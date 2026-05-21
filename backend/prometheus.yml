@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "fastapi"
+    static_configs:
+      - targets: ["backend:8001"]   # 컨테이너 서비스명:포트

@@ -1,0 +1,24 @@
+fastapi>=0.115.0
+uvicorn[standard]==0.29.0
+
+sqlalchemy==2.0.29
+pymysql==1.1.0
+
+pydantic>=2.7
+pydantic[email]   # EmailStr 지원
+
+python-jose==3.3.0
+cryptography>=42.0.0
+passlib[bcrypt]==1.7.4
+
+pycryptodome==3.20.0
+
+requests==2.31.0
+pytz==2024.1
+
+opencv-python==4.9.0.80
+flask==3.0.2
+
+python-multipart==0.0.9
+
+paho-mqtt==1.6.1

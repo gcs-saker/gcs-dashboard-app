@@ -1,0 +1,19 @@
+backend/
+├── main.py                              # FastAPI 앱 실행 진입점
+├── api/                                 # 실제 라우팅 로직 모음
+│   ├── stream.py                        # /stream: 영상 업로드 및 복호화 처리
+│   ├── telemetry.py                     # /telemetry: 센서 정보 수신
+│   ├── control.py                       # /control: 제어 명령 수신 (MQTT 연계)
+│   └── event.py                         # /event: 경고 및 알람 처리 (옵션)
+├── core/                                # 핵심 유틸리티 로직 (로우레벨)
+│   ├── crypto.py                        # AES 기반 암/복호화 함수 및 키 생성
+│   ├── geocoding.py                     # Google API reverse geocode 처리
+│   └── db.py                            # pymysql 기반 커넥션 및 삽입 함수
+├── mqtt/                                # MQTT 클라이언트 통신 전용 모듈
+│   └── client.py                        # 연결, 발행, 수신 콜백 정의
+├── models/                              # Pydantic 및 ORM 모델 정의
+│   ├── telemetry_model.py               # 센서 관련 Pydantic 모델
+│   ├── control_model.py                 # 제어 관련 모델
+│   └── stream_model.py                  # stream 메타/이미지 모델
+├── config.py                            # 환경변수 또는 설정값 관리
+└── requirements.txt                     # 종속성 패키지 리스트

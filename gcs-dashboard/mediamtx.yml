@@ -1,0 +1,9 @@
+logLevel: info
+
+rtmp: yes
+
+hls: yes
+
+paths:
+  all:
+    source: publisher
