@@ -1,0 +1,239 @@
+{
+  "labels": [
+    {
+      "name": "type: feature",
+      "color": "0052CC",
+      "description": "New feature"
+    },
+    {
+      "name": "type: bug",
+      "color": "D73A49",
+      "description": "Bug fix"
+    },
+    {
+      "name": "type: chore",
+      "color": "6F42C1",
+      "description": "Chore"
+    },
+    {
+      "name": "type: docs",
+      "color": "0075CA",
+      "description": "Documentation"
+    },
+    {
+      "name": "type: test",
+      "color": "A371F7",
+      "description": "Testing"
+    },
+    {
+      "name": "type: refactor",
+      "color": "7057FF",
+      "description": "Code refactoring"
+    },
+    {
+      "name": "type: ops",
+      "color": "008672",
+      "description": "Operations"
+    },
+    {
+      "name": "type: research",
+      "color": "E2B95D",
+      "description": "Research"
+    },
+    {
+      "name": "area: streaming",
+      "color": "22C55E",
+      "description": "Streaming area"
+    },
+    {
+      "name": "area: mediamtx",
+      "color": "22C55E",
+      "description": "MediaMTX area"
+    },
+    {
+      "name": "area: backend",
+      "color": "22C55E",
+      "description": "Backend area"
+    },
+    {
+      "name": "area: dashboard",
+      "color": "22C55E",
+      "description": "Dashboard area"
+    },
+    {
+      "name": "area: telemetry",
+      "color": "22C55E",
+      "description": "Telemetry area"
+    },
+    {
+      "name": "area: control",
+      "color": "22C55E",
+      "description": "Control area"
+    },
+    {
+      "name": "area: ai-adapter",
+      "color": "22C55E",
+      "description": "AI Adapter area"
+    },
+    {
+      "name": "area: device",
+      "color": "22C55E",
+      "description": "Device area"
+    },
+    {
+      "name": "area: auth",
+      "color": "22C55E",
+      "description": "Auth area"
+    },
+    {
+      "name": "area: group",
+      "color": "22C55E",
+      "description": "Group area"
+    },
+    {
+      "name": "area: map",
+      "color": "22C55E",
+      "description": "Map area"
+    },
+    {
+      "name": "area: db",
+      "color": "22C55E",
+      "description": "Database area"
+    },
+    {
+      "name": "area: redis",
+      "color": "22C55E",
+      "description": "Redis area"
+    },
+    {
+      "name": "area: mqtt",
+      "color": "22C55E",
+      "description": "MQTT area"
+    },
+    {
+      "name": "area: nginx",
+      "color": "22C55E",
+      "description": "Nginx area"
+    },
+    {
+      "name": "area: docker",
+      "color": "22C55E",
+      "description": "Docker area"
+    },
+    {
+      "name": "area: server",
+      "color": "22C55E",
+      "description": "Server area"
+    },
+    {
+      "name": "area: turn",
+      "color": "22C55E",
+      "description": "TURN area"
+    },
+    {
+      "name": "area: security",
+      "color": "22C55E",
+      "description": "Security area"
+    },
+    {
+      "name": "area: test",
+      "color": "22C55E",
+      "description": "Test area"
+    },
+    {
+      "name": "area: docs",
+      "color": "22C55E",
+      "description": "Docs area"
+    },
+    {
+      "name": "priority: p0-critical",
+      "color": "B60205",
+      "description": "Critical priority"
+    },
+    {
+      "name": "priority: p1-high",
+      "color": "D73A4A",
+      "description": "High priority"
+    },
+    {
+      "name": "priority: p2-normal",
+      "color": "F9D0EB",
+      "description": "Normal priority"
+    },
+    {
+      "name": "priority: p3-low",
+      "color": "FCE5CD",
+      "description": "Low priority"
+    },
+    {
+      "name": "status: blocked",
+      "color": "F39C12",
+      "description": "Blocked"
+    },
+    {
+      "name": "status: needs-review",
+      "color": "FDB827",
+      "description": "Needs review"
+    },
+    {
+      "name": "status: needs-test",
+      "color": "FBCA04",
+      "description": "Needs test"
+    },
+    {
+      "name": "status: ready",
+      "color": "85E89D",
+      "description": "Ready"
+    },
+    {
+      "name": "status: external-dependency",
+      "color": "D4C5F9",
+      "description": "External dependency"
+    },
+    {
+      "name": "dlv: streaming",
+      "color": "9467BD",
+      "description": "Streaming delivery"
+    },
+    {
+      "name": "dlv: backend",
+      "color": "9467BD",
+      "description": "Backend delivery"
+    },
+    {
+      "name": "dlv: frontend",
+      "color": "9467BD",
+      "description": "Frontend delivery"
+    },
+    {
+      "name": "dlv: ai-adapter",
+      "color": "9467BD",
+      "description": "AI Adapter delivery"
+    },
+    {
+      "name": "dlv: device-integration",
+      "color": "9467BD",
+      "description": "Device integration delivery"
+    },
+    {
+      "name": "dlv: ops-test",
+      "color": "9467BD",
+      "description": "Ops test delivery"
+    },
+    {
+      "name": "env: local",
+      "color": "808080",
+      "description": "Local environment"
+    },
+    {
+      "name": "env: staging",
+      "color": "A9A9A9",
+      "description": "Staging environment"
+    },
+    {
+      "name": "env: production",
+      "color": "696969",
+      "description": "Production environment"
+    }
+  ]
+}
