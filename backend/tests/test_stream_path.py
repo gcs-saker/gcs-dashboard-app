@@ -135,7 +135,7 @@ def test_stream_api_resolves_path_to_stream_id(client):
     "url",
     [
         "/stream/paths/from-id/raw..front",
-        "/stream/paths/from-path/raw/../front",
+        "/stream/paths/from-path/raw/robot.001/front",
     ],
 )
 def test_stream_api_returns_422_for_invalid_input(client, url):
