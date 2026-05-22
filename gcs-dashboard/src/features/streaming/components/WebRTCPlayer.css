@@ -1,0 +1,59 @@
+.webrtc-player {
+  position: relative;
+  min-height: 220px;
+  margin: 0;
+  overflow: hidden;
+  background: #03080d;
+  color: #dce8f4;
+}
+
+.webrtc-player__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  object-fit: cover;
+  background: #03080d;
+}
+
+.webrtc-player__overlay {
+  position: absolute;
+  inset: auto 12px 12px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+.webrtc-player__status,
+.webrtc-player__stream,
+.webrtc-player__state,
+.webrtc-player__error {
+  min-height: 24px;
+  padding: 4px 8px;
+  border: 1px solid rgba(126, 180, 222, 0.45);
+  background: rgba(3, 8, 13, 0.78);
+}
+
+.webrtc-player__status {
+  text-transform: uppercase;
+}
+
+.webrtc-player__status--playing {
+  border-color: rgba(86, 211, 124, 0.8);
+  color: #8df0a7;
+}
+
+.webrtc-player__status--loading {
+  color: #8fc7ff;
+}
+
+.webrtc-player__status--offline,
+.webrtc-player__status--error,
+.webrtc-player__error {
+  border-color: rgba(255, 111, 111, 0.75);
+  color: #ffb0a6;
+}
