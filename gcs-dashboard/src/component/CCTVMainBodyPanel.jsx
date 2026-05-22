@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import MainMap from "./MainMap";
 import HLSPlayer from "./HLSPlayer";
 import ControlPanel from "./ControlPanel";
-import Gyroscope from "./Gyroscope";
 import AzimuthReturn from "./AzimuthReturn";
 
 export default function MainBody({

@@ -1,8 +1,9 @@
-import Hls from "hls.js";
 import { useEffect, useReducer, useRef } from "react";
 import type { RefObject } from "react";
 
 import type { HLSFallbackSnapshot, HLSPlaybackMode } from "../types";
+
+type HlsConstructor = typeof import("hls.js").default;
 
 interface UseHlsFallbackPlaybackOptions {
   hlsUrl: string | null;
@@ -39,27 +40,8 @@ export function useHlsFallbackPlayback({
       return undefined;
     }
 
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        lowLatencyMode: true,
-        backBufferLength: 30,
-      });
-
-      dispatch({ type: "loading", mode: "hlsjs" });
-      hls.loadSource(hlsUrl);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        void video.play();
-        dispatch({ type: "playing", mode: "hlsjs" });
-      });
-      hls.on(Hls.Events.ERROR, () => {
-        dispatch({ type: "error", mode: "hlsjs", message: "HLS playback failed" });
-      });
-
-      return () => {
-        hls.destroy();
-      };
-    }
+    let disposed = false;
+    let cleanup: (() => void) | undefined;
 
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       const onLoadedMetadata = () => {
@@ -70,19 +52,61 @@ export function useHlsFallbackPlayback({
       dispatch({ type: "loading", mode: "native" });
       video.src = hlsUrl;
       video.addEventListener("loadedmetadata", onLoadedMetadata);
-
-      return () => {
+      cleanup = () => {
         video.removeEventListener("loadedmetadata", onLoadedMetadata);
         video.removeAttribute("src");
       };
+      return () => {
+        disposed = true;
+        cleanup?.();
+      };
     }
 
-    dispatch({
-      type: "error",
-      mode: "unsupported",
-      message: "HLS playback is not supported in this browser",
-    });
-    return undefined;
+    void loadHlsConstructor()
+      .then((Hls) => {
+        if (disposed) {
+          return;
+        }
+
+        if (!Hls.isSupported()) {
+          dispatch({
+            type: "error",
+            mode: "unsupported",
+            message: "HLS playback is not supported in this browser",
+          });
+          return;
+        }
+
+        const hls = new Hls({
+          lowLatencyMode: true,
+          backBufferLength: 30,
+        });
+
+        dispatch({ type: "loading", mode: "hlsjs" });
+        hls.loadSource(hlsUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          void video.play();
+          dispatch({ type: "playing", mode: "hlsjs" });
+        });
+        hls.on(Hls.Events.ERROR, () => {
+          dispatch({ type: "error", mode: "hlsjs", message: "HLS playback failed" });
+        });
+
+        cleanup = () => {
+          hls.destroy();
+        };
+      })
+      .catch(() => {
+        if (!disposed) {
+          dispatch({ type: "error", mode: "hlsjs", message: "HLS playback failed" });
+        }
+      });
+
+    return () => {
+      disposed = true;
+      cleanup?.();
+    };
   }, [hlsUrl]);
 
   return { ...snapshot, videoRef };
@@ -114,4 +138,9 @@ function hlsReducer(
   }
 
   return state;
+}
+
+async function loadHlsConstructor(): Promise<HlsConstructor> {
+  const module = await import("hls.js");
+  return module.default;
 }

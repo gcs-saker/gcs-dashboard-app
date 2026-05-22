@@ -1,6 +1,5 @@
 // src/components/HLSPlayer.jsx
 import React, { useRef, useEffect } from "react";
-import Hls from "hls.js";
 import { hlsStreamUrl } from "../config";
 
 const HLSPlayer = ({
@@ -14,50 +13,72 @@ const HLSPlayer = ({
 
   useEffect(() => {
     const video = videoRef.current;
-    let hls;
+    if (!video) return undefined;
 
-    if (Hls.isSupported()) {
-      hls = new Hls();
-      hls.loadSource(src);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+    let disposed = false;
+    let cleanup;
+
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      const onLoadedMetadata = () => {
         video.play();
-      });
-    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      };
+
       video.src = src;
-      video.addEventListener("loadedmetadata", () => {
-        video.play();
-      });
-    } else {
-      console.error("HLS not supported in this browser");
+      video.addEventListener("loadedmetadata", onLoadedMetadata);
+      return () => {
+        disposed = true;
+        video.removeEventListener("loadedmetadata", onLoadedMetadata);
+        video.removeAttribute("src");
+      };
     }
 
-    if (hls) {
-      // 레벨 정보 로드 완료 시
-      hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-        console.log("Available levels:", data.levels);
-      });
+    import("hls.js").then(({ default: Hls }) => {
+      if (disposed) return;
 
-      // 레벨 스위치 시 (자동 화질 변경 포함)
-      hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
-        const level = hls.levels[data.level];
-        if (!level || !onVideoInfo) return;
-        onVideoInfo({
-          width: level.width,
-          height: level.height,
-          bitrate: level.bitrate,
-          fps: level.fps,
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(src);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play();
         });
-        console.log("Current level:", level);
-      });
-    }
+
+        hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+          console.log("Available levels:", data.levels);
+        });
+
+        hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+          const level = hls.levels[data.level];
+          if (!level || !onVideoInfo) return;
+          onVideoInfo({
+            width: level.width,
+            height: level.height,
+            bitrate: level.bitrate,
+            fps: level.fps,
+          });
+          console.log("Current level:", level);
+        });
+
+        cleanup = () => {
+          hls.destroy();
+        };
+        return;
+      }
+
+      console.error("HLS not supported in this browser");
+    }).catch((error) => {
+      if (!disposed) {
+        console.error("Failed to load HLS runtime", error);
+      }
+    });
 
     return () => {
-      if (hls) {
-        hls.destroy();
+      disposed = true;
+      if (cleanup) {
+        cleanup();
       }
     };
-  }, [src]);
+  }, [src, onVideoInfo]);
 
   return (
     <div
