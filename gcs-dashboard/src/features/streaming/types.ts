@@ -18,3 +18,24 @@ export interface WebRTCPlayerProps {
   className?: string;
   onStatusChange?: (snapshot: WebRTCPlaybackSnapshot) => void;
 }
+
+export type HLSFallbackStatus = "idle" | "loading" | "playing" | "error";
+export type HLSPlaybackMode = "hlsjs" | "native" | "unsupported";
+
+export interface HLSFallbackSnapshot {
+  status: HLSFallbackStatus;
+  mode: HLSPlaybackMode;
+  errorMessage: string | null;
+}
+
+export interface HLSFallbackPlayerProps {
+  hlsUrl: string | null;
+  streamId?: string;
+  title?: string;
+  fallbackReason?: string;
+  autoPlay?: boolean;
+  muted?: boolean;
+  controls?: boolean;
+  className?: string;
+  onStatusChange?: (snapshot: HLSFallbackSnapshot) => void;
+}

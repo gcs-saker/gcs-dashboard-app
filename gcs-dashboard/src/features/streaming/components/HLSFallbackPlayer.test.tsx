@@ -1,0 +1,142 @@
+import { act, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+import { HLSFallbackPlayer } from "./HLSFallbackPlayer";
+
+const hlsMock = vi.hoisted(() => {
+  const instances: MockHls[] = [];
+
+  class MockHls {
+    static Events = {
+      ERROR: "hlsError",
+      MANIFEST_PARSED: "manifestParsed",
+    };
+
+    static isSupported = vi.fn(() => true);
+
+    handlers: Record<string, Array<() => void>> = {};
+    attachMedia = vi.fn();
+    destroy = vi.fn();
+    loadSource = vi.fn();
+
+    constructor() {
+      instances.push(this);
+    }
+
+    on(eventName: string, handler: () => void) {
+      this.handlers[eventName] = [...(this.handlers[eventName] ?? []), handler];
+    }
+
+    emit(eventName: string) {
+      for (const handler of this.handlers[eventName] ?? []) {
+        handler();
+      }
+    }
+  }
+
+  return { MockHls, instances };
+});
+
+vi.mock("hls.js", () => ({ default: hlsMock.MockHls }));
+
+const hlsUrl = "https://media.example.test/raw/sample/front/index.m3u8";
+
+beforeEach(() => {
+  hlsMock.instances.length = 0;
+  hlsMock.MockHls.isSupported.mockClear();
+  hlsMock.MockHls.isSupported.mockReturnValue(true);
+  vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("HLSFallbackPlayer", () => {
+  test("renders fallback player and starts hls.js playback when an HLS URL is provided", async () => {
+    render(<HLSFallbackPlayer hlsUrl={hlsUrl} streamId="raw.sample.front" />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("fallback loading");
+    expect(screen.getByText("WebRTC failed. Playing HLS fallback.")).toBeInTheDocument();
+    expect(hlsMock.instances[0].loadSource).toHaveBeenCalledWith(hlsUrl);
+    expect(hlsMock.instances[0].attachMedia).toHaveBeenCalledWith(screen.getByLabelText("HLS fallback stream"));
+
+    act(() => {
+      hlsMock.instances[0].emit("manifestParsed");
+    });
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("fallback playing"));
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
+    expect(screen.getByText("mode: hlsjs")).toBeInTheDocument();
+  });
+
+  test("renders a clear fallback reason after WebRTC failure", () => {
+    render(
+      <HLSFallbackPlayer
+        hlsUrl={hlsUrl}
+        fallbackReason="WebRTC connection failed. HLS fallback is active."
+      />,
+    );
+
+    expect(screen.getByText("WebRTC connection failed. HLS fallback is active.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("fallback loading");
+  });
+
+  test("uses native HLS when hls.js is not supported", async () => {
+    hlsMock.MockHls.isSupported.mockReturnValue(false);
+    vi.spyOn(HTMLMediaElement.prototype, "canPlayType").mockReturnValue("maybe");
+
+    render(<HLSFallbackPlayer hlsUrl={hlsUrl} />);
+    const video = screen.getByLabelText("HLS fallback stream") as HTMLVideoElement;
+
+    expect(video.src).toBe(hlsUrl);
+    expect(screen.getByText("mode: native")).toBeInTheDocument();
+
+    act(() => {
+      video.dispatchEvent(new Event("loadedmetadata"));
+    });
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("fallback playing"));
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
+    expect(hlsMock.instances).toHaveLength(0);
+  });
+
+  test("renders unsupported error when neither hls.js nor native HLS is available", () => {
+    hlsMock.MockHls.isSupported.mockReturnValue(false);
+    vi.spyOn(HTMLMediaElement.prototype, "canPlayType").mockReturnValue("");
+
+    render(<HLSFallbackPlayer hlsUrl={hlsUrl} />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("fallback error");
+    expect(screen.getByText("HLS playback is not supported in this browser")).toBeInTheDocument();
+    expect(screen.getByText("mode: unsupported")).toBeInTheDocument();
+  });
+
+  test("renders an error when the HLS URL is missing", () => {
+    render(<HLSFallbackPlayer hlsUrl={null} />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("fallback error");
+    expect(screen.getByText("HLS URL is required")).toBeInTheDocument();
+    expect(hlsMock.MockHls.isSupported).not.toHaveBeenCalled();
+  });
+
+  test("renders an error when hls.js emits a playback error", () => {
+    render(<HLSFallbackPlayer hlsUrl={hlsUrl} />);
+
+    act(() => {
+      hlsMock.instances[0].emit("hlsError");
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent("fallback error");
+    expect(screen.getByText("HLS playback failed")).toBeInTheDocument();
+  });
+
+  test("cleans up hls.js when the player unmounts", () => {
+    const { unmount } = render(<HLSFallbackPlayer hlsUrl={hlsUrl} />);
+    const hls = hlsMock.instances[0];
+
+    unmount();
+
+    expect(hls.destroy).toHaveBeenCalled();
+  });
+});
