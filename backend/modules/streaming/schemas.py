@@ -43,6 +43,33 @@ class StreamDescriptorResponse(BaseModel):
         )
 
 
+class StreamPlaybackResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    stream_id: str = Field(alias="streamId")
+    status: StreamStatus
+    playback_urls: PlaybackUrlsResponse = Field(alias="playbackUrls")
+
+    @classmethod
+    def from_domain(cls, descriptor: StreamDescriptor) -> "StreamPlaybackResponse":
+        return cls(
+            streamId=descriptor.stream_id,
+            status=descriptor.status,
+            playbackUrls=PlaybackUrlsResponse.from_domain(descriptor.playback_urls),
+        )
+
+
+class StreamStatusResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    stream_id: str = Field(alias="streamId")
+    status: StreamStatus
+
+    @classmethod
+    def from_domain(cls, descriptor: StreamDescriptor) -> "StreamStatusResponse":
+        return cls(streamId=descriptor.stream_id, status=descriptor.status)
+
+
 class StreamingModuleStatusResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 

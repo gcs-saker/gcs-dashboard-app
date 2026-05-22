@@ -25,6 +25,7 @@ app.add_middleware(
 # 📦 API 라우터 등록
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(stream.router, prefix="/stream", tags=["Stream"])
+app.include_router(stream.v1_router, prefix="/api/v1", tags=["Stream"])
 app.include_router(telemetry.router, prefix="/telemetry", tags=["Telemetry"])
 app.include_router(control.router, prefix="/control", tags=["Control"])
 app.include_router(unmaned_assets.router, prefix="/asset", tags=["Asset"])
