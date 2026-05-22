@@ -39,3 +39,32 @@ export interface HLSFallbackPlayerProps {
   className?: string;
   onStatusChange?: (snapshot: HLSFallbackSnapshot) => void;
 }
+
+export type StreamRuntimeStatus = "registered" | "online" | "offline" | "unknown";
+
+export interface StreamPlaybackUrls {
+  webrtc: string | null;
+  hls: string | null;
+}
+
+export interface StreamPlaybackResponse {
+  streamId: string;
+  status: StreamRuntimeStatus;
+  playbackUrls: StreamPlaybackUrls;
+}
+
+export type RealtimePlayerMode = "loading" | "webrtc" | "hls" | "offline" | "error";
+
+export interface RealtimePlayerSnapshot {
+  mode: RealtimePlayerMode;
+  streamStatus: StreamRuntimeStatus | "unknown";
+  errorMessage: string | null;
+}
+
+export interface RealtimePlayerProps {
+  streamId: string;
+  title?: string;
+  className?: string;
+  fetcher?: typeof fetch;
+  onStatusChange?: (snapshot: RealtimePlayerSnapshot) => void;
+}

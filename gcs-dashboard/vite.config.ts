@@ -3,6 +3,19 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-map": ["leaflet", "react-leaflet"],
+          "vendor-3d": ["three", "@react-three/fiber", "@react-three/drei"],
+          "vendor-media": ["hls.js"],
+          "vendor-charts": ["recharts"]
+        }
+      }
+    }
+  },
   server: {
     host: "0.0.0.0"
   },
