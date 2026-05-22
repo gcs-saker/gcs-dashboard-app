@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException
 
 from model.stream_model import StreamPathError, validate_stream_id, validate_stream_path
+from modules.streaming.router import router as streaming_module_router
 
 router = APIRouter()
+router.include_router(streaming_module_router, prefix="/module")
 
 
 @router.get("/status")
