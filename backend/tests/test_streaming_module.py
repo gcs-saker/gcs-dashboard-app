@@ -11,7 +11,9 @@ from modules.streaming import (
     StreamDescriptor,
     StreamingService,
 )
+import modules.streaming.router as streaming_router_module
 from modules.streaming.router import (
+    get_playback_urls,
     get_stream_registry_item,
     get_streaming_module_status,
     list_stream_registry,
@@ -33,7 +35,7 @@ def test_streaming_module_imports_core_boundaries():
     assert service.list_registered_streams() == []
 
 
-def test_service_registers_stream_path_and_builds_placeholder_playback_urls():
+def test_service_registers_stream_path_and_builds_mediamtx_playback_urls():
     builder = PlaybackUrlBuilder(
         PlaybackUrlBuilderConfig(
             webrtc_base_url="http://mediamtx.local:8889",
@@ -50,8 +52,8 @@ def test_service_registers_stream_path_and_builds_placeholder_playback_urls():
 
     assert descriptor.stream_id == "raw.robot-001.front"
     assert descriptor.status == "online"
-    assert descriptor.playback_urls.webrtc == "http://mediamtx.local:8889/raw/robot-001/front"
-    assert descriptor.playback_urls.hls == "http://mediamtx.local:8888/raw/robot-001/front"
+    assert descriptor.playback_urls.webrtc == "http://mediamtx.local:8889/raw/robot-001/front/whep"
+    assert descriptor.playback_urls.hls == "http://mediamtx.local:8888/raw/robot-001/front/index.m3u8"
     assert service.get_registered_stream("raw.robot-001.front") == descriptor
     assert service.module_status().registered_streams == 1
 
@@ -87,6 +89,7 @@ def test_streaming_module_router_boundary_is_mounted_under_stream_api():
     route_paths = {route.path for route in stream_router.routes}
 
     assert "/module/status" in route_paths
+    assert "/module/playback/{stream_id}" in route_paths
     assert "/module/registry" in route_paths
     assert "/module/registry/{stream_id}" in route_paths
 
@@ -99,6 +102,35 @@ def test_streaming_module_status_router_returns_testable_payload():
         "playbackUrlBuilderReady": True,
         "registeredStreams": 0,
     }
+
+
+def test_streaming_module_playback_router_returns_env_backed_urls(monkeypatch):
+    builder = PlaybackUrlBuilder(
+        PlaybackUrlBuilderConfig(
+            public_webrtc_base_url="https://media.example.com/webrtc",
+            public_hls_base_url="https://media.example.com/hls",
+        )
+    )
+    service = StreamingService(playback_url_builder=builder)
+    monkeypatch.setattr(streaming_router_module, "default_streaming_service", service)
+
+    response = run_async(get_playback_urls("raw.sample.front"))
+
+    assert response.model_dump() == {
+        "webrtc": "https://media.example.com/webrtc/raw/sample/front/whep",
+        "hls": "https://media.example.com/hls/raw/sample/front/index.m3u8",
+    }
+
+
+def test_streaming_module_playback_router_returns_422_for_invalid_stream_id(monkeypatch):
+    service = StreamingService(playback_url_builder=PlaybackUrlBuilder())
+    monkeypatch.setattr(streaming_router_module, "default_streaming_service", service)
+
+    with pytest.raises(HTTPException) as exc_info:
+        run_async(get_playback_urls("bad"))
+
+    assert exc_info.value.status_code == 422
+    assert exc_info.value.detail == "stream path prefix must be one of raw, ai, archive"
 
 
 def test_streaming_module_registry_router_starts_empty():
