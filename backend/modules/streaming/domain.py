@@ -4,6 +4,7 @@ from typing import Literal
 from model.stream_model import StreamPath, validate_stream_path
 
 StreamStatus = Literal["registered", "online", "offline", "unknown"]
+STREAM_STATUSES: tuple[StreamStatus, ...] = ("registered", "online", "offline", "unknown")
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,9 @@ class StreamDescriptor:
     status: StreamStatus = "registered"
     display_name: str | None = None
     playback_urls: PlaybackUrls = field(default_factory=PlaybackUrls)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "status", validate_stream_status(self.status))
 
     @classmethod
     def from_path(
@@ -46,6 +50,12 @@ class StreamDescriptor:
     @property
     def stream_id(self) -> str:
         return self.stream_path.stream_id
+
+
+def validate_stream_status(status: str) -> StreamStatus:
+    if status not in STREAM_STATUSES:
+        raise ValueError("stream status must be one of registered, online, offline, unknown")
+    return status
 
 
 @dataclass(frozen=True)
