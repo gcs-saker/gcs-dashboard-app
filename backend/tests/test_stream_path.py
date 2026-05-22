@@ -1,8 +1,9 @@
-import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+import asyncio
 
-from api.stream import router
+from fastapi import HTTPException
+import pytest
+
+from api.stream import resolve_stream_id, resolve_stream_path
 from model.stream_model import (
     StreamPathError,
     path_to_stream_id,
@@ -12,11 +13,8 @@ from model.stream_model import (
 )
 
 
-@pytest.fixture
-def client():
-    app = FastAPI()
-    app.include_router(router, prefix="/stream")
-    return TestClient(app)
+def run_async(coro):
+    return asyncio.run(coro)
 
 
 @pytest.mark.parametrize(
@@ -108,11 +106,10 @@ def test_invalid_stream_ids_are_rejected(stream_id):
         validate_stream_id(stream_id)
 
 
-def test_stream_api_resolves_stream_id_to_path(client):
-    response = client.get("/stream/paths/from-id/ai.drone-01.front.detector-v1")
+def test_stream_api_resolves_stream_id_to_path():
+    response = run_async(resolve_stream_id("ai.drone-01.front.detector-v1"))
 
-    assert response.status_code == 200
-    assert response.json() == {
+    assert response == {
         "prefix": "ai",
         "assetId": "drone-01",
         "sensorId": "front",
@@ -123,23 +120,23 @@ def test_stream_api_resolves_stream_id_to_path(client):
     }
 
 
-def test_stream_api_resolves_path_to_stream_id(client):
-    response = client.get("/stream/paths/from-path/archive/ugv-02/rear/2026-05-22")
+def test_stream_api_resolves_path_to_stream_id():
+    response = run_async(resolve_stream_path("archive/ugv-02/rear/2026-05-22"))
 
-    assert response.status_code == 200
-    assert response.json()["path"] == "archive/ugv-02/rear/2026-05-22"
-    assert response.json()["streamId"] == "archive.ugv-02.rear.2026-05-22"
+    assert response["path"] == "archive/ugv-02/rear/2026-05-22"
+    assert response["streamId"] == "archive.ugv-02.rear.2026-05-22"
 
 
 @pytest.mark.parametrize(
-    "url",
+    ("resolver", "value"),
     [
-        "/stream/paths/from-id/raw..front",
-        "/stream/paths/from-path/raw/robot.001/front",
+        (resolve_stream_id, "raw..front"),
+        (resolve_stream_path, "raw/robot.001/front"),
     ],
 )
-def test_stream_api_returns_422_for_invalid_input(client, url):
-    response = client.get(url)
+def test_stream_api_returns_422_for_invalid_input(resolver, value):
+    with pytest.raises(HTTPException) as exc_info:
+        run_async(resolver(value))
 
-    assert response.status_code == 422
-    assert response.json()["detail"]
+    assert exc_info.value.status_code == 422
+    assert exc_info.value.detail
