@@ -59,7 +59,7 @@ describe('App dashboard shell', () => {
     await userEvent.click(screen.getByRole('button', { name: /load telemetry/i }));
     await userEvent.selectOptions(screen.getByRole('combobox'), 'node-001');
 
-    expect(screen.getByText('node-001')).toBeInTheDocument();
+    expect(screen.getAllByText('node-001')).toHaveLength(2);
     expect(screen.getByText(/위도: 35\.82599/)).toBeInTheDocument();
     expect(screen.getByText(/고도: 120\.4 m/)).toBeInTheDocument();
     expect(screen.getByText(/무인체 배터리 : 78 %/)).toBeInTheDocument();
