@@ -7,6 +7,7 @@ from modules.ai_contract.schemas import (
     DetectionResult,
     FrameReference,
 )
+from modules.ai_contract.mock_service import MockAIService
 
 __all__ = [
     "AI_CONTRACT_SCHEMA_VERSION",
@@ -16,4 +17,5 @@ __all__ = [
     "BoundingBox",
     "DetectionResult",
     "FrameReference",
+    "MockAIService",
 ]
