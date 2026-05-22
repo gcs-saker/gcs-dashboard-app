@@ -20,6 +20,14 @@ scripts/publish_sample_stream.sh
 The script publishes to `rtsp://127.0.0.1:8554/raw/sample/front`, which maps to backend streamId `raw.sample.front`.
 Full usage and troubleshooting notes are in `docs/m1/sample-stream-publish.md`.
 
+For the full M1 streaming smoke procedure, run:
+
+```bash
+scripts/streaming_e2e_smoke.sh --check
+```
+
+Actual MediaMTX/backend/dashboard smoke testing is documented in `docs/m1/streaming-e2e-smoke-test.md`.
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).

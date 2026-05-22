@@ -4,8 +4,13 @@ import MainMap from './component/MainMap';
 import HLSPlayer from './component/HLSPlayer';
 import ControlPanel from './component/ControlPanel';
 import TelemetryDashboard from './component/TelemetryDashboard';
+import { StreamingSmokeDashboard } from './features/streaming/components/StreamingSmokeDashboard';
 
 function App() {
+  if (new URLSearchParams(window.location.search).get('streamingSmoke') === '1') {
+    return <StreamingSmokeDashboard />;
+  }
+
   const [telemetryMap, setTelemetryMap] = useState({});
   const [selectedUUID, setSelectedUUID] = useState('');
 

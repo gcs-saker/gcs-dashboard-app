@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import App from './App';
 
 vi.mock('./component/MainMap', () => ({ default: function MockMainMap({ setTelemetryMap }) {
@@ -43,7 +43,17 @@ vi.mock('./component/TelemetryDashboard', () => ({ default: function MockTelemet
   return <div data-testid="telemetry-dashboard">samples:{data?.length ?? 0}</div>;
 }}));
 
+vi.mock('./features/streaming/components/StreamingSmokeDashboard', () => ({
+  StreamingSmokeDashboard: function MockStreamingSmokeDashboard() {
+    return <div data-testid="streaming-smoke-dashboard">Streaming smoke</div>;
+  },
+}));
+
 describe('App dashboard shell', () => {
+  afterEach(() => {
+    window.history.pushState({}, '', '/');
+  });
+
   test('renders the core dashboard regions', () => {
     render(<App />);
 
@@ -65,5 +75,14 @@ describe('App dashboard shell', () => {
     expect(screen.getByText(/고도: 120\.4 m/)).toBeInTheDocument();
     expect(screen.getByText(/무인체 배터리 : 78 %/)).toBeInTheDocument();
     expect(screen.getByTestId('telemetry-dashboard')).toHaveTextContent('samples:1');
+  });
+
+  test('renders the streaming smoke dashboard when requested by query string', () => {
+    window.history.pushState({}, '', '/?streamingSmoke=1');
+
+    render(<App />);
+
+    expect(screen.getByTestId('streaming-smoke-dashboard')).toBeInTheDocument();
+    expect(screen.queryByTestId('hls-player')).not.toBeInTheDocument();
   });
 });
