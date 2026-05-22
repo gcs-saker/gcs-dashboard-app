@@ -33,6 +33,10 @@ webrtcLocalUDPAddress: :8189
 webrtcLocalTCPAddress: :8189
 webrtcIPsFromInterfaces: true
 webrtcAdditionalHosts: []
+# Base config keeps ICE servers empty so localhost/LAN development still works without secrets.
+# External/NAT deployments inject MTX_WEBRTCICESERVERS2_* with docker-compose.ice.example.yml.
+webrtcICEServers2: []
+webrtcSTUNGatherTimeout: 5s
 
 paths:
   all:

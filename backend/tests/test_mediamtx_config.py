@@ -7,7 +7,9 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MEDIAMTX_CONFIG = REPO_ROOT / "gcs-dashboard" / "mediamtx.yml"
 DOCKER_COMPOSE = REPO_ROOT / "gcs-dashboard" / "docker-compose.yml"
+DOCKER_ICE_COMPOSE = REPO_ROOT / "gcs-dashboard" / "docker-compose.ice.example.yml"
 DOCKER_ENV_EXAMPLE = REPO_ROOT / "gcs-dashboard" / ".env.example"
+ICE_DOC = REPO_ROOT / "docs" / "m1" / "mediamtx-ice-servers.md"
 
 
 PORT_MAPPING_PATTERN = re.compile(r"(?P<published>.+):(?P<target>\d+)(?:/(?P<protocol>tcp|udp))?$")
@@ -109,6 +111,41 @@ def test_compose_port_overrides_are_documented_without_management_ports():
     assert "MEDIAMTX_RTMP_PORT=1935" in env_example
     assert "9997" not in env_example
     assert "9998" not in env_example
+
+
+def test_mediamtx_declares_empty_ice_server_slot_for_env_override():
+    config = load_yaml(MEDIAMTX_CONFIG)
+
+    assert config["webrtcICEServers2"] == []
+    assert config["webrtcSTUNGatherTimeout"] == "5s"
+
+
+def test_ice_compose_override_maps_stun_env_to_mediamtx_config():
+    override = load_yaml(DOCKER_ICE_COMPOSE)
+    environment = override["services"]["mediamtx"]["environment"]
+
+    assert environment["MTX_WEBRTCICESERVERS2_0_URL"] == "${MEDIAMTX_STUN_URL:?Set MEDIAMTX_STUN_URL in .env}"
+    assert not any("9997" in key or "9998" in key for key in environment)
+    assert not any("PASSWORD" in key for key in environment)
+
+
+def test_env_example_documents_ice_server_values_without_real_turn_secret():
+    env_example = DOCKER_ENV_EXAMPLE.read_text(encoding="utf-8")
+
+    assert "MEDIAMTX_STUN_URL=" in env_example
+    assert "MEDIAMTX_TURN_URL=" in env_example
+    assert "MEDIAMTX_TURN_USERNAME=AUTH_SECRET" in env_example
+    assert "MEDIAMTX_TURN_PASSWORD=replace-with-secret-outside-git" in env_example
+    assert "Do not commit real TURN credentials" in env_example
+
+
+def test_ice_server_documentation_explains_nat_and_webrtc_encryption_boundary():
+    doc = ICE_DOC.read_text(encoding="utf-8")
+
+    assert "NAT traversal" in doc
+    assert "DTLS/SRTP" in doc
+    assert "STUN은 암호화를 담당하지 않는다" in doc
+    assert "TURN credential은 저장소에 들어가지 않는다" in doc
 
 
 def test_mediamtx_accepts_publisher_for_all_stream_paths():
