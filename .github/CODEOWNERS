@@ -1,0 +1,19 @@
+# Default owner for repository-wide changes
+* @taetaehoo
+
+# Backend service
+/backend/ @taetaehoo
+
+# Dashboard frontend
+/gcs-dashboard/ @taetaehoo
+
+# Infrastructure and runtime configuration
+/docker-compose.yml @taetaehoo
+/**/Dockerfile @taetaehoo
+/**/nginx.conf @taetaehoo
+/**/mediamtx.yml @taetaehoo
+/.github/workflows/ @taetaehoo
+
+# Documentation and runbooks
+/*.md @taetaehoo
+/docs/ @taetaehoo
