@@ -1,6 +1,7 @@
 from modules.streaming.domain import PlaybackUrls, StreamDescriptor, StreamingModuleStatus, StreamStatus
 from modules.streaming.playback_url_builder import PlaybackUrlBuilder
-from modules.streaming.repository import InMemoryStreamRepository, StreamRepository
+from modules.streaming.repository import StreamRepository
+from modules.streaming.seeds import build_seed_repository
 
 
 class StreamingService:
@@ -9,8 +10,8 @@ class StreamingService:
         repository: StreamRepository | None = None,
         playback_url_builder: PlaybackUrlBuilder | None = None,
     ) -> None:
-        self.repository = repository or InMemoryStreamRepository()
         self.playback_url_builder = playback_url_builder or PlaybackUrlBuilder.from_env()
+        self.repository = repository or build_seed_repository(self.playback_url_builder)
 
     def module_status(self) -> StreamingModuleStatus:
         return StreamingModuleStatus(
