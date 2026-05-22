@@ -27,11 +27,11 @@ class PlaybackUrlBuilderConfig:
 
     @property
     def resolved_webrtc_base_url(self) -> str | None:
-        return self.public_webrtc_base_url or self.webrtc_base_url
+        return _resolve_configured_url(self.public_webrtc_base_url, self.webrtc_base_url)
 
     @property
     def resolved_hls_base_url(self) -> str | None:
-        return self.public_hls_base_url or self.hls_base_url
+        return _resolve_configured_url(self.public_hls_base_url, self.hls_base_url)
 
 
 class PlaybackUrlBuilder:
@@ -56,6 +56,12 @@ class PlaybackUrlBuilder:
         if base_url is None:
             return None
         return f"{_normalize_base_url(base_url)}/{stream_path.lstrip('/')}/{suffix}"
+
+
+def _resolve_configured_url(primary_url: str | None, fallback_url: str | None) -> str | None:
+    if primary_url is not None:
+        return primary_url
+    return fallback_url
 
 
 def _normalize_base_url(base_url: str) -> str:
