@@ -32,7 +32,16 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:coverage": "react-scripts test --watchAll=false --coverage --coverageReporters=text --coverageReporters=text-summary",
     "eject": "react-scripts eject"
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "src/**/*.{js,jsx,ts,tsx}",
+      "!src/index.js",
+      "!src/reportWebVitals.js",
+      "!src/setupTests.js"
+    ]
   },
   "eslintConfig": {
     "extends": [
