@@ -3,10 +3,18 @@ services:
     image: bluenviron/mediamtx:latest
     container_name: mediamtx
     ports:
-      - "1935:1935"
-      - "8888:8888"
+      # Browser playback: WebRTC/WHEP primary, HLS fallback.
+      - "${MEDIAMTX_WEBRTC_SIGNALING_PORT:-8889}:8889/tcp"
+      - "${MEDIAMTX_WEBRTC_ICE_UDP_PORT:-8189}:8189/udp"
+      - "${MEDIAMTX_WEBRTC_ICE_TCP_PORT:-8189}:8189/tcp"
+      - "${MEDIAMTX_HLS_PORT:-8888}:8888/tcp"
+      # Device ingest: RTSP/SRT are the preferred field-device inputs.
+      - "${MEDIAMTX_RTSP_PORT:-8554}:8554/tcp"
+      - "${MEDIAMTX_SRT_PORT:-8890}:8890/udp"
+      # Legacy fallback ingest. Limit this at firewall/reverse-proxy level if unused.
+      - "${MEDIAMTX_RTMP_PORT:-1935}:1935/tcp"
     volumes:
-      - ./mediamtx.yml:/mediamtx.yml
+      - ./mediamtx.yml:/mediamtx.yml:ro
     command: /mediamtx.yml
     restart: always
 
@@ -17,7 +25,7 @@ services:
       - "3000:3000"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./build:/usr/share/nginx/html:ro   # 이 줄이 핵심
+      - ./build:/usr/share/nginx/html:ro
     depends_on:
       - mediamtx
     restart: always
