@@ -1,8 +1,38 @@
 logLevel: info
 
-rtmp: yes
+# 관리용 API와 metrics는 컨테이너 내부 localhost에만 바인딩하고 기본 비활성화한다.
+# 운영에서 필요할 때는 외부 포트 노출 없이 내부 네트워크에서만 켠다.
+api: false
+apiAddress: 127.0.0.1:9997
+metrics: false
+metricsAddress: 127.0.0.1:9998
 
-hls: yes
+# Ingest protocols
+rtsp: true
+rtspTransports: [tcp, udp]
+rtspAddress: :8554
+rtpAddress: :8000
+rtcpAddress: :8001
+
+rtmp: true
+rtmpAddress: :1935
+
+srt: true
+srtAddress: :8890
+
+# Playback protocols
+hls: true
+hlsAddress: :8888
+hlsVariant: lowLatency
+hlsAllowOrigins: ['*']
+
+webrtc: true
+webrtcAddress: :8889
+webrtcAllowOrigins: ['*']
+webrtcLocalUDPAddress: :8189
+webrtcLocalTCPAddress: :8189
+webrtcIPsFromInterfaces: true
+webrtcAdditionalHosts: []
 
 paths:
   all:
