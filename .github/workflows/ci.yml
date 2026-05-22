@@ -60,6 +60,11 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Run frontend tests with coverage
+        run: npm run test:coverage
+        env:
+          CI: "true"
+
       - name: Build frontend
         run: npm run build
         env:
