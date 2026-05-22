@@ -1,3 +1,25 @@
+# GCS SAKER Dashboard
+
+## M1 Sample Stream
+
+M1 streaming development uses MediaMTX and the seed stream path `raw/sample/front`.
+
+From the repository root, start MediaMTX:
+
+```bash
+cd gcs-dashboard
+docker compose up mediamtx
+```
+
+Then publish the reproducible sample stream:
+
+```bash
+scripts/publish_sample_stream.sh
+```
+
+The script publishes to `rtsp://127.0.0.1:8554/raw/sample/front`, which maps to backend streamId `raw.sample.front`.
+Full usage and troubleshooting notes are in `docs/m1/sample-stream-publish.md`.
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
