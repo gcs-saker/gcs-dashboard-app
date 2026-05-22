@@ -1,6 +1,12 @@
 from fastapi import APIRouter, HTTPException
 
-from modules.streaming.schemas import StreamDescriptorResponse, StreamingModuleStatusResponse
+from model.stream_model import StreamPathError
+from modules.streaming.playback_url_builder import PlaybackUrlBuilderError
+from modules.streaming.schemas import (
+    PlaybackUrlsResponse,
+    StreamDescriptorResponse,
+    StreamingModuleStatusResponse,
+)
 from modules.streaming.service import StreamingService
 
 router = APIRouter()
@@ -10,6 +16,15 @@ default_streaming_service = StreamingService()
 @router.get("/status", response_model=StreamingModuleStatusResponse)
 async def get_streaming_module_status() -> StreamingModuleStatusResponse:
     return StreamingModuleStatusResponse.from_domain(default_streaming_service.module_status())
+
+
+@router.get("/playback/{stream_id}", response_model=PlaybackUrlsResponse)
+async def get_playback_urls(stream_id: str) -> PlaybackUrlsResponse:
+    try:
+        playback_urls = default_streaming_service.build_playback_urls(stream_id)
+    except (StreamPathError, PlaybackUrlBuilderError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return PlaybackUrlsResponse.from_domain(playback_urls)
 
 
 @router.get("/registry", response_model=list[StreamDescriptorResponse])
