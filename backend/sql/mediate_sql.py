@@ -1,4 +1,6 @@
-from sqlalchemy import Column, BigInteger, String, Enum, ForeignKey, Table
+from typing import Any
+
+from sqlalchemy import Column, BigInteger, String, Enum, ForeignKey
 from core.db import Base
 from sqlalchemy.orm import relationship
 
@@ -9,8 +11,8 @@ class Gateway(Base):
     cid = Column(String(64), nullable=False)
     uuid = Column(String(64), unique=True, nullable=False, index=True)
     company_id = Column(BigInteger, nullable=False)
-    type = Column(Enum("smartphone", "tablet", "smartwatch", "etc"), nullable=False)
-    os = Column(Enum("android", "iphone", "etc"), nullable=False)
+    type: Any = Column(Enum("smartphone", "tablet", "smartwatch", "etc"), nullable=False)
+    os: Any = Column(Enum("android", "iphone", "etc"), nullable=False)
     name = Column(String(100), nullable=True)
     status = Column(String(50), nullable=True)
     
@@ -23,7 +25,7 @@ class UnmannedAsset(Base):
     cid = Column(String(64), nullable=False)
     uuid = Column(String(64), unique=True, nullable=False, index=True)
     company_id = Column(BigInteger, nullable=False)
-    type = Column(Enum("drone", "rover", "ugv", "usv", "uav", "cctv", "etc"), nullable=False)
+    type: Any = Column(Enum("drone", "rover", "ugv", "usv", "uav", "cctv", "etc"), nullable=False)
     name = Column(String(100), nullable=False)
     description = Column(String(2000), nullable=True)
     image_url = Column(String(1000), nullable=True)

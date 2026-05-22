@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import MainMap from "./MainMap";
 import HLSPlayer from "./HLSPlayer";
 import ControlPanel from "./ControlPanel";
-import Gyroscope from "./Gyroscope";
+import LazyGyroscope from "./LazyGyroscope";
 import AzimuthReturn from "./AzimuthReturn";
 
 
@@ -84,7 +84,7 @@ export default function MainBody({
               <br/>
               
               <span className="label"><img src="/icon/지자계.png" className="icon icon-muted" alt="지자계"/> 지자계 각도</span>
-              <Gyroscope
+              <LazyGyroscope
                 mx={selectedData?.magneticX ?? 0}
                 my={selectedData?.magneticY ?? 0}
                 mz={selectedData?.magneticZ ?? 0}

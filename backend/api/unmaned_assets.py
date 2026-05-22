@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from core.db import get_db
@@ -7,7 +9,7 @@ from core.security import get_current_user
 from datetime import timedelta
 
 router = APIRouter()
-node_store = {}
+node_store: dict[str, dict[str, Any]] = {}
 
 @router.get("/{uuid}")
 async def get_asset(uuid: str, db: Session = Depends(get_db)):

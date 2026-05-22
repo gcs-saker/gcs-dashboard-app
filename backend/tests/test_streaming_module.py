@@ -2,6 +2,7 @@ import asyncio
 
 from fastapi import HTTPException
 import pytest
+from starlette.routing import Route
 
 from api.stream import router as stream_router
 from modules.streaming import (
@@ -160,7 +161,7 @@ def test_stream_descriptor_response_uses_frontend_friendly_aliases():
 
 
 def test_streaming_module_router_boundary_is_mounted_under_stream_api():
-    route_paths = {route.path for route in stream_router.routes}
+    route_paths = {route.path for route in stream_router.routes if isinstance(route, Route)}
 
     assert "/module/status" in route_paths
     assert "/module/playback/{stream_id}" in route_paths

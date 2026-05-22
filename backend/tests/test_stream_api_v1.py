@@ -1,3 +1,5 @@
+from collections.abc import Generator
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -7,7 +9,7 @@ from modules.streaming import PlaybackUrlBuilder, PlaybackUrlBuilderConfig, Stre
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client() -> Generator[TestClient, None, None]:
     builder = PlaybackUrlBuilder(
         PlaybackUrlBuilderConfig(
             public_webrtc_base_url="https://media.example.com/webrtc",

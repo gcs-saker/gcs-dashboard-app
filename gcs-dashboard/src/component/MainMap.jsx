@@ -17,7 +17,7 @@ import DistanceMeasure from './DistanceMeasure';
 import CompassControl from './CompassControl';
 import 'leaflet-rotatedmarker';
 import { rcIcon, droneIcon } from '../icon/customIcons';
-import { apiUrl } from '../config';
+import { fetchTelemetryNodes } from './telemetryFeed';
 
 
 // 미니맵 추가 함수
@@ -75,10 +75,7 @@ export default function MainMap({ setTelemetryMap }) {
   const fetchLoop = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(apiUrl("/telemetry/all"), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const data = await fetchTelemetryNodes({ token });
 
       if (isMounted) {
         // ✅ nodeList도 갱신해야 지도에 Marker가 찍힘

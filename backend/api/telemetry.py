@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from core.db import get_db
@@ -9,12 +11,12 @@ from datetime import timedelta
 
 
 router = APIRouter()
-node_store = {}
+node_store: dict[str | None, dict[str, Any]] = {}
 
 # 센서 데이터 수집 (장비 → 서버)
 @router.post("/", response_model=TelemetryResponse)
 async def receive_telemetry(data: TelemetryCreate, db: Session = Depends(get_db)):
-    node = data.model_dump()
+    node: dict[str, Any] = data.model_dump()
 
     # epochTime 변환 (ms → hh:mm:ss)
     if node.get("epochTime") is not None:
@@ -33,16 +35,16 @@ async def receive_telemetry(data: TelemetryCreate, db: Session = Depends(get_db)
         for key, value in data.model_dump(exclude_unset=True).items():
             setattr(db_obj, key, value)
     else:
-        payload = data.model_dump()
+        payload: dict[str, Any] = data.model_dump()
 
         # ✅ epochTime이 숫자면 문자열(HH:MM:SS)로 변환
         if isinstance(payload.get("epochTime"), (int, float)):
             seconds = int(payload["epochTime"])
-            h, m, s = str(timedelta(seconds=seconds)).split(":")
-            payload["epochTime"] = f"{int(h):02}:{int(m):02}:{int(float(s)):02}"
+            hours_text, minutes_text, seconds_text = str(timedelta(seconds=seconds)).split(":")
+            payload["epochTime"] = f"{int(hours_text):02}:{int(minutes_text):02}:{int(float(seconds_text)):02}"
 
-    db_obj = Telemetry(**payload)
-    db.add(db_obj)
+        db_obj = Telemetry(**payload)
+        db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
 
