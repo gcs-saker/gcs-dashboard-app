@@ -1,0 +1,59 @@
+.realtime-player {
+  display: grid;
+  grid-template-rows: auto minmax(220px, 1fr);
+  min-height: 260px;
+  overflow: hidden;
+  border: 1px solid rgba(74, 144, 196, 0.45);
+  background: #05090f;
+  color: #dce8f4;
+}
+
+.realtime-player__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(74, 144, 196, 0.3);
+  font-size: 12px;
+}
+
+.realtime-player__badge,
+.realtime-player__stream,
+.realtime-player__mode {
+  min-height: 24px;
+  padding: 4px 8px;
+  border: 1px solid rgba(126, 180, 222, 0.45);
+  background: rgba(5, 9, 15, 0.78);
+}
+
+.realtime-player__badge {
+  text-transform: uppercase;
+}
+
+.realtime-player__badge--online,
+.realtime-player__badge--registered {
+  border-color: rgba(86, 211, 124, 0.8);
+  color: #8df0a7;
+}
+
+.realtime-player__badge--offline {
+  border-color: rgba(255, 111, 111, 0.75);
+  color: #ffb0a6;
+}
+
+.realtime-player__placeholder {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  padding: 16px;
+  background: #03080d;
+  color: #8fc7ff;
+  font-size: 13px;
+}
+
+.realtime-player__placeholder--offline,
+.realtime-player__placeholder--error {
+  color: #ffb0a6;
+}
