@@ -34,8 +34,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Audit backend dependencies
+        run: |
+          python -m pip_audit -r requirements.txt --no-deps --disable-pip
+          python -m pip_audit --local
+
       - name: Compile backend modules
-        run: python -m compileall .
+        run: python -m compileall -q -x '(^|/)(venv|__pycache__|.pytest_cache)/' .
+
+      - name: Typecheck backend streaming modules
+        run: python -m mypy config.py model/stream_model.py modules/streaming api/stream.py mqtt/client.py
 
       - name: Run backend tests with coverage
         run: python -m pytest tests --cov=. --cov-report=term-missing
@@ -59,6 +67,12 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=moderate
+
+      - name: Typecheck frontend
+        run: npm run typecheck
 
       - name: Run frontend tests with coverage
         run: npm run test:coverage

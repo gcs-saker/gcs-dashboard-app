@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
+import jwt
 
 SECRET_KEY = "supersecret"   # 환경변수로 관리 권장
 ALGORITHM = "HS256"
@@ -17,7 +17,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
                 detail="Invalid token",
             )
         return {"username": username}
-    except JWTError:
+    except jwt.PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
