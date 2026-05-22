@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+backend/venv/
+
+# Node / frontend
+node_modules/
+gcs-dashboard/node_modules/
+gcs-dashboard/dist/
+gcs-dashboard/coverage/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
