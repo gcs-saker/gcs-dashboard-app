@@ -37,6 +37,9 @@ jobs:
       - name: Compile backend modules
         run: python -m compileall .
 
+      - name: Run backend tests with coverage
+        run: python -m pytest tests --cov=. --cov-report=term-missing
+
   frontend-build:
     name: frontend-build
     runs-on: ubuntu-latest
