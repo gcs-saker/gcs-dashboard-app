@@ -57,7 +57,7 @@ describe('App dashboard shell', () => {
     render(<App />);
 
     await userEvent.click(screen.getByRole('button', { name: /load telemetry/i }));
-    await userEvent.selectOptions(screen.getByLabelText('노드 선택:'), 'node-001');
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'node-001');
 
     expect(screen.getByText('node-001')).toBeInTheDocument();
     expect(screen.getByText(/위도: 35\.82599/)).toBeInTheDocument();
