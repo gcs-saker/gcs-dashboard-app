@@ -53,6 +53,14 @@ def test_legacy_stream_status_route_stays_available(client: TestClient):
     assert response.json() == {"stream": "ready"}
 
 
+def test_prometheus_metrics_route_stays_available(client: TestClient):
+    response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/plain")
+    assert "python_info" in response.text
+
+
 def test_stream_api_v1_returns_stream_detail(client: TestClient):
     response = client.get("/api/v1/streams/raw.sample.front")
 

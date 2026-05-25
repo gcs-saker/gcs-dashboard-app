@@ -1,18 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from api import stream, telemetry, control, event, auth, unmaned_assets
 from modules.ai_contract.router import router as mock_ai_router
-from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 app = FastAPI(
     title="GCS Backend API",
     description="드론/로봇 제어 및 영상 처리 백엔드",
     version="1.0.0",
 )
-
-# 📊 Prometheus Metrics 등록 (앱 실행 전에 해야 함)
-instrumentator = Instrumentator().instrument(app)
-instrumentator.expose(app)
 
 # 🔓 CORS 설정 (로컬 프론트엔드 React와 통신 허용)
 app.add_middleware(
@@ -36,6 +32,11 @@ app.include_router(unmaned_assets.router, prefix="/asset", tags=["Asset"])
 @app.get("/")
 def read_root():
     return {"message": "🛰️ GCS Backend API Running"}
+
+
+@app.get("/metrics", include_in_schema=False)
+def prometheus_metrics() -> Response:
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 # 🔧 uvicorn 실행 시 진입점 예시:
