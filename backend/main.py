@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api import stream, telemetry, control, event, auth, unmaned_assets
+from modules.ai_contract.router import router as mock_ai_router
 from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(
@@ -26,6 +27,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(stream.router, prefix="/stream", tags=["Stream"])
 app.include_router(stream.v1_router, prefix="/api/v1", tags=["Stream"])
+app.include_router(mock_ai_router, prefix="/api/v1", tags=["AI Mock"])
 app.include_router(telemetry.router, prefix="/telemetry", tags=["Telemetry"])
 app.include_router(control.router, prefix="/control", tags=["Control"])
 app.include_router(unmaned_assets.router, prefix="/asset", tags=["Asset"])
