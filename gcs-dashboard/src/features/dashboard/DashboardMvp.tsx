@@ -13,6 +13,7 @@ import {
   type DashboardWidgetId,
 } from "./dashboardLayout";
 import "./DashboardMvp.css";
+import { getMapFocusForStream } from "./mapFocus";
 import {
   connectDeviceToStreamSlot,
   disconnectStreamSlot,
@@ -91,6 +92,7 @@ export function DashboardMvp() {
     () => streams.find((stream) => stream.id === editingStreamId) ?? null,
     [editingStreamId, streams],
   );
+  const mapFocus = useMemo(() => getMapFocusForStream(selectedStream), [selectedStream]);
 
   const groupedAssets = useMemo(
     () =>
@@ -240,6 +242,15 @@ export function DashboardMvp() {
                 <span>{asset.label}</span>
               </button>
             ))}
+            <div
+              className={`map-focus ${mapFocus.hasGeometry ? "has-geometry" : ""}`}
+              style={mapFocus.markerStyle}
+            >
+              <span className="map-focus__cone" style={mapFocus.coneStyle} />
+              <span className="map-focus__label" data-testid="map-focus-label">
+                {mapFocus.label}
+              </span>
+            </div>
             <div className="map-compass">N</div>
           </div>
         </section>
