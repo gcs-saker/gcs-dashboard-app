@@ -102,7 +102,7 @@ def test_stream_status_values_are_validated(status):
 
 def test_stream_status_rejects_unknown_runtime_value():
     with pytest.raises(ValueError) as exc_info:
-        StreamDescriptor.from_path("raw/sample/front", status="maintenance")  # type: ignore[arg-type]
+        StreamDescriptor.from_path("raw/sample/front", status="maintenance")
 
     assert str(exc_info.value) == "stream status must be one of registered, online, offline, unknown"
 

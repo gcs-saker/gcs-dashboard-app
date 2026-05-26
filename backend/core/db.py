@@ -1,16 +1,33 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+import os
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base, sessionmaker
+
 Base = declarative_base()
 
+DEFAULT_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
-# 도커에서는 어떻게 처리할 지 물어봐야함
-DATABASE_URL = "mysql+pymysql://root:1234@localhost:3308/gcs_db"
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+@dataclass(frozen=True)
+class DatabaseSettings:
+    url: str = DEFAULT_DATABASE_URL
+
+    @classmethod
+    def from_env(cls) -> "DatabaseSettings":
+        return cls(url=os.getenv("DATABASE_URL", cls.url).strip() or cls.url)
+
+
+def get_database_url() -> str:
+    return DatabaseSettings.from_env().url
+
+
+engine = create_engine(get_database_url(), pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# 의존성 주입용
+
 def get_db():
     db = SessionLocal()
     try:
