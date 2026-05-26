@@ -181,7 +181,7 @@ describe("WebRTCPlayer", () => {
     });
 
     expect(screen.getByRole("status")).toHaveTextContent("error");
-    expect(screen.getByText("WebRTC connection failed")).toBeInTheDocument();
+    expect(screen.getByText("WebRTC connection interrupted (new/failed)")).toBeInTheDocument();
     expect(screen.getByText("ice: failed")).toBeInTheDocument();
   });
 

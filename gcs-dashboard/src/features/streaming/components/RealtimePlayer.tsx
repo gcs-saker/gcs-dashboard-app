@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { useRealtimePlayback } from "../hooks/useRealtimePlayback";
 import type { RealtimePlayerProps } from "../types";
+import { describeWebRTCFailure, isRecoverableWebRTCFailure } from "../streamReconnectPolicy";
 import { HLSFallbackPlayer } from "./HLSFallbackPlayer";
 import "./RealtimePlayer.css";
 import { WebRTCPlayer } from "./WebRTCPlayer";
@@ -11,10 +12,19 @@ export function RealtimePlayer({
   title = "Realtime stream",
   className,
   fetcher,
+  reconnectDelaysMs,
   onStatusChange,
 }: RealtimePlayerProps) {
-  const playback = useRealtimePlayback({ streamId, fetcher });
-  const { mode, streamStatus, errorMessage, playback: playbackResponse, fallbackReason } = playback;
+  const playback = useRealtimePlayback({ streamId, fetcher, reconnectDelaysMs });
+  const {
+    mode,
+    streamStatus,
+    errorMessage,
+    playback: playbackResponse,
+    fallbackReason,
+    reconnectDelayMs,
+    webrtcRetryAttempt,
+  } = playback;
   const playbackUrls = playbackResponse?.playbackUrls;
   const isOnline = streamStatus === "online" || streamStatus === "registered" || streamStatus === "unknown";
 
@@ -23,8 +33,9 @@ export function RealtimePlayer({
       mode,
       streamStatus,
       errorMessage,
+      webrtcRetryAttempt,
     });
-  }, [errorMessage, mode, onStatusChange, streamStatus]);
+  }, [errorMessage, mode, onStatusChange, streamStatus, webrtcRetryAttempt]);
 
   return (
     <section className={["realtime-player", className].filter(Boolean).join(" ")} aria-label={title}>
@@ -44,6 +55,7 @@ export function RealtimePlayer({
 
       {mode === "webrtc" ? (
         <WebRTCPlayer
+          key={`${streamId}-${webrtcRetryAttempt}`}
           whepUrl={playbackUrls?.webrtc ?? null}
           streamId={streamId}
           title={`${title} WebRTC`}
@@ -54,11 +66,18 @@ export function RealtimePlayer({
               return;
             }
 
-            if (snapshot.status === "error") {
-              playback.useHLSFallback(snapshot.errorMessage ?? "WebRTC failed. Playing HLS fallback.");
+            if (isRecoverableWebRTCFailure(snapshot)) {
+              playback.scheduleWebRTCRetry(describeWebRTCFailure(snapshot));
             }
           }}
         />
+      ) : null}
+
+      {mode === "reconnecting" ? (
+        <div className="realtime-player__placeholder realtime-player__placeholder--reconnecting" role="status" aria-live="polite">
+          reconnecting playback; retry {webrtcRetryAttempt + 1}
+          {reconnectDelayMs !== null ? ` in ${reconnectDelayMs}ms` : ""}
+        </div>
       ) : null}
 
       {mode === "hls" ? (

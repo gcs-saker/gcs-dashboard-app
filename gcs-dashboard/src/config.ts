@@ -11,6 +11,17 @@ export function apiUrl(path: string): string {
   return `${API_BASE_URL.replace(/\/$/, "")}${normalizedPath}`;
 }
 
+export function apiV1Url(path: string): string {
+  return buildApiV1Url(API_BASE_URL, path);
+}
+
+export function buildApiV1Url(apiBaseUrl: string, path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const apiBase = apiBaseUrl.replace(/\/$/, "");
+  const v1Base = apiBase.endsWith("/api") ? `${apiBase}/v1` : `${apiBase}/api/v1`;
+  return `${v1Base}${normalizedPath}`;
+}
+
 export function hlsStreamUrl(streamId: string): string {
   return `${HLS_BASE_URL.replace(/\/$/, "")}/${streamId}/index.m3u8`;
 }

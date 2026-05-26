@@ -53,12 +53,13 @@ export interface StreamPlaybackResponse {
   playbackUrls: StreamPlaybackUrls;
 }
 
-export type RealtimePlayerMode = "loading" | "webrtc" | "hls" | "offline" | "error";
+export type RealtimePlayerMode = "loading" | "webrtc" | "reconnecting" | "hls" | "offline" | "error";
 
 export interface RealtimePlayerSnapshot {
   mode: RealtimePlayerMode;
   streamStatus: StreamRuntimeStatus | "unknown";
   errorMessage: string | null;
+  webrtcRetryAttempt?: number;
 }
 
 export interface RealtimePlayerProps {
@@ -66,5 +67,6 @@ export interface RealtimePlayerProps {
   title?: string;
   className?: string;
   fetcher?: typeof fetch;
+  reconnectDelaysMs?: readonly number[];
   onStatusChange?: (snapshot: RealtimePlayerSnapshot) => void;
 }

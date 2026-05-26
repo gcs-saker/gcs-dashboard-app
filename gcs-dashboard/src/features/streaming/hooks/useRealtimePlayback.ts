@@ -1,16 +1,23 @@
 import { useEffect, useReducer } from "react";
 
-import { apiUrl } from "../../../config";
+import { apiV1Url } from "../../../config";
+import { buildAuthHeaders } from "../../auth/authApi";
 import type {
   RealtimePlayerMode,
   RealtimePlayerSnapshot,
   StreamPlaybackResponse,
   StreamRuntimeStatus,
 } from "../types";
+import {
+  DEFAULT_WEBRTC_RECONNECT_DELAYS_MS,
+  getNextWebRTCRetryDelay,
+  shouldFallbackAfterWebRTCRetry,
+} from "../streamReconnectPolicy";
 
 interface UseRealtimePlaybackOptions {
   streamId: string;
   fetcher?: typeof fetch;
+  reconnectDelaysMs?: readonly number[];
 }
 
 type RealtimeAction =
@@ -18,12 +25,16 @@ type RealtimeAction =
   | { type: "loaded"; playback: StreamPlaybackResponse }
   | { type: "use-webrtc" }
   | { type: "use-hls"; reason: string }
+  | { type: "schedule-webrtc-retry"; reason: string; reconnectDelaysMs: readonly number[] }
+  | { type: "retry-webrtc" }
   | { type: "offline"; playback: StreamPlaybackResponse }
   | { type: "error"; message: string; streamStatus?: StreamRuntimeStatus | "unknown" };
 
 interface RealtimeState extends RealtimePlayerSnapshot {
   playback: StreamPlaybackResponse | null;
   fallbackReason: string;
+  reconnectDelayMs: number | null;
+  webrtcRetryAttempt: number;
 }
 
 const initialState: RealtimeState = {
@@ -32,14 +43,18 @@ const initialState: RealtimeState = {
   errorMessage: null,
   playback: null,
   fallbackReason: "WebRTC failed. Playing HLS fallback.",
+  reconnectDelayMs: null,
+  webrtcRetryAttempt: 0,
 };
 
 export function useRealtimePlayback({
   streamId,
   fetcher = fetch,
+  reconnectDelaysMs = DEFAULT_WEBRTC_RECONNECT_DELAYS_MS,
 }: UseRealtimePlaybackOptions): RealtimeState & {
   useWebRTC: () => void;
   useHLSFallback: (reason: string) => void;
+  scheduleWebRTCRetry: (reason: string) => void;
 } {
   const [state, dispatch] = useReducer(realtimeReducer, initialState);
 
@@ -73,10 +88,26 @@ export function useRealtimePlayback({
     };
   }, [fetcher, streamId]);
 
+  useEffect(() => {
+    if (state.mode !== "reconnecting" || state.reconnectDelayMs === null) {
+      return undefined;
+    }
+
+    const timeoutId = globalThis.setTimeout(() => {
+      dispatch({ type: "retry-webrtc" });
+    }, state.reconnectDelayMs);
+
+    return () => {
+      globalThis.clearTimeout(timeoutId);
+    };
+  }, [state.mode, state.reconnectDelayMs]);
+
   return {
     ...state,
     useWebRTC: () => dispatch({ type: "use-webrtc" }),
     useHLSFallback: (reason: string) => dispatch({ type: "use-hls", reason }),
+    scheduleWebRTCRetry: (reason: string) =>
+      dispatch({ type: "schedule-webrtc-retry", reason, reconnectDelaysMs }),
   };
 }
 
@@ -93,6 +124,8 @@ function realtimeReducer(state: RealtimeState, action: RealtimeAction): Realtime
         streamStatus: action.playback.status,
         errorMessage: null,
         playback: action.playback,
+        reconnectDelayMs: null,
+        webrtcRetryAttempt: 0,
         fallbackReason: action.playback.playbackUrls.webrtc
           ? initialState.fallbackReason
           : "WebRTC URL is unavailable. Playing HLS fallback.",
@@ -102,6 +135,8 @@ function realtimeReducer(state: RealtimeState, action: RealtimeAction): Realtime
         ...state,
         mode: "webrtc",
         errorMessage: null,
+        reconnectDelayMs: null,
+        webrtcRetryAttempt: 0,
       };
     case "use-hls":
       return {
@@ -109,6 +144,34 @@ function realtimeReducer(state: RealtimeState, action: RealtimeAction): Realtime
         mode: state.playback?.playbackUrls.hls ? "hls" : "error",
         errorMessage: state.playback?.playbackUrls.hls ? null : action.reason,
         fallbackReason: action.reason,
+        reconnectDelayMs: null,
+      };
+    case "schedule-webrtc-retry": {
+      if (!state.playback?.playbackUrls.hls || shouldFallbackAfterWebRTCRetry(state.webrtcRetryAttempt, action.reconnectDelaysMs)) {
+        return {
+          ...state,
+          mode: state.playback?.playbackUrls.hls ? "hls" : "error",
+          errorMessage: state.playback?.playbackUrls.hls ? null : action.reason,
+          fallbackReason: action.reason,
+          reconnectDelayMs: null,
+        };
+      }
+
+      return {
+        ...state,
+        mode: "reconnecting",
+        errorMessage: action.reason,
+        fallbackReason: action.reason,
+        reconnectDelayMs: getNextWebRTCRetryDelay(state.webrtcRetryAttempt, action.reconnectDelaysMs),
+      };
+    }
+    case "retry-webrtc":
+      return {
+        ...state,
+        mode: "webrtc",
+        errorMessage: null,
+        reconnectDelayMs: null,
+        webrtcRetryAttempt: state.webrtcRetryAttempt + 1,
       };
     case "offline":
       return {
@@ -117,6 +180,7 @@ function realtimeReducer(state: RealtimeState, action: RealtimeAction): Realtime
         streamStatus: action.playback.status,
         errorMessage: null,
         playback: action.playback,
+        reconnectDelayMs: null,
       };
     case "error":
       return {
@@ -133,11 +197,11 @@ async function fetchPlayback(
   fetcher: typeof fetch,
   signal: AbortSignal,
 ): Promise<StreamPlaybackResponse> {
-  const response = await fetcher(apiUrl(`/v1/streams/${encodeURIComponent(streamId)}/playback`), {
+  const response = await fetcher(apiV1Url(`/streams/${encodeURIComponent(streamId)}/playback`), {
     method: "GET",
-    headers: {
+    headers: buildAuthHeaders({
       Accept: "application/json",
-    },
+    }),
     signal,
   });
 
