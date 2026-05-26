@@ -17,6 +17,18 @@ describe("DashboardMvp", () => {
     expect(screen.getByRole("heading", { name: "AI 결과" })).toBeInTheDocument();
   });
 
+  test("marks dashboard regions with widget ids for custom layout editing", () => {
+    const { container } = render(<DashboardMvp />);
+
+    expect(container.querySelector('[data-widget-id="asset-tree"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-widget-id="tactical-map"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-widget-id="selected-stream"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-widget-id="stream-grid"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-widget-id="system-status"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-widget-id="telemetry-panel"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-widget-id="ai-results"]')).toBeInTheDocument();
+  });
+
   test("shows all MVP stream slots and changes the selected stream", async () => {
     const user = userEvent.setup();
     render(<DashboardMvp />);

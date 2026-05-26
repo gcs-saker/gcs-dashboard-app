@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { SelectedStreamPanel } from "./components/SelectedStreamPanel";
 import { StreamGrid } from "./components/StreamGrid";
+import { getDashboardWidgetDefinition } from "./dashboardLayout";
 import "./DashboardMvp.css";
 import { DEFAULT_DASHBOARD_STREAMS } from "./streamTypes";
 
@@ -54,6 +55,11 @@ function statusClass(status: AssetStatus): string {
 }
 
 export function DashboardMvp() {
+  const assetTreeWidget = getDashboardWidgetDefinition("asset-tree");
+  const tacticalMapWidget = getDashboardWidgetDefinition("tactical-map");
+  const systemStatusWidget = getDashboardWidgetDefinition("system-status");
+  const telemetryWidget = getDashboardWidgetDefinition("telemetry-panel");
+  const aiResultsWidget = getDashboardWidgetDefinition("ai-results");
   const [selectedStreamId, setSelectedStreamId] = useState(DEFAULT_DASHBOARD_STREAMS[0].id);
   const selectedStream = useMemo(
     () =>
@@ -86,7 +92,12 @@ export function DashboardMvp() {
       </header>
 
       <section className="ops-dashboard__grid">
-        <aside className="ops-panel asset-tree" aria-labelledby="asset-tree-title">
+        <aside
+          aria-labelledby="asset-tree-title"
+          className="ops-panel asset-tree"
+          data-widget-id={assetTreeWidget.id}
+          style={{ minHeight: assetTreeWidget.minHeight, minWidth: assetTreeWidget.minWidth }}
+        >
           <div className="ops-panel__header">
             <h2 id="asset-tree-title">자산트리</h2>
             <span className="ops-badge is-online">LIVE</span>
@@ -109,7 +120,12 @@ export function DashboardMvp() {
           ))}
         </aside>
 
-        <section className="ops-panel tactical-map" aria-labelledby="map-title">
+        <section
+          aria-labelledby="map-title"
+          className="ops-panel tactical-map"
+          data-widget-id={tacticalMapWidget.id}
+          style={{ minHeight: tacticalMapWidget.minHeight, minWidth: tacticalMapWidget.minWidth }}
+        >
           <div className="ops-panel__header">
             <h2 id="map-title">지도</h2>
             <span className="ops-badge">500 m</span>
@@ -143,7 +159,12 @@ export function DashboardMvp() {
           streams={DEFAULT_DASHBOARD_STREAMS}
         />
 
-        <section className="ops-panel system-status" aria-labelledby="status-title">
+        <section
+          aria-labelledby="status-title"
+          className="ops-panel system-status"
+          data-widget-id={systemStatusWidget.id}
+          style={{ minHeight: systemStatusWidget.minHeight, minWidth: systemStatusWidget.minWidth }}
+        >
           <div className="ops-panel__header">
             <h2 id="status-title">서버상태 / 연결상태 / 헬스체크</h2>
           </div>
@@ -160,7 +181,12 @@ export function DashboardMvp() {
           </dl>
         </section>
 
-        <section className="ops-panel telemetry-panel" aria-labelledby="telemetry-title">
+        <section
+          aria-labelledby="telemetry-title"
+          className="ops-panel telemetry-panel"
+          data-widget-id={telemetryWidget.id}
+          style={{ minHeight: telemetryWidget.minHeight, minWidth: telemetryWidget.minWidth }}
+        >
           <div className="ops-panel__header">
             <h2 id="telemetry-title">지오메트리 / 텔레메트리</h2>
           </div>
@@ -181,7 +207,12 @@ export function DashboardMvp() {
           </div>
         </section>
 
-        <section className="ops-panel ai-panel" aria-labelledby="ai-title">
+        <section
+          aria-labelledby="ai-title"
+          className="ops-panel ai-panel"
+          data-widget-id={aiResultsWidget.id}
+          style={{ minHeight: aiResultsWidget.minHeight, minWidth: aiResultsWidget.minWidth }}
+        >
           <div className="ops-panel__header">
             <h2 id="ai-title">AI 결과</h2>
             <span className="ops-badge is-warning">대기</span>
