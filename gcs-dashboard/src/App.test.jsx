@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import App from './App';
+import { clearAccessToken, storeAccessToken } from './features/auth/authStorage';
 
 vi.mock('./component/MainMap', () => ({ default: function MockMainMap({ setTelemetryMap }) {
   return (
@@ -50,7 +51,12 @@ vi.mock('./features/streaming/components/StreamingSmokeDashboard', () => ({
 }));
 
 describe('App dashboard shell', () => {
+  beforeEach(() => {
+    storeAccessToken('test-access-token');
+  });
+
   afterEach(() => {
+    clearAccessToken();
     window.history.pushState({}, '', '/');
   });
 
@@ -84,5 +90,15 @@ describe('App dashboard shell', () => {
 
     expect(screen.getByTestId('streaming-smoke-dashboard')).toBeInTheDocument();
     expect(screen.queryByTestId('hls-player')).not.toBeInTheDocument();
+  });
+
+  test('redirects unauthenticated dashboard access to login', async () => {
+    clearAccessToken();
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: '대시보드 로그인' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/login');
+    expect(window.location.search).toContain('redirect=%2F');
   });
 });

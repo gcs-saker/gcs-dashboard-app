@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from core.db import get_db
 from model.telemetry_model import TelemetryCreate, TelemetryResponse
 from sql.telemetry_sql import Telemetry
-from core.security import get_current_user
+from core.security import AuthenticatedUser, get_current_user
 
 from datetime import timedelta
 
@@ -54,7 +54,7 @@ async def receive_telemetry(data: TelemetryCreate, db: Session = Depends(get_db)
 
 # 로그인 사용자만 접근 가능
 @router.get("/all", response_model=list[TelemetryResponse])
-async def get_all_telemetry(current_user: dict = Depends(get_current_user)):
+async def get_all_telemetry(current_user: AuthenticatedUser = Depends(get_current_user)):
     telemetry = []
     for n in node_store.values():
         n["epochTime"] = format_epoch(n["epochTime"])

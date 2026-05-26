@@ -1,14 +1,17 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { clearAccessToken, storeAccessToken } from '../features/auth/authStorage';
 import ControlPanel from './ControlPanel';
 
 describe('ControlPanel', () => {
   beforeEach(() => {
+    storeAccessToken('test-access-token');
     global.fetch = vi.fn(() => Promise.resolve({ ok: true }));
   });
 
   afterEach(() => {
+    clearAccessToken();
     vi.restoreAllMocks();
   });
 
@@ -21,7 +24,10 @@ describe('ControlPanel', () => {
       '/api/control/',
       expect.objectContaining({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-access-token',
+        },
         body: JSON.stringify({ cid: 'CID001', direction: 'stop' }),
       })
     );
