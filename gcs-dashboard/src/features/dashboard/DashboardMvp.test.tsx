@@ -116,4 +116,11 @@ describe("DashboardMvp", () => {
     expect(screen.getByText("탐지")).toBeInTheDocument();
     expect(screen.getByText("처리 지연")).toBeInTheDocument();
   });
+
+  test("renders hierarchical asset tree nodes", () => {
+    render(<DashboardMvp />);
+
+    expect(screen.getByText("전방 EO")).toBeInTheDocument();
+    expect(screen.getByText("후방 AI")).toBeInTheDocument();
+  });
 });

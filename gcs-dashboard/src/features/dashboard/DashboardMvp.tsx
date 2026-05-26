@@ -5,6 +5,9 @@ import { WidgetAddDialog } from "./components/WidgetAddDialog";
 import { WidgetHeaderActions } from "./components/WidgetHeaderActions";
 import { WidgetPopout } from "./components/WidgetPopout";
 import { StreamDeviceConnectDialog } from "./components/StreamDeviceConnectDialog";
+import { AssetTreePanel } from "./components/AssetTreePanel";
+import { SystemStatusPanel } from "./components/SystemStatusPanel";
+import { DEFAULT_ASSET_TREE } from "./assetTree";
 import {
   getDashboardWidgetDefinition,
   resetDashboardLayout,
@@ -22,24 +25,6 @@ import {
 } from "./streamDevices";
 import { DEFAULT_DASHBOARD_STREAMS } from "./streamTypes";
 
-type AssetStatus = "online" | "warning" | "offline";
-
-interface AssetNode {
-  id: string;
-  label: string;
-  group: string;
-  status: AssetStatus;
-}
-
-const assets: AssetNode[] = [
-  { id: "DRN-01", label: "DRN-01", group: "드론", status: "online" },
-  { id: "DRN-02", label: "DRN-02", group: "드론", status: "online" },
-  { id: "UGV-01", label: "UGV-01", group: "지상로봇", status: "online" },
-  { id: "UGV-02", label: "UGV-02", group: "지상로봇", status: "warning" },
-  { id: "SEN-01", label: "SEN-01", group: "센서", status: "online" },
-  { id: "SEN-04", label: "SEN-04", group: "센서", status: "offline" },
-];
-
 const telemetryRows = [
   ["위도", "37.123456"],
   ["경도", "127.123456"],
@@ -48,28 +33,6 @@ const telemetryRows = [
   ["배터리", "78%"],
   ["링크", "95% / 42 ms"],
 ];
-
-const statusRows = [
-  ["서버상태", "정상", "online"],
-  ["연결 자산", "9 / 9", "online"],
-  ["네트워크", "42 ms", "online"],
-  ["헬스체크", "정상", "online"],
-];
-
-function statusText(status: AssetStatus): string {
-  switch (status) {
-    case "online":
-      return "정상";
-    case "warning":
-      return "주의";
-    case "offline":
-      return "오프라인";
-  }
-}
-
-function statusClass(status: AssetStatus): string {
-  return `is-${status}`;
-}
 
 export function DashboardMvp() {
   const assetTreeWidget = getDashboardWidgetDefinition("asset-tree");
@@ -93,15 +56,6 @@ export function DashboardMvp() {
     [editingStreamId, streams],
   );
   const mapFocus = useMemo(() => getMapFocusForStream(selectedStream), [selectedStream]);
-
-  const groupedAssets = useMemo(
-    () =>
-      assets.reduce<Record<string, AssetNode[]>>((groups, asset) => {
-        groups[asset.group] = [...(groups[asset.group] ?? []), asset];
-        return groups;
-      }, {}),
-    [],
-  );
 
   const isWidgetPinned = (widgetId: DashboardWidgetId): boolean =>
     layout.find((item) => item.id === widgetId)?.pinned ?? false;
@@ -187,29 +141,7 @@ export function DashboardMvp() {
           data-widget-id={assetTreeWidget.id}
           style={{ minHeight: assetTreeWidget.minHeight, minWidth: assetTreeWidget.minWidth }}
         >
-          <div className="ops-panel__header">
-            <h2 id="asset-tree-title">자산트리</h2>
-            <span className="ops-panel__header-actions">
-              <span className="ops-badge is-online">LIVE</span>
-              {widgetControls("asset-tree", "자산트리")}
-            </span>
-          </div>
-
-          <div className="asset-tree__root">GCS-SAKER</div>
-          {Object.entries(groupedAssets).map(([group, groupAssets]) => (
-            <div className="asset-group" key={group}>
-              <div className="asset-group__title">{group}</div>
-              <ul>
-                {groupAssets.map((asset) => (
-                  <li className="asset-node" key={asset.id}>
-                    <span className={`status-dot ${statusClass(asset.status)}`} />
-                    <span>{asset.label}</span>
-                    <span className="asset-node__status">{statusText(asset.status)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <AssetTreePanel controls={widgetControls("asset-tree", "자산트리")} root={DEFAULT_ASSET_TREE} />
         </aside>
 
         <section
@@ -233,13 +165,13 @@ export function DashboardMvp() {
               <button type="button">▧</button>
             </div>
             <div className="map-route" />
-            {assets.slice(0, 5).map((asset, index) => (
+            {["DRN-01", "DRN-02", "UGV-01", "UGV-02", "SEN-01"].map((asset, index) => (
               <button
-                className={`map-marker ${statusClass(asset.status)} marker-${index + 1}`}
-                key={asset.id}
+                className={`map-marker ${asset === "UGV-02" ? "is-warning" : "is-online"} marker-${index + 1}`}
+                key={asset}
                 type="button"
               >
-                <span>{asset.label}</span>
+                <span>{asset}</span>
               </button>
             ))}
             <div
@@ -272,21 +204,7 @@ export function DashboardMvp() {
           data-widget-id={systemStatusWidget.id}
           style={{ minHeight: systemStatusWidget.minHeight, minWidth: systemStatusWidget.minWidth }}
         >
-          <div className="ops-panel__header">
-            <h2 id="status-title">서버상태 / 연결상태 / 헬스체크</h2>
-            {widgetControls("system-status", "서버상태 / 연결상태 / 헬스체크")}
-          </div>
-          <dl>
-            {statusRows.map(([label, value, status]) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd>
-                  <span className={`status-dot is-${status}`} />
-                  {value}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <SystemStatusPanel controls={widgetControls("system-status", "서버상태 / 연결상태 / 헬스체크")} />
         </section>
 
         <section
