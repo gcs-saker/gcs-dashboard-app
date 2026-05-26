@@ -1,6 +1,7 @@
 fastapi==0.136.1
+starlette==1.0.1
 uvicorn[standard]==0.29.0
-prometheus-fastapi-instrumentator==7.1.0
+prometheus-client==0.25.0
 
 sqlalchemy==2.0.29
 pymysql==1.1.1
