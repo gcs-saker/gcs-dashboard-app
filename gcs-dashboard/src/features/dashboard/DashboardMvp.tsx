@@ -1,22 +1,16 @@
 import { useMemo, useState } from "react";
+import { SelectedStreamPanel } from "./components/SelectedStreamPanel";
+import { StreamGrid } from "./components/StreamGrid";
 import "./DashboardMvp.css";
+import { DEFAULT_DASHBOARD_STREAMS } from "./streamTypes";
 
 type AssetStatus = "online" | "warning" | "offline";
-type StreamStatus = "online" | "fallback" | "offline" | "error";
 
 interface AssetNode {
   id: string;
   label: string;
   group: string;
   status: AssetStatus;
-}
-
-interface StreamCard {
-  id: string;
-  title: string;
-  status: StreamStatus;
-  mode: "EO" | "IR" | "AI" | "MAP";
-  detail: string;
 }
 
 const assets: AssetNode[] = [
@@ -26,13 +20,6 @@ const assets: AssetNode[] = [
   { id: "UGV-02", label: "UGV-02", group: "지상로봇", status: "warning" },
   { id: "SEN-01", label: "SEN-01", group: "센서", status: "online" },
   { id: "SEN-04", label: "SEN-04", group: "센서", status: "offline" },
-];
-
-const streams: StreamCard[] = [
-  { id: "raw.sample.front", title: "스트리밍 1", status: "online", mode: "EO", detail: "전방 EO / raw.sample.front" },
-  { id: "raw.sample.thermal", title: "스트리밍 2", status: "fallback", mode: "IR", detail: "열화상 fallback / raw.sample.thermal" },
-  { id: "raw.sample.rear", title: "스트리밍 3", status: "online", mode: "AI", detail: "AI 감지 overlay / raw.sample.rear" },
-  { id: "raw.local.webcam", title: "스트리밍 4", status: "offline", mode: "MAP", detail: "로컬 웹캠 대기 / raw.local.webcam" },
 ];
 
 const telemetryRows = [
@@ -51,29 +38,27 @@ const statusRows = [
   ["헬스체크", "정상", "online"],
 ];
 
-function statusText(status: StreamStatus | AssetStatus): string {
+function statusText(status: AssetStatus): string {
   switch (status) {
     case "online":
       return "정상";
     case "warning":
       return "주의";
-    case "fallback":
-      return "Fallback";
     case "offline":
       return "오프라인";
-    case "error":
-      return "오류";
   }
 }
 
-function statusClass(status: StreamStatus | AssetStatus): string {
+function statusClass(status: AssetStatus): string {
   return `is-${status}`;
 }
 
 export function DashboardMvp() {
-  const [selectedStreamId, setSelectedStreamId] = useState(streams[0].id);
+  const [selectedStreamId, setSelectedStreamId] = useState(DEFAULT_DASHBOARD_STREAMS[0].id);
   const selectedStream = useMemo(
-    () => streams.find((stream) => stream.id === selectedStreamId) ?? streams[0],
+    () =>
+      DEFAULT_DASHBOARD_STREAMS.find((stream) => stream.id === selectedStreamId) ??
+      DEFAULT_DASHBOARD_STREAMS[0],
     [selectedStreamId],
   );
 
@@ -150,44 +135,13 @@ export function DashboardMvp() {
           </div>
         </section>
 
-        <section className="ops-panel selected-stream" aria-labelledby="selected-stream-title">
-          <div className="ops-panel__header">
-            <h2 id="selected-stream-title">선택 스트림</h2>
-            <span className={`ops-badge ${statusClass(selectedStream.status)}`}>
-              {statusText(selectedStream.status)}
-            </span>
-          </div>
-          <div className={`selected-stream__viewport mode-${selectedStream.mode.toLowerCase()}`}>
-            <div className="reticle" />
-            <div className="selected-stream__meta">
-              <strong>{selectedStream.title}</strong>
-              <span>{selectedStream.detail}</span>
-            </div>
-          </div>
-        </section>
+        <SelectedStreamPanel stream={selectedStream} />
 
-        <section className="stream-grid" aria-label="다중 스트림">
-          {streams.map((stream) => (
-            <button
-              aria-label={`${stream.title} 선택`}
-              className={`stream-card ${stream.id === selectedStreamId ? "is-selected" : ""}`}
-              key={stream.id}
-              onClick={() => setSelectedStreamId(stream.id)}
-              type="button"
-            >
-              <span className="stream-card__topline">
-                <strong>{stream.title}</strong>
-                <span className={`ops-badge ${statusClass(stream.status)}`}>
-                  {statusText(stream.status)}
-                </span>
-              </span>
-              <span className={`stream-card__visual mode-${stream.mode.toLowerCase()}`}>
-                <span className="reticle" />
-              </span>
-              <span className="stream-card__detail">{stream.detail}</span>
-            </button>
-          ))}
-        </section>
+        <StreamGrid
+          onSelectStream={setSelectedStreamId}
+          selectedStreamId={selectedStreamId}
+          streams={DEFAULT_DASHBOARD_STREAMS}
+        />
 
         <section className="ops-panel system-status" aria-labelledby="status-title">
           <div className="ops-panel__header">
