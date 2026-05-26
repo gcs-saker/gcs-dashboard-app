@@ -22,6 +22,7 @@ M2의 핵심 방향은 실제 서버 배포를 바로 시작하지 않고, 초�
 | --- | --- | --- | --- | --- |
 | M2-01 | #25 | Server-01/Server-02 현재 상태 점검 | 기준선 | 서버 기준선 점검표 |
 | M2-02 | #26 | 기존 Saker 서버 백업 | 기준선 | 백업 목록, rollback 명령 초안 |
+| M2-02a | #105 | 서버 보안 점검 및 하드닝 계획 수립 | 보안 기준 | 보안 하드닝 계획 |
 | M2-03 | #99 | 운영 장애 대응 Runbook 초안 작성 | 장애 대응 설계 | 운영 장애 대응 Runbook 초안 |
 | M2-04 | #100 | Backend/MediaMTX health readiness 기준 정리 | 장애 감지 기준 | health/readiness 기준서 |
 | M2-05 | #31 | Docker env 주입 구조 정리 | 배포 전 준비 | env/secret 분리표 |
@@ -42,7 +43,7 @@ M2의 핵심 방향은 실제 서버 배포를 바로 시작하지 않고, 초�
 
 실제 서버에 서비스를 띄우는 작업은 `M2-15`부터 시작한다.
 
-- `M2-01`~`M2-14`: 설계, 정책, 로컬 검증, UI/기능 구현, failure smoke, 로컬 웹캠 WebRTC 테스트
+- `M2-01`~`M2-14`: 기준선, 백업, 보안 하드닝 계획, 설계, 정책, 로컬 검증, UI/기능 구현, failure smoke, 로컬/휴대폰 카메라 WebRTC 테스트
 - `M2-15`: Server-02 staging 실제 배포
 - `M2-16`: Server-01 production 후보 실제 배포
 - `M2-17`: v0.2.0 release 준비
@@ -53,13 +54,15 @@ M2의 핵심 방향은 실제 서버 배포를 바로 시작하지 않고, 초�
 
 ### 1단계: 기준선과 백업
 
-대상 이슈: #25, #26
+대상 이슈: #25, #26, #105
 
 완료 기준:
 
 - Server-01/Server-02의 OS, Docker, disk, memory, CPU, static IP 상태가 기록된다.
 - 기존 Saker compose, env, nginx, DB, MediaMTX 설정이 백업된다.
 - rollback 명령 초안이 기록된다.
+- 서버 보안 도구, 방화벽, SSH hardening, Docker 권한 정책, 악성코드 점검 계획이 정리된다.
+- 서버 상세 인벤토리는 비공개로 보관하고 GitHub에는 sanitized 결과만 기록한다.
 
 ### 2단계: 운영 장애 대응 설계
 
