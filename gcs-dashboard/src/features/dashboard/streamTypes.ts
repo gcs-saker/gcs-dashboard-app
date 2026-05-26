@@ -16,6 +16,18 @@ export interface DashboardStreamSlot {
   status: DashboardStreamStatus;
   mode: DashboardStreamMode;
   detail: string;
+  connectedDeviceId?: string | null;
+  streamPath?: string | null;
+  geometry?: {
+    lat: number;
+    lng: number;
+    altitudeM: number;
+    headingDeg: number;
+    pitchDeg: number;
+    rollDeg: number;
+    yawDeg: number;
+    fovDeg: number;
+  } | null;
 }
 
 export interface StreamWidgetDefinition {

@@ -80,6 +80,29 @@ describe("DashboardMvp", () => {
     await user.click(screen.getByRole("button", { name: "스트리밍 3 선택" }));
 
     expect(screen.getAllByText("AI 감지 overlay / raw.sample.rear")).toHaveLength(2);
+    expect(screen.getByRole("dialog", { name: "스트리밍 3 장비 연결" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "변경 취소" }));
+  });
+
+  test("connects, cancels, and disconnects stream devices through the slot dialog", async () => {
+    const user = userEvent.setup();
+    render(<DashboardMvp />);
+
+    await user.click(screen.getByRole("button", { name: "스트리밍 4 선택" }));
+
+    expect(screen.getByRole("dialog", { name: "스트리밍 4 장비 연결" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /DRN-01 전방 EO/ }));
+
+    expect(screen.queryByRole("dialog", { name: "스트리밍 4 장비 연결" })).not.toBeInTheDocument();
+    expect(screen.getAllByText("DRN-01 전방 EO / raw.sample.front")).toHaveLength(2);
+    expect(screen.getByRole("status")).toHaveTextContent("스트리밍 장비 연결됨");
+
+    await user.click(screen.getByRole("button", { name: "스트리밍 4 선택" }));
+    await user.click(screen.getByRole("button", { name: "연결 해제" }));
+
+    expect(screen.getAllByText("장비 미연결")).toHaveLength(2);
+    expect(screen.getByRole("status")).toHaveTextContent("스트리밍 장비 연결 해제됨");
   });
 
   test("renders operational status placeholders needed before live backend wiring", () => {

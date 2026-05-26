@@ -645,6 +645,10 @@
   padding: 18px;
 }
 
+.stream-connect-dialog__device {
+  cursor: pointer;
+}
+
 @media (max-width: 1320px) {
   .ops-dashboard {
     overflow: auto;

@@ -4,6 +4,7 @@ import { StreamGrid } from "./components/StreamGrid";
 import { WidgetAddDialog } from "./components/WidgetAddDialog";
 import { WidgetHeaderActions } from "./components/WidgetHeaderActions";
 import { WidgetPopout } from "./components/WidgetPopout";
+import { StreamDeviceConnectDialog } from "./components/StreamDeviceConnectDialog";
 import {
   getDashboardWidgetDefinition,
   resetDashboardLayout,
@@ -12,6 +13,12 @@ import {
   type DashboardWidgetId,
 } from "./dashboardLayout";
 import "./DashboardMvp.css";
+import {
+  connectDeviceToStreamSlot,
+  disconnectStreamSlot,
+  MOCK_STREAM_DEVICES,
+  type StreamDeviceOption,
+} from "./streamDevices";
 import { DEFAULT_DASHBOARD_STREAMS } from "./streamTypes";
 
 type AssetStatus = "online" | "warning" | "offline";
@@ -73,12 +80,16 @@ export function DashboardMvp() {
   const [isWidgetDialogOpen, setIsWidgetDialogOpen] = useState(false);
   const [popoutWidgetId, setPopoutWidgetId] = useState<DashboardWidgetId | null>(null);
   const [layoutMessage, setLayoutMessage] = useState("기본 레이아웃");
+  const [streams, setStreams] = useState(() => DEFAULT_DASHBOARD_STREAMS);
   const [selectedStreamId, setSelectedStreamId] = useState(DEFAULT_DASHBOARD_STREAMS[0].id);
+  const [editingStreamId, setEditingStreamId] = useState<string | null>(null);
   const selectedStream = useMemo(
-    () =>
-      DEFAULT_DASHBOARD_STREAMS.find((stream) => stream.id === selectedStreamId) ??
-      DEFAULT_DASHBOARD_STREAMS[0],
-    [selectedStreamId],
+    () => streams.find((stream) => stream.id === selectedStreamId) ?? streams[0],
+    [selectedStreamId, streams],
+  );
+  const editingStream = useMemo(
+    () => streams.find((stream) => stream.id === editingStreamId) ?? null,
+    [editingStreamId, streams],
   );
 
   const groupedAssets = useMemo(
@@ -114,6 +125,33 @@ export function DashboardMvp() {
       widgetId={widgetId}
     />
   );
+
+  const openStreamConnection = (streamId: string): void => {
+    setSelectedStreamId(streamId);
+    setEditingStreamId(streamId);
+    setLayoutMessage("스트림 슬롯 선택됨");
+  };
+
+  const connectStreamDevice = (device: StreamDeviceOption): void => {
+    setStreams((current) =>
+      current.map((stream) =>
+        stream.id === editingStreamId ? connectDeviceToStreamSlot(stream, device) : stream,
+      ),
+    );
+    if (editingStreamId) {
+      setSelectedStreamId(editingStreamId);
+    }
+    setEditingStreamId(null);
+    setLayoutMessage("스트리밍 장비 연결됨");
+  };
+
+  const disconnectCurrentStreamSlot = (): void => {
+    setStreams((current) =>
+      current.map((stream) => (stream.id === editingStreamId ? disconnectStreamSlot(stream) : stream)),
+    );
+    setEditingStreamId(null);
+    setLayoutMessage("스트리밍 장비 연결 해제됨");
+  };
 
   return (
     <main className="ops-dashboard" aria-label="Field Ops Dashboard MVP">
@@ -212,9 +250,9 @@ export function DashboardMvp() {
         />
 
         <StreamGrid
-          onSelectStream={setSelectedStreamId}
+          onSelectStream={openStreamConnection}
           selectedStreamId={selectedStreamId}
-          streams={DEFAULT_DASHBOARD_STREAMS}
+          streams={streams}
         />
 
         <section
@@ -316,6 +354,19 @@ export function DashboardMvp() {
         <WidgetPopout
           onClose={() => setPopoutWidgetId(null)}
           widget={getDashboardWidgetDefinition(popoutWidgetId)}
+        />
+      ) : null}
+
+      {editingStream ? (
+        <StreamDeviceConnectDialog
+          devices={MOCK_STREAM_DEVICES}
+          onCancel={() => {
+            setEditingStreamId(null);
+            setLayoutMessage("스트림 연결 변경 취소됨");
+          }}
+          onConnect={connectStreamDevice}
+          onDisconnect={disconnectCurrentStreamSlot}
+          stream={editingStream}
         />
       ) : null}
     </main>
