@@ -20,9 +20,9 @@ gcs-dashboard/coverage/
 .env
 .env.*
 !.env.example
+docs/operations/server-baseline-results/
 
 # OS / editor
 .DS_Store
 .idea/
 .vscode/
-
