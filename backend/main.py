@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
-from api import stream, telemetry, control, event, auth, unmaned_assets
+from api import auth, control, event, health, stream, telemetry, unmaned_assets
 from modules.ai_contract.router import router as mock_ai_router
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
@@ -21,6 +21,7 @@ app.add_middleware(
 
 # 📦 API 라우터 등록
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(health.router, tags=["Health"])
 app.include_router(stream.router, prefix="/stream", tags=["Stream"])
 app.include_router(stream.v1_router, prefix="/api/v1", tags=["Stream"])
 app.include_router(mock_ai_router, prefix="/api/v1", tags=["AI Mock"])
