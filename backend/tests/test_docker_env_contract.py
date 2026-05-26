@@ -7,6 +7,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "docker_env_check.py"
 COMPOSE_FILE = REPO_ROOT / "gcs-dashboard" / "docker-compose.yml"
+MEDIAMTX_CONFIG = REPO_ROOT / "gcs-dashboard" / "mediamtx.yml"
 DASHBOARD_DOCKERFILE = REPO_ROOT / "gcs-dashboard" / "Dockerfile"
 DASHBOARD_DOCKERIGNORE = REPO_ROOT / "gcs-dashboard" / ".dockerignore"
 BACKEND_DOCKERIGNORE = REPO_ROOT / "backend" / ".dockerignore"
@@ -40,6 +41,9 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["backend"]["environment"]["MEDIAMTX_PUBLIC_WEBRTC_BASE_URL"].startswith("${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:")
     assert services["nginx"]["build"]["args"]["VITE_API_BASE_URL"] == "${VITE_API_BASE_URL:-/api}"
     assert services["nginx"]["build"]["args"]["VITE_HLS_BASE_URL"] == "${VITE_HLS_BASE_URL:-/hls}"
+    assert services["nginx"]["build"]["args"]["VITE_LOCAL_WEBCAM_WHIP_URL"].startswith(
+        "${VITE_LOCAL_WEBCAM_WHIP_URL:"
+    )
 
 
 def test_compose_keeps_mediamtx_management_ports_private_and_mounts_config_as_file() -> None:
@@ -53,6 +57,7 @@ def test_compose_keeps_mediamtx_management_ports_private_and_mounts_config_as_fi
         "target": "/mediamtx.yml",
         "read_only": True,
     } in mediamtx["volumes"]
+    assert MEDIAMTX_CONFIG.is_file()
 
 
 def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
@@ -61,6 +66,7 @@ def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
     assert "FROM node:22 AS builder" in dockerfile
     assert "ARG VITE_API_BASE_URL=/api" in dockerfile
     assert "ARG VITE_HLS_BASE_URL=/hls" in dockerfile
+    assert "ARG VITE_LOCAL_WEBCAM_WHIP_URL=http://localhost:8889/raw/local/webcam/whip" in dockerfile
     assert "COPY --from=builder /app/dist /usr/share/nginx/html" in dockerfile
     assert "COPY nginx.conf /etc/nginx/nginx.conf" in dockerfile
     assert "EXPOSE 3000" in dockerfile
