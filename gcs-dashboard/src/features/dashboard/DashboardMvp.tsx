@@ -1,7 +1,16 @@
 import { useMemo, useState } from "react";
 import { SelectedStreamPanel } from "./components/SelectedStreamPanel";
 import { StreamGrid } from "./components/StreamGrid";
-import { getDashboardWidgetDefinition } from "./dashboardLayout";
+import { WidgetAddDialog } from "./components/WidgetAddDialog";
+import { WidgetHeaderActions } from "./components/WidgetHeaderActions";
+import { WidgetPopout } from "./components/WidgetPopout";
+import {
+  getDashboardWidgetDefinition,
+  resetDashboardLayout,
+  setDashboardWidgetPinned,
+  type DashboardLayoutItem,
+  type DashboardWidgetId,
+} from "./dashboardLayout";
 import "./DashboardMvp.css";
 import { DEFAULT_DASHBOARD_STREAMS } from "./streamTypes";
 
@@ -60,6 +69,10 @@ export function DashboardMvp() {
   const systemStatusWidget = getDashboardWidgetDefinition("system-status");
   const telemetryWidget = getDashboardWidgetDefinition("telemetry-panel");
   const aiResultsWidget = getDashboardWidgetDefinition("ai-results");
+  const [layout, setLayout] = useState<DashboardLayoutItem[]>(() => resetDashboardLayout());
+  const [isWidgetDialogOpen, setIsWidgetDialogOpen] = useState(false);
+  const [popoutWidgetId, setPopoutWidgetId] = useState<DashboardWidgetId | null>(null);
+  const [layoutMessage, setLayoutMessage] = useState("기본 레이아웃");
   const [selectedStreamId, setSelectedStreamId] = useState(DEFAULT_DASHBOARD_STREAMS[0].id);
   const selectedStream = useMemo(
     () =>
@@ -77,18 +90,54 @@ export function DashboardMvp() {
     [],
   );
 
+  const isWidgetPinned = (widgetId: DashboardWidgetId): boolean =>
+    layout.find((item) => item.id === widgetId)?.pinned ?? false;
+
+  const toggleWidgetPin = (widgetId: DashboardWidgetId): void => {
+    const nextPinned = !isWidgetPinned(widgetId);
+    setLayout((current) => setDashboardWidgetPinned(current, widgetId, nextPinned));
+    setLayoutMessage(nextPinned ? "위젯 고정됨" : "위젯 고정 해제됨");
+  };
+
+  const resetLayout = (): void => {
+    setLayout(resetDashboardLayout());
+    setPopoutWidgetId(null);
+    setLayoutMessage("기본 레이아웃으로 초기화됨");
+  };
+
+  const widgetControls = (widgetId: DashboardWidgetId, title: string) => (
+    <WidgetHeaderActions
+      isPinned={isWidgetPinned(widgetId)}
+      onPopOut={setPopoutWidgetId}
+      onTogglePin={toggleWidgetPin}
+      title={title}
+      widgetId={widgetId}
+    />
+  );
+
   return (
     <main className="ops-dashboard" aria-label="Field Ops Dashboard MVP">
       <header className="ops-dashboard__tabs" aria-label="주요 탭">
-        <button className="ops-tab is-active" type="button">
-          대시보드
-        </button>
-        <button className="ops-tab" type="button">
-          CCTV
-        </button>
-        <button className="ops-tab" type="button">
-          이벤트로그
-        </button>
+        <nav className="ops-dashboard__tab-list">
+          <button className="ops-tab is-active" type="button">
+            대시보드
+          </button>
+          <button className="ops-tab" type="button">
+            CCTV
+          </button>
+          <button className="ops-tab" type="button">
+            이벤트로그
+          </button>
+        </nav>
+        <div className="ops-dashboard__actions">
+          <span role="status">{layoutMessage}</span>
+          <button className="ops-command-button" onClick={() => setIsWidgetDialogOpen(true)} type="button">
+            위젯 추가
+          </button>
+          <button className="ops-command-button" onClick={resetLayout} type="button">
+            초기화
+          </button>
+        </div>
       </header>
 
       <section className="ops-dashboard__grid">
@@ -100,7 +149,10 @@ export function DashboardMvp() {
         >
           <div className="ops-panel__header">
             <h2 id="asset-tree-title">자산트리</h2>
-            <span className="ops-badge is-online">LIVE</span>
+            <span className="ops-panel__header-actions">
+              <span className="ops-badge is-online">LIVE</span>
+              {widgetControls("asset-tree", "자산트리")}
+            </span>
           </div>
 
           <div className="asset-tree__root">GCS-SAKER</div>
@@ -128,7 +180,10 @@ export function DashboardMvp() {
         >
           <div className="ops-panel__header">
             <h2 id="map-title">지도</h2>
-            <span className="ops-badge">500 m</span>
+            <span className="ops-panel__header-actions">
+              <span className="ops-badge">500 m</span>
+              {widgetControls("tactical-map", "지도")}
+            </span>
           </div>
           <div className="tactical-map__canvas">
             <div className="map-toolbar" aria-label="지도 도구">
@@ -151,7 +206,10 @@ export function DashboardMvp() {
           </div>
         </section>
 
-        <SelectedStreamPanel stream={selectedStream} />
+        <SelectedStreamPanel
+          controls={widgetControls("selected-stream", "선택 스트림")}
+          stream={selectedStream}
+        />
 
         <StreamGrid
           onSelectStream={setSelectedStreamId}
@@ -167,6 +225,7 @@ export function DashboardMvp() {
         >
           <div className="ops-panel__header">
             <h2 id="status-title">서버상태 / 연결상태 / 헬스체크</h2>
+            {widgetControls("system-status", "서버상태 / 연결상태 / 헬스체크")}
           </div>
           <dl>
             {statusRows.map(([label, value, status]) => (
@@ -189,6 +248,7 @@ export function DashboardMvp() {
         >
           <div className="ops-panel__header">
             <h2 id="telemetry-title">지오메트리 / 텔레메트리</h2>
+            {widgetControls("telemetry-panel", "지오메트리 / 텔레메트리")}
           </div>
           <div className="telemetry-panel__body">
             <div className="telemetry-orbit">
@@ -215,7 +275,10 @@ export function DashboardMvp() {
         >
           <div className="ops-panel__header">
             <h2 id="ai-title">AI 결과</h2>
-            <span className="ops-badge is-warning">대기</span>
+            <span className="ops-panel__header-actions">
+              <span className="ops-badge is-warning">대기</span>
+              {widgetControls("ai-results", "AI 결과")}
+            </span>
           </div>
           <ul>
             <li>
@@ -233,6 +296,28 @@ export function DashboardMvp() {
           </ul>
         </section>
       </section>
+
+      {isWidgetDialogOpen ? (
+        <WidgetAddDialog
+          layout={layout}
+          onApply={() => {
+            setIsWidgetDialogOpen(false);
+            setLayoutMessage("레이아웃 변경 적용됨");
+          }}
+          onCancel={() => {
+            setIsWidgetDialogOpen(false);
+            setLayoutMessage("레이아웃 변경 취소됨");
+          }}
+          onReset={resetLayout}
+        />
+      ) : null}
+
+      {popoutWidgetId ? (
+        <WidgetPopout
+          onClose={() => setPopoutWidgetId(null)}
+          widget={getDashboardWidgetDefinition(popoutWidgetId)}
+        />
+      ) : null}
     </main>
   );
 }

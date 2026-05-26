@@ -29,6 +29,44 @@ describe("DashboardMvp", () => {
     expect(container.querySelector('[data-widget-id="ai-results"]')).toBeInTheDocument();
   });
 
+  test("opens and closes the widget add dialog from the dashboard toolbar", async () => {
+    const user = userEvent.setup();
+    render(<DashboardMvp />);
+
+    await user.click(screen.getByRole("button", { name: "위젯 추가" }));
+
+    expect(screen.getByRole("dialog", { name: "위젯 추가" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /지도/ })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "취소" }));
+
+    expect(screen.queryByRole("dialog", { name: "위젯 추가" })).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("레이아웃 변경 취소됨");
+  });
+
+  test("pins and pops out dashboard widgets", async () => {
+    const user = userEvent.setup();
+    render(<DashboardMvp />);
+
+    const assetTools = screen.getByLabelText("자산트리 위젯 도구");
+    const pinButton = assetTools.querySelector('button[title="자산트리 고정"]');
+    const popoutButton = assetTools.querySelector('button[title="자산트리 팝아웃"]');
+
+    expect(pinButton).not.toBeNull();
+    expect(popoutButton).not.toBeNull();
+
+    await user.click(pinButton as HTMLButtonElement);
+
+    expect(pinButton).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("status")).toHaveTextContent("위젯 고정됨");
+
+    await user.click(popoutButton as HTMLButtonElement);
+
+    expect(screen.getByRole("dialog", { name: "자산트리 팝아웃" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "X" }));
+    expect(screen.queryByRole("dialog", { name: "자산트리 팝아웃" })).not.toBeInTheDocument();
+  });
+
   test("shows all MVP stream slots and changes the selected stream", async () => {
     const user = userEvent.setup();
     render(<DashboardMvp />);

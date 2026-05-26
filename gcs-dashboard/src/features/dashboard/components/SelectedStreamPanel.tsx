@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { DashboardStreamSlot } from "../streamTypes";
 import {
   getDashboardStreamStatusClass,
@@ -7,9 +8,10 @@ import {
 
 interface SelectedStreamPanelProps {
   stream: DashboardStreamSlot;
+  controls?: ReactNode;
 }
 
-export function SelectedStreamPanel({ stream }: SelectedStreamPanelProps) {
+export function SelectedStreamPanel({ stream, controls }: SelectedStreamPanelProps) {
   return (
     <section
       aria-labelledby="selected-stream-title"
@@ -19,8 +21,11 @@ export function SelectedStreamPanel({ stream }: SelectedStreamPanelProps) {
     >
       <div className="ops-panel__header">
         <h2 id="selected-stream-title">선택 스트림</h2>
-        <span className={`ops-badge ${getDashboardStreamStatusClass(stream.status)}`}>
-          {getDashboardStreamStatusText(stream.status)}
+        <span className="ops-panel__header-actions">
+          <span className={`ops-badge ${getDashboardStreamStatusClass(stream.status)}`}>
+            {getDashboardStreamStatusText(stream.status)}
+          </span>
+          {controls}
         </span>
       </div>
       <div className={`selected-stream__viewport mode-${stream.mode.toLowerCase()}`}>
