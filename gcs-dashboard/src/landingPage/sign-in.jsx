@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import "../Login.scss";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { apiUrl } from "../config";
+import { storeAccessToken, storeUser } from "../features/auth/authStorage";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -14,9 +16,10 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://www.saker.ai.kr:8001/auth/login", form);
+      const res = await axios.post(apiUrl("/auth/login"), form);
       console.log("로그인 성공:", res.data);
-      localStorage.setItem("access_token", res.data.access_token);
+      storeAccessToken(res.data.access_token);
+      storeUser({ username: res.data.username, role: res.data.role });
       navigate("/");   // ✅ ControlApp으로 이동
       // ✅ 여기서 토큰 저장 후 대시보드 페이지로 이동
     } catch (err) {

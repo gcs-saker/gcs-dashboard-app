@@ -1,0 +1,91 @@
+.auth-page {
+  align-items: center;
+  background:
+    linear-gradient(rgba(6, 15, 24, 0.82), rgba(6, 15, 24, 0.88)),
+    #07131e;
+  color: #e8f2ff;
+  display: flex;
+  min-height: 100vh;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-login {
+  background: rgba(8, 20, 31, 0.94);
+  border: 1px solid rgba(82, 170, 224, 0.58);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  display: grid;
+  gap: 18px;
+  max-width: 420px;
+  padding: 28px;
+  width: min(100%, 420px);
+}
+
+.auth-login__header {
+  display: grid;
+  gap: 6px;
+}
+
+.auth-login__header p {
+  color: #6bd37d;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.auth-login__header h1 {
+  color: #f5fbff;
+  font-size: 1.55rem;
+  margin: 0;
+}
+
+.auth-login label {
+  display: grid;
+  gap: 8px;
+}
+
+.auth-login label span {
+  color: #b8c8d9;
+  font-size: 0.9rem;
+}
+
+.auth-login input {
+  background: #07131e;
+  border: 1px solid rgba(108, 158, 194, 0.62);
+  border-radius: 6px;
+  color: #f5fbff;
+  font: inherit;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.auth-login input:focus {
+  border-color: #53b3ff;
+  outline: 2px solid rgba(83, 179, 255, 0.22);
+}
+
+.auth-login button {
+  background: #2c8ad8;
+  border: 0;
+  border-radius: 6px;
+  color: #f8fbff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  min-height: 44px;
+}
+
+.auth-login button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.auth-login__error {
+  background: rgba(207, 66, 66, 0.16);
+  border: 1px solid rgba(235, 93, 93, 0.48);
+  border-radius: 6px;
+  color: #ffb8b8;
+  margin: 0;
+  padding: 10px 12px;
+}

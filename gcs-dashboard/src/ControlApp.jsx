@@ -4,6 +4,8 @@ import MenuPanel from "./component/MenuPanel";
 import ControlMainBodyPanel from "./component/ControlMainBodyPanel";
 import CCTVMainBodyPanel from "./component/CCTVMainBodyPanel";
 import TelemetryDashboard from "./component/TelemetryDashboard";
+import { apiUrl } from "./config";
+import { buildAuthHeaders } from "./features/auth/authApi";
 
 export default function GCSRoverUI() {
   const [telemetryMap, setTelemetryMap] = useState({});
@@ -78,9 +80,8 @@ export default function GCSRoverUI() {
     });
 
     // 예시: 새 UUID가 선택될 때마다 gateway API 요청
-    const token = localStorage.getItem("access_token");
-    fetch(`http://www.saker.ai.kr:8001/asset/${selectedUUID}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    fetch(apiUrl(`/asset/${selectedUUID}`), {
+      headers: buildAuthHeaders(),
     })
       .then(res => res.json())
       .then(data => {

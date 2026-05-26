@@ -25,8 +25,8 @@ def client() -> Generator[TestClient, None, None]:
     app.dependency_overrides.clear()
 
 
-def test_stream_api_v1_lists_registered_seed_streams(client: TestClient):
-    response = client.get("/api/v1/streams")
+def test_stream_api_v1_lists_registered_seed_streams(client: TestClient, auth_headers):
+    response = client.get("/api/v1/streams", headers=auth_headers("viewer01", "viewer"))
 
     assert response.status_code == 200
     payload = response.json()
@@ -61,8 +61,11 @@ def test_prometheus_metrics_route_stays_available(client: TestClient):
     assert "python_info" in response.text
 
 
-def test_stream_api_v1_returns_stream_detail(client: TestClient):
-    response = client.get("/api/v1/streams/raw.sample.front")
+def test_stream_api_v1_returns_stream_detail(client: TestClient, auth_headers):
+    response = client.get(
+        "/api/v1/streams/raw.sample.front",
+        headers=auth_headers("viewer01", "viewer"),
+    )
 
     assert response.status_code == 200
     assert response.json() == {
@@ -84,8 +87,12 @@ def test_stream_api_v1_returns_stream_detail(client: TestClient):
 
 def test_stream_api_v1_returns_playback_urls_with_webrtc_primary_and_hls_fallback(
     client: TestClient,
+    auth_headers,
 ):
-    response = client.get("/api/v1/streams/raw.sample.front/playback")
+    response = client.get(
+        "/api/v1/streams/raw.sample.front/playback",
+        headers=auth_headers("viewer01", "viewer"),
+    )
 
     assert response.status_code == 200
     assert response.json() == {
@@ -98,8 +105,11 @@ def test_stream_api_v1_returns_playback_urls_with_webrtc_primary_and_hls_fallbac
     }
 
 
-def test_stream_api_v1_returns_stream_status(client: TestClient):
-    response = client.get("/api/v1/streams/raw.sample.front/status")
+def test_stream_api_v1_returns_stream_status(client: TestClient, auth_headers):
+    response = client.get(
+        "/api/v1/streams/raw.sample.front/status",
+        headers=auth_headers("viewer01", "viewer"),
+    )
 
     assert response.status_code == 200
     assert response.json() == {"streamId": "raw.sample.front", "status": "online"}
@@ -114,11 +124,12 @@ def test_stream_api_v1_returns_stream_status(client: TestClient):
 )
 def test_stream_api_v1_returns_clear_errors_for_invalid_or_missing_streams(
     client: TestClient,
+    auth_headers,
     path: str,
     expected_status: int,
     expected_detail: str,
 ):
-    response = client.get(path)
+    response = client.get(path, headers=auth_headers("viewer01", "viewer"))
 
     assert response.status_code == expected_status
     assert response.json() == {"detail": expected_detail}

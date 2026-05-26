@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import statistics
 import sys
 import time
@@ -18,6 +19,7 @@ sys.path.insert(0, str(BACKEND_ROOT))
 from fastapi.testclient import TestClient  # noqa: E402
 
 from api.stream import get_v1_streaming_service  # noqa: E402
+from core.security import AuthSettings, create_access_token  # noqa: E402
 from main import app  # noqa: E402
 from modules.ai_contract import AI_CONTRACT_SCHEMA_VERSION  # noqa: E402
 from modules.streaming import PlaybackUrlBuilder, PlaybackUrlBuilderConfig, StreamingService  # noqa: E402
@@ -92,6 +94,16 @@ def measure_endpoint(
 def run_perf_check(iterations: int, warmup: int) -> dict[str, object]:
     service = build_test_service()
     app.dependency_overrides[get_v1_streaming_service] = lambda: service
+    os.environ.setdefault(
+        "AUTH_JWT_SECRET",
+        "local-perf-check-secret-for-gcs-saker-at-least-32-chars",
+    )
+    token = create_access_token(
+        "perf-operator",
+        "operator",
+        settings=AuthSettings.from_env(),
+    )
+    headers = {"Authorization": f"Bearer {token}"}
 
     try:
         with TestClient(app) as client:
@@ -99,7 +111,7 @@ def run_perf_check(iterations: int, warmup: int) -> dict[str, object]:
                 measure_endpoint(
                     client,
                     "stream_list_api",
-                    lambda active_client: active_client.get("/api/v1/streams"),
+                    lambda active_client: active_client.get("/api/v1/streams", headers=headers),
                     iterations,
                     warmup,
                 ),
@@ -107,7 +119,8 @@ def run_perf_check(iterations: int, warmup: int) -> dict[str, object]:
                     client,
                     "stream_playback_api",
                     lambda active_client: active_client.get(
-                        "/api/v1/streams/raw.sample.front/playback"
+                        "/api/v1/streams/raw.sample.front/playback",
+                        headers=headers,
                     ),
                     iterations,
                     warmup,
@@ -118,6 +131,7 @@ def run_perf_check(iterations: int, warmup: int) -> dict[str, object]:
                     lambda active_client: active_client.post(
                         "/api/v1/ai/mock/detections",
                         json=AI_REQUEST,
+                        headers=headers,
                     ),
                     iterations,
                     warmup,

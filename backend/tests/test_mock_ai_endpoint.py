@@ -40,8 +40,12 @@ def valid_ai_request() -> dict[str, object]:
     }
 
 
-def test_mock_ai_endpoint_returns_contract_shaped_detection_response(client: TestClient):
-    response = client.post("/api/v1/ai/mock/detections", json=valid_ai_request())
+def test_mock_ai_endpoint_returns_contract_shaped_detection_response(client: TestClient, auth_headers):
+    response = client.post(
+        "/api/v1/ai/mock/detections",
+        json=valid_ai_request(),
+        headers=auth_headers("operator01", "operator"),
+    )
 
     assert response.status_code == 200
     payload = response.json()
@@ -59,17 +63,22 @@ def test_mock_ai_endpoint_returns_contract_shaped_detection_response(client: Tes
     }
 
 
-def test_mock_ai_endpoint_supports_latency_simulation_option(client: TestClient):
-    response = client.post("/api/v1/ai/mock/detections?latencyMs=1", json=valid_ai_request())
+def test_mock_ai_endpoint_supports_latency_simulation_option(client: TestClient, auth_headers):
+    response = client.post(
+        "/api/v1/ai/mock/detections?latencyMs=1",
+        json=valid_ai_request(),
+        headers=auth_headers("operator01", "operator"),
+    )
 
     assert response.status_code == 200
     assert response.json()["schemaVersion"] == AI_CONTRACT_SCHEMA_VERSION
 
 
-def test_mock_ai_endpoint_supports_error_simulation_option(client: TestClient):
+def test_mock_ai_endpoint_supports_error_simulation_option(client: TestClient, auth_headers):
     response = client.post(
         "/api/v1/ai/mock/detections?simulateError=true",
         json=valid_ai_request(),
+        headers=auth_headers("operator01", "operator"),
     )
 
     assert response.status_code == 503
@@ -82,21 +91,27 @@ def test_mock_ai_endpoint_supports_error_simulation_option(client: TestClient):
     }
 
 
-def test_mock_ai_endpoint_validates_contract_payload(client: TestClient):
+def test_mock_ai_endpoint_validates_contract_payload(client: TestClient, auth_headers):
     payload = valid_ai_request()
     payload["schemaVersion"] = "ai.detection.v2"
 
-    response = client.post("/api/v1/ai/mock/detections", json=payload)
+    response = client.post(
+        "/api/v1/ai/mock/detections",
+        json=payload,
+        headers=auth_headers("operator01", "operator"),
+    )
 
     assert response.status_code == 422
 
 
-def test_mock_ai_error_does_not_block_streaming_playback_api(client: TestClient):
+def test_mock_ai_error_does_not_block_streaming_playback_api(client: TestClient, auth_headers):
+    headers = auth_headers("operator01", "operator")
     ai_response = client.post(
         "/api/v1/ai/mock/detections?simulateError=true",
         json=valid_ai_request(),
+        headers=headers,
     )
-    playback_response = client.get("/api/v1/streams/raw.sample.front/playback")
+    playback_response = client.get("/api/v1/streams/raw.sample.front/playback", headers=headers)
 
     assert ai_response.status_code == 503
     assert playback_response.status_code == 200

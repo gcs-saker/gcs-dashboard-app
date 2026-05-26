@@ -1,74 +1,92 @@
-from typing import Any, cast
+from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from typing import Annotated, cast
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from passlib.context import CryptContext
-import jwt
-from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
 
 from core.db import get_db
-from sql.user_sql import User
+from core.security import (
+    AuthConfigError,
+    AuthSettings,
+    AuthenticatedUser,
+    create_access_token,
+    get_current_user,
+    normalize_role,
+)
+from model.user_model import AuthenticatedUserResponse, TokenResponse, UserCreate, UserLogin, UserResponse
 from sql.company_sql import Company
-from model.user_model import UserCreate, UserLogin, UserResponse
+from sql.user_sql import User
 
 router = APIRouter()
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = "supersecret"  # 🔒 환경변수로 분리 권장
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
-# 비밀번호 해싱
+
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
+
 
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
-# JWT 토큰 생성
-def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# 회원가입
-@router.post("/signup", response_model=UserResponse)
-def signup(user: UserCreate, db: Session = Depends(get_db)):
-    # 유저가 있는지 확인 
+@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def signup(user: UserCreate, db: Annotated[Session, Depends(get_db)]) -> User:
     db_user = db.query(User).filter(User.username == user.username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
-    
-     # 이메일 중복 확인
+
     db_email = db.query(User).filter(User.email == user.email).first()
     if db_email:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
-     # 초대코드 일치여부 확인
+
     db_company = db.query(Company).filter(Company.invite_code == user.inviteCode).first()
     if not db_company:
         raise HTTPException(status_code=400, detail="Invalid invite code Input")
-    
-    hashed_pw = get_password_hash(user.password)
+
     new_user = User(
         username=user.username,
         email=user.email,
-        password_hash=hashed_pw,
+        password_hash=get_password_hash(user.password),
         company_id=db_company.id,
-        role=user.role
+        role=normalize_role(user.role),
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return new_user
 
-# 로그인
-@router.post("/login")
-def login(user: UserLogin, db: Session = Depends(get_db)):
+
+@router.post("/login", response_model=TokenResponse)
+def login(user: UserLogin, db: Annotated[Session, Depends(get_db)]) -> TokenResponse:
     db_user = db.query(User).filter(User.username == user.username).first()
     if not db_user or not verify_password(user.password, cast(str, db_user.password_hash)):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    token = create_access_token({"sub": db_user.username})
-    return {"access_token": token, "token_type": "bearer"}
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    try:
+        auth_settings = AuthSettings.from_env()
+        token = create_access_token(
+            cast(str, db_user.username),
+            cast(str | None, db_user.role),
+            settings=auth_settings,
+        )
+    except AuthConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        expires_in_minutes=auth_settings.access_token_expire_minutes,
+        username=cast(str, db_user.username),
+        role=normalize_role(cast(str | None, db_user.role)),
+    )
+
+
+@router.get("/me", response_model=AuthenticatedUserResponse)
+def read_current_user(current_user: Annotated[AuthenticatedUser, Depends(get_current_user)]):
+    return AuthenticatedUserResponse(username=current_user.username, role=current_user.role)
