@@ -11,6 +11,7 @@
 | 문서 | 목적 |
 | --- | --- |
 | `GCS-Saker_M2_이슈마일스톤_일정.md` | M2 이슈 순서와 실제 서버 배포 시작점 정리 |
+| `GCS-Saker_Cloudflare_DNS_DDNS_정책_v0.1.md` | Cloudflare proxy ON/DNS-only, DDNS, WebRTC 영향 기준 |
 | `GCS-Saker_운영장애대응_산출물_일정.md` | 장애 대응/복구/성능/운영 산출물 일정 정리 |
 | `GCS-Saker_운영장애대응_Runbook_v0.1.md` | M2 배포 전 장애 감지, 완화, 복구, 사용자 표시 기준 초안 |
 | `GCS-Saker_health_readiness_기준_v0.1.md` | Backend/MediaMTX/Docker/Nginx health와 readiness 판단 기준 |
