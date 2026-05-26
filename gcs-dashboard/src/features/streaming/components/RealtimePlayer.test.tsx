@@ -189,6 +189,18 @@ describe("RealtimePlayer", () => {
     expect(screen.queryByTestId("webrtc-player")).not.toBeInTheDocument();
     expect(screen.queryByTestId("hls-fallback-player")).not.toBeInTheDocument();
   });
+
+  test("contains backend fetch failures inside the realtime player", async () => {
+    const fetcher = vi.fn(async () => {
+      throw new Error("Failed to fetch");
+    });
+
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to fetch");
+    expect(screen.getByText("mode: error")).toBeInTheDocument();
+    expect(screen.queryByTestId("hls-fallback-player")).not.toBeInTheDocument();
+  });
 });
 
 function jsonResponse(payload: unknown, status = 200): Response {

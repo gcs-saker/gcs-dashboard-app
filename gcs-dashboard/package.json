@@ -46,6 +46,7 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
+    "test:smoke:failure": "vitest run src/features/streaming/failureSmokeScenarios.test.ts src/features/streaming/components/RealtimePlayer.test.tsx src/features/streaming/components/HLSFallbackPlayer.test.tsx",
     "test:coverage": "vitest run --coverage",
     "audit": "npm audit --audit-level=moderate"
   },
