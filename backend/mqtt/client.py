@@ -10,7 +10,7 @@ import paho.mqtt.client as mqtt
 
 @dataclass(frozen=True)
 class MqttSettings:
-    host: str = "165.229.169.127"
+    host: str = "localhost"
     port: int = 1883
     client_id: str = "gcs_backend_pub"
     keepalive: int = 60

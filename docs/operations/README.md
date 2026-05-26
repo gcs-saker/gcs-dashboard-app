@@ -13,6 +13,8 @@
 | `GCS-Saker_M2_이슈마일스톤_일정.md` | M2 이슈 순서와 실제 서버 배포 시작점 정리 |
 | `GCS-Saker_운영장애대응_산출물_일정.md` | 장애 대응/복구/성능/운영 산출물 일정 정리 |
 | `GCS-Saker_운영장애대응_Runbook_v0.1.md` | M2 배포 전 장애 감지, 완화, 복구, 사용자 표시 기준 초안 |
+| `GCS-Saker_health_readiness_기준_v0.1.md` | Backend/MediaMTX/Docker/Nginx health와 readiness 판단 기준 |
+| `GCS-Saker_Docker_env_주입_가이드_v0.1.md` | Docker Compose env 주입 구조와 local/staging/production 분리 기준 |
 | `GCS-Saker_Nginx_HTTPS_WSS_reverse_proxy_v0.1.md` | Nginx HTTPS/WSS reverse proxy 경로 정책과 관리 포트 비노출 기준 |
 | `GCS-Saker_서버기준선_점검표_v0.1.md` | Server-01/Server-02 기준선 점검 항목 |
 | `GCS-Saker_서버기준선_점검결과_TEMPLATE.md` | 비공개 점검 결과 작성 템플릿 |

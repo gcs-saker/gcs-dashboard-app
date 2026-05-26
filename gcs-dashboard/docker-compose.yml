@@ -1,7 +1,66 @@
+name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}
+
+x-env-files: &service_env_files
+  - path: ./.env
+    required: false
+  - path: ../backend/.env
+    required: false
+
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-mysql
+    env_file: *service_env_files
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-gcs_db}
+      MYSQL_USER: ${MYSQL_USER:-gcs_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+    ports:
+      - "${MYSQL_HOST_PORT:-3308}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u${MYSQL_USER:-gcs_app} -p$${MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: always
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-mqtt
+    command: ["mosquitto", "-c", "/mosquitto-no-auth.conf"]
+    ports:
+      - "${MQTT_HOST_PORT:-1883}:1883"
+    restart: always
+
+  backend:
+    image: ${BACKEND_IMAGE:-gcs-saker-backend:local}
+    build:
+      context: ../backend
+    container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-backend
+    env_file: *service_env_files
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in backend/.env or gcs-dashboard/.env}
+      MQTT_HOST: ${MQTT_HOST:-mqtt}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-gcs_backend_pub}
+      MEDIAMTX_PUBLIC_WEBRTC_BASE_URL: ${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8889}
+      MEDIAMTX_PUBLIC_HLS_BASE_URL: ${MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://localhost:8888}
+    ports:
+      - "${BACKEND_HTTP_PORT:-8001}:8001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mqtt:
+        condition: service_started
+    restart: always
+
   mediamtx:
-    image: bluenviron/mediamtx:latest
-    container_name: mediamtx
+    image: ${MEDIAMTX_IMAGE:-bluenviron/mediamtx:latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-mediamtx
+    env_file: *service_env_files
     ports:
       # Browser playback: WebRTC/WHEP primary, HLS fallback.
       - "${MEDIAMTX_WEBRTC_SIGNALING_PORT:-8889}:8889/tcp"
@@ -14,18 +73,31 @@ services:
       # Legacy fallback ingest. Limit this at firewall/reverse-proxy level if unused.
       - "${MEDIAMTX_RTMP_PORT:-1935}:1935/tcp"
     volumes:
-      - ./mediamtx.yml:/mediamtx.yml:ro
+      - type: bind
+        source: ./mediamtx.yml
+        target: /mediamtx.yml
+        read_only: true
     command: /mediamtx.yml
     restart: always
 
   nginx:
-    image: nginx:alpine
-    container_name: nginx
+    image: ${DASHBOARD_IMAGE:-gcs-saker-dashboard:local}
+    build:
+      context: .
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_HLS_BASE_URL: ${VITE_HLS_BASE_URL:-/hls}
+        VITE_DEFAULT_STREAM_ID: ${VITE_DEFAULT_STREAM_ID:-CID001}
+    container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-dashboard
+    env_file: *service_env_files
     ports:
-      - "3000:3000"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./build:/usr/share/nginx/html:ro
+      - "${DASHBOARD_HTTP_PORT:-3000}:3000"
     depends_on:
-      - mediamtx
+      backend:
+        condition: service_started
+      mediamtx:
+        condition: service_started
     restart: always
+
+volumes:
+  mysql-data:
