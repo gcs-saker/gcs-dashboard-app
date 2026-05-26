@@ -1,10 +1,14 @@
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "/api";
 const hlsBaseUrl = import.meta.env.VITE_HLS_BASE_URL ?? "/hls";
 const defaultStreamId = import.meta.env.VITE_DEFAULT_STREAM_ID ?? "CID001";
+const localWebcamWhipUrl =
+  import.meta.env.VITE_LOCAL_WEBCAM_WHIP_URL ?? "http://127.0.0.1:8889/raw/local/webcam/whip";
 
 export const API_BASE_URL: string = apiBaseUrl;
 export const HLS_BASE_URL: string = hlsBaseUrl;
 export const DEFAULT_STREAM_ID: string = defaultStreamId;
+export const LOCAL_WEBCAM_STREAM_ID = "raw.local.webcam";
+export const LOCAL_WEBCAM_WHIP_URL: string = localWebcamWhipUrl;
 
 export function apiUrl(path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;

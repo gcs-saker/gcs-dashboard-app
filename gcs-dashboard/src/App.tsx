@@ -3,11 +3,18 @@ import { AuthProvider } from "./features/auth/AuthProvider";
 import { LoginPage } from "./features/auth/LoginPage";
 import { RequireAuth } from "./features/auth/RequireAuth";
 import { DashboardMvp } from "./features/dashboard/DashboardMvp";
+import { LocalWebcamPublisher } from "./features/streaming/components/LocalWebcamPublisher";
 import { StreamingSmokeDashboard } from "./features/streaming/components/StreamingSmokeDashboard";
 
 function App() {
-  if (new URLSearchParams(window.location.search).get("streamingSmoke") === "1") {
+  const query = new URLSearchParams(window.location.search);
+
+  if (query.get("streamingSmoke") === "1") {
     return <StreamingSmokeDashboard />;
+  }
+
+  if (query.get("webcamPublisher") === "1") {
+    return <LocalWebcamPublisher />;
   }
 
   return (

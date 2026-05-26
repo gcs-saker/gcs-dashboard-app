@@ -9,6 +9,12 @@ vi.mock('./features/streaming/components/StreamingSmokeDashboard', () => ({
   },
 }));
 
+vi.mock('./features/streaming/components/LocalWebcamPublisher', () => ({
+  LocalWebcamPublisher: function MockLocalWebcamPublisher() {
+    return <div data-testid="local-webcam-publisher">Local webcam publisher</div>;
+  },
+}));
+
 describe('App dashboard shell', () => {
   beforeEach(() => {
     storeAccessToken('test-access-token');
@@ -38,6 +44,14 @@ describe('App dashboard shell', () => {
 
     expect(screen.getByTestId('streaming-smoke-dashboard')).toBeInTheDocument();
     expect(screen.queryByTestId('hls-player')).not.toBeInTheDocument();
+  });
+
+  test('renders the local webcam publisher when requested by query string', () => {
+    window.history.pushState({}, '', '/?webcamPublisher=1');
+
+    render(<App />);
+
+    expect(screen.getByTestId('local-webcam-publisher')).toBeInTheDocument();
   });
 
   test('redirects unauthenticated dashboard access to login', async () => {

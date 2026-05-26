@@ -34,6 +34,7 @@ def test_stream_api_v1_lists_registered_seed_streams(client: TestClient, auth_he
         "raw.sample.front",
         "raw.sample.thermal",
         "raw.sample.rear",
+        "raw.local.webcam",
     ]
     assert payload[0]["status"] == "online"
     assert payload[0]["playbackUrls"] == {
@@ -43,7 +44,7 @@ def test_stream_api_v1_lists_registered_seed_streams(client: TestClient, auth_he
 
 
 def test_stream_api_v1_dependency_exposes_default_seed_service():
-    assert get_v1_streaming_service().module_status().registered_streams == 3
+    assert get_v1_streaming_service().module_status().registered_streams == 4
 
 
 def test_legacy_stream_status_route_stays_available(client: TestClient):
@@ -113,6 +114,23 @@ def test_stream_api_v1_returns_stream_status(client: TestClient, auth_headers):
 
     assert response.status_code == 200
     assert response.json() == {"streamId": "raw.sample.front", "status": "online"}
+
+
+def test_stream_api_v1_returns_local_webcam_test_stream(client: TestClient, auth_headers):
+    response = client.get(
+        "/api/v1/streams/raw.local.webcam/playback",
+        headers=auth_headers("viewer01", "viewer"),
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "streamId": "raw.local.webcam",
+        "status": "registered",
+        "playbackUrls": {
+            "webrtc": "https://media.example.com/webrtc/raw/local/webcam/whep",
+            "hls": "https://media.example.com/hls/raw/local/webcam/index.m3u8",
+        },
+    }
 
 
 @pytest.mark.parametrize(
