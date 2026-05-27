@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { apiV1Url, buildApiV1Url } from "./config";
+import { apiV1Url, buildApiV1Url, normalizeLocalDevBaseUrl } from "./config";
 
 describe("config API URL helpers", () => {
   test("keeps the default /api base compatible with v1 routes", () => {
@@ -18,6 +18,17 @@ describe("config API URL helpers", () => {
   test("does not duplicate /api when the configured base already includes it", () => {
     expect(buildApiV1Url("https://gcs.example.test/api", "streams")).toBe(
       "https://gcs.example.test/api/v1/streams",
+    );
+  });
+
+  test("rewrites direct localhost backend base to the dev-server proxy path on local dashboard origin", () => {
+    expect(normalizeLocalDevBaseUrl("http://localhost:8001", "/api")).toBe("/api");
+    expect(normalizeLocalDevBaseUrl("http://127.0.0.1:8888", "/hls")).toBe("/hls");
+  });
+
+  test("keeps remote HTTPS API base unchanged on local dashboard origin", () => {
+    expect(normalizeLocalDevBaseUrl("https://a4ai.tplinkdns.com/api", "/api")).toBe(
+      "https://a4ai.tplinkdns.com/api",
     );
   });
 });
