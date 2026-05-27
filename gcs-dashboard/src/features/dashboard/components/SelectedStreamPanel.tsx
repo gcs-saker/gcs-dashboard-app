@@ -11,9 +11,15 @@ interface SelectedStreamPanelProps {
   stream: DashboardStreamSlot;
   controls?: ReactNode;
   isPinned?: boolean;
+  onToggleAiMode?: (streamId: string) => void;
 }
 
-export function SelectedStreamPanel({ stream, controls, isPinned = false }: SelectedStreamPanelProps) {
+export function SelectedStreamPanel({
+  stream,
+  controls,
+  isPinned = false,
+  onToggleAiMode,
+}: SelectedStreamPanelProps) {
   return (
     <section
       aria-labelledby="selected-stream-title"
@@ -27,6 +33,14 @@ export function SelectedStreamPanel({ stream, controls, isPinned = false }: Sele
           <span className={`ops-badge ${getDashboardStreamStatusClass(stream.status)}`}>
             {getDashboardStreamStatusText(stream.status)}
           </span>
+          <button
+            aria-pressed={Boolean(stream.aiModeEnabled)}
+            className={`ops-command-button stream-ai-toggle ${stream.aiModeEnabled ? "is-active" : ""}`}
+            onClick={() => onToggleAiMode?.(stream.id)}
+            type="button"
+          >
+            AI 모드
+          </button>
           {controls}
         </span>
       </div>
@@ -39,6 +53,7 @@ export function SelectedStreamPanel({ stream, controls, isPinned = false }: Sele
         <div className="selected-stream__meta">
           <strong>{stream.title}</strong>
           <span>{stream.detail}</span>
+          {stream.aiModeEnabled ? <span>AI 필터 준비됨</span> : null}
         </div>
       </div>
     </section>

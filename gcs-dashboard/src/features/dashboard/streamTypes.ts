@@ -16,6 +16,7 @@ export interface DashboardStreamSlot {
   status: DashboardStreamStatus;
   mode: DashboardStreamMode;
   detail: string;
+  aiModeEnabled?: boolean;
   connectedDeviceId?: string | null;
   streamPath?: string | null;
   geometry?: {

@@ -160,6 +160,15 @@ export function DashboardMvp() {
     setLayoutMessage("스트리밍 장비 연결 해제됨");
   };
 
+  const toggleStreamAiMode = (streamId: string): void => {
+    setStreams((current) =>
+      current.map((stream) =>
+        stream.id === streamId ? { ...stream, aiModeEnabled: !stream.aiModeEnabled } : stream,
+      ),
+    );
+    setLayoutMessage("AI 모드 옵션 변경됨");
+  };
+
   return (
     <main className="ops-dashboard" aria-label="Field Ops Dashboard MVP">
       <header className="ops-dashboard__tabs" aria-label="주요 탭">
@@ -224,6 +233,7 @@ export function DashboardMvp() {
         {isWidgetVisible("selected-stream") ? <SelectedStreamPanel
           controls={widgetControls("selected-stream", "선택 스트림")}
           isPinned={isWidgetPinned("selected-stream")}
+          onToggleAiMode={toggleStreamAiMode}
           stream={selectedStream}
         /> : null}
 

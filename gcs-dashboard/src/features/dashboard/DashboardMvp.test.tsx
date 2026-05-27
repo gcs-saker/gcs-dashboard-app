@@ -129,6 +129,18 @@ describe("DashboardMvp", () => {
     await user.click(screen.getByRole("button", { name: "변경 취소" }));
   });
 
+  test("toggles the selected stream AI mode option", async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    const aiToggle = screen.getByRole("button", { name: "AI 모드" });
+    await user.click(aiToggle);
+
+    expect(aiToggle).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("AI 필터 준비됨")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("AI 모드 옵션 변경됨");
+  });
+
   test("connects, cancels, and disconnects stream devices through the slot dialog", async () => {
     const user = userEvent.setup();
     renderDashboard();
