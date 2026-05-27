@@ -1,0 +1,33 @@
+name: Operations task
+description: Track deployment, infrastructure, backup, rollback, or runbook work
+title: "[Ops]: "
+labels: ["type: ops"]
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What operational state should be achieved?
+    validations:
+      required: true
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Checklist
+      placeholder: |
+        - [ ] Backup current state
+        - [ ] Apply change
+        - [ ] Verify health checks
+        - [ ] Record rollback path
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Operational impact
+      description: Expected downtime, exposed ports, credentials, or network changes.
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback plan
+      description: How do we return to the previous working state?
