@@ -34,6 +34,8 @@ describe("DashboardMvp", () => {
     expect(screen.getByRole("button", { name: "대시보드" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "웹캠 송출" })).toHaveAttribute("href", "/publisher");
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "지도 확대" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "지도 축소" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "자산트리" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "지도" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "선택 스트림" })).toBeInTheDocument();
@@ -61,7 +63,7 @@ describe("DashboardMvp", () => {
     await user.click(screen.getByRole("button", { name: "위젯 추가" }));
 
     expect(screen.getByRole("dialog", { name: "위젯 추가" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /지도/ })).toHaveTextContent("숨기기");
+    expect(screen.getByRole("button", { name: /지도\s*420 x 340/ })).toHaveTextContent("숨기기");
 
     await user.click(screen.getByRole("button", { name: "취소" }));
 
@@ -79,7 +81,7 @@ describe("DashboardMvp", () => {
     expect(screen.getByRole("status")).toHaveTextContent("위젯 숨김");
 
     await user.click(screen.getByRole("button", { name: "위젯 추가" }));
-    await user.click(screen.getByRole("button", { name: /지도/ }));
+    await user.click(screen.getByRole("button", { name: /지도\s*420 x 340/ }));
     await user.click(screen.getByRole("button", { name: "적용" }));
 
     expect(screen.getByRole("heading", { name: "지도" })).toBeInTheDocument();

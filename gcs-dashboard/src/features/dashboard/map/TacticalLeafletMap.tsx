@@ -29,13 +29,13 @@ function ZoomButtons() {
 
   return (
     <div className="map-toolbar" aria-label="지도 도구">
-      <button type="button" onClick={() => map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)}>
+      <button aria-label="지도 중심 초기화" type="button" onClick={() => map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)}>
         ⌖
       </button>
-      <button type="button" onClick={() => map.zoomIn()}>
+      <button aria-label="지도 확대" type="button" onClick={() => map.zoomIn()}>
         ＋
       </button>
-      <button type="button" onClick={() => map.zoomOut()}>
+      <button aria-label="지도 축소" type="button" onClick={() => map.zoomOut()}>
         －
       </button>
     </div>
