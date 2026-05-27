@@ -54,6 +54,17 @@ describe('App dashboard shell', () => {
     expect(screen.getByTestId('local-webcam-publisher')).toBeInTheDocument();
   });
 
+  test('redirects unauthenticated local webcam publisher access to login', async () => {
+    clearAccessToken();
+    window.history.pushState({}, '', '/?webcamPublisher=1');
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: '대시보드 로그인' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/login');
+    expect(window.location.search).toContain('webcamPublisher%3D1');
+  });
+
   test('redirects unauthenticated dashboard access to login', async () => {
     clearAccessToken();
 
