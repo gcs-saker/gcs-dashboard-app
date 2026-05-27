@@ -19,6 +19,7 @@ import {
 } from "./dashboardLayout";
 import "./DashboardMvp.css";
 import { getMapFocusForStream } from "./mapFocus";
+import { TacticalLeafletMap } from "./map/TacticalLeafletMap";
 import {
   connectDeviceToStreamSlot,
   disconnectStreamSlot,
@@ -201,34 +202,10 @@ export function DashboardMvp() {
               {widgetControls("tactical-map", "지도")}
             </span>
           </div>
-          <div className="tactical-map__canvas">
-            <div className="map-toolbar" aria-label="지도 도구">
-              <button type="button">⌖</button>
-              <button type="button">＋</button>
-              <button type="button">－</button>
-              <button type="button">▧</button>
-            </div>
-            <div className="map-route" />
-            {["DRN-01", "DRN-02", "UGV-01", "UGV-02", "SEN-01"].map((asset, index) => (
-              <button
-                className={`map-marker ${asset === "UGV-02" ? "is-warning" : "is-online"} marker-${index + 1}`}
-                key={asset}
-                type="button"
-              >
-                <span>{asset}</span>
-              </button>
-            ))}
-            <div
-              className={`map-focus ${mapFocus.hasGeometry ? "has-geometry" : ""}`}
-              style={mapFocus.markerStyle}
-            >
-              <span className="map-focus__cone" style={mapFocus.coneStyle} />
-              <span className="map-focus__label" data-testid="map-focus-label">
-                {mapFocus.label}
-              </span>
-            </div>
-            <div className="map-compass">N</div>
-          </div>
+          <TacticalLeafletMap selectedStream={selectedStream} streams={streams} />
+          <span className="map-focus__label" data-testid="map-focus-label">
+            {mapFocus.label}
+          </span>
         </section>
 
         <SelectedStreamPanel
