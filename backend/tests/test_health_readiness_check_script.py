@@ -6,6 +6,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "health_readiness_check.py"
 HEALTH_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_health_readiness_기준_v0.1.md"
 BACKEND_DOCKERFILE = REPO_ROOT / "backend" / "Dockerfile"
+BACKEND_PYPROJECT = REPO_ROOT / "backend" / "pyproject.toml"
+BACKEND_PYTHON_VERSION = REPO_ROOT / "backend" / ".python-version"
 MEDIAMTX_CONFIG = REPO_ROOT / "gcs-dashboard" / "mediamtx.yml"
 
 
@@ -40,6 +42,17 @@ def test_backend_dockerfile_uses_healthz_for_container_liveness():
 
     assert "HEALTHCHECK" in dockerfile
     assert "127.0.0.1:8001/healthz" in dockerfile
+
+
+def test_backend_runtime_is_pinned_to_python_312():
+    dockerfile = BACKEND_DOCKERFILE.read_text(encoding="utf-8")
+    pyproject = BACKEND_PYPROJECT.read_text(encoding="utf-8")
+    python_version = BACKEND_PYTHON_VERSION.read_text(encoding="utf-8").strip()
+
+    assert "FROM python:3.12-slim" in dockerfile
+    assert 'requires-python = ">=3.12,<3.13"' in pyproject
+    assert 'python_version = "3.12"' in pyproject
+    assert python_version == "3.12"
 
 
 def test_mediamtx_readiness_keeps_management_private_and_playback_public():

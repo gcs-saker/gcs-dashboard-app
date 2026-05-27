@@ -43,10 +43,22 @@ def test_mediamtx_enables_webrtc_whep_and_keeps_hls_fallback():
 
     assert config["webrtc"] is True
     assert config["webrtcAddress"] == ":8889"
+    assert config["webrtcAllowOrigin"] == "*"
+    assert "webrtcAllowOrigins" not in config
     assert config["webrtcLocalUDPAddress"] == ":8189"
     assert config["webrtcLocalTCPAddress"] == ":8189"
     assert config["hls"] is True
     assert config["hlsAddress"] == ":8888"
+    assert config["hlsAllowOrigin"] == "*"
+    assert "hlsAllowOrigins" not in config
+
+
+def test_compose_pins_mediamtx_runtime_version_for_config_compatibility():
+    compose = load_yaml(DOCKER_COMPOSE)
+    image = compose["services"]["mediamtx"]["image"]
+
+    assert image == "${MEDIAMTX_IMAGE:-bluenviron/mediamtx:1.15.3}"
+    assert ":latest" not in image
 
 
 def test_mediamtx_declares_ingest_ports_for_rtsp_rtmp_and_srt():

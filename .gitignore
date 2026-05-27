@@ -15,6 +15,7 @@ node_modules/
 gcs-dashboard/node_modules/
 gcs-dashboard/dist/
 gcs-dashboard/coverage/
+gcs-dashboard/certs/
 
 # Local environment
 .env

@@ -1,0 +1,39 @@
+name: Bug report
+description: Report a defect or regression
+title: "[Bug]: "
+labels: ["type: bug"]
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start services with ...
+        2. Open ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser, OS, backend version, docker compose profile, or device.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      render: shell

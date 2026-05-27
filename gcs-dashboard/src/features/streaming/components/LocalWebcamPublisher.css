@@ -1,0 +1,61 @@
+.local-webcam-publisher {
+  display: grid;
+  gap: 12px;
+  min-height: 100vh;
+  padding: 16px;
+  background: #05090f;
+  color: #dce8f4;
+}
+
+.local-webcam-publisher__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.local-webcam-publisher__header h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.local-webcam-publisher__badge,
+.local-webcam-publisher__stream,
+.local-webcam-publisher__whip {
+  min-height: 24px;
+  padding: 4px 8px;
+  border: 1px solid rgba(126, 180, 222, 0.45);
+  background: rgba(5, 9, 15, 0.78);
+  font-size: 12px;
+}
+
+.local-webcam-publisher__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.local-webcam-publisher__controls button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid rgba(126, 180, 222, 0.55);
+  background: #0c1a26;
+  color: #dce8f4;
+}
+
+.local-webcam-publisher__controls button:disabled {
+  opacity: 0.45;
+}
+
+.local-webcam-publisher__video {
+  width: min(100%, 960px);
+  min-height: 260px;
+  aspect-ratio: 16 / 9;
+  border: 1px solid rgba(74, 144, 196, 0.45);
+  background: #000;
+  object-fit: cover;
+}
+
+.local-webcam-publisher__error {
+  color: #ffb0a6;
+}

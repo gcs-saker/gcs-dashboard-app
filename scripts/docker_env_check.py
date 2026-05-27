@@ -25,13 +25,17 @@ GITIGNORE = REPO_ROOT / ".gitignore"
 
 REQUIRED_DASHBOARD_KEYS = {
     "COMPOSE_PROJECT_NAME",
+    "LOCAL_BIND_ADDR",
     "MYSQL_ROOT_PASSWORD",
     "MYSQL_DATABASE",
     "MYSQL_USER",
     "MYSQL_PASSWORD",
     "DATABASE_URL",
+    "AUTH_JWT_SECRET",
     "BACKEND_HTTP_PORT",
     "DASHBOARD_HTTP_PORT",
+    "PUBLIC_HTTPS_PORT",
+    "NGINX_CERTS_DIR",
     "MQTT_HOST",
     "MQTT_PORT",
     "VITE_API_BASE_URL",
@@ -68,10 +72,17 @@ def load_yaml(path: Path) -> dict:
 
 def require_services(compose: dict) -> None:
     services = compose.get("services", {})
-    for service_name in ("mysql", "mqtt", "backend", "mediamtx", "nginx"):
+    for service_name in ("mysql", "mqtt", "backend", "mediamtx", "nginx", "edge"):
         require(service_name in services, f"missing compose service: {service_name}")
     require("9997" not in str(services["mediamtx"].get("ports", [])), "MediaMTX API port must not be published")
     require("9998" not in str(services["mediamtx"].get("ports", [])), "MediaMTX metrics port must not be published")
+    require(
+        "${PUBLIC_HTTPS_BIND_ADDR:-0.0.0.0}:${PUBLIC_HTTPS_PORT:-443}:443" in services["edge"].get("ports", []),
+        "edge must publish 443",
+    )
+    for service_name in ("backend", "mediamtx", "nginx"):
+        ports = str(services[service_name].get("ports", []))
+        require("${LOCAL_BIND_ADDR:-127.0.0.1}:" in ports, f"{service_name} direct ports must bind locally by default")
 
 
 def require_env_files(compose: dict) -> None:

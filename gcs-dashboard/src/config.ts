@@ -1,16 +1,53 @@
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "/api";
-const hlsBaseUrl = import.meta.env.VITE_HLS_BASE_URL ?? "/hls";
+const apiBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_API_BASE_URL ?? "/api", "/api");
+const hlsBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_HLS_BASE_URL ?? "/hls", "/hls");
 const defaultStreamId = import.meta.env.VITE_DEFAULT_STREAM_ID ?? "CID001";
+const localWebcamWhipUrl = normalizeLocalDevBaseUrl(
+  import.meta.env.VITE_LOCAL_WEBCAM_WHIP_URL ?? "/webrtc/raw/local/webcam/whip",
+  "/webrtc/raw/local/webcam/whip",
+);
 
 export const API_BASE_URL: string = apiBaseUrl;
 export const HLS_BASE_URL: string = hlsBaseUrl;
 export const DEFAULT_STREAM_ID: string = defaultStreamId;
+export const LOCAL_WEBCAM_STREAM_ID = "raw.local.webcam";
+export const LOCAL_WEBCAM_WHIP_URL: string = localWebcamWhipUrl;
 
 export function apiUrl(path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${API_BASE_URL.replace(/\/$/, "")}${normalizedPath}`;
 }
 
+export function apiV1Url(path: string): string {
+  return buildApiV1Url(API_BASE_URL, path);
+}
+
+export function buildApiV1Url(apiBaseUrl: string, path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const apiBase = apiBaseUrl.replace(/\/$/, "");
+  const v1Base = apiBase.endsWith("/api") ? `${apiBase}/v1` : `${apiBase}/api/v1`;
+  return `${v1Base}${normalizedPath}`;
+}
+
 export function hlsStreamUrl(streamId: string): string {
   return `${HLS_BASE_URL.replace(/\/$/, "")}/${streamId}/index.m3u8`;
+}
+
+export function normalizeLocalDevBaseUrl(configuredUrl: string, fallbackPath: string): string {
+  if (!isLocalDashboardOrigin()) return configuredUrl;
+
+  try {
+    const parsed = new URL(configuredUrl);
+    if (["localhost", "127.0.0.1", "::1"].includes(parsed.hostname)) {
+      return fallbackPath;
+    }
+  } catch {
+    return configuredUrl;
+  }
+
+  return configuredUrl;
+}
+
+function isLocalDashboardOrigin(): boolean {
+  if (typeof window === "undefined") return false;
+  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
 }

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthApiError } from "./authApi";
 import { useAuth } from "./AuthProvider";
 import "./LoginPage.css";
@@ -15,10 +15,12 @@ export function LoginPage() {
   const { login } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const params = new URLSearchParams(location.search);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const registeredUsername = params.get("registered") === "1" ? params.get("username") : null;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
@@ -27,7 +29,6 @@ export function LoginPage() {
 
     try {
       await login({ username, password });
-      const params = new URLSearchParams(location.search);
       navigate(safeRedirectPath(params.get("redirect")), { replace: true });
     } catch (error) {
       if (error instanceof AuthApiError && error.status === 401) {
@@ -47,6 +48,12 @@ export function LoginPage() {
           <p>GCS-SAKER</p>
           <h1>대시보드 로그인</h1>
         </div>
+
+        {registeredUsername ? (
+          <p className="auth-login__success">
+            {registeredUsername} 계정이 등록되었습니다. 로그인해주세요.
+          </p>
+        ) : null}
 
         <label>
           <span>아이디</span>
@@ -77,6 +84,10 @@ export function LoginPage() {
         <button disabled={isSubmitting} type="submit">
           {isSubmitting ? "확인 중" : "접속"}
         </button>
+
+        <p className="auth-login__footer">
+          <Link to="/signup">회원가입</Link>
+        </p>
       </form>
     </main>
   );

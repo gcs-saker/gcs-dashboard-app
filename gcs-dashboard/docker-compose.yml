@@ -17,7 +17,7 @@ services:
       MYSQL_USER: ${MYSQL_USER:-gcs_app}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
     ports:
-      - "${MYSQL_HOST_PORT:-3308}:3306"
+      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MYSQL_HOST_PORT:-3308}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -32,7 +32,7 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-mqtt
     command: ["mosquitto", "-c", "/mosquitto-no-auth.conf"]
     ports:
-      - "${MQTT_HOST_PORT:-1883}:1883"
+      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MQTT_HOST_PORT:-1883}:1883"
     restart: always
 
   backend:
@@ -52,7 +52,7 @@ services:
       MEDIAMTX_PUBLIC_WEBRTC_BASE_URL: ${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8889}
       MEDIAMTX_PUBLIC_HLS_BASE_URL: ${MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://localhost:8888}
     ports:
-      - "${BACKEND_HTTP_PORT:-8001}:8001"
+      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${BACKEND_HTTP_PORT:-8001}:8001"
     depends_on:
       mysql:
         condition: service_healthy
@@ -61,20 +61,20 @@ services:
     restart: always
 
   mediamtx:
-    image: ${MEDIAMTX_IMAGE:-bluenviron/mediamtx:latest}
+    image: ${MEDIAMTX_IMAGE:-bluenviron/mediamtx:1.15.3}
     container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-mediamtx
     env_file: *service_env_files
     ports:
       # Browser playback: WebRTC/WHEP primary, HLS fallback.
-      - "${MEDIAMTX_WEBRTC_SIGNALING_PORT:-8889}:8889/tcp"
-      - "${MEDIAMTX_WEBRTC_ICE_UDP_PORT:-8189}:8189/udp"
-      - "${MEDIAMTX_WEBRTC_ICE_TCP_PORT:-8189}:8189/tcp"
-      - "${MEDIAMTX_HLS_PORT:-8888}:8888/tcp"
+      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_SIGNALING_PORT:-8889}:8889/tcp"
+      - "${MEDIAMTX_ICE_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_ICE_UDP_PORT:-8189}:8189/udp"
+      - "${MEDIAMTX_ICE_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_ICE_TCP_PORT:-8189}:8189/tcp"
+      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_HLS_PORT:-8888}:8888/tcp"
       # Device ingest: RTSP/SRT are the preferred field-device inputs.
-      - "${MEDIAMTX_RTSP_PORT:-8554}:8554/tcp"
-      - "${MEDIAMTX_SRT_PORT:-8890}:8890/udp"
+      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_RTSP_PORT:-8554}:8554/tcp"
+      - "${MEDIAMTX_SRT_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_SRT_PORT:-8890}:8890/udp"
       # Legacy fallback ingest. Limit this at firewall/reverse-proxy level if unused.
-      - "${MEDIAMTX_RTMP_PORT:-1935}:1935/tcp"
+      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_RTMP_PORT:-1935}:1935/tcp"
     volumes:
       - type: bind
         source: ./mediamtx.yml
@@ -91,14 +91,39 @@ services:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
         VITE_HLS_BASE_URL: ${VITE_HLS_BASE_URL:-/hls}
         VITE_DEFAULT_STREAM_ID: ${VITE_DEFAULT_STREAM_ID:-CID001}
+        VITE_LOCAL_WEBCAM_WHIP_URL: ${VITE_LOCAL_WEBCAM_WHIP_URL:-https://localhost/webrtc/raw/local/webcam/whip}
     container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-dashboard
     env_file: *service_env_files
     ports:
-      - "${DASHBOARD_HTTP_PORT:-3000}:3000"
+      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${DASHBOARD_HTTP_PORT:-3000}:3000"
     depends_on:
       backend:
         condition: service_started
       mediamtx:
+        condition: service_started
+    restart: always
+
+  edge:
+    image: nginx:1.29-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-edge
+    ports:
+      - "${PUBLIC_HTTP_BIND_ADDR:-127.0.0.1}:${PUBLIC_HTTP_PORT:-80}:80"
+      - "${PUBLIC_HTTPS_BIND_ADDR:-0.0.0.0}:${PUBLIC_HTTPS_PORT:-443}:443"
+    volumes:
+      - type: bind
+        source: ../deploy/nginx/gcs-saker.reverse-proxy.example.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+      - type: bind
+        source: ${NGINX_CERTS_DIR:-./certs}
+        target: /etc/nginx/certs
+        read_only: true
+    depends_on:
+      backend:
+        condition: service_started
+      mediamtx:
+        condition: service_started
+      nginx:
         condition: service_started
     restart: always
 

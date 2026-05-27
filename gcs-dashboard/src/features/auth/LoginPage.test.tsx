@@ -90,4 +90,15 @@ describe("LoginPage auth flow", () => {
     expect(getStoredAccessToken()).toBeNull();
     expect(window.location.pathname).toBe("/login");
   });
+
+  test("links unauthenticated users to signup", async () => {
+    globalThis.fetch = vi.fn();
+
+    render(<App />);
+
+    await userEvent.click(screen.getByRole("link", { name: "회원가입" }));
+
+    expect(screen.getByRole("heading", { name: "회원가입" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/signup");
+  });
 });

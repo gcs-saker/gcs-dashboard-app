@@ -24,11 +24,11 @@ srtAddress: :8890
 hls: true
 hlsAddress: :8888
 hlsVariant: lowLatency
-hlsAllowOrigins: ['*']
+hlsAllowOrigin: '*'
 
 webrtc: true
 webrtcAddress: :8889
-webrtcAllowOrigins: ['*']
+webrtcAllowOrigin: '*'
 webrtcLocalUDPAddress: :8189
 webrtcLocalTCPAddress: :8189
 webrtcIPsFromInterfaces: true

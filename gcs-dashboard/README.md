@@ -1,5 +1,31 @@
 # GCS SAKER Dashboard
 
+## Local Server-01 Dashboard Check
+
+로컬에서 dashboard UI를 켜고 Server-01 backend/edge를 같이 확인할 때는 frontend가 직접
+`http://localhost:8001`로 요청하면 안 된다. 로컬 Vite dev server는 `/api`, `/hls`,
+`/webrtc`를 Server-01 public edge로 proxy한다.
+
+로컬 `.env` 기준:
+
+```bash
+VITE_API_BASE_URL=/api
+VITE_HLS_BASE_URL=/hls
+VITE_LOCAL_WEBCAM_WHIP_URL=/webrtc/raw/local/webcam/whip
+VITE_DEV_PROXY_TARGET=https://a4ai.tplinkdns.com
+```
+
+실행:
+
+```bash
+npm run dev
+```
+
+브라우저에서 `http://localhost:<vite-port>`로 열면 로그인 요청은 브라우저 기준
+`/api/auth/login`으로 나가고, Vite가 `https://a4ai.tplinkdns.com/api/auth/login`으로
+전달한다. DevTools에 `http://localhost:8001/auth/login`이 보이면 오래된 `.env` 또는
+shell 환경변수 `VITE_API_BASE_URL`이 남아있는 상태다.
+
 ## M1 Sample Stream
 
 M1 streaming development uses MediaMTX and the seed stream path `raw/sample/front`.
@@ -65,36 +91,12 @@ See the section about [deployment](https://facebook.github.io/create-react-app/d
 
 If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. At this point you're on your own.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature.
 
 ## Learn More
 
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)

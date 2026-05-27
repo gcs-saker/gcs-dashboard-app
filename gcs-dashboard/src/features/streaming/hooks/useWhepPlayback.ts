@@ -172,10 +172,17 @@ function dispatchStateFromConnection(
     return;
   }
 
-  if (connectionState === "failed" || iceConnectionState === "failed") {
+  if (
+    connectionState === "failed" ||
+    connectionState === "disconnected" ||
+    connectionState === "closed" ||
+    iceConnectionState === "failed" ||
+    iceConnectionState === "disconnected" ||
+    iceConnectionState === "closed"
+  ) {
     dispatch({
       type: "error",
-      message: "WebRTC connection failed",
+      message: `WebRTC connection interrupted (${connectionState}/${iceConnectionState})`,
       connectionState,
       iceConnectionState,
     });
@@ -194,7 +201,14 @@ function statusFromConnection(
     return "playing";
   }
 
-  if (connectionState === "failed" || iceConnectionState === "failed") {
+  if (
+    connectionState === "failed" ||
+    connectionState === "disconnected" ||
+    connectionState === "closed" ||
+    iceConnectionState === "failed" ||
+    iceConnectionState === "disconnected" ||
+    iceConnectionState === "closed"
+  ) {
     return "error";
   }
 

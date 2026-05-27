@@ -41,6 +41,11 @@ DEFAULT_STREAM_SEEDS: tuple[StreamSeed, ...] = (
         status="unknown",
         display_name="Sample Rear Camera",
     ),
+    StreamSeed(
+        path="raw/local/webcam",
+        status="registered",
+        display_name="Local Webcam Test Harness",
+    ),
 )
 
 

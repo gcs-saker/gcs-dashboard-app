@@ -1,5 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { HLSFallbackPlayerProps, WebRTCPlayerProps } from "../types";
@@ -59,6 +58,7 @@ vi.mock("./HLSFallbackPlayer", () => ({
 }));
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -91,7 +91,7 @@ describe("RealtimePlayer", () => {
     expect(screen.getByText("online")).toBeInTheDocument();
   });
 
-  test("switches from WebRTC to HLS fallback when WebRTC fails", async () => {
+  test("retries WebRTC with bounded backoff before HLS fallback", async () => {
     const fetcher = vi.fn(async () =>
       jsonResponse({
         streamId: "raw.sample.front",
@@ -103,15 +103,43 @@ describe("RealtimePlayer", () => {
       }),
     );
 
-    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} />);
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} reconnectDelaysMs={[25]} />);
     await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
 
-    await userEvent.click(screen.getByRole("button", { name: "webrtc failed" }));
+    fireEvent.click(screen.getByRole("button", { name: "webrtc failed" }));
+
+    expect(screen.queryByTestId("webrtc-player")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("reconnecting playback; retry 1 in 25ms");
+
+    await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "webrtc failed" }));
 
     expect(screen.queryByTestId("webrtc-player")).not.toBeInTheDocument();
     expect(screen.getByTestId("hls-fallback-player")).toBeInTheDocument();
     expect(screen.getByText("hls:https://media.example.test/raw/sample/front/index.m3u8")).toBeInTheDocument();
     expect(screen.getByText("reason:WebRTC connection failed")).toBeInTheDocument();
+  });
+
+  test("renders a clear error when WebRTC fails and no HLS fallback exists", async () => {
+    const fetcher = vi.fn(async () =>
+      jsonResponse({
+        streamId: "raw.sample.front",
+        status: "online",
+        playbackUrls: {
+          webrtc: "https://media.example.test/raw/sample/front/whep",
+          hls: null,
+        },
+      }),
+    );
+
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} />);
+    await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "webrtc failed" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("WebRTC connection failed");
+    expect(screen.queryByTestId("hls-fallback-player")).not.toBeInTheDocument();
   });
 
   test("renders HLS fallback immediately when WebRTC URL is unavailable", async () => {
@@ -159,6 +187,18 @@ describe("RealtimePlayer", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Playback API request failed with 404");
     expect(screen.queryByTestId("webrtc-player")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hls-fallback-player")).not.toBeInTheDocument();
+  });
+
+  test("contains backend fetch failures inside the realtime player", async () => {
+    const fetcher = vi.fn(async () => {
+      throw new Error("Failed to fetch");
+    });
+
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to fetch");
+    expect(screen.getByText("mode: error")).toBeInTheDocument();
     expect(screen.queryByTestId("hls-fallback-player")).not.toBeInTheDocument();
   });
 });
