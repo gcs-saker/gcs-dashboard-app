@@ -153,6 +153,9 @@ export function DashboardMvp() {
         </nav>
         <div className="ops-dashboard__actions">
           <span role="status">{layoutMessage}</span>
+          <a className="ops-command-button is-primary" href="/publisher" role="button">
+            웹캠 송출
+          </a>
           <button className="ops-command-button" onClick={() => setIsWidgetDialogOpen(true)} type="button">
             위젯 추가
           </button>
