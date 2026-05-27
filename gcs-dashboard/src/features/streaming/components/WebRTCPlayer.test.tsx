@@ -98,6 +98,9 @@ describe("WebRTCPlayer", () => {
 
     expect(peerConnections[0].addTransceiver).toHaveBeenCalledWith("video", { direction: "recvonly" });
     expect(peerConnections[0].addTransceiver).toHaveBeenCalledWith("audio", { direction: "recvonly" });
+    expect(RTCPeerConnection).toHaveBeenCalledWith({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
     expect(peerConnections[0].setRemoteDescription).toHaveBeenCalledWith({
       type: "answer",
       sdp: "mock-answer-sdp",

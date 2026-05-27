@@ -51,6 +51,44 @@ describe("LocalWebcamPublisher", () => {
     );
   });
 
+  test("uses the configured STUN server for the default WHIP peer connection", async () => {
+    const track = { stop: vi.fn() } as unknown as MediaStreamTrack;
+    const mediaStream = { getTracks: () => [track] } as unknown as MediaStream;
+    const mediaDevices = {
+      getUserMedia: vi.fn(async () => mediaStream),
+    } as unknown as MediaDevices;
+    const originalPeerConnection = globalThis.RTCPeerConnection;
+    const fetcher = vi.fn(async () => ({
+      ok: true,
+      text: async () => "v=0\r\nmock-answer",
+    })) as unknown as typeof fetch;
+    const peerConnection = createPeerConnectionMock();
+    const peerConnectionConstructor = vi.fn(() => peerConnection);
+    globalThis.RTCPeerConnection = peerConnectionConstructor as unknown as typeof RTCPeerConnection;
+
+    try {
+      render(
+        <LocalWebcamPublisher
+          mediaDevices={mediaDevices}
+          fetcher={fetcher}
+          whipUrl="http://media.example.test/raw/local/webcam/whip"
+        />,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Start preview" }));
+      expect(await screen.findByRole("status")).toHaveTextContent("previewing");
+
+      fireEvent.click(screen.getByRole("button", { name: "Publish WebRTC" }));
+
+      await waitFor(() => expect(peerConnectionConstructor).toHaveBeenCalled());
+      expect(peerConnectionConstructor).toHaveBeenCalledWith({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      });
+    } finally {
+      globalThis.RTCPeerConnection = originalPeerConnection;
+    }
+  });
+
   test("shows a clear error when camera permission is denied", async () => {
     const mediaDevices = {
       getUserMedia: vi.fn(async () => {

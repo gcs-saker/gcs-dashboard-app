@@ -10,6 +10,10 @@ DASHBOARD_PORT="${DASHBOARD_PORT:-18023}"
 SMOKE_DURATION_SECONDS="${SMOKE_DURATION_SECONDS:-20}"
 WEBRTC_BASE_URL="${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:-http://127.0.0.1:8889}"
 HLS_BASE_URL="${MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://127.0.0.1:8888}"
+WEBRTC_ICE_SMOKE="${WEBRTC_ICE_SMOKE:-0}"
+WEBRTC_STUN_URL="${VITE_WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
+WEBRTC_ICE_INSECURE="${WEBRTC_ICE_INSECURE:-0}"
+WEBRTC_REQUIRE_CONNECTED="${WEBRTC_REQUIRE_CONNECTED:-0}"
 BACKEND_PID=""
 DASHBOARD_PID=""
 PUBLISH_PID=""
@@ -31,6 +35,10 @@ Environment:
   SMOKE_DURATION_SECONDS          Default: 20
   MEDIAMTX_PUBLIC_WEBRTC_BASE_URL Default: http://127.0.0.1:8889
   MEDIAMTX_PUBLIC_HLS_BASE_URL    Default: http://127.0.0.1:8888
+  WEBRTC_ICE_SMOKE                Default: 0. Set 1 to run live WHEP offer/answer ICE smoke.
+  VITE_WEBRTC_STUN_URL            Default: stun:stun.l.google.com:19302
+  WEBRTC_ICE_INSECURE             Default: 0. Set 1 for self-signed HTTPS WHEP endpoints.
+  WEBRTC_REQUIRE_CONNECTED        Default: 0. Set 1 to require ICE connected/completed.
 EOF
 }
 
@@ -96,6 +104,7 @@ cleanup() {
 run_check() {
   bash -n "${REPO_ROOT}/scripts/publish_sample_stream.sh"
   bash -n "${REPO_ROOT}/scripts/streaming_e2e_smoke.sh"
+  python3 "${REPO_ROOT}/scripts/webrtc_ice_smoke.py" --check
 
   local dry_run
   dry_run="$("${REPO_ROOT}/scripts/publish_sample_stream.sh" --dry-run)"
@@ -106,6 +115,8 @@ run_check() {
   grep -q "streamingSmoke=1" "${REPO_ROOT}/docs/m1/streaming-e2e-smoke-test.md"
   grep -q "HLS fallback" "${REPO_ROOT}/docs/m1/streaming-e2e-smoke-test.md"
   grep -q "STUN" "${REPO_ROOT}/docs/m1/streaming-e2e-smoke-test.md"
+  grep -q "WHEP offer/answer" "${REPO_ROOT}/docs/m1/streaming-e2e-smoke-test.md"
+  grep -q "ICE candidate" "${REPO_ROOT}/docs/m1/streaming-e2e-smoke-test.md"
 
   echo "Streaming E2E smoke check passed"
   echo "Sample dry-run: ${dry_run}"
@@ -140,6 +151,21 @@ run_smoke() {
   [[ "$playback_payload" == *"\"hls\":\"${HLS_BASE_URL}/${STREAM_PATH}/index.m3u8\""* ]]
 
   wait_for_http "${HLS_BASE_URL}/${STREAM_PATH}/index.m3u8" 45 1
+
+  if [[ "$WEBRTC_ICE_SMOKE" == "1" ]]; then
+    ice_args=(
+      --run
+      --whep-url "${WEBRTC_BASE_URL}/${STREAM_PATH}/whep"
+      --stun-url "$WEBRTC_STUN_URL"
+    )
+    if [[ "$WEBRTC_ICE_INSECURE" == "1" ]]; then
+      ice_args+=(--insecure)
+    fi
+    if [[ "$WEBRTC_REQUIRE_CONNECTED" == "1" ]]; then
+      ice_args+=(--require-connected)
+    fi
+    python3 "${REPO_ROOT}/scripts/webrtc_ice_smoke.py" "${ice_args[@]}"
+  fi
 
   (
     cd "${REPO_ROOT}/gcs-dashboard"

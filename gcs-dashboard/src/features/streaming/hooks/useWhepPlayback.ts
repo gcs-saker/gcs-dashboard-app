@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef } from "react";
 import type { Dispatch, RefObject } from "react";
 
+import { WEBRTC_ICE_SERVERS } from "../../../config";
 import type { WebRTCPlaybackSnapshot, WebRTCPlaybackStatus } from "../types";
 
 type PeerConnectionFactory = () => RTCPeerConnection;
@@ -267,5 +268,5 @@ function createPeerConnection(): RTCPeerConnection {
     throw new Error("WebRTC is not supported");
   }
 
-  return new RTCPeerConnection();
+  return new RTCPeerConnection({ iceServers: WEBRTC_ICE_SERVERS });
 }
