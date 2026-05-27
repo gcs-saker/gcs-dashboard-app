@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import App from "../../App";
-import { clearAccessToken, getStoredAccessToken } from "./authStorage";
+import { clearAccessToken, getStoredAccessToken, storeAccessToken, storeUser } from "./authStorage";
 
 vi.mock("../../component/MainMap", () => ({
   default: function MockMainMap() {
@@ -100,5 +100,16 @@ describe("LoginPage auth flow", () => {
 
     expect(screen.getByRole("heading", { name: "회원가입" })).toBeInTheDocument();
     expect(window.location.pathname).toBe("/signup");
+  });
+
+  test("redirects an already authenticated user away from login", async () => {
+    storeAccessToken("active-token");
+    storeUser({ username: "operator01", role: "operator" });
+    window.history.pushState({}, "", "/login");
+
+    render(<App />);
+
+    await waitFor(() => expect(window.location.pathname).toBe("/"));
+    expect(screen.queryByRole("heading", { name: "대시보드 로그인" })).not.toBeInTheDocument();
   });
 });

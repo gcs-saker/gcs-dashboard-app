@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthApiError } from "./authApi";
 import { useAuth } from "./AuthProvider";
@@ -12,7 +12,7 @@ function safeRedirectPath(value: string | null): string {
 }
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { isAuthenticated, login } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const params = new URLSearchParams(location.search);
@@ -21,6 +21,13 @@ export function LoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const registeredUsername = params.get("registered") === "1" ? params.get("username") : null;
+  const redirectPath = safeRedirectPath(params.get("redirect"));
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(redirectPath, { replace: true });
+    }
+  }, [isAuthenticated, navigate, redirectPath]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
@@ -29,7 +36,7 @@ export function LoginPage() {
 
     try {
       await login({ username, password });
-      navigate(safeRedirectPath(params.get("redirect")), { replace: true });
+      navigate(redirectPath, { replace: true });
     } catch (error) {
       if (error instanceof AuthApiError && error.status === 401) {
         setErrorMessage("아이디 또는 비밀번호가 올바르지 않습니다.");

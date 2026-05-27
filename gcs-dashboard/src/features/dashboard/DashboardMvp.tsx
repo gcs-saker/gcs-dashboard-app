@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthProvider";
 import { SelectedStreamPanel } from "./components/SelectedStreamPanel";
 import { StreamGrid } from "./components/StreamGrid";
 import { WidgetAddDialog } from "./components/WidgetAddDialog";
@@ -37,6 +39,8 @@ const telemetryRows = [
 ];
 
 export function DashboardMvp() {
+  const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
   const assetTreeWidget = getDashboardWidgetDefinition("asset-tree");
   const tacticalMapWidget = getDashboardWidgetDefinition("tactical-map");
   const systemStatusWidget = getDashboardWidgetDefinition("system-status");
@@ -100,6 +104,11 @@ export function DashboardMvp() {
     setLayoutMessage("기본 레이아웃으로 초기화됨");
   };
 
+  const handleLogout = (): void => {
+    logout();
+    navigate("/login", { replace: true });
+  };
+
   const widgetControls = (widgetId: DashboardWidgetId, title: string) => (
     <WidgetHeaderActions
       isPinned={isWidgetPinned(widgetId)}
@@ -153,9 +162,13 @@ export function DashboardMvp() {
         </nav>
         <div className="ops-dashboard__actions">
           <span role="status">{layoutMessage}</span>
+          {currentUser ? <span className="ops-user-chip">{currentUser.username}</span> : null}
           <a className="ops-command-button is-primary" href="/publisher" role="button">
             웹캠 송출
           </a>
+          <button className="ops-command-button" onClick={handleLogout} type="button">
+            로그아웃
+          </button>
           <button className="ops-command-button" onClick={() => setIsWidgetDialogOpen(true)} type="button">
             위젯 추가
           </button>

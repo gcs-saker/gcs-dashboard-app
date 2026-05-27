@@ -1,15 +1,39 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, test } from "vitest";
+import { BrowserRouter } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { AuthProvider } from "../auth/AuthProvider";
+import { clearAccessToken, storeAccessToken, storeUser } from "../auth/authStorage";
 import { DashboardMvp } from "./DashboardMvp";
 
+function renderDashboard() {
+  return render(
+    <BrowserRouter>
+      <AuthProvider>
+        <DashboardMvp />
+      </AuthProvider>
+    </BrowserRouter>,
+  );
+}
+
 describe("DashboardMvp", () => {
+  beforeEach(() => {
+    storeAccessToken("test-access-token");
+    storeUser({ username: "operator01", role: "operator" });
+  });
+
+  afterEach(() => {
+    clearAccessToken();
+    window.history.pushState({}, "", "/");
+  });
+
   test("renders the field operations dashboard regions from the M2 MVP", () => {
-    render(<DashboardMvp />);
+    renderDashboard();
 
     expect(screen.getByRole("main", { name: "Field Ops Dashboard MVP" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "대시보드" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "웹캠 송출" })).toHaveAttribute("href", "/publisher");
+    expect(screen.getByRole("button", { name: "로그아웃" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "자산트리" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "지도" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "선택 스트림" })).toBeInTheDocument();
@@ -19,7 +43,7 @@ describe("DashboardMvp", () => {
   });
 
   test("marks dashboard regions with widget ids for custom layout editing", () => {
-    const { container } = render(<DashboardMvp />);
+    const { container } = renderDashboard();
 
     expect(container.querySelector('[data-widget-id="asset-tree"]')).toBeInTheDocument();
     expect(container.querySelector('[data-widget-id="tactical-map"]')).toBeInTheDocument();
@@ -32,7 +56,7 @@ describe("DashboardMvp", () => {
 
   test("opens and closes the widget add dialog from the dashboard toolbar", async () => {
     const user = userEvent.setup();
-    render(<DashboardMvp />);
+    renderDashboard();
 
     await user.click(screen.getByRole("button", { name: "위젯 추가" }));
 
@@ -47,7 +71,7 @@ describe("DashboardMvp", () => {
 
   test("pins and pops out dashboard widgets", async () => {
     const user = userEvent.setup();
-    render(<DashboardMvp />);
+    renderDashboard();
 
     const assetTools = screen.getByLabelText("자산트리 위젯 도구");
     const pinButton = assetTools.querySelector('button[title="자산트리 고정"]');
@@ -70,7 +94,7 @@ describe("DashboardMvp", () => {
 
   test("shows all MVP stream slots and changes the selected stream", async () => {
     const user = userEvent.setup();
-    render(<DashboardMvp />);
+    renderDashboard();
 
     expect(screen.getByRole("button", { name: "스트리밍 1 선택" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "스트리밍 2 선택" })).toBeInTheDocument();
@@ -88,7 +112,7 @@ describe("DashboardMvp", () => {
 
   test("connects, cancels, and disconnects stream devices through the slot dialog", async () => {
     const user = userEvent.setup();
-    render(<DashboardMvp />);
+    renderDashboard();
 
     await user.click(screen.getByRole("button", { name: "스트리밍 4 선택" }));
 
@@ -109,7 +133,7 @@ describe("DashboardMvp", () => {
   });
 
   test("renders operational status placeholders needed before live backend wiring", () => {
-    render(<DashboardMvp />);
+    renderDashboard();
 
     expect(screen.getByText("GCS-SAKER")).toBeInTheDocument();
     expect(screen.getByText("서버상태")).toBeInTheDocument();
@@ -119,9 +143,19 @@ describe("DashboardMvp", () => {
   });
 
   test("renders hierarchical asset tree nodes", () => {
-    render(<DashboardMvp />);
+    renderDashboard();
 
     expect(screen.getByText("전방 EO")).toBeInTheDocument();
     expect(screen.getByText("후방 AI")).toBeInTheDocument();
+  });
+
+  test("clears the JWT session when logging out", async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    await user.click(screen.getByRole("button", { name: "로그아웃" }));
+
+    expect(window.localStorage.getItem("gcs_saker_access_token")).toBeNull();
+    expect(window.location.pathname).toBe("/login");
   });
 });
