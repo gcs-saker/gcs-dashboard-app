@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any, cast
 
 from fastapi import HTTPException
 import pytest
@@ -102,8 +103,10 @@ def test_stream_status_values_are_validated(status):
 
 
 def test_stream_status_rejects_unknown_runtime_value():
+    runtime_status = cast(Any, "maintenance")
+
     with pytest.raises(ValueError) as exc_info:
-        StreamDescriptor.from_path("raw/sample/front", status="maintenance")
+        StreamDescriptor.from_path("raw/sample/front", status=runtime_status)
 
     assert str(exc_info.value) == "stream status must be one of registered, online, offline, unknown"
 
@@ -220,7 +223,10 @@ def test_streaming_module_registry_router_returns_seed_streams():
     ]
 
 
-def test_streaming_module_registry_router_returns_sample_front_seed():
+def test_streaming_module_registry_router_returns_sample_front_seed(monkeypatch):
+    service = StreamingService(playback_url_builder=PlaybackUrlBuilder())
+    monkeypatch.setattr(streaming_router_module, "default_streaming_service", service)
+
     response = run_async(get_stream_registry_item("raw.sample.front"))
 
     assert response.model_dump(by_alias=True) == {
@@ -246,7 +252,10 @@ def test_streaming_module_registry_router_returns_404_for_missing_stream(stream_
     assert exc_info.value.detail == "stream is not registered"
 
 
-def test_streaming_module_registry_router_returns_local_webcam_seed():
+def test_streaming_module_registry_router_returns_local_webcam_seed(monkeypatch):
+    service = StreamingService(playback_url_builder=PlaybackUrlBuilder())
+    monkeypatch.setattr(streaming_router_module, "default_streaming_service", service)
+
     response = run_async(get_stream_registry_item("raw.local.webcam"))
 
     assert response.model_dump(by_alias=True) == {
