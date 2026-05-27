@@ -15,7 +15,7 @@ M2 Server-02 staging 배포 전에 Nginx reverse proxy의 HTTPS, WSS, API, dashb
 | 공개 경로 | upstream | 목적 | 정책 |
 | --- | --- | --- | --- |
 | `http://<host>/` | Nginx | HTTPS redirect | ACME challenge를 제외하고 `https://$host$request_uri`로 redirect |
-| `https://<host>/` | `dashboard:3000` | Dashboard serving | SPA/dashboard entrypoint |
+| `https://<host>/` | `nginx:3000` | Dashboard serving | SPA/dashboard entrypoint |
 | `https://<host>/api/` | `backend:8001` | Backend API proxy | `/api/v1/*` 중심으로 proxy, 추후 legacy `/control`, `/telemetry` 경로는 API migration 이슈에서 정리 |
 | `wss://<host>/ws/` | `backend:8001` | Backend WebSocket | `Upgrade`, `Connection` header를 반드시 전달 |
 | `https://<host>/hls/<stream>/index.m3u8` | `mediamtx:8888` | HLS fallback playback | `/hls/` prefix 제거 후 MediaMTX로 전달, buffering/cache off |
