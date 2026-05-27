@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { fetchDashboardServerStatus, serverHealthText } from "./serverStatus";
+import { fetchDashboardServerStatus, healthFromLatency, serverHealthText } from "./serverStatus";
 
 describe("serverStatus", () => {
   test("summarizes live backend status responses", async () => {
@@ -20,6 +20,7 @@ describe("serverStatus", () => {
     expect(status.readiness).toBe("online");
     expect(status.streams).toBe("online");
     expect(status.latencyMs).toBeGreaterThan(0);
+    expect(status.checkedAt).toBeGreaterThan(0);
   });
 
   test("reports error when backend probes fail", async () => {
@@ -29,5 +30,11 @@ describe("serverStatus", () => {
     expect(status.readiness).toBe("error");
     expect(status.streams).toBe("error");
     expect(serverHealthText(status.server)).toBe("오류");
+  });
+
+  test("downgrades health when response latency rises", () => {
+    expect(healthFromLatency(80)).toBe("online");
+    expect(healthFromLatency(700)).toBe("degraded");
+    expect(healthFromLatency(1400)).toBe("error");
   });
 });

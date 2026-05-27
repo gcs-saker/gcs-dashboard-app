@@ -16,7 +16,10 @@ export function WidgetPopout({ widget, onClose }: WidgetPopoutProps) {
           </button>
         </header>
         <div className="widget-popout__body">
-          <p>{widget.title} 위젯을 별도 창으로 확인 중입니다.</p>
+          <div className="widget-popout__preview" aria-label={`${widget.title} 위젯 미리보기`}>
+            <strong>{widget.title}</strong>
+            <span>현재 대시보드 위젯과 동기화된 팝아웃 보기</span>
+          </div>
           <span className="ops-badge">min {widget.minWidth} x {widget.minHeight}</span>
         </div>
       </section>

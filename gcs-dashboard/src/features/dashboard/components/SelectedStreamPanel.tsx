@@ -10,13 +10,20 @@ import {
 interface SelectedStreamPanelProps {
   stream: DashboardStreamSlot;
   controls?: ReactNode;
+  isPinned?: boolean;
+  onToggleAiMode?: (streamId: string) => void;
 }
 
-export function SelectedStreamPanel({ stream, controls }: SelectedStreamPanelProps) {
+export function SelectedStreamPanel({
+  stream,
+  controls,
+  isPinned = false,
+  onToggleAiMode,
+}: SelectedStreamPanelProps) {
   return (
     <section
       aria-labelledby="selected-stream-title"
-      className="ops-panel selected-stream"
+      className={`ops-panel selected-stream ${isPinned ? "is-pinned" : ""}`}
       data-widget-id={SELECTED_STREAM_WIDGET.id}
       style={{ minHeight: SELECTED_STREAM_WIDGET.minHeight }}
     >
@@ -26,6 +33,14 @@ export function SelectedStreamPanel({ stream, controls }: SelectedStreamPanelPro
           <span className={`ops-badge ${getDashboardStreamStatusClass(stream.status)}`}>
             {getDashboardStreamStatusText(stream.status)}
           </span>
+          <button
+            aria-pressed={Boolean(stream.aiModeEnabled)}
+            className={`ops-command-button stream-ai-toggle ${stream.aiModeEnabled ? "is-active" : ""}`}
+            onClick={() => onToggleAiMode?.(stream.id)}
+            type="button"
+          >
+            AI 모드
+          </button>
           {controls}
         </span>
       </div>
@@ -38,6 +53,7 @@ export function SelectedStreamPanel({ stream, controls }: SelectedStreamPanelPro
         <div className="selected-stream__meta">
           <strong>{stream.title}</strong>
           <span>{stream.detail}</span>
+          {stream.aiModeEnabled ? <span>AI 필터 준비됨</span> : null}
         </div>
       </div>
     </section>

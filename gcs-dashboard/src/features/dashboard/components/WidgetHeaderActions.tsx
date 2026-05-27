@@ -6,6 +6,7 @@ interface WidgetHeaderActionsProps {
   isPinned: boolean;
   onTogglePin: (widgetId: DashboardWidgetId) => void;
   onPopOut: (widgetId: DashboardWidgetId) => void;
+  onHide: (widgetId: DashboardWidgetId) => void;
 }
 
 export function WidgetHeaderActions({
@@ -14,6 +15,7 @@ export function WidgetHeaderActions({
   isPinned,
   onTogglePin,
   onPopOut,
+  onHide,
 }: WidgetHeaderActionsProps) {
   return (
     <span className="widget-actions" aria-label={`${title} 위젯 도구`}>
@@ -33,6 +35,14 @@ export function WidgetHeaderActions({
         type="button"
       >
         POP
+      </button>
+      <button
+        className="widget-icon-button"
+        onClick={() => onHide(widgetId)}
+        title={`${title} 숨김`}
+        type="button"
+      >
+        DEL
       </button>
     </span>
   );

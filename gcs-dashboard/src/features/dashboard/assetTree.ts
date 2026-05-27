@@ -80,3 +80,77 @@ export function getAssetTreeStatusText(status: AssetTreeStatus): string {
 export function collectAssetTreeNodes(root: AssetTreeNode): AssetTreeNode[] {
   return [root, ...(root.children ?? []).flatMap((child) => collectAssetTreeNodes(child))];
 }
+
+export interface AssetTreeStreamSource {
+  streamPath?: string | null;
+  detail: string;
+  status: "online" | "fallback" | "offline" | "error" | "reconnecting" | "degraded";
+}
+
+function statusFromStream(status: AssetTreeStreamSource["status"]): AssetTreeStatus {
+  switch (status) {
+    case "online":
+      return "online";
+    case "offline":
+    case "error":
+      return "offline";
+    case "fallback":
+    case "reconnecting":
+    case "degraded":
+      return "warning";
+  }
+}
+
+function assetIdFromStreamPath(streamPath: string): string {
+  const [, assetId = "unknown"] = streamPath.split(".");
+  return assetId.toUpperCase();
+}
+
+function streamLabelFromDetail(source: AssetTreeStreamSource): string {
+  const [name] = source.detail.split(" / ");
+  return name.trim() || source.streamPath || "스트림";
+}
+
+export function mergeAssetTreeWithStreams(
+  root: AssetTreeNode,
+  streams: AssetTreeStreamSource[],
+): AssetTreeNode {
+  const liveStreams = streams.filter((stream): stream is AssetTreeStreamSource & { streamPath: string } =>
+    Boolean(stream.streamPath),
+  );
+  const knownNodeIds = new Set(collectAssetTreeNodes(root).map((node) => node.id));
+  const discoveredByAsset = new Map<string, AssetTreeNode[]>();
+
+  for (const stream of liveStreams) {
+    if (knownNodeIds.has(stream.streamPath)) continue;
+    const assetId = assetIdFromStreamPath(stream.streamPath);
+    const streamNode: AssetTreeNode = {
+      id: stream.streamPath,
+      label: streamLabelFromDetail(stream),
+      type: "stream",
+      status: statusFromStream(stream.status),
+    };
+    discoveredByAsset.set(assetId, [...(discoveredByAsset.get(assetId) ?? []), streamNode]);
+  }
+
+  if (!discoveredByAsset.size) return root;
+
+  const discoveredGroup: AssetTreeNode = {
+    id: "group-discovered-streams",
+    label: "감지 스트림",
+    type: "group",
+    status: "online",
+    children: Array.from(discoveredByAsset.entries()).map(([assetId, children]) => ({
+      id: `asset-${assetId.toLowerCase()}`,
+      label: assetId,
+      type: "device",
+      status: children.some((child) => child.status === "online") ? "online" : "warning",
+      children,
+    })),
+  };
+
+  return {
+    ...root,
+    children: [...(root.children ?? []).filter((child) => child.id !== discoveredGroup.id), discoveredGroup],
+  };
+}

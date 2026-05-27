@@ -158,8 +158,20 @@ export function mergeStreamSlotsWithDevices(
   streams: DashboardStreamSlot[],
   devices: StreamDeviceOption[],
 ): DashboardStreamSlot[] {
-  const devicesByStreamPath = new Map(devices.map((device) => [device.streamPath, device]));
-  const nextStreams = streams.map((stream) => {
+  const devicesByStreamPath = new Map<string, StreamDeviceOption>();
+  for (const device of devices) {
+    if (!devicesByStreamPath.has(device.streamPath)) {
+      devicesByStreamPath.set(device.streamPath, device);
+    }
+  }
+
+  const seenStreamPaths = new Set<string>();
+  const nextStreams = streams.flatMap((stream) => {
+    if (stream.streamPath) {
+      if (seenStreamPaths.has(stream.streamPath)) return [];
+      seenStreamPaths.add(stream.streamPath);
+    }
+
     if (!stream.streamPath) return stream;
     const device = devicesByStreamPath.get(stream.streamPath);
     if (!device) return { ...stream, status: "offline" as const };

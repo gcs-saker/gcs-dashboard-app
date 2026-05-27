@@ -90,4 +90,23 @@ describe("streamDevices", () => {
       detail: "Drone 09 Front / raw.drone-09.front",
     });
   });
+
+  test("does not append duplicate stream slots across registry polling", () => {
+    const firstMerge = mergeStreamSlotsWithDevices(DEFAULT_DASHBOARD_STREAMS, [
+      {
+        ...MOCK_STREAM_DEVICES[3],
+        status: "online",
+      },
+    ]);
+    const secondMerge = mergeStreamSlotsWithDevices(firstMerge, [
+      {
+        ...MOCK_STREAM_DEVICES[3],
+        id: "registry-raw.local.webcam-duplicate",
+        status: "online",
+      },
+    ]);
+
+    expect(secondMerge.filter((stream) => stream.streamPath === "raw.local.webcam")).toHaveLength(1);
+    expect(secondMerge).toHaveLength(firstMerge.length);
+  });
 });

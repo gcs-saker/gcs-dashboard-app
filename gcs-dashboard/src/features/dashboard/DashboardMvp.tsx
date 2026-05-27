@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthProvider";
 import { SelectedStreamPanel } from "./components/SelectedStreamPanel";
 import { StreamGrid } from "./components/StreamGrid";
 import { WidgetAddDialog } from "./components/WidgetAddDialog";
@@ -7,25 +9,20 @@ import { WidgetPopout } from "./components/WidgetPopout";
 import { StreamDeviceConnectDialog } from "./components/StreamDeviceConnectDialog";
 import { AssetTreePanel } from "./components/AssetTreePanel";
 import { SystemStatusPanel } from "./components/SystemStatusPanel";
-import { DEFAULT_ASSET_TREE } from "./assetTree";
+import { DEFAULT_ASSET_TREE, mergeAssetTreeWithStreams } from "./assetTree";
 import {
   getDashboardWidgetDefinition,
   resetDashboardLayout,
   setDashboardWidgetPinned,
+  setDashboardWidgetVisible,
   type DashboardLayoutItem,
   type DashboardWidgetId,
 } from "./dashboardLayout";
 import "./DashboardMvp.css";
 import { getMapFocusForStream } from "./mapFocus";
-import {
-  connectDeviceToStreamSlot,
-  disconnectStreamSlot,
-  fetchStreamDeviceOptions,
-  mergeStreamSlotsWithDevices,
-  MOCK_STREAM_DEVICES,
-  type StreamDeviceOption,
-} from "./streamDevices";
-import { DEFAULT_DASHBOARD_STREAMS } from "./streamTypes";
+import { TacticalLeafletMap } from "./map/TacticalLeafletMap";
+import { type StreamDeviceOption } from "./streamDevices";
+import { useDashboardStreams } from "./hooks/useDashboardStreams";
 
 const telemetryRows = [
   ["위도", "37.123456"],
@@ -37,6 +34,8 @@ const telemetryRows = [
 ];
 
 export function DashboardMvp() {
+  const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
   const assetTreeWidget = getDashboardWidgetDefinition("asset-tree");
   const tacticalMapWidget = getDashboardWidgetDefinition("tactical-map");
   const systemStatusWidget = getDashboardWidgetDefinition("system-status");
@@ -46,52 +45,38 @@ export function DashboardMvp() {
   const [isWidgetDialogOpen, setIsWidgetDialogOpen] = useState(false);
   const [popoutWidgetId, setPopoutWidgetId] = useState<DashboardWidgetId | null>(null);
   const [layoutMessage, setLayoutMessage] = useState("기본 레이아웃");
-  const [streams, setStreams] = useState(() => DEFAULT_DASHBOARD_STREAMS);
-  const [streamDevices, setStreamDevices] = useState<StreamDeviceOption[]>(MOCK_STREAM_DEVICES);
-  const [selectedStreamId, setSelectedStreamId] = useState(DEFAULT_DASHBOARD_STREAMS[0].id);
-  const [editingStreamId, setEditingStreamId] = useState<string | null>(null);
-  const selectedStream = useMemo(
-    () => streams.find((stream) => stream.id === selectedStreamId) ?? streams[0],
-    [selectedStreamId, streams],
-  );
-  const editingStream = useMemo(
-    () => streams.find((stream) => stream.id === editingStreamId) ?? null,
-    [editingStreamId, streams],
-  );
+  const {
+    connectStreamDevice: connectStreamDeviceState,
+    disconnectCurrentStreamSlot: disconnectCurrentStreamSlotState,
+    editingStream,
+    openStreamConnection: openStreamConnectionState,
+    selectedStream,
+    selectedStreamId,
+    setEditingStreamId,
+    streamDevices,
+    streams,
+    toggleStreamAiMode: toggleStreamAiModeState,
+  } = useDashboardStreams();
   const mapFocus = useMemo(() => getMapFocusForStream(selectedStream), [selectedStream]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const refreshStreams = async (): Promise<void> => {
-      try {
-        const devices = await fetchStreamDeviceOptions();
-        if (!isMounted || devices.length === 0) return;
-        setStreamDevices(devices);
-        setStreams((current) => mergeStreamSlotsWithDevices(current, devices));
-      } catch {
-        if (isMounted) {
-          setStreams((current) => current.map((stream) => ({ ...stream, status: stream.status === "online" ? "degraded" : stream.status })));
-        }
-      }
-    };
-
-    void refreshStreams();
-    const intervalId = globalThis.setInterval(() => void refreshStreams(), 3000);
-
-    return () => {
-      isMounted = false;
-      globalThis.clearInterval(intervalId);
-    };
-  }, []);
+  const assetTreeRoot = useMemo(() => mergeAssetTreeWithStreams(DEFAULT_ASSET_TREE, streams), [streams]);
 
   const isWidgetPinned = (widgetId: DashboardWidgetId): boolean =>
     layout.find((item) => item.id === widgetId)?.pinned ?? false;
+  const isWidgetVisible = (widgetId: DashboardWidgetId): boolean =>
+    layout.find((item) => item.id === widgetId)?.visible ?? false;
+
+  const panelClass = (baseClass: string, widgetId: DashboardWidgetId): string =>
+    `${baseClass} ${isWidgetPinned(widgetId) ? "is-pinned" : ""}`;
 
   const toggleWidgetPin = (widgetId: DashboardWidgetId): void => {
     const nextPinned = !isWidgetPinned(widgetId);
     setLayout((current) => setDashboardWidgetPinned(current, widgetId, nextPinned));
     setLayoutMessage(nextPinned ? "위젯 고정됨" : "위젯 고정 해제됨");
+  };
+
+  const setWidgetVisible = (widgetId: DashboardWidgetId, visible: boolean): void => {
+    setLayout((current) => setDashboardWidgetVisible(current, widgetId, visible));
+    setLayoutMessage(visible ? "위젯 표시됨" : "위젯 숨김");
   };
 
   const resetLayout = (): void => {
@@ -100,10 +85,16 @@ export function DashboardMvp() {
     setLayoutMessage("기본 레이아웃으로 초기화됨");
   };
 
+  const handleLogout = (): void => {
+    logout();
+    navigate("/login", { replace: true });
+  };
+
   const widgetControls = (widgetId: DashboardWidgetId, title: string) => (
     <WidgetHeaderActions
       isPinned={isWidgetPinned(widgetId)}
       onPopOut={setPopoutWidgetId}
+      onHide={(id) => setWidgetVisible(id, false)}
       onTogglePin={toggleWidgetPin}
       title={title}
       widgetId={widgetId}
@@ -111,30 +102,23 @@ export function DashboardMvp() {
   );
 
   const openStreamConnection = (streamId: string): void => {
-    setSelectedStreamId(streamId);
-    setEditingStreamId(streamId);
+    openStreamConnectionState(streamId);
     setLayoutMessage("스트림 슬롯 선택됨");
   };
 
   const connectStreamDevice = (device: StreamDeviceOption): void => {
-    setStreams((current) =>
-      current.map((stream) =>
-        stream.id === editingStreamId ? connectDeviceToStreamSlot(stream, device) : stream,
-      ),
-    );
-    if (editingStreamId) {
-      setSelectedStreamId(editingStreamId);
-    }
-    setEditingStreamId(null);
+    connectStreamDeviceState(device);
     setLayoutMessage("스트리밍 장비 연결됨");
   };
 
   const disconnectCurrentStreamSlot = (): void => {
-    setStreams((current) =>
-      current.map((stream) => (stream.id === editingStreamId ? disconnectStreamSlot(stream) : stream)),
-    );
-    setEditingStreamId(null);
+    disconnectCurrentStreamSlotState();
     setLayoutMessage("스트리밍 장비 연결 해제됨");
+  };
+
+  const toggleStreamAiMode = (streamId: string): void => {
+    toggleStreamAiModeState(streamId);
+    setLayoutMessage("AI 모드 옵션 변경됨");
   };
 
   return (
@@ -153,9 +137,13 @@ export function DashboardMvp() {
         </nav>
         <div className="ops-dashboard__actions">
           <span role="status">{layoutMessage}</span>
+          {currentUser ? <span className="ops-user-chip">{currentUser.username}</span> : null}
           <a className="ops-command-button is-primary" href="/publisher" role="button">
             웹캠 송출
           </a>
+          <button className="ops-command-button" onClick={handleLogout} type="button">
+            로그아웃
+          </button>
           <button className="ops-command-button" onClick={() => setIsWidgetDialogOpen(true)} type="button">
             위젯 추가
           </button>
@@ -166,18 +154,18 @@ export function DashboardMvp() {
       </header>
 
       <section className="ops-dashboard__grid">
-        <aside
+        {isWidgetVisible("asset-tree") ? <aside
           aria-labelledby="asset-tree-title"
-          className="ops-panel asset-tree"
+          className={panelClass("ops-panel asset-tree", "asset-tree")}
           data-widget-id={assetTreeWidget.id}
           style={{ minHeight: assetTreeWidget.minHeight, minWidth: assetTreeWidget.minWidth }}
         >
-          <AssetTreePanel controls={widgetControls("asset-tree", "자산트리")} root={DEFAULT_ASSET_TREE} />
-        </aside>
+          <AssetTreePanel controls={widgetControls("asset-tree", "자산트리")} root={assetTreeRoot} />
+        </aside> : null}
 
-        <section
+        {isWidgetVisible("tactical-map") ? <section
           aria-labelledby="map-title"
-          className="ops-panel tactical-map"
+          className={panelClass("ops-panel tactical-map", "tactical-map")}
           data-widget-id={tacticalMapWidget.id}
           style={{ minHeight: tacticalMapWidget.minHeight, minWidth: tacticalMapWidget.minWidth }}
         >
@@ -188,59 +176,37 @@ export function DashboardMvp() {
               {widgetControls("tactical-map", "지도")}
             </span>
           </div>
-          <div className="tactical-map__canvas">
-            <div className="map-toolbar" aria-label="지도 도구">
-              <button type="button">⌖</button>
-              <button type="button">＋</button>
-              <button type="button">－</button>
-              <button type="button">▧</button>
-            </div>
-            <div className="map-route" />
-            {["DRN-01", "DRN-02", "UGV-01", "UGV-02", "SEN-01"].map((asset, index) => (
-              <button
-                className={`map-marker ${asset === "UGV-02" ? "is-warning" : "is-online"} marker-${index + 1}`}
-                key={asset}
-                type="button"
-              >
-                <span>{asset}</span>
-              </button>
-            ))}
-            <div
-              className={`map-focus ${mapFocus.hasGeometry ? "has-geometry" : ""}`}
-              style={mapFocus.markerStyle}
-            >
-              <span className="map-focus__cone" style={mapFocus.coneStyle} />
-              <span className="map-focus__label" data-testid="map-focus-label">
-                {mapFocus.label}
-              </span>
-            </div>
-            <div className="map-compass">N</div>
-          </div>
-        </section>
+          <TacticalLeafletMap selectedStream={selectedStream} streams={streams} />
+          <span className="map-focus__label" data-testid="map-focus-label">
+            {mapFocus.label}
+          </span>
+        </section> : null}
 
-        <SelectedStreamPanel
+        {isWidgetVisible("selected-stream") ? <SelectedStreamPanel
           controls={widgetControls("selected-stream", "선택 스트림")}
+          isPinned={isWidgetPinned("selected-stream")}
+          onToggleAiMode={toggleStreamAiMode}
           stream={selectedStream}
-        />
+        /> : null}
 
-        <StreamGrid
+        {isWidgetVisible("stream-grid") ? <StreamGrid
           onSelectStream={openStreamConnection}
           selectedStreamId={selectedStreamId}
           streams={streams}
-        />
+        /> : null}
 
-        <section
+        {isWidgetVisible("system-status") ? <section
           aria-labelledby="status-title"
-          className="ops-panel system-status"
+          className={panelClass("ops-panel system-status", "system-status")}
           data-widget-id={systemStatusWidget.id}
           style={{ minHeight: systemStatusWidget.minHeight, minWidth: systemStatusWidget.minWidth }}
         >
           <SystemStatusPanel controls={widgetControls("system-status", "서버상태 / 연결상태 / 헬스체크")} />
-        </section>
+        </section> : null}
 
-        <section
+        {isWidgetVisible("telemetry-panel") ? <section
           aria-labelledby="telemetry-title"
-          className="ops-panel telemetry-panel"
+          className={panelClass("ops-panel telemetry-panel", "telemetry-panel")}
           data-widget-id={telemetryWidget.id}
           style={{ minHeight: telemetryWidget.minHeight, minWidth: telemetryWidget.minWidth }}
         >
@@ -263,11 +229,11 @@ export function DashboardMvp() {
               ))}
             </dl>
           </div>
-        </section>
+        </section> : null}
 
-        <section
+        {isWidgetVisible("ai-results") ? <section
           aria-labelledby="ai-title"
-          className="ops-panel ai-panel"
+          className={panelClass("ops-panel ai-panel", "ai-results")}
           data-widget-id={aiResultsWidget.id}
           style={{ minHeight: aiResultsWidget.minHeight, minWidth: aiResultsWidget.minWidth }}
         >
@@ -292,7 +258,7 @@ export function DashboardMvp() {
               <span>42 ms</span>
             </li>
           </ul>
-        </section>
+        </section> : null}
       </section>
 
       {isWidgetDialogOpen ? (
@@ -307,6 +273,7 @@ export function DashboardMvp() {
             setLayoutMessage("레이아웃 변경 취소됨");
           }}
           onReset={resetLayout}
+          onToggleWidget={setWidgetVisible}
         />
       ) : null}
 

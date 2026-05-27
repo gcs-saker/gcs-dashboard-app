@@ -83,6 +83,7 @@
   cursor: pointer;
   font-weight: 800;
   min-height: 32px;
+  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease, transform 120ms ease;
 }
 
 .ops-command-button {
@@ -97,6 +98,21 @@
   color: var(--cyan);
 }
 
+.ops-command-button.is-active,
+.stream-ai-toggle.is-active {
+  border-color: var(--violet);
+  color: var(--violet);
+}
+
+.ops-user-chip {
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--text);
+  font-weight: 800;
+  min-height: 24px;
+  padding: 3px 9px;
+}
+
 .widget-icon-button {
   font-size: 0.68rem;
   min-width: 34px;
@@ -106,6 +122,20 @@
 .widget-icon-button.is-active {
   border-color: var(--amber);
   color: var(--amber);
+}
+
+.ops-command-button:hover,
+.widget-icon-button:hover,
+.stream-card:hover,
+.widget-dialog__item:hover {
+  border-color: var(--cyan);
+}
+
+.ops-command-button:active,
+.widget-icon-button:active,
+.stream-card:active,
+.widget-dialog__item:active {
+  transform: translateY(1px);
 }
 
 .ops-command-button:disabled,
@@ -118,8 +148,8 @@
   display: grid;
   flex: 1;
   gap: 8px;
-  grid-template-columns: 380px minmax(420px, 1.5fr) minmax(440px, 1fr);
-  grid-template-rows: minmax(300px, 1.1fr) minmax(180px, 0.7fr) 118px;
+  grid-template-columns: 340px minmax(420px, 1.25fr) minmax(560px, 1.55fr);
+  grid-template-rows: minmax(360px, 1.35fr) minmax(120px, 0.48fr) 104px;
   min-height: 0;
   padding: 8px;
 }
@@ -131,6 +161,12 @@
   border-radius: 6px;
   min-height: 0;
   overflow: hidden;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 160ms ease;
+}
+
+.ops-panel.is-pinned {
+  border-color: var(--amber);
+  box-shadow: inset 0 0 0 1px rgba(243, 200, 77, 0.42), 0 0 0 1px rgba(243, 200, 77, 0.18);
 }
 
 .ops-panel__header,
@@ -160,6 +196,7 @@
   min-height: 22px;
   padding: 0 9px;
   white-space: nowrap;
+  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
 }
 
 .ops-badge.is-online,
@@ -252,17 +289,25 @@
 .tactical-map {
   grid-column: 2;
   grid-row: 1;
+  position: relative;
 }
 
 .tactical-map__canvas {
-  background:
-    linear-gradient(rgba(7, 20, 22, 0.62), rgba(5, 13, 17, 0.86)),
-    repeating-linear-gradient(28deg, rgba(61, 184, 255, 0.11) 0 1px, transparent 1px 70px),
-    repeating-linear-gradient(118deg, rgba(89, 209, 116, 0.08) 0 1px, transparent 1px 86px),
-    #152522;
+  background: #152522;
   height: calc(100% - 46px);
   min-height: 294px;
   position: relative;
+}
+
+.tactical-map__leaflet {
+  height: 100%;
+  min-height: 294px;
+  width: 100%;
+}
+
+.tactical-map__canvas .leaflet-container {
+  background: #152522;
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
 }
 
 .map-toolbar {
@@ -354,11 +399,15 @@
   background: rgba(5, 13, 17, 0.78);
   border: 1px solid var(--line);
   border-radius: 6px;
+  bottom: 14px;
   color: var(--text);
   font-size: 0.72rem;
   font-weight: 800;
   padding: 4px 8px;
+  position: absolute;
+  right: 14px;
   white-space: nowrap;
+  z-index: 5;
 }
 
 .marker-1 {
@@ -417,7 +466,7 @@
 
 .selected-stream__viewport {
   height: calc(100% - 46px);
-  min-height: 294px;
+  min-height: 354px;
 }
 
 .mode-ir {
@@ -449,16 +498,25 @@
   border-radius: 6px;
   display: grid;
   gap: 4px;
-  left: 18px;
+  bottom: 14px;
+  left: 14px;
+  max-width: calc(100% - 28px);
   padding: 10px 12px;
   position: absolute;
-  top: 18px;
 }
 
 .selected-stream__meta span,
 .stream-card__detail {
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.selected-stream__meta strong,
+.selected-stream__meta span,
+.stream-card__detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stream-grid {
@@ -493,7 +551,7 @@
 }
 
 .stream-card__visual {
-  min-height: 86px;
+  min-height: 112px;
 }
 
 .stream-card__visual .reticle {
@@ -548,6 +606,13 @@
   margin: 0;
 }
 
+.system-status__updated {
+  color: var(--muted);
+  font-size: 0.74rem;
+  margin: 0;
+  padding: 0 14px 12px;
+}
+
 .telemetry-panel {
   grid-column: 2;
   grid-row: 2;
@@ -556,9 +621,9 @@
 .telemetry-panel__body {
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(140px, 0.8fr) 1fr;
+  grid-template-columns: minmax(96px, 0.45fr) 1fr;
   height: calc(100% - 46px);
-  padding: 14px;
+  padding: 10px 12px;
 }
 
 .telemetry-orbit {
@@ -568,7 +633,7 @@
     #07121a;
   border: 1px solid var(--line-soft);
   border-radius: 6px;
-  min-height: 132px;
+  min-height: 82px;
   position: relative;
 }
 
@@ -633,7 +698,19 @@
   box-shadow: 0 22px 60px rgba(0, 0, 0, 0.4);
   color: var(--text);
   max-width: min(680px, 100%);
+  animation: widget-enter 160ms ease-out;
   width: 100%;
+}
+
+@keyframes widget-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .widget-dialog__header,
@@ -697,6 +774,22 @@
   display: grid;
   gap: 12px;
   padding: 18px;
+}
+
+.widget-popout__preview {
+  background: rgba(5, 13, 17, 0.62);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  display: grid;
+  gap: 6px;
+  min-height: 140px;
+  padding: 16px;
+  place-content: center;
+  text-align: center;
+}
+
+.widget-popout__preview span {
+  color: var(--muted);
 }
 
 .stream-connect-dialog__device {

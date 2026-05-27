@@ -18,7 +18,7 @@
 
 .webrtc-player__overlay {
   position: absolute;
-  inset: auto 12px 12px 12px;
+  inset: 12px 12px auto auto;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -36,6 +36,11 @@
   padding: 4px 8px;
   border: 1px solid rgba(126, 180, 222, 0.45);
   background: rgba(3, 8, 13, 0.78);
+}
+
+.webrtc-player__stream,
+.webrtc-player__state {
+  display: none;
 }
 
 .webrtc-player__status {
