@@ -136,6 +136,14 @@ export function setDashboardWidgetPinned(
   return layout.map((item) => (item.id === widgetId ? { ...item, pinned } : item));
 }
 
+export function setDashboardWidgetVisible(
+  layout: DashboardLayoutItem[],
+  widgetId: DashboardWidgetId,
+  visible: boolean,
+): DashboardLayoutItem[] {
+  return layout.map((item) => (item.id === widgetId ? { ...item, visible } : item));
+}
+
 export function getVisibleDashboardLayout(layout: DashboardLayoutItem[]): DashboardLayoutItem[] {
   return layout.filter((item) => item.visible);
 }

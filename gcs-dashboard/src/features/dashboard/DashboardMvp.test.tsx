@@ -61,12 +61,29 @@ describe("DashboardMvp", () => {
     await user.click(screen.getByRole("button", { name: "위젯 추가" }));
 
     expect(screen.getByRole("dialog", { name: "위젯 추가" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /지도/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /지도/ })).toHaveTextContent("숨기기");
 
     await user.click(screen.getByRole("button", { name: "취소" }));
 
     expect(screen.queryByRole("dialog", { name: "위젯 추가" })).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("레이아웃 변경 취소됨");
+  });
+
+  test("hides and restores widgets through the layout dialog", async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    await user.click(screen.getByLabelText("지도 위젯 도구").querySelector('button[title="지도 숨김"]') as HTMLButtonElement);
+
+    expect(screen.queryByRole("heading", { name: "지도" })).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("위젯 숨김");
+
+    await user.click(screen.getByRole("button", { name: "위젯 추가" }));
+    await user.click(screen.getByRole("button", { name: /지도/ }));
+    await user.click(screen.getByRole("button", { name: "적용" }));
+
+    expect(screen.getByRole("heading", { name: "지도" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("레이아웃 변경 적용됨");
   });
 
   test("pins and pops out dashboard widgets", async () => {

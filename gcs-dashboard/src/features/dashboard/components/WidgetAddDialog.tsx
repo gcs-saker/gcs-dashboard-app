@@ -5,9 +5,10 @@ interface WidgetAddDialogProps {
   onApply: () => void;
   onCancel: () => void;
   onReset: () => void;
+  onToggleWidget: (widgetId: DashboardLayoutItem["id"], visible: boolean) => void;
 }
 
-export function WidgetAddDialog({ layout, onApply, onCancel, onReset }: WidgetAddDialogProps) {
+export function WidgetAddDialog({ layout, onApply, onCancel, onReset, onToggleWidget }: WidgetAddDialogProps) {
   return (
     <div className="widget-dialog__backdrop">
       <section aria-label="위젯 추가" aria-modal="true" className="widget-dialog" role="dialog">
@@ -20,7 +21,12 @@ export function WidgetAddDialog({ layout, onApply, onCancel, onReset }: WidgetAd
 
         <div className="widget-dialog__list">
           {layout.map((item) => (
-            <button className="widget-dialog__item" disabled={item.visible} key={item.id} type="button">
+            <button
+              className="widget-dialog__item"
+              key={item.id}
+              onClick={() => onToggleWidget(item.id, !item.visible)}
+              type="button"
+            >
               <span>
                 <strong>{item.title}</strong>
                 <small>
@@ -28,7 +34,7 @@ export function WidgetAddDialog({ layout, onApply, onCancel, onReset }: WidgetAd
                 </small>
               </span>
               <span className={`ops-badge ${item.visible ? "is-online" : "is-warning"}`}>
-                {item.visible ? "배치됨" : "추가 가능"}
+                {item.visible ? "숨기기" : "표시"}
               </span>
             </button>
           ))}

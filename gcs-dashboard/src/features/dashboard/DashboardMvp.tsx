@@ -14,6 +14,7 @@ import {
   getDashboardWidgetDefinition,
   resetDashboardLayout,
   setDashboardWidgetPinned,
+  setDashboardWidgetVisible,
   type DashboardLayoutItem,
   type DashboardWidgetId,
 } from "./dashboardLayout";
@@ -93,6 +94,8 @@ export function DashboardMvp() {
 
   const isWidgetPinned = (widgetId: DashboardWidgetId): boolean =>
     layout.find((item) => item.id === widgetId)?.pinned ?? false;
+  const isWidgetVisible = (widgetId: DashboardWidgetId): boolean =>
+    layout.find((item) => item.id === widgetId)?.visible ?? false;
 
   const panelClass = (baseClass: string, widgetId: DashboardWidgetId): string =>
     `${baseClass} ${isWidgetPinned(widgetId) ? "is-pinned" : ""}`;
@@ -101,6 +104,11 @@ export function DashboardMvp() {
     const nextPinned = !isWidgetPinned(widgetId);
     setLayout((current) => setDashboardWidgetPinned(current, widgetId, nextPinned));
     setLayoutMessage(nextPinned ? "위젯 고정됨" : "위젯 고정 해제됨");
+  };
+
+  const setWidgetVisible = (widgetId: DashboardWidgetId, visible: boolean): void => {
+    setLayout((current) => setDashboardWidgetVisible(current, widgetId, visible));
+    setLayoutMessage(visible ? "위젯 표시됨" : "위젯 숨김");
   };
 
   const resetLayout = (): void => {
@@ -118,6 +126,7 @@ export function DashboardMvp() {
     <WidgetHeaderActions
       isPinned={isWidgetPinned(widgetId)}
       onPopOut={setPopoutWidgetId}
+      onHide={(id) => setWidgetVisible(id, false)}
       onTogglePin={toggleWidgetPin}
       title={title}
       widgetId={widgetId}
@@ -184,16 +193,16 @@ export function DashboardMvp() {
       </header>
 
       <section className="ops-dashboard__grid">
-        <aside
+        {isWidgetVisible("asset-tree") ? <aside
           aria-labelledby="asset-tree-title"
           className={panelClass("ops-panel asset-tree", "asset-tree")}
           data-widget-id={assetTreeWidget.id}
           style={{ minHeight: assetTreeWidget.minHeight, minWidth: assetTreeWidget.minWidth }}
         >
           <AssetTreePanel controls={widgetControls("asset-tree", "자산트리")} root={assetTreeRoot} />
-        </aside>
+        </aside> : null}
 
-        <section
+        {isWidgetVisible("tactical-map") ? <section
           aria-labelledby="map-title"
           className={panelClass("ops-panel tactical-map", "tactical-map")}
           data-widget-id={tacticalMapWidget.id}
@@ -210,30 +219,30 @@ export function DashboardMvp() {
           <span className="map-focus__label" data-testid="map-focus-label">
             {mapFocus.label}
           </span>
-        </section>
+        </section> : null}
 
-        <SelectedStreamPanel
+        {isWidgetVisible("selected-stream") ? <SelectedStreamPanel
           controls={widgetControls("selected-stream", "선택 스트림")}
           isPinned={isWidgetPinned("selected-stream")}
           stream={selectedStream}
-        />
+        /> : null}
 
-        <StreamGrid
+        {isWidgetVisible("stream-grid") ? <StreamGrid
           onSelectStream={openStreamConnection}
           selectedStreamId={selectedStreamId}
           streams={streams}
-        />
+        /> : null}
 
-        <section
+        {isWidgetVisible("system-status") ? <section
           aria-labelledby="status-title"
           className={panelClass("ops-panel system-status", "system-status")}
           data-widget-id={systemStatusWidget.id}
           style={{ minHeight: systemStatusWidget.minHeight, minWidth: systemStatusWidget.minWidth }}
         >
           <SystemStatusPanel controls={widgetControls("system-status", "서버상태 / 연결상태 / 헬스체크")} />
-        </section>
+        </section> : null}
 
-        <section
+        {isWidgetVisible("telemetry-panel") ? <section
           aria-labelledby="telemetry-title"
           className={panelClass("ops-panel telemetry-panel", "telemetry-panel")}
           data-widget-id={telemetryWidget.id}
@@ -258,9 +267,9 @@ export function DashboardMvp() {
               ))}
             </dl>
           </div>
-        </section>
+        </section> : null}
 
-        <section
+        {isWidgetVisible("ai-results") ? <section
           aria-labelledby="ai-title"
           className={panelClass("ops-panel ai-panel", "ai-results")}
           data-widget-id={aiResultsWidget.id}
@@ -287,7 +296,7 @@ export function DashboardMvp() {
               <span>42 ms</span>
             </li>
           </ul>
-        </section>
+        </section> : null}
       </section>
 
       {isWidgetDialogOpen ? (
@@ -302,6 +311,7 @@ export function DashboardMvp() {
             setLayoutMessage("레이아웃 변경 취소됨");
           }}
           onReset={resetLayout}
+          onToggleWidget={setWidgetVisible}
         />
       ) : null}
 
