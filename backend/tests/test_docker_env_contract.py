@@ -50,6 +50,7 @@ def test_compose_keeps_mediamtx_management_ports_private_and_mounts_config_as_fi
     compose = load_yaml(COMPOSE_FILE)
     mediamtx = compose["services"]["mediamtx"]
 
+    assert mediamtx["image"] == "${MEDIAMTX_IMAGE:-bluenviron/mediamtx:1.15.3}"
     assert not any("9997" in port or "9998" in port for port in mediamtx["ports"])
     assert {
         "type": "bind",
@@ -89,3 +90,13 @@ def test_env_guide_documents_environment_split_and_recent_docker_failure() -> No
     assert "secret은 GitHub에 저장하지 않는다" in doc
     assert "MediaMTX `Exited (127)`" in doc
     assert "#112" in doc
+
+
+def test_dashboard_nginx_defers_mediamtx_dns_resolution_until_request_time() -> None:
+    config = (REPO_ROOT / "gcs-dashboard" / "nginx.conf").read_text(encoding="utf-8")
+
+    assert "resolver 127.0.0.11 valid=10s ipv6=off;" in config
+    assert "set $mediamtx_hls_host mediamtx;" in config
+    assert "rewrite ^/hls/(.*)$ /$1 break;" in config
+    assert "proxy_pass http://$mediamtx_hls_host:8888;" in config
+    assert "proxy_pass http://mediamtx:8888/" not in config
