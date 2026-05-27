@@ -149,7 +149,7 @@
   flex: 1;
   gap: 8px;
   grid-template-columns: 340px minmax(420px, 1.25fr) minmax(560px, 1.55fr);
-  grid-template-rows: minmax(360px, 1.35fr) minmax(120px, 0.48fr) 104px;
+  grid-template-rows: minmax(430px, 1.45fr) minmax(448px, 0.95fr) 104px;
   min-height: 0;
   padding: 8px;
 }
@@ -289,14 +289,18 @@
 .tactical-map {
   grid-column: 2;
   grid-row: 1;
+  isolation: isolate;
   position: relative;
+  z-index: 0;
 }
 
 .tactical-map__canvas {
   background: #152522;
   height: calc(100% - 46px);
   min-height: 294px;
+  overflow: hidden;
   position: relative;
+  z-index: 0;
 }
 
 .tactical-map__leaflet {
@@ -308,6 +312,7 @@
 .tactical-map__canvas .leaflet-container {
   background: #152522;
   font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  z-index: 0;
 }
 
 .map-toolbar {
@@ -317,16 +322,22 @@
   position: absolute;
   top: 18px;
   width: 42px;
-  z-index: 2;
+  z-index: 500;
 }
 
 .map-toolbar button {
+  align-items: center;
   background: rgba(5, 13, 17, 0.78);
   border: 1px solid var(--line);
   border-radius: 6px;
   color: var(--text);
   cursor: pointer;
+  display: flex;
+  font-size: 1.05rem;
+  font-weight: 900;
   height: 38px;
+  justify-content: center;
+  line-height: 1;
 }
 
 .map-route {
@@ -466,7 +477,12 @@
 
 .selected-stream__viewport {
   height: calc(100% - 46px);
-  min-height: 354px;
+  min-height: 430px;
+}
+
+.selected-stream__viewport .realtime-player {
+  height: 100%;
+  min-height: 100%;
 }
 
 .mode-ir {
@@ -525,7 +541,7 @@
   grid-column: 3;
   grid-row: 2;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  min-height: 0;
+  min-height: 448px;
   min-width: 360px;
 }
 
@@ -534,7 +550,7 @@
   cursor: pointer;
   display: grid;
   grid-template-rows: 38px 1fr 32px;
-  min-height: 0;
+  min-height: 122px;
   min-width: 0;
   padding: 0;
   text-align: left;
@@ -551,7 +567,7 @@
 }
 
 .stream-card__visual {
-  min-height: 112px;
+  min-height: 150px;
 }
 
 .stream-card__visual .reticle {

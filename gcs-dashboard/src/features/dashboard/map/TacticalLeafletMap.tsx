@@ -7,7 +7,7 @@ interface TacticalLeafletMapProps {
   streams: DashboardStreamSlot[];
 }
 
-const DEFAULT_CENTER: LatLngExpression = [37.123456, 127.123456];
+const DEFAULT_CENTER: LatLngExpression = [35.871435, 128.601445];
 const DEFAULT_ZOOM = 14;
 
 function geometryForStream(stream: DashboardStreamSlot): LatLngExpression {
@@ -73,10 +73,10 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
           ⌖
         </button>
         <button aria-label="지도 확대" type="button" onClick={() => mapRef.current?.zoomIn()}>
-          ＋
+          +
         </button>
         <button aria-label="지도 축소" type="button" onClick={() => mapRef.current?.zoomOut()}>
-          －
+          -
         </button>
       </div>
     </div>

@@ -40,8 +40,8 @@ export const MOCK_STREAM_DEVICES: StreamDeviceOption[] = [
     status: "online",
     mediaType: "eo",
     geometry: {
-      lat: 37.123456,
-      lng: 127.123456,
+      lat: 35.871435,
+      lng: 128.601445,
       altitudeM: 120,
       headingDeg: 130,
       pitchDeg: -2.1,
@@ -57,8 +57,8 @@ export const MOCK_STREAM_DEVICES: StreamDeviceOption[] = [
     status: "fallback",
     mediaType: "ir",
     geometry: {
-      lat: 37.1261,
-      lng: 127.1204,
+      lat: 35.8781,
+      lng: 128.5948,
       altitudeM: 96,
       headingDeg: 178,
       pitchDeg: -8,
@@ -74,8 +74,8 @@ export const MOCK_STREAM_DEVICES: StreamDeviceOption[] = [
     status: "online",
     mediaType: "ai",
     geometry: {
-      lat: 37.1204,
-      lng: 127.1187,
+      lat: 35.8669,
+      lng: 128.5931,
       altitudeM: 18,
       headingDeg: 84,
       pitchDeg: 0,
@@ -91,8 +91,8 @@ export const MOCK_STREAM_DEVICES: StreamDeviceOption[] = [
     status: "offline",
     mediaType: "eo",
     geometry: {
-      lat: 37.1242,
-      lng: 127.1253,
+      lat: 35.8724,
+      lng: 128.6072,
       altitudeM: 12,
       headingDeg: 24,
       pitchDeg: 0,
@@ -230,8 +230,8 @@ function defaultGeometryForStream(streamId: string): StreamDeviceGeometry {
   const knownDevice = MOCK_STREAM_DEVICES.find((device) => device.streamPath === streamId);
   if (knownDevice) return knownDevice.geometry;
   return {
-    lat: 37.123456,
-    lng: 127.123456,
+    lat: 35.871435,
+    lng: 128.601445,
     altitudeM: 0,
     headingDeg: 0,
     pitchDeg: 0,

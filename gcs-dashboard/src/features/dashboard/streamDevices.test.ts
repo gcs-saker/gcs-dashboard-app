@@ -55,7 +55,25 @@ describe("streamDevices", () => {
       name: "Drone 07 Front",
       streamPath: "raw.drone-07.front",
       status: "online",
+      geometry: {
+        lat: 35.871435,
+        lng: 128.601445,
+      },
     });
+  });
+
+  test("keeps default and mock stream coordinates in the Daegu operating area", () => {
+    const geometries = [
+      ...DEFAULT_DASHBOARD_STREAMS.map((stream) => stream.geometry),
+      ...MOCK_STREAM_DEVICES.map((device) => device.geometry),
+    ].filter(Boolean);
+
+    for (const geometry of geometries) {
+      expect(geometry?.lat).toBeGreaterThan(35.8);
+      expect(geometry?.lat).toBeLessThan(35.95);
+      expect(geometry?.lng).toBeGreaterThan(128.5);
+      expect(geometry?.lng).toBeLessThan(128.7);
+    }
   });
 
   test("merges newly discovered backend streams into dashboard slots", () => {

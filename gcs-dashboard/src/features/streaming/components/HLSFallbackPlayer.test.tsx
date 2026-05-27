@@ -37,7 +37,7 @@ const hlsMock = vi.hoisted(() => {
   return { MockHls, instances };
 });
 
-vi.mock("hls.js", () => ({ default: hlsMock.MockHls }));
+vi.mock("hls.js/light", () => ({ default: hlsMock.MockHls }));
 
 const hlsUrl = "https://media.example.test/raw/sample/front/index.m3u8";
 
