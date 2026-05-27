@@ -1,5 +1,31 @@
 # GCS SAKER Dashboard
 
+## Local Server-01 Dashboard Check
+
+로컬에서 dashboard UI를 켜고 Server-01 backend/edge를 같이 확인할 때는 frontend가 직접
+`http://localhost:8001`로 요청하면 안 된다. 로컬 Vite dev server는 `/api`, `/hls`,
+`/webrtc`를 Server-01 public edge로 proxy한다.
+
+로컬 `.env` 기준:
+
+```bash
+VITE_API_BASE_URL=/api
+VITE_HLS_BASE_URL=/hls
+VITE_LOCAL_WEBCAM_WHIP_URL=/webrtc/raw/local/webcam/whip
+VITE_DEV_PROXY_TARGET=https://a4ai.tplinkdns.com
+```
+
+실행:
+
+```bash
+npm run dev
+```
+
+브라우저에서 `http://localhost:<vite-port>`로 열면 로그인 요청은 브라우저 기준
+`/api/auth/login`으로 나가고, Vite가 `https://a4ai.tplinkdns.com/api/auth/login`으로
+전달한다. DevTools에 `http://localhost:8001/auth/login`이 보이면 오래된 `.env` 또는
+shell 환경변수 `VITE_API_BASE_URL`이 남아있는 상태다.
+
 ## M1 Sample Stream
 
 M1 streaming development uses MediaMTX and the seed stream path `raw/sample/front`.
