@@ -1,11 +1,28 @@
 logLevel: info
 
-# 관리용 API와 metrics는 컨테이너 내부 localhost에만 바인딩하고 기본 비활성화한다.
-# 운영에서 필요할 때는 외부 포트 노출 없이 내부 네트워크에서만 켠다.
-api: false
-apiAddress: 127.0.0.1:9997
+# 관리용 API는 Docker 내부 네트워크에서만 사용한다. 호스트/public 포트로는 노출하지 않는다.
+api: true
+apiAddress: :9997
 metrics: false
 metricsAddress: 127.0.0.1:9998
+
+# 기본 송출/재생은 익명 허용을 유지하되, Control API는 localhost와 Docker 내부망에서만 허용한다.
+authInternalUsers:
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: publish
+        path:
+      - action: read
+        path:
+      - action: playback
+        path:
+  - user: any
+    pass:
+    ips: ['127.0.0.1', '::1', '172.16.0.0/12']
+    permissions:
+      - action: api
 
 # Ingest protocols
 rtsp: true
@@ -33,9 +50,9 @@ webrtcLocalUDPAddress: :8189
 webrtcLocalTCPAddress: :8189
 webrtcIPsFromInterfaces: true
 webrtcAdditionalHosts: []
-# Base config keeps ICE servers empty so localhost/LAN development still works without secrets.
-# External/NAT deployments inject MTX_WEBRTCICESERVERS2_* with docker-compose.ice.example.yml.
-webrtcICEServers2: []
+# Public STUN helps browsers discover NAT candidates. TURN credentials still stay outside git.
+webrtcICEServers2:
+  - url: stun:stun.l.google.com:19302
 webrtcSTUNGatherTimeout: 5s
 
 paths:

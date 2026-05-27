@@ -1,4 +1,4 @@
-import { apiUrl } from "../../config";
+import { apiV1Url, backendRootUrl } from "../../config";
 import { buildAuthHeaders } from "../auth/authApi";
 
 export type DashboardServerHealth = "online" | "degraded" | "error";
@@ -18,7 +18,7 @@ export const DEFAULT_SERVER_STATUS: DashboardServerStatusSnapshot = {
 };
 
 async function probe(fetcher: typeof fetch, path: string, headers?: Record<string, string>): Promise<Response> {
-  return fetcher(apiUrl(path), { headers });
+  return fetcher(backendRootUrl(path), { headers });
 }
 
 export async function fetchDashboardServerStatus(
@@ -29,7 +29,7 @@ export async function fetchDashboardServerStatus(
     const [healthResponse, readyResponse, streamResponse] = await Promise.all([
       probe(fetcher, "/healthz"),
       probe(fetcher, "/readyz"),
-      probe(fetcher, "/api/v1/streams", buildAuthHeaders()),
+      fetcher(apiV1Url("/streams"), { headers: buildAuthHeaders({ Accept: "application/json" }) }),
     ]);
     const latencyMs = Math.max(1, Math.round(performance.now() - startedAt));
 

@@ -16,6 +16,7 @@ from modules.streaming import (
     StreamingService,
     validate_stream_status,
 )
+from modules.streaming.mediamtx_client import MediaMTXClient, MediaMTXPath
 import modules.streaming.router as streaming_router_module
 from modules.streaming.router import (
     get_playback_urls,
@@ -137,6 +138,49 @@ def test_service_registers_stream_path_and_builds_mediamtx_playback_urls():
     assert service.module_status().registered_streams == 1
 
 
+def test_service_discovers_ready_mediamtx_paths_and_overrides_seed_status():
+    builder = PlaybackUrlBuilder(
+        PlaybackUrlBuilderConfig(
+            public_webrtc_base_url="https://media.example.com/webrtc",
+            public_hls_base_url="https://media.example.com/hls",
+        )
+    )
+    mediamtx_client = cast(
+        MediaMTXClient,
+        FakeMediaMTXClient(
+            [
+                MediaMTXPath(name="raw/local/webcam", ready=True, source_type="webRTCSession", reader_count=1),
+                MediaMTXPath(name="raw/drone-07/front", ready=True, source_type="rtspSession", reader_count=0),
+            ]
+        ),
+    )
+    service = StreamingService(playback_url_builder=builder, mediamtx_client=mediamtx_client)
+
+    streams = {stream.stream_id: stream for stream in service.list_registered_streams()}
+
+    assert streams["raw.local.webcam"].status == "online"
+    assert streams["raw.local.webcam"].display_name == "raw/local/webcam (webRTCSession, readers 1)"
+    assert streams["raw.drone-07.front"].status == "online"
+    assert streams["raw.drone-07.front"].playback_urls.webrtc == (
+        "https://media.example.com/webrtc/raw/drone-07/front/whep"
+    )
+    assert service.get_registered_stream("raw.drone-07.front") == streams["raw.drone-07.front"]
+
+
+def test_service_ignores_mediamtx_paths_that_do_not_match_stream_contract():
+    mediamtx_client = cast(
+        MediaMTXClient,
+        FakeMediaMTXClient([MediaMTXPath(name="camera1", ready=True)]),
+    )
+    service = StreamingService(
+        repository=InMemoryStreamRepository(),
+        playback_url_builder=PlaybackUrlBuilder(),
+        mediamtx_client=mediamtx_client,
+    )
+
+    assert service.list_registered_streams() == []
+
+
 def test_repository_can_be_seeded_for_future_stream_registry():
     descriptor = StreamDescriptor.from_path("ai/drone-01/front/detector-v1")
     repository = InMemoryStreamRepository([descriptor])
@@ -144,6 +188,14 @@ def test_repository_can_be_seeded_for_future_stream_registry():
     assert repository.list() == [descriptor]
     assert repository.get("ai.drone-01.front.detector-v1") == descriptor
     assert repository.get("raw.missing.front") is None
+
+
+class FakeMediaMTXClient:
+    def __init__(self, paths: list[MediaMTXPath]) -> None:
+        self.paths = paths
+
+    def list_paths(self) -> list[MediaMTXPath]:
+        return self.paths
 
 
 def test_stream_descriptor_response_uses_frontend_friendly_aliases():

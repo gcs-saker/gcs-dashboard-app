@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SelectedStreamPanel } from "./components/SelectedStreamPanel";
 import { StreamGrid } from "./components/StreamGrid";
 import { WidgetAddDialog } from "./components/WidgetAddDialog";
@@ -20,6 +20,8 @@ import { getMapFocusForStream } from "./mapFocus";
 import {
   connectDeviceToStreamSlot,
   disconnectStreamSlot,
+  fetchStreamDeviceOptions,
+  mergeStreamSlotsWithDevices,
   MOCK_STREAM_DEVICES,
   type StreamDeviceOption,
 } from "./streamDevices";
@@ -45,6 +47,7 @@ export function DashboardMvp() {
   const [popoutWidgetId, setPopoutWidgetId] = useState<DashboardWidgetId | null>(null);
   const [layoutMessage, setLayoutMessage] = useState("기본 레이아웃");
   const [streams, setStreams] = useState(() => DEFAULT_DASHBOARD_STREAMS);
+  const [streamDevices, setStreamDevices] = useState<StreamDeviceOption[]>(MOCK_STREAM_DEVICES);
   const [selectedStreamId, setSelectedStreamId] = useState(DEFAULT_DASHBOARD_STREAMS[0].id);
   const [editingStreamId, setEditingStreamId] = useState<string | null>(null);
   const selectedStream = useMemo(
@@ -56,6 +59,31 @@ export function DashboardMvp() {
     [editingStreamId, streams],
   );
   const mapFocus = useMemo(() => getMapFocusForStream(selectedStream), [selectedStream]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const refreshStreams = async (): Promise<void> => {
+      try {
+        const devices = await fetchStreamDeviceOptions();
+        if (!isMounted || devices.length === 0) return;
+        setStreamDevices(devices);
+        setStreams((current) => mergeStreamSlotsWithDevices(current, devices));
+      } catch {
+        if (isMounted) {
+          setStreams((current) => current.map((stream) => ({ ...stream, status: stream.status === "online" ? "degraded" : stream.status })));
+        }
+      }
+    };
+
+    void refreshStreams();
+    const intervalId = globalThis.setInterval(() => void refreshStreams(), 3000);
+
+    return () => {
+      isMounted = false;
+      globalThis.clearInterval(intervalId);
+    };
+  }, []);
 
   const isWidgetPinned = (widgetId: DashboardWidgetId): boolean =>
     layout.find((item) => item.id === widgetId)?.pinned ?? false;
@@ -288,7 +316,7 @@ export function DashboardMvp() {
 
       {editingStream ? (
         <StreamDeviceConnectDialog
-          devices={MOCK_STREAM_DEVICES}
+          devices={streamDevices}
           onCancel={() => {
             setEditingStreamId(null);
             setLayoutMessage("스트림 연결 변경 취소됨");

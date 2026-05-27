@@ -52,10 +52,14 @@ def run_static_check() -> None:
     for term in required_doc_terms:
         require(term in doc, f"missing documented term: {term}")
 
-    require("api: false" in mediamtx_config, "MediaMTX API must stay disabled by default")
+    require("api: true" in mediamtx_config, "MediaMTX API must be enabled for internal stream discovery")
+    require("apiAddress: :9997" in mediamtx_config, "MediaMTX API must listen only inside the container network")
+    require("authInternalUsers:" in mediamtx_config, "MediaMTX API access must be constrained by internal auth policy")
+    require("172.16.0.0/12" in mediamtx_config, "MediaMTX API must allow Docker-internal backend access")
     require("metrics: false" in mediamtx_config, "MediaMTX metrics must stay disabled by default")
-    require("9997" not in compose, "MediaMTX management API port must not be published")
-    require("9998" not in compose, "MediaMTX metrics port must not be published")
+    published_port_lines = [line.strip() for line in compose.splitlines() if line.strip().startswith("-")]
+    require(not any("9997" in line for line in published_port_lines), "MediaMTX management API port must not be published")
+    require(not any("9998" in line for line in published_port_lines), "MediaMTX metrics port must not be published")
     require("HEALTHCHECK" in dockerfile and "/healthz" in dockerfile, "backend Dockerfile needs healthz healthcheck")
 
     print("Health/readiness static check passed")

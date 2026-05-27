@@ -17,6 +17,13 @@ export function apiUrl(path: string): string {
   return `${API_BASE_URL.replace(/\/$/, "")}${normalizedPath}`;
 }
 
+export function backendRootUrl(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const apiBase = API_BASE_URL.replace(/\/$/, "");
+  const rootBase = apiBase.endsWith("/api") ? apiBase.slice(0, -4) : apiBase;
+  return `${rootBase}${normalizedPath}`;
+}
+
 export function apiV1Url(path: string): string {
   return buildApiV1Url(API_BASE_URL, path);
 }

@@ -99,16 +99,33 @@ def test_compose_ports_match_mediamtx_listener_addresses():
     assert (mediamtx_port(config["rtmpAddress"]), "tcp") in targets
 
 
-def test_mediamtx_keeps_api_and_metrics_private_by_default():
+def test_mediamtx_enables_api_only_inside_docker_network_and_keeps_metrics_private():
     config = load_yaml(MEDIAMTX_CONFIG)
     exposed_ports = mediamtx_service_ports()
 
-    assert config["api"] is False
-    assert config["apiAddress"] == "127.0.0.1:9997"
+    assert config["api"] is True
+    assert config["apiAddress"] == ":9997"
     assert config["metrics"] is False
     assert config["metricsAddress"] == "127.0.0.1:9998"
     assert not any("9997" in port for port in exposed_ports)
     assert not any("9998" in port for port in exposed_ports)
+
+
+def test_mediamtx_allows_backend_container_to_read_control_api_without_public_api_port():
+    config = load_yaml(MEDIAMTX_CONFIG)
+    users = config["authInternalUsers"]
+
+    api_users = [
+        user
+        for user in users
+        if {"action": "api"} in user.get("permissions", [])
+    ]
+
+    assert api_users
+    assert "172.16.0.0/12" in api_users[0]["ips"]
+    assert "127.0.0.1" in api_users[0]["ips"]
+    assert {"action": "metrics"} not in api_users[0]["permissions"]
+    assert {"action": "pprof"} not in api_users[0]["permissions"]
 
 
 def test_compose_port_overrides_are_documented_without_management_ports():
@@ -125,10 +142,10 @@ def test_compose_port_overrides_are_documented_without_management_ports():
     assert "9998" not in env_example
 
 
-def test_mediamtx_declares_empty_ice_server_slot_for_env_override():
+def test_mediamtx_declares_public_stun_server_for_m2_webrtc_validation():
     config = load_yaml(MEDIAMTX_CONFIG)
 
-    assert config["webrtcICEServers2"] == []
+    assert config["webrtcICEServers2"] == [{"url": "stun:stun.l.google.com:19302"}]
     assert config["webrtcSTUNGatherTimeout"] == "5s"
 
 

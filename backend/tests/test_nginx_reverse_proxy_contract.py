@@ -55,6 +55,18 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "proxy_pass http://gcs_dashboard;" in extract_locations(config, "/")[-1]
 
 
+def test_reverse_proxy_routes_root_health_checks_to_backend() -> None:
+    config = read_config()
+
+    healthz_location = extract_exact_location(config, "/healthz")
+    readyz_location = extract_exact_location(config, "/readyz")
+
+    assert "proxy_pass http://gcs_backend/healthz;" in healthz_location
+    assert "proxy_pass http://gcs_backend/readyz;" in readyz_location
+    assert "proxy_read_timeout 10s;" in healthz_location
+    assert "proxy_read_timeout 10s;" in readyz_location
+
+
 def test_reverse_proxy_keeps_mediamtx_management_ports_private() -> None:
     config = read_config()
 
@@ -125,6 +137,13 @@ def extract_location(config: str, path: str) -> str:
     locations = extract_locations(config, path)
     assert locations, f"location {path} not found"
     return locations[0]
+
+
+def extract_exact_location(config: str, path: str) -> str:
+    escaped_path = re.escape(path)
+    match = re.search(rf"location = {escaped_path} \{{(?P<body>.*?)\n        \}}", config, re.DOTALL)
+    assert match, f"exact location {path} not found"
+    return match.group("body")
 
 
 def extract_locations(config: str, path: str) -> list[str]:
