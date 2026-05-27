@@ -40,6 +40,7 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     config = read_config()
 
     assert "upstream gcs_dashboard" in config
+    assert "server nginx:3000;" in config
     assert "upstream gcs_backend" in config
     assert "upstream gcs_mediamtx_hls" in config
     assert "upstream gcs_mediamtx_webrtc" in config
