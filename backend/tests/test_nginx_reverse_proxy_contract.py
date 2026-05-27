@@ -44,6 +44,7 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "upstream gcs_backend" in config
     assert "upstream gcs_mediamtx_hls" in config
     assert "upstream gcs_mediamtx_webrtc" in config
+    assert "location /api/auth/" in config
     assert "location /api/" in config
     assert "location /hls/" in config
     assert "location /webrtc/" in config
@@ -67,6 +68,15 @@ def test_media_proxy_rewrites_public_prefixes_to_mediamtx_paths() -> None:
     assert "proxy_pass http://gcs_mediamtx_hls;" in hls_location
     assert "rewrite ^/webrtc/(.*)$ /$1 break;" in webrtc_location
     assert "proxy_pass http://gcs_mediamtx_webrtc;" in webrtc_location
+
+
+def test_auth_proxy_rewrites_dashboard_api_auth_prefix_to_backend_auth_router() -> None:
+    config = read_config()
+    auth_location = extract_location(config, "/api/auth/")
+
+    assert "rewrite ^/api/auth/(.*)$ /auth/$1 break;" in auth_location
+    assert "proxy_pass http://gcs_backend;" in auth_location
+    assert "proxy_read_timeout 60s;" in auth_location
 
 
 def test_reverse_proxy_policy_doc_covers_required_endpoint_decisions() -> None:
