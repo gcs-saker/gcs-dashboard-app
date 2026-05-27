@@ -43,6 +43,7 @@ export function RealtimePlayer({
         <span className={`realtime-player__badge realtime-player__badge--${streamStatus}`}>
           {streamStatus}
         </span>
+        <span className="realtime-player__latency">WebRTC 우선</span>
         <span className="realtime-player__stream">{streamId}</span>
         <span className="realtime-player__mode">mode: {mode}</span>
       </header>

@@ -25,6 +25,7 @@
 }
 
 .realtime-player__badge,
+.realtime-player__latency,
 .realtime-player__stream,
 .realtime-player__mode {
   min-height: 24px;
@@ -36,6 +37,11 @@
 .realtime-player__stream,
 .realtime-player__mode {
   display: none;
+}
+
+.realtime-player__latency {
+  border-color: rgba(61, 184, 255, 0.65);
+  color: #8fc7ff;
 }
 
 .realtime-player__badge {
