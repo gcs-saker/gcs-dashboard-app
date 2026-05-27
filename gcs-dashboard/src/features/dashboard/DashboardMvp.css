@@ -127,8 +127,8 @@
   display: grid;
   flex: 1;
   gap: 8px;
-  grid-template-columns: 380px minmax(420px, 1.5fr) minmax(440px, 1fr);
-  grid-template-rows: minmax(300px, 1.1fr) minmax(180px, 0.7fr) 118px;
+  grid-template-columns: 340px minmax(420px, 1.25fr) minmax(560px, 1.55fr);
+  grid-template-rows: minmax(360px, 1.35fr) minmax(120px, 0.48fr) 104px;
   min-height: 0;
   padding: 8px;
 }
@@ -443,7 +443,7 @@
 
 .selected-stream__viewport {
   height: calc(100% - 46px);
-  min-height: 294px;
+  min-height: 354px;
 }
 
 .mode-ir {
@@ -528,7 +528,7 @@
 }
 
 .stream-card__visual {
-  min-height: 86px;
+  min-height: 112px;
 }
 
 .stream-card__visual .reticle {
@@ -598,9 +598,9 @@
 .telemetry-panel__body {
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(140px, 0.8fr) 1fr;
+  grid-template-columns: minmax(96px, 0.45fr) 1fr;
   height: calc(100% - 46px);
-  padding: 14px;
+  padding: 10px 12px;
 }
 
 .telemetry-orbit {
@@ -610,7 +610,7 @@
     #07121a;
   border: 1px solid var(--line-soft);
   border-radius: 6px;
-  min-height: 132px;
+  min-height: 82px;
   position: relative;
 }
 
