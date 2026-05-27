@@ -36,9 +36,23 @@ sudo docker compose ps
 curl -fsS http://127.0.0.1:8001/healthz
 curl -fsS http://127.0.0.1:8001/readyz
 curl -fsSI http://127.0.0.1:3000/
+sudo openssl req -x509 -nodes -newkey rsa:2048 -days 30 \
+  -keyout /opt/gcs-saker/private/nginx-certs/privkey.pem \
+  -out /opt/gcs-saker/private/nginx-certs/fullchain.pem \
+  -subj '/CN=a4ai.tplinkdns.com' \
+  -addext 'subjectAltName=DNS:a4ai.tplinkdns.com,IP:127.0.0.1'
+sudo docker compose exec -T edge nginx -t
+curl -k -fsSI https://127.0.0.1/
+sudo ufw allow 443/tcp comment 'GCS-Saker HTTPS edge'
+sudo ufw --force delete allow 3000/tcp
+sudo ufw --force delete allow 1883/tcp
+sudo ufw --force delete allow 9001/tcp
+sudo ufw --force delete allow 1935/tcp
+sudo ufw --force delete allow 8888/tcp
+sudo ufw status numbered
 ```
 
-operator 계정 seed, login token, 운영 비밀번호는 서버의 private 경로와 환경 변수로만 처리했고 문서에는 기록하지 않는다.
+operator 계정 seed, login token, 운영 비밀번호, TLS private key는 서버의 private 경로와 환경 변수로만 처리했고 문서에는 기록하지 않는다.
 
 ## 검증 결과
 
@@ -53,9 +67,14 @@ operator 계정 seed, login token, 운영 비밀번호는 서버의 private 경�
 | dashboard container | running |
 | MediaMTX container | running |
 | MQTT container | running |
+| edge Nginx container | running |
 | `/healthz` | 200 OK |
 | `/readyz` | 200 OK |
 | dashboard local HTTP | 200 OK |
+| dashboard edge HTTPS | 200 OK |
+| `/api/` edge proxy | `/api/v1/streams` 401, backend 인증 경로 도달 |
+| `/hls/` edge proxy | nonexistent stream 404, MediaMTX 경로 도달 |
+| `/webrtc/` edge proxy | WHEP GET 405, MediaMTX signaling 경로 도달 |
 | dashboard HLS proxy | 404 for nonexistent stream, Nginx upstream error 없음 |
 | `/auth/login` | 200 OK |
 | `/api/v1/streams` | 200 OK, 4개 stream 반환 |
@@ -122,16 +141,41 @@ operator 계정 seed, login token, 운영 비밀번호는 서버의 private 경�
 - 수정 후 dashboard image를 재빌드하고 container를 재생성했다.
 - `http://127.0.0.1:3000/hls/nonexistent/index.m3u8`는 MediaMTX까지 전달되어 404를 반환했고, Nginx upstream DNS 오류는 재발하지 않았다.
 
+## 443 단일 인입 적용 결과
+
+Server-01에는 `edge` Nginx container를 추가해 public entrypoint를 `443/tcp`로 단일화했다.
+
+적용 상태:
+
+- `edge`: `0.0.0.0:443->443/tcp`, `127.0.0.1:80->80/tcp`
+- dashboard container: `127.0.0.1:3000->3000/tcp`
+- backend container: `127.0.0.1:8001->8001/tcp`
+- MediaMTX HLS/WHEP: `127.0.0.1:8888-8889->8888-8889/tcp`
+- MediaMTX ICE: `127.0.0.1:8189->8189/tcp`, `127.0.0.1:8189->8189/udp`
+- MQTT: `127.0.0.1:1883->1883/tcp`
+- MySQL: `127.0.0.1:3308->3306/tcp`
+
+자체서명 인증서는 다음 private 경로에만 생성했다.
+
+- `/opt/gcs-saker/private/nginx-certs/fullchain.pem`
+- `/opt/gcs-saker/private/nginx-certs/privkey.pem`
+
+UFW 허용 포트:
+
+- `55121/tcp`: SSH
+- `443/tcp`: GCS-Saker HTTPS edge
+
+`3000/tcp`, `1883/tcp`, `9001/tcp`, `1935/tcp`, `8888/tcp`의 legacy allow rule은 제거했다.
+
 ## 외부 인입 상태
 
-서버 내부 검증은 정상이다. 다만 외부 네트워크에서 다음 요청은 실패했다.
+서버 내부 `https://127.0.0.1/` 검증은 정상이다. 다만 외부 네트워크에서 다음 요청은 실패했다.
 
 - `http://a4ai.tplinkdns.com:3000/`: connection failed
 - `http://a4ai.tplinkdns.com/`: timeout
+- `https://a4ai.tplinkdns.com/`: connection failed
 
-Server-01의 UFW는 `3000/tcp`를 허용하고 dashboard container도 host `3000`에 publish되어 있으므로, 남은 원인은 TP-Link/NAT 포트포워딩 또는 상위 네트워크 인입 정책으로 분리한다.
-
-`80/tcp`, `443/tcp`, HTTPS/WSS reverse proxy는 아직 production 후보 서버에 실적용하지 않았다. 도메인과 인증서 경로가 확정된 뒤 M2 후반 배포 이슈에서 적용한다.
+Server-01의 Docker publish와 UFW는 `443/tcp`를 받을 수 있는 상태다. 남은 원인은 TP-Link/NAT에서 `443/tcp`가 Server-01 edge Nginx로 포워딩되지 않은 상태로 분리한다.
 
 ## 롤백 기준
 
@@ -141,8 +185,9 @@ Server-01의 UFW는 `3000/tcp`를 허용하고 dashboard container도 host `3000
 
 ```bash
 cd ~/gcs-dashboard/gcs-dashboard
+sudo cp <backup-dir>/docker-compose.yml ./docker-compose.yml
+sudo cp <backup-dir>/gcs-dashboard.env ./.env
 sudo docker compose down
-git switch <previous-known-good-branch>
 sudo docker compose up -d
 sudo docker compose ps
 curl -fsS http://127.0.0.1:8001/healthz
@@ -152,7 +197,8 @@ MySQL production 후보 volume을 보존해야 하는 상황에서는 `down -v`�
 
 ## 남은 작업
 
-- TP-Link/NAT에서 Server-01 dashboard 또는 reverse proxy public entrypoint를 연결한다.
-- `443/tcp` 기반 Nginx HTTPS/WSS reverse proxy를 실제 인증서와 함께 적용한다.
-- 외부 브라우저에서 dashboard 접속과 WebRTC/HLS playback path를 확인한다.
+- TP-Link/NAT에서 `443/tcp -> Server-01 edge Nginx` 포트포워딩을 적용한다.
+- 외부 브라우저에서 dashboard 접속과 `/api/`, `/hls/`, `/webrtc/` 경로를 확인한다.
+- 도메인 확정 후 자체서명 인증서를 Let's Encrypt 인증서로 교체한다.
+- 실제 WebRTC media path에서 ICE direct candidate가 실패할 때만 `8189/udp`, `8189/tcp` 포트포워딩을 조건부 검토한다.
 - public ingress가 완료되면 #35의 남은 통과 기준을 닫는다.
