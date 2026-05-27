@@ -25,8 +25,8 @@ import { type StreamDeviceOption } from "./streamDevices";
 import { useDashboardStreams } from "./hooks/useDashboardStreams";
 
 const telemetryRows = [
-  ["위도", "37.123456"],
-  ["경도", "127.123456"],
+  ["위도", "35.871435"],
+  ["경도", "128.601445"],
   ["고도", "120 m AGL"],
   ["속도", "36 km/h"],
   ["배터리", "78%"],

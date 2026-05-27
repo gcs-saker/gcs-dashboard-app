@@ -13,9 +13,9 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks: {
             "vendor-react": ["react", "react-dom", "react-router-dom"],
-            "vendor-map": ["leaflet", "react-leaflet"],
+            "vendor-map": ["leaflet"],
             "lazy-3d": ["three", "@react-three/fiber"],
-            "lazy-media": ["hls.js"],
+            "lazy-hls-light": ["hls.js/light"],
             "vendor-charts": ["recharts"]
           }
         }

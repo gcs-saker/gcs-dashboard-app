@@ -49,8 +49,8 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
     connectedDeviceId: "device-drn-01-front",
     streamPath: "raw.sample.front",
     geometry: {
-      lat: 37.123456,
-      lng: 127.123456,
+      lat: 35.871435,
+      lng: 128.601445,
       altitudeM: 120,
       headingDeg: 130,
       pitchDeg: -2.1,
@@ -68,8 +68,8 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
     connectedDeviceId: "device-drn-02-thermal",
     streamPath: "raw.sample.thermal",
     geometry: {
-      lat: 37.1261,
-      lng: 127.1204,
+      lat: 35.8781,
+      lng: 128.5948,
       altitudeM: 96,
       headingDeg: 178,
       pitchDeg: -8,
@@ -87,8 +87,8 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
     connectedDeviceId: "device-ugv-01-rear",
     streamPath: "raw.sample.rear",
     geometry: {
-      lat: 37.1204,
-      lng: 127.1187,
+      lat: 35.8669,
+      lng: 128.5931,
       altitudeM: 18,
       headingDeg: 84,
       pitchDeg: 0,
@@ -106,8 +106,8 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
     connectedDeviceId: "device-local-webcam",
     streamPath: "raw.local.webcam",
     geometry: {
-      lat: 37.1242,
-      lng: 127.1253,
+      lat: 35.8724,
+      lng: 128.6072,
       altitudeM: 12,
       headingDeg: 24,
       pitchDeg: 0,

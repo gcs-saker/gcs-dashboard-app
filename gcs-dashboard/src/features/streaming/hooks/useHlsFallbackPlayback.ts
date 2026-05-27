@@ -141,6 +141,6 @@ function hlsReducer(
 }
 
 async function loadHlsConstructor(): Promise<HlsConstructor> {
-  const module = await import("hls.js");
+  const module = await import("hls.js/light");
   return module.default;
 }
