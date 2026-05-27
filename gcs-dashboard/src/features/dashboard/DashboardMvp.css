@@ -458,16 +458,25 @@
   border-radius: 6px;
   display: grid;
   gap: 4px;
-  left: 18px;
+  bottom: 14px;
+  left: 14px;
+  max-width: calc(100% - 28px);
   padding: 10px 12px;
   position: absolute;
-  top: 18px;
 }
 
 .selected-stream__meta span,
 .stream-card__detail {
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.selected-stream__meta strong,
+.selected-stream__meta span,
+.stream-card__detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stream-grid {

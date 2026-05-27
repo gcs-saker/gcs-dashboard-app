@@ -1,6 +1,6 @@
 .realtime-player {
   display: grid;
-  grid-template-rows: auto minmax(220px, 1fr);
+  grid-template-rows: minmax(220px, 1fr);
   min-height: 260px;
   overflow: hidden;
   border: 1px solid rgba(74, 144, 196, 0.45);
@@ -9,14 +9,19 @@
 }
 
 .realtime-player__header {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-  min-height: 40px;
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(74, 144, 196, 0.3);
+  min-height: 0;
+  padding: 0;
+  border-bottom: 0;
   font-size: 12px;
+  pointer-events: none;
 }
 
 .realtime-player__badge,
@@ -26,6 +31,11 @@
   padding: 4px 8px;
   border: 1px solid rgba(126, 180, 222, 0.45);
   background: rgba(5, 9, 15, 0.78);
+}
+
+.realtime-player__stream,
+.realtime-player__mode {
+  display: none;
 }
 
 .realtime-player__badge {
