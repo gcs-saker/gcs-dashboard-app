@@ -1,6 +1,7 @@
 # GCS-Saker TP-Link 포트포워딩 정책 v0.1
 
 작성일: 2026-05-26 KST
+갱신일: 2026-05-27 KST
 
 ## 목표
 
@@ -9,11 +10,12 @@ M2 후반 Server-02 staging 및 Server-01 production 후보 배포 전에 TP-Lin
 ## 기본 원칙
 
 - 외부 사용자는 가능하면 `443/tcp` 하나로 dashboard, backend API, WSS, HLS, WebRTC WHEP signaling에 접근한다.
+- Server-01 production 후보의 Docker 직접 서비스 포트는 기본 `127.0.0.1` 바인딩으로 유지하고, 외부 공개는 `edge` Nginx의 `443/tcp`만 사용한다.
 - WebRTC ICE media candidate 포트는 HTTP reverse proxy 대상이 아니므로 별도 포트포워딩 또는 TURN relay가 필요하다.
 - HLS와 WebRTC WHEP signaling은 Nginx reverse proxy를 우선 경로로 둔다.
 - STUN/TURN 서버와 credential은 Nginx가 proxy하지 않는다.
 - MediaMTX API `9997`과 metrics `9998`은 외부에 포트포워딩하지 않는다.
-- 실제 TP-Link 포트포워딩 적용은 M2 후반 Server-02 staging, Server-01 production 후보 배포 시점에 수행한다.
+- Server-01 host와 UFW는 `443/tcp` edge 인입을 받을 준비가 끝났고, 실제 외부 도달은 TP-Link `443/tcp -> Server-01` 포트포워딩 적용 후 확인한다.
 
 ## 포트 정책
 
@@ -55,6 +57,7 @@ M2 후반 Server-02 staging 및 Server-01 production 후보 배포 전에 TP-Lin
 ## 배포 전 점검 체크리스트
 
 - [ ] TP-Link에는 `443/tcp`만 필수 public entrypoint로 등록한다.
+- [ ] `3000/tcp`, `8001/tcp`, `8888/tcp`, `8889/tcp`는 TP-Link 포트포워딩에 등록하지 않는다.
 - [ ] `80/tcp`는 HTTPS redirect 또는 ACME challenge가 필요할 때만 임시 또는 제한적으로 등록한다.
 - [ ] `8889/tcp`, `8888/tcp`는 직접 공개하지 않고 Nginx reverse proxy 경유를 확인한다.
 - [ ] WebRTC 직접 ICE 검증이 필요하면 `8189/udp`, `8189/tcp`만 조건부로 등록하고 테스트 후 정책을 재검토한다.
@@ -64,6 +67,13 @@ M2 후반 Server-02 staging 및 Server-01 production 후보 배포 전에 TP-Lin
 - [ ] Docker publish 포트 중 관리 포트 `9997`, `9998`이 없는지 확인한다.
 - [ ] 외부 네트워크에서 `https://<host>/`, `/api/`, `/hls/`, `/webrtc/` 경로를 점검한다.
 - [ ] 실패 시 되돌릴 TP-Link rule snapshot과 compose/env snapshot을 남긴다.
+
+## Server-01 현재 확인 상태
+
+- Server-01 Docker publish는 `edge` Nginx의 `443/tcp`만 외부 인터페이스에 바인딩한다.
+- Server-01 UFW는 `55121/tcp` SSH와 `443/tcp` HTTPS edge만 허용한다.
+- `3000/tcp`, `8001/tcp`, `8888/tcp`, `8889/tcp`, `8189/tcp`, `8189/udp`는 host `127.0.0.1`에 바인딩되어 직접 외부 공개하지 않는다.
+- 외부 `https://a4ai.tplinkdns.com/` 요청은 아직 연결 실패이며, 남은 조치점은 TP-Link 포트포워딩이다.
 
 ## M2 적용 순서
 
