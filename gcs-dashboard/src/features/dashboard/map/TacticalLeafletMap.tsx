@@ -1,5 +1,5 @@
-import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
-import { useEffect } from "react";
+import L, { type LatLngExpression, type LayerGroup, type Map as LeafletMap } from "leaflet";
+import { useEffect, useRef } from "react";
 import type { DashboardStreamSlot } from "../streamTypes";
 
 interface TacticalLeafletMapProps {
@@ -7,83 +7,78 @@ interface TacticalLeafletMapProps {
   streams: DashboardStreamSlot[];
 }
 
-const DEFAULT_CENTER: [number, number] = [37.123456, 127.123456];
+const DEFAULT_CENTER: LatLngExpression = [37.123456, 127.123456];
 const DEFAULT_ZOOM = 14;
 
-function geometryForStream(stream: DashboardStreamSlot): [number, number] {
+function geometryForStream(stream: DashboardStreamSlot): LatLngExpression {
   return stream.geometry ? [stream.geometry.lat, stream.geometry.lng] : DEFAULT_CENTER;
 }
 
-function MapFocusController({ stream }: { stream: DashboardStreamSlot }) {
-  const map = useMap();
+export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletMapProps) {
+  const mapElementRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const markerLayerRef = useRef<LayerGroup | null>(null);
 
   useEffect(() => {
-    map.setView(geometryForStream(stream), Math.max(map.getZoom(), DEFAULT_ZOOM), { animate: true });
-  }, [map, stream]);
+    if (!mapElementRef.current || mapRef.current) return;
 
-  return null;
-}
+    const map = L.map(mapElementRef.current, {
+      center: DEFAULT_CENTER,
+      zoom: DEFAULT_ZOOM,
+      zoomControl: false,
+    });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap",
+    }).addTo(map);
+    const markerLayer = L.layerGroup().addTo(map);
+    mapRef.current = map;
+    markerLayerRef.current = markerLayer;
 
-function ZoomButtons() {
-  const map = useMap();
+    return () => {
+      markerLayer.remove();
+      map.remove();
+      mapRef.current = null;
+      markerLayerRef.current = null;
+    };
+  }, []);
 
-  return (
-    <div className="map-toolbar" aria-label="지도 도구">
-      <button aria-label="지도 중심 초기화" type="button" onClick={() => map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)}>
-        ⌖
-      </button>
-      <button aria-label="지도 확대" type="button" onClick={() => map.zoomIn()}>
-        ＋
-      </button>
-      <button aria-label="지도 축소" type="button" onClick={() => map.zoomOut()}>
-        －
-      </button>
-    </div>
-  );
-}
+  useEffect(() => {
+    const map = mapRef.current;
+    const markerLayer = markerLayerRef.current;
+    if (!map || !markerLayer) return;
 
-export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletMapProps) {
-  const selectedCenter = geometryForStream(selectedStream);
+    markerLayer.clearLayers();
+    for (const stream of streams) {
+      if (!stream.geometry) continue;
+      const isSelected = stream.id === selectedStream.id;
+      L.circleMarker(geometryForStream(stream), {
+        color: isSelected ? "#3db8ff" : "#59d174",
+        fillColor: isSelected ? "#3db8ff" : "#59d174",
+        fillOpacity: isSelected ? 0.62 : 0.42,
+        radius: isSelected ? 10 : 7,
+      })
+        .bindPopup(`<strong>${stream.title}</strong><br />${stream.streamPath ?? "stream pending"}`)
+        .addTo(markerLayer);
+    }
+    map.setView(geometryForStream(selectedStream), Math.max(map.getZoom(), DEFAULT_ZOOM), {
+      animate: true,
+    });
+  }, [selectedStream, streams]);
 
   return (
     <div className="tactical-map__canvas tactical-map__canvas--leaflet">
-      <MapContainer
-        center={selectedCenter}
-        className="tactical-map__leaflet"
-        zoom={DEFAULT_ZOOM}
-        zoomControl={false}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <MapFocusController stream={selectedStream} />
-        <ZoomButtons />
-        {streams
-          .filter((stream) => stream.geometry)
-          .map((stream) => {
-            const isSelected = stream.id === selectedStream.id;
-            return (
-              <CircleMarker
-                center={geometryForStream(stream)}
-                className={isSelected ? "is-selected" : ""}
-                key={stream.id}
-                pathOptions={{
-                  color: isSelected ? "#3db8ff" : "#59d174",
-                  fillColor: isSelected ? "#3db8ff" : "#59d174",
-                  fillOpacity: isSelected ? 0.62 : 0.42,
-                }}
-                radius={isSelected ? 10 : 7}
-              >
-                <Popup>
-                  <strong>{stream.title}</strong>
-                  <br />
-                  {stream.streamPath ?? "stream pending"}
-                </Popup>
-              </CircleMarker>
-            );
-          })}
-      </MapContainer>
+      <div ref={mapElementRef} className="tactical-map__leaflet" />
+      <div className="map-toolbar" aria-label="지도 도구">
+        <button aria-label="지도 중심 초기화" type="button" onClick={() => mapRef.current?.setView(DEFAULT_CENTER, DEFAULT_ZOOM)}>
+          ⌖
+        </button>
+        <button aria-label="지도 확대" type="button" onClick={() => mapRef.current?.zoomIn()}>
+          ＋
+        </button>
+        <button aria-label="지도 축소" type="button" onClick={() => mapRef.current?.zoomOut()}>
+          －
+        </button>
+      </div>
     </div>
   );
 }

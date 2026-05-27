@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { SelectedStreamPanel } from "./components/SelectedStreamPanel";
@@ -21,15 +21,8 @@ import {
 import "./DashboardMvp.css";
 import { getMapFocusForStream } from "./mapFocus";
 import { TacticalLeafletMap } from "./map/TacticalLeafletMap";
-import {
-  connectDeviceToStreamSlot,
-  disconnectStreamSlot,
-  fetchStreamDeviceOptions,
-  mergeStreamSlotsWithDevices,
-  MOCK_STREAM_DEVICES,
-  type StreamDeviceOption,
-} from "./streamDevices";
-import { DEFAULT_DASHBOARD_STREAMS } from "./streamTypes";
+import { type StreamDeviceOption } from "./streamDevices";
+import { useDashboardStreams } from "./hooks/useDashboardStreams";
 
 const telemetryRows = [
   ["위도", "37.123456"],
@@ -52,45 +45,20 @@ export function DashboardMvp() {
   const [isWidgetDialogOpen, setIsWidgetDialogOpen] = useState(false);
   const [popoutWidgetId, setPopoutWidgetId] = useState<DashboardWidgetId | null>(null);
   const [layoutMessage, setLayoutMessage] = useState("기본 레이아웃");
-  const [streams, setStreams] = useState(() => DEFAULT_DASHBOARD_STREAMS);
-  const [streamDevices, setStreamDevices] = useState<StreamDeviceOption[]>(MOCK_STREAM_DEVICES);
-  const [selectedStreamId, setSelectedStreamId] = useState(DEFAULT_DASHBOARD_STREAMS[0].id);
-  const [editingStreamId, setEditingStreamId] = useState<string | null>(null);
-  const selectedStream = useMemo(
-    () => streams.find((stream) => stream.id === selectedStreamId) ?? streams[0],
-    [selectedStreamId, streams],
-  );
-  const editingStream = useMemo(
-    () => streams.find((stream) => stream.id === editingStreamId) ?? null,
-    [editingStreamId, streams],
-  );
+  const {
+    connectStreamDevice: connectStreamDeviceState,
+    disconnectCurrentStreamSlot: disconnectCurrentStreamSlotState,
+    editingStream,
+    openStreamConnection: openStreamConnectionState,
+    selectedStream,
+    selectedStreamId,
+    setEditingStreamId,
+    streamDevices,
+    streams,
+    toggleStreamAiMode: toggleStreamAiModeState,
+  } = useDashboardStreams();
   const mapFocus = useMemo(() => getMapFocusForStream(selectedStream), [selectedStream]);
   const assetTreeRoot = useMemo(() => mergeAssetTreeWithStreams(DEFAULT_ASSET_TREE, streams), [streams]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const refreshStreams = async (): Promise<void> => {
-      try {
-        const devices = await fetchStreamDeviceOptions();
-        if (!isMounted || devices.length === 0) return;
-        setStreamDevices(devices);
-        setStreams((current) => mergeStreamSlotsWithDevices(current, devices));
-      } catch {
-        if (isMounted) {
-          setStreams((current) => current.map((stream) => ({ ...stream, status: stream.status === "online" ? "degraded" : stream.status })));
-        }
-      }
-    };
-
-    void refreshStreams();
-    const intervalId = globalThis.setInterval(() => void refreshStreams(), 3000);
-
-    return () => {
-      isMounted = false;
-      globalThis.clearInterval(intervalId);
-    };
-  }, []);
 
   const isWidgetPinned = (widgetId: DashboardWidgetId): boolean =>
     layout.find((item) => item.id === widgetId)?.pinned ?? false;
@@ -134,38 +102,22 @@ export function DashboardMvp() {
   );
 
   const openStreamConnection = (streamId: string): void => {
-    setSelectedStreamId(streamId);
-    setEditingStreamId(streamId);
+    openStreamConnectionState(streamId);
     setLayoutMessage("스트림 슬롯 선택됨");
   };
 
   const connectStreamDevice = (device: StreamDeviceOption): void => {
-    setStreams((current) =>
-      current.map((stream) =>
-        stream.id === editingStreamId ? connectDeviceToStreamSlot(stream, device) : stream,
-      ),
-    );
-    if (editingStreamId) {
-      setSelectedStreamId(editingStreamId);
-    }
-    setEditingStreamId(null);
+    connectStreamDeviceState(device);
     setLayoutMessage("스트리밍 장비 연결됨");
   };
 
   const disconnectCurrentStreamSlot = (): void => {
-    setStreams((current) =>
-      current.map((stream) => (stream.id === editingStreamId ? disconnectStreamSlot(stream) : stream)),
-    );
-    setEditingStreamId(null);
+    disconnectCurrentStreamSlotState();
     setLayoutMessage("스트리밍 장비 연결 해제됨");
   };
 
   const toggleStreamAiMode = (streamId: string): void => {
-    setStreams((current) =>
-      current.map((stream) =>
-        stream.id === streamId ? { ...stream, aiModeEnabled: !stream.aiModeEnabled } : stream,
-      ),
-    );
+    toggleStreamAiModeState(streamId);
     setLayoutMessage("AI 모드 옵션 변경됨");
   };
 
