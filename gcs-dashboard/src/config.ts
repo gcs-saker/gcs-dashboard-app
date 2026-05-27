@@ -1,8 +1,10 @@
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "/api";
-const hlsBaseUrl = import.meta.env.VITE_HLS_BASE_URL ?? "/hls";
+const apiBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_API_BASE_URL ?? "/api", "/api");
+const hlsBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_HLS_BASE_URL ?? "/hls", "/hls");
 const defaultStreamId = import.meta.env.VITE_DEFAULT_STREAM_ID ?? "CID001";
-const localWebcamWhipUrl =
-  import.meta.env.VITE_LOCAL_WEBCAM_WHIP_URL ?? "http://127.0.0.1:8889/raw/local/webcam/whip";
+const localWebcamWhipUrl = normalizeLocalDevBaseUrl(
+  import.meta.env.VITE_LOCAL_WEBCAM_WHIP_URL ?? "/webrtc/raw/local/webcam/whip",
+  "/webrtc/raw/local/webcam/whip",
+);
 
 export const API_BASE_URL: string = apiBaseUrl;
 export const HLS_BASE_URL: string = hlsBaseUrl;
@@ -28,4 +30,24 @@ export function buildApiV1Url(apiBaseUrl: string, path: string): string {
 
 export function hlsStreamUrl(streamId: string): string {
   return `${HLS_BASE_URL.replace(/\/$/, "")}/${streamId}/index.m3u8`;
+}
+
+export function normalizeLocalDevBaseUrl(configuredUrl: string, fallbackPath: string): string {
+  if (!isLocalDashboardOrigin()) return configuredUrl;
+
+  try {
+    const parsed = new URL(configuredUrl);
+    if (["localhost", "127.0.0.1", "::1"].includes(parsed.hostname)) {
+      return fallbackPath;
+    }
+  } catch {
+    return configuredUrl;
+  }
+
+  return configuredUrl;
+}
+
+function isLocalDashboardOrigin(): boolean {
+  if (typeof window === "undefined") return false;
+  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
 }
