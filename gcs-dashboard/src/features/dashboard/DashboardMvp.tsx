@@ -9,7 +9,7 @@ import { WidgetPopout } from "./components/WidgetPopout";
 import { StreamDeviceConnectDialog } from "./components/StreamDeviceConnectDialog";
 import { AssetTreePanel } from "./components/AssetTreePanel";
 import { SystemStatusPanel } from "./components/SystemStatusPanel";
-import { DEFAULT_ASSET_TREE } from "./assetTree";
+import { DEFAULT_ASSET_TREE, mergeAssetTreeWithStreams } from "./assetTree";
 import {
   getDashboardWidgetDefinition,
   resetDashboardLayout,
@@ -64,6 +64,7 @@ export function DashboardMvp() {
     [editingStreamId, streams],
   );
   const mapFocus = useMemo(() => getMapFocusForStream(selectedStream), [selectedStream]);
+  const assetTreeRoot = useMemo(() => mergeAssetTreeWithStreams(DEFAULT_ASSET_TREE, streams), [streams]);
 
   useEffect(() => {
     let isMounted = true;
@@ -186,7 +187,7 @@ export function DashboardMvp() {
           data-widget-id={assetTreeWidget.id}
           style={{ minHeight: assetTreeWidget.minHeight, minWidth: assetTreeWidget.minWidth }}
         >
-          <AssetTreePanel controls={widgetControls("asset-tree", "자산트리")} root={DEFAULT_ASSET_TREE} />
+          <AssetTreePanel controls={widgetControls("asset-tree", "자산트리")} root={assetTreeRoot} />
         </aside>
 
         <section
