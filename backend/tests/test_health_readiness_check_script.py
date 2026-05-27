@@ -32,7 +32,8 @@ def test_health_readiness_document_separates_health_ready_and_metrics_roles():
     assert "/readyz" in doc
     assert "/metrics" in doc
     assert "민감 정보를 노출하지 않는다" in doc
-    assert "MediaMTX 관리 API와 metrics는 기본적으로 비활성화" in doc
+    assert "MediaMTX 관리 API는 내부 스트림 discovery를 위해 활성화" in doc
+    assert "외부 포트로 publish하지 않는다" in doc
     assert "#28" in doc
     assert "#102" in doc
 
@@ -58,8 +59,10 @@ def test_backend_runtime_is_pinned_to_python_312():
 def test_mediamtx_readiness_keeps_management_private_and_playback_public():
     config = MEDIAMTX_CONFIG.read_text(encoding="utf-8")
 
-    assert "api: false" in config
-    assert "apiAddress: 127.0.0.1:9997" in config
+    assert "api: true" in config
+    assert "apiAddress: :9997" in config
+    assert "authInternalUsers:" in config
+    assert "172.16.0.0/12" in config
     assert "metrics: false" in config
     assert "metricsAddress: 127.0.0.1:9998" in config
     assert "hlsAddress: :8888" in config

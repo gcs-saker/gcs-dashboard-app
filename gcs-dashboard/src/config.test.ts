@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { apiV1Url, buildApiV1Url, normalizeLocalDevBaseUrl } from "./config";
+import { apiV1Url, backendRootUrl, buildApiV1Url, normalizeLocalDevBaseUrl } from "./config";
 
 describe("config API URL helpers", () => {
   test("keeps the default /api base compatible with v1 routes", () => {
@@ -19,6 +19,10 @@ describe("config API URL helpers", () => {
     expect(buildApiV1Url("https://gcs.example.test/api", "streams")).toBe(
       "https://gcs.example.test/api/v1/streams",
     );
+  });
+
+  test("builds root backend probes outside the /api edge namespace", () => {
+    expect(backendRootUrl("/healthz")).toBe("/healthz");
   });
 
   test("rewrites direct localhost backend base to the dev-server proxy path on local dashboard origin", () => {

@@ -11,6 +11,11 @@ describe("serverStatus", () => {
 
     const status = await fetchDashboardServerStatus(fetcher as unknown as typeof fetch);
 
+    expect(fetcher).toHaveBeenNthCalledWith(1, "/healthz", { headers: undefined });
+    expect(fetcher).toHaveBeenNthCalledWith(2, "/readyz", { headers: undefined });
+    expect(fetcher).toHaveBeenNthCalledWith(3, "/api/v1/streams", {
+      headers: { Accept: "application/json" },
+    });
     expect(status.server).toBe("online");
     expect(status.readiness).toBe("online");
     expect(status.streams).toBe("online");

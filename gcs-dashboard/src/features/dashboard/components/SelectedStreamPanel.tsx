@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { RealtimePlayer } from "../../streaming/components/RealtimePlayer";
 import type { DashboardStreamSlot } from "../streamTypes";
 import {
   getDashboardStreamStatusClass,
@@ -29,7 +30,11 @@ export function SelectedStreamPanel({ stream, controls }: SelectedStreamPanelPro
         </span>
       </div>
       <div className={`selected-stream__viewport mode-${stream.mode.toLowerCase()}`}>
-        <div className="reticle" />
+        {stream.streamPath ? (
+          <RealtimePlayer streamId={stream.streamPath} title={stream.title} />
+        ) : (
+          <div className="reticle" />
+        )}
         <div className="selected-stream__meta">
           <strong>{stream.title}</strong>
           <span>{stream.detail}</span>
