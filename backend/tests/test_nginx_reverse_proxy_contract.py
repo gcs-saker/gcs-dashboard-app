@@ -45,6 +45,10 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "upstream gcs_mediamtx_hls" in config
     assert "upstream gcs_mediamtx_webrtc" in config
     assert "location /api/auth/" in config
+    assert "location /api/control/" in config
+    assert "location /api/asset/" in config
+    assert "location /api/telemetry/" in config
+    assert "location /api/stream/" in config
     assert "location /api/" in config
     assert "location /hls/" in config
     assert "location /webrtc/" in config
@@ -77,6 +81,29 @@ def test_auth_proxy_rewrites_dashboard_api_auth_prefix_to_backend_auth_router() 
     assert "rewrite ^/api/auth/(.*)$ /auth/$1 break;" in auth_location
     assert "proxy_pass http://gcs_backend;" in auth_location
     assert "proxy_read_timeout 60s;" in auth_location
+
+
+def test_legacy_api_prefixes_are_rewritten_to_backend_routers() -> None:
+    config = read_config()
+
+    expected_rewrites = {
+        "/api/control/": "rewrite ^/api/control/(.*)$ /control/$1 break;",
+        "/api/asset/": "rewrite ^/api/asset/(.*)$ /asset/$1 break;",
+        "/api/telemetry/": "rewrite ^/api/telemetry/(.*)$ /telemetry/$1 break;",
+        "/api/stream/": "rewrite ^/api/stream/(.*)$ /stream/$1 break;",
+    }
+    for public_prefix, rewrite in expected_rewrites.items():
+        location = extract_location(config, public_prefix)
+        assert rewrite in location
+        assert "proxy_pass http://gcs_backend;" in location
+
+
+def test_versioned_api_prefix_stays_on_backend_api_namespace() -> None:
+    config = read_config()
+    api_location = extract_location(config, "/api/")
+
+    assert "rewrite ^/api/v1/" not in api_location
+    assert "proxy_pass http://gcs_backend;" in api_location
 
 
 def test_reverse_proxy_policy_doc_covers_required_endpoint_decisions() -> None:
