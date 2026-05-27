@@ -61,7 +61,7 @@ services:
     restart: always
 
   mediamtx:
-    image: ${MEDIAMTX_IMAGE:-bluenviron/mediamtx:latest}
+    image: ${MEDIAMTX_IMAGE:-bluenviron/mediamtx:1.15.3}
     container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-mediamtx
     env_file: *service_env_files
     ports:
