@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import { LOCAL_WEBCAM_STREAM_ID, LOCAL_WEBCAM_WHIP_URL } from "../../../config";
+import { LOCAL_WEBCAM_STREAM_ID, LOCAL_WEBCAM_WHIP_URL, WEBRTC_ICE_SERVERS } from "../../../config";
 import "./LocalWebcamPublisher.css";
 
 type WebcamPublisherStatus = "idle" | "previewing" | "publishing" | "published" | "error" | "unsupported";
@@ -17,7 +17,7 @@ export function LocalWebcamPublisher({
   streamId = LOCAL_WEBCAM_STREAM_ID,
   whipUrl = LOCAL_WEBCAM_WHIP_URL,
   mediaDevices = navigator.mediaDevices,
-  peerConnectionFactory = () => new RTCPeerConnection(),
+  peerConnectionFactory = () => new RTCPeerConnection({ iceServers: WEBRTC_ICE_SERVERS }),
   fetcher = fetch,
 }: LocalWebcamPublisherProps) {
   const videoRef = useRef<HTMLVideoElement>(null);

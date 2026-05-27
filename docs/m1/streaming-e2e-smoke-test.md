@@ -16,6 +16,7 @@ scripts/streaming_e2e_smoke.sh --check
 
 - sample publish script의 bash syntax
 - E2E smoke script의 bash syntax
+- WHEP offer/answer와 ICE candidate 검사 스크립트의 정적 계약
 - `raw/sample/front` dry-run publish command
 - WebRTC/HLS/STUN 확인 절차 문서 존재
 
@@ -34,7 +35,34 @@ scripts/streaming_e2e_smoke.sh --run
 3. `scripts/publish_sample_stream.sh`로 `raw/sample/front` publish
 4. backend playback API 확인
 5. HLS fallback playlist 확인
-6. dashboard smoke URL 확인
+6. 선택적으로 WHEP offer/answer와 ICE candidate 확인
+7. dashboard smoke URL 확인
+
+실제 WebRTC SDP와 ICE candidate까지 확인하려면 다음처럼 실행한다.
+
+```bash
+WEBRTC_ICE_SMOKE=1 WEBRTC_REQUIRE_CONNECTED=1 scripts/streaming_e2e_smoke.sh --run
+```
+
+`WEBRTC_ICE_SMOKE=1`은 `scripts/webrtc_ice_smoke.py`를 호출한다. 이 스크립트는 브라우저와 같은 viewer 역할로 video recvonly WHEP offer를 만들고, local ICE gathering 완료 후 MediaMTX WHEP endpoint에 POST한다. 이후 answer SDP에 다음 값이 있는지 확인한다.
+
+- `a=ice-ufrag`
+- `a=ice-pwd`
+- `a=fingerprint`
+- 하나 이상의 `a=candidate`
+
+도메인/자체서명 TLS 환경에서는 다음처럼 직접 실행할 수 있다.
+
+```bash
+python scripts/webrtc_ice_smoke.py \
+  --run \
+  --whep-url https://a4ai.tplinkdns.com/webrtc/raw/server01/smoke/whep \
+  --stun-url stun:stun.l.google.com:19302 \
+  --insecure \
+  --require-connected
+```
+
+통과 기준은 local offer와 WHEP answer 양쪽에 ICE candidate가 있고, `--require-connected` 사용 시 ICE state가 `connected` 또는 `completed`에 도달하는 것이다.
 
 기본 dashboard smoke URL:
 
@@ -92,6 +120,7 @@ curl http://127.0.0.1:8888/raw/sample/front/index.m3u8
 
 localhost/LAN 환경에서는 기본 ICE 서버 없이도 재생될 수 있다. 외부망이나 NAT 환경에서 WebRTC가 실패하면 다음을 확인한다.
 
+- dashboard bundle에 `VITE_WEBRTC_STUN_URL=stun:stun.l.google.com:19302`가 주입되었는가?
 - `docs/m1/mediamtx-ice-servers.md`의 STUN/TURN 설정을 적용했는가?
 - `MEDIAMTX_STUN_URL`이 `.env` 또는 배포 설정으로 주입되었는가?
 - `8189/udp`, `8189/tcp`, `8889/tcp`가 방화벽에서 열려 있는가?

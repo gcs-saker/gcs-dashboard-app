@@ -45,6 +45,9 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["nginx"]["build"]["args"]["VITE_LOCAL_WEBCAM_WHIP_URL"].startswith(
         "${VITE_LOCAL_WEBCAM_WHIP_URL:"
     )
+    assert services["nginx"]["build"]["args"]["VITE_WEBRTC_STUN_URL"] == (
+        "${VITE_WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
+    )
 
 
 def test_compose_publishes_only_edge_https_by_default_for_external_ingress() -> None:
@@ -100,6 +103,7 @@ def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
     assert "ARG VITE_API_BASE_URL=/api" in dockerfile
     assert "ARG VITE_HLS_BASE_URL=/hls" in dockerfile
     assert "ARG VITE_LOCAL_WEBCAM_WHIP_URL=https://localhost/webrtc/raw/local/webcam/whip" in dockerfile
+    assert "ARG VITE_WEBRTC_STUN_URL=stun:stun.l.google.com:19302" in dockerfile
     assert "COPY --from=builder /app/dist /usr/share/nginx/html" in dockerfile
     assert "COPY nginx.conf /etc/nginx/nginx.conf" in dockerfile
     assert "EXPOSE 3000" in dockerfile

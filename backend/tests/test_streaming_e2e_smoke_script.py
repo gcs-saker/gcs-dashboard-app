@@ -31,6 +31,7 @@ def test_streaming_e2e_smoke_check_validates_documented_contract():
     assert result.returncode == 0, result.stderr
     assert "Streaming E2E smoke check passed" in result.stdout
     assert "rtsp://127.0.0.1:8554/raw/sample/front" in result.stdout
+    assert "WebRTC ICE smoke check passed" in result.stdout
 
 
 def test_streaming_e2e_documentation_covers_webrtc_hls_and_ice_paths():
@@ -42,4 +43,6 @@ def test_streaming_e2e_documentation_covers_webrtc_hls_and_ice_paths():
     assert "WebRTC" in doc
     assert "HLS fallback" in doc
     assert "STUN" in doc
+    assert "WHEP offer/answer" in doc
+    assert "ICE candidate" in doc
     assert "TURN credential" in doc

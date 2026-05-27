@@ -1,6 +1,7 @@
 const apiBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_API_BASE_URL ?? "/api", "/api");
 const hlsBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_HLS_BASE_URL ?? "/hls", "/hls");
 const defaultStreamId = import.meta.env.VITE_DEFAULT_STREAM_ID ?? "CID001";
+const defaultStunUrl = import.meta.env.VITE_WEBRTC_STUN_URL ?? "stun:stun.l.google.com:19302";
 const localWebcamWhipUrl = normalizeLocalDevBaseUrl(
   import.meta.env.VITE_LOCAL_WEBCAM_WHIP_URL ?? "/webrtc/raw/local/webcam/whip",
   "/webrtc/raw/local/webcam/whip",
@@ -11,6 +12,9 @@ export const HLS_BASE_URL: string = hlsBaseUrl;
 export const DEFAULT_STREAM_ID: string = defaultStreamId;
 export const LOCAL_WEBCAM_STREAM_ID = "raw.local.webcam";
 export const LOCAL_WEBCAM_WHIP_URL: string = localWebcamWhipUrl;
+export const WEBRTC_ICE_SERVERS: RTCIceServer[] = defaultStunUrl
+  ? [{ urls: defaultStunUrl }]
+  : [];
 
 export function apiUrl(path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;

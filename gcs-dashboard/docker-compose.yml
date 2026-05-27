@@ -93,6 +93,7 @@ services:
         VITE_HLS_BASE_URL: ${VITE_HLS_BASE_URL:-/hls}
         VITE_DEFAULT_STREAM_ID: ${VITE_DEFAULT_STREAM_ID:-CID001}
         VITE_LOCAL_WEBCAM_WHIP_URL: ${VITE_LOCAL_WEBCAM_WHIP_URL:-https://localhost/webrtc/raw/local/webcam/whip}
+        VITE_WEBRTC_STUN_URL: ${VITE_WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}
     container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-dashboard
     env_file: *service_env_files
     ports:

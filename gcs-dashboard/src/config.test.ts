@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { apiV1Url, backendRootUrl, buildApiV1Url, normalizeLocalDevBaseUrl } from "./config";
+import { apiV1Url, backendRootUrl, buildApiV1Url, normalizeLocalDevBaseUrl, WEBRTC_ICE_SERVERS } from "./config";
 
 describe("config API URL helpers", () => {
   test("keeps the default /api base compatible with v1 routes", () => {
@@ -34,5 +34,9 @@ describe("config API URL helpers", () => {
     expect(normalizeLocalDevBaseUrl("https://a4ai.tplinkdns.com/api", "/api")).toBe(
       "https://a4ai.tplinkdns.com/api",
     );
+  });
+
+  test("declares a STUN server for browser ICE candidate gathering", () => {
+    expect(WEBRTC_ICE_SERVERS).toEqual([{ urls: "stun:stun.l.google.com:19302" }]);
   });
 });
