@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   connectDeviceToStreamSlot,
   disconnectStreamSlot,
@@ -51,12 +51,12 @@ export function useDashboardStreams() {
     };
   }, []);
 
-  const openStreamConnection = (streamId: string): void => {
+  const openStreamConnection = useCallback((streamId: string): void => {
     setSelectedStreamId(streamId);
     setEditingStreamId(streamId);
-  };
+  }, []);
 
-  const connectStreamDevice = (device: StreamDeviceOption): void => {
+  const connectStreamDevice = useCallback((device: StreamDeviceOption): void => {
     setStreams((current) =>
       current.map((stream) =>
         stream.id === editingStreamId ? connectDeviceToStreamSlot(stream, device) : stream,
@@ -66,24 +66,24 @@ export function useDashboardStreams() {
       setSelectedStreamId(editingStreamId);
     }
     setEditingStreamId(null);
-  };
+  }, [editingStreamId]);
 
-  const disconnectCurrentStreamSlot = (): void => {
+  const disconnectCurrentStreamSlot = useCallback((): void => {
     setStreams((current) =>
       current.map((stream) => (stream.id === editingStreamId ? disconnectStreamSlot(stream) : stream)),
     );
     setEditingStreamId(null);
-  };
+  }, [editingStreamId]);
 
-  const toggleStreamAiMode = (streamId: string): void => {
+  const toggleStreamAiMode = useCallback((streamId: string): void => {
     setStreams((current) =>
       current.map((stream) =>
         stream.id === streamId ? { ...stream, aiModeEnabled: !stream.aiModeEnabled } : stream,
       ),
     );
-  };
+  }, []);
 
-  return {
+  return useMemo(() => ({
     connectStreamDevice,
     disconnectCurrentStreamSlot,
     editingStream,
@@ -94,5 +94,15 @@ export function useDashboardStreams() {
     streamDevices,
     streams,
     toggleStreamAiMode,
-  };
+  }), [
+    connectStreamDevice,
+    disconnectCurrentStreamSlot,
+    editingStream,
+    openStreamConnection,
+    selectedStream,
+    selectedStreamId,
+    streamDevices,
+    streams,
+    toggleStreamAiMode,
+  ]);
 }

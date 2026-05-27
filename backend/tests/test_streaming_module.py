@@ -193,9 +193,34 @@ def test_repository_can_be_seeded_for_future_stream_registry():
 class FakeMediaMTXClient:
     def __init__(self, paths: list[MediaMTXPath]) -> None:
         self.paths = paths
+        self.call_count = 0
 
     def list_paths(self) -> list[MediaMTXPath]:
+        self.call_count += 1
         return self.paths
+
+
+def test_service_reuses_runtime_registry_snapshot_within_cache_ttl():
+    builder = PlaybackUrlBuilder(
+        PlaybackUrlBuilderConfig(
+            public_webrtc_base_url="https://media.example.com/webrtc",
+            public_hls_base_url="https://media.example.com/hls",
+        )
+    )
+    mediamtx_client = cast(
+        MediaMTXClient,
+        FakeMediaMTXClient([MediaMTXPath(name="raw/local/webcam", ready=True)]),
+    )
+    service = StreamingService(playback_url_builder=builder, mediamtx_client=mediamtx_client)
+
+    streams = service.list_registered_streams()
+    descriptor = service.get_registered_stream("raw.local.webcam")
+    status = service.module_status()
+
+    assert descriptor is not None
+    assert descriptor.status == "online"
+    assert status.registered_streams == len(streams)
+    assert cast(FakeMediaMTXClient, mediamtx_client).call_count == 1
 
 
 def test_stream_descriptor_response_uses_frontend_friendly_aliases():

@@ -174,8 +174,10 @@ export function mergeStreamSlotsWithDevices(
 
     if (!stream.streamPath) return stream;
     const device = devicesByStreamPath.get(stream.streamPath);
-    if (!device) return { ...stream, status: "offline" as const };
-    return {
+    if (!device) {
+      return stream.status === "offline" ? stream : { ...stream, status: "offline" as const };
+    }
+    const nextStream = {
       ...stream,
       connectedDeviceId: stream.connectedDeviceId ?? device.id,
       detail: `${device.name} / ${device.streamPath}`,
@@ -183,6 +185,7 @@ export function mergeStreamSlotsWithDevices(
       status: device.status,
       geometry: stream.geometry ?? device.geometry,
     };
+    return areDashboardStreamSlotsEqual(stream, nextStream) ? stream : nextStream;
   });
 
   const knownStreamPaths = new Set(nextStreams.map((stream) => stream.streamPath).filter(Boolean));
@@ -199,7 +202,32 @@ export function mergeStreamSlotsWithDevices(
       geometry: device.geometry,
     }));
 
+  if (
+    discoveredStreams.length === 0 &&
+    nextStreams.length === streams.length &&
+    nextStreams.every((stream, index) => stream === streams[index])
+  ) {
+    return streams;
+  }
+
   return [...nextStreams, ...discoveredStreams];
+}
+
+function areDashboardStreamSlotsEqual(
+  left: DashboardStreamSlot,
+  right: DashboardStreamSlot,
+): boolean {
+  return (
+    left.id === right.id &&
+    left.title === right.title &&
+    left.status === right.status &&
+    left.mode === right.mode &&
+    left.detail === right.detail &&
+    left.aiModeEnabled === right.aiModeEnabled &&
+    left.connectedDeviceId === right.connectedDeviceId &&
+    left.streamPath === right.streamPath &&
+    left.geometry === right.geometry
+  );
 }
 
 function streamDeviceFromRegistryItem(item: StreamRegistryResponse): StreamDeviceOption {
