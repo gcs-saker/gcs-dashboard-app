@@ -13,9 +13,8 @@ function App() {
     return <StreamingSmokeDashboard />;
   }
 
-  if (query.get("webcamPublisher") === "1") {
-    return <LocalWebcamPublisher />;
-  }
+  const authenticatedApp =
+    query.get("webcamPublisher") === "1" ? <LocalWebcamPublisher /> : <DashboardMvp />;
 
   return (
     <BrowserRouter>
@@ -26,7 +25,7 @@ function App() {
             path="*"
             element={
               <RequireAuth>
-                <DashboardMvp />
+                {authenticatedApp}
               </RequireAuth>
             }
           />
