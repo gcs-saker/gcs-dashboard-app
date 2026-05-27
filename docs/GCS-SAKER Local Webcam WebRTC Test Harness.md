@@ -8,7 +8,7 @@ M2에서 현장 카메라가 없어도 개발자 노트북/모니터 캠으로 W
 
 - Publisher page: `/?webcamPublisher=1`
 - Stream ID: `raw.local.webcam`
-- Default WHIP URL: `http://localhost:8889/raw/local/webcam/whip`
+- Default WHIP URL: `https://localhost/webrtc/raw/local/webcam/whip`
 - Playback API: `/api/v1/streams/raw.local.webcam/playback`
 
 ## 로컬 절차
