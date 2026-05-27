@@ -94,6 +94,9 @@ export function DashboardMvp() {
   const isWidgetPinned = (widgetId: DashboardWidgetId): boolean =>
     layout.find((item) => item.id === widgetId)?.pinned ?? false;
 
+  const panelClass = (baseClass: string, widgetId: DashboardWidgetId): string =>
+    `${baseClass} ${isWidgetPinned(widgetId) ? "is-pinned" : ""}`;
+
   const toggleWidgetPin = (widgetId: DashboardWidgetId): void => {
     const nextPinned = !isWidgetPinned(widgetId);
     setLayout((current) => setDashboardWidgetPinned(current, widgetId, nextPinned));
@@ -183,7 +186,7 @@ export function DashboardMvp() {
       <section className="ops-dashboard__grid">
         <aside
           aria-labelledby="asset-tree-title"
-          className="ops-panel asset-tree"
+          className={panelClass("ops-panel asset-tree", "asset-tree")}
           data-widget-id={assetTreeWidget.id}
           style={{ minHeight: assetTreeWidget.minHeight, minWidth: assetTreeWidget.minWidth }}
         >
@@ -192,7 +195,7 @@ export function DashboardMvp() {
 
         <section
           aria-labelledby="map-title"
-          className="ops-panel tactical-map"
+          className={panelClass("ops-panel tactical-map", "tactical-map")}
           data-widget-id={tacticalMapWidget.id}
           style={{ minHeight: tacticalMapWidget.minHeight, minWidth: tacticalMapWidget.minWidth }}
         >
@@ -211,6 +214,7 @@ export function DashboardMvp() {
 
         <SelectedStreamPanel
           controls={widgetControls("selected-stream", "선택 스트림")}
+          isPinned={isWidgetPinned("selected-stream")}
           stream={selectedStream}
         />
 
@@ -222,7 +226,7 @@ export function DashboardMvp() {
 
         <section
           aria-labelledby="status-title"
-          className="ops-panel system-status"
+          className={panelClass("ops-panel system-status", "system-status")}
           data-widget-id={systemStatusWidget.id}
           style={{ minHeight: systemStatusWidget.minHeight, minWidth: systemStatusWidget.minWidth }}
         >
@@ -231,7 +235,7 @@ export function DashboardMvp() {
 
         <section
           aria-labelledby="telemetry-title"
-          className="ops-panel telemetry-panel"
+          className={panelClass("ops-panel telemetry-panel", "telemetry-panel")}
           data-widget-id={telemetryWidget.id}
           style={{ minHeight: telemetryWidget.minHeight, minWidth: telemetryWidget.minWidth }}
         >
@@ -258,7 +262,7 @@ export function DashboardMvp() {
 
         <section
           aria-labelledby="ai-title"
-          className="ops-panel ai-panel"
+          className={panelClass("ops-panel ai-panel", "ai-results")}
           data-widget-id={aiResultsWidget.id}
           style={{ minHeight: aiResultsWidget.minHeight, minWidth: aiResultsWidget.minWidth }}
         >

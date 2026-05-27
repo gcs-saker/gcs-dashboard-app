@@ -10,13 +10,14 @@ import {
 interface SelectedStreamPanelProps {
   stream: DashboardStreamSlot;
   controls?: ReactNode;
+  isPinned?: boolean;
 }
 
-export function SelectedStreamPanel({ stream, controls }: SelectedStreamPanelProps) {
+export function SelectedStreamPanel({ stream, controls, isPinned = false }: SelectedStreamPanelProps) {
   return (
     <section
       aria-labelledby="selected-stream-title"
-      className="ops-panel selected-stream"
+      className={`ops-panel selected-stream ${isPinned ? "is-pinned" : ""}`}
       data-widget-id={SELECTED_STREAM_WIDGET.id}
       style={{ minHeight: SELECTED_STREAM_WIDGET.minHeight }}
     >
