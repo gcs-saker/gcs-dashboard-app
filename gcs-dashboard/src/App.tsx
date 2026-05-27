@@ -24,6 +24,14 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route
+            path="/publisher"
+            element={
+              <RequireAuth>
+                <LocalWebcamPublisher />
+              </RequireAuth>
+            }
+          />
+          <Route
             path="*"
             element={
               <RequireAuth>

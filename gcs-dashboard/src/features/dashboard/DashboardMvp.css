@@ -86,6 +86,9 @@
 }
 
 .ops-command-button {
+  align-items: center;
+  display: inline-flex;
+  text-decoration: none;
   padding: 0 12px;
 }
 
