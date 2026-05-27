@@ -10,22 +10,29 @@ import {
 interface SystemStatusPanelProps {
   controls?: ReactNode;
   fetcher?: typeof fetch;
+  refreshMs?: number;
 }
 
-export function SystemStatusPanel({ controls, fetcher }: SystemStatusPanelProps) {
+export function SystemStatusPanel({ controls, fetcher, refreshMs = 5000 }: SystemStatusPanelProps) {
   const [status, setStatus] = useState<DashboardServerStatusSnapshot>(DEFAULT_SERVER_STATUS);
 
   useEffect(() => {
     let isMounted = true;
-    void fetchDashboardServerStatus(fetcher).then((snapshot) => {
+    const refresh = async (): Promise<void> => {
+      const snapshot = await fetchDashboardServerStatus(fetcher);
       if (isMounted) {
         setStatus(snapshot);
       }
-    });
+    };
+
+    void refresh();
+    const intervalId = globalThis.setInterval(() => void refresh(), refreshMs);
+
     return () => {
       isMounted = false;
+      globalThis.clearInterval(intervalId);
     };
-  }, [fetcher]);
+  }, [fetcher, refreshMs]);
 
   const rows = [
     ["서버상태", serverHealthText(status.server), status.server],
@@ -33,6 +40,9 @@ export function SystemStatusPanel({ controls, fetcher }: SystemStatusPanelProps)
     ["네트워크", status.latencyMs ? `${status.latencyMs} ms` : "측정 대기", status.readiness],
     ["헬스체크", serverHealthText(status.readiness), status.readiness],
   ];
+  const checkedText = status.checkedAt
+    ? new Date(status.checkedAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    : "대기";
 
   return (
     <>
@@ -51,6 +61,7 @@ export function SystemStatusPanel({ controls, fetcher }: SystemStatusPanelProps)
           </div>
         ))}
       </dl>
+      <p className="system-status__updated">업데이트 {checkedText}</p>
     </>
   );
 }

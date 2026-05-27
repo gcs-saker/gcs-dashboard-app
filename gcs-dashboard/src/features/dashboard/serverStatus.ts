@@ -8,6 +8,7 @@ export interface DashboardServerStatusSnapshot {
   readiness: DashboardServerHealth;
   streams: DashboardServerHealth;
   latencyMs: number | null;
+  checkedAt: number | null;
 }
 
 export const DEFAULT_SERVER_STATUS: DashboardServerStatusSnapshot = {
@@ -15,6 +16,7 @@ export const DEFAULT_SERVER_STATUS: DashboardServerStatusSnapshot = {
   readiness: "degraded",
   streams: "degraded",
   latencyMs: null,
+  checkedAt: null,
 };
 
 async function probe(fetcher: typeof fetch, path: string, headers?: Record<string, string>): Promise<Response> {
@@ -34,10 +36,11 @@ export async function fetchDashboardServerStatus(
     const latencyMs = Math.max(1, Math.round(performance.now() - startedAt));
 
     return {
-      server: healthResponse.ok ? "online" : "error",
+      server: healthResponse.ok ? healthFromLatency(latencyMs) : "error",
       readiness: readyResponse.ok ? "online" : "degraded",
       streams: streamResponse.ok ? "online" : "degraded",
       latencyMs,
+      checkedAt: Date.now(),
     };
   } catch {
     return {
@@ -45,8 +48,15 @@ export async function fetchDashboardServerStatus(
       readiness: "error",
       streams: "error",
       latencyMs: null,
+      checkedAt: Date.now(),
     };
   }
+}
+
+export function healthFromLatency(latencyMs: number): DashboardServerHealth {
+  if (latencyMs > 1200) return "error";
+  if (latencyMs > 450) return "degraded";
+  return "online";
 }
 
 export function serverHealthText(health: DashboardServerHealth): string {

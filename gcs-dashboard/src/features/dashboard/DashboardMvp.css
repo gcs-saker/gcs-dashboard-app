@@ -583,6 +583,13 @@
   margin: 0;
 }
 
+.system-status__updated {
+  color: var(--muted);
+  font-size: 0.74rem;
+  margin: 0;
+  padding: 0 14px 12px;
+}
+
 .telemetry-panel {
   grid-column: 2;
   grid-row: 2;
