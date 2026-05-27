@@ -1,6 +1,6 @@
 import { apiUrl } from "../../config";
 import { getStoredAccessToken } from "./authStorage";
-import type { AuthenticatedUser, LoginRequest, TokenResponse } from "./types";
+import type { AuthenticatedUser, LoginRequest, SignupRequest, SignupResponse, TokenResponse } from "./types";
 
 export class AuthApiError extends Error {
   readonly status: number;
@@ -33,6 +33,20 @@ export async function loginRequest(credentials: LoginRequest): Promise<TokenResp
   }
 
   return (await response.json()) as TokenResponse;
+}
+
+export async function signupRequest(payload: SignupRequest): Promise<SignupResponse> {
+  const response = await fetch(apiUrl("/auth/signup"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new AuthApiError(response.status, await parseError(response));
+  }
+
+  return (await response.json()) as SignupResponse;
 }
 
 export async function fetchCurrentUser(accessToken: string): Promise<AuthenticatedUser> {

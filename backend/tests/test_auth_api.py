@@ -32,7 +32,7 @@ def db_session() -> Generator[Session, None, None]:
     db.add(
         User(
             username="operator01",
-            email="operator01@example.test",
+            email="operator01@example.com",
             password_hash=get_password_hash("correct-password"),
             company_id=1,
             role="operator",
@@ -82,6 +82,79 @@ def test_login_rejects_invalid_credentials(auth_client: TestClient) -> None:
     )
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid credentials"}
+
+
+def test_signup_creates_user_with_hashed_password(auth_client: TestClient, db_session: Session) -> None:
+    response = auth_client.post(
+        "/auth/signup",
+        json={
+            "username": "viewer02",
+            "email": "viewer02@example.com",
+            "password": "strong-password",
+            "inviteCode": "A4AI01",
+            "role": "viewer",
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["username"] == "viewer02"
+    assert payload["email"] == "viewer02@example.com"
+    assert payload["company_id"] == 1
+    assert payload["role"] == "viewer"
+    assert "password" not in payload
+    assert "password_hash" not in payload
+
+    created_user = db_session.query(User).filter(User.username == "viewer02").one()
+    assert created_user.password_hash != "strong-password"
+    assert "strong-password" not in created_user.password_hash
+    assert created_user.password_hash.startswith("$pbkdf2-sha256$")
+
+
+@pytest.mark.parametrize(
+    ("payload", "detail"),
+    [
+        (
+            {
+                "username": "operator01",
+                "email": "new-operator@example.com",
+                "password": "strong-password",
+                "inviteCode": "A4AI01",
+                "role": "viewer",
+            },
+            "Username already registered",
+        ),
+        (
+            {
+                "username": "newoperator",
+                "email": "operator01@example.com",
+                "password": "strong-password",
+                "inviteCode": "A4AI01",
+                "role": "viewer",
+            },
+            "Email already registered",
+        ),
+        (
+            {
+                "username": "newoperator",
+                "email": "new-operator@example.com",
+                "password": "strong-password",
+                "inviteCode": "WRONG-CODE",
+                "role": "viewer",
+            },
+            "Invalid invite code Input",
+        ),
+    ],
+)
+def test_signup_rejects_duplicate_or_invalid_invite(
+    auth_client: TestClient,
+    payload: dict[str, str],
+    detail: str,
+) -> None:
+    response = auth_client.post("/auth/signup", json=payload)
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": detail}
 
 
 def test_auth_me_reports_missing_invalid_and_expired_tokens(
