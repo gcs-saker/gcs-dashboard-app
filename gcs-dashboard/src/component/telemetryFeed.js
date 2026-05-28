@@ -1,11 +1,14 @@
 import { apiUrl } from "../config";
+import { authenticatedFetch } from "../features/auth/authApi";
 
 export async function fetchTelemetryNodes({ token, fetcher = fetch } = {}) {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   let response;
 
   try {
-    response = await fetcher(apiUrl("/telemetry/all"), { headers });
+    response = token
+      ? await fetcher(apiUrl("/telemetry/all"), { headers })
+      : await authenticatedFetch(apiUrl("/telemetry/all"), {}, fetcher);
   } catch {
     return [];
   }

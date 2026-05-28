@@ -132,3 +132,13 @@ localhost/LAN 환경에서는 기본 ICE 서버 없이도 재생될 수 있다. 
 - playback API 실패: backend env `MEDIAMTX_PUBLIC_WEBRTC_BASE_URL`, `MEDIAMTX_PUBLIC_HLS_BASE_URL` 확인
 - HLS playlist 실패: stream path가 `raw/sample/front`인지, MediaMTX가 publisher를 인식했는지 확인
 - WebRTC 실패: 브라우저 console, ICE candidate, STUN/TURN 설정 확인 후 HLS fallback으로 전환되는지 확인
+
+## TURN relay smoke 확인
+
+도메인/공유기/NAT 환경에서 TURN 서버가 실제 relay allocation을 반환하는지 확인하려면 서버의 비밀값을 출력하지 않고 `.env`에서만 읽어 다음을 실행한다.
+
+```bash
+DOCKER_CMD="sudo docker" scripts/turnutils_relay_smoke.sh
+```
+
+이 검증은 `3478/tcp|udp` 포트 개방만 보는 것이 아니라 coturn 공식 `turnutils_uclient`를 실행한 뒤 서버 로그의 allocation 증가를 확인한다. 통과 후에도 실제 WebRTC media가 끊기면 공유기에서 `49160-49200/udp` relay 범위가 같은 서버로 포워딩되어 있는지 확인한다.

@@ -6,7 +6,7 @@ import type {
   DashboardStreamStatus,
 } from "./streamTypes";
 import { apiV1Url } from "../../config";
-import { AuthApiError, buildAuthHeaders } from "../auth/authApi";
+import { AuthApiError, authenticatedFetch } from "../auth/authApi";
 
 export type StreamDeviceGeometry = DashboardStreamGeometry;
 
@@ -144,9 +144,13 @@ export function disconnectStreamSlot(stream: DashboardStreamSlot): DashboardStre
 }
 
 export async function fetchStreamDeviceOptions(fetcher: typeof fetch = fetch): Promise<StreamDeviceOption[]> {
-  const response = await fetcher(apiV1Url("/streams"), {
-    headers: buildAuthHeaders({ Accept: "application/json" }),
-  });
+  const response = await authenticatedFetch(
+    apiV1Url("/streams"),
+    {
+      headers: { Accept: "application/json" },
+    },
+    fetcher,
+  );
   if (response.status === 401) {
     throw new AuthApiError(response.status, "stream registry authentication required");
   }

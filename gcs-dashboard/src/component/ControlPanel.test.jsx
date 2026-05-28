@@ -28,6 +28,7 @@ describe('ControlPanel', () => {
       '/api/control/',
       expect.objectContaining({
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           Authorization: 'Bearer test-access-token',

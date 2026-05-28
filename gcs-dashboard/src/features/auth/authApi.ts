@@ -1,5 +1,5 @@
 import { apiUrl } from "../../config";
-import { getStoredAccessToken } from "./authStorage";
+import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 import type { AuthenticatedUser, LoginRequest, SignupRequest, SignupResponse, TokenResponse } from "./types";
 
 export class AuthApiError extends Error {
@@ -24,6 +24,7 @@ async function parseError(response: Response): Promise<string> {
 export async function loginRequest(credentials: LoginRequest): Promise<TokenResponse> {
   const response = await fetch(apiUrl("/auth/login"), {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(credentials),
   });
@@ -35,9 +36,35 @@ export async function loginRequest(credentials: LoginRequest): Promise<TokenResp
   return (await response.json()) as TokenResponse;
 }
 
+export async function refreshSessionRequest(fetcher: typeof fetch = fetch): Promise<TokenResponse> {
+  const response = await fetcher(apiUrl("/auth/refresh"), {
+    method: "POST",
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  });
+
+  if (!response.ok) {
+    clearAuthSession();
+    throw new AuthApiError(response.status, await parseError(response));
+  }
+
+  const token = (await response.json()) as TokenResponse;
+  persistTokenResponse(token);
+  return token;
+}
+
+export async function logoutRequest(fetcher: typeof fetch = fetch): Promise<void> {
+  await fetcher(apiUrl("/auth/logout"), {
+    method: "POST",
+    credentials: "include",
+  });
+  clearAuthSession();
+}
+
 export async function signupRequest(payload: SignupRequest): Promise<SignupResponse> {
   const response = await fetch(apiUrl("/auth/signup"), {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
@@ -51,6 +78,7 @@ export async function signupRequest(payload: SignupRequest): Promise<SignupRespo
 
 export async function fetchCurrentUser(accessToken: string): Promise<AuthenticatedUser> {
   const response = await fetch(apiUrl("/auth/me"), {
+    credentials: "include",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
@@ -65,4 +93,45 @@ export function buildAuthHeaders(headers: Record<string, string> = {}): Record<s
   const accessToken = getStoredAccessToken();
   if (!accessToken) return headers;
   return { ...headers, Authorization: `Bearer ${accessToken}` };
+}
+
+export async function authenticatedFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  fetcher: typeof fetch = fetch,
+): Promise<Response> {
+  const firstResponse = await fetcher(input, withAuth(init));
+  if (firstResponse.status !== 401) {
+    return firstResponse;
+  }
+
+  await refreshSessionRequest(fetcher);
+  return fetcher(input, withAuth(init));
+}
+
+export function persistTokenResponse(token: TokenResponse): void {
+  storeAuthSession({
+    accessToken: token.access_token,
+    expiresAt: new Date(Date.now() + token.expires_in_minutes * 60_000).toISOString(),
+    user: { username: token.username, role: token.role },
+  });
+}
+
+function withAuth(init: RequestInit): RequestInit {
+  return {
+    ...init,
+    credentials: "include",
+    headers: buildAuthHeaders(headersToRecord(init.headers)),
+  };
+}
+
+function headersToRecord(headers: HeadersInit | undefined): Record<string, string> {
+  if (!headers) return {};
+  if (headers instanceof Headers) {
+    return Object.fromEntries(headers.entries());
+  }
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers);
+  }
+  return headers;
 }

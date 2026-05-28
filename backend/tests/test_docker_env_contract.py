@@ -38,6 +38,11 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert {"mysql", "mqtt", "backend", "mediamtx", "turn", "nginx", "edge"} <= set(services)
     assert services["backend"]["environment"]["DATABASE_URL"].startswith("${DATABASE_URL:")
     assert services["backend"]["environment"]["AUTH_JWT_SECRET"].startswith("${AUTH_JWT_SECRET:")
+    assert services["backend"]["environment"]["AUTH_REFRESH_TOKEN_EXPIRE_MINUTES"] == (
+        "${AUTH_REFRESH_TOKEN_EXPIRE_MINUTES:-10080}"
+    )
+    assert services["backend"]["environment"]["AUTH_REFRESH_COOKIE_SECURE"] == "${AUTH_REFRESH_COOKIE_SECURE:-false}"
+    assert services["backend"]["environment"]["AUTH_REFRESH_COOKIE_SAMESITE"] == "${AUTH_REFRESH_COOKIE_SAMESITE:-lax}"
     assert services["backend"]["environment"]["MQTT_HOST"] == "${MQTT_HOST:-mqtt}"
     assert services["backend"]["environment"]["MEDIAMTX_PUBLIC_WEBRTC_BASE_URL"].startswith("${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:")
     assert services["backend"]["environment"]["WEBRTC_STUN_URL"] == (
@@ -109,6 +114,9 @@ def test_compose_declares_turn_service_as_opt_in_profile() -> None:
     assert "${TURN_BIND_ADDR:-0.0.0.0}:${TURN_PORT:-3478}:3478/tcp" in turn["ports"]
     assert "${TURN_BIND_ADDR:-0.0.0.0}:${TURN_PORT:-3478}:3478/udp" in turn["ports"]
     assert "${TURN_BIND_ADDR:-0.0.0.0}:49160-49200:49160-49200/udp" in turn["ports"]
+    assert "--min-port=49160" in turn["command"]
+    assert "--max-port=49200" in turn["command"]
+    assert "--lt-cred-mech" in turn["command"]
     assert "--user=${WEBRTC_TURN_USERNAME:-gcs-turn}:${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}" in turn["command"]
 
 

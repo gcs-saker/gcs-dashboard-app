@@ -16,7 +16,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(apiUrl("/auth/login"), form);
+      const res = await axios.post(apiUrl("/auth/login"), form, { withCredentials: true });
       console.log("로그인 성공:", res.data);
       storeAuthSession({
         accessToken: res.data.access_token,

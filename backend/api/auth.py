@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Annotated, cast
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
@@ -12,6 +13,8 @@ from core.security import (
     AuthSettings,
     AuthenticatedUser,
     create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
     get_current_user,
     normalize_role,
 )
@@ -60,7 +63,7 @@ def signup(user: UserCreate, db: Annotated[Session, Depends(get_db)]) -> User:
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(user: UserLogin, db: Annotated[Session, Depends(get_db)]) -> TokenResponse:
+def login(user: UserLogin, response: Response, db: Annotated[Session, Depends(get_db)]) -> TokenResponse:
     db_user = db.query(User).filter(User.username == user.username).first()
     if not db_user or not verify_password(user.password, cast(str, db_user.password_hash)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
@@ -72,12 +75,18 @@ def login(user: UserLogin, db: Annotated[Session, Depends(get_db)]) -> TokenResp
             cast(str | None, db_user.role),
             settings=auth_settings,
         )
+        refresh_token = create_refresh_token(
+            cast(str, db_user.username),
+            cast(str | None, db_user.role),
+            settings=auth_settings,
+        )
     except AuthConfigError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
 
+    _set_refresh_cookie(response, refresh_token, auth_settings)
     return TokenResponse(
         access_token=token,
         token_type="bearer",
@@ -87,6 +96,86 @@ def login(user: UserLogin, db: Annotated[Session, Depends(get_db)]) -> TokenResp
     )
 
 
+@router.post("/refresh", response_model=TokenResponse)
+def refresh_session(request: Request, response: Response, db: Annotated[Session, Depends(get_db)]) -> TokenResponse | JSONResponse:
+    try:
+        auth_settings = AuthSettings.from_env()
+    except AuthConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    refresh_token = request.cookies.get(auth_settings.refresh_cookie_name)
+    if not refresh_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="refresh token required")
+
+    refresh_user = decode_refresh_token(refresh_token, settings=auth_settings)
+    db_user = db.query(User).filter(User.username == refresh_user.username).first()
+    if not db_user:
+        error_response = JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "invalid refresh session"},
+        )
+        _clear_refresh_cookie(error_response, auth_settings)
+        return error_response
+
+    access_token = create_access_token(
+        cast(str, db_user.username),
+        cast(str | None, db_user.role),
+        settings=auth_settings,
+    )
+    rotated_refresh_token = create_refresh_token(
+        cast(str, db_user.username),
+        cast(str | None, db_user.role),
+        settings=auth_settings,
+    )
+    _set_refresh_cookie(response, rotated_refresh_token, auth_settings)
+    return TokenResponse(
+        access_token=access_token,
+        token_type="bearer",
+        expires_in_minutes=auth_settings.access_token_expire_minutes,
+        username=cast(str, db_user.username),
+        role=normalize_role(cast(str | None, db_user.role)),
+    )
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(response: Response) -> Response:
+    try:
+        auth_settings = AuthSettings.from_env()
+    except AuthConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    _clear_refresh_cookie(response, auth_settings)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
+
+
 @router.get("/me", response_model=AuthenticatedUserResponse)
 def read_current_user(current_user: Annotated[AuthenticatedUser, Depends(get_current_user)]):
     return AuthenticatedUserResponse(username=current_user.username, role=current_user.role)
+
+
+def _set_refresh_cookie(response: Response, refresh_token: str, auth_settings: AuthSettings) -> None:
+    response.set_cookie(
+        key=auth_settings.refresh_cookie_name,
+        value=refresh_token,
+        max_age=auth_settings.refresh_token_expire_minutes * 60,
+        httponly=True,
+        secure=auth_settings.refresh_cookie_secure,
+        samesite=auth_settings.refresh_cookie_samesite,
+        path="/",
+    )
+
+
+def _clear_refresh_cookie(response: Response, auth_settings: AuthSettings) -> None:
+    response.delete_cookie(
+        key=auth_settings.refresh_cookie_name,
+        httponly=True,
+        secure=auth_settings.refresh_cookie_secure,
+        samesite=auth_settings.refresh_cookie_samesite,
+        path="/",
+    )

@@ -17,12 +17,19 @@ BACKEND_ROOT = REPO_ROOT / "backend"
 sys.path.insert(0, str(BACKEND_ROOT))
 
 from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
+from sqlalchemy.pool import StaticPool  # noqa: E402
 
+from api.auth import get_password_hash  # noqa: E402
 from api.stream import get_v1_streaming_service  # noqa: E402
+from core.db import Base, get_db  # noqa: E402
 from core.security import AuthSettings, create_access_token  # noqa: E402
 from main import app  # noqa: E402
 from modules.ai_contract import AI_CONTRACT_SCHEMA_VERSION  # noqa: E402
 from modules.streaming import PlaybackUrlBuilder, PlaybackUrlBuilderConfig, StreamingService  # noqa: E402
+from sql.company_sql import Company  # noqa: E402
+from sql.user_sql import User  # noqa: E402
 
 
 MetricCall = Callable[[TestClient], Any]
@@ -98,20 +105,67 @@ def run_perf_check(iterations: int, warmup: int) -> dict[str, object]:
         "AUTH_JWT_SECRET",
         "local-perf-check-secret-for-gcs-saker-at-least-32-chars",
     )
+    os.environ.setdefault("AUTH_REFRESH_COOKIE_SECURE", "false")
     token = create_access_token(
         "perf-operator",
         "operator",
         settings=AuthSettings.from_env(),
     )
     headers = {"Authorization": f"Bearer {token}"}
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base.metadata.create_all(bind=engine)
+    seed_db = testing_session_local()
+    try:
+        seed_benchmark_user(seed_db)
+    finally:
+        seed_db.close()
+
+    def override_get_db():
+        db = testing_session_local()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
 
     try:
         with TestClient(app) as client:
+            login_payload = {"username": "perf-operator", "password": "perf-password"}
+            login_response = client.post("/auth/login", json=login_payload)
+            if login_response.status_code != 200:
+                raise RuntimeError(f"benchmark login failed with {login_response.status_code}")
             results = [
+                measure_endpoint(
+                    client,
+                    "auth_login_api",
+                    lambda active_client: active_client.post("/auth/login", json=login_payload),
+                    iterations,
+                    warmup,
+                ),
+                measure_endpoint(
+                    client,
+                    "auth_refresh_api",
+                    lambda active_client: active_client.post("/auth/refresh"),
+                    iterations,
+                    warmup,
+                ),
                 measure_endpoint(
                     client,
                     "stream_list_api",
                     lambda active_client: active_client.get("/api/v1/streams", headers=headers),
+                    iterations,
+                    warmup,
+                ),
+                measure_endpoint(
+                    client,
+                    "stream_ice_servers_api",
+                    lambda active_client: active_client.get("/api/v1/streams/ice-servers", headers=headers),
                     iterations,
                     warmup,
                 ),
@@ -139,11 +193,27 @@ def run_perf_check(iterations: int, warmup: int) -> dict[str, object]:
             ]
     finally:
         app.dependency_overrides.clear()
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
 
     return {
         "target": "streaming-core-v0.1.0-local-fastapi-testclient",
         "results": results,
     }
+
+
+def seed_benchmark_user(db: Session) -> None:
+    db.add(Company(id=1, companyname="A4AI", invite_code="A4AI01"))
+    db.add(
+        User(
+            username="perf-operator",
+            email="perf-operator@example.com",
+            password_hash=get_password_hash("perf-password"),
+            company_id=1,
+            role="operator",
+        )
+    )
+    db.commit()
 
 
 def parse_args() -> argparse.Namespace:

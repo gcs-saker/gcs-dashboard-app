@@ -1,10 +1,10 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { loginRequest } from "./authApi";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { loginRequest, logoutRequest, persistTokenResponse, refreshSessionRequest } from "./authApi";
 import {
   clearAuthSession,
   getStoredAccessToken,
   getStoredUser,
-  storeAuthSession,
+  hasStoredSessionMetadata,
 } from "./authStorage";
 import type { AuthenticatedUser, LoginRequest } from "./types";
 
@@ -12,6 +12,7 @@ interface AuthContextValue {
   accessToken: string | null;
   currentUser: AuthenticatedUser | null;
   isAuthenticated: boolean;
+  isAuthReady: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
   logout: () => void;
 }
@@ -23,23 +24,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(() =>
     getStoredUser<AuthenticatedUser>(),
   );
+  const [isAuthReady, setIsAuthReady] = useState<boolean>(() => Boolean(getStoredAccessToken()));
+  const didRequestLogoutRef = useRef(false);
+
+  useEffect(() => {
+    let disposed = false;
+    if (accessToken) {
+      setIsAuthReady(true);
+      return () => {
+        disposed = true;
+      };
+    }
+    if (didRequestLogoutRef.current || !hasStoredSessionMetadata()) {
+      setIsAuthReady(true);
+      return () => {
+        disposed = true;
+      };
+    }
+
+    void refreshSessionRequest()
+      .then((token) => {
+        if (disposed) return;
+        const user = { username: token.username, role: token.role };
+        setAccessToken(token.access_token);
+        setCurrentUser(user);
+      })
+      .catch(() => {
+        if (disposed) return;
+        setAccessToken(null);
+        setCurrentUser(null);
+      })
+      .finally(() => {
+        if (!disposed) {
+          setIsAuthReady(true);
+        }
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [accessToken]);
 
   const logout = useCallback((): void => {
+    didRequestLogoutRef.current = true;
     clearAuthSession();
     setAccessToken(null);
     setCurrentUser(null);
+    setIsAuthReady(true);
+    void logoutRequest().catch(() => undefined);
   }, []);
 
   const login = useCallback(async (credentials: LoginRequest): Promise<void> => {
     const token = await loginRequest(credentials);
     const user = { username: token.username, role: token.role };
-    storeAuthSession({
-      accessToken: token.access_token,
-      expiresAt: new Date(Date.now() + token.expires_in_minutes * 60_000).toISOString(),
-      user,
-    });
+    persistTokenResponse(token);
+    didRequestLogoutRef.current = false;
     setAccessToken(token.access_token);
     setCurrentUser(user);
+    setIsAuthReady(true);
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -47,10 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessToken,
       currentUser,
       isAuthenticated: Boolean(accessToken),
+      isAuthReady,
       login,
       logout,
     }),
-    [accessToken, currentUser, login, logout],
+    [accessToken, currentUser, isAuthReady, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

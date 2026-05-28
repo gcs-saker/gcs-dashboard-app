@@ -32,6 +32,9 @@ REQUIRED_DASHBOARD_KEYS = {
     "MYSQL_PASSWORD",
     "DATABASE_URL",
     "AUTH_JWT_SECRET",
+    "AUTH_REFRESH_TOKEN_EXPIRE_MINUTES",
+    "AUTH_REFRESH_COOKIE_SECURE",
+    "AUTH_REFRESH_COOKIE_SAMESITE",
     "BACKEND_HTTP_PORT",
     "DASHBOARD_HTTP_PORT",
     "PUBLIC_HTTPS_PORT",
@@ -44,6 +47,17 @@ REQUIRED_DASHBOARD_KEYS = {
     "MEDIAMTX_PUBLIC_HLS_BASE_URL",
     "MEDIAMTX_WEBRTC_SIGNALING_PORT",
     "MEDIAMTX_HLS_PORT",
+    "WEBRTC_STUN_URL",
+    "TURN_BIND_ADDR",
+    "TURN_PORT",
+    "TURN_REALM",
+    "TURN_EXTERNAL_IP",
+}
+
+OPTIONAL_TURN_KEYS = {
+    "WEBRTC_TURN_URL",
+    "WEBRTC_TURN_USERNAME",
+    "WEBRTC_TURN_PASSWORD",
 }
 
 SECRET_PATTERNS = (
@@ -102,10 +116,24 @@ def require_env_examples() -> None:
         keys = set(re.findall(r"^([A-Z0-9_]+)=", content, flags=re.MULTILINE))
         missing = REQUIRED_DASHBOARD_KEYS - keys
         require(not missing, f"{env_path.name} is missing keys: {sorted(missing)}")
+        for key in OPTIONAL_TURN_KEYS:
+            require(
+                re.search(rf"^#?\s*{key}=", content, flags=re.MULTILINE),
+                f"{env_path.name} should document optional TURN key: {key}",
+            )
         require("9997" not in content and "9998" not in content, f"{env_path.name} must not publish management ports")
 
     backend_content = BACKEND_ENV_EXAMPLE.read_text(encoding="utf-8")
-    for key in ("DATABASE_URL", "MQTT_HOST", "MQTT_PORT", "MEDIAMTX_PUBLIC_WEBRTC_BASE_URL", "MEDIAMTX_PUBLIC_HLS_BASE_URL"):
+    for key in (
+        "DATABASE_URL",
+        "AUTH_REFRESH_TOKEN_EXPIRE_MINUTES",
+        "AUTH_REFRESH_COOKIE_SECURE",
+        "AUTH_REFRESH_COOKIE_SAMESITE",
+        "MQTT_HOST",
+        "MQTT_PORT",
+        "MEDIAMTX_PUBLIC_WEBRTC_BASE_URL",
+        "MEDIAMTX_PUBLIC_HLS_BASE_URL",
+    ):
         require(f"{key}=" in backend_content, f"backend/.env.example missing {key}")
 
     gitignore = GITIGNORE.read_text(encoding="utf-8")

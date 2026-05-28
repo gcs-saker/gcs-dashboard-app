@@ -5,7 +5,7 @@ import ControlMainBodyPanel from "./component/ControlMainBodyPanel";
 import CCTVMainBodyPanel from "./component/CCTVMainBodyPanel";
 import TelemetryDashboard from "./component/TelemetryDashboard";
 import { apiUrl } from "./config";
-import { buildAuthHeaders } from "./features/auth/authApi";
+import { authenticatedFetch } from "./features/auth/authApi";
 
 export default function GCSRoverUI() {
   const [telemetryMap, setTelemetryMap] = useState({});
@@ -80,9 +80,7 @@ export default function GCSRoverUI() {
     });
 
     // 예시: 새 UUID가 선택될 때마다 gateway API 요청
-    fetch(apiUrl(`/asset/${selectedUUID}`), {
-      headers: buildAuthHeaders(),
-    })
+    authenticatedFetch(apiUrl(`/asset/${selectedUUID}`))
       .then(res => res.json())
       .then(data => {
         // 배열 → uuid 기준으로 Map 형태 변환

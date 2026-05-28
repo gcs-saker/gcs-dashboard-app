@@ -74,8 +74,7 @@ export default function MainMap({ setTelemetryMap }) {
 
   const fetchLoop = async () => {
     try {
-      const token = localStorage.getItem("access_token");
-      const data = await fetchTelemetryNodes({ token });
+      const data = await fetchTelemetryNodes();
 
       if (isMounted) {
         // ✅ nodeList도 갱신해야 지도에 Marker가 찍힘
