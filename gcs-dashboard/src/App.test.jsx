@@ -29,10 +29,10 @@ describe('App dashboard shell', () => {
     window.history.pushState({}, '', '/');
   });
 
-  test('renders the core dashboard regions', () => {
+  test('renders the core dashboard regions', async () => {
     render(<App />);
 
-    expect(screen.getByRole('main', { name: 'Field Ops Dashboard MVP' })).toBeInTheDocument();
+    expect(await screen.findByRole('main', { name: 'Field Ops Dashboard MVP' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '자산트리' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '지도' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '선택 스트림' })).toBeInTheDocument();
@@ -41,21 +41,21 @@ describe('App dashboard shell', () => {
     expect(screen.getByRole('heading', { name: 'AI 결과' })).toBeInTheDocument();
   });
 
-  test('renders the streaming smoke dashboard when requested by query string', () => {
+  test('renders the streaming smoke dashboard when requested by query string', async () => {
     window.history.pushState({}, '', '/?streamingSmoke=1');
 
     render(<App />);
 
-    expect(screen.getByTestId('streaming-smoke-dashboard')).toBeInTheDocument();
+    expect(await screen.findByTestId('streaming-smoke-dashboard')).toBeInTheDocument();
     expect(screen.queryByTestId('hls-player')).not.toBeInTheDocument();
   });
 
-  test('renders the local webcam publisher when requested by query string', () => {
+  test('renders the local webcam publisher when requested by query string', async () => {
     window.history.pushState({}, '', '/?webcamPublisher=1');
 
     render(<App />);
 
-    expect(screen.getByTestId('local-webcam-publisher')).toBeInTheDocument();
+    expect(await screen.findByTestId('local-webcam-publisher')).toBeInTheDocument();
   });
 
   test('renders the local webcam publisher on the protected publisher route', () => {

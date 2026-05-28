@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { SelectedStreamPanel } from "./components/SelectedStreamPanel";
@@ -20,9 +20,12 @@ import {
 } from "./dashboardLayout";
 import "./DashboardMvp.css";
 import { getMapFocusForStream } from "./mapFocus";
-import { TacticalLeafletMap } from "./map/TacticalLeafletMap";
 import { type StreamDeviceOption } from "./streamDevices";
 import { useDashboardStreams } from "./hooks/useDashboardStreams";
+
+const TacticalLeafletMap = lazy(() =>
+  import("./map/TacticalLeafletMap").then((module) => ({ default: module.TacticalLeafletMap })),
+);
 
 const telemetryRows = [
   ["위도", "35.871435"],
@@ -180,7 +183,15 @@ export function DashboardMvp() {
               {widgetControls("tactical-map", "지도")}
             </span>
           </div>
-          <TacticalLeafletMap selectedStream={selectedStream} streams={streams} />
+          <Suspense
+            fallback={
+              <div className="tactical-map__canvas tactical-map__canvas--loading" role="status" aria-label="지도 준비 중">
+                <span />
+              </div>
+            }
+          >
+            <TacticalLeafletMap selectedStream={selectedStream} streams={streams} />
+          </Suspense>
           <span className="map-focus__label" data-testid="map-focus-label">
             {mapFocus.label}
           </span>
