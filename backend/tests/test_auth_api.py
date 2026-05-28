@@ -98,6 +98,39 @@ def test_refresh_uses_httponly_cookie_and_rotates_access_token(auth_client: Test
     assert "gcs_saker_refresh=" in refresh_response.headers["set-cookie"]
 
 
+def test_cookie_auth_posts_reject_untrusted_origin(auth_client: TestClient) -> None:
+    login_response = auth_client.post(
+        "/auth/login",
+        json={"username": "operator01", "password": "correct-password"},
+    )
+    assert login_response.status_code == 200
+
+    refresh_response = auth_client.post("/auth/refresh", headers={"Origin": "https://evil.example"})
+    logout_response = auth_client.post(
+        "/auth/logout",
+        headers={"Referer": "https://evil.example/session"},
+    )
+
+    assert refresh_response.status_code == 403
+    assert refresh_response.json() == {"detail": "untrusted request origin"}
+    assert logout_response.status_code == 403
+    assert logout_response.json() == {"detail": "untrusted request origin"}
+
+
+def test_cookie_auth_posts_accept_configured_origin(auth_client: TestClient) -> None:
+    login_response = auth_client.post(
+        "/auth/login",
+        json={"username": "operator01", "password": "correct-password"},
+        headers={"Origin": "http://localhost:5173"},
+    )
+    assert login_response.status_code == 200
+
+    refresh_response = auth_client.post("/auth/refresh", headers={"Origin": "http://localhost:5173"})
+
+    assert refresh_response.status_code == 200
+    assert refresh_response.json()["access_token"]
+
+
 def test_refresh_rejects_missing_invalid_and_deleted_user_cookie(
     auth_client: TestClient,
     db_session: Session,

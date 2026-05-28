@@ -2,6 +2,8 @@ import { apiUrl } from "../../config";
 import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 import type { AuthenticatedUser, LoginRequest, SignupRequest, SignupResponse, TokenResponse } from "./types";
 
+let refreshInFlight: Promise<TokenResponse> | null = null;
+
 export class AuthApiError extends Error {
   readonly status: number;
 
@@ -105,8 +107,17 @@ export async function authenticatedFetch(
     return firstResponse;
   }
 
-  await refreshSessionRequest(fetcher);
+  await refreshSessionOnce(fetcher);
   return fetcher(input, withAuth(init));
+}
+
+export async function refreshSessionOnce(fetcher: typeof fetch = fetch): Promise<TokenResponse> {
+  if (!refreshInFlight) {
+    refreshInFlight = refreshSessionRequest(fetcher).finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
 }
 
 export function persistTokenResponse(token: TokenResponse): void {
