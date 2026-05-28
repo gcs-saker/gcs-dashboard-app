@@ -35,6 +35,40 @@ class MediaServerSettings:
 
 
 @dataclass(frozen=True)
+class WebRtcIceSettings:
+    stun_url: str | None = "stun:stun.l.google.com:19302"
+    turn_url: str | None = None
+    turn_username: str | None = None
+    turn_password: str | None = None
+
+    @classmethod
+    def from_env(cls) -> "WebRtcIceSettings":
+        return cls(
+            stun_url=_empty_to_none(os.getenv("WEBRTC_STUN_URL")) or "stun:stun.l.google.com:19302",
+            turn_url=_empty_to_none(os.getenv("WEBRTC_TURN_URL"))
+            or _empty_to_none(os.getenv("MEDIAMTX_TURN_URL")),
+            turn_username=_empty_to_none(os.getenv("WEBRTC_TURN_USERNAME"))
+            or _empty_to_none(os.getenv("MEDIAMTX_TURN_USERNAME")),
+            turn_password=_empty_to_none(os.getenv("WEBRTC_TURN_PASSWORD"))
+            or _empty_to_none(os.getenv("MEDIAMTX_TURN_PASSWORD")),
+        )
+
+    def browser_ice_servers(self) -> tuple[dict[str, str], ...]:
+        servers: list[dict[str, str]] = []
+        if self.stun_url:
+            servers.append({"urls": self.stun_url})
+        if self.turn_url and self.turn_username and self.turn_password:
+            servers.append(
+                {
+                    "urls": self.turn_url,
+                    "username": self.turn_username,
+                    "credential": self.turn_password,
+                }
+            )
+        return tuple(servers)
+
+
+@dataclass(frozen=True)
 class WebSecuritySettings:
     allowed_origins: tuple[str, ...]
     content_security_policy: str

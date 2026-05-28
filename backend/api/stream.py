@@ -3,10 +3,12 @@ from typing import Annotated, Generic, TypeAlias, TypeVar
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from config import WebRtcIceSettings
 from model.stream_model import StreamPathError, validate_stream_id, validate_stream_path
 from modules.streaming.domain import StreamDescriptor
 from modules.streaming.router import router as streaming_module_router
 from modules.streaming.schemas import (
+    IceServerResponse,
     StreamDescriptorResponse,
     StreamPlaybackResponse,
     StreamStatusResponse,
@@ -75,6 +77,14 @@ async def list_streams(service: StreamServiceDependency) -> list[StreamDescripto
     return [
         StreamDescriptorResponse.from_domain(descriptor)
         for descriptor in service.list_registered_streams()
+    ]
+
+
+@v1_router.get("/streams/ice-servers", response_model=list[IceServerResponse])
+async def list_stream_ice_servers() -> list[IceServerResponse]:
+    return [
+        IceServerResponse(**server)
+        for server in WebRtcIceSettings.from_env().browser_ice_servers()
     ]
 
 

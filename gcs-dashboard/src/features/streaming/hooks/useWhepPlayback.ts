@@ -2,6 +2,7 @@ import { useEffect, useReducer, useRef } from "react";
 import type { Dispatch, RefObject } from "react";
 
 import { WEBRTC_ICE_SERVERS } from "../../../config";
+import { loadWebRtcIceServers } from "../iceServers";
 import type { WebRTCPlaybackSnapshot, WebRTCPlaybackStatus } from "../types";
 
 type PeerConnectionFactory = () => RTCPeerConnection;
@@ -31,7 +32,7 @@ const initialPlaybackState: WebRTCPlaybackSnapshot = {
 export function useWhepPlayback({
   whepUrl,
   isOnline = true,
-  peerConnectionFactory = createPeerConnection,
+  peerConnectionFactory,
   fetcher = fetch,
 }: UseWhepPlaybackOptions): WebRTCPlaybackSnapshot & { videoRef: RefObject<HTMLVideoElement | null> } {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -48,60 +49,76 @@ export function useWhepPlayback({
       return;
     }
 
-    let peerConnection: RTCPeerConnection;
+    const resolvedWhepUrl = whepUrl;
+    let peerConnection: RTCPeerConnection | null = null;
     const abortController = new AbortController();
     let disposed = false;
 
-    try {
-      peerConnection = peerConnectionFactory();
-    } catch (error) {
-      dispatch({
-        type: "unsupported",
-        message: error instanceof Error ? error.message : "WebRTC is not supported",
-      });
-      return;
-    }
-
     dispatch({
       type: "loading",
-      connectionState: peerConnection.connectionState,
-      iceConnectionState: peerConnection.iceConnectionState,
+      connectionState: "new",
+      iceConnectionState: "new",
     });
 
-    peerConnection.addTransceiver("video", { direction: "recvonly" });
-    peerConnection.addTransceiver("audio", { direction: "recvonly" });
-
-    peerConnection.ontrack = (event) => {
-      const [stream] = event.streams;
-      if (videoRef.current && stream) {
-        videoRef.current.srcObject = stream;
-      }
-    };
-
-    peerConnection.onconnectionstatechange = () => {
-      dispatchStateFromConnection(peerConnection, dispatch);
-    };
-
-    peerConnection.oniceconnectionstatechange = () => {
-      dispatchStateFromConnection(peerConnection, dispatch);
-    };
-
-    void connectWithWhep(peerConnection, whepUrl, fetcher, abortController.signal).catch((error) => {
-      if (disposed || abortController.signal.aborted) {
-        return;
-      }
+    void startWhepPlayback().catch((error) => {
+      if (disposed || abortController.signal.aborted) return;
       dispatch({
         type: "error",
         message: error instanceof Error ? error.message : "WebRTC playback failed",
+        connectionState: peerConnection?.connectionState,
+        iceConnectionState: peerConnection?.iceConnectionState,
+      });
+    });
+
+    async function startWhepPlayback(): Promise<void> {
+      const iceServers = peerConnectionFactory ? WEBRTC_ICE_SERVERS : await loadWebRtcIceServers(fetcher);
+      if (disposed || abortController.signal.aborted) return;
+
+      try {
+        peerConnection = peerConnectionFactory?.() ?? createPeerConnection(iceServers);
+      } catch (error) {
+        dispatch({
+          type: "unsupported",
+          message: error instanceof Error ? error.message : "WebRTC is not supported",
+        });
+        return;
+      }
+
+      dispatch({
+        type: "loading",
         connectionState: peerConnection.connectionState,
         iceConnectionState: peerConnection.iceConnectionState,
       });
-    });
+
+      peerConnection.addTransceiver("video", { direction: "recvonly" });
+      peerConnection.addTransceiver("audio", { direction: "recvonly" });
+
+      peerConnection.ontrack = (event) => {
+        const [stream] = event.streams;
+        if (videoRef.current && stream) {
+          videoRef.current.srcObject = stream;
+        }
+      };
+
+      peerConnection.onconnectionstatechange = () => {
+        if (peerConnection) {
+          dispatchStateFromConnection(peerConnection, dispatch);
+        }
+      };
+
+      peerConnection.oniceconnectionstatechange = () => {
+        if (peerConnection) {
+          dispatchStateFromConnection(peerConnection, dispatch);
+        }
+      };
+
+      await connectWithWhep(peerConnection, resolvedWhepUrl, fetcher, abortController.signal);
+    }
 
     return () => {
       disposed = true;
       abortController.abort();
-      peerConnection.close();
+      peerConnection?.close();
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
@@ -263,10 +280,10 @@ function waitForIceGatheringComplete(peerConnection: RTCPeerConnection): Promise
   });
 }
 
-function createPeerConnection(): RTCPeerConnection {
+function createPeerConnection(iceServers: RTCIceServer[]): RTCPeerConnection {
   if (typeof RTCPeerConnection === "undefined") {
     throw new Error("WebRTC is not supported");
   }
 
-  return new RTCPeerConnection({ iceServers: WEBRTC_ICE_SERVERS });
+  return new RTCPeerConnection({ iceServers });
 }

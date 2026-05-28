@@ -54,6 +54,10 @@ services:
       MEDIAMTX_PUBLIC_WEBRTC_BASE_URL: ${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8889}
       MEDIAMTX_PUBLIC_HLS_BASE_URL: ${MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://localhost:8888}
       MEDIAMTX_API_BASE_URL: ${MEDIAMTX_API_BASE_URL:-http://mediamtx:9997}
+      WEBRTC_STUN_URL: ${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}
+      WEBRTC_TURN_URL: ${WEBRTC_TURN_URL:-}
+      WEBRTC_TURN_USERNAME: ${WEBRTC_TURN_USERNAME:-}
+      WEBRTC_TURN_PASSWORD: ${WEBRTC_TURN_PASSWORD:-}
     ports:
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${BACKEND_HTTP_PORT:-8001}:8001"
     depends_on:
@@ -84,6 +88,30 @@ services:
         target: /mediamtx.yml
         read_only: true
     command: /mediamtx.yml
+    restart: always
+
+  turn:
+    image: ${COTURN_IMAGE:-coturn/coturn:4.6.3}
+    container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-turn
+    profiles: ["turn"]
+    env_file: *service_env_files
+    command:
+      - -n
+      - --log-file=stdout
+      - --fingerprint
+      - --lt-cred-mech
+      - --realm=${TURN_REALM:-gcs-saker.local}
+      - --user=${WEBRTC_TURN_USERNAME:-gcs-turn}:${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}
+      - --listening-port=3478
+      - --min-port=49160
+      - --max-port=49200
+      - --external-ip=${TURN_EXTERNAL_IP:-127.0.0.1}
+      - --no-cli
+      - --no-multicast-peers
+    ports:
+      - "${TURN_BIND_ADDR:-0.0.0.0}:${TURN_PORT:-3478}:3478/tcp"
+      - "${TURN_BIND_ADDR:-0.0.0.0}:${TURN_PORT:-3478}:3478/udp"
+      - "${TURN_BIND_ADDR:-0.0.0.0}:49160-49200:49160-49200/udp"
     restart: always
 
   nginx:

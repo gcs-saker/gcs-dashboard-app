@@ -1,10 +1,8 @@
 services:
   mediamtx:
     environment:
-      # Required when this override file is enabled.
-      MTX_WEBRTCICESERVERS2_0_URL: "${MEDIAMTX_STUN_URL:?Set MEDIAMTX_STUN_URL in .env}"
-      # TURN/TURNS extension point. Uncomment when relay is required and keep secrets outside git.
-      # MTX_WEBRTCICESERVERS2_1_URL: "${MEDIAMTX_TURN_URL:?Set MEDIAMTX_TURN_URL in .env}"
-      # MTX_WEBRTCICESERVERS2_1_USERNAME: "${MEDIAMTX_TURN_USERNAME:?Set MEDIAMTX_TURN_USERNAME in .env}"
-      # MTX_WEBRTCICESERVERS2_1_PASSWORD: "${MEDIAMTX_TURN_PASSWORD:?Set MEDIAMTX_TURN_PASSWORD in .env}"
-      # MTX_WEBRTCICESERVERS2_1_CLIENTONLY: "${MEDIAMTX_TURN_CLIENT_ONLY:-false}"
+      MTX_WEBRTCICESERVERS2_0_URL: "${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
+      MTX_WEBRTCICESERVERS2_1_URL: "${WEBRTC_TURN_URL:-turn:turn:3478?transport=udp}"
+      MTX_WEBRTCICESERVERS2_1_USERNAME: "${WEBRTC_TURN_USERNAME:-gcs-turn}"
+      MTX_WEBRTCICESERVERS2_1_PASSWORD: "${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}"
+      MTX_WEBRTCICESERVERS2_1_CLIENTONLY: "${WEBRTC_TURN_CLIENT_ONLY:-false}"

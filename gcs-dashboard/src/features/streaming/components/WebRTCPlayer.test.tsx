@@ -107,6 +107,44 @@ describe("WebRTCPlayer", () => {
     });
   });
 
+  test("uses TURN servers returned by the backend ICE API", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn(async () => [
+          { urls: "stun:stun.example.test:3478" },
+          {
+            urls: "turn:turn.example.test:3478?transport=udp",
+            username: "gcs-turn",
+            credential: "test-secret",
+          },
+        ]),
+      } as unknown as Response)
+      .mockResolvedValueOnce(successfulWhepResponse as unknown as Response);
+
+    render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" streamId="raw.sample.front" />);
+
+    await waitFor(() => {
+      expect(RTCPeerConnection).toHaveBeenCalledWith({
+        iceServers: [
+          { urls: "stun:stun.example.test:3478" },
+          {
+            urls: "turn:turn.example.test:3478?transport=udp",
+            username: "gcs-turn",
+            credential: "test-secret",
+          },
+        ],
+      });
+    });
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/streams/ice-servers",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Accept: "application/json" }),
+      }),
+    );
+  });
+
   test("renders playing state and WebRTC connection details", async () => {
     const onStatusChange = vi.fn();
     render(
@@ -165,7 +203,10 @@ describe("WebRTCPlayer", () => {
     render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" />);
 
     await waitFor(() => expect(peerConnections[0].setLocalDescription).toHaveBeenCalled());
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalledWith(
+      "https://media.example.test/raw/sample/front/whep",
+      expect.objectContaining({ method: "POST" }),
+    );
 
     act(() => {
       peerConnections[0].emitIceGatheringComplete();
@@ -200,7 +241,10 @@ describe("WebRTCPlayer", () => {
 
     expect(await screen.findByText("WebRTC is not supported")).toBeInTheDocument();
     expect(screen.getByText("pc: unsupported")).toBeInTheDocument();
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalledWith(
+      "https://media.example.test/raw/sample/front/whep",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   test("renders an unsupported error when RTCPeerConnection is missing", async () => {
@@ -210,6 +254,9 @@ describe("WebRTCPlayer", () => {
 
     expect(await screen.findByText("WebRTC is not supported")).toBeInTheDocument();
     expect(screen.getByText("pc: unsupported")).toBeInTheDocument();
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalledWith(
+      "https://media.example.test/raw/sample/front/whep",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 });
