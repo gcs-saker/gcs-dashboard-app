@@ -14,6 +14,14 @@ function geometryForStream(stream: DashboardStreamSlot): LatLngExpression {
   return stream.geometry ? [stream.geometry.lat, stream.geometry.lng] : DEFAULT_CENTER;
 }
 
+function popupContentForStream(stream: DashboardStreamSlot): HTMLElement {
+  const wrapper = document.createElement("div");
+  const title = document.createElement("strong");
+  title.textContent = stream.title;
+  wrapper.append(title, document.createElement("br"), document.createTextNode(stream.streamPath ?? "stream pending"));
+  return wrapper;
+}
+
 export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletMapProps) {
   const mapElementRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -57,7 +65,7 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
         fillOpacity: isSelected ? 0.62 : 0.42,
         radius: isSelected ? 10 : 7,
       })
-        .bindPopup(`<strong>${stream.title}</strong><br />${stream.streamPath ?? "stream pending"}`)
+        .bindPopup(popupContentForStream(stream))
         .addTo(markerLayer);
     }
     map.setView(geometryForStream(selectedStream), Math.max(map.getZoom(), DEFAULT_ZOOM), {

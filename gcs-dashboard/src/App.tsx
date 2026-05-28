@@ -10,12 +10,12 @@ import { StreamingSmokeDashboard } from "./features/streaming/components/Streami
 function App() {
   const query = new URLSearchParams(window.location.search);
 
-  if (query.get("streamingSmoke") === "1") {
-    return <StreamingSmokeDashboard />;
-  }
-
   const authenticatedApp =
-    query.get("webcamPublisher") === "1" ? <LocalWebcamPublisher /> : <DashboardMvp />;
+    query.get("streamingSmoke") === "1"
+      ? <StreamingSmokeDashboard />
+      : query.get("webcamPublisher") === "1"
+        ? <LocalWebcamPublisher />
+        : <DashboardMvp />;
 
   return (
     <BrowserRouter>

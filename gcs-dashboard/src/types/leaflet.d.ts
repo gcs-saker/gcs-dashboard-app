@@ -30,7 +30,7 @@ declare module "leaflet" {
   }
 
   export interface CircleMarker extends Layer {
-    bindPopup(content: string): this;
+    bindPopup(content: string | HTMLElement): this;
   }
 
   export interface LeafletStatic {

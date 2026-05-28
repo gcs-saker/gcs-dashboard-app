@@ -1,5 +1,5 @@
 import { apiV1Url, backendRootUrl } from "../../config";
-import { buildAuthHeaders } from "../auth/authApi";
+import { AuthApiError, buildAuthHeaders } from "../auth/authApi";
 
 export type DashboardServerHealth = "online" | "degraded" | "error";
 
@@ -34,6 +34,9 @@ export async function fetchDashboardServerStatus(
       fetcher(apiV1Url("/streams"), { headers: buildAuthHeaders({ Accept: "application/json" }) }),
     ]);
     const latencyMs = Math.max(1, Math.round(performance.now() - startedAt));
+    if (streamResponse.status === 401) {
+      throw new AuthApiError(streamResponse.status, "stream status authentication required");
+    }
 
     return {
       server: healthResponse.ok ? healthFromLatency(latencyMs) : "error",
@@ -42,7 +45,10 @@ export async function fetchDashboardServerStatus(
       latencyMs,
       checkedAt: Date.now(),
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthApiError && error.status === 401) {
+      throw error;
+    }
     return {
       server: "error",
       readiness: "error",
