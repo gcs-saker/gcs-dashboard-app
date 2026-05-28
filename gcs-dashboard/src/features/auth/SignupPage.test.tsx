@@ -70,7 +70,9 @@ describe("SignupPage auth flow", () => {
     await userEvent.click(screen.getByRole("button", { name: "가입" }));
 
     await waitFor(() => expect(window.location.pathname).toBe("/login"));
-    expect(screen.getByText("viewer02 계정이 등록되었습니다. 로그인해주세요.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("viewer02 계정이 등록되었습니다. 로그인해주세요."),
+    ).toBeInTheDocument();
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "/api/auth/signup",
       expect.objectContaining({
