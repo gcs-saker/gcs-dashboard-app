@@ -79,7 +79,7 @@ describe("LocalWebcamPublisher", () => {
 
     await waitFor(() => expect(peerConnection.setLocalDescription).toHaveBeenCalled());
     expect(screen.getByRole("status")).toHaveTextContent("ICE 후보 수집");
-    expect(screen.getByText("STUN 서버를 이용해 ICE 후보를 수집하고 있습니다.")).toBeInTheDocument();
+    expect(screen.getByText("STUN/TURN ICE 서버를 이용해 후보를 수집하고 있습니다.")).toBeInTheDocument();
     expect(fetcher).not.toHaveBeenCalled();
 
     peerConnection.completeIceGathering();

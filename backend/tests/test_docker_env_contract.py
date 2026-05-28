@@ -35,11 +35,15 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     compose = load_yaml(COMPOSE_FILE)
     services = compose["services"]
 
-    assert {"mysql", "mqtt", "backend", "mediamtx", "nginx", "edge"} <= set(services)
+    assert {"mysql", "mqtt", "backend", "mediamtx", "turn", "nginx", "edge"} <= set(services)
     assert services["backend"]["environment"]["DATABASE_URL"].startswith("${DATABASE_URL:")
     assert services["backend"]["environment"]["AUTH_JWT_SECRET"].startswith("${AUTH_JWT_SECRET:")
     assert services["backend"]["environment"]["MQTT_HOST"] == "${MQTT_HOST:-mqtt}"
     assert services["backend"]["environment"]["MEDIAMTX_PUBLIC_WEBRTC_BASE_URL"].startswith("${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:")
+    assert services["backend"]["environment"]["WEBRTC_STUN_URL"] == (
+        "${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
+    )
+    assert services["backend"]["environment"]["WEBRTC_TURN_URL"] == "${WEBRTC_TURN_URL:-}"
     assert services["nginx"]["build"]["args"]["VITE_API_BASE_URL"] == "${VITE_API_BASE_URL:-/api}"
     assert services["nginx"]["build"]["args"]["VITE_HLS_BASE_URL"] == "${VITE_HLS_BASE_URL:-/hls}"
     assert services["nginx"]["build"]["args"]["VITE_LOCAL_WEBCAM_WHIP_URL"].startswith(
@@ -94,6 +98,18 @@ def test_compose_keeps_mediamtx_management_ports_private_and_mounts_config_as_fi
         "read_only": True,
     } in mediamtx["volumes"]
     assert MEDIAMTX_CONFIG.is_file()
+
+
+def test_compose_declares_turn_service_as_opt_in_profile() -> None:
+    compose = load_yaml(COMPOSE_FILE)
+    turn = compose["services"]["turn"]
+
+    assert turn["profiles"] == ["turn"]
+    assert turn["image"] == "${COTURN_IMAGE:-coturn/coturn:4.6.3}"
+    assert "${TURN_BIND_ADDR:-0.0.0.0}:${TURN_PORT:-3478}:3478/tcp" in turn["ports"]
+    assert "${TURN_BIND_ADDR:-0.0.0.0}:${TURN_PORT:-3478}:3478/udp" in turn["ports"]
+    assert "${TURN_BIND_ADDR:-0.0.0.0}:49160-49200:49160-49200/udp" in turn["ports"]
+    assert "--user=${WEBRTC_TURN_USERNAME:-gcs-turn}:${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}" in turn["command"]
 
 
 def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:

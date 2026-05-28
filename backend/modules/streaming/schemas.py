@@ -12,6 +12,12 @@ class PlaybackUrlsResponse(BaseModel):
         return cls(webrtc=playback_urls.webrtc, hls=playback_urls.hls)
 
 
+class IceServerResponse(BaseModel):
+    urls: str | list[str]
+    username: str | None = None
+    credential: str | None = None
+
+
 class StreamDescriptorResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 

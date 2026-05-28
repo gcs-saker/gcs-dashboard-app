@@ -153,19 +153,36 @@ def test_ice_compose_override_maps_stun_env_to_mediamtx_config():
     override = load_yaml(DOCKER_ICE_COMPOSE)
     environment = override["services"]["mediamtx"]["environment"]
 
-    assert environment["MTX_WEBRTCICESERVERS2_0_URL"] == "${MEDIAMTX_STUN_URL:?Set MEDIAMTX_STUN_URL in .env}"
+    assert environment["MTX_WEBRTCICESERVERS2_0_URL"] == "${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
+    assert environment["MTX_WEBRTCICESERVERS2_1_URL"] == "${WEBRTC_TURN_URL:-turn:turn:3478?transport=udp}"
+    assert environment["MTX_WEBRTCICESERVERS2_1_USERNAME"] == "${WEBRTC_TURN_USERNAME:-gcs-turn}"
+    assert environment["MTX_WEBRTCICESERVERS2_1_PASSWORD"] == "${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}"
     assert not any("9997" in key or "9998" in key for key in environment)
-    assert not any("PASSWORD" in key for key in environment)
 
 
 def test_env_example_documents_ice_server_values_without_real_turn_secret():
     env_example = DOCKER_ENV_EXAMPLE.read_text(encoding="utf-8")
 
-    assert "MEDIAMTX_STUN_URL=" in env_example
-    assert "MEDIAMTX_TURN_URL=" in env_example
-    assert "MEDIAMTX_TURN_USERNAME=AUTH_SECRET" in env_example
-    assert "MEDIAMTX_TURN_PASSWORD=replace-with-secret-outside-git" in env_example
+    assert "WEBRTC_STUN_URL=stun:stun.l.google.com:19302" in env_example
+    assert "WEBRTC_TURN_URL=turn:a4ai.tplinkdns.com:3478?transport=udp" in env_example
+    assert "WEBRTC_TURN_USERNAME=gcs-turn" in env_example
+    assert "WEBRTC_TURN_PASSWORD=replace-with-secret-outside-git" in env_example
     assert "Do not commit real TURN credentials" in env_example
+
+
+def test_compose_declares_profiled_coturn_service_with_limited_relay_range():
+    compose = load_yaml(DOCKER_COMPOSE)
+    turn = compose["services"]["turn"]
+
+    assert turn["image"] == "${COTURN_IMAGE:-coturn/coturn:4.6.3}"
+    assert turn["profiles"] == ["turn"]
+    assert "--lt-cred-mech" in turn["command"]
+    assert "--user=${WEBRTC_TURN_USERNAME:-gcs-turn}:${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}" in turn["command"]
+    assert "--min-port=49160" in turn["command"]
+    assert "--max-port=49200" in turn["command"]
+    assert "${TURN_BIND_ADDR:-0.0.0.0}:${TURN_PORT:-3478}:3478/tcp" in turn["ports"]
+    assert "${TURN_BIND_ADDR:-0.0.0.0}:${TURN_PORT:-3478}:3478/udp" in turn["ports"]
+    assert "${TURN_BIND_ADDR:-0.0.0.0}:49160-49200:49160-49200/udp" in turn["ports"]
 
 
 def test_ice_server_documentation_explains_nat_and_webrtc_encryption_boundary():

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { LOCAL_WEBCAM_STREAM_ID, LOCAL_WEBCAM_WHIP_URL, WEBRTC_ICE_SERVERS } from "../../../config";
+import { loadWebRtcIceServers } from "../iceServers";
 import "./LocalWebcamPublisher.css";
 
 type WebcamPublisherStatus =
@@ -34,7 +35,7 @@ export function LocalWebcamPublisher({
   streamId = LOCAL_WEBCAM_STREAM_ID,
   whipUrl = LOCAL_WEBCAM_WHIP_URL,
   mediaDevices = navigator.mediaDevices,
-  peerConnectionFactory = () => new RTCPeerConnection({ iceServers: WEBRTC_ICE_SERVERS }),
+  peerConnectionFactory,
   fetcher = fetch,
 }: LocalWebcamPublisherProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -84,7 +85,8 @@ export function LocalWebcamPublisher({
     try {
       setFailedStep(null);
       setStatus("creating-offer");
-      const peerConnection = peerConnectionFactory();
+      const iceServers = peerConnectionFactory ? WEBRTC_ICE_SERVERS : await loadWebRtcIceServers(fetcher);
+      const peerConnection = peerConnectionFactory?.() ?? new RTCPeerConnection({ iceServers });
       peerConnectionRef.current = peerConnection;
       for (const track of streamRef.current.getTracks()) {
         peerConnection.addTrack(track, streamRef.current);
@@ -310,7 +312,7 @@ function getStatusDetail(status: WebcamPublisherStatus): string {
     "requesting-camera": "브라우저 카메라와 마이크 권한을 요청하고 있습니다.",
     previewing: "카메라 미리보기가 준비됐습니다. 시그널링을 시작할 수 있습니다.",
     "creating-offer": "브라우저에서 WebRTC offer를 생성하고 있습니다.",
-    "gathering-ice": "STUN 서버를 이용해 ICE 후보를 수집하고 있습니다.",
+    "gathering-ice": "STUN/TURN ICE 서버를 이용해 후보를 수집하고 있습니다.",
     "sending-offer": "WHIP 엔드포인트로 offer SDP를 전송하고 있습니다.",
     "signaling-complete": "WHIP answer를 받았습니다. 미디어 연결을 확정합니다.",
     "connecting-media": "ICE 미디어 경로가 실제로 연결되는지 확인하고 있습니다.",
