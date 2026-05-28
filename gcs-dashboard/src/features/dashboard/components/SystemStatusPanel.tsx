@@ -6,33 +6,47 @@ import {
   serverHealthText,
   type DashboardServerStatusSnapshot,
 } from "../serverStatus";
+import { AuthApiError } from "../../auth/authApi";
 
 interface SystemStatusPanelProps {
   controls?: ReactNode;
   fetcher?: typeof fetch;
+  onAuthFailure?: () => void;
   refreshMs?: number;
 }
 
-export function SystemStatusPanel({ controls, fetcher, refreshMs = 5000 }: SystemStatusPanelProps) {
+export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs = 5000 }: SystemStatusPanelProps) {
   const [status, setStatus] = useState<DashboardServerStatusSnapshot>(DEFAULT_SERVER_STATUS);
 
   useEffect(() => {
     let isMounted = true;
+    let intervalId: ReturnType<typeof globalThis.setInterval> | null = null;
     const refresh = async (): Promise<void> => {
-      const snapshot = await fetchDashboardServerStatus(fetcher);
-      if (isMounted) {
-        setStatus(snapshot);
+      try {
+        const snapshot = await fetchDashboardServerStatus(fetcher);
+        if (isMounted) {
+          setStatus(snapshot);
+        }
+      } catch (error) {
+        if (error instanceof AuthApiError && error.status === 401) {
+          if (intervalId) {
+            globalThis.clearInterval(intervalId);
+          }
+          onAuthFailure?.();
+        }
       }
     };
 
     void refresh();
-    const intervalId = globalThis.setInterval(() => void refresh(), refreshMs);
+    intervalId = globalThis.setInterval(() => void refresh(), refreshMs);
 
     return () => {
       isMounted = false;
-      globalThis.clearInterval(intervalId);
+      if (intervalId) {
+        globalThis.clearInterval(intervalId);
+      }
     };
-  }, [fetcher, refreshMs]);
+  }, [fetcher, onAuthFailure, refreshMs]);
 
   const rows = [
     ["서버상태", serverHealthText(status.server), status.server],

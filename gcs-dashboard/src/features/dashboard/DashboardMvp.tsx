@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { SelectedStreamPanel } from "./components/SelectedStreamPanel";
@@ -45,6 +45,10 @@ export function DashboardMvp() {
   const [isWidgetDialogOpen, setIsWidgetDialogOpen] = useState(false);
   const [popoutWidgetId, setPopoutWidgetId] = useState<DashboardWidgetId | null>(null);
   const [layoutMessage, setLayoutMessage] = useState("기본 레이아웃");
+  const handleAuthFailure = useCallback((): void => {
+    logout();
+    navigate("/login?reason=session-expired", { replace: true });
+  }, [logout, navigate]);
   const {
     connectStreamDevice: connectStreamDeviceState,
     disconnectCurrentStreamSlot: disconnectCurrentStreamSlotState,
@@ -56,7 +60,7 @@ export function DashboardMvp() {
     streamDevices,
     streams,
     toggleStreamAiMode: toggleStreamAiModeState,
-  } = useDashboardStreams();
+  } = useDashboardStreams(handleAuthFailure);
   const mapFocus = useMemo(() => getMapFocusForStream(selectedStream), [selectedStream]);
   const assetTreeRoot = useMemo(() => mergeAssetTreeWithStreams(DEFAULT_ASSET_TREE, streams), [streams]);
 
@@ -201,7 +205,10 @@ export function DashboardMvp() {
           data-widget-id={systemStatusWidget.id}
           style={{ minHeight: systemStatusWidget.minHeight, minWidth: systemStatusWidget.minWidth }}
         >
-          <SystemStatusPanel controls={widgetControls("system-status", "서버상태 / 연결상태 / 헬스체크")} />
+          <SystemStatusPanel
+            controls={widgetControls("system-status", "서버상태 / 연결상태 / 헬스체크")}
+            onAuthFailure={handleAuthFailure}
+          />
         </section> : null}
 
         {isWidgetVisible("telemetry-panel") ? <section

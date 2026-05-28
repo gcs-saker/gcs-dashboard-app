@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { AuthProvider } from "../auth/AuthProvider";
-import { clearAccessToken, storeAccessToken, storeUser } from "../auth/authStorage";
+import { clearAuthSession, storeAuthSession } from "../auth/authStorage";
 import { DashboardMvp } from "./DashboardMvp";
 
 function renderDashboard() {
@@ -18,12 +18,15 @@ function renderDashboard() {
 
 describe("DashboardMvp", () => {
   beforeEach(() => {
-    storeAccessToken("test-access-token");
-    storeUser({ username: "operator01", role: "operator" });
+    storeAuthSession({
+      accessToken: "test-access-token",
+      expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+      user: { username: "operator01", role: "operator" },
+    });
   });
 
   afterEach(() => {
-    clearAccessToken();
+    clearAuthSession();
     window.history.pushState({}, "", "/");
   });
 

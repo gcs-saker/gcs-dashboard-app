@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import App from "../../App";
-import { clearAccessToken, getStoredAccessToken, storeAccessToken, storeUser } from "./authStorage";
+import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 
 vi.mock("../../component/MainMap", () => ({
   default: function MockMainMap() {
@@ -36,12 +36,12 @@ vi.mock("../streaming/components/StreamingSmokeDashboard", () => ({
 
 describe("LoginPage auth flow", () => {
   beforeEach(() => {
-    clearAccessToken();
+    clearAuthSession();
     window.history.pushState({}, "", "/login?redirect=%2Fops");
   });
 
   afterEach(() => {
-    clearAccessToken();
+    clearAuthSession();
     vi.restoreAllMocks();
     window.history.pushState({}, "", "/");
   });
@@ -103,13 +103,54 @@ describe("LoginPage auth flow", () => {
   });
 
   test("redirects an already authenticated user away from login", async () => {
-    storeAccessToken("active-token");
-    storeUser({ username: "operator01", role: "operator" });
+    storeAuthSession({
+      accessToken: "active-token",
+      expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+      user: { username: "operator01", role: "operator" },
+    });
     window.history.pushState({}, "", "/login");
 
     render(<App />);
 
     await waitFor(() => expect(window.location.pathname).toBe("/"));
     expect(screen.queryByRole("heading", { name: "대시보드 로그인" })).not.toBeInTheDocument();
+  });
+
+  test("rejects external redirect URLs after login", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      Response.json({
+        access_token: "issued-access-token",
+        token_type: "bearer",
+        expires_in_minutes: 30,
+        username: "operator01",
+        role: "operator",
+      }),
+    );
+    window.history.pushState({}, "", "/login?redirect=https%3A%2F%2Fevil.example");
+
+    render(<App />);
+
+    await userEvent.type(screen.getByLabelText("아이디"), "operator01");
+    await userEvent.type(screen.getByLabelText("비밀번호"), "correct-password");
+    await userEvent.click(screen.getByRole("button", { name: "접속" }));
+
+    await waitFor(() => expect(window.location.pathname).toBe("/"));
+  });
+
+  test("clears expired frontend sessions instead of treating them as authenticated", async () => {
+    window.localStorage.setItem(
+      "gcs_saker_auth_session",
+      JSON.stringify({
+        accessToken: "expired-token",
+        expiresAt: new Date(Date.now() - 1000).toISOString(),
+        user: { username: "operator01", role: "operator" },
+      }),
+    );
+    window.history.pushState({}, "", "/");
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "대시보드 로그인" })).toBeInTheDocument();
+    expect(getStoredAccessToken()).toBeNull();
   });
 });

@@ -1,12 +1,10 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { loginRequest } from "./authApi";
 import {
-  clearAccessToken,
-  clearStoredUser,
+  clearAuthSession,
   getStoredAccessToken,
   getStoredUser,
-  storeAccessToken,
-  storeUser,
+  storeAuthSession,
 } from "./authStorage";
 import type { AuthenticatedUser, LoginRequest } from "./types";
 
@@ -26,21 +24,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getStoredUser<AuthenticatedUser>(),
   );
 
-  const logout = (): void => {
-    clearAccessToken();
-    clearStoredUser();
+  const logout = useCallback((): void => {
+    clearAuthSession();
     setAccessToken(null);
     setCurrentUser(null);
-  };
+  }, []);
 
-  const login = async (credentials: LoginRequest): Promise<void> => {
+  const login = useCallback(async (credentials: LoginRequest): Promise<void> => {
     const token = await loginRequest(credentials);
     const user = { username: token.username, role: token.role };
-    storeAccessToken(token.access_token);
-    storeUser(user);
+    storeAuthSession({
+      accessToken: token.access_token,
+      expiresAt: new Date(Date.now() + token.expires_in_minutes * 60_000).toISOString(),
+      user,
+    });
     setAccessToken(token.access_token);
     setCurrentUser(user);
-  };
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
     }),
-    [accessToken, currentUser],
+    [accessToken, currentUser, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

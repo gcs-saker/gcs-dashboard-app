@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
+import { AuthApiError } from "../auth/authApi";
 import { DEFAULT_DASHBOARD_STREAMS } from "./streamTypes";
 import {
   connectDeviceToStreamSlot,
@@ -60,6 +61,15 @@ describe("streamDevices", () => {
         lng: 128.601445,
       },
     });
+  });
+
+  test("surfaces stream registry 401 as an auth failure", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("unauthorized", { status: 401 }));
+
+    await expect(fetchStreamDeviceOptions(fetcher as unknown as typeof fetch)).rejects.toMatchObject({
+      status: 401,
+      name: "AuthApiError",
+    } satisfies Partial<AuthApiError>);
   });
 
   test("keeps default and mock stream coordinates in the Daegu operating area", () => {

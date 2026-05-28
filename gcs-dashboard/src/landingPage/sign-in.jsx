@@ -3,7 +3,7 @@ import "../Login.scss";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { apiUrl } from "../config";
-import { storeAccessToken, storeUser } from "../features/auth/authStorage";
+import { storeAuthSession } from "../features/auth/authStorage";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -18,8 +18,11 @@ export default function Login() {
     try {
       const res = await axios.post(apiUrl("/auth/login"), form);
       console.log("로그인 성공:", res.data);
-      storeAccessToken(res.data.access_token);
-      storeUser({ username: res.data.username, role: res.data.role });
+      storeAuthSession({
+        accessToken: res.data.access_token,
+        expiresAt: new Date(Date.now() + res.data.expires_in_minutes * 60_000).toISOString(),
+        user: { username: res.data.username, role: res.data.role },
+      });
       navigate("/");   // ✅ ControlApp으로 이동
       // ✅ 여기서 토큰 저장 후 대시보드 페이지로 이동
     } catch (err) {

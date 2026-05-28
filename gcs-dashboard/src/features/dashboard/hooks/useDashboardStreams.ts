@@ -8,8 +8,9 @@ import {
   type StreamDeviceOption,
 } from "../streamDevices";
 import { DEFAULT_DASHBOARD_STREAMS } from "../streamTypes";
+import { AuthApiError } from "../../auth/authApi";
 
-export function useDashboardStreams() {
+export function useDashboardStreams(onAuthFailure?: () => void) {
   const [streams, setStreams] = useState(() => DEFAULT_DASHBOARD_STREAMS);
   const [streamDevices, setStreamDevices] = useState<StreamDeviceOption[]>(MOCK_STREAM_DEVICES);
   const [selectedStreamId, setSelectedStreamId] = useState(DEFAULT_DASHBOARD_STREAMS[0].id);
@@ -26,6 +27,7 @@ export function useDashboardStreams() {
 
   useEffect(() => {
     let isMounted = true;
+    let intervalId: ReturnType<typeof globalThis.setInterval> | null = null;
 
     const refreshStreams = async (): Promise<void> => {
       try {
@@ -33,7 +35,14 @@ export function useDashboardStreams() {
         if (!isMounted || devices.length === 0) return;
         setStreamDevices(devices);
         setStreams((current) => mergeStreamSlotsWithDevices(current, devices));
-      } catch {
+      } catch (error) {
+        if (error instanceof AuthApiError && error.status === 401) {
+          if (intervalId) {
+            globalThis.clearInterval(intervalId);
+          }
+          onAuthFailure?.();
+          return;
+        }
         if (isMounted) {
           setStreams((current) =>
             current.map((stream) => ({ ...stream, status: stream.status === "online" ? "degraded" : stream.status })),
@@ -43,13 +52,15 @@ export function useDashboardStreams() {
     };
 
     void refreshStreams();
-    const intervalId = globalThis.setInterval(() => void refreshStreams(), 3000);
+    intervalId = globalThis.setInterval(() => void refreshStreams(), 3000);
 
     return () => {
       isMounted = false;
-      globalThis.clearInterval(intervalId);
+      if (intervalId) {
+        globalThis.clearInterval(intervalId);
+      }
     };
-  }, []);
+  }, [onAuthFailure]);
 
   const openStreamConnection = (streamId: string): void => {
     setSelectedStreamId(streamId);

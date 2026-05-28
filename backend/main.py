@@ -1,6 +1,9 @@
-from fastapi import Depends, FastAPI, Response
+from collections.abc import Awaitable, Callable
+
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from api import auth, control, event, health, stream, telemetry, unmaned_assets
+from config import WebSecuritySettings
 from core.security import require_role
 from modules.ai_contract.router import router as mock_ai_router
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
@@ -11,14 +14,29 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# 🔓 CORS 설정 (로컬 프론트엔드 React와 통신 허용)
+web_security_settings = WebSecuritySettings.from_env()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 운영 시 프론트엔드 주소로 변경 권장
+    allow_origins=list(web_security_settings.allowed_origins),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
 )
+
+
+@app.middleware("http")
+async def add_security_headers(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("Permissions-Policy", "camera=(self), microphone=(self), geolocation=(self)")
+    response.headers.setdefault("Content-Security-Policy", web_security_settings.content_security_policy)
+    return response
 
 # 📦 API 라우터 등록
 app.include_router(auth.router, prefix="/auth", tags=["auth"])

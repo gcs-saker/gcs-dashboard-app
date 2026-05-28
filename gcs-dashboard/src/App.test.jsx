@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import App from './App';
-import { clearAccessToken, storeAccessToken } from './features/auth/authStorage';
+import { clearAuthSession, storeAuthSession } from './features/auth/authStorage';
 
 vi.mock('./features/streaming/components/StreamingSmokeDashboard', () => ({
   StreamingSmokeDashboard: function MockStreamingSmokeDashboard() {
@@ -17,11 +17,15 @@ vi.mock('./features/streaming/components/LocalWebcamPublisher', () => ({
 
 describe('App dashboard shell', () => {
   beforeEach(() => {
-    storeAccessToken('test-access-token');
+    storeAuthSession({
+      accessToken: 'test-access-token',
+      expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+      user: { username: 'operator01', role: 'operator' },
+    });
   });
 
   afterEach(() => {
-    clearAccessToken();
+    clearAuthSession();
     window.history.pushState({}, '', '/');
   });
 
@@ -63,7 +67,7 @@ describe('App dashboard shell', () => {
   });
 
   test('redirects unauthenticated local webcam publisher access to login', async () => {
-    clearAccessToken();
+    clearAuthSession();
     window.history.pushState({}, '', '/publisher');
 
     render(<App />);
@@ -74,12 +78,23 @@ describe('App dashboard shell', () => {
   });
 
   test('redirects unauthenticated dashboard access to login', async () => {
-    clearAccessToken();
+    clearAuthSession();
 
     render(<App />);
 
     expect(await screen.findByRole('heading', { name: '대시보드 로그인' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/login');
     expect(window.location.search).toContain('redirect=%2F');
+  });
+
+  test('redirects unauthenticated streaming smoke query access to login', async () => {
+    clearAuthSession();
+    window.history.pushState({}, '', '/?streamingSmoke=1');
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: '대시보드 로그인' })).toBeInTheDocument();
+    expect(screen.queryByTestId('streaming-smoke-dashboard')).not.toBeInTheDocument();
+    expect(window.location.search).toContain('streamingSmoke%3D1');
   });
 });

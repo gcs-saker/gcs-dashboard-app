@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
+import { AuthApiError } from "../auth/authApi";
 import { fetchDashboardServerStatus, healthFromLatency, serverHealthText } from "./serverStatus";
 
 describe("serverStatus", () => {
@@ -30,6 +31,19 @@ describe("serverStatus", () => {
     expect(status.readiness).toBe("error");
     expect(status.streams).toBe("error");
     expect(serverHealthText(status.server)).toBe("오류");
+  });
+
+  test("surfaces stream status 401 so polling can stop and logout", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("ok", { status: 200 }))
+      .mockResolvedValueOnce(new Response("ready", { status: 200 }))
+      .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }));
+
+    await expect(fetchDashboardServerStatus(fetcher as unknown as typeof fetch)).rejects.toMatchObject({
+      status: 401,
+      name: "AuthApiError",
+    } satisfies Partial<AuthApiError>);
   });
 
   test("downgrades health when response latency rises", () => {

@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import App from "../../App";
-import { clearAccessToken } from "./authStorage";
+import { clearAuthSession } from "./authStorage";
 
 vi.mock("../../component/MainMap", () => ({
   default: function MockMainMap() {
@@ -36,12 +36,12 @@ vi.mock("../streaming/components/StreamingSmokeDashboard", () => ({
 
 describe("SignupPage auth flow", () => {
   beforeEach(() => {
-    clearAccessToken();
+    clearAuthSession();
     window.history.pushState({}, "", "/signup");
   });
 
   afterEach(() => {
-    clearAccessToken();
+    clearAuthSession();
     vi.restoreAllMocks();
     window.history.pushState({}, "", "/");
   });

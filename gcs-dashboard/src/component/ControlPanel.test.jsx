@@ -1,17 +1,21 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { clearAccessToken, storeAccessToken } from '../features/auth/authStorage';
+import { clearAuthSession, storeAuthSession } from '../features/auth/authStorage';
 import ControlPanel from './ControlPanel';
 
 describe('ControlPanel', () => {
   beforeEach(() => {
-    storeAccessToken('test-access-token');
+    storeAuthSession({
+      accessToken: 'test-access-token',
+      expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+      user: { username: 'operator01', role: 'operator' },
+    });
     global.fetch = vi.fn(() => Promise.resolve({ ok: true }));
   });
 
   afterEach(() => {
-    clearAccessToken();
+    clearAuthSession();
     vi.restoreAllMocks();
   });
 

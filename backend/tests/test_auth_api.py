@@ -227,3 +227,34 @@ def test_control_api_requires_operator_role(
         assert operator_response.status_code == 200
         assert operator_response.json()["status"] == "sent"
         assert published == [("robot/control/CID001", "stop")]
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"cid": "CID001", "direction": "stop; rm -rf /"},
+        {"cid": "../CID001", "direction": "stop"},
+        {"cid": "CID001/../../x", "direction": "stop"},
+    ],
+)
+def test_control_api_rejects_untrusted_command_payloads(
+    monkeypatch,
+    auth_headers: Callable[[str, str], dict[str, str]],
+    payload: dict[str, str],
+) -> None:
+    published: list[tuple[str, str]] = []
+
+    def fake_publish(topic: str, command: str) -> None:
+        published.append((topic, command))
+
+    monkeypatch.setattr(control, "publish_control_command", fake_publish)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/control/",
+            json=payload,
+            headers=auth_headers("operator01", "operator"),
+        )
+
+    assert response.status_code == 422
+    assert published == []
