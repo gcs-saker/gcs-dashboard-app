@@ -70,5 +70,6 @@ describe("TacticalLeafletMap", () => {
     expect(popup.querySelector("script")).toBeNull();
     expect(popup.querySelector("strong")?.textContent).toBe('<img src=x onerror="alert(1)">');
     expect(popup.textContent).toContain('<script>alert("path")</script>');
+    expect(popup.textContent).toContain("기본 좌표");
   });
 });

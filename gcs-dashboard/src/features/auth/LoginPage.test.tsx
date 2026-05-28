@@ -113,7 +113,7 @@ describe("LoginPage auth flow", () => {
     render(<App />);
 
     await waitFor(() => expect(window.location.pathname).toBe("/"));
-    expect(screen.queryByRole("heading", { name: "대시보드 로그인" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "대시보드 로그인" })).not.toBeInTheDocument());
   });
 
   test("rejects external redirect URLs after login", async () => {

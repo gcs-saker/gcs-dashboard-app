@@ -30,14 +30,14 @@ describe("DashboardMvp", () => {
     window.history.pushState({}, "", "/");
   });
 
-  test("renders the field operations dashboard regions from the M2 MVP", () => {
+  test("renders the field operations dashboard regions from the M2 MVP", async () => {
     renderDashboard();
 
     expect(screen.getByRole("main", { name: "Field Ops Dashboard MVP" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "대시보드" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "웹캠 송출" })).toHaveAttribute("href", "/publisher");
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "지도 확대" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "지도 확대" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "지도 축소" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "자산트리" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "지도" })).toBeInTheDocument();
@@ -127,7 +127,7 @@ describe("DashboardMvp", () => {
     await user.click(screen.getByRole("button", { name: "스트리밍 3 선택" }));
 
     expect(screen.getAllByText("AI 감지 overlay / raw.sample.rear")).toHaveLength(2);
-    expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 focus 84deg / FOV 82deg");
+    expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 기본 좌표 84deg / FOV 82deg");
     expect(screen.getByRole("dialog", { name: "스트리밍 3 장비 연결" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "변경 취소" }));
   });
@@ -156,7 +156,7 @@ describe("DashboardMvp", () => {
 
     expect(screen.queryByRole("dialog", { name: "스트리밍 4 장비 연결" })).not.toBeInTheDocument();
     expect(screen.getAllByText("DRN-01 전방 EO / raw.sample.front")).toHaveLength(2);
-    expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 4 focus 130deg / FOV 72deg");
+    expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 4 기본 좌표 130deg / FOV 72deg");
     expect(screen.getByRole("status")).toHaveTextContent("스트리밍 장비 연결됨");
 
     await user.click(screen.getByRole("button", { name: "스트리밍 4 선택" }));

@@ -43,7 +43,7 @@ export function RealtimePlayer({
         <span className={`realtime-player__badge realtime-player__badge--${streamStatus}`}>
           {streamStatus}
         </span>
-        <span className="realtime-player__latency">WebRTC 우선</span>
+        <span className="realtime-player__latency">저지연</span>
         <span className="realtime-player__stream">{streamId}</span>
         <span className="realtime-player__mode">mode: {mode}</span>
       </header>
@@ -55,7 +55,7 @@ export function RealtimePlayer({
       ) : null}
 
       {mode === "webrtc" ? (
-        <WebRTCPlayer
+          <WebRTCPlayer
           key={`${streamId}-${webrtcRetryAttempt}`}
           whepUrl={playbackUrls?.webrtc ?? null}
           streamId={streamId}
@@ -76,8 +76,8 @@ export function RealtimePlayer({
 
       {mode === "reconnecting" ? (
         <div className="realtime-player__placeholder realtime-player__placeholder--reconnecting" role="status" aria-live="polite">
-          reconnecting playback; retry {webrtcRetryAttempt + 1}
-          {reconnectDelayMs !== null ? ` in ${reconnectDelayMs}ms` : ""}
+          스트림 재연결 중
+          {reconnectDelayMs !== null ? ` (${reconnectDelayMs}ms)` : ""}
         </div>
       ) : null}
 

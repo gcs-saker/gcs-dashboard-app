@@ -7,6 +7,7 @@ describe("mapFocus", () => {
     const focus = getMapFocusForStream(DEFAULT_DASHBOARD_STREAMS[0]);
 
     expect(focus.hasGeometry).toBe(true);
+    expect(focus.label).toContain("기본 좌표");
     expect(focus.label).toContain("FOV 72deg");
     expect(focus.coneStyle.transform).toBe("rotate(130deg)");
   });

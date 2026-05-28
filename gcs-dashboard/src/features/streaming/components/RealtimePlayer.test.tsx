@@ -109,7 +109,7 @@ describe("RealtimePlayer", () => {
     fireEvent.click(screen.getByRole("button", { name: "webrtc failed" }));
 
     expect(screen.queryByTestId("webrtc-player")).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("reconnecting playback; retry 1 in 25ms");
+    expect(screen.getByRole("status")).toHaveTextContent("스트림 재연결 중 (25ms)");
 
     await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
 

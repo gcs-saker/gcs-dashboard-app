@@ -9,6 +9,19 @@ export type DashboardStreamStatus =
   | "degraded";
 
 export type DashboardStreamMode = "EO" | "IR" | "AI" | "MAP";
+export type DashboardGeometrySource = "mock" | "registry" | "telemetry" | "device";
+
+export interface DashboardStreamGeometry {
+  lat: number;
+  lng: number;
+  altitudeM: number;
+  headingDeg: number;
+  pitchDeg: number;
+  rollDeg: number;
+  yawDeg: number;
+  fovDeg: number;
+  source?: DashboardGeometrySource;
+}
 
 export interface DashboardStreamSlot {
   id: string;
@@ -19,16 +32,7 @@ export interface DashboardStreamSlot {
   aiModeEnabled?: boolean;
   connectedDeviceId?: string | null;
   streamPath?: string | null;
-  geometry?: {
-    lat: number;
-    lng: number;
-    altitudeM: number;
-    headingDeg: number;
-    pitchDeg: number;
-    rollDeg: number;
-    yawDeg: number;
-    fovDeg: number;
-  } | null;
+  geometry?: DashboardStreamGeometry | null;
 }
 
 export interface StreamWidgetDefinition {
@@ -57,6 +61,7 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
       rollDeg: 1.3,
       yawDeg: 127,
       fovDeg: 72,
+      source: "mock",
     },
   },
   {
@@ -76,6 +81,7 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
       rollDeg: 0.5,
       yawDeg: 176,
       fovDeg: 58,
+      source: "mock",
     },
   },
   {
@@ -95,6 +101,7 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
       rollDeg: 0,
       yawDeg: 84,
       fovDeg: 82,
+      source: "mock",
     },
   },
   {
@@ -114,6 +121,7 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
       rollDeg: 0,
       yawDeg: 24,
       fovDeg: 64,
+      source: "mock",
     },
   },
 ];

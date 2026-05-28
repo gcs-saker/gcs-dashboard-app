@@ -1,17 +1,14 @@
-import type { DashboardStreamMode, DashboardStreamSlot, DashboardStreamStatus } from "./streamTypes";
+import type {
+  DashboardGeometrySource,
+  DashboardStreamGeometry,
+  DashboardStreamMode,
+  DashboardStreamSlot,
+  DashboardStreamStatus,
+} from "./streamTypes";
 import { apiV1Url } from "../../config";
 import { AuthApiError, buildAuthHeaders } from "../auth/authApi";
 
-export interface StreamDeviceGeometry {
-  lat: number;
-  lng: number;
-  altitudeM: number;
-  headingDeg: number;
-  pitchDeg: number;
-  rollDeg: number;
-  yawDeg: number;
-  fovDeg: number;
-}
+export type StreamDeviceGeometry = DashboardStreamGeometry;
 
 export interface StreamDeviceOption {
   id: string;
@@ -48,6 +45,7 @@ export const MOCK_STREAM_DEVICES: StreamDeviceOption[] = [
       rollDeg: 1.3,
       yawDeg: 127,
       fovDeg: 72,
+      source: "mock",
     },
   },
   {
@@ -65,6 +63,7 @@ export const MOCK_STREAM_DEVICES: StreamDeviceOption[] = [
       rollDeg: 0.5,
       yawDeg: 176,
       fovDeg: 58,
+      source: "mock",
     },
   },
   {
@@ -82,6 +81,7 @@ export const MOCK_STREAM_DEVICES: StreamDeviceOption[] = [
       rollDeg: 0,
       yawDeg: 84,
       fovDeg: 82,
+      source: "mock",
     },
   },
   {
@@ -99,6 +99,7 @@ export const MOCK_STREAM_DEVICES: StreamDeviceOption[] = [
       rollDeg: 0,
       yawDeg: 24,
       fovDeg: 64,
+      source: "mock",
     },
   },
 ];
@@ -213,7 +214,7 @@ function streamDeviceFromRegistryItem(item: StreamRegistryResponse): StreamDevic
     streamPath: item.streamId,
     status: dashboardStatusFromRegistryStatus(item.status),
     mediaType,
-    geometry: defaultGeometryForStream(item.streamId),
+    geometry: defaultGeometryForStream(item.streamId, "registry"),
   };
 }
 
@@ -229,9 +230,9 @@ function dashboardStatusFromRegistryStatus(status: StreamRegistryResponse["statu
   }
 }
 
-function defaultGeometryForStream(streamId: string): StreamDeviceGeometry {
+function defaultGeometryForStream(streamId: string, source: DashboardGeometrySource = "mock"): StreamDeviceGeometry {
   const knownDevice = MOCK_STREAM_DEVICES.find((device) => device.streamPath === streamId);
-  if (knownDevice) return knownDevice.geometry;
+  if (knownDevice) return { ...knownDevice.geometry, source };
   return {
     lat: 35.871435,
     lng: 128.601445,
@@ -241,5 +242,6 @@ function defaultGeometryForStream(streamId: string): StreamDeviceGeometry {
     rollDeg: 0,
     yawDeg: 0,
     fovDeg: 60,
+    source,
   };
 }

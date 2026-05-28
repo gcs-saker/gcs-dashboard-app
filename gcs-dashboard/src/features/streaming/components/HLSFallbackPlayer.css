@@ -17,7 +17,7 @@
   min-height: 220px;
   max-height: 100%;
   max-width: 100%;
-  object-fit: cover;
+  object-fit: contain;
   background: #05090f;
 }
 
@@ -41,7 +41,7 @@
   min-height: 24px;
   padding: 4px 8px;
   border: 1px solid rgba(126, 180, 222, 0.45);
-  background: rgba(5, 9, 15, 0.78);
+  background: rgba(5, 9, 15, 0.64);
 }
 
 .hls-fallback-player__status {

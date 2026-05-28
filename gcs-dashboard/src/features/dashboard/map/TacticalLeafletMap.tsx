@@ -1,4 +1,5 @@
 import L, { type LatLngExpression, type LayerGroup, type Map as LeafletMap } from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { useEffect, useRef } from "react";
 import type { DashboardStreamSlot } from "../streamTypes";
 
@@ -10,6 +11,20 @@ interface TacticalLeafletMapProps {
 const DEFAULT_CENTER: LatLngExpression = [35.871435, 128.601445];
 const DEFAULT_ZOOM = 14;
 
+function coordinateSourceLabel(stream: DashboardStreamSlot): string {
+  switch (stream.geometry?.source) {
+    case "telemetry":
+      return "실시간 GPS";
+    case "device":
+      return "장비 좌표";
+    case "registry":
+      return "등록 좌표";
+    case "mock":
+    case undefined:
+      return "기본 좌표";
+  }
+}
+
 function geometryForStream(stream: DashboardStreamSlot): LatLngExpression {
   return stream.geometry ? [stream.geometry.lat, stream.geometry.lng] : DEFAULT_CENTER;
 }
@@ -18,7 +33,13 @@ function popupContentForStream(stream: DashboardStreamSlot): HTMLElement {
   const wrapper = document.createElement("div");
   const title = document.createElement("strong");
   title.textContent = stream.title;
-  wrapper.append(title, document.createElement("br"), document.createTextNode(stream.streamPath ?? "stream pending"));
+  wrapper.append(
+    title,
+    document.createElement("br"),
+    document.createTextNode(stream.streamPath ?? "stream pending"),
+    document.createElement("br"),
+    document.createTextNode(coordinateSourceLabel(stream)),
+  );
   return wrapper;
 }
 
@@ -76,6 +97,9 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
   return (
     <div className="tactical-map__canvas tactical-map__canvas--leaflet">
       <div ref={mapElementRef} className="tactical-map__leaflet" />
+      <span className="map-coordinate-source" data-testid="map-coordinate-source">
+        {coordinateSourceLabel(selectedStream)}
+      </span>
       <div className="map-toolbar" aria-label="지도 도구">
         <button aria-label="지도 중심 초기화" type="button" onClick={() => mapRef.current?.setView(DEFAULT_CENTER, DEFAULT_ZOOM)}>
           ⌖
