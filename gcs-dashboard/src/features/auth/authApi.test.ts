@@ -44,4 +44,37 @@ describe("authenticatedFetch", () => {
       }),
     );
   });
+
+  test("coalesces concurrent 401 responses into one refresh request", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === "/api/auth/refresh") {
+        return Response.json({
+          access_token: "fresh-access-token",
+          token_type: "bearer",
+          expires_in_minutes: 30,
+          username: "operator01",
+          role: "operator",
+        });
+      }
+
+      const headers = init?.headers as Record<string, string> | undefined;
+      if (headers?.Authorization === "Bearer fresh-access-token") {
+        return Response.json({ ok: true });
+      }
+
+      return Response.json({ detail: "token expired" }, { status: 401 });
+    });
+
+    const [streamsResponse, statusResponse, iceResponse] = await Promise.all([
+      authenticatedFetch("/api/v1/streams", {}, fetcher),
+      authenticatedFetch("/api/v1/system/status", {}, fetcher),
+      authenticatedFetch("/api/v1/streams/ice-servers", {}, fetcher),
+    ]);
+
+    expect(streamsResponse.status).toBe(200);
+    expect(statusResponse.status).toBe(200);
+    expect(iceResponse.status).toBe(200);
+    expect(getStoredAccessToken()).toBe("fresh-access-token");
+    expect(fetcher.mock.calls.filter(([input]) => String(input) === "/api/auth/refresh")).toHaveLength(1);
+  });
 });

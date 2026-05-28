@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from typing import Annotated, cast
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
+from config import WebSecuritySettings
 from core.db import get_db
 from core.security import (
     AuthConfigError,
@@ -36,7 +38,8 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def signup(user: UserCreate, db: Annotated[Session, Depends(get_db)]) -> User:
+def signup(user: UserCreate, request: Request, db: Annotated[Session, Depends(get_db)]) -> User:
+    _assert_trusted_request_origin(request)
     db_user = db.query(User).filter(User.username == user.username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -63,7 +66,13 @@ def signup(user: UserCreate, db: Annotated[Session, Depends(get_db)]) -> User:
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(user: UserLogin, response: Response, db: Annotated[Session, Depends(get_db)]) -> TokenResponse:
+def login(
+    user: UserLogin,
+    request: Request,
+    response: Response,
+    db: Annotated[Session, Depends(get_db)],
+) -> TokenResponse:
+    _assert_trusted_request_origin(request)
     db_user = db.query(User).filter(User.username == user.username).first()
     if not db_user or not verify_password(user.password, cast(str, db_user.password_hash)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
@@ -98,6 +107,7 @@ def login(user: UserLogin, response: Response, db: Annotated[Session, Depends(ge
 
 @router.post("/refresh", response_model=TokenResponse)
 def refresh_session(request: Request, response: Response, db: Annotated[Session, Depends(get_db)]) -> TokenResponse | JSONResponse:
+    _assert_trusted_request_origin(request)
     try:
         auth_settings = AuthSettings.from_env()
     except AuthConfigError as exc:
@@ -141,7 +151,8 @@ def refresh_session(request: Request, response: Response, db: Annotated[Session,
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(response: Response) -> Response:
+def logout(request: Request, response: Response) -> Response:
+    _assert_trusted_request_origin(request)
     try:
         auth_settings = AuthSettings.from_env()
     except AuthConfigError as exc:
@@ -179,3 +190,25 @@ def _clear_refresh_cookie(response: Response, auth_settings: AuthSettings) -> No
         samesite=auth_settings.refresh_cookie_samesite,
         path="/",
     )
+
+
+def _assert_trusted_request_origin(request: Request) -> None:
+    request_origin = request.headers.get("origin") or _origin_from_referer(request.headers.get("referer"))
+    if not request_origin:
+        return
+
+    allowed_origins = set(WebSecuritySettings.from_env().allowed_origins)
+    if request_origin not in allowed_origins:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="untrusted request origin",
+        )
+
+
+def _origin_from_referer(referer: str | None) -> str | None:
+    if not referer:
+        return None
+    parsed = urlsplit(referer)
+    if not parsed.scheme or not parsed.netloc:
+        return None
+    return f"{parsed.scheme}://{parsed.netloc}"
