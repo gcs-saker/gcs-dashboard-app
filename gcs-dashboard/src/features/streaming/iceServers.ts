@@ -1,5 +1,5 @@
 import { apiV1Url, WEBRTC_ICE_SERVERS } from "../../config";
-import { buildAuthHeaders } from "../auth/authApi";
+import { authenticatedFetch } from "../auth/authApi";
 
 interface IceServerPayload {
   urls?: string | string[];
@@ -9,9 +9,13 @@ interface IceServerPayload {
 
 export async function loadWebRtcIceServers(fetcher: typeof fetch = fetch): Promise<RTCIceServer[]> {
   try {
-    const response = await fetcher(apiV1Url("/streams/ice-servers"), {
-      headers: buildAuthHeaders({ Accept: "application/json" }),
-    });
+    const response = await authenticatedFetch(
+      apiV1Url("/streams/ice-servers"),
+      {
+        headers: { Accept: "application/json" },
+      },
+      fetcher,
+    );
     if (!response.ok) {
       return WEBRTC_ICE_SERVERS;
     }

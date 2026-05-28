@@ -49,6 +49,7 @@ describe("streamDevices", () => {
     const devices = await fetchStreamDeviceOptions(fetcher as unknown as typeof fetch);
 
     expect(fetcher).toHaveBeenCalledWith("/api/v1/streams", {
+      credentials: "include",
       headers: { Accept: "application/json" },
     });
     expect(devices[0]).toMatchObject({

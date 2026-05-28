@@ -30,7 +30,10 @@ def test_streaming_core_perf_script_reports_core_endpoint_latency():
 
     results = {item["name"]: item for item in report["results"]}
     assert set(results) == {
+        "auth_login_api",
+        "auth_refresh_api",
         "stream_list_api",
+        "stream_ice_servers_api",
         "stream_playback_api",
         "mock_ai_detection_api",
     }

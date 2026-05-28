@@ -1,15 +1,15 @@
 // ControlPanel.js
 import { useState } from "react";
 import { apiUrl } from "../config";
-import { buildAuthHeaders } from "../features/auth/authApi";
+import { authenticatedFetch } from "../features/auth/authApi";
 
 const ControlPanel = () => {
   const [cid, setCid] = useState("CID001");
 
   const handleClick = async (command) => {
-    await fetch(apiUrl("/control/"), {
+    await authenticatedFetch(apiUrl("/control/"), {
       method: "POST",
-      headers: buildAuthHeaders({ "Content-Type": "application/json" }),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cid, direction: command }),
     });
   };

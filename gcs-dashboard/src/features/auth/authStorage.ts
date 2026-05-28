@@ -3,10 +3,14 @@ const SESSION_KEY = "gcs_saker_auth_session";
 const USER_KEY = "gcs_saker_user";
 
 export interface StoredAuthSession<TUser = unknown> {
-  accessToken: string;
+  accessToken?: string;
   expiresAt: string;
+  refreshAvailable?: boolean;
   user: TUser;
 }
+
+let memoryAccessToken: string | null = null;
+let memoryAccessTokenExpiresAt: string | null = null;
 
 function parseStoredSession<TUser>(): StoredAuthSession<TUser> | null {
   const raw = window.localStorage.getItem(SESSION_KEY);
@@ -15,15 +19,10 @@ function parseStoredSession<TUser>(): StoredAuthSession<TUser> | null {
   try {
     const session = JSON.parse(raw) as Partial<StoredAuthSession<TUser>>;
     if (
-      typeof session.accessToken !== "string" ||
       typeof session.expiresAt !== "string" ||
       !session.user ||
       Number.isNaN(new Date(session.expiresAt).getTime())
     ) {
-      clearAuthSession();
-      return null;
-    }
-    if (new Date(session.expiresAt).getTime() <= Date.now()) {
       clearAuthSession();
       return null;
     }
@@ -35,14 +34,28 @@ function parseStoredSession<TUser>(): StoredAuthSession<TUser> | null {
 }
 
 export function getStoredAccessToken(): string | null {
-  return parseStoredSession()?.accessToken ?? null;
+  if (memoryAccessToken && isFutureIsoDate(memoryAccessTokenExpiresAt)) {
+    return memoryAccessToken;
+  }
+
+  memoryAccessToken = null;
+  memoryAccessTokenExpiresAt = null;
+  const session = parseStoredSession();
+  if (session?.accessToken && isFutureIsoDate(session.expiresAt)) {
+    setMemoryAccessToken(session.accessToken, session.expiresAt);
+    storeAuthSession({ expiresAt: session.expiresAt, user: session.user });
+    return session.accessToken;
+  }
+  return null;
 }
 
 export function storeAccessToken(token: string): void {
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  setMemoryAccessToken(token, new Date(Date.now() + 5 * 60_000).toISOString());
 }
 
 export function clearAccessToken(): void {
+  memoryAccessToken = null;
+  memoryAccessTokenExpiresAt = null;
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
 }
 
@@ -61,13 +74,37 @@ export function clearStoredUser(): void {
 }
 
 export function storeAuthSession<TUser>(session: StoredAuthSession<TUser>): void {
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  setMemoryAccessToken(session.accessToken ?? null, session.expiresAt);
+  window.localStorage.setItem(
+    SESSION_KEY,
+    JSON.stringify({
+      expiresAt: session.expiresAt,
+      refreshAvailable: true,
+      user: session.user,
+    }),
+  );
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
   window.localStorage.removeItem(USER_KEY);
 }
 
 export function clearAuthSession(): void {
+  memoryAccessToken = null;
+  memoryAccessTokenExpiresAt = null;
   window.localStorage.removeItem(SESSION_KEY);
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
   window.localStorage.removeItem(USER_KEY);
+}
+
+export function hasStoredSessionMetadata(): boolean {
+  return parseStoredSession()?.refreshAvailable === true;
+}
+
+function setMemoryAccessToken(token: string | null, expiresAt: string): void {
+  memoryAccessToken = token;
+  memoryAccessTokenExpiresAt = token ? expiresAt : null;
+}
+
+function isFutureIsoDate(value: string | null): boolean {
+  if (!value) return false;
+  return new Date(value).getTime() > Date.now();
 }

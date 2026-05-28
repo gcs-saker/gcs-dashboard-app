@@ -10,9 +10,9 @@ function CompassControl({ map }) {
 
     compass.onAdd = function () {
       const div = L.DomUtil.create('div', 'leaflet-control-compass');
-      div.innerHTML = `
-        <img src="compass.png" alt="Compass" class="compass-image" />
-      `;
+      const image = L.DomUtil.create('img', 'compass-image', div);
+      image.src = 'compass.png';
+      image.alt = 'Compass';
       return div;
     };
 

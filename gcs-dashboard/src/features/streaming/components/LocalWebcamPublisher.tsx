@@ -14,6 +14,7 @@ type WebcamPublisherStatus =
   | "signaling-complete"
   | "connecting-media"
   | "published"
+  | "reconnecting"
   | "error"
   | "unsupported";
 
@@ -22,6 +23,7 @@ type PublisherStepState = "pending" | "active" | "complete" | "error";
 
 const ICE_GATHERING_TIMEOUT_MS = 5_000;
 const MEDIA_CONNECTION_TIMEOUT_MS = 8_000;
+const RECONNECT_DELAYS_MS = [1_000, 2_000, 5_000] as const;
 
 interface LocalWebcamPublisherProps {
   streamId?: string;
@@ -41,10 +43,17 @@ export function LocalWebcamPublisher({
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const reconnectTimeoutRef = useRef<number | null>(null);
+  const reconnectAttemptRef = useRef(0);
+  const statusRef = useRef<WebcamPublisherStatus>("idle");
   const [status, setStatus] = useState<WebcamPublisherStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [failedStep, setFailedStep] = useState<PublisherStepId | null>(null);
   const steps = useMemo(() => getPublisherSteps(status, failedStep), [failedStep, status]);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   useEffect(() => () => stopAll(), []);
 
@@ -83,11 +92,16 @@ export function LocalWebcamPublisher({
 
     let currentStep: PublisherStepId = "ice";
     try {
+      clearReconnectTimer();
+      peerConnectionRef.current?.close();
+      peerConnectionRef.current = null;
       setFailedStep(null);
       setStatus("creating-offer");
       const iceServers = peerConnectionFactory ? WEBRTC_ICE_SERVERS : await loadWebRtcIceServers(fetcher);
       const peerConnection = peerConnectionFactory?.() ?? new RTCPeerConnection({ iceServers });
       peerConnectionRef.current = peerConnection;
+      peerConnection.onconnectionstatechange = () => handlePublishedConnectionChange(peerConnection);
+      peerConnection.oniceconnectionstatechange = () => handlePublishedConnectionChange(peerConnection);
       for (const track of streamRef.current.getTracks()) {
         peerConnection.addTrack(track, streamRef.current);
       }
@@ -119,6 +133,7 @@ export function LocalWebcamPublisher({
       setStatus("connecting-media");
       await waitForPeerConnectionReady(peerConnection);
       setErrorMessage(null);
+      reconnectAttemptRef.current = 0;
       setStatus("published");
     } catch (error) {
       peerConnectionRef.current?.close();
@@ -130,6 +145,8 @@ export function LocalWebcamPublisher({
   }
 
   function stopAll(): void {
+    clearReconnectTimer();
+    reconnectAttemptRef.current = 0;
     peerConnectionRef.current?.close();
     peerConnectionRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -139,6 +156,47 @@ export function LocalWebcamPublisher({
     }
     setStatus("idle");
     setFailedStep(null);
+  }
+
+  function handlePublishedConnectionChange(peerConnection: RTCPeerConnection): void {
+    const isDisconnected = (
+      peerConnection.connectionState === "disconnected" ||
+      peerConnection.connectionState === "failed" ||
+      peerConnection.connectionState === "closed" ||
+      peerConnection.iceConnectionState === "disconnected" ||
+      peerConnection.iceConnectionState === "failed" ||
+      peerConnection.iceConnectionState === "closed"
+    );
+    if (!isDisconnected || statusRef.current !== "published") {
+      return;
+    }
+    scheduleReconnect(
+      `송출 미디어 연결이 끊겼습니다 (${peerConnection.connectionState}/${peerConnection.iceConnectionState}). 재연결을 시도합니다.`,
+    );
+  }
+
+  function scheduleReconnect(message: string): void {
+    if (!streamRef.current || reconnectTimeoutRef.current !== null) {
+      return;
+    }
+    peerConnectionRef.current?.close();
+    peerConnectionRef.current = null;
+    const delay = RECONNECT_DELAYS_MS[Math.min(reconnectAttemptRef.current, RECONNECT_DELAYS_MS.length - 1)];
+    reconnectAttemptRef.current += 1;
+    setFailedStep("media");
+    setErrorMessage(message);
+    setStatus("reconnecting");
+    reconnectTimeoutRef.current = window.setTimeout(() => {
+      reconnectTimeoutRef.current = null;
+      void publish();
+    }, delay);
+  }
+
+  function clearReconnectTimer(): void {
+    if (reconnectTimeoutRef.current !== null) {
+      window.clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
   }
 
   return (
@@ -286,6 +344,7 @@ function isBusy(status: WebcamPublisherStatus): boolean {
     "sending-offer",
     "signaling-complete",
     "connecting-media",
+    "reconnecting",
   ].includes(status);
 }
 
@@ -300,6 +359,7 @@ function getStatusLabel(status: WebcamPublisherStatus): string {
     "signaling-complete": "시그널링 완료",
     "connecting-media": "미디어 연결",
     published: "송출 중",
+    reconnecting: "재연결 중",
     error: "오류",
     unsupported: "지원 안 됨",
   };
@@ -317,6 +377,7 @@ function getStatusDetail(status: WebcamPublisherStatus): string {
     "signaling-complete": "WHIP answer를 받았습니다. 미디어 연결을 확정합니다.",
     "connecting-media": "ICE 미디어 경로가 실제로 연결되는지 확인하고 있습니다.",
     published: "WebRTC 미디어 연결이 완료되어 송출 중입니다.",
+    reconnecting: "송출 미디어 경로가 끊겨 재연결을 시도하고 있습니다.",
     error: "오류 내용을 확인한 뒤 다시 시도할 수 있습니다.",
     unsupported: "현재 브라우저 환경에서는 로컬 카메라 WebRTC 송출을 지원하지 않습니다.",
   };
@@ -338,6 +399,7 @@ function getPublisherSteps(status: WebcamPublisherStatus, failedStep: PublisherS
     "signaling-complete": "signaling",
     "connecting-media": "media",
     published: "media",
+    reconnecting: "media",
   };
   const order: PublisherStepId[] = ["camera", "ice", "signaling", "media"];
   const labels: Record<PublisherStepId, string> = {

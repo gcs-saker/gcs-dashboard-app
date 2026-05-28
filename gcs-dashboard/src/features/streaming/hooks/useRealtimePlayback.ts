@@ -1,7 +1,7 @@
 import { useEffect, useReducer } from "react";
 
 import { apiV1Url } from "../../../config";
-import { buildAuthHeaders } from "../../auth/authApi";
+import { authenticatedFetch } from "../../auth/authApi";
 import type {
   RealtimePlayerMode,
   RealtimePlayerSnapshot,
@@ -197,13 +197,13 @@ async function fetchPlayback(
   fetcher: typeof fetch,
   signal: AbortSignal,
 ): Promise<StreamPlaybackResponse> {
-  const response = await fetcher(apiV1Url(`/streams/${encodeURIComponent(streamId)}/playback`), {
+  const response = await authenticatedFetch(apiV1Url(`/streams/${encodeURIComponent(streamId)}/playback`), {
     method: "GET",
-    headers: buildAuthHeaders({
+    headers: {
       Accept: "application/json",
-    }),
+    },
     signal,
-  });
+  }, fetcher);
 
   if (!response.ok) {
     throw new Error(`Playback API request failed with ${response.status}`);

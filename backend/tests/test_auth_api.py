@@ -10,7 +10,7 @@ from sqlalchemy.pool import StaticPool
 from api import control
 from api.auth import get_password_hash
 from core.db import Base, get_db
-from core.security import AuthSettings, create_access_token
+from core.security import AuthSettings, create_access_token, create_refresh_token
 from main import app
 from sql.company_sql import Company
 from sql.user_sql import User
@@ -66,6 +66,10 @@ def test_login_issues_access_token_and_me_returns_claims(auth_client: TestClient
     assert token_payload["token_type"] == "bearer"
     assert token_payload["role"] == "operator"
     assert token_payload["username"] == "operator01"
+    set_cookie = login_response.headers["set-cookie"]
+    assert "gcs_saker_refresh=" in set_cookie
+    assert "HttpOnly" in set_cookie
+    assert "SameSite=lax" in set_cookie
 
     me_response = auth_client.get(
         "/auth/me",
@@ -73,6 +77,65 @@ def test_login_issues_access_token_and_me_returns_claims(auth_client: TestClient
     )
     assert me_response.status_code == 200
     assert me_response.json() == {"username": "operator01", "role": "operator"}
+
+
+def test_refresh_uses_httponly_cookie_and_rotates_access_token(auth_client: TestClient) -> None:
+    login_response = auth_client.post(
+        "/auth/login",
+        json={"username": "operator01", "password": "correct-password"},
+    )
+    assert login_response.status_code == 200
+    assert login_response.json()["access_token"]
+
+    refresh_response = auth_client.post("/auth/refresh")
+
+    assert refresh_response.status_code == 200
+    token_payload = refresh_response.json()
+    assert token_payload["access_token"]
+    assert token_payload["token_type"] == "bearer"
+    assert token_payload["username"] == "operator01"
+    assert token_payload["role"] == "operator"
+    assert "gcs_saker_refresh=" in refresh_response.headers["set-cookie"]
+
+
+def test_refresh_rejects_missing_invalid_and_deleted_user_cookie(
+    auth_client: TestClient,
+    db_session: Session,
+) -> None:
+    missing_response = auth_client.post("/auth/refresh")
+    assert missing_response.status_code == 401
+    assert missing_response.json() == {"detail": "refresh token required"}
+
+    auth_client.cookies.set("gcs_saker_refresh", "not-a-token")
+    invalid_response = auth_client.post("/auth/refresh")
+    assert invalid_response.status_code == 401
+    assert invalid_response.json() == {"detail": "invalid token"}
+
+    ghost_token = create_refresh_token(
+        "deleted-user",
+        "viewer",
+        settings=AuthSettings(secret=TEST_AUTH_SECRET),
+    )
+    auth_client.cookies.set("gcs_saker_refresh", ghost_token)
+    deleted_response = auth_client.post("/auth/refresh")
+    assert deleted_response.status_code == 401
+    assert deleted_response.json() == {"detail": "invalid refresh session"}
+    assert "Max-Age=0" in deleted_response.headers["set-cookie"]
+    assert db_session.query(User).filter(User.username == "deleted-user").first() is None
+
+
+def test_logout_clears_refresh_cookie(auth_client: TestClient) -> None:
+    login_response = auth_client.post(
+        "/auth/login",
+        json={"username": "operator01", "password": "correct-password"},
+    )
+    assert login_response.status_code == 200
+
+    logout_response = auth_client.post("/auth/logout")
+
+    assert logout_response.status_code == 204
+    assert "gcs_saker_refresh=" in logout_response.headers["set-cookie"]
+    assert "Max-Age=0" in logout_response.headers["set-cookie"]
 
 
 def test_login_rejects_invalid_credentials(auth_client: TestClient) -> None:

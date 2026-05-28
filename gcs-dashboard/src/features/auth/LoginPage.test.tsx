@@ -69,6 +69,7 @@ describe("LoginPage auth flow", () => {
       "/api/auth/login",
       expect.objectContaining({
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: "operator01", password: "correct-password" }),
       }),

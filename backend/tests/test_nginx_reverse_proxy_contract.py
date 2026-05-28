@@ -36,6 +36,17 @@ def test_reverse_proxy_preserves_websocket_upgrade_headers() -> None:
     assert "proxy_read_timeout 3600s;" in ws_location
 
 
+def test_reverse_proxy_sets_browser_security_headers() -> None:
+    config = read_config()
+
+    assert 'add_header X-Frame-Options DENY always;' in config
+    assert 'add_header X-Content-Type-Options nosniff always;' in config
+    assert "frame-ancestors 'none'" in config
+    assert "object-src 'none'" in config
+    assert "connect-src 'self' https: wss: stun: turn:;" in config
+    assert 'add_header Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)" always;' in config
+
+
 def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     config = read_config()
 

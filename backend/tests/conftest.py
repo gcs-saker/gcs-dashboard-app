@@ -11,6 +11,9 @@ TEST_AUTH_SECRET = "test-auth-secret-for-gcs-saker-at-least-32-characters"
 def auth_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AUTH_JWT_SECRET", TEST_AUTH_SECRET)
     monkeypatch.setenv("AUTH_ACCESS_TOKEN_EXPIRE_MINUTES", "30")
+    monkeypatch.setenv("AUTH_REFRESH_TOKEN_EXPIRE_MINUTES", "10080")
+    monkeypatch.setenv("AUTH_REFRESH_COOKIE_SECURE", "false")
+    monkeypatch.setenv("AUTH_REFRESH_COOKIE_SAMESITE", "lax")
     monkeypatch.setenv("AUTH_JWT_ISSUER", "gcs-saker")
 
 

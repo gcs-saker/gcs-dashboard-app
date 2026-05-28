@@ -140,11 +140,53 @@ describe("LocalWebcamPublisher", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("오류");
     expect(screen.getByText("Permission denied")).toBeInTheDocument();
   });
+
+  test("detects a dropped publisher media connection and retries WHIP signaling", async () => {
+    const track = { stop: vi.fn() } as unknown as MediaStreamTrack;
+    const mediaStream = { getTracks: () => [track] } as unknown as MediaStream;
+    const mediaDevices = {
+      getUserMedia: vi.fn(async () => mediaStream),
+    } as unknown as MediaDevices;
+    const firstPeerConnection = createPeerConnectionMock();
+    const secondPeerConnection = createPeerConnectionMock();
+    const peerConnectionFactory = vi.fn()
+      .mockReturnValueOnce(firstPeerConnection)
+      .mockReturnValueOnce(secondPeerConnection);
+    const fetcher = vi.fn(async () => ({
+      ok: true,
+      text: async () => "v=0\r\nmock-answer",
+    })) as unknown as typeof fetch;
+
+    render(
+      <LocalWebcamPublisher
+        mediaDevices={mediaDevices}
+        peerConnectionFactory={peerConnectionFactory}
+        fetcher={fetcher}
+        whipUrl="http://media.example.test/raw/local/webcam/whip"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("미리보기 준비");
+
+    fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"));
+
+    firstPeerConnection.disconnect();
+
+    expect(await screen.findByRole("status")).toHaveTextContent("재연결 중");
+    expect(screen.getByText(/송출 미디어 연결이 끊겼습니다/)).toBeInTheDocument();
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"), { timeout: 2_000 });
+    expect(peerConnectionFactory).toHaveBeenCalledTimes(2);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
 });
 
 type PeerConnectionMock = RTCPeerConnection & {
   completeIceGathering: () => void;
   completeConnection: () => void;
+  disconnect: () => void;
 };
 
 function createPeerConnectionMock(initialIceGatheringState: RTCIceGatheringState = "complete"): PeerConnectionMock {
@@ -195,6 +237,12 @@ function createPeerConnectionMock(initialIceGatheringState: RTCIceGatheringState
     completeConnection() {
       connectionState = "connected";
       iceConnectionState = "connected";
+      connectionStateChangeHandler?.call(peerConnection as unknown as RTCPeerConnection, new Event("connectionstatechange"));
+      iceConnectionStateChangeHandler?.call(peerConnection as unknown as RTCPeerConnection, new Event("iceconnectionstatechange"));
+    },
+    disconnect() {
+      connectionState = "disconnected";
+      iceConnectionState = "disconnected";
       connectionStateChangeHandler?.call(peerConnection as unknown as RTCPeerConnection, new Event("connectionstatechange"));
       iceConnectionStateChangeHandler?.call(peerConnection as unknown as RTCPeerConnection, new Event("iceconnectionstatechange"));
     },

@@ -15,6 +15,7 @@ describe("serverStatus", () => {
     expect(fetcher).toHaveBeenNthCalledWith(1, "/healthz", { headers: undefined });
     expect(fetcher).toHaveBeenNthCalledWith(2, "/readyz", { headers: undefined });
     expect(fetcher).toHaveBeenNthCalledWith(3, "/api/v1/streams", {
+      credentials: "include",
       headers: { Accept: "application/json" },
     });
     expect(status.server).toBe("online");
@@ -38,7 +39,8 @@ describe("serverStatus", () => {
       .fn()
       .mockResolvedValueOnce(new Response("ok", { status: 200 }))
       .mockResolvedValueOnce(new Response("ready", { status: 200 }))
-      .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }));
+      .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
+      .mockResolvedValueOnce(Response.json({ detail: "refresh token required" }, { status: 401 }));
 
     await expect(fetchDashboardServerStatus(fetcher as unknown as typeof fetch)).rejects.toMatchObject({
       status: 401,
