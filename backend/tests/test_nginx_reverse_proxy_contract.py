@@ -71,14 +71,14 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "proxy_pass http://gcs_dashboard;" in extract_locations(config, "/")[-1]
 
 
-def test_reverse_proxy_routes_root_health_checks_to_backend() -> None:
+def test_reverse_proxy_routes_root_health_checks_to_auth_policy() -> None:
     config = read_config()
 
     healthz_location = extract_exact_location(config, "/healthz")
     readyz_location = extract_exact_location(config, "/readyz")
 
-    assert "proxy_pass http://gcs_backend/healthz;" in healthz_location
-    assert "proxy_pass http://gcs_backend/readyz;" in readyz_location
+    assert "proxy_pass http://gcs_auth_policy/healthz;" in healthz_location
+    assert "proxy_pass http://gcs_auth_policy/readyz;" in readyz_location
     assert "proxy_read_timeout 10s;" in healthz_location
     assert "proxy_read_timeout 10s;" in readyz_location
 
@@ -136,7 +136,6 @@ def test_legacy_api_prefixes_are_rewritten_to_backend_routers() -> None:
         "/api/control/": "rewrite ^/api/control/(.*)$ /control/$1 break;",
         "/api/asset/": "rewrite ^/api/asset/(.*)$ /asset/$1 break;",
         "/api/telemetry/": "rewrite ^/api/telemetry/(.*)$ /telemetry/$1 break;",
-        "/api/stream/": "rewrite ^/api/stream/(.*)$ /stream/$1 break;",
     }
     for public_prefix, rewrite in expected_rewrites.items():
         location = extract_location(config, public_prefix)
@@ -144,11 +143,20 @@ def test_legacy_api_prefixes_are_rewritten_to_backend_routers() -> None:
         assert "proxy_pass http://gcs_backend;" in location
 
 
-def test_legacy_stream_prefix_is_kept_on_backend_for_runtime_smoke() -> None:
+def test_legacy_stream_prefix_is_cut_over_to_go_media_control_for_runtime_smoke() -> None:
+    config = read_config()
+    api_stream_location = extract_location(config, "/api/stream/")
+    stream_location = extract_location(config, "/stream/")
+
+    assert "rewrite ^/api/stream/(.*)$ /stream/$1 break;" in api_stream_location
+    assert "proxy_pass http://gcs_media_control;" in api_stream_location
+    assert "proxy_pass http://gcs_media_control;" in stream_location
+
+
+def test_legacy_stream_prefix_keeps_short_runtime_timeout() -> None:
     config = read_config()
     location = extract_location(config, "/stream/")
 
-    assert "proxy_pass http://gcs_backend;" in location
     assert "proxy_read_timeout 60s;" in location
 
 

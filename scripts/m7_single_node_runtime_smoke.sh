@@ -228,7 +228,7 @@ run_live() {
 
   echo "M7 single-node runtime smoke run passed"
   echo "Edge URL: ${edge_base_url}"
-  echo "Verified: backend health/ready, auth-policy, media-control ICE servers, MediaMTX API, TURN primary/secondary allocation"
+  echo "Verified: auth-policy health/ready, media-control stream status/ICE servers, MediaMTX API, TURN primary/secondary allocation"
 
   if [[ "$STOP_STACK" == "1" ]]; then
     compose down

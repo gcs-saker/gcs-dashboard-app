@@ -48,3 +48,5 @@ def test_m7_runtime_smoke_requires_backend_stream_status_payload():
     assert "wait_for_stream_status" in script
     assert '"stream":"ready"' in script
     assert "compose restart edge" in script
+    assert "auth-policy health/ready" in script
+    assert "media-control stream status" in script
