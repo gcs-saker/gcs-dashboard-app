@@ -170,8 +170,8 @@ services:
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_RTSP_PORT:-8554}:8554/tcp"
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_RTMP_PORT:-1935}:1935/tcp"
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_SRT_PORT:-8890}:8890/udp"
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_ICE_UDP_PORT:-8189}:8189/udp"
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_ICE_TCP_PORT:-8189}:8189/tcp"
+      - "${MEDIAMTX_ICE_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_ICE_UDP_PORT:-8189}:8189/udp"
+      - "${MEDIAMTX_ICE_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_ICE_TCP_PORT:-8189}:8189/tcp"
     volumes:
       - type: bind
         source: ../mediamtx/mediamtx.closed-network.yml
@@ -199,9 +199,9 @@ services:
       - --no-cli
       - --no-multicast-peers
     ports:
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/tcp"
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/udp"
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_RELAY_HOST_MIN_PORT:-49160}-${TURN_PRIMARY_RELAY_HOST_MAX_PORT:-49180}:49160-49180/udp"
+      - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/tcp"
+      - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/udp"
+      - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_RELAY_HOST_MIN_PORT:-49160}-${TURN_PRIMARY_RELAY_HOST_MAX_PORT:-49180}:49160-49180/udp"
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "timeout 2 sh -c '</dev/udp/127.0.0.1/3478' || exit 0"]
@@ -226,9 +226,9 @@ services:
       - --no-cli
       - --no-multicast-peers
     ports:
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/tcp"
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/udp"
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_RELAY_HOST_MIN_PORT:-49181}-${TURN_SECONDARY_RELAY_HOST_MAX_PORT:-49200}:49181-49200/udp"
+      - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/tcp"
+      - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/udp"
+      - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_RELAY_HOST_MIN_PORT:-49181}-${TURN_SECONDARY_RELAY_HOST_MAX_PORT:-49200}:49181-49200/udp"
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "timeout 2 sh -c '</dev/udp/127.0.0.1/3478' || exit 0"]
