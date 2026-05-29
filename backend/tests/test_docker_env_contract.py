@@ -74,8 +74,20 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
     compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
     services = compose["services"]
 
+    assert services["dashboard"]["build"]["args"]["VITE_AUTH_API_BASE_URL"] == (
+        "${VITE_AUTH_API_BASE_URL:-/auth-policy/auth}"
+    )
     assert services["dashboard"]["build"]["args"]["VITE_STREAM_API_BASE_URL"] == (
         "${VITE_STREAM_API_BASE_URL:-/media-control}"
+    )
+    assert services["media-control"]["environment"]["AUTH_POLICY_BASE_URL"] == (
+        "${AUTH_POLICY_BASE_URL:-http://auth-policy:8080}"
+    )
+    assert services["media-control"]["environment"]["MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID"] == (
+        "${MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID:-co-a}"
+    )
+    assert services["media-control"]["environment"]["MEDIA_CONTROL_STREAM_GROUP_MAP"] == (
+        "${MEDIA_CONTROL_STREAM_GROUP_MAP:-raw/sample/front=co-a,raw/local/webcam=co-a}"
     )
     assert services["media-control"]["environment"]["MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL"] == (
         "${MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8080/webrtc}"

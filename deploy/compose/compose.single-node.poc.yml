@@ -141,6 +141,9 @@ services:
       TURN_PASSWORD: ${TURN_PASSWORD:?Set TURN_PASSWORD}
       MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL: ${MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8080/webrtc}
       MEDIA_CONTROL_PUBLIC_HLS_BASE_URL: ${MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://localhost:8080/hls}
+      AUTH_POLICY_BASE_URL: ${AUTH_POLICY_BASE_URL:-http://auth-policy:8080}
+      MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID: ${MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID:-co-a}
+      MEDIA_CONTROL_STREAM_GROUP_MAP: ${MEDIA_CONTROL_STREAM_GROUP_MAP:-raw/sample/front=co-a,raw/local/webcam=co-a}
       MEDIA_CONTROL_LISTEN_ADDR: :8081
     healthcheck:
       <<: *health_defaults
@@ -152,6 +155,8 @@ services:
         condition: service_started
       turn-secondary:
         condition: service_started
+      auth-policy:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - control-net
@@ -236,7 +241,7 @@ services:
       context: ../../gcs-dashboard
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
-        VITE_AUTH_API_BASE_URL: ${VITE_AUTH_API_BASE_URL:-/api/auth}
+        VITE_AUTH_API_BASE_URL: ${VITE_AUTH_API_BASE_URL:-/auth-policy/auth}
         VITE_STREAM_API_BASE_URL: ${VITE_STREAM_API_BASE_URL:-/media-control}
         VITE_HLS_BASE_URL: ${VITE_HLS_BASE_URL:-/hls}
         VITE_DEFAULT_STREAM_ID: ${VITE_DEFAULT_STREAM_ID:-raw/local/webcam}

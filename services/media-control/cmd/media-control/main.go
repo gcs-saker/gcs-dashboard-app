@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/authpolicy"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/httpapi"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/mediamtx"
@@ -25,6 +26,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	groupResolver, err := domain.NewStreamGroupResolver(
+		getenv("MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID", "co-a"),
+		getenv("MEDIA_CONTROL_STREAM_GROUP_MAP", "raw/sample/front=co-a,raw/local/webcam=co-a"),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	iceServers := mustIceServers([]iceServerConfig{
 		{URL: getenv("MEDIA_CONTROL_STUN_URL", "stun:turn-primary:3478"), Kind: domain.IceServerSTUN, Healthy: true},
@@ -36,6 +44,8 @@ func main() {
 		mediamtx.NewClient(mediaMTXBaseURL, &http.Client{Timeout: 3 * time.Second}),
 		turn.NewRegistry(iceServers, turn.StaticProbe{}),
 		playback,
+		authpolicy.NewClient(getenv("AUTH_POLICY_BASE_URL", ""), &http.Client{Timeout: 2 * time.Second}),
+		groupResolver,
 	)
 
 	log.Printf("media-control listening on %s", listenAddress)

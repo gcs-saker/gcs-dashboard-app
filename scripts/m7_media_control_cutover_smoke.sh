@@ -9,6 +9,9 @@ PUBLISH_DURATION_SECONDS="${PUBLISH_DURATION_SECONDS:-35}"
 START_STACK="${START_STACK:-1}"
 STOP_STACK="${STOP_STACK:-0}"
 EDGE_BASE_URL="${EDGE_BASE_URL:-http://127.0.0.1:18080}"
+AUTH_BASE_PATH="${AUTH_BASE_PATH:-/auth-policy/auth}"
+SMOKE_USERNAME="${SMOKE_USERNAME:-m7-smoke-viewer}"
+SMOKE_PASSWORD="${SMOKE_PASSWORD:-m7-smoke-pass}"
 FFMPEG_IMAGE="${FFMPEG_IMAGE:-jrottenberg/ffmpeg:6.1-alpine}"
 FFMPEG_PLATFORM="${FFMPEG_PLATFORM:-}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-gcs-saker-arch-poc}"
@@ -29,6 +32,9 @@ Environment:
   START_STACK               Run m7_single_node_runtime_smoke.sh first. Default: 1
   STOP_STACK                Stop compose after the smoke. Default: 0
   EDGE_BASE_URL             Default: http://127.0.0.1:18080
+  AUTH_BASE_PATH            Default: /auth-policy/auth
+  SMOKE_USERNAME            Default: m7-smoke-viewer
+  SMOKE_PASSWORD            Default: m7-smoke-pass
   PUBLISH_DURATION_SECONDS  Default: 35
 EOF
 }
@@ -95,6 +101,20 @@ start_publisher() {
     "rtsp://mediamtx:8554/${STREAM_PATH}" >/dev/null
 }
 
+login_token() {
+  local login_payload
+  local login_response
+  export SMOKE_USERNAME
+  export SMOKE_PASSWORD
+  login_payload="$(python3 -c 'import json, os; print(json.dumps({"username": os.environ["SMOKE_USERNAME"], "password": os.environ["SMOKE_PASSWORD"]}))')"
+  login_response="$(curl -fsS \
+    -H "Content-Type: application/json" \
+    -X POST \
+    --data "$login_payload" \
+    "${EDGE_BASE_URL}${AUTH_BASE_PATH}/login")"
+  python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])' <<<"$login_response"
+}
+
 wait_for_media_control_stream() {
   local attempts="${1:-45}"
   local delay_seconds="${2:-1}"
@@ -102,7 +122,7 @@ wait_for_media_control_stream() {
   local payload
 
   for ((attempt = 1; attempt <= attempts; attempt += 1)); do
-    payload="$(curl -fsS "${EDGE_BASE_URL}/media-control/api/v1/streams" 2>/dev/null || true)"
+    payload="$(curl -fsS -H "Authorization: Bearer ${ACCESS_TOKEN}" "${EDGE_BASE_URL}/media-control/api/v1/streams" 2>/dev/null || true)"
     if PAYLOAD="$payload" python3 - "$STREAM_ID" >/dev/null 2>&1 <<'PY'
 import json
 import os
@@ -126,7 +146,11 @@ assert_json_contract() {
   local url="$1"
   local expected="$2"
   local payload
-  payload="$(curl -fsS "$url")"
+  if [[ "$expected" == "ice" ]]; then
+    payload="$(curl -fsS "$url")"
+  else
+    payload="$(curl -fsS -H "Authorization: Bearer ${ACCESS_TOKEN}" "$url")"
+  fi
   PAYLOAD="$payload" python3 - "$expected" "$STREAM_ID" "$EDGE_BASE_URL" <<'PY'
 import json
 import os
@@ -161,6 +185,8 @@ run_check() {
   grep -q "func ParseStreamID" "${REPO_ROOT}/services/media-control/internal/domain/stream.go"
   grep -q "func NewPlaybackURLBuilder" "${REPO_ROOT}/services/media-control/internal/domain/playback.go"
   grep -q "/api/v1/streams/ice-servers" "${REPO_ROOT}/services/media-control/internal/httpapi/server.go"
+  grep -q "AUTH_POLICY_BASE_URL" "${REPO_ROOT}/services/media-control/cmd/media-control/main.go"
+  grep -q "Authorization: Bearer" "$0"
   grep -q "VITE_STREAM_API_BASE_URL" "${REPO_ROOT}/gcs-dashboard/src/config.ts"
   grep -q "location /media-control/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   echo "M7 media-control cutover smoke check passed"
@@ -176,6 +202,8 @@ run_live() {
     "${REPO_ROOT}/scripts/m7_single_node_runtime_smoke.sh" --run
   fi
 
+  ACCESS_TOKEN="$(login_token)"
+  export ACCESS_TOKEN
   assert_json_contract "${EDGE_BASE_URL}/media-control/api/v1/streams/ice-servers" ice
   start_publisher
   wait_for_media_control_stream

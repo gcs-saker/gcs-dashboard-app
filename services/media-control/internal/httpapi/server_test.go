@@ -27,6 +27,25 @@ func (f fakeIce) HealthyIceServers() []domain.IceServer {
 	return f.servers
 }
 
+type fakeAuthorizer struct {
+	errByStream  map[string]error
+	observedAuth *string
+}
+
+func (f fakeAuthorizer) AuthorizeStream(
+	_ context.Context,
+	authorization string,
+	target domain.StreamAccessTarget,
+) (domain.StreamAccessDecision, error) {
+	if f.observedAuth != nil {
+		*f.observedAuth = authorization
+	}
+	if err, ok := f.errByStream[target.StreamID]; ok {
+		return domain.DenyStream(target.StreamID, err.Error()), err
+	}
+	return domain.AllowStream(target.StreamID, "test allow"), nil
+}
+
 func TestHealthz(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
 	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
@@ -108,6 +127,58 @@ func TestDashboardStreamListContract(t *testing.T) {
 	}
 }
 
+func TestDashboardStreamListFiltersDeniedStreams(t *testing.T) {
+	allowedPath, _ := domain.NewStreamPath("raw/sample/front")
+	deniedPath, _ := domain.NewStreamPath("raw/company-b/front")
+	server := newTestServerWithAuthorizer(
+		fakeStreams{streams: []domain.StreamDescriptor{
+			{Path: allowedPath, Ready: true, Status: domain.StreamStatusOnline},
+			{Path: deniedPath, Ready: true, Status: domain.StreamStatusOnline},
+		}},
+		fakeIce{},
+		fakeAuthorizer{errByStream: map[string]error{
+			"raw.company-b.front": domain.ErrStreamAccessDenied,
+		}},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", recorder.Code)
+	}
+	var payload []map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if len(payload) != 1 || payload[0]["streamId"] != "raw.sample.front" {
+		t.Fatalf("expected only allowed stream, got %#v", payload)
+	}
+}
+
+func TestDashboardStreamListForwardsAuthorizationHeader(t *testing.T) {
+	path, _ := domain.NewStreamPath("raw/sample/front")
+	observedAuth := ""
+	server := newTestServerWithAuthorizer(
+		fakeStreams{streams: []domain.StreamDescriptor{{Path: path, Ready: true, Status: domain.StreamStatusOnline}}},
+		fakeIce{},
+		fakeAuthorizer{observedAuth: &observedAuth},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams", nil)
+	request.Header.Set("Authorization", "Bearer dashboard-token")
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", recorder.Code)
+	}
+	if observedAuth != "Bearer dashboard-token" {
+		t.Fatalf("expected authorization header to be forwarded, got %q", observedAuth)
+	}
+}
+
 func TestDashboardPlaybackStatusAndDetailContracts(t *testing.T) {
 	path, _ := domain.NewStreamPath("raw/local/webcam")
 	server := newTestServer(
@@ -128,6 +199,44 @@ func TestDashboardPlaybackStatusAndDetailContracts(t *testing.T) {
 		if recorder.Code != http.StatusOK {
 			t.Fatalf("%s expected 200, got %d: %s", route, recorder.Code, recorder.Body.String())
 		}
+	}
+}
+
+func TestDashboardStreamListRequiresAuthorizationWhenPolicyRequiresIt(t *testing.T) {
+	path, _ := domain.NewStreamPath("raw/sample/front")
+	server := newTestServerWithAuthorizer(
+		fakeStreams{streams: []domain.StreamDescriptor{{Path: path, Ready: true, Status: domain.StreamStatusOnline}}},
+		fakeIce{},
+		fakeAuthorizer{errByStream: map[string]error{
+			"raw.sample.front": domain.ErrStreamAuthenticationRequired,
+		}},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", recorder.Code)
+	}
+}
+
+func TestDashboardPlaybackDeniesForbiddenStream(t *testing.T) {
+	path, _ := domain.NewStreamPath("raw/company-b/front")
+	server := newTestServerWithAuthorizer(
+		fakeStreams{streams: []domain.StreamDescriptor{{Path: path, Ready: true, Status: domain.StreamStatusOnline}}},
+		fakeIce{},
+		fakeAuthorizer{errByStream: map[string]error{
+			"raw.company-b.front": domain.ErrStreamAccessDenied,
+		}},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.company-b.front/playback", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", recorder.Code)
 	}
 }
 
@@ -173,9 +282,17 @@ func TestDashboardIceServersContract(t *testing.T) {
 }
 
 func newTestServer(streams StreamLister, ice IceServerProvider) Server {
+	return newTestServerWithAuthorizer(streams, ice, fakeAuthorizer{})
+}
+
+func newTestServerWithAuthorizer(streams StreamLister, ice IceServerProvider, authorizer StreamAuthorizer) Server {
 	playback, err := domain.NewPlaybackURLBuilder("http://edge.local/webrtc", "http://edge.local/hls")
 	if err != nil {
 		panic(err)
 	}
-	return NewServer(streams, ice, playback)
+	groups, err := domain.NewStreamGroupResolver("co-a", "raw/company-b/front=co-b")
+	if err != nil {
+		panic(err)
+	}
+	return NewServer(streams, ice, playback, authorizer, groups)
 }

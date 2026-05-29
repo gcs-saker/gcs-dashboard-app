@@ -28,6 +28,9 @@ def test_m7_smoke_user_seed_script_documents_default_user():
 def test_m7_dashboard_smoke_validates_authenticated_playback_edge_url():
     script = (REPO_ROOT / "scripts" / "m7_dashboard_first_frame_smoke.sh").read_text(encoding="utf-8")
 
+    assert "AUTH_BASE_PATH" in script
+    assert "${EDGE_BASE_URL}${AUTH_BASE_PATH}/login" in script
+    assert "${EDGE_BASE_URL}${AUTH_BASE_PATH}/me" in script
     assert "STREAM_API_BASE_PATH" in script
     assert "${EDGE_BASE_URL}${STREAM_API_BASE_PATH}/streams/${SMOKE_STREAM_ID}/playback" in script
     assert 'payload["playbackUrls"]' in script

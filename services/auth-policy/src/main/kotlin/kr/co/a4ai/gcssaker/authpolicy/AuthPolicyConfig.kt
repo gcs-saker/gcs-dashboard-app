@@ -3,8 +3,11 @@ package kr.co.a4ai.gcssaker.authpolicy
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupType
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
+import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationUnit
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.springframework.context.annotation.Bean
@@ -61,6 +64,17 @@ class AuthPolicyConfig {
         tokenService: JwtTokenService,
     ): AuthSessionService =
         AuthSessionService(users, passwordHasher, tokenService)
+
+    @Bean
+    fun groupPolicyService(): GroupPolicyService =
+        GroupPolicyService(
+            listOf(
+                OrganizationUnit(GroupId("bn-1"), "1 Battalion", GroupType.BATTALION),
+                OrganizationUnit(GroupId("co-a"), "A Company", GroupType.COMPANY, GroupId("bn-1")),
+                OrganizationUnit(GroupId("co-b"), "B Company", GroupType.COMPANY, GroupId("bn-1")),
+                OrganizationUnit(GroupId("plt-b-1"), "B Company 1 Platoon", GroupType.PLATOON, GroupId("co-b")),
+            ),
+        )
 }
 
 data class AuthRuntimeSettings(
