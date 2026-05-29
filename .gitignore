@@ -17,12 +17,34 @@ gcs-dashboard/dist/
 gcs-dashboard/coverage/
 gcs-dashboard/certs/
 
+# JVM / Spring Kotlin
+.gradle/
+build/
+out/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# Go
+bin/
+coverage.out
+*.test
+
 # Local environment
 .env
 .env.*
 !.env.example
 !.env.*.example
 docs/operations/server-baseline-results/
+
+# Local runtime data
+docker-data/
+volumes/
+mysql-data/
+postgres-data/
+redis-data/
+mediamtx-recordings/
+coturn-state/
 
 # OS / editor
 .DS_Store
