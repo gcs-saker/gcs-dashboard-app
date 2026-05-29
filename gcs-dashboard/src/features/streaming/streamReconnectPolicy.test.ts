@@ -47,6 +47,8 @@ function snapshot(overrides: Partial<WebRTCPlaybackSnapshot>): WebRTCPlaybackSna
     connectionState: "connecting",
     iceConnectionState: "checking",
     errorMessage: null,
+    hasVideoFrame: false,
+    firstFrameLatencyMs: null,
     ...overrides,
   };
 }

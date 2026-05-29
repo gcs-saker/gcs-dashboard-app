@@ -20,13 +20,16 @@ type PlaybackAction =
   | { type: "offline" }
   | { type: "unsupported"; message: string }
   | { type: "error"; message: string; connectionState?: RTCPeerConnectionState; iceConnectionState?: RTCIceConnectionState }
-  | { type: "connection"; connectionState: RTCPeerConnectionState; iceConnectionState: RTCIceConnectionState };
+  | { type: "connection"; connectionState: RTCPeerConnectionState; iceConnectionState: RTCIceConnectionState }
+  | { type: "first-frame"; latencyMs: number };
 
 const initialPlaybackState: WebRTCPlaybackSnapshot = {
   status: "idle",
   connectionState: "new",
   iceConnectionState: "new",
   errorMessage: null,
+  hasVideoFrame: false,
+  firstFrameLatencyMs: null,
 };
 
 export function useWhepPlayback({
@@ -53,6 +56,14 @@ export function useWhepPlayback({
     let peerConnection: RTCPeerConnection | null = null;
     const abortController = new AbortController();
     let disposed = false;
+    const startedAt = performance.now();
+
+    const videoElement = videoRef.current;
+    const handleFirstFrame = () => {
+      if (disposed || abortController.signal.aborted) return;
+      dispatch({ type: "first-frame", latencyMs: performance.now() - startedAt });
+    };
+    videoElement?.addEventListener("loadeddata", handleFirstFrame, { once: true });
 
     dispatch({
       type: "loading",
@@ -122,6 +133,7 @@ export function useWhepPlayback({
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
+      videoElement?.removeEventListener("loadeddata", handleFirstFrame);
     };
   }, [fetcher, isOnline, peerConnectionFactory, whepUrl]);
 
@@ -139,6 +151,8 @@ function playbackReducer(
         connectionState: action.connectionState,
         iceConnectionState: action.iceConnectionState,
         errorMessage: null,
+        hasVideoFrame: false,
+        firstFrameLatencyMs: null,
       };
     case "playing":
       return {
@@ -146,6 +160,8 @@ function playbackReducer(
         connectionState: action.connectionState,
         iceConnectionState: action.iceConnectionState,
         errorMessage: null,
+        hasVideoFrame: state.hasVideoFrame,
+        firstFrameLatencyMs: state.firstFrameLatencyMs,
       };
     case "offline":
       return {
@@ -153,6 +169,8 @@ function playbackReducer(
         connectionState: "closed",
         iceConnectionState: "closed",
         errorMessage: null,
+        hasVideoFrame: false,
+        firstFrameLatencyMs: null,
       };
     case "unsupported":
       return {
@@ -160,6 +178,8 @@ function playbackReducer(
         connectionState: "unsupported",
         iceConnectionState: "unsupported",
         errorMessage: action.message,
+        hasVideoFrame: false,
+        firstFrameLatencyMs: null,
       };
     case "error":
       return {
@@ -167,6 +187,8 @@ function playbackReducer(
         connectionState: action.connectionState ?? state.connectionState,
         iceConnectionState: action.iceConnectionState ?? state.iceConnectionState,
         errorMessage: action.message,
+        hasVideoFrame: state.hasVideoFrame,
+        firstFrameLatencyMs: state.firstFrameLatencyMs,
       };
     case "connection":
       return {
@@ -174,6 +196,12 @@ function playbackReducer(
         status: statusFromConnection(action.connectionState, action.iceConnectionState, state.status),
         connectionState: action.connectionState,
         iceConnectionState: action.iceConnectionState,
+      };
+    case "first-frame":
+      return {
+        ...state,
+        hasVideoFrame: true,
+        firstFrameLatencyMs: Math.max(0, Math.round(action.latencyMs)),
       };
   }
 }
