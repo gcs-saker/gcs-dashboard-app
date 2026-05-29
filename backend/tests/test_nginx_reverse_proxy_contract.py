@@ -66,16 +66,22 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "proxy_pass http://gcs_dashboard;" in extract_locations(config, "/")[-1]
 
 
-def test_reverse_proxy_routes_root_health_checks_to_backend() -> None:
+def test_reverse_proxy_routes_root_and_api_health_checks_to_backend() -> None:
     config = read_config()
 
     healthz_location = extract_exact_location(config, "/healthz")
     readyz_location = extract_exact_location(config, "/readyz")
+    api_healthz_location = extract_exact_location(config, "/api/healthz")
+    api_readyz_location = extract_exact_location(config, "/api/readyz")
 
     assert "proxy_pass http://gcs_backend/healthz;" in healthz_location
     assert "proxy_pass http://gcs_backend/readyz;" in readyz_location
+    assert "proxy_pass http://gcs_backend/healthz;" in api_healthz_location
+    assert "proxy_pass http://gcs_backend/readyz;" in api_readyz_location
     assert "proxy_read_timeout 10s;" in healthz_location
     assert "proxy_read_timeout 10s;" in readyz_location
+    assert "proxy_read_timeout 10s;" in api_healthz_location
+    assert "proxy_read_timeout 10s;" in api_readyz_location
 
 
 def test_reverse_proxy_keeps_mediamtx_management_ports_private() -> None:

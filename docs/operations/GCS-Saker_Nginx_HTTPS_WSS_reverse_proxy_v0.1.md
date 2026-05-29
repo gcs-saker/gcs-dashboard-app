@@ -16,6 +16,8 @@ M2 Server-02 staging 배포 전에 Nginx reverse proxy의 HTTPS, WSS, API, dashb
 | --- | --- | --- | --- |
 | `http://<host>/` | Nginx | HTTPS redirect | ACME challenge를 제외하고 `https://$host$request_uri`로 redirect |
 | `https://<host>/` | `nginx:3000` | Dashboard serving | SPA/dashboard entrypoint |
+| `https://<host>/healthz`, `https://<host>/readyz` | `backend:8001` | Liveness/readiness smoke | backend root health endpoint로 직접 proxy |
+| `https://<host>/api/healthz`, `https://<host>/api/readyz` | `backend:8001` | API namespace smoke | 운영 점검에서 API 단일 prefix를 사용할 때도 backend health endpoint로 proxy |
 | `https://<host>/api/` | `backend:8001` | Backend API proxy | `/api/v1/*` 중심으로 proxy, 추후 legacy `/control`, `/telemetry` 경로는 API migration 이슈에서 정리 |
 | `wss://<host>/ws/` | `backend:8001` | Backend WebSocket | `Upgrade`, `Connection` header를 반드시 전달 |
 | `https://<host>/hls/<stream>/index.m3u8` | `mediamtx:8888` | HLS fallback playback | `/hls/` prefix 제거 후 MediaMTX로 전달, buffering/cache off |
@@ -44,7 +46,7 @@ M2 Server-02 staging 배포 전에 Nginx reverse proxy의 HTTPS, WSS, API, dashb
 - reverse proxy 설정 초안 파일 존재
 - HTTP to HTTPS redirect 존재
 - HTTPS server와 certificate placeholder 존재
-- `/api/`, `/ws/`, `/hls/`, `/webrtc/` location 존재
+- `/healthz`, `/readyz`, `/api/healthz`, `/api/readyz`, `/api/`, `/ws/`, `/hls/`, `/webrtc/` location 존재
 - WebSocket upgrade header 존재
 - `9997`, `9998` 관리 포트 미노출
 
