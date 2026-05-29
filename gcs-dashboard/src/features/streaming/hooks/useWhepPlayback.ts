@@ -7,6 +7,8 @@ import type { WebRTCPlaybackSnapshot, WebRTCPlaybackStatus } from "../types";
 
 type PeerConnectionFactory = () => RTCPeerConnection;
 
+const ICE_GATHERING_TIMEOUT_MS = 2500;
+
 interface UseWhepPlaybackOptions {
   whepUrl: string | null;
   isOnline?: boolean;
@@ -269,7 +271,11 @@ async function connectWithWhep(
 ): Promise<void> {
   const offer = await peerConnection.createOffer();
   await peerConnection.setLocalDescription(offer);
-  await waitForIceGatheringComplete(peerConnection);
+  await waitForIceGatheringComplete(peerConnection, signal, ICE_GATHERING_TIMEOUT_MS);
+
+  if (signal.aborted) {
+    throw new Error("WebRTC playback was aborted");
+  }
 
   const localDescription = peerConnection.localDescription;
   if (!localDescription?.sdp) {
@@ -294,15 +300,31 @@ async function connectWithWhep(
   await peerConnection.setRemoteDescription({ type: "answer", sdp: answerSdp });
 }
 
-function waitForIceGatheringComplete(peerConnection: RTCPeerConnection): Promise<void> {
+function waitForIceGatheringComplete(
+  peerConnection: RTCPeerConnection,
+  signal: AbortSignal,
+  timeoutMs: number,
+): Promise<void> {
   if (peerConnection.iceGatheringState === "complete") {
     return Promise.resolve();
   }
 
   return new Promise((resolve) => {
+    let isResolved = false;
+    const finish = () => {
+      if (isResolved) return;
+      isResolved = true;
+      globalThis.clearTimeout(timeoutId);
+      signal.removeEventListener("abort", finish);
+      peerConnection.onicegatheringstatechange = null;
+      resolve();
+    };
+    const timeoutId = globalThis.setTimeout(finish, timeoutMs);
+
+    signal.addEventListener("abort", finish, { once: true });
     peerConnection.onicegatheringstatechange = () => {
       if (peerConnection.iceGatheringState === "complete") {
-        resolve();
+        finish();
       }
     };
   });

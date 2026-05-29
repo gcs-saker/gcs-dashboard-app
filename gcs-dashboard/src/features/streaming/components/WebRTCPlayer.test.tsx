@@ -244,6 +244,26 @@ describe("WebRTCPlayer", () => {
     await waitFor(() => expect(fetch).toHaveBeenCalled());
   });
 
+  test("posts the WHEP offer after a bounded ICE gathering wait", async () => {
+    initialIceGatheringState = "gathering";
+
+    render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" />);
+
+    await waitFor(() => expect(peerConnections[0].setLocalDescription).toHaveBeenCalled());
+    expect(fetch).not.toHaveBeenCalledWith(
+      "https://media.example.test/raw/sample/front/whep",
+      expect.objectContaining({ method: "POST" }),
+    );
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        "https://media.example.test/raw/sample/front/whep",
+        expect.objectContaining({ method: "POST" }),
+      ),
+      { timeout: 3500 },
+    );
+  });
+
   test("renders an error state when the ICE connection fails", async () => {
     render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" />);
 
