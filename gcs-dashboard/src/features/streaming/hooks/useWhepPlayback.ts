@@ -41,6 +41,7 @@ export function useWhepPlayback({
   fetcher = fetch,
 }: UseWhepPlaybackOptions): WebRTCPlaybackSnapshot & { videoRef: RefObject<HTMLVideoElement | null> } {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   const [snapshot, dispatch] = useReducer(playbackReducer, initialPlaybackState);
 
   useEffect(() => {
@@ -107,10 +108,21 @@ export function useWhepPlayback({
       peerConnection.addTransceiver("audio", { direction: "recvonly" });
 
       peerConnection.ontrack = (event) => {
+        if (!videoRef.current) return;
+
         const [stream] = event.streams;
-        if (videoRef.current && stream) {
+        if (stream) {
           videoRef.current.srcObject = stream;
+          requestVideoPlayback(videoRef.current);
+          return;
         }
+
+        if (!remoteStreamRef.current) {
+          remoteStreamRef.current = new MediaStream();
+        }
+        remoteStreamRef.current.addTrack(event.track);
+        videoRef.current.srcObject = remoteStreamRef.current;
+        requestVideoPlayback(videoRef.current);
       };
 
       peerConnection.onconnectionstatechange = () => {
@@ -135,6 +147,7 @@ export function useWhepPlayback({
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
+      remoteStreamRef.current = null;
       videoElement?.removeEventListener("loadeddata", handleFirstFrame);
     };
   }, [fetcher, isOnline, peerConnectionFactory, whepUrl]);
@@ -336,4 +349,13 @@ function createPeerConnection(iceServers: RTCIceServer[]): RTCPeerConnection {
   }
 
   return new RTCPeerConnection({ iceServers });
+}
+
+function requestVideoPlayback(videoElement: HTMLVideoElement): void {
+  try {
+    const playResult = videoElement.play();
+    void playResult?.catch(() => undefined);
+  } catch {
+    // Browser autoplay policy can reject programmatic playback; the peer connection still remains valid.
+  }
 }

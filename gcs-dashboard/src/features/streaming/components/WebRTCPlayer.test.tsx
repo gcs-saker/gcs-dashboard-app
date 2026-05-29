@@ -46,6 +46,13 @@ class MockPeerConnection {
     this.iceGatheringState = "complete";
     this.onicegatheringstatechange?.call(this as unknown as RTCPeerConnection, new Event("icegatheringstatechange"));
   }
+
+  emitRemoteTrack(streams: MediaStream[]) {
+    this.ontrack?.call(this as unknown as RTCPeerConnection, {
+      streams,
+      track: { id: "video-track-1" },
+    } as unknown as RTCTrackEvent);
+  }
 }
 
 let peerConnections: MockPeerConnection[] = [];
@@ -69,6 +76,18 @@ beforeEach(() => {
     }),
   );
   vi.stubGlobal("fetch", vi.fn(async () => successfulWhepResponse));
+  vi.stubGlobal(
+    "MediaStream",
+    vi.fn(function MockMediaStream() {
+      return {
+        addTrack: vi.fn(),
+      };
+    }),
+  );
+  Object.defineProperty(HTMLMediaElement.prototype, "play", {
+    configurable: true,
+    value: vi.fn(async () => undefined),
+  });
 });
 
 afterEach(() => {
@@ -200,6 +219,20 @@ describe("WebRTCPlayer", () => {
         firstFrameLatencyMs: expect.any(Number),
       }),
     );
+  });
+
+  test("attaches remote WHEP tracks even when the track event has no stream", async () => {
+    render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" />);
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    act(() => {
+      peerConnections[0].emitRemoteTrack([]);
+    });
+
+    const video = screen.getByTestId("webrtc-video") as HTMLVideoElement;
+    expect(MediaStream).toHaveBeenCalled();
+    expect(video.srcObject).toBeTruthy();
   });
 
   test("renders offline state without creating a peer connection", () => {
