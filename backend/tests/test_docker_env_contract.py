@@ -83,6 +83,9 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
     assert services["media-control"]["environment"]["AUTH_POLICY_BASE_URL"] == (
         "${AUTH_POLICY_BASE_URL:-http://auth-policy:8080}"
     )
+    assert services["auth-policy"]["environment"]["AUTH_POLICY_SIGNUP_INVITES"] == (
+        "${AUTH_POLICY_SIGNUP_INVITES:-A4AI01:1:co-a}"
+    )
     assert services["media-control"]["environment"]["MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID"] == (
         "${MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID:-co-a}"
     )

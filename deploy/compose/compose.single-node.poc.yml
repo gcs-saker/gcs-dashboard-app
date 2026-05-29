@@ -122,6 +122,7 @@ services:
       AUTH_POLICY_REFRESH_COOKIE_SECURE: ${AUTH_REFRESH_COOKIE_SECURE:-false}
       AUTH_POLICY_REFRESH_COOKIE_SAMESITE: ${AUTH_REFRESH_COOKIE_SAMESITE:-lax}
       AUTH_POLICY_ALLOWED_ORIGINS: ${BACKEND_CORS_ALLOW_ORIGINS:-http://localhost:8080}
+      AUTH_POLICY_SIGNUP_INVITES: ${AUTH_POLICY_SIGNUP_INVITES:-A4AI01:1:co-a}
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz >/dev/null"]

@@ -2,12 +2,14 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 
 import jakarta.servlet.http.Cookie
 import kr.co.a4ai.gcssaker.authpolicy.AuthRuntimeSettings
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuthRegistrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
+import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvite
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -33,10 +35,13 @@ class AuthControllerTest {
         allowedOrigins = setOf("http://localhost:18080"),
         operatorUsername = "operator01",
         operatorPassword = "correct-password",
+        operatorCompanyId = 1,
         operatorGroupId = "co-a",
         smokeUsername = "m7-smoke-viewer",
         smokePassword = "m7-smoke-pass",
+        smokeCompanyId = 1,
         smokeGroupId = "co-a",
+        signupInvites = listOf(SignupInvite("A4AI01", 1, GroupId("co-a"))),
     )
     private val tokenService = JwtTokenService(
         secret = settings.jwtSecret,
@@ -44,22 +49,27 @@ class AuthControllerTest {
         accessTokenTtl = Duration.ofMinutes(settings.accessTokenExpireMinutes),
         refreshTokenTtl = Duration.ofMinutes(settings.refreshTokenExpireMinutes),
     )
-    private val controller = AuthController(
-        sessions = AuthSessionService(
-            users = InMemoryAuthUserRepository(
+    private val users = InMemoryAuthUserRepository(
                 listOf(
                     AuthUser(
+                        id = 1,
                         username = "operator01",
                         email = "operator01@example.test",
                         passwordHash = passwordHasher.hash("correct-password"),
+                        companyId = 1,
                         role = UserRole.OPERATOR,
                         groupId = GroupId("co-a"),
                     ),
                 ),
-            ),
+            )
+
+    private val controller = AuthController(
+        sessions = AuthSessionService(
+            users = users,
             passwordHasher = passwordHasher,
             tokenService = tokenService,
         ),
+        registration = AuthRegistrationService(users, passwordHasher, settings.signupInvites),
         settings = settings,
     )
 
@@ -82,6 +92,86 @@ class AuthControllerTest {
         assertTrue(cookie.contains("gcs_saker_refresh="))
         assertTrue(cookie.contains("HttpOnly"))
         assertTrue(cookie.contains("SameSite=lax"))
+    }
+
+    @Test
+    fun `signup creates python-compatible user response without password fields`() {
+        val response = controller.signup(
+            request = SignupRequest(
+                username = "viewer02",
+                email = "viewer02@example.test",
+                password = "strong-password",
+                inviteCode = "A4AI01",
+                role = "viewer",
+            ),
+            origin = "http://localhost:18080",
+            referer = null,
+        )
+
+        assertEquals(HttpStatus.CREATED, response.statusCode)
+        assertEquals(
+            UserResponse(
+                id = 2,
+                username = "viewer02",
+                email = "viewer02@example.test",
+                companyId = 1,
+                role = "viewer",
+            ),
+            response.body,
+        )
+
+        val login = controller.login(LoginRequest("viewer02", "strong-password"), "http://localhost:18080", null)
+        assertEquals(HttpStatus.OK, login.statusCode)
+    }
+
+    @Test
+    fun `signup rejects duplicate username email and invalid invite code`() {
+        val duplicateUsername = assertFailsWith<ResponseStatusException> {
+            controller.signup(
+                SignupRequest(
+                    username = "operator01",
+                    email = "new@example.test",
+                    password = "strong-password",
+                    inviteCode = "A4AI01",
+                    role = "viewer",
+                ),
+                "http://localhost:18080",
+                null,
+            )
+        }
+        val duplicateEmail = assertFailsWith<ResponseStatusException> {
+            controller.signup(
+                SignupRequest(
+                    username = "viewer03",
+                    email = "operator01@example.test",
+                    password = "strong-password",
+                    inviteCode = "A4AI01",
+                    role = "viewer",
+                ),
+                "http://localhost:18080",
+                null,
+            )
+        }
+        val invalidInvite = assertFailsWith<ResponseStatusException> {
+            controller.signup(
+                SignupRequest(
+                    username = "viewer04",
+                    email = "viewer04@example.test",
+                    password = "strong-password",
+                    inviteCode = "WRONG",
+                    role = "viewer",
+                ),
+                "http://localhost:18080",
+                null,
+            )
+        }
+
+        assertEquals(HttpStatus.BAD_REQUEST, duplicateUsername.statusCode)
+        assertEquals("Username already registered", duplicateUsername.reason)
+        assertEquals(HttpStatus.BAD_REQUEST, duplicateEmail.statusCode)
+        assertEquals("Email already registered", duplicateEmail.reason)
+        assertEquals(HttpStatus.BAD_REQUEST, invalidInvite.statusCode)
+        assertEquals("Invalid invite code Input", invalidInvite.reason)
     }
 
     @Test

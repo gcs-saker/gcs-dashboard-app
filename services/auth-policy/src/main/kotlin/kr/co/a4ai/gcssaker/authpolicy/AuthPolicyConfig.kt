@@ -2,6 +2,7 @@ package kr.co.a4ai.gcssaker.authpolicy
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuthRegistrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupType
@@ -9,6 +10,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationUnit
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
+import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvite
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -41,16 +43,20 @@ class AuthPolicyConfig {
         InMemoryAuthUserRepository(
             listOf(
                 AuthUser(
+                    id = 1,
                     username = settings.operatorUsername,
                     email = "${settings.operatorUsername}@example.test",
                     passwordHash = passwordHasher.hash(settings.operatorPassword),
+                    companyId = settings.operatorCompanyId,
                     role = UserRole.OPERATOR,
                     groupId = GroupId(settings.operatorGroupId),
                 ),
                 AuthUser(
+                    id = 2,
                     username = settings.smokeUsername,
                     email = "${settings.smokeUsername}@example.test",
                     passwordHash = passwordHasher.hash(settings.smokePassword),
+                    companyId = settings.smokeCompanyId,
                     role = UserRole.VIEWER,
                     groupId = GroupId(settings.smokeGroupId),
                 ),
@@ -64,6 +70,14 @@ class AuthPolicyConfig {
         tokenService: JwtTokenService,
     ): AuthSessionService =
         AuthSessionService(users, passwordHasher, tokenService)
+
+    @Bean
+    fun authRegistrationService(
+        users: InMemoryAuthUserRepository,
+        passwordHasher: PasswordHasher,
+        settings: AuthRuntimeSettings,
+    ): AuthRegistrationService =
+        AuthRegistrationService(users, passwordHasher, settings.signupInvites)
 
     @Bean
     fun groupPolicyService(): GroupPolicyService =
@@ -88,10 +102,13 @@ data class AuthRuntimeSettings(
     val allowedOrigins: Set<String>,
     val operatorUsername: String,
     val operatorPassword: String,
+    val operatorCompanyId: Int,
     val operatorGroupId: String,
     val smokeUsername: String,
     val smokePassword: String,
+    val smokeCompanyId: Int,
     val smokeGroupId: String,
+    val signupInvites: List<SignupInvite>,
 ) {
     companion object {
         private const val DEFAULT_SECRET = "local-auth-policy-secret-at-least-32-characters"
@@ -117,14 +134,20 @@ data class AuthRuntimeSettings(
                     .ifEmpty { csvEnv(env, "BACKEND_CORS_ALLOW_ORIGINS") },
                 operatorUsername = env.getProperty("AUTH_POLICY_OPERATOR_USERNAME") ?: "operator01",
                 operatorPassword = env.getProperty("AUTH_POLICY_OPERATOR_PASSWORD") ?: "correct-password",
+                operatorCompanyId = intEnv(env, "AUTH_POLICY_OPERATOR_COMPANY_ID", 1),
                 operatorGroupId = env.getProperty("AUTH_POLICY_OPERATOR_GROUP_ID") ?: "co-a",
                 smokeUsername = env.getProperty("AUTH_POLICY_SMOKE_USERNAME") ?: "m7-smoke-viewer",
                 smokePassword = env.getProperty("AUTH_POLICY_SMOKE_PASSWORD") ?: "m7-smoke-pass",
+                smokeCompanyId = intEnv(env, "AUTH_POLICY_SMOKE_COMPANY_ID", 1),
                 smokeGroupId = env.getProperty("AUTH_POLICY_SMOKE_GROUP_ID") ?: "co-a",
+                signupInvites = signupInvites(env),
             )
 
         private fun longEnv(env: Environment, name: String, defaultValue: Long): Long =
             env.getProperty(name)?.toLongOrNull()?.takeIf { it > 0 } ?: defaultValue
+
+        private fun intEnv(env: Environment, name: String, defaultValue: Int): Int =
+            env.getProperty(name)?.toIntOrNull()?.takeIf { it > 0 } ?: defaultValue
 
         private fun boolEnv(env: Environment, name: String, defaultValue: Boolean): Boolean =
             env.getProperty(name)?.lowercase()?.let { it == "true" || it == "1" } ?: defaultValue
@@ -136,5 +159,23 @@ data class AuthRuntimeSettings(
                 ?.filter { it.isNotEmpty() }
                 ?.toSet()
                 ?: emptySet()
+
+        private fun signupInvites(env: Environment): List<SignupInvite> {
+            val raw = env.getProperty("AUTH_POLICY_SIGNUP_INVITES") ?: "A4AI01:1:co-a"
+            return raw.split(",")
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .map { item ->
+                    val parts = item.split(":")
+                    require(parts.size == 3) {
+                        "AUTH_POLICY_SIGNUP_INVITES must use code:companyId:groupId entries"
+                    }
+                    SignupInvite(
+                        code = parts[0].trim(),
+                        companyId = parts[1].trim().toInt(),
+                        groupId = GroupId(parts[2].trim()),
+                    )
+                }
+        }
     }
 }
