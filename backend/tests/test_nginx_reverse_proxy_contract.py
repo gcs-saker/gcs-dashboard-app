@@ -60,6 +60,7 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "location /api/asset/" in config
     assert "location /api/telemetry/" in config
     assert "location /api/stream/" in config
+    assert "location /stream/" in config
     assert "location /api/" in config
     assert "location /hls/" in config
     assert "location /webrtc/" in config
@@ -119,6 +120,14 @@ def test_legacy_api_prefixes_are_rewritten_to_backend_routers() -> None:
         location = extract_location(config, public_prefix)
         assert rewrite in location
         assert "proxy_pass http://gcs_backend;" in location
+
+
+def test_legacy_stream_prefix_is_kept_on_backend_for_runtime_smoke() -> None:
+    config = read_config()
+    location = extract_location(config, "/stream/")
+
+    assert "proxy_pass http://gcs_backend;" in location
+    assert "proxy_read_timeout 60s;" in location
 
 
 def test_versioned_api_prefix_stays_on_backend_api_namespace() -> None:

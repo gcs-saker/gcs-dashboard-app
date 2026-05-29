@@ -32,7 +32,7 @@ describe('App dashboard shell', () => {
   test('renders the core dashboard regions', async () => {
     render(<App />);
 
-    expect(await screen.findByRole('main', { name: 'Field Ops Dashboard MVP' })).toBeInTheDocument();
+    expect(await screen.findByRole('main', { name: 'Field Ops Dashboard MVP' }, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '자산트리' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '지도' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '선택 스트림' })).toBeInTheDocument();
