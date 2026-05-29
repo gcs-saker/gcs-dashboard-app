@@ -111,6 +111,28 @@ export function useRealtimePlayback({
   };
 }
 
+export function normalizeBrowserMediaUrl(url: string | null, pageHref?: string): string | null {
+  if (!url || typeof window === "undefined") return url;
+
+  const resolvedPageHref = pageHref ?? window.location.href;
+  const pageUrl = new URL(resolvedPageHref);
+  const mediaUrl = new URL(url, pageUrl.href);
+  const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+  const isLocalMediaUrl = localHosts.has(mediaUrl.hostname);
+  const isLocalPage = localHosts.has(pageUrl.hostname);
+
+  if (isLocalMediaUrl && !isLocalPage) {
+    return `${pageUrl.origin}${mediaUrl.pathname}${mediaUrl.search}${mediaUrl.hash}`;
+  }
+
+  if (pageUrl.protocol === "https:" && mediaUrl.protocol === "http:" && mediaUrl.hostname === pageUrl.hostname) {
+    mediaUrl.protocol = "https:";
+    return mediaUrl.toString();
+  }
+
+  return url;
+}
+
 function realtimeReducer(state: RealtimeState, action: RealtimeAction): RealtimeState {
   switch (action.type) {
     case "loading":
@@ -120,13 +142,13 @@ function realtimeReducer(state: RealtimeState, action: RealtimeAction): Realtime
     case "loaded":
       return {
         ...state,
-        mode: action.playback.playbackUrls.webrtc ? "webrtc" : "hls",
+        mode: normalizeBrowserMediaUrl(action.playback.playbackUrls.webrtc) ? "webrtc" : "hls",
         streamStatus: action.playback.status,
         errorMessage: null,
-        playback: action.playback,
+        playback: normalizePlaybackResponse(action.playback),
         reconnectDelayMs: null,
         webrtcRetryAttempt: 0,
-        fallbackReason: action.playback.playbackUrls.webrtc
+        fallbackReason: normalizeBrowserMediaUrl(action.playback.playbackUrls.webrtc)
           ? initialState.fallbackReason
           : "WebRTC URL is unavailable. Playing HLS fallback.",
       };
@@ -190,6 +212,16 @@ function realtimeReducer(state: RealtimeState, action: RealtimeAction): Realtime
         errorMessage: action.message,
       };
   }
+}
+
+function normalizePlaybackResponse(playback: StreamPlaybackResponse): StreamPlaybackResponse {
+  return {
+    ...playback,
+    playbackUrls: {
+      webrtc: normalizeBrowserMediaUrl(playback.playbackUrls.webrtc),
+      hls: normalizeBrowserMediaUrl(playback.playbackUrls.hls),
+    },
+  };
 }
 
 async function fetchPlayback(
