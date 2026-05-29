@@ -4,6 +4,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="check"
 EDGE_BASE_URL="${EDGE_BASE_URL:-http://127.0.0.1:18080}"
+STREAM_API_BASE_PATH="${STREAM_API_BASE_PATH:-/media-control/api/v1}"
 BACKEND_CONTAINER="${BACKEND_CONTAINER:-gcs-saker-arch-poc-backend-1}"
 SEED_SMOKE_USER="${SEED_SMOKE_USER:-1}"
 SMOKE_USERNAME="${SMOKE_USERNAME:-m7-smoke-viewer}"
@@ -21,6 +22,7 @@ Modes:
 
 Environment:
   EDGE_BASE_URL  Default: http://127.0.0.1:18080
+  STREAM_API_BASE_PATH  Default: /media-control/api/v1
   BACKEND_CONTAINER  Default: gcs-saker-arch-poc-backend-1
   SEED_SMOKE_USER    Seed the runtime DB before login. Default: 1
   SMOKE_USERNAME     Default: m7-smoke-viewer
@@ -101,7 +103,7 @@ run_live() {
   local playback_response
   playback_response="$(curl -fsS \
     -H "Authorization: Bearer ${access_token}" \
-    "${EDGE_BASE_URL}/api/v1/streams/${SMOKE_STREAM_ID}/playback")"
+    "${EDGE_BASE_URL}${STREAM_API_BASE_PATH}/streams/${SMOKE_STREAM_ID}/playback")"
   local whep_url
   whep_url="$(EDGE_BASE_URL="$EDGE_BASE_URL" python3 -c '
 import json

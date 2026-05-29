@@ -31,10 +31,19 @@ type pathListResponse struct {
 }
 
 type pathItem struct {
-	Name        string `json:"name"`
-	Ready       bool   `json:"ready"`
-	Source      string `json:"source"`
-	ReaderCount int    `json:"readerCount"`
+	Name        string       `json:"name"`
+	Ready       bool         `json:"ready"`
+	Source      pathSource   `json:"source"`
+	ReaderCount int          `json:"readerCount"`
+	Readers     []pathReader `json:"readers"`
+}
+
+type pathSource struct {
+	Type string `json:"type"`
+}
+
+type pathReader struct {
+	Type string `json:"type"`
 }
 
 func (c Client) ListStreams(ctx context.Context) ([]domain.StreamDescriptor, error) {
@@ -63,17 +72,24 @@ func (c Client) ListStreams(ctx context.Context) ([]domain.StreamDescriptor, err
 		if err != nil {
 			return nil, err
 		}
-		status := domain.StreamStatusIdle
+		status := domain.StreamStatusRegistered
 		if item.Ready {
-			status = domain.StreamStatusReady
+			status = domain.StreamStatusOnline
 		}
 		streams = append(streams, domain.StreamDescriptor{
 			Path:        path,
 			Ready:       item.Ready,
-			Source:      item.Source,
+			Source:      item.Source.Type,
 			Status:      status,
-			ReaderCount: item.ReaderCount,
+			ReaderCount: item.readerCount(),
 		})
 	}
 	return streams, nil
+}
+
+func (i pathItem) readerCount() int {
+	if i.ReaderCount > 0 {
+		return i.ReaderCount
+	}
+	return len(i.Readers)
 }

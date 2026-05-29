@@ -12,7 +12,7 @@ func TestListStreamsMapsMediaMTXPaths(t *testing.T) {
 		if r.URL.Path != "/v3/paths/list" {
 			t.Fatalf("unexpected path %s", r.URL.Path)
 		}
-		_, _ = w.Write([]byte(`{"items":[{"name":"raw/local/webcam","ready":true,"source":"publisher","readerCount":2}]}`))
+		_, _ = w.Write([]byte(`{"items":[{"name":"raw/local/webcam","ready":true,"source":{"type":"rtspSession","id":"session-1"},"readers":[{"type":"webRTCSession"},{"type":"hlsMuxer"}]}]}`))
 	}))
 	defer server.Close()
 
@@ -24,7 +24,7 @@ func TestListStreamsMapsMediaMTXPaths(t *testing.T) {
 	if len(streams) != 1 {
 		t.Fatalf("expected one stream, got %d", len(streams))
 	}
-	if !streams[0].Ready || streams[0].ReaderCount != 2 {
+	if !streams[0].Ready || streams[0].ReaderCount != 2 || streams[0].Source != "rtspSession" {
 		t.Fatalf("unexpected stream descriptor: %+v", streams[0])
 	}
 }

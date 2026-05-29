@@ -1,4 +1,4 @@
-import { apiV1Url, backendRootUrl } from "../../config";
+import { backendRootUrl, streamApiV1Url } from "../../config";
 import { AuthApiError, authenticatedFetch } from "../auth/authApi";
 
 export type DashboardServerHealth = "online" | "degraded" | "error";
@@ -31,7 +31,7 @@ export async function fetchDashboardServerStatus(
     const [healthResponse, readyResponse, streamResponse] = await Promise.all([
       probe(fetcher, "/healthz"),
       probe(fetcher, "/readyz"),
-      authenticatedFetch(apiV1Url("/streams"), { headers: { Accept: "application/json" } }, fetcher),
+      authenticatedFetch(streamApiV1Url("/streams"), { headers: { Accept: "application/json" } }, fetcher),
     ]);
     const latencyMs = Math.max(1, Math.round(performance.now() - startedAt));
     if (streamResponse.status === 401) {

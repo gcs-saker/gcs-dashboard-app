@@ -5,7 +5,7 @@ import type {
   DashboardStreamSlot,
   DashboardStreamStatus,
 } from "./streamTypes";
-import { apiV1Url } from "../../config";
+import { streamApiV1Url } from "../../config";
 import { AuthApiError, authenticatedFetch } from "../auth/authApi";
 
 export type StreamDeviceGeometry = DashboardStreamGeometry;
@@ -145,7 +145,7 @@ export function disconnectStreamSlot(stream: DashboardStreamSlot): DashboardStre
 
 export async function fetchStreamDeviceOptions(fetcher: typeof fetch = fetch): Promise<StreamDeviceOption[]> {
   const response = await authenticatedFetch(
-    apiV1Url("/streams"),
+      streamApiV1Url("/streams"),
     {
       headers: { Accept: "application/json" },
     },

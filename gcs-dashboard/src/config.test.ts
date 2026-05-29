@@ -7,6 +7,7 @@ import {
   buildApiV1Url,
   buildAuthUrl,
   normalizeLocalDevBaseUrl,
+  streamApiV1Url,
   WEBRTC_ICE_SERVERS,
 } from "./config";
 
@@ -15,6 +16,7 @@ describe("config API URL helpers", () => {
     expect(apiV1Url("/streams/raw.sample.front/playback")).toBe(
       "/api/v1/streams/raw.sample.front/playback",
     );
+    expect(streamApiV1Url("/streams")).toBe("/api/v1/streams");
   });
 
   test("adds the /api/v1 prefix when VITE_API_BASE_URL points to the backend origin", () => {
@@ -26,6 +28,12 @@ describe("config API URL helpers", () => {
   test("does not duplicate /api when the configured base already includes it", () => {
     expect(buildApiV1Url("https://gcs.example.test/api", "streams")).toBe(
       "https://gcs.example.test/api/v1/streams",
+    );
+  });
+
+  test("can point stream endpoints to the Go media-control cutover path", () => {
+    expect(buildApiV1Url("/media-control", "/streams/raw.local.webcam/playback")).toBe(
+      "/media-control/api/v1/streams/raw.local.webcam/playback",
     );
   });
 

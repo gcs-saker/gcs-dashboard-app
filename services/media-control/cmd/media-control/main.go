@@ -18,6 +18,13 @@ func main() {
 	turnUsername := getenv("TURN_USERNAME", "gcs-turn")
 	turnPassword := getenv("TURN_PASSWORD", "replace-with-secret")
 	listenAddress := getenv("MEDIA_CONTROL_LISTEN_ADDR", ":8081")
+	playback, err := domain.NewPlaybackURLBuilder(
+		getenv("MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL", "http://localhost:8080/webrtc"),
+		getenv("MEDIA_CONTROL_PUBLIC_HLS_BASE_URL", "http://localhost:8080/hls"),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	iceServers := mustIceServers([]iceServerConfig{
 		{URL: getenv("MEDIA_CONTROL_STUN_URL", "stun:turn-primary:3478"), Kind: domain.IceServerSTUN, Healthy: true},
@@ -28,6 +35,7 @@ func main() {
 	server := httpapi.NewServer(
 		mediamtx.NewClient(mediaMTXBaseURL, &http.Client{Timeout: 3 * time.Second}),
 		turn.NewRegistry(iceServers, turn.StaticProbe{}),
+		playback,
 	)
 
 	log.Printf("media-control listening on %s", listenAddress)

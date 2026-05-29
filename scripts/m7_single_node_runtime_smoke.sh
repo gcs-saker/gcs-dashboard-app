@@ -92,6 +92,9 @@ apply_smoke_ports() {
   export TURN_SECONDARY_RELAY_HOST_MAX_PORT="${GCS_SMOKE_TURN_SECONDARY_RELAY_HOST_MAX_PORT:-59200}"
   export MEDIAMTX_PUBLIC_WEBRTC_BASE_URL="${GCS_SMOKE_MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/webrtc}"
   export MEDIAMTX_PUBLIC_HLS_BASE_URL="${GCS_SMOKE_MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/hls}"
+  export MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL="${GCS_SMOKE_MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/webrtc}"
+  export MEDIA_CONTROL_PUBLIC_HLS_BASE_URL="${GCS_SMOKE_MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/hls}"
+  export VITE_STREAM_API_BASE_URL="${GCS_SMOKE_VITE_STREAM_API_BASE_URL:-/media-control}"
   export VITE_LOCAL_WEBCAM_WHIP_URL="${GCS_SMOKE_VITE_LOCAL_WEBCAM_WHIP_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/webrtc/raw/local/webcam/whip}"
   export WEBRTC_STUN_URL="${GCS_SMOKE_WEBRTC_STUN_URL:-stun:127.0.0.1:${TURN_PRIMARY_HOST_PORT}}"
   export WEBRTC_TURN_URL="${GCS_SMOKE_WEBRTC_TURN_URL:-turn:127.0.0.1:${TURN_PRIMARY_HOST_PORT}?transport=udp}"
@@ -152,6 +155,7 @@ check_contract_text() {
   grep -q "webrtcICEServers2" "${REPO_ROOT}/deploy/mediamtx/mediamtx.closed-network.yml"
   grep -q "location /stream/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /auth-policy/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
+  grep -q "location /media-control/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /webrtc/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /hls/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
 }
@@ -200,6 +204,7 @@ run_live() {
   runtime_probe_from_edge "http://auth-policy:8080/healthz"
   runtime_probe_from_edge "http://media-control:8081/healthz"
   runtime_probe_from_edge "http://media-control:8081/v1/ice-servers"
+  runtime_probe_from_edge "http://media-control:8081/api/v1/streams/ice-servers"
   runtime_probe_from_edge "http://mediamtx:9997/v3/config/global/get"
 
   python3 "${REPO_ROOT}/scripts/turn_relay_smoke.py" \

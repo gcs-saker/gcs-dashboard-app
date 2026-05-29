@@ -139,6 +139,8 @@ services:
       MEDIAMTX_API_BASE_URL: ${MEDIAMTX_API_BASE_URL:-http://mediamtx:9997}
       TURN_USERNAME: ${TURN_USERNAME:-gcs-turn}
       TURN_PASSWORD: ${TURN_PASSWORD:?Set TURN_PASSWORD}
+      MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL: ${MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8080/webrtc}
+      MEDIA_CONTROL_PUBLIC_HLS_BASE_URL: ${MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://localhost:8080/hls}
       MEDIA_CONTROL_LISTEN_ADDR: :8081
     healthcheck:
       <<: *health_defaults
@@ -235,6 +237,7 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
         VITE_AUTH_API_BASE_URL: ${VITE_AUTH_API_BASE_URL:-/api/auth}
+        VITE_STREAM_API_BASE_URL: ${VITE_STREAM_API_BASE_URL:-/media-control}
         VITE_HLS_BASE_URL: ${VITE_HLS_BASE_URL:-/hls}
         VITE_DEFAULT_STREAM_ID: ${VITE_DEFAULT_STREAM_ID:-raw/local/webcam}
         VITE_LOCAL_WEBCAM_WHIP_URL: ${VITE_LOCAL_WEBCAM_WHIP_URL:-http://localhost:8080/webrtc/raw/local/webcam/whip}
