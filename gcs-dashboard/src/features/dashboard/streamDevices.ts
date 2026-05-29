@@ -5,7 +5,7 @@ import type {
   DashboardStreamSlot,
   DashboardStreamStatus,
 } from "./streamTypes";
-import { streamApiV1Url } from "../../config";
+import { LOCAL_WEBCAM_STREAM_ID, streamApiV1Url } from "../../config";
 import { AuthApiError, authenticatedFetch } from "../auth/authApi";
 
 export type StreamDeviceGeometry = DashboardStreamGeometry;
@@ -208,6 +208,27 @@ export function mergeStreamSlotsWithDevices(
     }));
 
   return [...nextStreams, ...discoveredStreams];
+}
+
+export function preferredSelectedStreamId(
+  currentStreamId: string,
+  streams: DashboardStreamSlot[],
+  devices: StreamDeviceOption[],
+): string {
+  if (devices.length === 0) return currentStreamId;
+
+  const currentStream = streams.find((stream) => stream.id === currentStreamId);
+  const currentDevice = devices.find((device) => device.streamPath === currentStream?.streamPath);
+  if (currentDevice?.status === "online") return currentStreamId;
+
+  const preferredDevice =
+    devices.find((device) => device.streamPath === LOCAL_WEBCAM_STREAM_ID && device.status === "online") ??
+    devices.find((device) => device.status === "online") ??
+    devices.find((device) => device.streamPath === LOCAL_WEBCAM_STREAM_ID) ??
+    devices[0];
+
+  const matchingSlot = streams.find((stream) => stream.streamPath === preferredDevice.streamPath);
+  return matchingSlot?.id ?? preferredDevice.streamPath;
 }
 
 function streamDeviceFromRegistryItem(item: StreamRegistryResponse): StreamDeviceOption {

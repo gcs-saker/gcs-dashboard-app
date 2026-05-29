@@ -7,6 +7,7 @@ import {
   fetchStreamDeviceOptions,
   mergeStreamSlotsWithDevices,
   MOCK_STREAM_DEVICES,
+  preferredSelectedStreamId,
 } from "./streamDevices";
 
 describe("streamDevices", () => {
@@ -137,5 +138,30 @@ describe("streamDevices", () => {
 
     expect(secondMerge.filter((stream) => stream.streamPath === "raw.local.webcam")).toHaveLength(1);
     expect(secondMerge).toHaveLength(firstMerge.length);
+  });
+
+  test("prefers the live local webcam stream when the selected sample stream is not in the registry", () => {
+    const liveWebcamDevice = {
+      ...MOCK_STREAM_DEVICES[3],
+      status: "online" as const,
+    };
+    const merged = mergeStreamSlotsWithDevices(DEFAULT_DASHBOARD_STREAMS, [liveWebcamDevice]);
+
+    expect(preferredSelectedStreamId("raw.sample.front", merged, [liveWebcamDevice])).toBe("raw.local.webcam");
+  });
+
+  test("keeps the current selection when that stream is online in the registry", () => {
+    const liveSampleDevice = {
+      ...MOCK_STREAM_DEVICES[0],
+      status: "online" as const,
+    };
+    const liveWebcamDevice = {
+      ...MOCK_STREAM_DEVICES[3],
+      status: "online" as const,
+    };
+
+    expect(
+      preferredSelectedStreamId("raw.sample.front", DEFAULT_DASHBOARD_STREAMS, [liveSampleDevice, liveWebcamDevice]),
+    ).toBe("raw.sample.front");
   });
 });
