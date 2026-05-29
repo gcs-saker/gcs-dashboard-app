@@ -98,6 +98,15 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
     assert services["media-control"]["environment"]["MEDIA_CONTROL_PUBLIC_HLS_BASE_URL"] == (
         "${MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://localhost:8080/hls}"
     )
+    assert services["media-control"]["environment"]["MEDIA_CONTROL_STUN_URL"] == (
+        "${MEDIA_CONTROL_STUN_URL:-stun:localhost:3478}"
+    )
+    assert services["media-control"]["environment"]["MEDIA_CONTROL_TURN_PRIMARY_URL"] == (
+        "${MEDIA_CONTROL_TURN_PRIMARY_URL:-turn:localhost:3478?transport=udp}"
+    )
+    assert services["media-control"]["environment"]["MEDIA_CONTROL_TURN_SECONDARY_URL"] == (
+        "${MEDIA_CONTROL_TURN_SECONDARY_URL:-turn:localhost:3479?transport=udp}"
+    )
 
 
 def test_single_node_keeps_management_ports_local_but_allows_webrtc_ice_public_bind_override() -> None:
