@@ -85,12 +85,16 @@ export function useWhepPlayback({
     });
 
     async function startWhepPlayback(): Promise<void> {
+      reportWhepDebug("start", resolvedWhepUrl);
       const iceServers = peerConnectionFactory ? WEBRTC_ICE_SERVERS : await loadWebRtcIceServers(fetcher);
       if (disposed || abortController.signal.aborted) return;
+      reportWhepDebug("ice-loaded", resolvedWhepUrl, { count: String(iceServers.length) });
 
       try {
-        peerConnection = peerConnectionFactory?.() ?? createPeerConnection(iceServers);
+        peerConnection = peerConnectionFactory?.() ?? createPeerConnection(iceServers, resolvedWhepUrl);
+        reportWhepDebug("pc-created", resolvedWhepUrl);
       } catch (error) {
+        reportWhepDebug("pc-error", resolvedWhepUrl, { message: messageFromUnknown(error) });
         dispatch({
           type: "unsupported",
           message: error instanceof Error ? error.message : "WebRTC is not supported",
@@ -283,18 +287,24 @@ async function connectWithWhep(
   signal: AbortSignal,
 ): Promise<void> {
   const offer = await peerConnection.createOffer();
+  reportWhepDebug("offer-created", whepUrl);
   await peerConnection.setLocalDescription(offer);
+  reportWhepDebug("local-description-set", whepUrl);
   await waitForIceGatheringComplete(peerConnection, signal, ICE_GATHERING_TIMEOUT_MS);
+  reportWhepDebug("ice-wait-done", whepUrl, { state: peerConnection.iceGatheringState });
 
   if (signal.aborted) {
+    reportWhepDebug("aborted-before-post", whepUrl);
     throw new Error("WebRTC playback was aborted");
   }
 
   const localDescription = peerConnection.localDescription;
   if (!localDescription?.sdp) {
+    reportWhepDebug("missing-local-sdp", whepUrl);
     throw new Error("WebRTC local offer SDP was not created");
   }
 
+  reportWhepDebug("whep-post-start", whepUrl, { candidates: String(countSdpCandidates(localDescription.sdp)) });
   const response = await fetcher(whepUrl, {
     method: "POST",
     headers: {
@@ -304,6 +314,7 @@ async function connectWithWhep(
     body: localDescription.sdp,
     signal,
   });
+  reportWhepDebug("whep-post-response", whepUrl, { status: String(response.status) });
 
   if (!response.ok) {
     throw new Error(`WHEP request failed with ${response.status}`);
@@ -311,6 +322,7 @@ async function connectWithWhep(
 
   const answerSdp = await response.text();
   await peerConnection.setRemoteDescription({ type: "answer", sdp: answerSdp });
+  reportWhepDebug("remote-description-set", whepUrl, { candidates: String(countSdpCandidates(answerSdp)) });
 }
 
 function waitForIceGatheringComplete(
@@ -343,12 +355,24 @@ function waitForIceGatheringComplete(
   });
 }
 
-function createPeerConnection(iceServers: RTCIceServer[]): RTCPeerConnection {
+function createPeerConnection(iceServers: RTCIceServer[], whepUrl: string): RTCPeerConnection {
   if (typeof RTCPeerConnection === "undefined") {
     throw new Error("WebRTC is not supported");
   }
 
-  return new RTCPeerConnection({ iceServers });
+  try {
+    return new RTCPeerConnection({ iceServers });
+  } catch (primaryError) {
+    reportWhepDebug("pc-primary-config-failed", whepUrl, { message: messageFromUnknown(primaryError) });
+  }
+
+  try {
+    return new RTCPeerConnection({ iceServers: WEBRTC_ICE_SERVERS });
+  } catch (fallbackError) {
+    reportWhepDebug("pc-fallback-config-failed", whepUrl, { message: messageFromUnknown(fallbackError) });
+  }
+
+  return new RTCPeerConnection();
 }
 
 function requestVideoPlayback(videoElement: HTMLVideoElement): void {
@@ -358,4 +382,41 @@ function requestVideoPlayback(videoElement: HTMLVideoElement): void {
   } catch {
     // Browser autoplay policy can reject programmatic playback; the peer connection still remains valid.
   }
+}
+
+function countSdpCandidates(sdp: string): number {
+  return sdp.split(/\r?\n/).filter((line) => line.startsWith("a=candidate:")).length;
+}
+
+function reportWhepDebug(stage: string, whepUrl: string, fields: Record<string, string> = {}): void {
+  if (typeof window === "undefined") return;
+
+  const params = new URLSearchParams({
+    stage,
+    stream: streamPathFromWhepUrl(whepUrl),
+    ...fields,
+  });
+  const url = `/client-debug/webrtc?${params.toString()}`;
+
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(url);
+    }
+  } catch {
+    // Debug reporting must never interrupt playback.
+  }
+}
+
+function streamPathFromWhepUrl(whepUrl: string): string {
+  try {
+    const path = new URL(whepUrl, window.location.href).pathname;
+    return path.replace(/^\/webrtc\//, "").replace(/\/whep$/, "");
+  } catch {
+    return "unknown";
+  }
+}
+
+function messageFromUnknown(error: unknown): string {
+  if (error instanceof Error) return error.message.slice(0, 160);
+  return String(error).slice(0, 160);
 }
