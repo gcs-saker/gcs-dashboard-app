@@ -62,6 +62,7 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "location /media-control/" in config
     assert "location /api/control/" in config
     assert "location /api/asset/" in config
+    assert "location = /api/telemetry/all" in config
     assert "location /api/telemetry/" in config
     assert "location /api/stream/" in config
     assert "location /stream/" in config
@@ -134,13 +135,22 @@ def test_legacy_api_prefixes_are_rewritten_to_backend_routers() -> None:
 
     expected_rewrites = {
         "/api/control/": "rewrite ^/api/control/(.*)$ /control/$1 break;",
-        "/api/asset/": "rewrite ^/api/asset/(.*)$ /asset/$1 break;",
         "/api/telemetry/": "rewrite ^/api/telemetry/(.*)$ /telemetry/$1 break;",
     }
     for public_prefix, rewrite in expected_rewrites.items():
         location = extract_location(config, public_prefix)
         assert rewrite in location
         assert "proxy_pass http://gcs_backend;" in location
+
+
+def test_read_only_asset_and_telemetry_paths_are_cut_over_to_auth_policy() -> None:
+    config = read_config()
+    asset_location = extract_location(config, "/api/asset/")
+    telemetry_all_location = extract_exact_location(config, "/api/telemetry/all")
+
+    assert "rewrite ^/api/asset/(.*)$ /asset/$1 break;" in asset_location
+    assert "proxy_pass http://gcs_auth_policy;" in asset_location
+    assert "proxy_pass http://gcs_auth_policy/telemetry/all;" in telemetry_all_location
 
 
 def test_legacy_stream_prefix_is_cut_over_to_go_media_control_for_runtime_smoke() -> None:

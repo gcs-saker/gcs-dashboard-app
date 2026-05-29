@@ -7,15 +7,21 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupType
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
+import kr.co.a4ai.gcssaker.authpolicy.domain.AssetReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationUnit
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvite
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
+import kr.co.a4ai.gcssaker.authpolicy.api.BearerPrincipalResolver
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.env.Environment
 import java.time.Duration
+import java.time.Instant
 
 @Configuration
 class AuthPolicyConfig {
@@ -72,6 +78,10 @@ class AuthPolicyConfig {
         AuthSessionService(users, passwordHasher, tokenService)
 
     @Bean
+    fun bearerPrincipalResolver(sessions: AuthSessionService): BearerPrincipalResolver =
+        BearerPrincipalResolver(sessions)
+
+    @Bean
     fun authRegistrationService(
         users: InMemoryAuthUserRepository,
         passwordHasher: PasswordHasher,
@@ -89,6 +99,48 @@ class AuthPolicyConfig {
                 OrganizationUnit(GroupId("plt-b-1"), "B Company 1 Platoon", GroupType.PLATOON, GroupId("co-b")),
             ),
         )
+
+    @Bean
+    fun operationalReadRepository(): OperationalReadRepository {
+        val group = GroupId("co-a")
+        val timestamp = Instant.parse("2026-05-29T00:00:00Z")
+        val sampleGateway = "raw.sample.front"
+        val sampleAsset = AssetReadModel(
+            id = 1,
+            cid = "A4AI-GCS",
+            uuid = "DRN-01",
+            companyId = 1,
+            type = "drone",
+            name = "DRN-01",
+            description = "M7 PoC telemetry-linked unmanned asset",
+            imageUrl = null,
+            status = "active",
+            createdAt = timestamp,
+            updatedAt = timestamp,
+            groupId = group,
+        )
+        return InMemoryOperationalReadRepository(
+            telemetry = listOf(
+                TelemetryReadModel(
+                    uuid = sampleGateway,
+                    latitude = 35.8714,
+                    longitude = 128.6014,
+                    altitude = 120.0,
+                    magneticX = 12.4,
+                    magneticY = -3.2,
+                    magneticZ = 42.1,
+                    soc = "78",
+                    phoneBatterySOC = 91.0,
+                    velocity = 8.5,
+                    totalDistance = 1520.0,
+                    epochTime = "00:10:23",
+                    portDistance = 250.0,
+                    groupId = group,
+                ),
+            ),
+            assetsByGateway = mapOf(sampleGateway to listOf(sampleAsset)),
+        )
+    }
 }
 
 data class AuthRuntimeSettings(

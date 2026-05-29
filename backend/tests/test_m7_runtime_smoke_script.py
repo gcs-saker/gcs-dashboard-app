@@ -42,11 +42,14 @@ def test_m7_runtime_smoke_ports_override_public_playback_urls():
     assert "http://127.0.0.1:${PUBLIC_HTTP_PORT},http://localhost:${PUBLIC_HTTP_PORT}" in script
 
 
-def test_m7_runtime_smoke_requires_backend_stream_status_payload():
+def test_m7_runtime_smoke_requires_backend_stream_status_payload_and_read_model_probe():
     script = (REPO_ROOT / "scripts" / "m7_single_node_runtime_smoke.sh").read_text(encoding="utf-8")
 
     assert "wait_for_stream_status" in script
     assert '"stream":"ready"' in script
+    assert "login_access_token" in script
+    assert "/api/telemetry/all" in script
+    assert "/api/asset/raw.sample.front" in script
     assert "compose restart edge" in script
-    assert "auth-policy health/ready" in script
+    assert "auth-policy health/ready/telemetry/asset reads" in script
     assert "media-control stream status" in script

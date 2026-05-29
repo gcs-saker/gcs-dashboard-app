@@ -142,6 +142,18 @@ wait_for_stream_status() {
   return 1
 }
 
+login_access_token() {
+  local edge_base_url="$1"
+  local username="${AUTH_POLICY_OPERATOR_USERNAME:-operator01}"
+  local password="${AUTH_POLICY_OPERATOR_PASSWORD:-correct-password}"
+
+  curl -fsS \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"${username}\",\"password\":\"${password}\"}" \
+    "${edge_base_url}/auth-policy/auth/login" \
+    | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])'
+}
+
 check_required_files() {
   test -f "$COMPOSE_FILE"
   test -f "$ENV_FILE"
@@ -160,6 +172,8 @@ check_contract_text() {
   grep -q "location /stream/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /auth-policy/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /media-control/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
+  grep -q "location /api/asset/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
+  grep -q "location = /api/telemetry/all" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /webrtc/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /hls/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
 }
@@ -205,6 +219,11 @@ run_live() {
   wait_for_http "${edge_base_url}/readyz"
   wait_for_stream_status "${edge_base_url}/stream/status"
 
+  local access_token
+  access_token="$(login_access_token "$edge_base_url")"
+  curl -fsS -H "Authorization: Bearer ${access_token}" "${edge_base_url}/api/telemetry/all" | grep -q "raw.sample.front"
+  curl -fsS -H "Authorization: Bearer ${access_token}" "${edge_base_url}/api/asset/raw.sample.front" | grep -q "DRN-01"
+
   runtime_probe_from_edge "http://auth-policy:8080/healthz"
   runtime_probe_from_edge "http://media-control:8081/healthz"
   runtime_probe_from_edge "http://media-control:8081/v1/ice-servers"
@@ -228,7 +247,7 @@ run_live() {
 
   echo "M7 single-node runtime smoke run passed"
   echo "Edge URL: ${edge_base_url}"
-  echo "Verified: auth-policy health/ready, media-control stream status/ICE servers, MediaMTX API, TURN primary/secondary allocation"
+  echo "Verified: auth-policy health/ready/telemetry/asset reads, media-control stream status/ICE servers, MediaMTX API, TURN primary/secondary allocation"
 
   if [[ "$STOP_STACK" == "1" ]]; then
     compose down
