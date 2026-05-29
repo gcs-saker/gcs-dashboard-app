@@ -53,7 +53,7 @@ flowchart LR
 7. `dashboard`
 8. `edge`
 
-`auth-policy`는 M7-02에서 Spring/Kotlin skeleton으로 구현한다. `media-control`은 M7-03에서 실제 Go service로 전환한다.
+`auth-policy`는 M7-02에서 Spring/Kotlin skeleton으로 구현한다. `media-control`은 M7-03에서 Go skeleton으로 구현하며, MediaMTX/coturn adapter와 stream/ICE contract를 담당한다.
 
 ## 네트워크
 

@@ -126,12 +126,27 @@ services:
       - control-net
 
   media-control:
-    image: alpine:3.20
+    image: ${MEDIA_CONTROL_IMAGE:-gcs-saker-media-control:arch-poc}
+    build:
+      context: ../../services/media-control
     profiles: ["future-services"]
-    command: ["sh", "-c", "echo 'Go media-control placeholder for M7-03'; sleep infinity"]
+    env_file: *service_env_files
+    environment:
+      MEDIAMTX_API_BASE_URL: ${MEDIAMTX_API_BASE_URL:-http://mediamtx:9997}
+      TURN_USERNAME: ${TURN_USERNAME:-gcs-turn}
+      TURN_PASSWORD: ${TURN_PASSWORD:?Set TURN_PASSWORD}
+      MEDIA_CONTROL_LISTEN_ADDR: :8081
     healthcheck:
       <<: *health_defaults
-      test: ["CMD-SHELL", "exit 0"]
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8081/healthz >/dev/null"]
+    depends_on:
+      mediamtx:
+        condition: service_healthy
+      turn-primary:
+        condition: service_started
+      turn-secondary:
+        condition: service_started
+    restart: unless-stopped
     networks:
       - control-net
       - media-net
