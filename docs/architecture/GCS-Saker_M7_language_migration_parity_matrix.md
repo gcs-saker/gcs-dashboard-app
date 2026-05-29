@@ -39,3 +39,5 @@ Python legacy backend에서 제공하던 기능이 Spring/Kotlin 또는 Go 경�
 ## 구현 전 기능의 처리 기준
 
 아직 제품 기능으로 확정되지 않은 control, AI mock, metrics는 M7 언어 전환 완료의 blocker로 보지 않는다. 이 항목들은 실제 사용자 흐름, 장비 인증, 운영 지표 요구사항이 확정되는 시점에 별도 기능 이슈로 구현한다.
+
+완료 게이트의 상세 기준은 [GCS-Saker_M7_migration_completion_gate.md](GCS-Saker_M7_migration_completion_gate.md)에 둔다.

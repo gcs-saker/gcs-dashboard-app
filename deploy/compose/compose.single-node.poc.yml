@@ -265,10 +265,12 @@ services:
         target: /etc/nginx/nginx.conf
         read_only: true
     depends_on:
-      backend:
+      auth-policy:
         condition: service_healthy
       dashboard:
         condition: service_healthy
+      media-control:
+        condition: service_started
       mediamtx:
         condition: service_started
     healthcheck:

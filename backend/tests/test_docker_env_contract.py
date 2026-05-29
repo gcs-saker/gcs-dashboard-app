@@ -100,6 +100,17 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
     )
 
 
+def test_single_node_edge_depends_on_active_cutover_services() -> None:
+    compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
+    edge_depends_on = compose["services"]["edge"]["depends_on"]
+
+    assert edge_depends_on["auth-policy"]["condition"] == "service_healthy"
+    assert edge_depends_on["dashboard"]["condition"] == "service_healthy"
+    assert edge_depends_on["media-control"]["condition"] == "service_started"
+    assert edge_depends_on["mediamtx"]["condition"] == "service_started"
+    assert "backend" not in edge_depends_on
+
+
 def test_compose_publishes_only_edge_https_by_default_for_external_ingress() -> None:
     compose = load_yaml(COMPOSE_FILE)
     services = compose["services"]

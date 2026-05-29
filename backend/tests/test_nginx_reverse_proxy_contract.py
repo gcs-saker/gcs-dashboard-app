@@ -107,6 +107,7 @@ def test_auth_proxy_rewrites_dashboard_api_auth_prefix_to_backend_auth_router() 
     config = read_config()
     auth_location = extract_location(config, "/api/auth/")
 
+    assert "Legacy fallback only" in auth_location
     assert "rewrite ^/api/auth/(.*)$ /auth/$1 break;" in auth_location
     assert "proxy_pass http://gcs_backend;" in auth_location
     assert "proxy_read_timeout 60s;" in auth_location
@@ -140,6 +141,14 @@ def test_legacy_api_prefixes_are_rewritten_to_backend_routers() -> None:
         location = extract_location(config, public_prefix)
         assert rewrite in location
         assert "proxy_pass http://gcs_backend;" in location
+
+
+def test_legacy_control_prefix_is_marked_as_future_command_fallback() -> None:
+    config = read_config()
+    control_location = extract_location(config, "/api/control/")
+
+    assert "Future/legacy command fallback" in control_location
+    assert "proxy_pass http://gcs_backend;" in control_location
 
 
 def test_read_only_asset_and_telemetry_paths_are_cut_over_to_auth_policy() -> None:
