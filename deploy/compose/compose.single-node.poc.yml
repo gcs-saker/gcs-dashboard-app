@@ -109,12 +109,19 @@ services:
       - media-net
 
   auth-policy:
-    image: eclipse-temurin:21-jre
+    image: ${AUTH_POLICY_IMAGE:-gcs-saker-auth-policy:arch-poc}
+    build:
+      context: ../../services/auth-policy
     profiles: ["future-services"]
-    command: ["sh", "-c", "echo 'Spring/Kotlin auth-policy placeholder for M7-02'; sleep infinity"]
+    env_file: *service_env_files
+    environment:
+      AUTH_POLICY_JWT_ISSUER: ${AUTH_JWT_ISSUER:-gcs-saker}
+      AUTH_POLICY_JWT_SECRET: ${AUTH_JWT_SECRET:?Set AUTH_JWT_SECRET}
+      AUTH_POLICY_ACCESS_TOKEN_EXPIRE_MINUTES: ${AUTH_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
     healthcheck:
       <<: *health_defaults
-      test: ["CMD-SHELL", "exit 0"]
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz >/dev/null"]
+    restart: unless-stopped
     networks:
       - control-net
 
