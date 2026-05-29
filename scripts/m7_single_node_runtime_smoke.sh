@@ -221,7 +221,14 @@ run_live() {
 
   local access_token
   access_token="$(login_access_token "$edge_base_url")"
+  curl -fsS \
+    -H "Authorization: Bearer ${access_token}" \
+    -H "Content-Type: application/json" \
+    -d '{"uuid":"raw.smoke.telemetry","latitude":35.882,"longitude":128.61,"altitude":42,"magneticX":1,"magneticY":2,"magneticZ":3,"soc":"88","phoneBatterySOC":77,"velocity":4.5,"totalDistance":120,"epochTime":65,"portDistance":9}' \
+    "${edge_base_url}/api/telemetry/" \
+    | grep -q "raw.smoke.telemetry"
   curl -fsS -H "Authorization: Bearer ${access_token}" "${edge_base_url}/api/telemetry/all" | grep -q "raw.sample.front"
+  curl -fsS -H "Authorization: Bearer ${access_token}" "${edge_base_url}/api/telemetry/all" | grep -q "raw.smoke.telemetry"
   curl -fsS -H "Authorization: Bearer ${access_token}" "${edge_base_url}/api/asset/raw.sample.front" | grep -q "DRN-01"
 
   runtime_probe_from_edge "http://auth-policy:8080/healthz"
@@ -247,7 +254,7 @@ run_live() {
 
   echo "M7 single-node runtime smoke run passed"
   echo "Edge URL: ${edge_base_url}"
-  echo "Verified: auth-policy health/ready/telemetry/asset reads, media-control stream status/ICE servers, MediaMTX API, TURN primary/secondary allocation"
+  echo "Verified: auth-policy health/ready/telemetry ingest-read/asset reads, media-control stream status/ICE servers, MediaMTX API, TURN primary/secondary allocation"
 
   if [[ "$STOP_STACK" == "1" ]]; then
     compose down

@@ -48,8 +48,10 @@ def test_m7_runtime_smoke_requires_backend_stream_status_payload_and_read_model_
     assert "wait_for_stream_status" in script
     assert '"stream":"ready"' in script
     assert "login_access_token" in script
+    assert '"raw.smoke.telemetry"' in script
     assert "/api/telemetry/all" in script
+    assert "/api/telemetry/" in script
     assert "/api/asset/raw.sample.front" in script
     assert "compose restart edge" in script
-    assert "auth-policy health/ready/telemetry/asset reads" in script
+    assert "auth-policy health/ready/telemetry ingest-read/asset reads" in script
     assert "media-control stream status" in script
