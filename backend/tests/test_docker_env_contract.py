@@ -7,6 +7,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "docker_env_check.py"
 COMPOSE_FILE = REPO_ROOT / "gcs-dashboard" / "docker-compose.yml"
+SINGLE_NODE_COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
 MEDIAMTX_CONFIG = REPO_ROOT / "gcs-dashboard" / "mediamtx.yml"
 DASHBOARD_DOCKERFILE = REPO_ROOT / "gcs-dashboard" / "Dockerfile"
 DASHBOARD_DOCKERIGNORE = REPO_ROOT / "gcs-dashboard" / ".dockerignore"
@@ -50,6 +51,7 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     )
     assert services["backend"]["environment"]["WEBRTC_TURN_URL"] == "${WEBRTC_TURN_URL:-}"
     assert services["nginx"]["build"]["args"]["VITE_API_BASE_URL"] == "${VITE_API_BASE_URL:-/api}"
+    assert services["nginx"]["build"]["args"]["VITE_AUTH_API_BASE_URL"] == "${VITE_AUTH_API_BASE_URL:-/api/auth}"
     assert services["nginx"]["build"]["args"]["VITE_HLS_BASE_URL"] == "${VITE_HLS_BASE_URL:-/hls}"
     assert services["nginx"]["build"]["args"]["VITE_LOCAL_WEBCAM_WHIP_URL"].startswith(
         "${VITE_LOCAL_WEBCAM_WHIP_URL:"
@@ -57,6 +59,14 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["nginx"]["build"]["args"]["VITE_WEBRTC_STUN_URL"] == (
         "${VITE_WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
     )
+
+
+def test_single_node_mqtt_healthcheck_uses_container_available_probe() -> None:
+    compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
+    mqtt_healthcheck = compose["services"]["mqtt"]["healthcheck"]["test"]
+
+    assert mqtt_healthcheck == ["CMD-SHELL", "nc -z 127.0.0.1 1883"]
+    assert "/dev/tcp" not in " ".join(mqtt_healthcheck)
 
 
 def test_compose_publishes_only_edge_https_by_default_for_external_ingress() -> None:
@@ -125,6 +135,7 @@ def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
 
     assert "FROM node:22 AS builder" in dockerfile
     assert "ARG VITE_API_BASE_URL=/api" in dockerfile
+    assert "ARG VITE_AUTH_API_BASE_URL=/api/auth" in dockerfile
     assert "ARG VITE_HLS_BASE_URL=/hls" in dockerfile
     assert "ARG VITE_LOCAL_WEBCAM_WHIP_URL=https://localhost/webrtc/raw/local/webcam/whip" in dockerfile
     assert "ARG VITE_WEBRTC_STUN_URL=stun:stun.l.google.com:19302" in dockerfile

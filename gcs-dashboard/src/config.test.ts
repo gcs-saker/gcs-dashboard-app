@@ -1,6 +1,14 @@
 import { describe, expect, test } from "vitest";
 
-import { apiV1Url, backendRootUrl, buildApiV1Url, normalizeLocalDevBaseUrl, WEBRTC_ICE_SERVERS } from "./config";
+import {
+  apiV1Url,
+  authUrl,
+  backendRootUrl,
+  buildApiV1Url,
+  buildAuthUrl,
+  normalizeLocalDevBaseUrl,
+  WEBRTC_ICE_SERVERS,
+} from "./config";
 
 describe("config API URL helpers", () => {
   test("keeps the default /api base compatible with v1 routes", () => {
@@ -23,6 +31,15 @@ describe("config API URL helpers", () => {
 
   test("builds root backend probes outside the /api edge namespace", () => {
     expect(backendRootUrl("/healthz")).toBe("/healthz");
+  });
+
+  test("keeps auth endpoints on the legacy backend by default", () => {
+    expect(authUrl("/login")).toBe("/api/auth/login");
+    expect(authUrl("refresh")).toBe("/api/auth/refresh");
+  });
+
+  test("can point auth endpoints to the Spring Kotlin auth-policy cutover path", () => {
+    expect(buildAuthUrl("/auth-policy/auth", "/me")).toBe("/auth-policy/auth/me");
   });
 
   test("rewrites direct localhost backend base to the dev-server proxy path on local dashboard origin", () => {

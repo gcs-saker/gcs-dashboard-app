@@ -1,4 +1,4 @@
-import { apiUrl } from "../../config";
+import { apiUrl, authUrl } from "../../config";
 import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 import type { AuthenticatedUser, LoginRequest, SignupRequest, SignupResponse, TokenResponse } from "./types";
 
@@ -24,7 +24,7 @@ async function parseError(response: Response): Promise<string> {
 }
 
 export async function loginRequest(credentials: LoginRequest): Promise<TokenResponse> {
-  const response = await fetch(apiUrl("/auth/login"), {
+  const response = await fetch(authUrl("/login"), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -39,7 +39,7 @@ export async function loginRequest(credentials: LoginRequest): Promise<TokenResp
 }
 
 export async function refreshSessionRequest(fetcher: typeof fetch = fetch): Promise<TokenResponse> {
-  const response = await fetcher(apiUrl("/auth/refresh"), {
+  const response = await fetcher(authUrl("/refresh"), {
     method: "POST",
     credentials: "include",
     headers: { Accept: "application/json" },
@@ -56,7 +56,7 @@ export async function refreshSessionRequest(fetcher: typeof fetch = fetch): Prom
 }
 
 export async function logoutRequest(fetcher: typeof fetch = fetch): Promise<void> {
-  await fetcher(apiUrl("/auth/logout"), {
+  await fetcher(authUrl("/logout"), {
     method: "POST",
     credentials: "include",
   });
@@ -79,7 +79,7 @@ export async function signupRequest(payload: SignupRequest): Promise<SignupRespo
 }
 
 export async function fetchCurrentUser(accessToken: string): Promise<AuthenticatedUser> {
-  const response = await fetch(apiUrl("/auth/me"), {
+  const response = await fetch(authUrl("/me"), {
     credentials: "include",
     headers: { Authorization: `Bearer ${accessToken}` },
   });

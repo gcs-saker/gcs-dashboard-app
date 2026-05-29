@@ -151,6 +151,7 @@ check_contract_text() {
   grep -q "turn-secondary" "$COMPOSE_FILE"
   grep -q "webrtcICEServers2" "${REPO_ROOT}/deploy/mediamtx/mediamtx.closed-network.yml"
   grep -q "location /stream/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
+  grep -q "location /auth-policy/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /webrtc/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /hls/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
 }

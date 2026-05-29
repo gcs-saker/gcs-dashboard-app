@@ -64,7 +64,7 @@ services:
     command: ["mosquitto", "-c", "/mosquitto-no-auth.conf"]
     healthcheck:
       <<: *health_defaults
-      test: ["CMD-SHELL", "timeout 2 sh -c '</dev/tcp/127.0.0.1/1883'"]
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 1883"]
     restart: unless-stopped
     networks:
       - media-net
@@ -118,6 +118,10 @@ services:
       AUTH_POLICY_JWT_ISSUER: ${AUTH_JWT_ISSUER:-gcs-saker}
       AUTH_POLICY_JWT_SECRET: ${AUTH_JWT_SECRET:?Set AUTH_JWT_SECRET}
       AUTH_POLICY_ACCESS_TOKEN_EXPIRE_MINUTES: ${AUTH_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      AUTH_POLICY_REFRESH_TOKEN_EXPIRE_MINUTES: ${AUTH_REFRESH_TOKEN_EXPIRE_MINUTES:-10080}
+      AUTH_POLICY_REFRESH_COOKIE_SECURE: ${AUTH_REFRESH_COOKIE_SECURE:-false}
+      AUTH_POLICY_REFRESH_COOKIE_SAMESITE: ${AUTH_REFRESH_COOKIE_SAMESITE:-lax}
+      AUTH_POLICY_ALLOWED_ORIGINS: ${BACKEND_CORS_ALLOW_ORIGINS:-http://localhost:8080}
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz >/dev/null"]
@@ -230,6 +234,7 @@ services:
       context: ../../gcs-dashboard
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_AUTH_API_BASE_URL: ${VITE_AUTH_API_BASE_URL:-/api/auth}
         VITE_HLS_BASE_URL: ${VITE_HLS_BASE_URL:-/hls}
         VITE_DEFAULT_STREAM_ID: ${VITE_DEFAULT_STREAM_ID:-raw/local/webcam}
         VITE_LOCAL_WEBCAM_WHIP_URL: ${VITE_LOCAL_WEBCAM_WHIP_URL:-http://localhost:8080/webrtc/raw/local/webcam/whip}

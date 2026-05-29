@@ -53,9 +53,11 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "upstream gcs_dashboard" in config
     assert "server nginx:3000;" in config
     assert "upstream gcs_backend" in config
+    assert "upstream gcs_auth_policy" in config
     assert "upstream gcs_mediamtx_hls" in config
     assert "upstream gcs_mediamtx_webrtc" in config
     assert "location /api/auth/" in config
+    assert "location /auth-policy/" in config
     assert "location /api/control/" in config
     assert "location /api/asset/" in config
     assert "location /api/telemetry/" in config
@@ -105,6 +107,15 @@ def test_auth_proxy_rewrites_dashboard_api_auth_prefix_to_backend_auth_router() 
     assert "rewrite ^/api/auth/(.*)$ /auth/$1 break;" in auth_location
     assert "proxy_pass http://gcs_backend;" in auth_location
     assert "proxy_read_timeout 60s;" in auth_location
+
+
+def test_auth_policy_cutover_prefix_rewrites_to_spring_auth_policy() -> None:
+    config = read_config()
+    auth_policy_location = extract_location(config, "/auth-policy/")
+
+    assert "rewrite ^/auth-policy/(.*)$ /$1 break;" in auth_policy_location
+    assert "proxy_pass http://gcs_auth_policy;" in auth_policy_location
+    assert "proxy_read_timeout 60s;" in auth_policy_location
 
 
 def test_legacy_api_prefixes_are_rewritten_to_backend_routers() -> None:
