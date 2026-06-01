@@ -48,11 +48,12 @@ flowchart LR
 2. `mqtt`
 3. `turn-primary`, `turn-secondary`
 4. `mediamtx`
-5. `backend`
-6. `dashboard`
-7. `edge`
+5. `auth-policy` future profile
+6. `backend`
+7. `dashboard`
+8. `edge`
 
-`auth-policy`와 `media-control`은 M7-02/M7-03에서 실제 서비스로 구현한다. M7-01에서는 compose 상의 위치와 네트워크 경계만 placeholder profile로 둔다.
+`auth-policy`는 M7-02에서 Spring/Kotlin skeleton으로 구현한다. `media-control`은 M7-03에서 실제 Go service로 전환한다.
 
 ## 네트워크
 
