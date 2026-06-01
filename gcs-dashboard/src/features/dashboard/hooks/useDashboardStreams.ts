@@ -5,6 +5,7 @@ import {
   fetchStreamDeviceOptions,
   mergeStreamSlotsWithDevices,
   MOCK_STREAM_DEVICES,
+  preferredSelectedStreamId,
   type StreamDeviceOption,
 } from "../streamDevices";
 import { DEFAULT_DASHBOARD_STREAMS } from "../streamTypes";
@@ -32,9 +33,13 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
     const refreshStreams = async (): Promise<void> => {
       try {
         const devices = await fetchStreamDeviceOptions();
-        if (!isMounted || devices.length === 0) return;
+        if (!isMounted) return;
         setStreamDevices(devices);
-        setStreams((current) => mergeStreamSlotsWithDevices(current, devices));
+        setStreams((current) => {
+          const merged = mergeStreamSlotsWithDevices(current, devices);
+          setSelectedStreamId((currentSelectedId) => preferredSelectedStreamId(currentSelectedId, merged, devices));
+          return merged;
+        });
       } catch (error) {
         if (error instanceof AuthApiError && error.status === 401) {
           if (intervalId) {

@@ -51,12 +51,13 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     config = read_config()
 
     assert "upstream gcs_dashboard" in config
-    assert "server nginx:3000;" in config
+    assert "server dashboard:3000;" in config
     assert "upstream gcs_backend" in config
     assert "upstream gcs_auth_policy" in config
     assert "upstream gcs_media_control" in config
     assert "upstream gcs_mediamtx_hls" in config
     assert "upstream gcs_mediamtx_webrtc" in config
+    assert "resolver 127.0.0.11 valid=10s ipv6=off;" in config
     assert "location /api/auth/" in config
     assert "location /auth-policy/" in config
     assert "location /media-control/" in config
@@ -98,15 +99,18 @@ def test_media_proxy_rewrites_public_prefixes_to_mediamtx_paths() -> None:
     webrtc_location = extract_location(config, "/webrtc/")
 
     assert "rewrite ^/hls/(.*)$ /$1 break;" in hls_location
-    assert "proxy_pass http://gcs_mediamtx_hls;" in hls_location
+    assert 'set $gcs_mediamtx_hls "mediamtx:8888";' in hls_location
+    assert "proxy_pass http://$gcs_mediamtx_hls;" in hls_location
     assert "rewrite ^/webrtc/(.*)$ /$1 break;" in webrtc_location
-    assert "proxy_pass http://gcs_mediamtx_webrtc;" in webrtc_location
+    assert 'set $gcs_mediamtx_webrtc "mediamtx:8889";' in webrtc_location
+    assert "proxy_pass http://$gcs_mediamtx_webrtc;" in webrtc_location
 
 
 def test_auth_proxy_rewrites_dashboard_api_auth_prefix_to_backend_auth_router() -> None:
     config = read_config()
     auth_location = extract_location(config, "/api/auth/")
 
+    assert "Legacy fallback only" in auth_location
     assert "rewrite ^/api/auth/(.*)$ /auth/$1 break;" in auth_location
     assert "proxy_pass http://gcs_backend;" in auth_location
     assert "proxy_read_timeout 60s;" in auth_location
@@ -140,6 +144,14 @@ def test_legacy_api_prefixes_are_rewritten_to_backend_routers() -> None:
         location = extract_location(config, public_prefix)
         assert rewrite in location
         assert "proxy_pass http://gcs_backend;" in location
+
+
+def test_legacy_control_prefix_is_marked_as_future_command_fallback() -> None:
+    config = read_config()
+    control_location = extract_location(config, "/api/control/")
+
+    assert "Future/legacy command fallback" in control_location
+    assert "proxy_pass http://gcs_backend;" in control_location
 
 
 def test_read_only_asset_and_telemetry_paths_are_cut_over_to_auth_policy() -> None:

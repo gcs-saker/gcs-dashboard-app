@@ -1,6 +1,4 @@
-import L, { type LatLngExpression, type LayerGroup, type Map as LeafletMap } from "leaflet";
-import "leaflet/dist/leaflet.css";
-import { useEffect, useRef } from "react";
+import { useMemo, useState } from "react";
 import type { DashboardStreamSlot } from "../streamTypes";
 
 interface TacticalLeafletMapProps {
@@ -8,8 +6,16 @@ interface TacticalLeafletMapProps {
   streams: DashboardStreamSlot[];
 }
 
-const DEFAULT_CENTER: LatLngExpression = [35.871435, 128.601445];
-const DEFAULT_ZOOM = 14;
+interface ProjectedStream {
+  stream: DashboardStreamSlot;
+  left: number;
+  top: number;
+}
+
+const DEFAULT_CENTER = { lat: 35.871435, lng: 128.601445 };
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 5;
+const INITIAL_ZOOM = 3;
 
 function coordinateSourceLabel(stream: DashboardStreamSlot): string {
   switch (stream.geometry?.source) {
@@ -21,96 +27,86 @@ function coordinateSourceLabel(stream: DashboardStreamSlot): string {
       return "등록 좌표";
     case "mock":
     case undefined:
-      return "기본 좌표";
+      return "내장 오프라인 지도";
   }
 }
 
-function geometryForStream(stream: DashboardStreamSlot): LatLngExpression {
-  return stream.geometry ? [stream.geometry.lat, stream.geometry.lng] : DEFAULT_CENTER;
+function clampPercent(value: number): number {
+  return Math.min(92, Math.max(8, value));
 }
 
-function popupContentForStream(stream: DashboardStreamSlot): HTMLElement {
-  const wrapper = document.createElement("div");
-  const title = document.createElement("strong");
-  title.textContent = stream.title;
-  wrapper.append(
-    title,
-    document.createElement("br"),
-    document.createTextNode(stream.streamPath ?? "stream pending"),
-    document.createElement("br"),
-    document.createTextNode(coordinateSourceLabel(stream)),
-  );
-  return wrapper;
+function projectStreams(streams: DashboardStreamSlot[], selectedStream: DashboardStreamSlot, zoom: number): ProjectedStream[] {
+  const geometricStreams = streams.filter((stream) => stream.geometry);
+  const center = selectedStream.geometry ?? DEFAULT_CENTER;
+  const spread = Math.max(0.008 / zoom, 0.0016);
+
+  return geometricStreams.map((stream) => {
+    const geometry = stream.geometry ?? center;
+    return {
+      stream,
+      left: clampPercent(50 + ((geometry.lng - center.lng) / spread) * 42),
+      top: clampPercent(50 - ((geometry.lat - center.lat) / spread) * 42),
+    };
+  });
+}
+
+function markerClassForStream(stream: DashboardStreamSlot, selectedStream: DashboardStreamSlot): string {
+  const classes = ["offline-map-marker"];
+  if (stream.id === selectedStream.id) classes.push("is-selected");
+  if (stream.status === "fallback" || stream.status === "degraded") classes.push("is-warning");
+  if (stream.status === "offline") classes.push("is-offline");
+  return classes.join(" ");
+}
+
+function coordinateText(stream: DashboardStreamSlot): string {
+  if (!stream.geometry) return "좌표 대기 중";
+  return `${stream.geometry.lat.toFixed(6)}, ${stream.geometry.lng.toFixed(6)}`;
 }
 
 export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletMapProps) {
-  const mapElementRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<LeafletMap | null>(null);
-  const markerLayerRef = useRef<LayerGroup | null>(null);
-
-  useEffect(() => {
-    if (!mapElementRef.current || mapRef.current) return;
-
-    const map = L.map(mapElementRef.current, {
-      center: DEFAULT_CENTER,
-      zoom: DEFAULT_ZOOM,
-      zoomControl: false,
-    });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap",
-    }).addTo(map);
-    const markerLayer = L.layerGroup().addTo(map);
-    mapRef.current = map;
-    markerLayerRef.current = markerLayer;
-
-    return () => {
-      markerLayer.remove();
-      map.remove();
-      mapRef.current = null;
-      markerLayerRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    const markerLayer = markerLayerRef.current;
-    if (!map || !markerLayer) return;
-
-    markerLayer.clearLayers();
-    for (const stream of streams) {
-      if (!stream.geometry) continue;
-      const isSelected = stream.id === selectedStream.id;
-      L.circleMarker(geometryForStream(stream), {
-        color: isSelected ? "#3db8ff" : "#59d174",
-        fillColor: isSelected ? "#3db8ff" : "#59d174",
-        fillOpacity: isSelected ? 0.62 : 0.42,
-        radius: isSelected ? 10 : 7,
-      })
-        .bindPopup(popupContentForStream(stream))
-        .addTo(markerLayer);
-    }
-    map.setView(geometryForStream(selectedStream), Math.max(map.getZoom(), DEFAULT_ZOOM), {
-      animate: true,
-    });
-  }, [selectedStream, streams]);
+  const [zoom, setZoom] = useState(INITIAL_ZOOM);
+  const projectedStreams = useMemo(() => projectStreams(streams, selectedStream, zoom), [selectedStream, streams, zoom]);
+  const selectedGeometry = selectedStream.geometry ?? DEFAULT_CENTER;
 
   return (
-    <div className="tactical-map__canvas tactical-map__canvas--leaflet">
-      <div ref={mapElementRef} className="tactical-map__leaflet" />
+    <div
+      className="tactical-map__canvas tactical-map__canvas--offline"
+      data-testid="offline-tactical-map"
+      aria-label="폐쇄망 오프라인 전술 지도"
+    >
+      <div className="offline-map-grid" aria-hidden="true" />
+      <div className="offline-map-roads" aria-hidden="true" />
+      <div className="offline-map-river" aria-hidden="true" />
       <span className="map-coordinate-source" data-testid="map-coordinate-source">
         {coordinateSourceLabel(selectedStream)}
       </span>
+      <span className="offline-map-center" data-testid="offline-map-center">
+        중심 {selectedGeometry.lat.toFixed(6)}, {selectedGeometry.lng.toFixed(6)}
+      </span>
       <div className="map-toolbar" aria-label="지도 도구">
-        <button aria-label="지도 중심 초기화" type="button" onClick={() => mapRef.current?.setView(DEFAULT_CENTER, DEFAULT_ZOOM)}>
+        <button aria-label="지도 중심 초기화" type="button" onClick={() => setZoom(INITIAL_ZOOM)}>
           ⌖
         </button>
-        <button aria-label="지도 확대" type="button" onClick={() => mapRef.current?.zoomIn()}>
+        <button aria-label="지도 확대" type="button" onClick={() => setZoom((current) => Math.min(MAX_ZOOM, current + 1))}>
           +
         </button>
-        <button aria-label="지도 축소" type="button" onClick={() => mapRef.current?.zoomOut()}>
+        <button aria-label="지도 축소" type="button" onClick={() => setZoom((current) => Math.max(MIN_ZOOM, current - 1))}>
           -
         </button>
       </div>
+      {projectedStreams.map(({ stream, left, top }) => (
+        <button
+          key={stream.id}
+          className={markerClassForStream(stream, selectedStream)}
+          style={{ left: `${left}%`, top: `${top}%` }}
+          type="button"
+          title={`${stream.title} / ${coordinateText(stream)}`}
+          aria-label={`${stream.title} 위치 ${coordinateText(stream)}`}
+        >
+          <span className="offline-map-marker__dot" />
+          <span className="offline-map-marker__label">{stream.title}</span>
+        </button>
+      ))}
     </div>
   );
 }

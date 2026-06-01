@@ -4,7 +4,9 @@ import { AuthApiError, authenticatedFetch } from "../auth/authApi";
 export type DashboardServerHealth = "online" | "degraded" | "error";
 
 export interface DashboardServerStatusSnapshot {
-  server: DashboardServerHealth;
+  apiServer: DashboardServerHealth;
+  authServer: DashboardServerHealth;
+  signalingServer: DashboardServerHealth;
   readiness: DashboardServerHealth;
   streams: DashboardServerHealth;
   latencyMs: number | null;
@@ -12,7 +14,9 @@ export interface DashboardServerStatusSnapshot {
 }
 
 export const DEFAULT_SERVER_STATUS: DashboardServerStatusSnapshot = {
-  server: "degraded",
+  apiServer: "degraded",
+  authServer: "degraded",
+  signalingServer: "degraded",
   readiness: "degraded",
   streams: "degraded",
   latencyMs: null,
@@ -28,9 +32,10 @@ export async function fetchDashboardServerStatus(
 ): Promise<DashboardServerStatusSnapshot> {
   const startedAt = performance.now();
   try {
-    const [healthResponse, readyResponse, streamResponse] = await Promise.all([
+    const [healthResponse, readyResponse, signalingResponse, streamResponse] = await Promise.all([
       probe(fetcher, "/healthz"),
       probe(fetcher, "/readyz"),
+      probe(fetcher, "/media-control/healthz"),
       authenticatedFetch(streamApiV1Url("/streams"), { headers: { Accept: "application/json" } }, fetcher),
     ]);
     const latencyMs = Math.max(1, Math.round(performance.now() - startedAt));
@@ -39,7 +44,9 @@ export async function fetchDashboardServerStatus(
     }
 
     return {
-      server: healthResponse.ok ? healthFromLatency(latencyMs) : "error",
+      apiServer: streamResponse.ok ? healthFromLatency(latencyMs) : "degraded",
+      authServer: healthResponse.ok && readyResponse.ok ? "online" : "degraded",
+      signalingServer: signalingResponse.ok ? "online" : "degraded",
       readiness: readyResponse.ok ? "online" : "degraded",
       streams: streamResponse.ok ? "online" : "degraded",
       latencyMs,
@@ -50,7 +57,9 @@ export async function fetchDashboardServerStatus(
       throw error;
     }
     return {
-      server: "error",
+      apiServer: "error",
+      authServer: "error",
+      signalingServer: "error",
       readiness: "error",
       streams: "error",
       latencyMs: null,

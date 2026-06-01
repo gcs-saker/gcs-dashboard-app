@@ -88,6 +88,52 @@ describe("LocalWebcamPublisher", () => {
     expect(screen.getByRole("status")).toHaveTextContent("송출 중");
   });
 
+  test("posts browser GPS telemetry while publishing", async () => {
+    const track = { stop: vi.fn() } as unknown as MediaStreamTrack;
+    const mediaStream = { getTracks: () => [track] } as unknown as MediaStream;
+    const mediaDevices = {
+      getUserMedia: vi.fn(async () => mediaStream),
+    } as unknown as MediaDevices;
+    const peerConnection = createPeerConnectionMock();
+    const geolocation = createGeolocationMock({
+      latitude: 35.8842,
+      longitude: 128.6123,
+      altitude: 44,
+      speed: 1.5,
+    });
+    const fetcher = vi.fn(async () => ({
+      ok: true,
+      text: async () => "v=0\r\nmock-answer",
+    })) as unknown as typeof fetch;
+
+    render(
+      <LocalWebcamPublisher
+        mediaDevices={mediaDevices}
+        peerConnectionFactory={() => peerConnection}
+        fetcher={fetcher}
+        geolocation={geolocation}
+        streamId="raw.local.webcam"
+        whipUrl="http://media.example.test/raw/local/webcam/whip"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("미리보기 준비");
+
+    fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
+
+    await waitFor(() => expect(screen.getByText(/GPS: 수신 중/)).toHaveTextContent("35.884200, 128.612300"));
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/telemetry/",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        headers: expect.objectContaining({ "Content-Type": "application/json" }),
+        body: expect.stringContaining('"uuid":"raw.local.webcam"'),
+      }),
+    );
+  });
+
   test("uses the configured STUN server for the default WHIP peer connection", async () => {
     const track = { stop: vi.fn() } as unknown as MediaStreamTrack;
     const mediaStream = { getTracks: () => [track] } as unknown as MediaStream;
@@ -119,7 +165,7 @@ describe("LocalWebcamPublisher", () => {
 
       await waitFor(() => expect(peerConnectionConstructor).toHaveBeenCalled());
       expect(peerConnectionConstructor).toHaveBeenCalledWith({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        iceServers: [{ urls: "stun:localhost:3478" }],
       });
     } finally {
       globalThis.RTCPeerConnection = originalPeerConnection;
@@ -248,4 +294,30 @@ function createPeerConnectionMock(initialIceGatheringState: RTCIceGatheringState
     },
   } as unknown as PeerConnectionMock;
   return peerConnection;
+}
+
+function createGeolocationMock(coords: Partial<GeolocationCoordinates>): Geolocation {
+  const position = {
+    coords: {
+      accuracy: 5,
+      altitude: null,
+      altitudeAccuracy: null,
+      heading: null,
+      latitude: 0,
+      longitude: 0,
+      speed: null,
+      toJSON: () => ({}),
+      ...coords,
+    },
+    timestamp: Date.now(),
+    toJSON: () => ({}),
+  } as GeolocationPosition;
+  return {
+    getCurrentPosition: vi.fn((success: PositionCallback) => success(position)),
+    watchPosition: vi.fn((success: PositionCallback) => {
+      success(position);
+      return 7;
+    }),
+    clearWatch: vi.fn(),
+  } as unknown as Geolocation;
 }
