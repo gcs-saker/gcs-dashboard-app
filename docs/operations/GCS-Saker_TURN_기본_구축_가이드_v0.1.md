@@ -22,7 +22,7 @@ flowchart LR
 실제 값은 서버 `.env` 또는 secret store에만 둔다.
 
 ```bash
-WEBRTC_STUN_URL=stun:stun.l.google.com:19302
+WEBRTC_STUN_URL=stun:localhost:3478
 WEBRTC_TURN_URL=turn:a4ai.tplinkdns.com:3478?transport=udp
 WEBRTC_TURN_USERNAME=gcs-turn
 WEBRTC_TURN_PASSWORD=<secret>

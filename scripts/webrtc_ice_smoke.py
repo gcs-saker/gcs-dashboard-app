@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 
 
 DEFAULT_WHEP_URL = "http://127.0.0.1:8889/raw/sample/front/whep"
-DEFAULT_STUN_URL = "stun:stun.l.google.com:19302"
+DEFAULT_STUN_URL = "stun:localhost:3478"
 REQUIRED_SDP_MARKERS = ("ice-ufrag", "ice-pwd", "fingerprint")
 CONNECTED_ICE_STATES = {"connected", "completed"}
 FAILED_ICE_STATES = {"failed", "closed", "disconnected"}
