@@ -50,6 +50,7 @@ func (s Server) Routes() http.Handler {
 	mux.HandleFunc("/healthz", s.healthz)
 	mux.HandleFunc("/v1/streams", s.streamList)
 	mux.HandleFunc("/v1/ice-servers", s.iceServers)
+	mux.HandleFunc("/stream/status", s.legacyStreamStatus)
 	mux.HandleFunc("/api/v1/streams/ice-servers", s.dashboardIceServers)
 	mux.HandleFunc("/api/v1/streams/", s.dashboardStreamItem)
 	mux.HandleFunc("/api/v1/streams", s.dashboardStreamList)
@@ -70,6 +71,10 @@ func (s Server) streamList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"streams": streams})
+}
+
+func (s Server) legacyStreamStatus(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{"stream": "ready"})
 }
 
 func (s Server) iceServers(w http.ResponseWriter, _ *http.Request) {

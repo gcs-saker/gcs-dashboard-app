@@ -6,6 +6,8 @@ export interface WebRTCPlaybackSnapshot {
   iceConnectionState: RTCIceConnectionState | "unsupported";
   errorMessage: string | null;
   hasVideoFrame: boolean;
+  hasAudioTrack: boolean;
+  isAudioActive: boolean;
   firstFrameLatencyMs: number | null;
 }
 
@@ -62,6 +64,8 @@ export interface RealtimePlayerSnapshot {
   streamStatus: StreamRuntimeStatus | "unknown";
   errorMessage: string | null;
   webrtcRetryAttempt?: number;
+  hasAudioTrack?: boolean;
+  isAudioActive?: boolean;
 }
 
 export interface RealtimePlayerProps {

@@ -79,7 +79,10 @@ export function useHlsFallbackPlayback({
 
         const hls = new Hls({
           lowLatencyMode: true,
-          backBufferLength: 30,
+          backBufferLength: 10,
+          liveSyncDurationCount: 2,
+          maxLiveSyncPlaybackRate: 1.5,
+          capLevelToPlayerSize: true,
         });
 
         dispatch({ type: "loading", mode: "hlsjs" });

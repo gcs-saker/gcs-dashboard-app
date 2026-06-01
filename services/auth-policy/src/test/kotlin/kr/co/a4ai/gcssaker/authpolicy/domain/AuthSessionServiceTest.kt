@@ -30,7 +30,9 @@ class AuthSessionServiceTest {
             ),
         ),
     )
-    private val service = AuthSessionService(users, passwordHasher, tokenService)
+    private val principalCache = RecordingPrincipalCache()
+    private val refreshSessions = RecordingRefreshSessionStore()
+    private val service = AuthSessionService(users, passwordHasher, tokenService, principalCache, refreshSessions)
 
     @Test
     fun `login issues access and refresh token with principal claims`() {
@@ -43,6 +45,8 @@ class AuthSessionServiceTest {
         assertNotEquals(tokens.accessToken, tokens.refreshToken)
         assertEquals(tokens.principal, tokenService.verifyAccessToken(tokens.accessToken))
         assertEquals(tokens.principal, tokenService.verifyRefreshToken(tokens.refreshToken))
+        assertEquals(tokens.principal, principalCache.getAccessPrincipal(tokens.accessToken))
+        assertEquals(tokens.principal, refreshSessions.peek(tokens.refreshToken))
     }
 
     @Test
@@ -60,5 +64,67 @@ class AuthSessionServiceTest {
         assertNotNull(refreshed)
         assertEquals(loginTokens.principal, refreshed.principal)
         assertNotEquals(loginTokens.accessToken, refreshed.refreshToken)
+        assertNull(refreshSessions.peek(loginTokens.refreshToken))
+        assertEquals(refreshed.principal, refreshSessions.peek(refreshed.refreshToken))
+    }
+
+    @Test
+    fun `refresh rejects reused refresh token when session store is authoritative`() {
+        val loginTokens = requireNotNull(service.login("operator01", "correct-password"))
+
+        assertNotNull(service.refresh(loginTokens.refreshToken))
+
+        assertNull(service.refresh(loginTokens.refreshToken))
+    }
+
+    @Test
+    fun `access token verification reuses cached principal`() {
+        val tokens = requireNotNull(service.login("operator01", "correct-password"))
+        principalCache.reads = 0
+
+        val principal = service.verifyAccessToken(tokens.accessToken)
+
+        assertEquals(tokens.principal, principal)
+        assertEquals(1, principalCache.reads)
+    }
+
+    private class RecordingPrincipalCache : PrincipalCache {
+        private val values = mutableMapOf<String, AuthenticatedPrincipal>()
+        var reads = 0
+
+        override fun getAccessPrincipal(accessToken: String): AuthenticatedPrincipal? {
+            reads += 1
+            return values[accessToken]
+        }
+
+        override fun putAccessPrincipal(
+            accessToken: String,
+            principal: AuthenticatedPrincipal,
+            ttl: Duration,
+        ) {
+            values[accessToken] = principal
+        }
+    }
+
+    private class RecordingRefreshSessionStore : RefreshSessionStore {
+        private val values = mutableMapOf<String, AuthenticatedPrincipal>()
+        override val authoritative = true
+
+        override fun putRefreshSession(
+            refreshToken: String,
+            principal: AuthenticatedPrincipal,
+            ttl: Duration,
+        ) {
+            values[refreshToken] = principal
+        }
+
+        override fun consumeRefreshSession(refreshToken: String): AuthenticatedPrincipal? =
+            values.remove(refreshToken)
+
+        override fun revokeRefreshSession(refreshToken: String) {
+            values.remove(refreshToken)
+        }
+
+        fun peek(refreshToken: String): AuthenticatedPrincipal? = values[refreshToken]
     }
 }
