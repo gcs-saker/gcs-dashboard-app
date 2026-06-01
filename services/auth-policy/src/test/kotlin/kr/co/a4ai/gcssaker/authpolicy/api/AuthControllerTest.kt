@@ -23,25 +23,35 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class AuthControllerTest {
+    private companion object {
+        const val TRUSTED_ORIGIN = "http://localhost:18080"
+        const val TRUSTED_LOGIN_REFERER = "$TRUSTED_ORIGIN/login"
+        const val UNTRUSTED_ORIGIN = "https://evil.example"
+        const val OPERATOR_USERNAME = "operator01"
+        const val OPERATOR_PASSWORD = "correct-password"
+        const val VIEWER_INVITE_CODE = "A4AI01"
+        const val REFRESH_COOKIE_NAME = "gcs_saker_refresh"
+    }
+
     private val passwordHasher = PasswordHasher()
     private val settings = AuthRuntimeSettings(
         jwtSecret = "test-secret-must-be-at-least-32-characters",
         jwtIssuer = "gcs-saker-test",
         accessTokenExpireMinutes = 30,
         refreshTokenExpireMinutes = 10_080,
-        refreshCookieName = "gcs_saker_refresh",
+        refreshCookieName = REFRESH_COOKIE_NAME,
         refreshCookieSecure = false,
         refreshCookieSameSite = "lax",
-        allowedOrigins = setOf("http://localhost:18080"),
-        operatorUsername = "operator01",
-        operatorPassword = "correct-password",
+        allowedOrigins = setOf(TRUSTED_ORIGIN),
+        operatorUsername = OPERATOR_USERNAME,
+        operatorPassword = OPERATOR_PASSWORD,
         operatorCompanyId = 1,
         operatorGroupId = "co-a",
         smokeUsername = "m7-smoke-viewer",
         smokePassword = "m7-smoke-pass",
         smokeCompanyId = 1,
         smokeGroupId = "co-a",
-        signupInvites = listOf(SignupInvite("A4AI01", 1, GroupId("co-a"))),
+        signupInvites = listOf(SignupInvite(VIEWER_INVITE_CODE, 1, GroupId("co-a"))),
     )
     private val tokenService = JwtTokenService(
         secret = settings.jwtSecret,
@@ -53,9 +63,9 @@ class AuthControllerTest {
                 listOf(
                     AuthUser(
                         id = 1,
-                        username = "operator01",
+                        username = OPERATOR_USERNAME,
                         email = "operator01@example.test",
-                        passwordHash = passwordHasher.hash("correct-password"),
+                        passwordHash = passwordHasher.hash(OPERATOR_PASSWORD),
                         companyId = 1,
                         role = UserRole.OPERATOR,
                         groupId = GroupId("co-a"),
@@ -73,39 +83,61 @@ class AuthControllerTest {
         settings = settings,
     )
 
+    private fun login(
+        request: LoginRequest = LoginRequest(OPERATOR_USERNAME, OPERATOR_PASSWORD),
+        origin: String? = TRUSTED_ORIGIN,
+        referer: String? = null,
+        csrfHeader: String? = AuthSecurityHeaders.CSRF_HEADER_VALUE,
+    ) = controller.login(request, origin, referer, csrfHeader)
+
+    private fun signup(
+        request: SignupRequest,
+        origin: String? = TRUSTED_ORIGIN,
+        referer: String? = null,
+        csrfHeader: String? = AuthSecurityHeaders.CSRF_HEADER_VALUE,
+    ) = controller.signup(request, origin, referer, csrfHeader)
+
+    private fun refresh(
+        request: MockHttpServletRequest,
+        origin: String? = TRUSTED_ORIGIN,
+        referer: String? = null,
+        csrfHeader: String? = AuthSecurityHeaders.CSRF_HEADER_VALUE,
+    ) = controller.refresh(request, origin, referer, csrfHeader)
+
+    private fun logout(
+        request: MockHttpServletRequest = MockHttpServletRequest(),
+        origin: String? = TRUSTED_ORIGIN,
+        referer: String? = null,
+        csrfHeader: String? = AuthSecurityHeaders.CSRF_HEADER_VALUE,
+    ) = controller.logout(request, origin, referer, csrfHeader)
+
     @Test
     fun `login returns python-compatible token response and refresh cookie`() {
-        val response = controller.login(
-            request = LoginRequest("operator01", "correct-password"),
-            origin = "http://localhost:18080",
-            referer = null,
-        )
+        val response = login()
 
         assertEquals(HttpStatus.OK, response.statusCode)
         val body = requireNotNull(response.body)
         assertEquals("bearer", body.tokenType)
         assertEquals(30, body.expiresInMinutes)
-        assertEquals("operator01", body.username)
+        assertEquals(OPERATOR_USERNAME, body.username)
         assertEquals("operator", body.role)
         val cookie = response.headers.getFirst(HttpHeaders.SET_COOKIE)
         assertNotNull(cookie)
-        assertTrue(cookie.contains("gcs_saker_refresh="))
+        assertTrue(cookie.contains("$REFRESH_COOKIE_NAME="))
         assertTrue(cookie.contains("HttpOnly"))
         assertTrue(cookie.contains("SameSite=lax"))
     }
 
     @Test
     fun `signup creates python-compatible user response without password fields`() {
-        val response = controller.signup(
+        val response = signup(
             request = SignupRequest(
                 username = "viewer02",
                 email = "viewer02@example.test",
                 password = "strong-password",
-                inviteCode = "A4AI01",
+                inviteCode = VIEWER_INVITE_CODE,
                 role = "viewer",
-            ),
-            origin = "http://localhost:18080",
-            referer = null,
+            )
         )
 
         assertEquals(HttpStatus.CREATED, response.statusCode)
@@ -120,49 +152,43 @@ class AuthControllerTest {
             response.body,
         )
 
-        val login = controller.login(LoginRequest("viewer02", "strong-password"), "http://localhost:18080", null)
+        val login = login(LoginRequest("viewer02", "strong-password"))
         assertEquals(HttpStatus.OK, login.statusCode)
     }
 
     @Test
     fun `signup rejects duplicate username email and invalid invite code`() {
         val duplicateUsername = assertFailsWith<ResponseStatusException> {
-            controller.signup(
+            signup(
                 SignupRequest(
-                    username = "operator01",
+                    username = OPERATOR_USERNAME,
                     email = "new@example.test",
                     password = "strong-password",
-                    inviteCode = "A4AI01",
+                    inviteCode = VIEWER_INVITE_CODE,
                     role = "viewer",
-                ),
-                "http://localhost:18080",
-                null,
+                )
             )
         }
         val duplicateEmail = assertFailsWith<ResponseStatusException> {
-            controller.signup(
+            signup(
                 SignupRequest(
                     username = "viewer03",
                     email = "operator01@example.test",
                     password = "strong-password",
-                    inviteCode = "A4AI01",
+                    inviteCode = VIEWER_INVITE_CODE,
                     role = "viewer",
-                ),
-                "http://localhost:18080",
-                null,
+                )
             )
         }
         val invalidInvite = assertFailsWith<ResponseStatusException> {
-            controller.signup(
+            signup(
                 SignupRequest(
                     username = "viewer04",
                     email = "viewer04@example.test",
                     password = "strong-password",
                     inviteCode = "WRONG",
                     role = "viewer",
-                ),
-                "http://localhost:18080",
-                null,
+                )
             )
         }
 
@@ -177,7 +203,7 @@ class AuthControllerTest {
     @Test
     fun `me verifies bearer access token`() {
         val login = requireNotNull(
-            controller.login(LoginRequest("operator01", "correct-password"), "http://localhost:18080", null).body,
+            login().body,
         )
 
         val currentUser = controller.me("Bearer ${login.accessToken}")
@@ -187,23 +213,23 @@ class AuthControllerTest {
 
     @Test
     fun `refresh rotates token from httpOnly cookie`() {
-        val loginResponse = controller.login(LoginRequest("operator01", "correct-password"), "http://localhost:18080", null)
+        val loginResponse = login()
         val refreshToken = requireNotNull(loginResponse.headers.getFirst(HttpHeaders.SET_COOKIE))
-            .substringAfter("gcs_saker_refresh=")
+            .substringAfter("$REFRESH_COOKIE_NAME=")
             .substringBefore(";")
         val servletRequest = MockHttpServletRequest().apply {
-            setCookies(Cookie("gcs_saker_refresh", refreshToken))
+            setCookies(Cookie(REFRESH_COOKIE_NAME, refreshToken))
         }
 
-        val refreshResponse = controller.refresh(servletRequest, "http://localhost:18080", null)
+        val refreshResponse = refresh(servletRequest)
 
         assertEquals(HttpStatus.OK, refreshResponse.statusCode)
-        assertEquals("operator01", requireNotNull(refreshResponse.body).username)
+        assertEquals(OPERATOR_USERNAME, requireNotNull(refreshResponse.body).username)
     }
 
     @Test
     fun `logout clears refresh cookie`() {
-        val response = controller.logout(MockHttpServletRequest(), "http://localhost:18080", null)
+        val response = logout()
 
         assertEquals(HttpStatus.NO_CONTENT, response.statusCode)
         assertTrue(requireNotNull(response.headers.getFirst(HttpHeaders.SET_COOKIE)).contains("Max-Age=0"))
@@ -212,16 +238,26 @@ class AuthControllerTest {
     @Test
     fun `mutating auth endpoints reject untrusted origin`() {
         val error = assertFailsWith<ResponseStatusException> {
-            controller.login(LoginRequest("operator01", "correct-password"), "https://evil.example", null)
+            login(origin = UNTRUSTED_ORIGIN)
         }
 
         assertEquals(HttpStatus.FORBIDDEN, error.statusCode)
     }
 
     @Test
+    fun `mutating auth endpoints reject missing csrf header`() {
+        val error = assertFailsWith<ResponseStatusException> {
+            login(csrfHeader = null)
+        }
+
+        assertEquals(HttpStatus.FORBIDDEN, error.statusCode)
+        assertEquals("csrf header required", error.reason)
+    }
+
+    @Test
     fun `login rejects invalid credentials`() {
         val error = assertFailsWith<ResponseStatusException> {
-            controller.login(LoginRequest("operator01", "wrong-password"), "http://localhost:18080", null)
+            login(LoginRequest(OPERATOR_USERNAME, "wrong-password"))
         }
 
         assertEquals(HttpStatus.UNAUTHORIZED, error.statusCode)
@@ -230,7 +266,7 @@ class AuthControllerTest {
     @Test
     fun `refresh rejects missing cookie`() {
         val error = assertFailsWith<ResponseStatusException> {
-            controller.refresh(MockHttpServletRequest(), "http://localhost:18080", null)
+            refresh(MockHttpServletRequest())
         }
 
         assertEquals(HttpStatus.UNAUTHORIZED, error.statusCode)
@@ -251,10 +287,9 @@ class AuthControllerTest {
 
     @Test
     fun `trusted referer is accepted when origin header is absent`() {
-        val response = controller.login(
-            request = LoginRequest("operator01", "correct-password"),
+        val response = login(
             origin = null,
-            referer = "http://localhost:18080/login",
+            referer = TRUSTED_LOGIN_REFERER,
         )
 
         assertEquals(HttpStatus.OK, response.statusCode)

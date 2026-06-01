@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import App from "../../App";
+import { AUTH_JSON_HEADERS } from "./authApi";
 import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 
 vi.mock("../../component/MainMap", () => ({
@@ -35,6 +36,25 @@ vi.mock("../streaming/components/StreamingSmokeDashboard", () => ({
 }));
 
 describe("LoginPage auth flow", () => {
+  const AUTH_REFRESH_URL = "/api/auth/refresh";
+  const AUTH_LOGIN_URL = "/api/auth/login";
+  const ISSUED_TOKEN_RESPONSE = {
+    access_token: "issued-access-token",
+    token_type: "bearer",
+    expires_in_minutes: 30,
+    username: "operator01",
+    role: "operator",
+  } as const;
+
+  function mockRefreshMissingThenLogin(loginResponse: Response): void {
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input) === AUTH_REFRESH_URL) {
+        return Response.json({ detail: "refresh token required" }, { status: 401 });
+      }
+      return loginResponse;
+    });
+  }
+
   beforeEach(() => {
     clearAuthSession();
     window.history.pushState({}, "", "/login?redirect=%2Fops");
@@ -47,15 +67,7 @@ describe("LoginPage auth flow", () => {
   });
 
   test("logs in, stores token, and redirects to the requested path", async () => {
-    globalThis.fetch = vi.fn(async () =>
-      Response.json({
-        access_token: "issued-access-token",
-        token_type: "bearer",
-        expires_in_minutes: 30,
-        username: "operator01",
-        role: "operator",
-      }),
-    );
+    mockRefreshMissingThenLogin(Response.json(ISSUED_TOKEN_RESPONSE));
 
     render(<App />);
 
@@ -66,20 +78,18 @@ describe("LoginPage auth flow", () => {
     await waitFor(() => expect(getStoredAccessToken()).toBe("issued-access-token"));
     expect(window.location.pathname).toBe("/ops");
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      "/api/auth/login",
+      AUTH_LOGIN_URL,
       expect.objectContaining({
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: AUTH_JSON_HEADERS,
         body: JSON.stringify({ username: "operator01", password: "correct-password" }),
       }),
     );
   });
 
   test("keeps the user on login when credentials are rejected", async () => {
-    globalThis.fetch = vi.fn(async () =>
-      Response.json({ detail: "Invalid credentials" }, { status: 401 }),
-    );
+    mockRefreshMissingThenLogin(Response.json({ detail: "Invalid credentials" }, { status: 401 }));
 
     render(<App />);
 
@@ -93,7 +103,7 @@ describe("LoginPage auth flow", () => {
   });
 
   test("links unauthenticated users to signup", async () => {
-    globalThis.fetch = vi.fn();
+    globalThis.fetch = vi.fn(async () => Response.json({ detail: "refresh token required" }, { status: 401 }));
 
     render(<App />);
 
@@ -118,15 +128,7 @@ describe("LoginPage auth flow", () => {
   });
 
   test("rejects external redirect URLs after login", async () => {
-    globalThis.fetch = vi.fn(async () =>
-      Response.json({
-        access_token: "issued-access-token",
-        token_type: "bearer",
-        expires_in_minutes: 30,
-        username: "operator01",
-        role: "operator",
-      }),
-    );
+    mockRefreshMissingThenLogin(Response.json(ISSUED_TOKEN_RESPONSE));
     window.history.pushState({}, "", "/login?redirect=https%3A%2F%2Fevil.example");
 
     render(<App />);
@@ -139,6 +141,7 @@ describe("LoginPage auth flow", () => {
   });
 
   test("clears expired frontend sessions instead of treating them as authenticated", async () => {
+    globalThis.fetch = vi.fn(async () => Response.json({ detail: "refresh token required" }, { status: 401 }));
     window.localStorage.setItem(
       "gcs_saker_auth_session",
       JSON.stringify({
@@ -153,5 +156,6 @@ describe("LoginPage auth flow", () => {
 
     expect(await screen.findByRole("heading", { name: "대시보드 로그인" })).toBeInTheDocument();
     expect(getStoredAccessToken()).toBeNull();
+    expect(window.localStorage.getItem("gcs_saker_auth_session")).toBeNull();
   });
 });

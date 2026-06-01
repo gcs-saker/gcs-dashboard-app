@@ -68,6 +68,11 @@ data class CurrentUserResponse(
     val role: String,
 )
 
+object AuthSecurityHeaders {
+    const val CSRF_HEADER_NAME = "X-GCS-CSRF"
+    const val CSRF_HEADER_VALUE = "same-origin"
+}
+
 @RestController
 @RequestMapping("/auth")
 class AuthController(
@@ -81,8 +86,10 @@ class AuthController(
         @RequestBody request: SignupRequest,
         @RequestHeader(HttpHeaders.ORIGIN, required = false) origin: String?,
         @RequestHeader(HttpHeaders.REFERER, required = false) referer: String?,
+        @RequestHeader(AuthSecurityHeaders.CSRF_HEADER_NAME, required = false) csrfHeader: String?,
     ): ResponseEntity<UserResponse> {
         assertTrustedOrigin(origin, referer)
+        assertCsrfHeader(csrfHeader)
         val user = try {
             registration.signup(
                 SignupCommand(
@@ -106,8 +113,10 @@ class AuthController(
         @RequestBody request: LoginRequest,
         @RequestHeader(HttpHeaders.ORIGIN, required = false) origin: String?,
         @RequestHeader(HttpHeaders.REFERER, required = false) referer: String?,
+        @RequestHeader(AuthSecurityHeaders.CSRF_HEADER_NAME, required = false) csrfHeader: String?,
     ): ResponseEntity<TokenResponse> {
         assertTrustedOrigin(origin, referer)
+        assertCsrfHeader(csrfHeader)
         val tokens = sessions.login(request.username, request.password)
             ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials")
         return tokenResponse(tokens.principal, tokens.accessToken, tokens.refreshToken, tokens.expiresInMinutes)
@@ -118,8 +127,10 @@ class AuthController(
         servletRequest: HttpServletRequest,
         @RequestHeader(HttpHeaders.ORIGIN, required = false) origin: String?,
         @RequestHeader(HttpHeaders.REFERER, required = false) referer: String?,
+        @RequestHeader(AuthSecurityHeaders.CSRF_HEADER_NAME, required = false) csrfHeader: String?,
     ): ResponseEntity<TokenResponse> {
         assertTrustedOrigin(origin, referer)
+        assertCsrfHeader(csrfHeader)
         val refreshToken = servletRequest.cookies
             ?.firstOrNull { it.name == settings.refreshCookieName }
             ?.value
@@ -157,8 +168,10 @@ class AuthController(
         servletRequest: HttpServletRequest,
         @RequestHeader(HttpHeaders.ORIGIN, required = false) origin: String?,
         @RequestHeader(HttpHeaders.REFERER, required = false) referer: String?,
+        @RequestHeader(AuthSecurityHeaders.CSRF_HEADER_NAME, required = false) csrfHeader: String?,
     ): ResponseEntity<Void> {
         assertTrustedOrigin(origin, referer)
+        assertCsrfHeader(csrfHeader)
         servletRequest.cookies
             ?.firstOrNull { it.name == settings.refreshCookieName }
             ?.value
@@ -220,6 +233,12 @@ class AuthController(
         }
         if (requestOrigin !in settings.allowedOrigins) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "untrusted request origin")
+        }
+    }
+
+    private fun assertCsrfHeader(value: String?) {
+        if (value != AuthSecurityHeaders.CSRF_HEADER_VALUE) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, "csrf header required")
         }
     }
 }

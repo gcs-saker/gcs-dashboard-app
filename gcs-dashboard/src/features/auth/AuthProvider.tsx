@@ -4,7 +4,6 @@ import {
   clearAuthSession,
   getStoredAccessToken,
   getStoredUser,
-  hasStoredSessionMetadata,
 } from "./authStorage";
 import type { AuthenticatedUser, LoginRequest } from "./types";
 
@@ -35,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         disposed = true;
       };
     }
-    if (didRequestLogoutRef.current || !hasStoredSessionMetadata()) {
+    if (didRequestLogoutRef.current) {
       setIsAuthReady(true);
       return () => {
         disposed = true;
