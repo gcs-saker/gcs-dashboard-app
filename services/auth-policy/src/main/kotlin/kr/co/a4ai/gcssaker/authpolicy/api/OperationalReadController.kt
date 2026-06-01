@@ -53,17 +53,17 @@ data class AssetReadResponse(
     val id: Int,
     val cid: String,
     val uuid: String,
-    @get:JsonProperty(AuthResponseFields.COMPANY_ID)
+    @get:JsonProperty(ApiFieldNames.COMPANY_ID)
     val companyId: Int,
     val type: String,
     val name: String,
     val description: String?,
-    @get:JsonProperty(AuthResponseFields.IMAGE_URL)
+    @get:JsonProperty(ApiFieldNames.IMAGE_URL)
     val imageUrl: String?,
     val status: String,
-    @get:JsonProperty(AuthResponseFields.CREATED_AT)
+    @get:JsonProperty(ApiFieldNames.CREATED_AT)
     val createdAt: Instant,
-    @get:JsonProperty(AuthResponseFields.UPDATED_AT)
+    @get:JsonProperty(ApiFieldNames.UPDATED_AT)
     val updatedAt: Instant,
 )
 
@@ -101,7 +101,7 @@ class OperationalReadController(
 
 private fun TelemetryIngestRequest.toReadModel(principal: AuthenticatedPrincipal): TelemetryReadModel {
     val telemetryUuid = uuid?.trim()?.takeIf { it.isNotEmpty() }
-        ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, AuthErrorMessages.UUID_REQUIRED)
+        ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, OperationalReadApiErrors.UUID_REQUIRED)
     return TelemetryReadModel(
         uuid = telemetryUuid,
         latitude = latitude ?: 0.0,
