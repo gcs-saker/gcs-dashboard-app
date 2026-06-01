@@ -2,6 +2,7 @@ package streamcache
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -14,6 +15,16 @@ type recordingLister struct {
 	calls   int
 	streams []domain.StreamDescriptor
 	err     error
+}
+
+type failingStringCache struct{}
+
+func (failingStringCache) Get(context.Context, string) (string, bool, error) {
+	return "", false, errors.New("redis unavailable")
+}
+
+func (failingStringCache) Set(context.Context, string, string, time.Duration) error {
+	return errors.New("redis unavailable")
 }
 
 func (l *recordingLister) ListStreams(context.Context) ([]domain.StreamDescriptor, error) {
@@ -121,5 +132,28 @@ func TestCachedStreamListerCoalescesConcurrentCacheMisses(t *testing.T) {
 
 	if upstream.callCount() != 1 {
 		t.Fatalf("expected concurrent cache miss to hit upstream once, got %d", upstream.callCount())
+	}
+}
+
+func TestCachedStreamListerTreatsRedisOutageAsDegradedCacheOnly(t *testing.T) {
+	path, _ := domain.NewStreamPath("raw/local/webcam")
+	upstream := &recordingLister{
+		streams: []domain.StreamDescriptor{{
+			Path:   path,
+			Ready:  true,
+			Status: domain.StreamStatusOnline,
+		}},
+	}
+	lister := NewCachedStreamLister(upstream, failingStringCache{}, "streams:list", "presence:", time.Second, 5*time.Second)
+
+	streams, err := lister.ListStreams(context.Background())
+	if err != nil {
+		t.Fatalf("redis outage must not fail MediaMTX stream listing: %v", err)
+	}
+	if len(streams) != 1 {
+		t.Fatalf("expected upstream stream during redis outage, got %d", len(streams))
+	}
+	if upstream.callCount() != 1 {
+		t.Fatalf("expected one upstream call, got %d", upstream.callCount())
 	}
 }

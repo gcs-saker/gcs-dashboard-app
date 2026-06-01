@@ -13,6 +13,7 @@ import (
 
 const (
 	routeHealthz                     = "/healthz"
+	routeReadyz                      = "/readyz"
 	routeStreams                     = "/v1/streams"
 	routeIceServers                  = "/v1/ice-servers"
 	routeLegacyStreamStatus          = "/stream/status"
@@ -25,14 +26,24 @@ const (
 	jsonContentType                  = "application/json"
 	authorizationHeader              = "Authorization"
 	jsonKeyDetail                    = "detail"
+	jsonKeyChecks                    = "checks"
 	jsonKeyIceServers                = "iceServers"
+	jsonKeyName                      = "name"
+	jsonKeyReason                    = "reason"
+	jsonKeyRequired                  = "required"
 	jsonKeyService                   = "service"
 	jsonKeyStatus                    = "status"
 	jsonKeyStream                    = "stream"
 	jsonKeyStreams                   = "streams"
 	mediaControlServiceName          = "media-control"
 	healthStatusOK                   = "ok"
+	healthStatusDegraded             = "degraded"
+	healthStatusError                = "error"
 	legacyStreamReadyStatus          = "ready"
+	readyCheckStreamRegistry         = "stream_registry"
+	readyCheckIceServers             = "ice_servers"
+	errStreamRegistryQueryFailed     = "stream registry query failed"
+	errNoHealthyIceServers           = "no healthy ICE servers available"
 	errAuthenticationRequiredMessage = "authentication required"
 	errStreamAccessDeniedMessage     = "stream access denied"
 	errStreamNotRegisteredMessage    = "stream is not registered"
@@ -75,6 +86,7 @@ func NewServer(
 func (s Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc(routeHealthz, s.healthz)
+	mux.HandleFunc(routeReadyz, s.readyz)
 	mux.HandleFunc(routeStreams, s.streamList)
 	mux.HandleFunc(routeIceServers, s.iceServers)
 	mux.HandleFunc(routeLegacyStreamStatus, s.legacyStreamStatus)
@@ -89,6 +101,51 @@ func (s Server) healthz(w http.ResponseWriter, _ *http.Request) {
 		jsonKeyStatus:  healthStatusOK,
 		jsonKeyService: mediaControlServiceName,
 	})
+}
+
+func (s Server) readyz(w http.ResponseWriter, r *http.Request) {
+	checks := []readinessCheck{
+		s.streamRegistryReadiness(r.Context()),
+		s.iceServerReadiness(),
+	}
+	status := healthStatusOK
+	httpStatus := http.StatusOK
+	for _, check := range checks {
+		if check.Status == healthStatusError && check.Required {
+			status = healthStatusDegraded
+			httpStatus = http.StatusServiceUnavailable
+			break
+		}
+	}
+	writeJSON(w, httpStatus, map[string]any{
+		jsonKeyService: mediaControlServiceName,
+		jsonKeyStatus:  status,
+		jsonKeyChecks:  checks,
+	})
+}
+
+func (s Server) streamRegistryReadiness(ctx context.Context) readinessCheck {
+	if _, err := s.streams.ListStreams(ctx); err != nil {
+		return readinessCheck{
+			Name:     readyCheckStreamRegistry,
+			Status:   healthStatusError,
+			Required: true,
+			Reason:   errStreamRegistryQueryFailed,
+		}
+	}
+	return readinessCheck{Name: readyCheckStreamRegistry, Status: healthStatusOK, Required: true}
+}
+
+func (s Server) iceServerReadiness() readinessCheck {
+	if len(s.ice.HealthyIceServers()) == 0 {
+		return readinessCheck{
+			Name:     readyCheckIceServers,
+			Status:   healthStatusError,
+			Required: true,
+			Reason:   errNoHealthyIceServers,
+		}
+	}
+	return readinessCheck{Name: readyCheckIceServers, Status: healthStatusOK, Required: true}
 }
 
 func (s Server) streamList(w http.ResponseWriter, r *http.Request) {
@@ -341,6 +398,13 @@ type iceServerResponse struct {
 	URLs       string  `json:"urls"`
 	Username   *string `json:"username"`
 	Credential *string `json:"credential"`
+}
+
+type readinessCheck struct {
+	Name     string `json:"name"`
+	Status   string `json:"status"`
+	Required bool   `json:"required"`
+	Reason   string `json:"reason,omitempty"`
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

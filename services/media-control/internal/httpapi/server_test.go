@@ -3,8 +3,10 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
@@ -56,6 +58,78 @@ func TestHealthz(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", recorder.Code)
 	}
+}
+
+func TestReadyzReturnsOKWhenMediaMTXAndIceServersAreReady(t *testing.T) {
+	path, _ := domain.NewStreamPath("raw/local/webcam")
+	ice, _ := domain.NewIceServer("turn:turn-primary:3478", domain.IceServerTURN, "gcs-turn", "secret", true)
+	server := newTestServer(
+		fakeStreams{streams: []domain.StreamDescriptor{{Path: path, Ready: true, Status: domain.StreamStatusOnline}}},
+		fakeIce{servers: []domain.IceServer{ice}},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload["status"] != "ok" {
+		t.Fatalf("expected ok readiness, got %#v", payload)
+	}
+}
+
+func TestReadyzReturnsDegradedWhenMediaMTXRegistryFails(t *testing.T) {
+	ice, _ := domain.NewIceServer("turn:turn-primary:3478", domain.IceServerTURN, "gcs-turn", "secret", true)
+	server := newTestServer(
+		fakeStreams{err: errors.New("raw mediamtx connection refused")},
+		fakeIce{servers: []domain.IceServer{ice}},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d", recorder.Code)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload["status"] != "degraded" {
+		t.Fatalf("expected degraded status, got %#v", payload)
+	}
+	assertReadinessCheck(t, payload, "stream_registry", "error", "stream registry query failed")
+	if strings.Contains(recorder.Body.String(), "connection refused") {
+		t.Fatalf("readiness response leaked raw upstream detail: %s", recorder.Body.String())
+	}
+}
+
+func TestReadyzReturnsDegradedWhenNoIceServersAreHealthy(t *testing.T) {
+	path, _ := domain.NewStreamPath("raw/local/webcam")
+	server := newTestServer(
+		fakeStreams{streams: []domain.StreamDescriptor{{Path: path, Ready: true, Status: domain.StreamStatusOnline}}},
+		fakeIce{},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d", recorder.Code)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	assertReadinessCheck(t, payload, "ice_servers", "error", "no healthy ICE servers available")
 }
 
 func TestIceServersResponse(t *testing.T) {
@@ -314,4 +388,28 @@ func newTestServerWithAuthorizer(streams StreamLister, ice IceServerProvider, au
 		panic(err)
 	}
 	return NewServer(streams, ice, playback, authorizer, groups)
+}
+
+func assertReadinessCheck(t *testing.T, payload map[string]any, name string, status string, reason string) {
+	t.Helper()
+	checks, ok := payload["checks"].([]any)
+	if !ok {
+		t.Fatalf("expected checks array, got %#v", payload["checks"])
+	}
+	for _, rawCheck := range checks {
+		check, ok := rawCheck.(map[string]any)
+		if !ok {
+			t.Fatalf("expected check object, got %#v", rawCheck)
+		}
+		if check["name"] == name {
+			if check["status"] != status {
+				t.Fatalf("expected %s status %s, got %#v", name, status, check)
+			}
+			if check["reason"] != reason {
+				t.Fatalf("expected %s reason %q, got %#v", name, reason, check)
+			}
+			return
+		}
+	}
+	t.Fatalf("expected readiness check %q in %#v", name, checks)
 }
