@@ -12,3 +12,5 @@ services:
         source: ${NGINX_CERTS_DIR:?NGINX_CERTS_DIR is required for HTTPS edge}
         target: /etc/nginx/certs
         read_only: true
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-check-certificate -q -O- https://127.0.0.1/healthz >/dev/null"]
