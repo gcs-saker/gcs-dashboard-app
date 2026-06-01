@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -39,12 +40,16 @@ func main() {
 		{URL: getenv("MEDIA_CONTROL_TURN_PRIMARY_URL", "turn:turn-primary:3478"), Kind: domain.IceServerTURN, Username: turnUsername, Credential: turnPassword, Healthy: true},
 		{URL: getenv("MEDIA_CONTROL_TURN_SECONDARY_URL", "turn:turn-secondary:3478"), Kind: domain.IceServerTURN, Username: turnUsername, Credential: turnPassword, Healthy: true},
 	})
+	authorizer := authpolicy.NewCachedAuthorizer(
+		authpolicy.NewClient(getenv("AUTH_POLICY_BASE_URL", ""), &http.Client{Timeout: 2 * time.Second}),
+		getenvDuration("MEDIA_CONTROL_AUTHZ_CACHE_TTL_SECONDS", 2*time.Second),
+	)
 
 	server := httpapi.NewServer(
 		mediamtx.NewClient(mediaMTXBaseURL, &http.Client{Timeout: 3 * time.Second}),
 		turn.NewRegistry(iceServers, turn.StaticProbe{}),
 		playback,
-		authpolicy.NewClient(getenv("AUTH_POLICY_BASE_URL", ""), &http.Client{Timeout: 2 * time.Second}),
+		&authorizer,
 		groupResolver,
 	)
 
@@ -80,4 +85,16 @@ func getenv(key string, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func getenvDuration(key string, fallback time.Duration) time.Duration {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	seconds, err := strconv.ParseFloat(value, 64)
+	if err != nil || seconds < 0 {
+		return fallback
+	}
+	return time.Duration(seconds * float64(time.Second))
 }

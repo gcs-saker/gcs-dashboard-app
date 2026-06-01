@@ -203,7 +203,7 @@ class AuthControllerTest {
 
     @Test
     fun `logout clears refresh cookie`() {
-        val response = controller.logout("http://localhost:18080", null)
+        val response = controller.logout(MockHttpServletRequest(), "http://localhost:18080", null)
 
         assertEquals(HttpStatus.NO_CONTENT, response.statusCode)
         assertTrue(requireNotNull(response.headers.getFirst(HttpHeaders.SET_COOKIE)).contains("Max-Age=0"))

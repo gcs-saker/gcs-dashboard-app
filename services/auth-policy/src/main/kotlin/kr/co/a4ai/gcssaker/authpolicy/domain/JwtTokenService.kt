@@ -7,6 +7,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.Date
+import java.util.UUID
 
 class JwtTokenService(
     secret: String,
@@ -50,6 +51,8 @@ class JwtTokenService(
 
     fun accessTokenExpiresInMinutes(): Long = accessTokenTtl.toMinutes()
 
+    fun refreshTokenExpiresInMinutes(): Long = refreshTokenTtl.toMinutes()
+
     private fun issueToken(
         principal: AuthenticatedPrincipal,
         tokenUse: String,
@@ -62,6 +65,7 @@ class JwtTokenService(
             .withClaim("role", principal.role.name.lowercase())
             .withClaim("group_id", principal.groupId.value)
             .withClaim("token_use", tokenUse)
+            .withJWTId(UUID.randomUUID().toString())
             .withIssuedAt(Date.from(now))
             .withExpiresAt(Date.from(now.plus(ttl)))
             .sign(algorithm)

@@ -142,6 +142,25 @@ PY
   return 1
 }
 
+wait_for_hls_playlist() {
+  local attempts="${1:-45}"
+  local delay_seconds="${2:-1}"
+  local attempt
+  local playlist_url="${EDGE_BASE_URL}/hls/${STREAM_PATH}/index.m3u8"
+  local payload
+
+  for ((attempt = 1; attempt <= attempts; attempt += 1)); do
+    payload="$(curl -fsS "$playlist_url" 2>/dev/null || true)"
+    if [[ "$payload" == *"#EXTM3U"* ]]; then
+      return 0
+    fi
+    sleep "$delay_seconds"
+  done
+
+  echo "Timed out waiting for HLS playlist: ${playlist_url}" >&2
+  return 1
+}
+
 assert_json_contract() {
   local url="$1"
   local expected="$2"
@@ -187,8 +206,10 @@ run_check() {
   grep -q "/api/v1/streams/ice-servers" "${REPO_ROOT}/services/media-control/internal/httpapi/server.go"
   grep -q "AUTH_POLICY_BASE_URL" "${REPO_ROOT}/services/media-control/cmd/media-control/main.go"
   grep -q "Authorization: Bearer" "$0"
+  grep -q "wait_for_hls_playlist" "$0"
   grep -q "VITE_STREAM_API_BASE_URL" "${REPO_ROOT}/gcs-dashboard/src/config.ts"
   grep -q "location /media-control/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
+  grep -q "location /hls/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   echo "M7 media-control cutover smoke check passed"
 }
 
@@ -199,7 +220,7 @@ run_live() {
   trap cleanup EXIT
 
   if [[ "$START_STACK" == "1" ]]; then
-    "${REPO_ROOT}/scripts/m7_single_node_runtime_smoke.sh" --run
+    STOP_STACK=0 "${REPO_ROOT}/scripts/m7_single_node_runtime_smoke.sh" --run
   fi
 
   ACCESS_TOKEN="$(login_token)"
@@ -207,13 +228,14 @@ run_live() {
   assert_json_contract "${EDGE_BASE_URL}/media-control/api/v1/streams/ice-servers" ice
   start_publisher
   wait_for_media_control_stream
+  wait_for_hls_playlist
   assert_json_contract "${EDGE_BASE_URL}/media-control/api/v1/streams/${STREAM_ID}" detail
   assert_json_contract "${EDGE_BASE_URL}/media-control/api/v1/streams/${STREAM_ID}/playback" playback
   assert_json_contract "${EDGE_BASE_URL}/media-control/api/v1/streams/${STREAM_ID}/status" status
 
   echo "M7 media-control cutover smoke run passed"
   echo "Stream ID: ${STREAM_ID}"
-  echo "Verified: Go stream list, detail, playback, status, ICE servers through /media-control"
+  echo "Verified: Go stream list, detail, playback, status, ICE servers through /media-control, HLS playlist through /hls"
 }
 
 case "$MODE" in

@@ -1,5 +1,6 @@
 from pathlib import Path
 import subprocess
+import sys
 
 import yaml
 
@@ -22,7 +23,7 @@ def load_yaml(path: Path) -> dict:
 
 def test_docker_env_check_script_passes_static_contracts() -> None:
     result = subprocess.run(
-        [str(SCRIPT)],
+        [sys.executable, str(SCRIPT)],
         check=False,
         capture_output=True,
         text=True,

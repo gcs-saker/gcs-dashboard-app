@@ -154,10 +154,16 @@ class AuthController(
 
     @PostMapping("/logout")
     fun logout(
+        servletRequest: HttpServletRequest,
         @RequestHeader(HttpHeaders.ORIGIN, required = false) origin: String?,
         @RequestHeader(HttpHeaders.REFERER, required = false) referer: String?,
     ): ResponseEntity<Void> {
         assertTrustedOrigin(origin, referer)
+        servletRequest.cookies
+            ?.firstOrNull { it.name == settings.refreshCookieName }
+            ?.value
+            ?.takeIf { it.isNotBlank() }
+            ?.let(sessions::revokeRefreshToken)
         return ResponseEntity.noContent()
             .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
             .build()
