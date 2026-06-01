@@ -3,6 +3,7 @@ import "../Login.scss";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { apiUrl } from "../config";
+import { AUTH_JSON_HEADERS } from "../features/auth/authApi";
 import { storeAuthSession } from "../features/auth/authStorage";
 
 export default function Login() {
@@ -16,7 +17,10 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(apiUrl("/auth/login"), form, { withCredentials: true });
+      const res = await axios.post(apiUrl("/auth/login"), form, {
+        withCredentials: true,
+        headers: AUTH_JSON_HEADERS,
+      });
       console.log("로그인 성공:", res.data);
       storeAuthSession({
         accessToken: res.data.access_token,

@@ -2,6 +2,20 @@ import { authUrl } from "../../config";
 import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 import type { AuthenticatedUser, LoginRequest, SignupRequest, SignupResponse, TokenResponse } from "./types";
 
+export const CSRF_HEADER_NAME = "X-GCS-CSRF";
+export const CSRF_HEADER_VALUE = "same-origin";
+export const AUTH_CSRF_HEADERS = Object.freeze({
+  [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
+});
+export const AUTH_JSON_HEADERS = Object.freeze({
+  "Content-Type": "application/json",
+  [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
+});
+export const AUTH_ACCEPT_HEADERS = Object.freeze({
+  Accept: "application/json",
+  [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
+});
+
 let refreshInFlight: Promise<TokenResponse> | null = null;
 
 export class AuthApiError extends Error {
@@ -27,7 +41,7 @@ export async function loginRequest(credentials: LoginRequest): Promise<TokenResp
   const response = await fetch(authUrl("/login"), {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: AUTH_JSON_HEADERS,
     body: JSON.stringify(credentials),
   });
 
@@ -42,7 +56,7 @@ export async function refreshSessionRequest(fetcher: typeof fetch = fetch): Prom
   const response = await fetcher(authUrl("/refresh"), {
     method: "POST",
     credentials: "include",
-    headers: { Accept: "application/json" },
+    headers: AUTH_ACCEPT_HEADERS,
   });
 
   if (!response.ok) {
@@ -59,6 +73,7 @@ export async function logoutRequest(fetcher: typeof fetch = fetch): Promise<void
   await fetcher(authUrl("/logout"), {
     method: "POST",
     credentials: "include",
+    headers: AUTH_CSRF_HEADERS,
   });
   clearAuthSession();
 }
@@ -67,7 +82,7 @@ export async function signupRequest(payload: SignupRequest): Promise<SignupRespo
   const response = await fetch(authUrl("/signup"), {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: AUTH_JSON_HEADERS,
     body: JSON.stringify(payload),
   });
 

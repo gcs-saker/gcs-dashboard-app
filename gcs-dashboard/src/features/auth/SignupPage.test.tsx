@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import App from "../../App";
+import { AUTH_JSON_HEADERS } from "./authApi";
 import { clearAuthSession } from "./authStorage";
 
 vi.mock("../../component/MainMap", () => ({
@@ -35,6 +36,18 @@ vi.mock("../streaming/components/StreamingSmokeDashboard", () => ({
 }));
 
 describe("SignupPage auth flow", () => {
+  const AUTH_REFRESH_URL = "/api/auth/refresh";
+  const AUTH_SIGNUP_URL = "/api/auth/signup";
+
+  function mockRefreshMissingThenSignup(signupResponse: Response): void {
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input) === AUTH_REFRESH_URL) {
+        return Response.json({ detail: "refresh token required" }, { status: 401 });
+      }
+      return signupResponse;
+    });
+  }
+
   beforeEach(() => {
     clearAuthSession();
     window.history.pushState({}, "", "/signup");
@@ -47,7 +60,7 @@ describe("SignupPage auth flow", () => {
   });
 
   test("creates a user through the edge-relative signup API and redirects to login", async () => {
-    globalThis.fetch = vi.fn(async () =>
+    mockRefreshMissingThenSignup(
       Response.json(
         {
           id: 2,
@@ -74,10 +87,10 @@ describe("SignupPage auth flow", () => {
       await screen.findByText("viewer02 계정이 등록되었습니다. 로그인해주세요."),
     ).toBeInTheDocument();
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      "/api/auth/signup",
+      AUTH_SIGNUP_URL,
       expect.objectContaining({
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: AUTH_JSON_HEADERS,
         body: JSON.stringify({
           username: "viewer02",
           email: "viewer02@example.com",
@@ -90,7 +103,7 @@ describe("SignupPage auth flow", () => {
   });
 
   test("blocks submit when password confirmation does not match", async () => {
-    globalThis.fetch = vi.fn();
+    globalThis.fetch = vi.fn(async () => Response.json({ detail: "refresh token required" }, { status: 401 }));
 
     render(<App />);
 
@@ -102,14 +115,16 @@ describe("SignupPage auth flow", () => {
     await userEvent.click(screen.getByRole("button", { name: "가입" }));
 
     expect(screen.getByText("비밀번호 확인이 일치하지 않습니다.")).toBeInTheDocument();
-    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      AUTH_REFRESH_URL,
+      expect.objectContaining({ method: "POST", credentials: "include" }),
+    );
     expect(window.location.pathname).toBe("/signup");
   });
 
   test("shows a specific message when the username already exists", async () => {
-    globalThis.fetch = vi.fn(async () =>
-      Response.json({ detail: "Username already registered" }, { status: 400 }),
-    );
+    mockRefreshMissingThenSignup(Response.json({ detail: "Username already registered" }, { status: 400 }));
 
     render(<App />);
 

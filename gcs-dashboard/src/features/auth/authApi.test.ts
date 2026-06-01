@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { authenticatedFetch } from "./authApi";
+import { AUTH_ACCEPT_HEADERS, CSRF_HEADER_NAME, CSRF_HEADER_VALUE, authenticatedFetch } from "./authApi";
 import { clearAuthSession, getStoredAccessToken } from "./authStorage";
 
 describe("authenticatedFetch", () => {
@@ -32,7 +32,7 @@ describe("authenticatedFetch", () => {
     expect(fetcher).toHaveBeenNthCalledWith(
       2,
       "/api/auth/refresh",
-      expect.objectContaining({ method: "POST", credentials: "include" }),
+      expect.objectContaining({ method: "POST", credentials: "include", headers: AUTH_ACCEPT_HEADERS }),
     );
     expect(fetcher).toHaveBeenNthCalledWith(
       3,
@@ -108,7 +108,11 @@ describe("authenticatedFetch", () => {
 
     expect(fetcher).toHaveBeenCalledWith(
       "/auth-policy/auth/signup",
-      expect.objectContaining({ method: "POST", credentials: "include" }),
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        headers: expect.objectContaining({ [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE }),
+      }),
     );
   });
 });
