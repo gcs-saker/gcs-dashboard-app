@@ -113,4 +113,26 @@ class AuthPolicyConfigTest {
         assertEquals(1, warnEvents.size)
         assertEquals("TURN 릴레이", warnEvents.first().source)
     }
+
+    @Test
+    fun `configuration reads closed network time sync defaults`() {
+        val env = StandardEnvironment()
+        env.propertySources.addFirst(
+            MapPropertySource(
+                "test",
+                mapOf(
+                    "TIME_SYNC_MODE" to "closed_network",
+                    "TIME_SYNC_SOURCE_HOST" to "10.0.0.10",
+                    "TIME_SYNC_SOURCE_PORT" to "123",
+                    "TIME_SYNC_DRIFT_WARN_MS" to "500",
+                ),
+            ),
+        )
+
+        val config = AuthPolicyConfig().timeSyncConfigRepository(env).current()
+
+        assertEquals("10.0.0.10", config.sourceHost)
+        assertEquals(123, config.sourcePort)
+        assertEquals(500, config.driftWarnMs)
+    }
 }

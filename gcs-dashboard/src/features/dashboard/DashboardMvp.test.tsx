@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { AuthProvider } from "../auth/AuthProvider";
 import { clearAuthSession, storeAuthSession } from "../auth/authStorage";
 import { DashboardMvp } from "./DashboardMvp";
@@ -27,6 +27,7 @@ describe("DashboardMvp", () => {
 
   afterEach(() => {
     clearAuthSession();
+    vi.unstubAllGlobals();
     window.history.pushState({}, "", "/");
   });
 
@@ -35,6 +36,7 @@ describe("DashboardMvp", () => {
 
     expect(screen.getByRole("main", { name: "Field Ops Dashboard MVP" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "대시보드" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "운영설정" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "웹캠 송출" })).toHaveAttribute("href", "/publisher");
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "지도 확대" })).toBeInTheDocument();
@@ -196,5 +198,33 @@ describe("DashboardMvp", () => {
 
     expect(window.localStorage.getItem("gcs_saker_access_token")).toBeNull();
     expect(window.location.pathname).toBe("/login");
+  });
+
+  test("opens time sync settings from the operations settings tab", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        mode: "public",
+        sourceHost: "pool.ntp.org",
+        sourcePort: 123,
+        driftWarnMs: 1000,
+        updatedAt: "1970-01-01T00:00:00Z",
+        updatedBy: "system",
+        serverTime: "2026-06-01T00:00:00Z",
+        monotonicMs: 42000,
+        timezone: "UTC",
+        checkedAt: "2026-06-01T00:00:00Z",
+        health: "ok",
+        message: "pool.ntp.org:123 기준으로 시간 소스가 설정되었습니다.",
+      }),
+    } as Response)));
+    renderDashboard();
+
+    await user.click(screen.getByRole("button", { name: "운영설정" }));
+
+    expect(await screen.findByLabelText("시간 동기화 설정")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "설정 저장" })).toBeInTheDocument();
   });
 });

@@ -31,6 +31,14 @@ Spring Boot + Kotlin 기반 인증/인가 및 group policy control-plane PoC 서
 
 `POST /policy/streams/access`는 bearer access token을 검증한 뒤 stream 발행 group과 사용자 group/role을 비교한다. 같은 group viewer는 허용하고, operator/admin은 담당 group 하위 stream까지 허용한다. M7 PoC에서는 in-memory user/group repository를 사용하며, DB-backed repository 전환 전까지는 정책 모델과 API contract를 고정하는 역할이다.
 
+## Time Sync API
+
+- `GET /ops/time/status`: 현재 서버 시각, 설정된 시간 source, drift 경고 기준, 상태를 반환한다.
+- `POST /ops/time/check`: 같은 contract로 즉시 점검 결과를 반환한다.
+- `PUT /ops/time/config`: operator/admin만 공개망, 폐쇄망, 수동/격리 모드 설정을 변경한다.
+
+환경 변수 기본값은 `TIME_SYNC_MODE=public`, `TIME_SYNC_SOURCE_HOST=pool.ntp.org`, `TIME_SYNC_SOURCE_PORT=123`, `TIME_SYNC_DRIFT_WARN_MS=1000`이다. 폐쇄망 납품에서는 `TIME_SYNC_MODE=closed_network`와 내부 NTP 서버 IP 또는 도메인을 주입한다. 앱은 host clock을 직접 변경하지 않고, 실제 chrony/systemd-timesyncd 적용은 운영 계층에서 분리한다.
+
 ## 테스트
 
 ```bash

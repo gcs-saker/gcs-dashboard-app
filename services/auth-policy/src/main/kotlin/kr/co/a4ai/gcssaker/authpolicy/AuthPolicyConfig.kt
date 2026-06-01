@@ -22,7 +22,13 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.RefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvite
 import kr.co.a4ai.gcssaker.authpolicy.domain.StatelessRefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
+import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfig
+import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfigRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncStatusService
+import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryTimeSyncConfigRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
+import kr.co.a4ai.gcssaker.authpolicy.domain.parseTimeSyncMode
+import kr.co.a4ai.gcssaker.authpolicy.domain.normalizedSourceHost
 import kr.co.a4ai.gcssaker.authpolicy.api.BearerPrincipalResolver
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -243,6 +249,28 @@ class AuthPolicyConfig {
             ),
         )
     }
+
+    @Bean
+    fun timeSyncConfigRepository(env: Environment): TimeSyncConfigRepository {
+        val mode = parseTimeSyncMode(env.getProperty("TIME_SYNC_MODE") ?: "public")
+        val sourceHost = normalizedSourceHost(mode, env.getProperty("TIME_SYNC_SOURCE_HOST"))
+        val sourcePort = env.getProperty("TIME_SYNC_SOURCE_PORT")?.toIntOrNull()?.takeIf { it in 1..65_535 } ?: 123
+        val driftWarnMs = env.getProperty("TIME_SYNC_DRIFT_WARN_MS")?.toLongOrNull()?.takeIf { it in 1..600_000 } ?: 1_000
+        return InMemoryTimeSyncConfigRepository(
+            TimeSyncConfig(
+                mode = mode,
+                sourceHost = sourceHost,
+                sourcePort = sourcePort,
+                driftWarnMs = driftWarnMs,
+                updatedAt = Instant.EPOCH,
+                updatedBy = "system",
+            ),
+        )
+    }
+
+    @Bean
+    fun timeSyncStatusService(repository: TimeSyncConfigRepository): TimeSyncStatusService =
+        TimeSyncStatusService(repository)
 }
 
 data class AuthRuntimeSettings(
