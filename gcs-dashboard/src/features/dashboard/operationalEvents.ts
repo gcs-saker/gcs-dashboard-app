@@ -20,64 +20,6 @@ export interface OperationalEventFilters {
   to: string;
 }
 
-export const DEFAULT_OPERATIONAL_EVENTS: OperationalEvent[] = [
-  {
-    id: "evt-001",
-    occurredAt: "2026-06-01T09:00:00+09:00",
-    severity: "info",
-    category: "api",
-    source: "API 서버",
-    message: "헬스체크 정상",
-    connections: 12,
-    latencyMs: 42,
-    throughputMbps: 18.4,
-  },
-  {
-    id: "evt-002",
-    occurredAt: "2026-06-01T09:05:00+09:00",
-    severity: "info",
-    category: "signaling",
-    source: "Signaling 서버",
-    message: "WebRTC WHEP 연결 수립",
-    connections: 3,
-    latencyMs: 88,
-    throughputMbps: 42.1,
-  },
-  {
-    id: "evt-003",
-    occurredAt: "2026-06-01T09:12:00+09:00",
-    severity: "warn",
-    category: "network",
-    source: "TURN 릴레이",
-    message: "직접 ICE 후보 실패 후 릴레이 경로 사용",
-    connections: 5,
-    latencyMs: 164,
-    throughputMbps: 31.6,
-  },
-  {
-    id: "evt-004",
-    occurredAt: "2026-06-01T09:24:00+09:00",
-    severity: "warn",
-    category: "stream",
-    source: "Stream Registry",
-    message: "송출 종료 감지",
-    connections: 1,
-    latencyMs: 110,
-    throughputMbps: 0,
-  },
-  {
-    id: "evt-005",
-    occurredAt: "2026-06-01T09:31:00+09:00",
-    severity: "error",
-    category: "security",
-    source: "인증/인가 서버",
-    message: "만료된 세션으로 스트림 접근 거절",
-    connections: 0,
-    latencyMs: 73,
-    throughputMbps: 0,
-  },
-];
-
 export function filterOperationalEvents(
   events: OperationalEvent[],
   filters: OperationalEventFilters,

@@ -2,8 +2,12 @@ package kr.co.a4ai.gcssaker.authpolicy
 
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.StandardEnvironment
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.NoopPrincipalCache
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
 import kr.co.a4ai.gcssaker.authpolicy.domain.StatelessRefreshSessionStore
+import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -94,5 +98,19 @@ class AuthPolicyConfigTest {
         assertNotNull(repository.findByUsername("operator01"))
         assertNotNull(repository.findByUsername("m7-smoke-viewer"))
         assertNotNull(sessionService.login("operator01", "correct-password"))
+    }
+
+    @Test
+    fun `configuration seeds operational event repository for dashboard log integration`() {
+        val repository = AuthPolicyConfig().operationalEventRepository()
+        val principal = AuthenticatedPrincipal("operator01", UserRole.OPERATOR, GroupId("co-a"))
+
+        val allEvents = repository.eventsFor(principal, OperationalEventQuery())
+        val warnEvents = repository.eventsFor(principal, OperationalEventQuery(severity = "warn", query = "ICE"))
+
+        assertEquals(5, allEvents.size)
+        assertEquals("ops-security-001", allEvents.first().id)
+        assertEquals(1, warnEvents.size)
+        assertEquals("TURN 릴레이", warnEvents.first().source)
     }
 }

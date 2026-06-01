@@ -1025,7 +1025,7 @@
 .event-log-view {
   display: grid;
   gap: 10px;
-  grid-template-rows: auto auto minmax(180px, 0.32fr) 1fr;
+  grid-template-rows: auto auto auto minmax(180px, 0.32fr) 1fr;
 }
 
 .event-log-view__filters {
@@ -1042,13 +1042,20 @@
 .event-log-view__summary {
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .event-log-view__summary span {
   border: 1px solid var(--line-soft);
   color: var(--text);
   font-weight: 900;
+  padding: 10px;
+}
+
+.event-log-view__error {
+  border: 1px solid rgba(255, 108, 93, 0.56);
+  color: #ffb0a6;
+  margin: 0;
   padding: 10px;
 }
 

@@ -65,6 +65,7 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "location /api/asset/" in config
     assert "location = /api/telemetry/all" in config
     assert "location /api/telemetry/" in config
+    assert "location /api/ops/" in config
     assert "location /api/stream/" in config
     assert "location /stream/" in config
     assert "location /api/" in config
@@ -154,17 +155,20 @@ def test_legacy_control_prefix_is_marked_as_future_command_fallback() -> None:
     assert "proxy_pass http://gcs_backend;" in control_location
 
 
-def test_read_only_asset_and_telemetry_paths_are_cut_over_to_auth_policy() -> None:
+def test_read_only_asset_telemetry_and_ops_paths_are_cut_over_to_auth_policy() -> None:
     config = read_config()
     asset_location = extract_location(config, "/api/asset/")
     telemetry_all_location = extract_exact_location(config, "/api/telemetry/all")
     telemetry_location = extract_location(config, "/api/telemetry/")
+    ops_location = extract_location(config, "/api/ops/")
 
     assert "rewrite ^/api/asset/(.*)$ /asset/$1 break;" in asset_location
     assert "proxy_pass http://gcs_auth_policy;" in asset_location
     assert "proxy_pass http://gcs_auth_policy/telemetry/all;" in telemetry_all_location
     assert "rewrite ^/api/telemetry/(.*)$ /telemetry/$1 break;" in telemetry_location
     assert "proxy_pass http://gcs_auth_policy;" in telemetry_location
+    assert "rewrite ^/api/ops/(.*)$ /ops/$1 break;" in ops_location
+    assert "proxy_pass http://gcs_auth_policy;" in ops_location
 
 
 def test_legacy_stream_prefix_is_cut_over_to_go_media_control_for_runtime_smoke() -> None:
