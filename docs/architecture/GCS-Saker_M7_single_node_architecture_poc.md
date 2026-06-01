@@ -104,12 +104,12 @@ classDiagram
       +unitId
       +status
     }
-    class StreamRoutePolicy {
-      +viewerUnitId
-      +streamUnitId
-      +scope
-      +expiresAt
-    }
+class StreamRoutePolicy {
+  +viewerUnitId
+  +streamUnitId
+  +scope
+  +expiresAt
+}
     OrganizationUnit "1" --> "*" OrganizationUnit
     OrganizationUnit "1" --> "*" User
     OrganizationUnit "1" --> "*" Asset
@@ -123,6 +123,16 @@ classDiagram
 - 중대는 자기 중대 stream만 기본 조회한다.
 - 임시 공유는 `StreamRoutePolicy`로 열고 만료 시간을 둔다.
 - stream list API는 사용자 group scope에 따라 필터링된 결과만 반환한다.
+
+M7-04에서 auth-policy domain에 고정한 route scope:
+
+| Scope | 의미 | 사용 예 |
+| --- | --- | --- |
+| `SAME_GROUP` | 특정 viewer group이 특정 publisher group의 stream만 조회 | 중대 내부 공유 |
+| `DESCENDANT_GROUPS` | 특정 publisher group과 하위 group stream까지 조회 | 대대/중대 지휘관 화면 |
+| `CROSS_GROUP` | 형제/타 부대 stream을 만료 시간 기준으로 임시 조회 | 합동 작전/상황 전파 |
+
+stream routing은 인증/인가 domain에서 먼저 판단하고, media-control은 허용된 stream registry와 ICE 정보만 제공하는 방향으로 둔다. 즉, media-control은 group 권한을 직접 결정하지 않고 auth-policy의 decision을 소비하는 쪽으로 확장한다.
 
 ## GraphQL 검토 위치
 

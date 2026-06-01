@@ -37,6 +37,12 @@ enum class Permission {
     MANAGE_POLICY,
 }
 
+enum class StreamRouteScope {
+    SAME_GROUP,
+    DESCENDANT_GROUPS,
+    CROSS_GROUP,
+}
+
 data class OrganizationUnit(
     val id: GroupId,
     val name: String,
@@ -63,6 +69,16 @@ data class StreamSessionDescriptor(
     val publisherGroupId: GroupId,
     val startedAt: Instant,
 )
+
+data class StreamRoutePolicy(
+    val viewerGroupId: GroupId,
+    val publisherGroupId: GroupId,
+    val scope: StreamRouteScope,
+    val expiresAt: Instant? = null,
+) {
+    fun isActive(now: Instant): Boolean =
+        expiresAt == null || expiresAt.isAfter(now)
+}
 
 data class StreamAccessDecision(
     val allowed: Boolean,
