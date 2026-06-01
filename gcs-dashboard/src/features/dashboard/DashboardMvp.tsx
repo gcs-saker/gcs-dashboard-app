@@ -36,9 +36,12 @@ const TacticalLeafletMap = lazy(() =>
 const EventLogView = lazy(() =>
   import("./components/EventLogView").then((module) => ({ default: module.EventLogView })),
 );
+const TimeSyncSettingsView = lazy(() =>
+  import("./components/TimeSyncSettingsView").then((module) => ({ default: module.TimeSyncSettingsView })),
+);
 
 type TelemetryRow = [label: string, value: string];
-type DashboardView = "dashboard" | "cctv" | "events";
+type DashboardView = "dashboard" | "cctv" | "events" | "settings";
 
 function geometrySourceLabel(source: DashboardGeometrySource | undefined): string {
   switch (source) {
@@ -210,6 +213,13 @@ export function DashboardMvp() {
           >
             이벤트로그
           </button>
+          <button
+            className={`ops-tab ${activeView === "settings" ? "is-active" : ""}`}
+            onClick={() => setActiveView("settings")}
+            type="button"
+          >
+            운영설정
+          </button>
         </nav>
         <div className="ops-dashboard__actions">
           <span role="status">{layoutMessage}</span>
@@ -232,6 +242,11 @@ export function DashboardMvp() {
       {activeView === "events" ? (
         <Suspense fallback={<section className="event-log-view" role="status">이벤트로그 준비 중</section>}>
           <EventLogView />
+        </Suspense>
+      ) : null}
+      {activeView === "settings" ? (
+        <Suspense fallback={<section className="time-sync-view" role="status">운영설정 준비 중</section>}>
+          <TimeSyncSettingsView />
         </Suspense>
       ) : null}
       {activeView === "cctv" ? (
