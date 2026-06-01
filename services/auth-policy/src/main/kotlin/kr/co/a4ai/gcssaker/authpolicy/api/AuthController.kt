@@ -47,17 +47,17 @@ data class UserResponse(
     val id: Int,
     val username: String,
     val email: String,
-    @get:JsonProperty(AuthResponseFields.COMPANY_ID)
+    @get:JsonProperty(ApiFieldNames.COMPANY_ID)
     val companyId: Int,
     val role: String,
 )
 
 data class TokenResponse(
-    @get:JsonProperty(AuthResponseFields.ACCESS_TOKEN)
+    @get:JsonProperty(ApiFieldNames.ACCESS_TOKEN)
     val accessToken: String,
-    @get:JsonProperty(AuthResponseFields.TOKEN_TYPE)
+    @get:JsonProperty(ApiFieldNames.TOKEN_TYPE)
     val tokenType: String = AuthTokenContract.BEARER_TOKEN_TYPE,
-    @get:JsonProperty(AuthResponseFields.EXPIRES_IN_MINUTES)
+    @get:JsonProperty(ApiFieldNames.EXPIRES_IN_MINUTES)
     val expiresInMinutes: Long,
     val username: String,
     val role: String,
@@ -96,11 +96,11 @@ class AuthController(
                 ),
             )
         } catch (exc: SignupRejectedException) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, exc.message ?: AuthErrorMessages.SIGNUP_REJECTED)
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, exc.message ?: AuthApiErrors.SIGNUP_REJECTED)
         } catch (exc: IllegalArgumentException) {
             throw ResponseStatusException(
                 HttpStatus.BAD_REQUEST,
-                exc.message ?: AuthErrorMessages.INVALID_SIGNUP_REQUEST,
+                exc.message ?: AuthApiErrors.INVALID_SIGNUP_REQUEST,
             )
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(userResponse(user))
@@ -116,7 +116,7 @@ class AuthController(
         assertTrustedOrigin(origin, referer)
         assertCsrfHeader(csrfHeader)
         val tokens = sessions.login(request.username, request.password)
-            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthErrorMessages.INVALID_CREDENTIALS)
+            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthApiErrors.INVALID_CREDENTIALS)
         return tokenResponse(tokens.principal, tokens.accessToken, tokens.refreshToken, tokens.expiresInMinutes)
     }
 
@@ -133,12 +133,12 @@ class AuthController(
             ?.firstOrNull { it.name == settings.refreshCookieName }
             ?.value
         if (refreshToken.isNullOrBlank()) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthErrorMessages.REFRESH_TOKEN_REQUIRED)
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthApiErrors.REFRESH_TOKEN_REQUIRED)
         }
         val tokens = try {
             sessions.refresh(refreshToken)
         } catch (_: JWTVerificationException) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthErrorMessages.INVALID_TOKEN)
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthApiErrors.INVALID_TOKEN)
         }
         if (tokens == null) {
             @Suppress("UNCHECKED_CAST")
@@ -152,11 +152,11 @@ class AuthController(
     @GetMapping(AuthApiRoutes.ME)
     fun me(@RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorization: String?): CurrentUserResponse {
         val token = authorization?.removePrefix(AuthTokenContract.BEARER_PREFIX)?.takeIf { it != authorization }
-            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthErrorMessages.AUTHENTICATION_REQUIRED)
+            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthApiErrors.AUTHENTICATION_REQUIRED)
         val principal = try {
             sessions.verifyAccessToken(token)
         } catch (_: JWTVerificationException) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthErrorMessages.INVALID_TOKEN)
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthApiErrors.INVALID_TOKEN)
         }
         return CurrentUserResponse(username = principal.username, role = principal.role.name.lowercase())
     }
@@ -230,13 +230,13 @@ class AuthController(
             return
         }
         if (requestOrigin !in settings.allowedOrigins) {
-            throw ResponseStatusException(HttpStatus.FORBIDDEN, AuthErrorMessages.UNTRUSTED_REQUEST_ORIGIN)
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, AuthApiErrors.UNTRUSTED_REQUEST_ORIGIN)
         }
     }
 
     private fun assertCsrfHeader(value: String?) {
         if (value != AuthSecurityHeaders.CSRF_HEADER_VALUE) {
-            throw ResponseStatusException(HttpStatus.FORBIDDEN, AuthErrorMessages.CSRF_HEADER_REQUIRED)
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, AuthApiErrors.CSRF_HEADER_REQUIRED)
         }
     }
 }

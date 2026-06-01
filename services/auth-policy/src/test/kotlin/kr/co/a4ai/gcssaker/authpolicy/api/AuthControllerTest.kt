@@ -253,7 +253,7 @@ class AuthControllerTest {
         }
 
         assertEquals(HttpStatus.FORBIDDEN, error.statusCode)
-        assertEquals(AuthErrorMessages.CSRF_HEADER_REQUIRED, error.reason)
+        assertEquals(AuthApiErrors.CSRF_HEADER_REQUIRED, error.reason)
     }
 
     @Test

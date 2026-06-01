@@ -11,11 +11,11 @@ class BearerPrincipalResolver(
     fun requirePrincipal(authorization: String?) =
         try {
             val token = authorization?.removePrefix(AuthTokenContract.BEARER_PREFIX)?.takeIf { it != authorization }
-                ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthErrorMessages.AUTHENTICATION_REQUIRED)
+                ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthApiErrors.AUTHENTICATION_REQUIRED)
             sessions.verifyAccessToken(token)
         } catch (_: JWTVerificationException) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthErrorMessages.INVALID_TOKEN)
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthApiErrors.INVALID_TOKEN)
         } catch (_: IllegalArgumentException) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthErrorMessages.INVALID_TOKEN)
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthApiErrors.INVALID_TOKEN)
         }
 }

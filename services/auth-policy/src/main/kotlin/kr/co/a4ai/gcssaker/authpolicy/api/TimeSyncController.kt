@@ -83,14 +83,14 @@ class TimeSyncController(
                 Instant.now(),
             )
         } catch (exc: IllegalArgumentException) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, exc.message ?: AuthErrorMessages.INVALID_TIME_SYNC_CONFIG)
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, exc.message ?: OpsApiErrors.INVALID_TIME_SYNC_CONFIG)
         }
         return statusService.status().toResponse()
     }
 
     private fun requireOperator(principal: AuthenticatedPrincipal) {
         if (principal.role != UserRole.OPERATOR && principal.role != UserRole.ADMIN) {
-            throw ResponseStatusException(HttpStatus.FORBIDDEN, AuthErrorMessages.OPERATOR_ROLE_REQUIRED)
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, OpsApiErrors.OPERATOR_ROLE_REQUIRED)
         }
     }
 }
