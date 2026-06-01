@@ -3,6 +3,7 @@ package streamcache
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
@@ -24,6 +25,7 @@ type CachedStreamLister struct {
 	presencePrefix string
 	listTTL        time.Duration
 	presenceTTL    time.Duration
+	refreshMu      *sync.Mutex
 }
 
 func NewCachedStreamLister(
@@ -41,43 +43,57 @@ func NewCachedStreamLister(
 		presencePrefix: presencePrefix,
 		listTTL:        listTTL,
 		presenceTTL:    presenceTTL,
+		refreshMu:      &sync.Mutex{},
 	}
 }
 
 func (l CachedStreamLister) ListStreams(ctx context.Context) ([]domain.StreamDescriptor, error) {
-	if l.cache != nil && l.listTTL > 0 && l.listKey != "" {
-		if cached, ok, err := l.cache.Get(ctx, l.listKey); err == nil && ok {
-			var streams []domain.StreamDescriptor
-			if json.Unmarshal([]byte(cached), &streams) == nil {
-				return streams, nil
-			}
-		}
+	if streams, ok := l.loadCached(ctx); ok {
+		return streams, nil
+	}
+	l.refreshMu.Lock()
+	defer l.refreshMu.Unlock()
+	if streams, ok := l.loadCached(ctx); ok {
+		return streams, nil
 	}
 
 	streams, err := l.upstream.ListStreams(ctx)
 	if err != nil {
 		return nil, err
 	}
-	l.store(ctx, streams)
-	return streams, nil
+	streamList := domain.NewStreamList(streams)
+	l.store(ctx, streamList)
+	return streamList.Values(), nil
 }
 
-func (l CachedStreamLister) store(ctx context.Context, streams []domain.StreamDescriptor) {
+func (l CachedStreamLister) loadCached(ctx context.Context) ([]domain.StreamDescriptor, bool) {
+	if l.cache != nil && l.listTTL > 0 && l.listKey != "" {
+		if cached, ok, err := l.cache.Get(ctx, l.listKey); err == nil && ok {
+			var streams []domain.StreamDescriptor
+			if json.Unmarshal([]byte(cached), &streams) == nil {
+				return domain.NewStreamList(streams).Values(), true
+			}
+		}
+	}
+	return nil, false
+}
+
+func (l CachedStreamLister) store(ctx context.Context, streams domain.StreamList) {
 	if l.cache == nil {
 		return
 	}
 	if l.listTTL > 0 && l.listKey != "" {
-		if payload, err := json.Marshal(streams); err == nil {
+		if payload, err := json.Marshal(streams.Values()); err == nil {
 			_ = l.cache.Set(ctx, l.listKey, string(payload), l.listTTL)
 		}
 	}
 	if l.presenceTTL <= 0 || l.presencePrefix == "" {
 		return
 	}
-	for _, stream := range streams {
+	streams.ForEach(func(stream domain.StreamDescriptor) {
 		if stream.Status != domain.StreamStatusOnline {
-			continue
+			return
 		}
 		_ = l.cache.Set(ctx, l.presencePrefix+string(stream.Path), string(stream.Status), l.presenceTTL)
-	}
+	})
 }

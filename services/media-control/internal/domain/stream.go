@@ -39,6 +39,29 @@ type StreamDescriptor struct {
 	ReaderCount int          `json:"readerCount"`
 }
 
+type StreamList struct {
+	values []StreamDescriptor
+}
+
+func NewStreamList(streams []StreamDescriptor) StreamList {
+	values := append([]StreamDescriptor(nil), streams...)
+	return StreamList{values: values}
+}
+
+func (l StreamList) Values() []StreamDescriptor {
+	return append([]StreamDescriptor(nil), l.values...)
+}
+
+func (l StreamList) Len() int {
+	return len(l.values)
+}
+
+func (l StreamList) ForEach(fn func(StreamDescriptor)) {
+	for _, stream := range l.values {
+		fn(stream)
+	}
+}
+
 type ParsedStreamPath struct {
 	Prefix      string
 	AssetID     string

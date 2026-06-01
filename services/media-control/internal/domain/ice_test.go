@@ -22,3 +22,18 @@ func TestHealthyIceServersFiltersUnhealthyServers(t *testing.T) {
 		t.Fatalf("expected %s, got %s", healthy.URL, result[0].URL)
 	}
 }
+
+func TestIceServerListDefensivelyCopiesAndFilters(t *testing.T) {
+	healthy, _ := NewIceServer("stun:turn-primary:3478", IceServerSTUN, "", "", true)
+	unhealthy, _ := NewIceServer("stun:turn-secondary:3478", IceServerSTUN, "", "", false)
+	servers := []IceServer{healthy, unhealthy}
+
+	list := NewIceServerList(servers)
+	servers[0].Healthy = false
+	values := list.Values()
+	values[0].Healthy = false
+
+	if len(list.Healthy().Values()) != 1 {
+		t.Fatalf("expected one healthy server after external mutation attempts")
+	}
+}
