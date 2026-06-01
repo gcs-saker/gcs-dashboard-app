@@ -47,7 +47,7 @@ staging/production에서는 같은 키 이름을 유지하되, 값은 서버 sec
 | dashboard | `DASHBOARD_HTTP_PORT`, `VITE_*` | nginx serving과 Vite build-time 값 |
 | mediamtx | `MEDIAMTX_*` | playback/ingest port, public playback URL |
 | edge | `PUBLIC_HTTPS_PORT`, `NGINX_CERTS_DIR` | 외부 `443/tcp` 단일 인입과 TLS 인증서 경로 |
-| ice | `MEDIAMTX_STUN_URL`, `MEDIAMTX_TURN_*` | 외부/NAT 환경 WebRTC ICE 설정 |
+| ice | `MEDIAMTX_ICE_BIND_ADDR`, `TURN_PUBLIC_BIND_ADDR`, `TURN_*` | 외부/NAT 환경 WebRTC ICE/TURN 설정 |
 
 ## 443 단일 인입 기준
 
@@ -55,7 +55,7 @@ M2 Server-01 production 후보에서는 `edge` Nginx container가 외부 `443/tc
 
 자체서명 인증서는 서버 private 경로에 생성하고 `NGINX_CERTS_DIR`로 주입한다. 이 디렉터리에는 `fullchain.pem`, `privkey.pem` 두 파일이 있어야 하며, 실제 key는 GitHub에 기록하지 않는다.
 
-`8189/udp`, `8189/tcp`는 WebRTC ICE media 후보 검증이 실패한 뒤에만 `MEDIAMTX_ICE_BIND_ADDR=0.0.0.0`과 공유기 포트포워딩을 함께 적용한다.
+`8189/udp`, `8189/tcp`는 WebRTC ICE media 후보 검증이 실패한 뒤에만 `MEDIAMTX_ICE_BIND_ADDR=0.0.0.0`과 공유기 포트포워딩을 함께 적용한다. TURN은 `TURN_PUBLIC_BIND_ADDR=0.0.0.0`으로 `3478/tcp`, `3478/udp`, `49160-49200/udp`만 공개한다. RTSP/RTMP/SRT/HLS/signaling 관리 포트는 계속 `LOCAL_BIND_ADDR=127.0.0.1` 또는 Nginx reverse proxy 뒤에 둔다.
 
 ## 검증 명령
 

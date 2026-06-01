@@ -2,6 +2,8 @@ package kr.co.a4ai.gcssaker.authpolicy
 
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.StandardEnvironment
+import kr.co.a4ai.gcssaker.authpolicy.domain.NoopPrincipalCache
+import kr.co.a4ai.gcssaker.authpolicy.domain.StatelessRefreshSessionStore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -46,6 +48,7 @@ class AuthPolicyConfigTest {
         assertEquals(setOf("http://localhost:18080", "https://gcs.example.test"), settings.allowedOrigins)
         assertEquals("op", settings.operatorUsername)
         assertEquals("viewer", settings.smokeUsername)
+        assertTrue(settings.redisPrincipalCacheEnabled)
     }
 
     @Test
@@ -80,7 +83,13 @@ class AuthPolicyConfigTest {
         val passwordHasher = config.passwordHasher()
         val repository = config.authUserRepository(settings, passwordHasher)
         val tokenService = config.jwtTokenService(settings)
-        val sessionService = config.authSessionService(repository, passwordHasher, tokenService)
+        val sessionService = config.authSessionService(
+            repository,
+            passwordHasher,
+            tokenService,
+            NoopPrincipalCache,
+            StatelessRefreshSessionStore,
+        )
 
         assertNotNull(repository.findByUsername("operator01"))
         assertNotNull(repository.findByUsername("m7-smoke-viewer"))

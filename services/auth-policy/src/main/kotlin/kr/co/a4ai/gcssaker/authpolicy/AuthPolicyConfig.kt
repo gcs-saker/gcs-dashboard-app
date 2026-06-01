@@ -7,15 +7,27 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupType
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
+import kr.co.a4ai.gcssaker.authpolicy.domain.NoopPrincipalCache
+import kr.co.a4ai.gcssaker.authpolicy.domain.AssetReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationUnit
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
+import kr.co.a4ai.gcssaker.authpolicy.domain.PrincipalCache
+import kr.co.a4ai.gcssaker.authpolicy.domain.RefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvite
+import kr.co.a4ai.gcssaker.authpolicy.domain.StatelessRefreshSessionStore
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
+import kr.co.a4ai.gcssaker.authpolicy.api.BearerPrincipalResolver
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.env.Environment
+import org.springframework.beans.factory.ObjectProvider
+import org.springframework.data.redis.core.StringRedisTemplate
 import java.time.Duration
+import java.time.Instant
 
 @Configuration
 class AuthPolicyConfig {
@@ -68,8 +80,36 @@ class AuthPolicyConfig {
         users: InMemoryAuthUserRepository,
         passwordHasher: PasswordHasher,
         tokenService: JwtTokenService,
+        principalCache: PrincipalCache,
+        refreshSessionStore: RefreshSessionStore,
     ): AuthSessionService =
-        AuthSessionService(users, passwordHasher, tokenService)
+        AuthSessionService(users, passwordHasher, tokenService, principalCache, refreshSessionStore)
+
+    @Bean
+    fun principalCache(
+        settings: AuthRuntimeSettings,
+        redisTemplate: ObjectProvider<StringRedisTemplate>,
+    ): PrincipalCache {
+        if (!settings.redisPrincipalCacheEnabled) {
+            return NoopPrincipalCache
+        }
+        return redisTemplate.getIfAvailable()?.let { RedisPrincipalCache(it) } ?: NoopPrincipalCache
+    }
+
+    @Bean
+    fun refreshSessionStore(
+        settings: AuthRuntimeSettings,
+        redisTemplate: ObjectProvider<StringRedisTemplate>,
+    ): RefreshSessionStore {
+        if (!settings.redisRefreshSessionEnabled) {
+            return StatelessRefreshSessionStore
+        }
+        return redisTemplate.getIfAvailable()?.let { RedisRefreshSessionStore(it) } ?: StatelessRefreshSessionStore
+    }
+
+    @Bean
+    fun bearerPrincipalResolver(sessions: AuthSessionService): BearerPrincipalResolver =
+        BearerPrincipalResolver(sessions)
 
     @Bean
     fun authRegistrationService(
@@ -89,6 +129,48 @@ class AuthPolicyConfig {
                 OrganizationUnit(GroupId("plt-b-1"), "B Company 1 Platoon", GroupType.PLATOON, GroupId("co-b")),
             ),
         )
+
+    @Bean
+    fun operationalReadRepository(): OperationalReadRepository {
+        val group = GroupId("co-a")
+        val timestamp = Instant.parse("2026-05-29T00:00:00Z")
+        val sampleGateway = "raw.sample.front"
+        val sampleAsset = AssetReadModel(
+            id = 1,
+            cid = "A4AI-GCS",
+            uuid = "DRN-01",
+            companyId = 1,
+            type = "drone",
+            name = "DRN-01",
+            description = "M7 PoC telemetry-linked unmanned asset",
+            imageUrl = null,
+            status = "active",
+            createdAt = timestamp,
+            updatedAt = timestamp,
+            groupId = group,
+        )
+        return InMemoryOperationalReadRepository(
+            telemetry = listOf(
+                TelemetryReadModel(
+                    uuid = sampleGateway,
+                    latitude = 35.8714,
+                    longitude = 128.6014,
+                    altitude = 120.0,
+                    magneticX = 12.4,
+                    magneticY = -3.2,
+                    magneticZ = 42.1,
+                    soc = "78",
+                    phoneBatterySOC = 91.0,
+                    velocity = 8.5,
+                    totalDistance = 1520.0,
+                    epochTime = "00:10:23",
+                    portDistance = 250.0,
+                    groupId = group,
+                ),
+            ),
+            assetsByGateway = mapOf(sampleGateway to listOf(sampleAsset)),
+        )
+    }
 }
 
 data class AuthRuntimeSettings(
@@ -109,6 +191,8 @@ data class AuthRuntimeSettings(
     val smokeCompanyId: Int,
     val smokeGroupId: String,
     val signupInvites: List<SignupInvite>,
+    val redisPrincipalCacheEnabled: Boolean = true,
+    val redisRefreshSessionEnabled: Boolean = true,
 ) {
     companion object {
         private const val DEFAULT_SECRET = "local-auth-policy-secret-at-least-32-characters"
@@ -141,6 +225,8 @@ data class AuthRuntimeSettings(
                 smokeCompanyId = intEnv(env, "AUTH_POLICY_SMOKE_COMPANY_ID", 1),
                 smokeGroupId = env.getProperty("AUTH_POLICY_SMOKE_GROUP_ID") ?: "co-a",
                 signupInvites = signupInvites(env),
+                redisPrincipalCacheEnabled = boolEnv(env, "AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED", true),
+                redisRefreshSessionEnabled = boolEnv(env, "AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED", true),
             )
 
         private fun longEnv(env: Environment, name: String, defaultValue: Long): Long =

@@ -48,6 +48,8 @@ function snapshot(overrides: Partial<WebRTCPlaybackSnapshot>): WebRTCPlaybackSna
     iceConnectionState: "checking",
     errorMessage: null,
     hasVideoFrame: false,
+    hasAudioTrack: false,
+    isAudioActive: false,
     firstFrameLatencyMs: null,
     ...overrides,
   };

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { LOCAL_WEBCAM_STREAM_ID, LOCAL_WEBCAM_WHIP_URL, WEBRTC_ICE_SERVERS } from "../../../config";
+import { apiUrl, LOCAL_WEBCAM_STREAM_ID, LOCAL_WEBCAM_WHIP_URL, WEBRTC_ICE_SERVERS } from "../../../config";
+import { authenticatedFetch } from "../../auth/authApi";
 import { loadWebRtcIceServers } from "../iceServers";
 import "./LocalWebcamPublisher.css";
 
@@ -20,6 +21,7 @@ type WebcamPublisherStatus =
 
 type PublisherStepId = "camera" | "ice" | "signaling" | "media";
 type PublisherStepState = "pending" | "active" | "complete" | "error";
+type PublisherGpsStatus = "idle" | "requesting" | "active" | "unavailable" | "error";
 
 const ICE_GATHERING_TIMEOUT_MS = 5_000;
 const MEDIA_CONNECTION_TIMEOUT_MS = 8_000;
@@ -31,6 +33,7 @@ interface LocalWebcamPublisherProps {
   mediaDevices?: MediaDevices;
   peerConnectionFactory?: () => RTCPeerConnection;
   fetcher?: typeof fetch;
+  geolocation?: Geolocation;
 }
 
 export function LocalWebcamPublisher({
@@ -39,14 +42,19 @@ export function LocalWebcamPublisher({
   mediaDevices = navigator.mediaDevices,
   peerConnectionFactory,
   fetcher = fetch,
+  geolocation = navigator.geolocation,
 }: LocalWebcamPublisherProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const reconnectAttemptRef = useRef(0);
+  const gpsWatchIdRef = useRef<number | null>(null);
+  const publishStartedAtRef = useRef<number | null>(null);
   const statusRef = useRef<WebcamPublisherStatus>("idle");
   const [status, setStatus] = useState<WebcamPublisherStatus>("idle");
+  const [gpsStatus, setGpsStatus] = useState<PublisherGpsStatus>("idle");
+  const [gpsDetail, setGpsDetail] = useState("GPS 대기");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [failedStep, setFailedStep] = useState<PublisherStepId | null>(null);
   const steps = useMemo(() => getPublisherSteps(status, failedStep), [failedStep, status]);
@@ -135,9 +143,11 @@ export function LocalWebcamPublisher({
       setErrorMessage(null);
       reconnectAttemptRef.current = 0;
       setStatus("published");
+      startGpsTelemetry();
     } catch (error) {
       peerConnectionRef.current?.close();
       peerConnectionRef.current = null;
+      stopGpsTelemetry();
       setStatus("error");
       setFailedStep(currentStep);
       setErrorMessage(error instanceof Error ? error.message : "로컬 웹캠 송출에 실패했습니다.");
@@ -146,6 +156,7 @@ export function LocalWebcamPublisher({
 
   function stopAll(): void {
     clearReconnectTimer();
+    stopGpsTelemetry();
     reconnectAttemptRef.current = 0;
     peerConnectionRef.current?.close();
     peerConnectionRef.current = null;
@@ -156,6 +167,79 @@ export function LocalWebcamPublisher({
     }
     setStatus("idle");
     setFailedStep(null);
+  }
+
+  function startGpsTelemetry(): void {
+    if (!geolocation) {
+      setGpsStatus("unavailable");
+      setGpsDetail("이 브라우저에서는 GPS 위치를 지원하지 않습니다.");
+      return;
+    }
+    stopGpsTelemetry();
+    publishStartedAtRef.current = Date.now();
+    setGpsStatus("requesting");
+    setGpsDetail("GPS 권한 요청 중");
+    const options: PositionOptions = {
+      enableHighAccuracy: true,
+      maximumAge: 2_000,
+      timeout: 10_000,
+    };
+    geolocation.getCurrentPosition(handleGpsPosition, handleGpsError, options);
+    gpsWatchIdRef.current = geolocation.watchPosition(handleGpsPosition, handleGpsError, options);
+  }
+
+  function stopGpsTelemetry(): void {
+    if (gpsWatchIdRef.current !== null && geolocation) {
+      geolocation.clearWatch(gpsWatchIdRef.current);
+    }
+    gpsWatchIdRef.current = null;
+    publishStartedAtRef.current = null;
+    setGpsStatus("idle");
+    setGpsDetail("GPS 대기");
+  }
+
+  function handleGpsPosition(position: GeolocationPosition): void {
+    setGpsStatus("active");
+    setGpsDetail(`${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`);
+    void postGpsTelemetry(position);
+  }
+
+  function handleGpsError(error: GeolocationPositionError): void {
+    setGpsStatus("error");
+    setGpsDetail(error.message || "GPS 위치를 받을 수 없습니다.");
+  }
+
+  async function postGpsTelemetry(position: GeolocationPosition): Promise<void> {
+    try {
+      const response = await authenticatedFetch(
+        apiUrl("/telemetry/"),
+        {
+          method: "POST",
+          headers: { Accept: "application/json", "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uuid: streamId,
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            altitude: position.coords.altitude ?? 0,
+            velocity: position.coords.speed ?? 0,
+            epochTime: elapsedPublishSeconds(),
+          }),
+        },
+        fetcher,
+      );
+      if (!response.ok) {
+        setGpsStatus("error");
+        setGpsDetail(`GPS 전송 실패 ${response.status}`);
+      }
+    } catch (error) {
+      setGpsStatus("error");
+      setGpsDetail(error instanceof Error ? error.message : "GPS 전송 실패");
+    }
+  }
+
+  function elapsedPublishSeconds(): number {
+    if (!publishStartedAtRef.current) return 0;
+    return Math.max(0, Math.floor((Date.now() - publishStartedAtRef.current) / 1000));
   }
 
   function handlePublishedConnectionChange(peerConnection: RTCPeerConnection): void {
@@ -179,6 +263,7 @@ export function LocalWebcamPublisher({
     if (!streamRef.current || reconnectTimeoutRef.current !== null) {
       return;
     }
+    stopGpsTelemetry();
     peerConnectionRef.current?.close();
     peerConnectionRef.current = null;
     const delay = RECONNECT_DELAYS_MS[Math.min(reconnectAttemptRef.current, RECONNECT_DELAYS_MS.length - 1)];
@@ -236,9 +321,23 @@ export function LocalWebcamPublisher({
       <p className="local-webcam-publisher__status-detail" aria-live="polite">
         {getStatusDetail(status)}
       </p>
+      <p className={`local-webcam-publisher__gps local-webcam-publisher__gps--${gpsStatus}`} aria-live="polite">
+        GPS: {getGpsStatusLabel(gpsStatus)} / {gpsDetail}
+      </p>
       {errorMessage ? <p className="local-webcam-publisher__error">{errorMessage}</p> : null}
     </main>
   );
+}
+
+function getGpsStatusLabel(status: PublisherGpsStatus): string {
+  const labels: Record<PublisherGpsStatus, string> = {
+    idle: "대기",
+    requesting: "권한 요청",
+    active: "수신 중",
+    unavailable: "미지원",
+    error: "오류",
+  };
+  return labels[status];
 }
 
 export default LocalWebcamPublisher;

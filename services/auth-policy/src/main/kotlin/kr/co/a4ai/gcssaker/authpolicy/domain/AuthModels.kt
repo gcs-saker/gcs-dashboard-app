@@ -112,6 +112,8 @@ class AuthSessionService(
     private val users: AuthUserRepository,
     private val passwordHasher: PasswordHasher,
     private val tokenService: JwtTokenService,
+    private val principalCache: PrincipalCache = NoopPrincipalCache,
+    private val refreshSessions: RefreshSessionStore = StatelessRefreshSessionStore,
 ) {
     fun login(username: String, password: String): IssuedTokenSet? {
         val user = users.findByUsername(username) ?: return null
@@ -122,19 +124,48 @@ class AuthSessionService(
     }
 
     fun refresh(refreshToken: String): IssuedTokenSet? {
-        val principal = tokenService.verifyRefreshToken(refreshToken)
+        val principal = if (refreshSessions.authoritative) {
+            refreshSessions.consumeRefreshSession(refreshToken) ?: return null
+        } else {
+            tokenService.verifyRefreshToken(refreshToken)
+        }
         val user = users.findByUsername(principal.username) ?: return null
         return issueTokens(user.principal())
     }
 
-    fun verifyAccessToken(accessToken: String): AuthenticatedPrincipal =
-        tokenService.verifyAccessToken(accessToken)
+    fun revokeRefreshToken(refreshToken: String) {
+        refreshSessions.revokeRefreshSession(refreshToken)
+    }
 
-    private fun issueTokens(principal: AuthenticatedPrincipal): IssuedTokenSet =
-        IssuedTokenSet(
-            accessToken = tokenService.issueAccessToken(principal),
-            refreshToken = tokenService.issueRefreshToken(principal),
+    fun verifyAccessToken(accessToken: String): AuthenticatedPrincipal {
+        principalCache.getAccessPrincipal(accessToken)?.let { return it }
+        val principal = tokenService.verifyAccessToken(accessToken)
+        principalCache.putAccessPrincipal(
+            accessToken = accessToken,
+            principal = principal,
+            ttl = java.time.Duration.ofMinutes(tokenService.accessTokenExpiresInMinutes()),
+        )
+        return principal
+    }
+
+    private fun issueTokens(principal: AuthenticatedPrincipal): IssuedTokenSet {
+        val accessToken = tokenService.issueAccessToken(principal)
+        principalCache.putAccessPrincipal(
+            accessToken = accessToken,
+            principal = principal,
+            ttl = java.time.Duration.ofMinutes(tokenService.accessTokenExpiresInMinutes()),
+        )
+        val refreshToken = tokenService.issueRefreshToken(principal)
+        refreshSessions.putRefreshSession(
+            refreshToken = refreshToken,
+            principal = principal,
+            ttl = java.time.Duration.ofMinutes(tokenService.refreshTokenExpiresInMinutes()),
+        )
+        return IssuedTokenSet(
+            accessToken = accessToken,
+            refreshToken = refreshToken,
             expiresInMinutes = tokenService.accessTokenExpiresInMinutes(),
             principal = principal,
         )
+    }
 }

@@ -49,10 +49,12 @@ export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs 
   }, [fetcher, onAuthFailure, refreshMs]);
 
   const rows = [
-    ["서버상태", serverHealthText(status.server), status.server],
-    ["연결 자산", serverHealthText(status.streams), status.streams],
-    ["네트워크", status.latencyMs ? `${status.latencyMs} ms` : "측정 대기", status.readiness],
-    ["헬스체크", serverHealthText(status.readiness), status.readiness],
+    ["API 서버", serverHealthText(status.apiServer), status.apiServer],
+    ["인증/인가 서버", serverHealthText(status.authServer), status.authServer],
+    ["Signaling 서버", serverHealthText(status.signalingServer), status.signalingServer],
+    ["스트림 Registry", serverHealthText(status.streams), status.streams],
+    ["네트워크 RTT", status.latencyMs ? `${status.latencyMs} ms` : "측정 대기", status.readiness],
+    ["통합 헬스체크", serverHealthText(status.readiness), status.readiness],
   ];
   const checkedText = status.checkedAt
     ? new Date(status.checkedAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
@@ -61,7 +63,7 @@ export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs 
   return (
     <>
       <div className="ops-panel__header">
-        <h2 id="status-title">서버상태 / 연결상태 / 헬스체크</h2>
+        <h2 id="status-title">서버 상태 상세 / 연결상태 / 헬스체크</h2>
         {controls}
       </div>
       <dl>
