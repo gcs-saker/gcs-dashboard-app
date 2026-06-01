@@ -1,0 +1,14 @@
+services:
+  edge:
+    ports:
+      - "${PUBLIC_HTTP_BIND_ADDR:-127.0.0.1}:${PUBLIC_HTTP_PORT:-8080}:80"
+      - "${PUBLIC_HTTPS_BIND_ADDR:-0.0.0.0}:${PUBLIC_HTTPS_PORT:-443}:443"
+    volumes:
+      - type: bind
+        source: ../nginx/gcs-saker.reverse-proxy.example.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+      - type: bind
+        source: ${NGINX_CERTS_DIR:?NGINX_CERTS_DIR is required for HTTPS edge}
+        target: /etc/nginx/certs
+        read_only: true
