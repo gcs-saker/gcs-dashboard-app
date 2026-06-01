@@ -9,6 +9,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "docker_env_check.py"
 COMPOSE_FILE = REPO_ROOT / "gcs-dashboard" / "docker-compose.yml"
 SINGLE_NODE_COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
+EDGE_HTTPS_OVERRIDE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.edge-https.override.yml"
 MEDIAMTX_CONFIG = REPO_ROOT / "gcs-dashboard" / "mediamtx.yml"
 DASHBOARD_DOCKERFILE = REPO_ROOT / "gcs-dashboard" / "Dockerfile"
 DASHBOARD_DOCKERIGNORE = REPO_ROOT / "gcs-dashboard" / ".dockerignore"
@@ -139,6 +140,16 @@ def test_single_node_edge_depends_on_active_cutover_services() -> None:
     assert edge_depends_on["media-control"]["condition"] == "service_started"
     assert edge_depends_on["mediamtx"]["condition"] == "service_started"
     assert "backend" not in edge_depends_on
+
+
+def test_https_edge_healthcheck_allows_temporary_self_signed_certificate() -> None:
+    override = load_yaml(EDGE_HTTPS_OVERRIDE_FILE)
+    healthcheck = override["services"]["edge"]["healthcheck"]["test"]
+
+    assert healthcheck == [
+        "CMD-SHELL",
+        "wget --no-check-certificate -q -O- https://127.0.0.1/healthz >/dev/null",
+    ]
 
 
 def test_compose_publishes_only_edge_https_by_default_for_external_ingress() -> None:
