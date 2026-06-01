@@ -8,6 +8,7 @@ import asyncio
 from dataclasses import dataclass
 import ssl
 import sys
+import time
 from typing import Sequence
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -139,6 +140,11 @@ async def wait_for_ice_connected(peer_connection: object, timeout_seconds: float
         raise RuntimeError(f"ICE connection did not reach connected/completed: state={final_state}")
 
 
+async def wait_for_video_frame(track_queue: asyncio.Queue[object], timeout_seconds: float) -> object:
+    track = await asyncio.wait_for(track_queue.get(), timeout=timeout_seconds)
+    return await asyncio.wait_for(track.recv(), timeout=timeout_seconds)  # type: ignore[attr-defined]
+
+
 async def run_webrtc_smoke(args: argparse.Namespace) -> int:
     try:
         from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
@@ -148,10 +154,17 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
     peer_connection = RTCPeerConnection(
         RTCConfiguration(iceServers=[RTCIceServer(urls=[args.stun_url])]),
     )
+    video_tracks: asyncio.Queue[object] = asyncio.Queue()
+
+    @peer_connection.on("track")  # type: ignore[attr-defined]
+    def on_track(track: object) -> None:
+        if getattr(track, "kind", "") == "video":
+            video_tracks.put_nowait(track)
 
     try:
         peer_connection.addTransceiver("video", direction="recvonly")
 
+        started = time.perf_counter()
         offer = await peer_connection.createOffer()
         await peer_connection.setLocalDescription(offer)
         await wait_for_ice_gathering_complete(peer_connection, args.timeout_seconds)
@@ -161,25 +174,38 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
             raise RuntimeError("Local WebRTC offer SDP was not created")
 
         local_inspection = require_webrtc_sdp(local_description.sdp, "local offer")
+        offer_ready_elapsed_ms = (time.perf_counter() - started) * 1000
         answer_sdp = post_whep_offer(args.whep_url, local_description.sdp, args.insecure)
+        answer_elapsed_ms = (time.perf_counter() - started) * 1000
         answer_inspection = require_webrtc_sdp(answer_sdp, "WHEP answer")
 
         await peer_connection.setRemoteDescription(
             RTCSessionDescription(sdp=answer_sdp, type="answer"),
         )
 
-        if args.require_connected:
+        if args.require_connected or args.require_video_frame:
             await wait_for_ice_connected(peer_connection, args.timeout_seconds)
         else:
             await asyncio.sleep(0.2)
+
+        frame = None
+        first_frame_elapsed_ms = None
+        if args.require_video_frame:
+            frame = await wait_for_video_frame(video_tracks, args.timeout_seconds)
+            first_frame_elapsed_ms = (time.perf_counter() - started) * 1000
 
         print("WebRTC ICE smoke run passed")
         print(f"WHEP URL: {args.whep_url}")
         print(f"STUN URL: {args.stun_url}")
         print(f"Local offer candidates: {local_inspection.candidate_count}")
         print(f"WHEP answer candidates: {answer_inspection.candidate_count}")
+        print(f"Local offer ready ms: {offer_ready_elapsed_ms:.1f}")
+        print(f"WHEP answer latency ms: {answer_elapsed_ms:.1f}")
         print(f"ICE gathering state: {peer_connection.iceGatheringState}")
         print(f"ICE connection state: {peer_connection.iceConnectionState}")
+        if frame is not None and first_frame_elapsed_ms is not None:
+            print(f"First video frame latency ms: {first_frame_elapsed_ms:.1f}")
+            print(f"First video frame size: {frame.width}x{frame.height}")  # type: ignore[attr-defined]
         return 0
     finally:
         await peer_connection.close()
@@ -225,6 +251,11 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         "--require-connected",
         action="store_true",
         help="Fail unless ICE reaches connected/completed after applying the WHEP answer.",
+    )
+    parser.add_argument(
+        "--require-video-frame",
+        action="store_true",
+        help="Fail unless a decoded remote video frame is received.",
     )
     args = parser.parse_args(argv)
     if not args.check and not args.run:
