@@ -1,8 +1,7 @@
 import { backendRootUrl, streamApiV1Url } from "../../config";
 import { BACKEND_ROOT_ROUTES, STREAM_API_ROUTES } from "@/features/apiRoutes";
+import { DASHBOARD_SERVER_HEALTH, type DashboardServerHealth } from "@/features/stateContracts";
 import { AuthApiError, authenticatedFetch } from "../auth/authApi";
-
-export type DashboardServerHealth = "online" | "degraded" | "error";
 
 export interface DashboardServerStatusSnapshot {
   apiServer: DashboardServerHealth;
@@ -15,11 +14,11 @@ export interface DashboardServerStatusSnapshot {
 }
 
 export const DEFAULT_SERVER_STATUS: DashboardServerStatusSnapshot = {
-  apiServer: "degraded",
-  authServer: "degraded",
-  signalingServer: "degraded",
-  readiness: "degraded",
-  streams: "degraded",
+  apiServer: DASHBOARD_SERVER_HEALTH.degraded,
+  authServer: DASHBOARD_SERVER_HEALTH.degraded,
+  signalingServer: DASHBOARD_SERVER_HEALTH.degraded,
+  readiness: DASHBOARD_SERVER_HEALTH.degraded,
+  streams: DASHBOARD_SERVER_HEALTH.degraded,
   latencyMs: null,
   checkedAt: null,
 };
@@ -45,11 +44,11 @@ export async function fetchDashboardServerStatus(
     }
 
     return {
-      apiServer: streamResponse.ok ? healthFromLatency(latencyMs) : "degraded",
-      authServer: healthResponse.ok && readyResponse.ok ? "online" : "degraded",
-      signalingServer: signalingResponse.ok ? "online" : "degraded",
-      readiness: readyResponse.ok ? "online" : "degraded",
-      streams: streamResponse.ok ? "online" : "degraded",
+      apiServer: streamResponse.ok ? healthFromLatency(latencyMs) : DASHBOARD_SERVER_HEALTH.degraded,
+      authServer: healthResponse.ok && readyResponse.ok ? DASHBOARD_SERVER_HEALTH.online : DASHBOARD_SERVER_HEALTH.degraded,
+      signalingServer: signalingResponse.ok ? DASHBOARD_SERVER_HEALTH.online : DASHBOARD_SERVER_HEALTH.degraded,
+      readiness: readyResponse.ok ? DASHBOARD_SERVER_HEALTH.online : DASHBOARD_SERVER_HEALTH.degraded,
+      streams: streamResponse.ok ? DASHBOARD_SERVER_HEALTH.online : DASHBOARD_SERVER_HEALTH.degraded,
       latencyMs,
       checkedAt: Date.now(),
     };
@@ -58,11 +57,11 @@ export async function fetchDashboardServerStatus(
       throw error;
     }
     return {
-      apiServer: "error",
-      authServer: "error",
-      signalingServer: "error",
-      readiness: "error",
-      streams: "error",
+      apiServer: DASHBOARD_SERVER_HEALTH.error,
+      authServer: DASHBOARD_SERVER_HEALTH.error,
+      signalingServer: DASHBOARD_SERVER_HEALTH.error,
+      readiness: DASHBOARD_SERVER_HEALTH.error,
+      streams: DASHBOARD_SERVER_HEALTH.error,
       latencyMs: null,
       checkedAt: Date.now(),
     };
@@ -70,18 +69,18 @@ export async function fetchDashboardServerStatus(
 }
 
 export function healthFromLatency(latencyMs: number): DashboardServerHealth {
-  if (latencyMs > 1200) return "error";
-  if (latencyMs > 450) return "degraded";
-  return "online";
+  if (latencyMs > 1200) return DASHBOARD_SERVER_HEALTH.error;
+  if (latencyMs > 450) return DASHBOARD_SERVER_HEALTH.degraded;
+  return DASHBOARD_SERVER_HEALTH.online;
 }
 
 export function serverHealthText(health: DashboardServerHealth): string {
   switch (health) {
-    case "online":
+    case DASHBOARD_SERVER_HEALTH.online:
       return "정상";
-    case "degraded":
+    case DASHBOARD_SERVER_HEALTH.degraded:
       return "저하";
-    case "error":
+    case DASHBOARD_SERVER_HEALTH.error:
       return "오류";
   }
 }
