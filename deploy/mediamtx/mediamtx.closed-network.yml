@@ -1,0 +1,61 @@
+logLevel: info
+
+api: true
+apiAddress: :9997
+metrics: true
+metricsAddress: :9998
+
+authInternalUsers:
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: publish
+        path:
+      - action: read
+        path:
+      - action: playback
+        path:
+  - user: any
+    pass:
+    ips: ['127.0.0.1', '::1', '172.16.0.0/12']
+    permissions:
+      - action: api
+
+rtsp: true
+rtspTransports: [tcp, udp]
+rtspAddress: :8554
+rtpAddress: :8000
+rtcpAddress: :8001
+
+rtmp: true
+rtmpAddress: :1935
+
+srt: true
+srtAddress: :8890
+
+hls: true
+hlsAddress: :8888
+hlsVariant: lowLatency
+hlsAllowOrigin: '*'
+
+webrtc: true
+webrtcAddress: :8889
+webrtcAllowOrigin: '*'
+webrtcLocalUDPAddress: :8189
+webrtcLocalTCPAddress: :8189
+webrtcIPsFromInterfaces: true
+webrtcAdditionalHosts: []
+webrtcICEServers2:
+  - url: stun:turn-primary:3478
+  - url: turn:turn-primary:3478
+    username: ${TURN_USERNAME}
+    password: ${TURN_PASSWORD}
+  - url: turn:turn-secondary:3478
+    username: ${TURN_USERNAME}
+    password: ${TURN_PASSWORD}
+webrtcSTUNGatherTimeout: 5s
+
+paths:
+  all:
+    source: publisher
