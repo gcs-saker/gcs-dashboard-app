@@ -18,6 +18,8 @@ vi.mock("./WebRTCPlayer", () => ({
               connectionState: "connected",
               iceConnectionState: "connected",
               errorMessage: null,
+              hasVideoFrame: true,
+              firstFrameLatencyMs: 812,
             })
           }
         >
@@ -31,6 +33,8 @@ vi.mock("./WebRTCPlayer", () => ({
               connectionState: "failed",
               iceConnectionState: "failed",
               errorMessage: "WebRTC connection failed",
+              hasVideoFrame: false,
+              firstFrameLatencyMs: null,
             })
           }
         >

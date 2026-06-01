@@ -24,7 +24,7 @@ export function WebRTCPlayer({
   onStatusChange,
 }: WebRTCPlayerProps) {
   const playback = useWhepPlayback({ whepUrl, isOnline });
-  const { videoRef, status, connectionState, iceConnectionState, errorMessage } = playback;
+  const { videoRef, status, connectionState, iceConnectionState, errorMessage, hasVideoFrame, firstFrameLatencyMs } = playback;
 
   useEffect(() => {
     onStatusChange?.({
@@ -32,13 +32,22 @@ export function WebRTCPlayer({
       connectionState,
       iceConnectionState,
       errorMessage,
+      hasVideoFrame,
+      firstFrameLatencyMs,
     });
-  }, [connectionState, errorMessage, iceConnectionState, onStatusChange, status]);
+  }, [connectionState, errorMessage, firstFrameLatencyMs, hasVideoFrame, iceConnectionState, onStatusChange, status]);
 
   return (
-    <figure className={["webrtc-player", className].filter(Boolean).join(" ")}>
+    <figure
+      className={["webrtc-player", className].filter(Boolean).join(" ")}
+      data-testid="webrtc-player"
+      data-playback-status={status}
+      data-has-video-frame={hasVideoFrame ? "true" : "false"}
+      data-first-frame-latency-ms={firstFrameLatencyMs ?? ""}
+    >
       <video
         ref={videoRef}
+        data-testid="webrtc-video"
         aria-label={title}
         autoPlay={autoPlay}
         muted={muted}
@@ -57,6 +66,9 @@ export function WebRTCPlayer({
         {streamId ? <span className="webrtc-player__stream">{streamId}</span> : null}
         <span className="webrtc-player__state">pc: {connectionState}</span>
         <span className="webrtc-player__state">ice: {iceConnectionState}</span>
+        {firstFrameLatencyMs !== null ? (
+          <span className="webrtc-player__state">first frame: {firstFrameLatencyMs}ms</span>
+        ) : null}
         {errorMessage ? <span className="webrtc-player__error">{errorMessage}</span> : null}
       </figcaption>
     </figure>

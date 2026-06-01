@@ -5,6 +5,8 @@ export interface WebRTCPlaybackSnapshot {
   connectionState: RTCPeerConnectionState | "unsupported";
   iceConnectionState: RTCIceConnectionState | "unsupported";
   errorMessage: string | null;
+  hasVideoFrame: boolean;
+  firstFrameLatencyMs: number | null;
 }
 
 export interface WebRTCPlayerProps {

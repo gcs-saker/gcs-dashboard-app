@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { WebRTCPlayer } from "./WebRTCPlayer";
@@ -169,6 +169,35 @@ describe("WebRTCPlayer", () => {
         status: "playing",
         connectionState: "connected",
         iceConnectionState: "connected",
+        hasVideoFrame: false,
+        firstFrameLatencyMs: null,
+      }),
+    );
+  });
+
+  test("records first video frame latency for browser smoke checks", async () => {
+    const onStatusChange = vi.fn();
+    render(
+      <WebRTCPlayer
+        whepUrl="https://media.example.test/raw/sample/front/whep"
+        streamId="raw.sample.front"
+        onStatusChange={onStatusChange}
+      />,
+    );
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    fireEvent.loadedData(screen.getByTestId("webrtc-video"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-has-video-frame", "true");
+    });
+    expect(screen.getByTestId("webrtc-player").getAttribute("data-first-frame-latency-ms")).toMatch(/^\d+$/);
+    expect(screen.getByText(/first frame: \d+ms/)).toBeInTheDocument();
+    expect(onStatusChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        hasVideoFrame: true,
+        firstFrameLatencyMs: expect.any(Number),
       }),
     );
   });
