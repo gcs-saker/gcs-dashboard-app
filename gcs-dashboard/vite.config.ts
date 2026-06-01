@@ -54,7 +54,7 @@ export default defineConfig(({ mode }) => {
         provider: "istanbul",
         reporter: ["text", "text-summary"],
         include: ["src/**/*.{jsx,ts,tsx}"],
-        exclude: ["src/index.tsx", "src/reportWebVitals.js", "src/setupTests.js"]
+        exclude: ["src/index.tsx", "src/setupTests.js"]
       }
     }
   };
