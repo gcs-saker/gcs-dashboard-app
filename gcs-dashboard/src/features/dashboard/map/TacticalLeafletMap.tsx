@@ -1,5 +1,13 @@
 import { useMemo, useState } from "react";
-import type { DashboardStreamSlot } from "../streamTypes";
+import type { ChangeEvent, FormEvent, MouseEvent, PointerEvent } from "react";
+import { getDashboardStreamStatusText, type DashboardStreamSlot } from "../streamTypes";
+import { coordinateFromMapPercent, formatCoordinate, projectCoordinate } from "./tacticalMapGeometry";
+import type { MapCoordinate, MapPoint } from "./tacticalMapGeometry";
+import {
+  draftFromCoordinate,
+  type CustomMarkerDraft,
+  useCustomMapMarkers,
+} from "./useCustomMapMarkers";
 
 interface TacticalLeafletMapProps {
   selectedStream: DashboardStreamSlot;
@@ -16,6 +24,13 @@ const DEFAULT_CENTER = { lat: 35.871435, lng: 128.601445 };
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
 const INITIAL_ZOOM = 3;
+const SCALE_OPTIONS = [
+  { label: "100 m", meters: 100, zoom: 5 },
+  { label: "250 m", meters: 250, zoom: 4 },
+  { label: "500 m", meters: 500, zoom: 3 },
+  { label: "1 km", meters: 1000, zoom: 2 },
+  { label: "2 km", meters: 2000, zoom: 1 },
+] as const;
 
 function coordinateSourceLabel(stream: DashboardStreamSlot): string {
   switch (stream.geometry?.source) {
@@ -31,21 +46,17 @@ function coordinateSourceLabel(stream: DashboardStreamSlot): string {
   }
 }
 
-function clampPercent(value: number): number {
-  return Math.min(92, Math.max(8, value));
-}
-
 function projectStreams(streams: DashboardStreamSlot[], selectedStream: DashboardStreamSlot, zoom: number): ProjectedStream[] {
   const geometricStreams = streams.filter((stream) => stream.geometry);
   const center = selectedStream.geometry ?? DEFAULT_CENTER;
-  const spread = Math.max(0.008 / zoom, 0.0016);
 
   return geometricStreams.map((stream) => {
     const geometry = stream.geometry ?? center;
+    const point = projectCoordinate(geometry, center, zoom);
     return {
       stream,
-      left: clampPercent(50 + ((geometry.lng - center.lng) / spread) * 42),
-      top: clampPercent(50 - ((geometry.lat - center.lat) / spread) * 42),
+      left: point.left,
+      top: point.top,
     };
   });
 }
@@ -60,19 +71,140 @@ function markerClassForStream(stream: DashboardStreamSlot, selectedStream: Dashb
 
 function coordinateText(stream: DashboardStreamSlot): string {
   if (!stream.geometry) return "좌표 대기 중";
-  return `${stream.geometry.lat.toFixed(6)}, ${stream.geometry.lng.toFixed(6)}`;
+  return formatCoordinate(stream.geometry);
+}
+
+function geometrySourceText(stream: DashboardStreamSlot): string {
+  switch (stream.geometry?.source) {
+    case "telemetry":
+      return "실시간 GPS";
+    case "device":
+      return "장비 좌표";
+    case "registry":
+      return "등록 좌표";
+    case "mock":
+      return "기본 좌표";
+    case undefined:
+      return "좌표 없음";
+  }
+}
+
+function percentFromPointer(event: PointerEvent<HTMLElement> | MouseEvent<HTMLElement>): MapPoint {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const width = Math.max(rect.width, 1);
+  const height = Math.max(rect.height, 1);
+  return {
+    left: Math.min(100, Math.max(0, ((event.clientX - rect.left) / width) * 100)),
+    top: Math.min(100, Math.max(0, ((event.clientY - rect.top) / height) * 100)),
+  };
 }
 
 export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletMapProps) {
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
+  const [scaleMeters, setScaleMeters] = useState(500);
+  const [hoverCoordinate, setHoverCoordinate] = useState<MapCoordinate | null>(null);
+  const [isMarkerFormOpen, setIsMarkerFormOpen] = useState(false);
+  const [markerDraft, setMarkerDraft] = useState<CustomMarkerDraft>(() => draftFromCoordinate(DEFAULT_CENTER));
+  const [activeMarkerId, setActiveMarkerId] = useState<string | null>(null);
+  const [activeStreamId, setActiveStreamId] = useState<string | null>(null);
+  const [editingDraft, setEditingDraft] = useState<CustomMarkerDraft>(() => draftFromCoordinate(DEFAULT_CENTER));
+  const [movingMarkerId, setMovingMarkerId] = useState<string | null>(null);
+  const {
+    addMarker,
+    markers,
+    removeMarker,
+    routeMarkerIds,
+    routeMarkers,
+    toggleMarkerLocked,
+    toggleRouteMarker,
+    updateMarkerCoordinate,
+    updateMarkerFromDraft,
+  } = useCustomMapMarkers();
   const projectedStreams = useMemo(() => projectStreams(streams, selectedStream, zoom), [selectedStream, streams, zoom]);
   const selectedGeometry = selectedStream.geometry ?? DEFAULT_CENTER;
+  const projectedMarkers = useMemo(
+    () =>
+      markers.map((marker) => ({
+        marker,
+        ...projectCoordinate(marker.coordinate, selectedGeometry, zoom),
+      })),
+    [markers, selectedGeometry, zoom],
+  );
+  const routePoints = useMemo(
+    () => routeMarkers.map((marker) => projectCoordinate(marker.coordinate, selectedGeometry, zoom)),
+    [routeMarkers, selectedGeometry, zoom],
+  );
+  const activeMarker = markers.find((marker) => marker.id === activeMarkerId);
+  const activeStream = streams.find((stream) => stream.id === activeStreamId);
+  const selectedScale = SCALE_OPTIONS.find((option) => option.meters === scaleMeters) ?? SCALE_OPTIONS[2];
+
+  const handlePointerMove = (event: PointerEvent<HTMLElement>) => {
+    setHoverCoordinate(coordinateFromMapPercent(percentFromPointer(event), selectedGeometry, zoom));
+  };
+
+  const handleMapClick = (event: MouseEvent<HTMLElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.closest("button, input, form, label")) return;
+    setActiveStreamId(null);
+    if (!movingMarkerId) return;
+    const point = percentFromPointer(event);
+    updateMarkerCoordinate(movingMarkerId, coordinateFromMapPercent(point, selectedGeometry, zoom));
+    setMovingMarkerId(null);
+  };
+
+  const openMarkerForm = () => {
+    const coordinate = hoverCoordinate ?? selectedGeometry;
+    setMarkerDraft(draftFromCoordinate(coordinate));
+    setActiveMarkerId(null);
+    setActiveStreamId(null);
+    setIsMarkerFormOpen(true);
+  };
+
+  const submitMarkerDraft = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const marker = addMarker(markerDraft);
+    if (!marker) return;
+    setActiveMarkerId(marker.id);
+    setEditingDraft(draftFromCoordinate(marker.coordinate, marker.label));
+    setIsMarkerFormOpen(false);
+  };
+
+  const openMarkerEditor = (markerId: string) => {
+    const marker = markers.find((item) => item.id === markerId);
+    if (!marker) return;
+    setActiveMarkerId(marker.id);
+    setActiveStreamId(null);
+    setEditingDraft(draftFromCoordinate(marker.coordinate, marker.label));
+  };
+
+  const submitMarkerEdit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!activeMarkerId) return;
+    updateMarkerFromDraft(activeMarkerId, editingDraft);
+  };
+
+  const handleScaleChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextScale = Number.parseInt(event.target.value, 10);
+    const option = SCALE_OPTIONS.find((item) => item.meters === nextScale);
+    if (!option) return;
+    setScaleMeters(option.meters);
+    setZoom(option.zoom);
+  };
+
+  const openStreamPopover = (streamId: string) => {
+    setActiveMarkerId(null);
+    setIsMarkerFormOpen(false);
+    setActiveStreamId(streamId);
+  };
 
   return (
     <div
       className="tactical-map__canvas tactical-map__canvas--offline"
       data-testid="offline-tactical-map"
       aria-label="폐쇄망 오프라인 전술 지도"
+      onClick={handleMapClick}
+      onPointerLeave={() => setHoverCoordinate(null)}
+      onPointerMove={handlePointerMove}
     >
       <div className="offline-map-grid" aria-hidden="true" />
       <div className="offline-map-roads" aria-hidden="true" />
@@ -80,9 +212,17 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
       <span className="map-coordinate-source" data-testid="map-coordinate-source">
         {coordinateSourceLabel(selectedStream)}
       </span>
-      <span className="offline-map-center" data-testid="offline-map-center">
-        중심 {selectedGeometry.lat.toFixed(6)}, {selectedGeometry.lng.toFixed(6)}
+      <span className="map-hover-coordinate" data-testid="map-hover-coordinate">
+        마우스 {hoverCoordinate ? formatCoordinate(hoverCoordinate) : "지도 위 대기"}
       </span>
+      <span className="offline-map-center" data-testid="offline-map-center">
+        중심 {formatCoordinate(selectedGeometry)} / 축척 {selectedScale.label}
+      </span>
+      {routePoints.length > 1 ? (
+        <svg className="custom-map-route" aria-label="선택 핀 경로" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polyline points={routePoints.map((point) => `${point.left},${point.top}`).join(" ")} />
+        </svg>
+      ) : null}
       <div className="map-toolbar" aria-label="지도 도구">
         <button aria-label="지도 중심 초기화" type="button" onClick={() => setZoom(INITIAL_ZOOM)}>
           ⌖
@@ -93,7 +233,53 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
         <button aria-label="지도 축소" type="button" onClick={() => setZoom((current) => Math.max(MIN_ZOOM, current - 1))}>
           -
         </button>
+        <button aria-label="커스텀 마커 추가" type="button" onClick={openMarkerForm}>
+          ⊕
+        </button>
+        <label className="map-scale-control">
+          <span>축척</span>
+          <select aria-label="지도 축척" value={scaleMeters} onChange={handleScaleChange}>
+            {SCALE_OPTIONS.map((option) => (
+              <option key={option.meters} value={option.meters}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
+      {isMarkerFormOpen ? (
+        <form className="custom-marker-form" aria-label="커스텀 마커 추가 입력" onSubmit={submitMarkerDraft}>
+          <label>
+            이름
+            <input
+              value={markerDraft.label}
+              onChange={(event) => setMarkerDraft((current) => ({ ...current, label: event.target.value }))}
+            />
+          </label>
+          <label>
+            위도
+            <input
+              inputMode="decimal"
+              value={markerDraft.lat}
+              onChange={(event) => setMarkerDraft((current) => ({ ...current, lat: event.target.value }))}
+            />
+          </label>
+          <label>
+            경도
+            <input
+              inputMode="decimal"
+              value={markerDraft.lng}
+              onChange={(event) => setMarkerDraft((current) => ({ ...current, lng: event.target.value }))}
+            />
+          </label>
+          <span className="custom-marker-form__actions">
+            <button type="submit">추가</button>
+            <button type="button" onClick={() => setIsMarkerFormOpen(false)}>
+              취소
+            </button>
+          </span>
+        </form>
+      ) : null}
       {projectedStreams.map(({ stream, left, top }) => (
         <button
           key={stream.id}
@@ -102,11 +288,146 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
           type="button"
           title={`${stream.title} / ${coordinateText(stream)}`}
           aria-label={`${stream.title} 위치 ${coordinateText(stream)}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            openStreamPopover(stream.id);
+          }}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            openStreamPopover(stream.id);
+          }}
         >
           <span className="offline-map-marker__dot" />
           <span className="offline-map-marker__label">{stream.title}</span>
         </button>
       ))}
+      {activeStream ? (
+        <aside
+          className="map-asset-popover"
+          aria-label={`${activeStream.title} 상태`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="map-asset-popover__header">
+            <strong>{activeStream.title}</strong>
+            <button type="button" aria-label="마커 상태 닫기" onClick={() => setActiveStreamId(null)}>
+              ×
+            </button>
+          </div>
+          <dl>
+            <div>
+              <dt>상태</dt>
+              <dd>{getDashboardStreamStatusText(activeStream.status)}</dd>
+            </div>
+            <div>
+              <dt>모드</dt>
+              <dd>{activeStream.mode}</dd>
+            </div>
+            <div>
+              <dt>자산</dt>
+              <dd>{activeStream.connectedDeviceId ?? "미연결"}</dd>
+            </div>
+            <div>
+              <dt>좌표</dt>
+              <dd>{coordinateText(activeStream)}</dd>
+            </div>
+            <div>
+              <dt>고도</dt>
+              <dd>{activeStream.geometry ? `${activeStream.geometry.altitudeM} m` : "대기"}</dd>
+            </div>
+            <div>
+              <dt>방위/FOV</dt>
+              <dd>
+                {activeStream.geometry
+                  ? `${activeStream.geometry.headingDeg}° / ${activeStream.geometry.fovDeg}°`
+                  : "대기"}
+              </dd>
+            </div>
+            <div>
+              <dt>출처</dt>
+              <dd>{geometrySourceText(activeStream)}</dd>
+            </div>
+          </dl>
+          <button className="map-asset-popover__control" type="button" disabled title="조종 권한 정책 연결 후 활성화">
+            조종 준비
+          </button>
+        </aside>
+      ) : null}
+      {projectedMarkers.map(({ marker, left, top }) => (
+        <button
+          key={marker.id}
+          className={`custom-map-marker ${marker.locked ? "is-locked" : "is-unlocked"} ${
+            routeMarkerIds.includes(marker.id) ? "is-route-point" : ""
+          }`}
+          style={{ left: `${left}%`, top: `${top}%` }}
+          type="button"
+          title={`${marker.label} / ${formatCoordinate(marker.coordinate)}`}
+          aria-label={`${marker.label} 커스텀 마커 ${formatCoordinate(marker.coordinate)}`}
+          onClick={() => openMarkerEditor(marker.id)}
+        >
+          <span aria-hidden="true">{marker.locked ? "⌾" : "✥"}</span>
+          <span>{marker.label}</span>
+        </button>
+      ))}
+      {activeMarker ? (
+        <form
+          className="custom-marker-editor"
+          aria-label="커스텀 마커 편집"
+          onClick={(event) => event.stopPropagation()}
+          onSubmit={submitMarkerEdit}
+        >
+          <strong>{activeMarker.label}</strong>
+          <small>{formatCoordinate(activeMarker.coordinate)}</small>
+          <label>
+            이름
+            <input
+              value={editingDraft.label}
+              onChange={(event) => setEditingDraft((current) => ({ ...current, label: event.target.value }))}
+            />
+          </label>
+          <label>
+            위도
+            <input
+              inputMode="decimal"
+              value={editingDraft.lat}
+              onChange={(event) => setEditingDraft((current) => ({ ...current, lat: event.target.value }))}
+            />
+          </label>
+          <label>
+            경도
+            <input
+              inputMode="decimal"
+              value={editingDraft.lng}
+              onChange={(event) => setEditingDraft((current) => ({ ...current, lng: event.target.value }))}
+            />
+          </label>
+          <span className="custom-marker-editor__actions">
+            <button type="submit">적용</button>
+            <button type="button" onClick={() => toggleMarkerLocked(activeMarker.id)}>
+              {activeMarker.locked ? "고정 해제" : "고정"}
+            </button>
+            <button
+              type="button"
+              disabled={activeMarker.locked}
+              onClick={() => {
+                setMovingMarkerId(activeMarker.id);
+                setActiveMarkerId(null);
+              }}
+            >
+              이동
+            </button>
+            <button type="button" onClick={() => toggleRouteMarker(activeMarker.id)}>
+              {routeMarkerIds.includes(activeMarker.id) ? "경로 제외" : "경로 선택"}
+            </button>
+            <button type="button" onClick={() => removeMarker(activeMarker.id)}>
+              삭제
+            </button>
+            <button type="button" onClick={() => setActiveMarkerId(null)}>
+              닫기
+            </button>
+          </span>
+        </form>
+      ) : null}
+      {movingMarkerId ? <span className="map-move-hint">지도 위치를 눌러 마커를 이동</span> : null}
     </div>
   );
 }

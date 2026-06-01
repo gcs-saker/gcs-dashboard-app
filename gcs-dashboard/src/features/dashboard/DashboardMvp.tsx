@@ -278,7 +278,7 @@ export function DashboardMvp() {
           <div className="ops-panel__header">
             <h2 id="map-title">지도</h2>
             <span className="ops-panel__header-actions">
-              <span className="ops-badge">500 m</span>
+              <span className="ops-badge">축척 설정</span>
               {widgetControls("tactical-map", "지도")}
             </span>
           </div>
