@@ -14,32 +14,32 @@ import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
 
 data class StreamAccessRequest(
-    @get:JsonProperty("streamId")
+    @get:JsonProperty(AuthResponseFields.STREAM_ID)
     val streamId: String,
     val path: String,
-    @get:JsonProperty("publisherGroupId")
+    @get:JsonProperty(AuthResponseFields.PUBLISHER_GROUP_ID)
     val publisherGroupId: String,
     val startedAt: Instant? = null,
 )
 
 data class StreamAccessResponse(
-    @get:JsonProperty("streamId")
+    @get:JsonProperty(AuthResponseFields.STREAM_ID)
     val streamId: String,
     val allowed: Boolean,
     val reason: String,
     val username: String,
     val role: String,
-    @get:JsonProperty("groupId")
+    @get:JsonProperty(AuthResponseFields.GROUP_ID)
     val groupId: String,
 )
 
 @RestController
-@RequestMapping("/policy/streams")
+@RequestMapping(StreamPolicyApiRoutes.ROOT)
 class StreamPolicyController(
     private val principalResolver: BearerPrincipalResolver,
     private val groupPolicy: GroupPolicyService,
 ) {
-    @PostMapping("/access")
+    @PostMapping(StreamPolicyApiRoutes.ACCESS)
     fun access(
         @RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
         @RequestBody request: StreamAccessRequest,

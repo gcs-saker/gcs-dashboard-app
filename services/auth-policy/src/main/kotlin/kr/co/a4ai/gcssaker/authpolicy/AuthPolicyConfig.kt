@@ -20,6 +20,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.PrincipalCache
 import kr.co.a4ai.gcssaker.authpolicy.domain.RefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvite
+import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvites
 import kr.co.a4ai.gcssaker.authpolicy.domain.StatelessRefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfig
@@ -281,7 +282,7 @@ data class AuthRuntimeSettings(
     val refreshCookieName: String,
     val refreshCookieSecure: Boolean,
     val refreshCookieSameSite: String,
-    val allowedOrigins: Set<String>,
+    val allowedOrigins: AllowedOrigins,
     val operatorUsername: String,
     val operatorPassword: String,
     val operatorCompanyId: Int,
@@ -290,7 +291,7 @@ data class AuthRuntimeSettings(
     val smokePassword: String,
     val smokeCompanyId: Int,
     val smokeGroupId: String,
-    val signupInvites: List<SignupInvite>,
+    val signupInvites: SignupInvites,
     val redisPrincipalCacheEnabled: Boolean = true,
     val redisRefreshSessionEnabled: Boolean = true,
 ) {
@@ -314,8 +315,10 @@ data class AuthRuntimeSettings(
                 refreshCookieSameSite = env.getProperty("AUTH_POLICY_REFRESH_COOKIE_SAMESITE")
                     ?: env.getProperty("AUTH_REFRESH_COOKIE_SAMESITE")
                     ?: "lax",
-                allowedOrigins = csvEnv(env, "AUTH_POLICY_ALLOWED_ORIGINS")
-                    .ifEmpty { csvEnv(env, "BACKEND_CORS_ALLOW_ORIGINS") },
+                allowedOrigins = AllowedOrigins.of(
+                    csvEnv(env, "AUTH_POLICY_ALLOWED_ORIGINS")
+                        .ifEmpty { csvEnv(env, "BACKEND_CORS_ALLOW_ORIGINS") },
+                ),
                 operatorUsername = env.getProperty("AUTH_POLICY_OPERATOR_USERNAME") ?: "operator01",
                 operatorPassword = env.getProperty("AUTH_POLICY_OPERATOR_PASSWORD") ?: "correct-password",
                 operatorCompanyId = intEnv(env, "AUTH_POLICY_OPERATOR_COMPANY_ID", 1),
@@ -346,9 +349,10 @@ data class AuthRuntimeSettings(
                 ?.toSet()
                 ?: emptySet()
 
-        private fun signupInvites(env: Environment): List<SignupInvite> {
+        private fun signupInvites(env: Environment): SignupInvites {
             val raw = env.getProperty("AUTH_POLICY_SIGNUP_INVITES") ?: "A4AI01:1:co-a"
-            return raw.split(",")
+            return SignupInvites.of(
+                raw.split(",")
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }
                 .map { item ->
@@ -361,7 +365,28 @@ data class AuthRuntimeSettings(
                         companyId = parts[1].trim().toInt(),
                         groupId = GroupId(parts[2].trim()),
                     )
-                }
+                },
+            )
         }
+    }
+}
+
+class AllowedOrigins private constructor(
+    private val values: Set<String>,
+) {
+    operator fun contains(origin: String): Boolean = origin in values
+
+    fun isEmpty(): Boolean = values.isEmpty()
+
+    fun toSet(): Set<String> = values
+
+    companion object {
+        fun of(origins: Collection<String>): AllowedOrigins =
+            AllowedOrigins(
+                origins
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .toSet(),
+            )
     }
 }

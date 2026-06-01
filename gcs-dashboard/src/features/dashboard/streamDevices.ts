@@ -6,6 +6,7 @@ import type {
   DashboardStreamStatus,
 } from "./streamTypes";
 import { apiUrl, LOCAL_WEBCAM_STREAM_ID, streamApiV1Url } from "../../config";
+import { DASHBOARD_API_ROUTES, STREAM_API_ROUTES } from "../apiRoutes";
 import { AuthApiError, authenticatedFetch } from "../auth/authApi";
 
 export type StreamDeviceGeometry = DashboardStreamGeometry;
@@ -162,7 +163,7 @@ export async function fetchStreamDeviceOptions(fetcher: typeof fetch = fetch): P
 
 async function fetchStreamRegistry(fetcher: typeof fetch): Promise<StreamRegistryResponse[]> {
   const response = await authenticatedFetch(
-      streamApiV1Url("/streams"),
+      streamApiV1Url(STREAM_API_ROUTES.streams),
     {
       headers: { Accept: "application/json" },
     },
@@ -180,7 +181,7 @@ async function fetchStreamRegistry(fetcher: typeof fetch): Promise<StreamRegistr
 
 export async function fetchTelemetryIndex(fetcher: typeof fetch = fetch): Promise<Map<string, TelemetryReadResponse>> {
   const response = await authenticatedFetch(
-    apiUrl("/telemetry/all"),
+    apiUrl(DASHBOARD_API_ROUTES.telemetryAll),
     {
       headers: { Accept: "application/json" },
     },

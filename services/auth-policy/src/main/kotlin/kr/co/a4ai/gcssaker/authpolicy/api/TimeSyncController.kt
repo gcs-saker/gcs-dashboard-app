@@ -48,7 +48,7 @@ class TimeSyncController(
     private val statusService: TimeSyncStatusService,
     private val principalResolver: BearerPrincipalResolver,
 ) {
-    @GetMapping("/ops/time/status")
+    @GetMapping(OpsApiRoutes.TIME_STATUS)
     fun status(
         @RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
     ): TimeSyncStatusResponse {
@@ -56,7 +56,7 @@ class TimeSyncController(
         return statusService.status().toResponse()
     }
 
-    @PostMapping("/ops/time/check")
+    @PostMapping(OpsApiRoutes.TIME_CHECK)
     fun check(
         @RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
     ): TimeSyncStatusResponse {
@@ -64,7 +64,7 @@ class TimeSyncController(
         return statusService.status().toResponse()
     }
 
-    @PutMapping("/ops/time/config")
+    @PutMapping(OpsApiRoutes.TIME_CONFIG)
     fun updateConfig(
         @RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
         @RequestBody request: TimeSyncConfigRequest,
@@ -83,14 +83,14 @@ class TimeSyncController(
                 Instant.now(),
             )
         } catch (exc: IllegalArgumentException) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, exc.message ?: "invalid time sync config")
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, exc.message ?: AuthErrorMessages.INVALID_TIME_SYNC_CONFIG)
         }
         return statusService.status().toResponse()
     }
 
     private fun requireOperator(principal: AuthenticatedPrincipal) {
         if (principal.role != UserRole.OPERATOR && principal.role != UserRole.ADMIN) {
-            throw ResponseStatusException(HttpStatus.FORBIDDEN, "operator role required")
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, AuthErrorMessages.OPERATOR_ROLE_REQUIRED)
         }
     }
 }

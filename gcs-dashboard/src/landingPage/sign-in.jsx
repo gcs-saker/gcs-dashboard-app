@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import "../Login.scss";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { apiUrl } from "../config";
+import { authUrl } from "../config";
+import { AUTH_ROUTES } from "../features/apiRoutes";
 import { AUTH_JSON_HEADERS } from "../features/auth/authApi";
 import { storeAuthSession } from "../features/auth/authStorage";
 
@@ -17,7 +18,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(apiUrl("/auth/login"), form, {
+      const res = await axios.post(authUrl(AUTH_ROUTES.login), form, {
         withCredentials: true,
         headers: AUTH_JSON_HEADERS,
       });

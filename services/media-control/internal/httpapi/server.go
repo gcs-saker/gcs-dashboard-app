@@ -11,6 +11,33 @@ import (
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 )
 
+const (
+	routeHealthz                     = "/healthz"
+	routeStreams                     = "/v1/streams"
+	routeIceServers                  = "/v1/ice-servers"
+	routeLegacyStreamStatus          = "/stream/status"
+	routeDashboardIceServers         = "/api/v1/streams/ice-servers"
+	routeDashboardStreamItemPrefix   = "/api/v1/streams/"
+	routeDashboardStreams            = "/api/v1/streams"
+	routeSuffixPlayback              = "playback"
+	routeSuffixStatus                = "status"
+	contentTypeHeader                = "Content-Type"
+	jsonContentType                  = "application/json"
+	authorizationHeader              = "Authorization"
+	jsonKeyDetail                    = "detail"
+	jsonKeyIceServers                = "iceServers"
+	jsonKeyService                   = "service"
+	jsonKeyStatus                    = "status"
+	jsonKeyStream                    = "stream"
+	jsonKeyStreams                   = "streams"
+	mediaControlServiceName          = "media-control"
+	healthStatusOK                   = "ok"
+	legacyStreamReadyStatus          = "ready"
+	errAuthenticationRequiredMessage = "authentication required"
+	errStreamAccessDeniedMessage     = "stream access denied"
+	errStreamNotRegisteredMessage    = "stream is not registered"
+)
+
 type StreamLister interface {
 	ListStreams(ctx context.Context) ([]domain.StreamDescriptor, error)
 }
@@ -47,44 +74,44 @@ func NewServer(
 
 func (s Server) Routes() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", s.healthz)
-	mux.HandleFunc("/v1/streams", s.streamList)
-	mux.HandleFunc("/v1/ice-servers", s.iceServers)
-	mux.HandleFunc("/stream/status", s.legacyStreamStatus)
-	mux.HandleFunc("/api/v1/streams/ice-servers", s.dashboardIceServers)
-	mux.HandleFunc("/api/v1/streams/", s.dashboardStreamItem)
-	mux.HandleFunc("/api/v1/streams", s.dashboardStreamList)
+	mux.HandleFunc(routeHealthz, s.healthz)
+	mux.HandleFunc(routeStreams, s.streamList)
+	mux.HandleFunc(routeIceServers, s.iceServers)
+	mux.HandleFunc(routeLegacyStreamStatus, s.legacyStreamStatus)
+	mux.HandleFunc(routeDashboardIceServers, s.dashboardIceServers)
+	mux.HandleFunc(routeDashboardStreamItemPrefix, s.dashboardStreamItem)
+	mux.HandleFunc(routeDashboardStreams, s.dashboardStreamList)
 	return mux
 }
 
 func (s Server) healthz(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{
-		"status":  "ok",
-		"service": "media-control",
+		jsonKeyStatus:  healthStatusOK,
+		jsonKeyService: mediaControlServiceName,
 	})
 }
 
 func (s Server) streamList(w http.ResponseWriter, r *http.Request) {
 	streams, err := s.streams.ListStreams(r.Context())
 	if err != nil {
-		writeJSON(w, http.StatusBadGateway, map[string]string{"detail": err.Error()})
+		writeJSON(w, http.StatusBadGateway, errorPayload(err.Error()))
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"streams": streams})
+	writeJSON(w, http.StatusOK, map[string]any{jsonKeyStreams: streams})
 }
 
 func (s Server) legacyStreamStatus(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"stream": "ready"})
+	writeJSON(w, http.StatusOK, map[string]string{jsonKeyStream: legacyStreamReadyStatus})
 }
 
 func (s Server) iceServers(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"iceServers": s.ice.HealthyIceServers()})
+	writeJSON(w, http.StatusOK, map[string]any{jsonKeyIceServers: s.ice.HealthyIceServers()})
 }
 
 func (s Server) dashboardStreamList(w http.ResponseWriter, r *http.Request) {
 	streams, err := s.streams.ListStreams(r.Context())
 	if err != nil {
-		writeJSON(w, http.StatusBadGateway, map[string]string{"detail": err.Error()})
+		writeJSON(w, http.StatusBadGateway, errorPayload(err.Error()))
 		return
 	}
 
@@ -94,16 +121,16 @@ func (s Server) dashboardStreamList(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			continue
 		}
-		_, err = s.authorizer.AuthorizeStream(r.Context(), r.Header.Get("Authorization"), s.groups.TargetFor(parsed))
+		_, err = s.authorizer.AuthorizeStream(r.Context(), r.Header.Get(authorizationHeader), s.groups.TargetFor(parsed))
 		if errors.Is(err, domain.ErrStreamAuthenticationRequired) {
-			writeJSON(w, http.StatusUnauthorized, map[string]string{"detail": "authentication required"})
+			writeJSON(w, http.StatusUnauthorized, errorPayload(errAuthenticationRequiredMessage))
 			return
 		}
 		if errors.Is(err, domain.ErrStreamAccessDenied) {
 			continue
 		}
 		if err != nil {
-			writeJSON(w, http.StatusBadGateway, map[string]string{"detail": err.Error()})
+			writeJSON(w, http.StatusBadGateway, errorPayload(err.Error()))
 			return
 		}
 		item := s.streamDescriptorResponseFromParsed(stream, parsed)
@@ -119,20 +146,20 @@ func (s Server) dashboardStreamItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := domain.ParseStreamID(streamID); err != nil {
-		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"detail": err.Error()})
+		writeJSON(w, http.StatusUnprocessableEntity, errorPayload(err.Error()))
 		return
 	}
 
 	stream, found, err := s.findStream(r.Context(), streamID)
 	if err != nil {
-		writeJSON(w, http.StatusBadGateway, map[string]string{"detail": err.Error()})
+		writeJSON(w, http.StatusBadGateway, errorPayload(err.Error()))
 		return
 	}
 	if !found {
-		writeJSON(w, http.StatusNotFound, map[string]string{"detail": "stream is not registered"})
+		writeJSON(w, http.StatusNotFound, errorPayload(errStreamNotRegisteredMessage))
 		return
 	}
-	parsed, err := s.authorizeDashboardStream(r.Context(), r.Header.Get("Authorization"), stream)
+	parsed, err := s.authorizeDashboardStream(r.Context(), r.Header.Get(authorizationHeader), stream)
 	if err != nil {
 		s.writeStreamAccessError(w, err)
 		return
@@ -141,9 +168,9 @@ func (s Server) dashboardStreamItem(w http.ResponseWriter, r *http.Request) {
 	switch suffix {
 	case "":
 		writeJSON(w, http.StatusOK, s.streamDescriptorResponseFromParsed(stream, parsed))
-	case "playback":
+	case routeSuffixPlayback:
 		writeJSON(w, http.StatusOK, s.streamPlaybackResponseFromParsed(stream, parsed))
-	case "status":
+	case routeSuffixStatus:
 		writeJSON(w, http.StatusOK, streamStatusResponse{StreamID: parsed.StreamID, Status: stream.Status})
 	default:
 		http.NotFound(w, r)
@@ -248,16 +275,16 @@ func (s Server) authorizeDashboardStream(
 func (s Server) writeStreamAccessError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, domain.ErrStreamAuthenticationRequired):
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"detail": "authentication required"})
+		writeJSON(w, http.StatusUnauthorized, errorPayload(errAuthenticationRequiredMessage))
 	case errors.Is(err, domain.ErrStreamAccessDenied):
-		writeJSON(w, http.StatusForbidden, map[string]string{"detail": "stream access denied"})
+		writeJSON(w, http.StatusForbidden, errorPayload(errStreamAccessDeniedMessage))
 	default:
-		writeJSON(w, http.StatusBadGateway, map[string]string{"detail": err.Error()})
+		writeJSON(w, http.StatusBadGateway, errorPayload(err.Error()))
 	}
 }
 
 func streamIDAndSuffix(path string) (string, string, bool) {
-	trimmed := strings.TrimPrefix(path, "/api/v1/streams/")
+	trimmed := strings.TrimPrefix(path, routeDashboardStreamItemPrefix)
 	if trimmed == path || trimmed == "" {
 		return "", "", false
 	}
@@ -317,7 +344,11 @@ type iceServerResponse struct {
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(contentTypeHeader, jsonContentType)
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func errorPayload(detail string) map[string]string {
+	return map[string]string{jsonKeyDetail: detail}
 }

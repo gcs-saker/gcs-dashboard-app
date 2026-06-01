@@ -59,6 +59,24 @@ data class SignupInvite(
     }
 }
 
+class SignupInvites private constructor(
+    private val valuesByCode: Map<String, SignupInvite>,
+) {
+    fun findByCode(code: String): SignupInvite? = valuesByCode[code]
+
+    fun toList(): List<SignupInvite> = valuesByCode.values.toList()
+
+    companion object {
+        fun of(invites: Collection<SignupInvite>): SignupInvites {
+            val values = invites.toList()
+            require(values.map { it.code }.distinct().size == values.size) {
+                "signup invite codes must be unique"
+            }
+            return SignupInvites(values.associateBy { it.code }.toMap())
+        }
+    }
+}
+
 data class SignupCommand(
     val username: String,
     val email: String,
@@ -72,10 +90,8 @@ class SignupRejectedException(message: String) : RuntimeException(message)
 class AuthRegistrationService(
     private val users: AuthUserRepository,
     private val passwordHasher: PasswordHasher,
-    invites: Collection<SignupInvite>,
+    private val invites: SignupInvites,
 ) {
-    private val invitesByCode = invites.associateBy { it.code }
-
     fun signup(command: SignupCommand): AuthUser {
         if (users.findByUsername(command.username) != null) {
             throw SignupRejectedException("Username already registered")
@@ -83,7 +99,7 @@ class AuthRegistrationService(
         if (users.findByEmail(command.email) != null) {
             throw SignupRejectedException("Email already registered")
         }
-        val invite = invitesByCode[command.inviteCode]
+        val invite = invites.findByCode(command.inviteCode)
             ?: throw SignupRejectedException("Invalid invite code Input")
         val role = command.role.trim().uppercase().let {
             runCatching { UserRole.valueOf(it) }.getOrDefault(UserRole.VIEWER)

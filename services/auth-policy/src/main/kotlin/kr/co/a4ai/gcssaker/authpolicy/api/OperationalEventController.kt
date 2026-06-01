@@ -29,7 +29,7 @@ class OperationalEventController(
     private val repository: OperationalEventRepository,
     private val principalResolver: BearerPrincipalResolver,
 ) {
-    @GetMapping("/ops/events")
+    @GetMapping(OpsApiRoutes.EVENTS)
     fun events(
         @RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
         @RequestParam(required = false) query: String?,
@@ -42,7 +42,7 @@ class OperationalEventController(
             principal,
             OperationalEventQuery(
                 query = query,
-                severity = severity?.takeUnless { it.equals("all", ignoreCase = true) },
+                severity = severity?.takeUnless { it.equals(OperationalQueryValues.ALL, ignoreCase = true) },
                 from = parseInstantQuery("from", from),
                 to = parseInstantQuery("to", to),
             ),

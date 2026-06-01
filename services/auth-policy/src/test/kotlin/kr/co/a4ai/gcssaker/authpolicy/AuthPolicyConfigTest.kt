@@ -6,12 +6,15 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.NoopPrincipalCache
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
+import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvite
+import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvites
 import kr.co.a4ai.gcssaker.authpolicy.domain.StatelessRefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class AuthPolicyConfigTest {
@@ -49,7 +52,7 @@ class AuthPolicyConfigTest {
         assertEquals("policy_refresh", settings.refreshCookieName)
         assertTrue(settings.refreshCookieSecure)
         assertEquals("strict", settings.refreshCookieSameSite)
-        assertEquals(setOf("http://localhost:18080", "https://gcs.example.test"), settings.allowedOrigins)
+        assertEquals(setOf("http://localhost:18080", "https://gcs.example.test"), settings.allowedOrigins.toSet())
         assertEquals("op", settings.operatorUsername)
         assertEquals("viewer", settings.smokeUsername)
         assertTrue(settings.redisPrincipalCacheEnabled)
@@ -77,7 +80,7 @@ class AuthPolicyConfigTest {
         assertEquals("backend-issuer", settings.jwtIssuer)
         assertEquals("backend_refresh", settings.refreshCookieName)
         assertFalse(settings.refreshCookieSecure)
-        assertEquals(setOf("http://localhost:5173"), settings.allowedOrigins)
+        assertEquals(setOf("http://localhost:5173"), settings.allowedOrigins.toSet())
     }
 
     @Test
@@ -134,5 +137,23 @@ class AuthPolicyConfigTest {
         assertEquals("10.0.0.10", config.sourceHost)
         assertEquals(123, config.sourcePort)
         assertEquals(500, config.driftWarnMs)
+    }
+
+    @Test
+    fun `first class collections protect auth policy runtime contracts`() {
+        val origins = AllowedOrigins.of(listOf(" http://localhost:5173 ", "", "https://gcs.example.test"))
+        val invites = SignupInvites.of(listOf(SignupInvite("A4AI01", 1, GroupId("co-a"))))
+
+        assertTrue("http://localhost:5173" in origins)
+        assertEquals(setOf("http://localhost:5173", "https://gcs.example.test"), origins.toSet())
+        assertEquals("co-a", invites.findByCode("A4AI01")?.groupId?.value)
+        assertFailsWith<IllegalArgumentException> {
+            SignupInvites.of(
+                listOf(
+                    SignupInvite("A4AI01", 1, GroupId("co-a")),
+                    SignupInvite("A4AI01", 1, GroupId("co-b")),
+                ),
+            )
+        }
     }
 }

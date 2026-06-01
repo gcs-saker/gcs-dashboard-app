@@ -1,4 +1,5 @@
 import { authUrl } from "../../config";
+import { AUTH_ROUTES } from "../apiRoutes";
 import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 import type { AuthenticatedUser, LoginRequest, SignupRequest, SignupResponse, TokenResponse } from "./types";
 
@@ -38,7 +39,7 @@ async function parseError(response: Response): Promise<string> {
 }
 
 export async function loginRequest(credentials: LoginRequest): Promise<TokenResponse> {
-  const response = await fetch(authUrl("/login"), {
+  const response = await fetch(authUrl(AUTH_ROUTES.login), {
     method: "POST",
     credentials: "include",
     headers: AUTH_JSON_HEADERS,
@@ -53,7 +54,7 @@ export async function loginRequest(credentials: LoginRequest): Promise<TokenResp
 }
 
 export async function refreshSessionRequest(fetcher: typeof fetch = fetch): Promise<TokenResponse> {
-  const response = await fetcher(authUrl("/refresh"), {
+  const response = await fetcher(authUrl(AUTH_ROUTES.refresh), {
     method: "POST",
     credentials: "include",
     headers: AUTH_ACCEPT_HEADERS,
@@ -70,7 +71,7 @@ export async function refreshSessionRequest(fetcher: typeof fetch = fetch): Prom
 }
 
 export async function logoutRequest(fetcher: typeof fetch = fetch): Promise<void> {
-  await fetcher(authUrl("/logout"), {
+  await fetcher(authUrl(AUTH_ROUTES.logout), {
     method: "POST",
     credentials: "include",
     headers: AUTH_CSRF_HEADERS,
@@ -79,7 +80,7 @@ export async function logoutRequest(fetcher: typeof fetch = fetch): Promise<void
 }
 
 export async function signupRequest(payload: SignupRequest): Promise<SignupResponse> {
-  const response = await fetch(authUrl("/signup"), {
+  const response = await fetch(authUrl(AUTH_ROUTES.signup), {
     method: "POST",
     credentials: "include",
     headers: AUTH_JSON_HEADERS,
@@ -94,7 +95,7 @@ export async function signupRequest(payload: SignupRequest): Promise<SignupRespo
 }
 
 export async function fetchCurrentUser(accessToken: string): Promise<AuthenticatedUser> {
-  const response = await fetch(authUrl("/me"), {
+  const response = await fetch(authUrl(AUTH_ROUTES.me), {
     credentials: "include",
     headers: { Authorization: `Bearer ${accessToken}` },
   });

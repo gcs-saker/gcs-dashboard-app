@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import "../Login.scss";
 import axios from "axios";
-import { apiUrl } from "../config";
+import { authUrl } from "../config";
+import { AUTH_ROUTES } from "../features/apiRoutes";
+import { AUTH_JSON_HEADERS } from "../features/auth/authApi";
 
 export default function Signup() {
   const [form, setForm] = useState({
@@ -31,7 +33,10 @@ export default function Signup() {
     console.log("회원가입 데이터:", form);
 
     try {
-      const res = await axios.post(apiUrl("/auth/signup"), form);
+      const res = await axios.post(authUrl(AUTH_ROUTES.signup), form, {
+        withCredentials: true,
+        headers: AUTH_JSON_HEADERS,
+      });
       console.log("회원가입 성공:", res.data);
       // ✅ 여기서 토큰 저장 후 대시보드 페이지로 이동
     } catch (err) {

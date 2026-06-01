@@ -1,4 +1,5 @@
 import { backendRootUrl, streamApiV1Url } from "../../config";
+import { BACKEND_ROOT_ROUTES, STREAM_API_ROUTES } from "../apiRoutes";
 import { AuthApiError, authenticatedFetch } from "../auth/authApi";
 
 export type DashboardServerHealth = "online" | "degraded" | "error";
@@ -33,10 +34,10 @@ export async function fetchDashboardServerStatus(
   const startedAt = performance.now();
   try {
     const [healthResponse, readyResponse, signalingResponse, streamResponse] = await Promise.all([
-      probe(fetcher, "/healthz"),
-      probe(fetcher, "/readyz"),
-      probe(fetcher, "/media-control/healthz"),
-      authenticatedFetch(streamApiV1Url("/streams"), { headers: { Accept: "application/json" } }, fetcher),
+      probe(fetcher, BACKEND_ROOT_ROUTES.healthz),
+      probe(fetcher, BACKEND_ROOT_ROUTES.readyz),
+      probe(fetcher, BACKEND_ROOT_ROUTES.mediaControlHealthz),
+      authenticatedFetch(streamApiV1Url(STREAM_API_ROUTES.streams), { headers: { Accept: "application/json" } }, fetcher),
     ]);
     const latencyMs = Math.max(1, Math.round(performance.now() - startedAt));
     if (streamResponse.status === 401) {

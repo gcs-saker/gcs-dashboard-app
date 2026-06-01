@@ -18,23 +18,41 @@ data class HealthReportResponse(
 
 @RestController
 class HealthController {
-    @GetMapping("/healthz")
+    @GetMapping(HealthApiRoutes.HEALTHZ)
     fun healthz(): HealthReportResponse =
         HealthReportResponse(
-            service = "auth-policy",
-            status = "ok",
-            checks = listOf(HealthCheckResponse(name = "api", status = "ok", required = true)),
+            service = HealthContract.SERVICE_NAME,
+            status = HealthContract.STATUS_OK,
+            checks = listOf(
+                HealthCheckResponse(
+                    name = HealthContract.CHECK_API,
+                    status = HealthContract.STATUS_OK,
+                    required = true,
+                ),
+            ),
         )
 
-    @GetMapping("/readyz")
+    @GetMapping(HealthApiRoutes.READYZ)
     fun readyz(): HealthReportResponse =
         HealthReportResponse(
-            service = "auth-policy",
-            status = "ok",
+            service = HealthContract.SERVICE_NAME,
+            status = HealthContract.STATUS_OK,
             checks = listOf(
-                HealthCheckResponse(name = "auth_repository", status = "ok", required = true),
-                HealthCheckResponse(name = "jwt_token_service", status = "ok", required = true),
-                HealthCheckResponse(name = "stream_policy", status = "ok", required = true),
+                HealthCheckResponse(
+                    name = HealthContract.CHECK_AUTH_REPOSITORY,
+                    status = HealthContract.STATUS_OK,
+                    required = true,
+                ),
+                HealthCheckResponse(
+                    name = HealthContract.CHECK_JWT_TOKEN_SERVICE,
+                    status = HealthContract.STATUS_OK,
+                    required = true,
+                ),
+                HealthCheckResponse(
+                    name = HealthContract.CHECK_STREAM_POLICY,
+                    status = HealthContract.STATUS_OK,
+                    required = true,
+                ),
             ),
         )
 }
