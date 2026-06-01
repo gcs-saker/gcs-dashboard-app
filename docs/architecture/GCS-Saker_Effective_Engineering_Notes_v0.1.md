@@ -8,7 +8,7 @@
 
 적용 사례:
 
-- Spring/Kotlin `auth-policy`는 `ApiRoutes.kt`, `AuthApiContract.kt`, `ApiFieldNames.kt`처럼 API 성격별 계약 파일에 endpoint, header, token, error, response field 계약값을 나누어 모았다.
+- Spring/Kotlin `auth-policy`는 `AuthApiRoutes.kt`, `TimeSyncApiRoutes.kt`, `OperationalReadApiRoutes.kt`처럼 API 도메인별 계약 파일에 endpoint, header, token, error, response field 계약값을 나누어 모았다.
 - React dashboard는 `features/apiRoutes.ts`에서 auth/dashboard/stream endpoint를 관리한다.
 - Go `media-control`은 HTTP route, JSON key, content type, error detail을 상수화했다.
 
@@ -24,7 +24,7 @@
 
 적용 방식:
 
-- `AuthApiRoutes`, `HealthApiRoutes`, `OpsApiRoutes`, `OperationalReadApiRoutes`, `StreamPolicyApiRoutes`로 route를 분리했다.
+- `AuthApiRoutes`, `HealthApiRoutes`, `TimeSyncApiRoutes`, `OperationalEventApiRoutes`, `OperationalReadApiRoutes`, `StreamPolicyApiRoutes`로 route를 분리했다.
 - 컨트롤러 annotation은 계약 객체만 참조한다.
 
 효과:
@@ -41,7 +41,7 @@ DTO는 JSON field명, 호환성, 외부 클라이언트와의 약속을 담당�
 
 - `TokenResponse`, `UserResponse`, `StreamAccessResponse`, `TelemetryReadResponse`는 API DTO다.
 - `AuthUser`, `SignupInvite`, `GroupId`, `StreamSessionDescriptor`는 도메인 모델이다.
-- JSON field명은 `ApiFieldNames`로 분리했다.
+- JSON field명은 `AuthApiFields`, `OperationalReadApiFields`, `StreamPolicyApiFields`처럼 API 도메인별 field contract로 분리했다.
 
 원칙:
 
@@ -219,6 +219,7 @@ localStorage는 편하지만 XSS에 취약하다.
 
 - 프론트 인증 요청은 공통 header 상수를 사용한다.
 - 백엔드는 변경성 auth endpoint에서 CSRF header를 검증한다.
+- Spring `@RequestHeader`는 Kotlin annotation class에 meta-annotation으로 합성하기 어렵기 때문에, custom annotation 대신 `AuthSecurityHeaders` 상수를 사용해 계약값을 고정했다.
 
 ## 14. 테스트는 구현 의도까지 고정해야 한다
 
@@ -278,6 +279,25 @@ API가 200이어도 signaling/ICE/media track이 실패하면 스트리밍은 �
 - TanStack Query/Zustand 혼합 전략
 - 불필요한 polling 간격 조정
 - stream status/event log는 polling보다 push 구조 검토
+
+## 17. DB 튜닝은 쿼리 수, 인덱스, 실행 계획을 함께 고정하라
+
+성능을 올릴 때는 “느낌상 빠름”이 아니라 DB round-trip, rows examined, 실행 계획으로 검증한다.
+
+적용 사례:
+
+- signup 중복 검사는 username 조회와 email 조회를 하나의 OR query로 합쳤다.
+- signup 중복 검사는 row 조회가 아니라 `EXISTS` index probe로 처리해 불필요한 user row materialization을 피한다.
+- login/refresh/gateway/company 조회는 필요한 column만 projection한다.
+- gateway asset 조회는 mapping 조회 후 `IN (...)` 조회를 join query로 합쳤다.
+- MySQL/MariaDB telemetry ingest는 `ON DUPLICATE KEY UPDATE` atomic upsert로 select-then-update race window와 불필요한 선행 조회를 줄인다.
+- `gateway_assets.asset_id` reverse lookup index contract를 추가했다.
+- Python test에서 signup duplicate email path가 `EXISTS`만 수행하는지, login이 인증에 필요한 column만 읽는지, asset 조회가 gateway id projection + join 조회로 고정되는지 검증한다.
+
+운영 절차:
+
+- 운영 DB에서는 `EXPLAIN ANALYZE`, `SHOW INDEX`, `ANALYZE TABLE` 순서로 확인한다.
+- 자세한 실행 순서와 기대 연산 감소는 [GCS-Saker_DB_Query_Tuning_Guide_v0.1.md](../operations/GCS-Saker_DB_Query_Tuning_Guide_v0.1.md)를 기준으로 한다.
 
 ## 17. 운영 상태는 단일 “서버 상태”가 아니라 구성요소별로 보라
 

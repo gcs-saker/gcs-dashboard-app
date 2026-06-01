@@ -3,7 +3,7 @@ from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -251,6 +251,69 @@ def test_signup_rejects_duplicate_or_invalid_invite(
 
     assert response.status_code == 400
     assert response.json() == {"detail": detail}
+
+
+def test_signup_duplicate_email_uses_one_user_lookup(
+    auth_client: TestClient,
+    db_session: Session,
+) -> None:
+    select_statements: list[str] = []
+    bind = db_session.get_bind()
+
+    def record_selects(conn, cursor, statement, parameters, context, executemany) -> None:
+        if statement.lstrip().upper().startswith("SELECT"):
+            select_statements.append(statement)
+
+    event.listen(bind, "before_cursor_execute", record_selects)
+    try:
+        response = auth_client.post(
+            "/auth/signup",
+            json={
+                "username": "newoperator",
+                "email": "operator01@example.com",
+                "password": "strong-password",
+                "inviteCode": "A4AI01",
+                "role": "viewer",
+            },
+        )
+    finally:
+        event.remove(bind, "before_cursor_execute", record_selects)
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Email already registered"}
+    assert len(select_statements) == 1
+    assert "EXISTS" in select_statements[0].upper()
+    assert "password_hash" not in select_statements[0]
+    assert "company_id" not in select_statements[0]
+
+
+def test_login_selects_only_authentication_columns(
+    auth_client: TestClient,
+    db_session: Session,
+) -> None:
+    select_statements: list[str] = []
+    bind = db_session.get_bind()
+
+    def record_selects(conn, cursor, statement, parameters, context, executemany) -> None:
+        if statement.lstrip().upper().startswith("SELECT"):
+            select_statements.append(statement)
+
+    event.listen(bind, "before_cursor_execute", record_selects)
+    try:
+        response = auth_client.post(
+            "/auth/login",
+            json={"username": "operator01", "password": "correct-password"},
+        )
+    finally:
+        event.remove(bind, "before_cursor_execute", record_selects)
+
+    assert response.status_code == 200
+    login_select = select_statements[0]
+    assert "users.username" in login_select
+    assert "users.password_hash" in login_select
+    assert "users.role" in login_select
+    assert "users.email" not in login_select
+    assert "users.company_id" not in login_select
 
 
 def test_auth_me_reports_missing_invalid_and_expired_tokens(

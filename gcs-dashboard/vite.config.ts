@@ -8,6 +8,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    resolve: {
+      alias: {
+        "@": new URL("./src", import.meta.url).pathname
+      }
+    },
     build: {
       rollupOptions: {
         output: {

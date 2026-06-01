@@ -1,5 +1,5 @@
 import { backendRootUrl, streamApiV1Url } from "../../config";
-import { BACKEND_ROOT_ROUTES, STREAM_API_ROUTES } from "../apiRoutes";
+import { BACKEND_ROOT_ROUTES, STREAM_API_ROUTES } from "@/features/apiRoutes";
 import { AuthApiError, authenticatedFetch } from "../auth/authApi";
 
 export type DashboardServerHealth = "online" | "degraded" | "error";

@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import "../Login.scss";
 import axios from "axios";
 import { authUrl } from "../config";
-import { AUTH_ROUTES } from "../features/apiRoutes";
-import { AUTH_JSON_HEADERS } from "../features/auth/authApi";
+import { AUTH_ROUTES } from "@/features/apiRoutes";
+import { AUTH_JSON_HEADERS } from "@/features/auth/authApi";
 
 export default function Signup() {
   const [form, setForm] = useState({

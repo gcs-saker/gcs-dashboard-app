@@ -1,5 +1,5 @@
 import { streamApiV1Url, WEBRTC_ICE_SERVERS } from "../../config";
-import { STREAM_API_ROUTES } from "../apiRoutes";
+import { STREAM_API_ROUTES } from "@/features/apiRoutes";
 import { authenticatedFetch } from "../auth/authApi";
 
 interface IceServerPayload {

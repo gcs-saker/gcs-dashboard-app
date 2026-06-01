@@ -3,9 +3,9 @@ import "../Login.scss";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { authUrl } from "../config";
-import { AUTH_ROUTES } from "../features/apiRoutes";
-import { AUTH_JSON_HEADERS } from "../features/auth/authApi";
-import { storeAuthSession } from "../features/auth/authStorage";
+import { AUTH_ROUTES } from "@/features/apiRoutes";
+import { AUTH_JSON_HEADERS } from "@/features/auth/authApi";
+import { storeAuthSession } from "@/features/auth/authStorage";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
