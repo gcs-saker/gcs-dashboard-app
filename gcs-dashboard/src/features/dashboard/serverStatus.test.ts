@@ -9,6 +9,7 @@ describe("serverStatus", () => {
       .mockResolvedValueOnce(new Response("ok", { status: 200 }))
       .mockResolvedValueOnce(new Response("ready", { status: 200 }))
       .mockResolvedValueOnce(new Response("media", { status: 200 }))
+      .mockResolvedValueOnce(new Response("media-ready", { status: 200 }))
       .mockResolvedValueOnce(new Response("[]", { status: 200 }));
 
     const status = await fetchDashboardServerStatus(fetcher as unknown as typeof fetch);
@@ -16,7 +17,8 @@ describe("serverStatus", () => {
     expect(fetcher).toHaveBeenNthCalledWith(1, "/healthz", { headers: undefined });
     expect(fetcher).toHaveBeenNthCalledWith(2, "/readyz", { headers: undefined });
     expect(fetcher).toHaveBeenNthCalledWith(3, "/media-control/healthz", { headers: undefined });
-    expect(fetcher).toHaveBeenNthCalledWith(4, "/api/v1/streams", {
+    expect(fetcher).toHaveBeenNthCalledWith(4, "/media-control/readyz", { headers: undefined });
+    expect(fetcher).toHaveBeenNthCalledWith(5, "/api/v1/streams", {
       credentials: "include",
       headers: { Accept: "application/json" },
     });
@@ -27,6 +29,22 @@ describe("serverStatus", () => {
     expect(status.streams).toBe("online");
     expect(status.latencyMs).toBeGreaterThan(0);
     expect(status.checkedAt).toBeGreaterThan(0);
+  });
+
+  test("marks signaling degraded when media-control process is alive but readiness fails", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("ok", { status: 200 }))
+      .mockResolvedValueOnce(new Response("ready", { status: 200 }))
+      .mockResolvedValueOnce(new Response("media", { status: 200 }))
+      .mockResolvedValueOnce(Response.json({ status: "degraded" }, { status: 503 }))
+      .mockResolvedValueOnce(new Response("[]", { status: 200 }));
+
+    const status = await fetchDashboardServerStatus(fetcher as unknown as typeof fetch);
+
+    expect(status.apiServer).toBe("online");
+    expect(status.signalingServer).toBe("degraded");
+    expect(status.streams).toBe("online");
   });
 
   test("reports error when backend probes fail", async () => {
@@ -44,6 +62,7 @@ describe("serverStatus", () => {
       .mockResolvedValueOnce(new Response("ok", { status: 200 }))
       .mockResolvedValueOnce(new Response("ready", { status: 200 }))
       .mockResolvedValueOnce(new Response("media", { status: 200 }))
+      .mockResolvedValueOnce(new Response("media-ready", { status: 200 }))
       .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
       .mockResolvedValueOnce(Response.json({ detail: "refresh token required" }, { status: 401 }));
 

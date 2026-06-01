@@ -32,10 +32,11 @@ export async function fetchDashboardServerStatus(
 ): Promise<DashboardServerStatusSnapshot> {
   const startedAt = performance.now();
   try {
-    const [healthResponse, readyResponse, signalingResponse, streamResponse] = await Promise.all([
+    const [healthResponse, readyResponse, signalingResponse, signalingReadyResponse, streamResponse] = await Promise.all([
       probe(fetcher, BACKEND_ROOT_ROUTES.healthz),
       probe(fetcher, BACKEND_ROOT_ROUTES.readyz),
       probe(fetcher, BACKEND_ROOT_ROUTES.mediaControlHealthz),
+      probe(fetcher, BACKEND_ROOT_ROUTES.mediaControlReadyz),
       authenticatedFetch(streamApiV1Url(STREAM_API_ROUTES.streams), { headers: { Accept: "application/json" } }, fetcher),
     ]);
     const latencyMs = Math.max(1, Math.round(performance.now() - startedAt));
@@ -46,7 +47,10 @@ export async function fetchDashboardServerStatus(
     return {
       apiServer: streamResponse.ok ? healthFromLatency(latencyMs) : DASHBOARD_SERVER_HEALTH.degraded,
       authServer: healthResponse.ok && readyResponse.ok ? DASHBOARD_SERVER_HEALTH.online : DASHBOARD_SERVER_HEALTH.degraded,
-      signalingServer: signalingResponse.ok ? DASHBOARD_SERVER_HEALTH.online : DASHBOARD_SERVER_HEALTH.degraded,
+      signalingServer:
+        signalingResponse.ok && signalingReadyResponse.ok
+          ? DASHBOARD_SERVER_HEALTH.online
+          : DASHBOARD_SERVER_HEALTH.degraded,
       readiness: readyResponse.ok ? DASHBOARD_SERVER_HEALTH.online : DASHBOARD_SERVER_HEALTH.degraded,
       streams: streamResponse.ok ? DASHBOARD_SERVER_HEALTH.online : DASHBOARD_SERVER_HEALTH.degraded,
       latencyMs,
