@@ -90,6 +90,13 @@ apply_smoke_ports() {
   export TURN_PRIMARY_RELAY_HOST_MAX_PORT="${GCS_SMOKE_TURN_PRIMARY_RELAY_HOST_MAX_PORT:-59180}"
   export TURN_SECONDARY_RELAY_HOST_MIN_PORT="${GCS_SMOKE_TURN_SECONDARY_RELAY_HOST_MIN_PORT:-59181}"
   export TURN_SECONDARY_RELAY_HOST_MAX_PORT="${GCS_SMOKE_TURN_SECONDARY_RELAY_HOST_MAX_PORT:-59200}"
+  export MEDIAMTX_PUBLIC_WEBRTC_BASE_URL="${GCS_SMOKE_MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/webrtc}"
+  export MEDIAMTX_PUBLIC_HLS_BASE_URL="${GCS_SMOKE_MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/hls}"
+  export VITE_LOCAL_WEBCAM_WHIP_URL="${GCS_SMOKE_VITE_LOCAL_WEBCAM_WHIP_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/webrtc/raw/local/webcam/whip}"
+  export WEBRTC_STUN_URL="${GCS_SMOKE_WEBRTC_STUN_URL:-stun:127.0.0.1:${TURN_PRIMARY_HOST_PORT}}"
+  export WEBRTC_TURN_URL="${GCS_SMOKE_WEBRTC_TURN_URL:-turn:127.0.0.1:${TURN_PRIMARY_HOST_PORT}?transport=udp}"
+  export VITE_WEBRTC_STUN_URL="${GCS_SMOKE_VITE_WEBRTC_STUN_URL:-stun:127.0.0.1:${TURN_PRIMARY_HOST_PORT}}"
+  export BACKEND_CORS_ALLOW_ORIGINS="${GCS_SMOKE_BACKEND_CORS_ALLOW_ORIGINS:-http://127.0.0.1:${PUBLIC_HTTP_PORT},http://localhost:${PUBLIC_HTTP_PORT}}"
 }
 
 wait_for_http() {
@@ -109,6 +116,25 @@ wait_for_http() {
   return 1
 }
 
+wait_for_stream_status() {
+  local url="$1"
+  local attempts="${2:-45}"
+  local delay_seconds="${3:-2}"
+  local attempt
+  local payload
+
+  for ((attempt = 1; attempt <= attempts; attempt += 1)); do
+    payload="$(curl -fsS "$url" 2>/dev/null || true)"
+    if [[ "$payload" == *'"stream":"ready"'* ]]; then
+      return 0
+    fi
+    sleep "$delay_seconds"
+  done
+
+  echo "Timed out waiting for ${url} to return backend stream readiness" >&2
+  return 1
+}
+
 check_required_files() {
   test -f "$COMPOSE_FILE"
   test -f "$ENV_FILE"
@@ -124,6 +150,7 @@ check_contract_text() {
   grep -q "turn-primary" "$COMPOSE_FILE"
   grep -q "turn-secondary" "$COMPOSE_FILE"
   grep -q "webrtcICEServers2" "${REPO_ROOT}/deploy/mediamtx/mediamtx.closed-network.yml"
+  grep -q "location /stream/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /webrtc/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /hls/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
 }
@@ -160,13 +187,14 @@ run_live() {
 
   if [[ "$START_STACK" == "1" ]]; then
     compose up -d --build
+    compose restart edge >/dev/null
   fi
 
   local public_http_port="${PUBLIC_HTTP_PORT:-8080}"
   local edge_base_url="http://127.0.0.1:${public_http_port}"
   wait_for_http "${edge_base_url}/healthz"
   wait_for_http "${edge_base_url}/readyz"
-  wait_for_http "${edge_base_url}/stream/status"
+  wait_for_stream_status "${edge_base_url}/stream/status"
 
   runtime_probe_from_edge "http://auth-policy:8080/healthz"
   runtime_probe_from_edge "http://media-control:8081/healthz"
