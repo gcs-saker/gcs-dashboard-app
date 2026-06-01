@@ -141,7 +141,7 @@ services:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8081/healthz >/dev/null"]
     depends_on:
       mediamtx:
-        condition: service_healthy
+        condition: service_started
       turn-primary:
         condition: service_started
       turn-secondary:
@@ -166,9 +166,6 @@ services:
         target: /mediamtx.yml
         read_only: true
     command: /mediamtx.yml
-    healthcheck:
-      <<: *health_defaults
-      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:9997/v3/config/global/get >/dev/null"]
     restart: unless-stopped
     networks:
       - media-net
@@ -192,7 +189,7 @@ services:
     ports:
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/tcp"
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/udp"
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:49160-49180:49160-49180/udp"
+      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_RELAY_HOST_MIN_PORT:-49160}-${TURN_PRIMARY_RELAY_HOST_MAX_PORT:-49180}:49160-49180/udp"
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "timeout 2 sh -c '</dev/udp/127.0.0.1/3478' || exit 0"]
@@ -219,7 +216,7 @@ services:
     ports:
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/tcp"
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/udp"
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:49181-49200:49181-49200/udp"
+      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_RELAY_HOST_MIN_PORT:-49181}-${TURN_SECONDARY_RELAY_HOST_MAX_PORT:-49200}:49181-49200/udp"
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "timeout 2 sh -c '</dev/udp/127.0.0.1/3478' || exit 0"]
@@ -259,7 +256,7 @@ services:
       dashboard:
         condition: service_healthy
       mediamtx:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1/healthz >/dev/null"]

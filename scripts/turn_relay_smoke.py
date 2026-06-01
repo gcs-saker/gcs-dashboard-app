@@ -176,49 +176,66 @@ def decode_xor_relayed_address(value: bytes | None, transaction_id: bytes) -> st
 
 
 def send_turn_message(target: TurnTarget, payload: bytes, timeout: float) -> bytes:
-    sock_type = socket.SOCK_DGRAM if target.transport == "udp" else socket.SOCK_STREAM
-    with socket.socket(socket.AF_INET, sock_type) as client:
-        client.settimeout(timeout)
-        if target.transport == "tcp":
-            client.connect((target.host, target.port))
-            client.sendall(payload)
-            return client.recv(2048)
-        client.sendto(payload, (target.host, target.port))
-        return client.recv(2048)
+    with TurnConnection(target, timeout) as connection:
+        return connection.send(payload)
+
+
+class TurnConnection:
+    def __init__(self, target: TurnTarget, timeout: float) -> None:
+        self.target = target
+        self.timeout = timeout
+        self.client: socket.socket | None = None
+
+    def __enter__(self) -> "TurnConnection":
+        sock_type = socket.SOCK_DGRAM if self.target.transport == "udp" else socket.SOCK_STREAM
+        self.client = socket.socket(socket.AF_INET, sock_type)
+        self.client.settimeout(self.timeout)
+        self.client.connect((self.target.host, self.target.port))
+        return self
+
+    def __exit__(self, *_exc_info: object) -> None:
+        if self.client is not None:
+            self.client.close()
+            self.client = None
+
+    def send(self, payload: bytes) -> bytes:
+        if self.client is None:
+            raise RuntimeError("TURN connection is not open")
+        self.client.sendall(payload)
+        return self.client.recv(2048)
 
 
 def run_turn_allocate(target: TurnTarget, username: str, password: str, timeout: float) -> str:
-    challenge = parse_message(send_turn_message(target, encode_allocate_request(secrets.token_bytes(12)), timeout))
-    if challenge.type != ALLOCATE_ERROR_RESPONSE or decode_error_code(get_attr(challenge, ATTR_ERROR_CODE)) != 401:
-        raise RuntimeError("TURN server did not return the expected long-term credential challenge")
+    with TurnConnection(target, timeout) as connection:
+        challenge = parse_message(connection.send(encode_allocate_request(secrets.token_bytes(12))))
+        if challenge.type != ALLOCATE_ERROR_RESPONSE or decode_error_code(get_attr(challenge, ATTR_ERROR_CODE)) != 401:
+            raise RuntimeError("TURN server did not return the expected long-term credential challenge")
 
-    authenticated = None
-    for _ in range(3):
-        realm = get_attr(challenge, ATTR_REALM)
-        nonce = get_attr(challenge, ATTR_NONCE)
-        if not realm or not nonce:
-            raise RuntimeError("TURN challenge did not include realm and nonce")
+        authenticated = None
+        for _ in range(3):
+            realm = get_attr(challenge, ATTR_REALM)
+            nonce = get_attr(challenge, ATTR_NONCE)
+            if not realm or not nonce:
+                raise RuntimeError("TURN challenge did not include realm and nonce")
 
-        authenticated = parse_message(
-            send_turn_message(
-                target,
-                encode_allocate_request(
-                    transaction_id=secrets.token_bytes(12),
-                    username=username,
-                    realm=realm.decode("utf-8"),
-                    nonce=nonce.decode("utf-8"),
-                    password=password,
-                ),
-                timeout,
+            authenticated = parse_message(
+                connection.send(
+                    encode_allocate_request(
+                        transaction_id=secrets.token_bytes(12),
+                        username=username,
+                        realm=realm.decode("utf-8"),
+                        nonce=nonce.decode("utf-8"),
+                        password=password,
+                    )
+                )
             )
-        )
-        if authenticated.type == ALLOCATE_SUCCESS_RESPONSE:
-            break
-        if authenticated.type == ALLOCATE_ERROR_RESPONSE and decode_error_code(get_attr(authenticated, ATTR_ERROR_CODE)) == 438:
-            challenge = authenticated
-            continue
-        error_code = decode_error_code(get_attr(authenticated, ATTR_ERROR_CODE))
-        raise RuntimeError(f"TURN allocation failed with error={error_code or 'unknown'}")
+            if authenticated.type == ALLOCATE_SUCCESS_RESPONSE:
+                break
+            if authenticated.type == ALLOCATE_ERROR_RESPONSE and decode_error_code(get_attr(authenticated, ATTR_ERROR_CODE)) == 438:
+                challenge = authenticated
+                continue
+            error_code = decode_error_code(get_attr(authenticated, ATTR_ERROR_CODE))
+            raise RuntimeError(f"TURN allocation failed with error={error_code or 'unknown'}")
 
     if authenticated is None or authenticated.type != ALLOCATE_SUCCESS_RESPONSE:
         raise RuntimeError("TURN allocation failed after retrying stale nonce challenges")
