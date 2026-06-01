@@ -1,10 +1,9 @@
 import { useMemo, useState } from "react";
 import {
-  DEFAULT_OPERATIONAL_EVENTS,
-  filterOperationalEvents,
   summarizeOperationalEvents,
   type OperationalEventFilters,
 } from "../operationalEvents";
+import { useOperationalEvents } from "../hooks/useOperationalEvents";
 
 const severityLabels = {
   all: "전체",
@@ -20,8 +19,8 @@ export function EventLogView() {
     from: "",
     to: "",
   });
-  const filteredEvents = useMemo(() => filterOperationalEvents(DEFAULT_OPERATIONAL_EVENTS, filters), [filters]);
-  const summary = useMemo(() => summarizeOperationalEvents(filteredEvents), [filteredEvents]);
+  const { events, errorMessage, isLoading, lastUpdatedAt } = useOperationalEvents(filters);
+  const summary = useMemo(() => summarizeOperationalEvents(events), [events]);
   const peakThroughput = Math.max(1, summary.peakThroughputMbps);
 
   return (
@@ -74,10 +73,14 @@ export function EventLogView() {
         <span>Peak {summary.peakThroughputMbps.toFixed(1)} Mbps</span>
         <span>WARN {summary.warnings}</span>
         <span>ERROR {summary.errors}</span>
+        {isLoading ? <span role="status">이벤트 갱신 중</span> : null}
+        {lastUpdatedAt ? <span>{new Date(lastUpdatedAt).toLocaleTimeString("ko-KR")} 갱신</span> : null}
       </div>
 
+      {errorMessage ? <p className="event-log-view__error" role="alert">{errorMessage}</p> : null}
+
       <div className="event-log-view__chart" aria-label="시간대별 네트워크 지표">
-        {filteredEvents.map((event) => (
+        {events.map((event) => (
           <div className="event-log-view__bar" key={event.id}>
             <span>{new Date(event.occurredAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}</span>
             <i style={{ height: `${Math.max(6, (event.throughputMbps / peakThroughput) * 100)}%` }} />
@@ -95,7 +98,7 @@ export function EventLogView() {
           <span role="columnheader">RTT</span>
           <span role="columnheader">연결</span>
         </div>
-        {filteredEvents.map((event) => (
+        {events.map((event) => (
           <div className={`is-${event.severity}`} key={event.id} role="row">
             <span role="cell">{new Date(event.occurredAt).toLocaleString("ko-KR")}</span>
             <span role="cell">{event.severity.toUpperCase()}</span>

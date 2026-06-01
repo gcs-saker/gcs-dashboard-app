@@ -8,7 +8,6 @@ import { WidgetHeaderActions } from "./components/WidgetHeaderActions";
 import { WidgetPopout } from "./components/WidgetPopout";
 import { StreamDeviceConnectDialog } from "./components/StreamDeviceConnectDialog";
 import { AssetTreePanel } from "./components/AssetTreePanel";
-import { EventLogView } from "./components/EventLogView";
 import { SystemStatusPanel } from "./components/SystemStatusPanel";
 import { DEFAULT_ASSET_TREE, mergeAssetTreeWithStreams } from "./assetTree";
 import {
@@ -33,6 +32,9 @@ import { useDashboardStreams } from "./hooks/useDashboardStreams";
 
 const TacticalLeafletMap = lazy(() =>
   import("./map/TacticalLeafletMap").then((module) => ({ default: module.TacticalLeafletMap })),
+);
+const EventLogView = lazy(() =>
+  import("./components/EventLogView").then((module) => ({ default: module.EventLogView })),
 );
 
 type TelemetryRow = [label: string, value: string];
@@ -227,7 +229,11 @@ export function DashboardMvp() {
         </div>
       </header>
 
-      {activeView === "events" ? <EventLogView /> : null}
+      {activeView === "events" ? (
+        <Suspense fallback={<section className="event-log-view" role="status">이벤트로그 준비 중</section>}>
+          <EventLogView />
+        </Suspense>
+      ) : null}
       {activeView === "cctv" ? (
         <section className="ops-dashboard__placeholder-view" aria-label="CCTV">
           <StreamGrid

@@ -7,10 +7,13 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupType
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.NoopPrincipalCache
 import kr.co.a4ai.gcssaker.authpolicy.domain.AssetReadModel
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventReadModel
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationUnit
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
@@ -169,6 +172,75 @@ class AuthPolicyConfig {
                 ),
             ),
             assetsByGateway = mapOf(sampleGateway to listOf(sampleAsset)),
+        )
+    }
+
+    @Bean
+    fun operationalEventRepository(): OperationalEventRepository {
+        val group = GroupId("co-a")
+        return InMemoryOperationalEventRepository(
+            listOf(
+                OperationalEventReadModel(
+                    id = "ops-health-001",
+                    occurredAt = Instant.parse("2026-06-01T00:00:00Z"),
+                    severity = "info",
+                    category = "api",
+                    source = "API 서버",
+                    message = "헬스체크 정상",
+                    connections = 12,
+                    latencyMs = 42,
+                    throughputMbps = 18.4,
+                    groupId = group,
+                ),
+                OperationalEventReadModel(
+                    id = "ops-signaling-001",
+                    occurredAt = Instant.parse("2026-06-01T00:05:00Z"),
+                    severity = "info",
+                    category = "signaling",
+                    source = "Signaling 서버",
+                    message = "WebRTC WHEP 연결 수립",
+                    connections = 3,
+                    latencyMs = 88,
+                    throughputMbps = 42.1,
+                    groupId = group,
+                ),
+                OperationalEventReadModel(
+                    id = "ops-network-001",
+                    occurredAt = Instant.parse("2026-06-01T00:12:00Z"),
+                    severity = "warn",
+                    category = "network",
+                    source = "TURN 릴레이",
+                    message = "직접 ICE 후보 실패 후 릴레이 경로 사용",
+                    connections = 5,
+                    latencyMs = 164,
+                    throughputMbps = 31.6,
+                    groupId = group,
+                ),
+                OperationalEventReadModel(
+                    id = "ops-stream-001",
+                    occurredAt = Instant.parse("2026-06-01T00:24:00Z"),
+                    severity = "warn",
+                    category = "stream",
+                    source = "Stream Registry",
+                    message = "송출 종료 감지",
+                    connections = 1,
+                    latencyMs = 110,
+                    throughputMbps = 0.0,
+                    groupId = group,
+                ),
+                OperationalEventReadModel(
+                    id = "ops-security-001",
+                    occurredAt = Instant.parse("2026-06-01T00:31:00Z"),
+                    severity = "error",
+                    category = "security",
+                    source = "인증/인가 서버",
+                    message = "만료된 세션으로 스트림 접근 거절",
+                    connections = 0,
+                    latencyMs = 73,
+                    throughputMbps = 0.0,
+                    groupId = group,
+                ),
+            ),
         )
     }
 }
