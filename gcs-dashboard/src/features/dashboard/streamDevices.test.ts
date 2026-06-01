@@ -138,4 +138,12 @@ describe("streamDevices", () => {
     expect(secondMerge.filter((stream) => stream.streamPath === "raw.local.webcam")).toHaveLength(1);
     expect(secondMerge).toHaveLength(firstMerge.length);
   });
+
+  test("keeps the same stream array reference when the registry snapshot is unchanged", () => {
+    const firstMerge = mergeStreamSlotsWithDevices(DEFAULT_DASHBOARD_STREAMS, MOCK_STREAM_DEVICES);
+    const secondMerge = mergeStreamSlotsWithDevices(firstMerge, MOCK_STREAM_DEVICES);
+
+    expect(secondMerge).toBe(firstMerge);
+    expect(secondMerge[0]).toBe(firstMerge[0]);
+  });
 });
