@@ -58,8 +58,10 @@ describe("TacticalLeafletMap", () => {
     fireEvent.click(screen.getByRole("button", { name: "지도 확대" }));
     fireEvent.click(screen.getByRole("button", { name: "지도 축소" }));
     fireEvent.click(screen.getByRole("button", { name: "지도 중심 초기화" }));
+    fireEvent.change(screen.getByLabelText("지도 축척"), { target: { value: "1000" } });
 
     expect(screen.getByTestId("offline-tactical-map")).toBeInTheDocument();
+    expect(screen.getByTestId("offline-map-center")).toHaveTextContent("축척 1 km");
   });
 
   test("shows the coordinate under the pointer", () => {
@@ -99,6 +101,20 @@ describe("TacticalLeafletMap", () => {
     await user.click(screen.getByRole("button", { name: "경로 선택" }));
 
     expect(screen.getByLabelText("선택 핀 경로")).toBeInTheDocument();
+  });
+
+  test("opens a floating asset status panel from a stream marker", async () => {
+    const user = userEvent.setup();
+    render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
+
+    await user.click(screen.getByRole("button", { name: /로컬 웹캠 위치/ }));
+
+    expect(screen.getByLabelText("로컬 웹캠 상태")).toBeInTheDocument();
+    expect(screen.getByText("정상")).toBeInTheDocument();
+    expect(screen.getByText("미연결")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "조종 준비" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "마커 상태 닫기" }));
+    expect(screen.queryByLabelText("로컬 웹캠 상태")).not.toBeInTheDocument();
   });
 
   test("unlocks and moves a custom marker by clicking the map", async () => {

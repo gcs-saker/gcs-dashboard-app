@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import type { FormEvent, MouseEvent, PointerEvent } from "react";
-import type { DashboardStreamSlot } from "../streamTypes";
+import type { ChangeEvent, FormEvent, MouseEvent, PointerEvent } from "react";
+import { getDashboardStreamStatusText, type DashboardStreamSlot } from "../streamTypes";
 import { coordinateFromMapPercent, formatCoordinate, projectCoordinate } from "./tacticalMapGeometry";
 import type { MapCoordinate, MapPoint } from "./tacticalMapGeometry";
 import {
@@ -24,6 +24,13 @@ const DEFAULT_CENTER = { lat: 35.871435, lng: 128.601445 };
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
 const INITIAL_ZOOM = 3;
+const SCALE_OPTIONS = [
+  { label: "100 m", meters: 100, zoom: 5 },
+  { label: "250 m", meters: 250, zoom: 4 },
+  { label: "500 m", meters: 500, zoom: 3 },
+  { label: "1 km", meters: 1000, zoom: 2 },
+  { label: "2 km", meters: 2000, zoom: 1 },
+] as const;
 
 function coordinateSourceLabel(stream: DashboardStreamSlot): string {
   switch (stream.geometry?.source) {
@@ -67,6 +74,21 @@ function coordinateText(stream: DashboardStreamSlot): string {
   return formatCoordinate(stream.geometry);
 }
 
+function geometrySourceText(stream: DashboardStreamSlot): string {
+  switch (stream.geometry?.source) {
+    case "telemetry":
+      return "실시간 GPS";
+    case "device":
+      return "장비 좌표";
+    case "registry":
+      return "등록 좌표";
+    case "mock":
+      return "기본 좌표";
+    case undefined:
+      return "좌표 없음";
+  }
+}
+
 function percentFromPointer(event: PointerEvent<HTMLElement> | MouseEvent<HTMLElement>): MapPoint {
   const rect = event.currentTarget.getBoundingClientRect();
   const width = Math.max(rect.width, 1);
@@ -79,10 +101,12 @@ function percentFromPointer(event: PointerEvent<HTMLElement> | MouseEvent<HTMLEl
 
 export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletMapProps) {
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
+  const [scaleMeters, setScaleMeters] = useState(500);
   const [hoverCoordinate, setHoverCoordinate] = useState<MapCoordinate | null>(null);
   const [isMarkerFormOpen, setIsMarkerFormOpen] = useState(false);
   const [markerDraft, setMarkerDraft] = useState<CustomMarkerDraft>(() => draftFromCoordinate(DEFAULT_CENTER));
   const [activeMarkerId, setActiveMarkerId] = useState<string | null>(null);
+  const [activeStreamId, setActiveStreamId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState<CustomMarkerDraft>(() => draftFromCoordinate(DEFAULT_CENTER));
   const [movingMarkerId, setMovingMarkerId] = useState<string | null>(null);
   const {
@@ -111,6 +135,8 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
     [routeMarkers, selectedGeometry, zoom],
   );
   const activeMarker = markers.find((marker) => marker.id === activeMarkerId);
+  const activeStream = streams.find((stream) => stream.id === activeStreamId);
+  const selectedScale = SCALE_OPTIONS.find((option) => option.meters === scaleMeters) ?? SCALE_OPTIONS[2];
 
   const handlePointerMove = (event: PointerEvent<HTMLElement>) => {
     setHoverCoordinate(coordinateFromMapPercent(percentFromPointer(event), selectedGeometry, zoom));
@@ -119,6 +145,7 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
   const handleMapClick = (event: MouseEvent<HTMLElement>) => {
     const target = event.target as HTMLElement;
     if (target.closest("button, input, form, label")) return;
+    setActiveStreamId(null);
     if (!movingMarkerId) return;
     const point = percentFromPointer(event);
     updateMarkerCoordinate(movingMarkerId, coordinateFromMapPercent(point, selectedGeometry, zoom));
@@ -129,6 +156,7 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
     const coordinate = hoverCoordinate ?? selectedGeometry;
     setMarkerDraft(draftFromCoordinate(coordinate));
     setActiveMarkerId(null);
+    setActiveStreamId(null);
     setIsMarkerFormOpen(true);
   };
 
@@ -145,6 +173,7 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
     const marker = markers.find((item) => item.id === markerId);
     if (!marker) return;
     setActiveMarkerId(marker.id);
+    setActiveStreamId(null);
     setEditingDraft(draftFromCoordinate(marker.coordinate, marker.label));
   };
 
@@ -152,6 +181,20 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
     event.preventDefault();
     if (!activeMarkerId) return;
     updateMarkerFromDraft(activeMarkerId, editingDraft);
+  };
+
+  const handleScaleChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextScale = Number.parseInt(event.target.value, 10);
+    const option = SCALE_OPTIONS.find((item) => item.meters === nextScale);
+    if (!option) return;
+    setScaleMeters(option.meters);
+    setZoom(option.zoom);
+  };
+
+  const openStreamPopover = (streamId: string) => {
+    setActiveMarkerId(null);
+    setIsMarkerFormOpen(false);
+    setActiveStreamId(streamId);
   };
 
   return (
@@ -173,7 +216,7 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
         마우스 {hoverCoordinate ? formatCoordinate(hoverCoordinate) : "지도 위 대기"}
       </span>
       <span className="offline-map-center" data-testid="offline-map-center">
-        중심 {selectedGeometry.lat.toFixed(6)}, {selectedGeometry.lng.toFixed(6)}
+        중심 {formatCoordinate(selectedGeometry)} / 축척 {selectedScale.label}
       </span>
       {routePoints.length > 1 ? (
         <svg className="custom-map-route" aria-label="선택 핀 경로" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -193,6 +236,16 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
         <button aria-label="커스텀 마커 추가" type="button" onClick={openMarkerForm}>
           ⊕
         </button>
+        <label className="map-scale-control">
+          <span>축척</span>
+          <select aria-label="지도 축척" value={scaleMeters} onChange={handleScaleChange}>
+            {SCALE_OPTIONS.map((option) => (
+              <option key={option.meters} value={option.meters}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
       {isMarkerFormOpen ? (
         <form className="custom-marker-form" aria-label="커스텀 마커 추가 입력" onSubmit={submitMarkerDraft}>
@@ -235,11 +288,70 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
           type="button"
           title={`${stream.title} / ${coordinateText(stream)}`}
           aria-label={`${stream.title} 위치 ${coordinateText(stream)}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            openStreamPopover(stream.id);
+          }}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            openStreamPopover(stream.id);
+          }}
         >
           <span className="offline-map-marker__dot" />
           <span className="offline-map-marker__label">{stream.title}</span>
         </button>
       ))}
+      {activeStream ? (
+        <aside
+          className="map-asset-popover"
+          aria-label={`${activeStream.title} 상태`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="map-asset-popover__header">
+            <strong>{activeStream.title}</strong>
+            <button type="button" aria-label="마커 상태 닫기" onClick={() => setActiveStreamId(null)}>
+              ×
+            </button>
+          </div>
+          <dl>
+            <div>
+              <dt>상태</dt>
+              <dd>{getDashboardStreamStatusText(activeStream.status)}</dd>
+            </div>
+            <div>
+              <dt>모드</dt>
+              <dd>{activeStream.mode}</dd>
+            </div>
+            <div>
+              <dt>자산</dt>
+              <dd>{activeStream.connectedDeviceId ?? "미연결"}</dd>
+            </div>
+            <div>
+              <dt>좌표</dt>
+              <dd>{coordinateText(activeStream)}</dd>
+            </div>
+            <div>
+              <dt>고도</dt>
+              <dd>{activeStream.geometry ? `${activeStream.geometry.altitudeM} m` : "대기"}</dd>
+            </div>
+            <div>
+              <dt>방위/FOV</dt>
+              <dd>
+                {activeStream.geometry
+                  ? `${activeStream.geometry.headingDeg}° / ${activeStream.geometry.fovDeg}°`
+                  : "대기"}
+              </dd>
+            </div>
+            <div>
+              <dt>출처</dt>
+              <dd>{geometrySourceText(activeStream)}</dd>
+            </div>
+          </dl>
+          <button className="map-asset-popover__control" type="button" disabled title="조종 권한 정책 연결 후 활성화">
+            조종 준비
+          </button>
+        </aside>
+      ) : null}
       {projectedMarkers.map(({ marker, left, top }) => (
         <button
           key={marker.id}
