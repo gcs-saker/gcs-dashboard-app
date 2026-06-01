@@ -4,6 +4,7 @@ import { DEFAULT_DASHBOARD_STREAMS } from "./streamTypes";
 import {
   connectDeviceToStreamSlot,
   disconnectStreamSlot,
+  fetchTelemetryIndex,
   fetchStreamDeviceOptions,
   mergeStreamSlotsWithDevices,
   MOCK_STREAM_DEVICES,
@@ -33,23 +34,40 @@ describe("streamDevices", () => {
   });
 
   test("fetches live stream devices from the backend registry", async () => {
-    const fetcher = vi.fn().mockResolvedValue(
-      Response.json([
-        {
-          streamId: "raw.drone-07.front",
-          path: "raw/drone-07/front",
-          prefix: "raw",
-          assetId: "drone-07",
-          sensorId: "front",
-          status: "online",
-          displayName: "Drone 07 Front",
-        },
-      ]),
-    );
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(
+        Response.json([
+          {
+            streamId: "raw.drone-07.front",
+            path: "raw/drone-07/front",
+            prefix: "raw",
+            assetId: "drone-07",
+            sensorId: "front",
+            status: "online",
+            displayName: "Drone 07 Front",
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        Response.json([
+          {
+            uuid: "raw.drone-07.front",
+            latitude: 35.8842,
+            longitude: 128.6123,
+            altitude: 81,
+            velocity: 3,
+            epochTime: "00:00:10",
+          },
+        ]),
+      );
 
     const devices = await fetchStreamDeviceOptions(fetcher as unknown as typeof fetch);
 
-    expect(fetcher).toHaveBeenCalledWith("/api/v1/streams", {
+    expect(fetcher).toHaveBeenNthCalledWith(1, "/api/v1/streams", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    expect(fetcher).toHaveBeenNthCalledWith(2, "/api/telemetry/all", {
       credentials: "include",
       headers: { Accept: "application/json" },
     });
@@ -59,14 +77,41 @@ describe("streamDevices", () => {
       streamPath: "raw.drone-07.front",
       status: "online",
       geometry: {
-        lat: 35.871435,
-        lng: 128.601445,
+        lat: 35.8842,
+        lng: 128.6123,
+        altitudeM: 81,
+        source: "telemetry",
       },
     });
   });
 
+  test("indexes telemetry by uuid for map geometry updates", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      Response.json([
+        {
+          uuid: "raw.local.webcam",
+          latitude: 35.9,
+          longitude: 128.62,
+          altitude: 24,
+          velocity: 0,
+          epochTime: "00:01:00",
+        },
+      ]),
+    );
+
+    const telemetry = await fetchTelemetryIndex(fetcher as unknown as typeof fetch);
+
+    expect(telemetry.get("raw.local.webcam")).toMatchObject({
+      latitude: 35.9,
+      longitude: 128.62,
+    });
+  });
+
   test("surfaces stream registry 401 as an auth failure", async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response("unauthorized", { status: 401 }));
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
+      .mockResolvedValueOnce(Response.json([]))
+      .mockResolvedValueOnce(new Response("refresh unauthorized", { status: 401 }));
 
     await expect(fetchStreamDeviceOptions(fetcher as unknown as typeof fetch)).rejects.toMatchObject({
       status: 401,
@@ -118,6 +163,29 @@ describe("streamDevices", () => {
       id: "raw.drone-09.front",
       title: "스트리밍 2",
       detail: "Drone 09 Front / raw.drone-09.front",
+    });
+  });
+
+  test("updates an existing stream slot when live telemetry geometry arrives", () => {
+    const liveWebcamDevice = {
+      ...MOCK_STREAM_DEVICES[3],
+      status: "online" as const,
+      geometry: {
+        ...MOCK_STREAM_DEVICES[3].geometry,
+        lat: 35.91,
+        lng: 128.63,
+        altitudeM: 30,
+        source: "telemetry" as const,
+      },
+    };
+
+    const merged = mergeStreamSlotsWithDevices(DEFAULT_DASHBOARD_STREAMS, [liveWebcamDevice]);
+    const webcam = merged.find((stream) => stream.streamPath === "raw.local.webcam");
+
+    expect(webcam?.geometry).toMatchObject({
+      lat: 35.91,
+      lng: 128.63,
+      source: "telemetry",
     });
   });
 

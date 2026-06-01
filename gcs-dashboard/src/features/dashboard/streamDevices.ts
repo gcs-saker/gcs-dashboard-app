@@ -5,7 +5,7 @@ import type {
   DashboardStreamSlot,
   DashboardStreamStatus,
 } from "./streamTypes";
-import { LOCAL_WEBCAM_STREAM_ID, streamApiV1Url } from "../../config";
+import { apiUrl, LOCAL_WEBCAM_STREAM_ID, streamApiV1Url } from "../../config";
 import { AuthApiError, authenticatedFetch } from "../auth/authApi";
 
 export type StreamDeviceGeometry = DashboardStreamGeometry;
@@ -27,6 +27,15 @@ export interface StreamRegistryResponse {
   prefix: string;
   assetId: string;
   sensorId: string;
+}
+
+export interface TelemetryReadResponse {
+  uuid: string;
+  latitude: number;
+  longitude: number;
+  altitude: number;
+  velocity: number;
+  epochTime: string;
 }
 
 export const MOCK_STREAM_DEVICES: StreamDeviceOption[] = [
@@ -144,6 +153,14 @@ export function disconnectStreamSlot(stream: DashboardStreamSlot): DashboardStre
 }
 
 export async function fetchStreamDeviceOptions(fetcher: typeof fetch = fetch): Promise<StreamDeviceOption[]> {
+  const [registry, telemetryByUuid] = await Promise.all([
+    fetchStreamRegistry(fetcher),
+    fetchTelemetryIndex(fetcher),
+  ]);
+  return registry.map((item) => streamDeviceFromRegistryItem(item, telemetryByUuid));
+}
+
+async function fetchStreamRegistry(fetcher: typeof fetch): Promise<StreamRegistryResponse[]> {
   const response = await authenticatedFetch(
       streamApiV1Url("/streams"),
     {
@@ -158,8 +175,26 @@ export async function fetchStreamDeviceOptions(fetcher: typeof fetch = fetch): P
     throw new Error(`stream registry request failed with ${response.status}`);
   }
 
-  const registry = (await response.json()) as StreamRegistryResponse[];
-  return registry.map(streamDeviceFromRegistryItem);
+  return (await response.json()) as StreamRegistryResponse[];
+}
+
+export async function fetchTelemetryIndex(fetcher: typeof fetch = fetch): Promise<Map<string, TelemetryReadResponse>> {
+  const response = await authenticatedFetch(
+    apiUrl("/telemetry/all"),
+    {
+      headers: { Accept: "application/json" },
+    },
+    fetcher,
+  );
+  if (response.status === 401) {
+    throw new AuthApiError(response.status, "telemetry authentication required");
+  }
+  if (!response.ok) {
+    return new Map();
+  }
+
+  const telemetry = (await response.json()) as TelemetryReadResponse[];
+  return new Map(telemetry.map((item) => [item.uuid, item]));
 }
 
 export function mergeStreamSlotsWithDevices(
@@ -189,7 +224,7 @@ export function mergeStreamSlotsWithDevices(
       detail: `${device.name} / ${device.streamPath}`,
       mode: modeForMediaType(device.mediaType),
       status: device.status,
-      geometry: stream.geometry ?? device.geometry,
+      geometry: shouldPreferDeviceGeometry(device.geometry) ? device.geometry : stream.geometry ?? device.geometry,
     };
   });
 
@@ -231,15 +266,37 @@ export function preferredSelectedStreamId(
   return matchingSlot?.id ?? preferredDevice.streamPath;
 }
 
-function streamDeviceFromRegistryItem(item: StreamRegistryResponse): StreamDeviceOption {
+function streamDeviceFromRegistryItem(
+  item: StreamRegistryResponse,
+  telemetryByUuid: Map<string, TelemetryReadResponse> = new Map(),
+): StreamDeviceOption {
   const mediaType = item.sensorId.toLowerCase().includes("thermal") ? "ir" : "eo";
+  const telemetry = telemetryByUuid.get(item.streamId) ?? telemetryByUuid.get(item.path);
   return {
     id: `registry-${item.streamId}`,
     name: item.displayName ?? `${item.assetId} ${item.sensorId}`,
     streamPath: item.streamId,
     status: dashboardStatusFromRegistryStatus(item.status),
     mediaType,
-    geometry: defaultGeometryForStream(item.streamId, "registry"),
+    geometry: telemetry ? geometryFromTelemetry(telemetry) : defaultGeometryForStream(item.streamId, "registry"),
+  };
+}
+
+function shouldPreferDeviceGeometry(geometry: StreamDeviceGeometry): boolean {
+  return geometry.source === "telemetry" || geometry.source === "device";
+}
+
+function geometryFromTelemetry(telemetry: TelemetryReadResponse): StreamDeviceGeometry {
+  return {
+    lat: telemetry.latitude,
+    lng: telemetry.longitude,
+    altitudeM: telemetry.altitude,
+    headingDeg: 0,
+    pitchDeg: 0,
+    rollDeg: 0,
+    yawDeg: 0,
+    fovDeg: 60,
+    source: "telemetry",
   };
 }
 

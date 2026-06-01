@@ -39,7 +39,7 @@ describe("loadWebRtcIceServers", () => {
     })) as unknown as typeof fetch;
 
     await expect(loadWebRtcIceServers(fetcher)).resolves.toEqual([
-      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:localhost:3478" },
     ]);
   });
 });
