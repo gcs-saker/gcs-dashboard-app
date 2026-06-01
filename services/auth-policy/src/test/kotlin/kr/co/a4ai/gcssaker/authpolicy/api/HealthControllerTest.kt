@@ -8,22 +8,43 @@ class HealthControllerTest {
     fun `health endpoint reports python compatible liveness report`() {
         val response = HealthController().healthz()
 
-        assertEquals("ok", response.status)
-        assertEquals("auth-policy", response.service)
-        assertEquals(listOf(HealthCheckResponse(name = "api", status = "ok", required = true)), response.checks)
+        assertEquals(HealthContract.STATUS_OK, response.status)
+        assertEquals(HealthContract.SERVICE_NAME, response.service)
+        assertEquals(
+            listOf(
+                HealthCheckResponse(
+                    name = HealthContract.CHECK_API,
+                    status = HealthContract.STATUS_OK,
+                    required = true,
+                ),
+            ),
+            response.checks,
+        )
     }
 
     @Test
     fun `ready endpoint reports python compatible readiness report`() {
         val response = HealthController().readyz()
 
-        assertEquals("ok", response.status)
-        assertEquals("auth-policy", response.service)
+        assertEquals(HealthContract.STATUS_OK, response.status)
+        assertEquals(HealthContract.SERVICE_NAME, response.service)
         assertEquals(
             listOf(
-                HealthCheckResponse(name = "auth_repository", status = "ok", required = true),
-                HealthCheckResponse(name = "jwt_token_service", status = "ok", required = true),
-                HealthCheckResponse(name = "stream_policy", status = "ok", required = true),
+                HealthCheckResponse(
+                    name = HealthContract.CHECK_AUTH_REPOSITORY,
+                    status = HealthContract.STATUS_OK,
+                    required = true,
+                ),
+                HealthCheckResponse(
+                    name = HealthContract.CHECK_JWT_TOKEN_SERVICE,
+                    status = HealthContract.STATUS_OK,
+                    required = true,
+                ),
+                HealthCheckResponse(
+                    name = HealthContract.CHECK_STREAM_POLICY,
+                    status = HealthContract.STATUS_OK,
+                    required = true,
+                ),
             ),
             response.checks,
         )

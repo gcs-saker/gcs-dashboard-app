@@ -47,17 +47,17 @@ data class UserResponse(
     val id: Int,
     val username: String,
     val email: String,
-    @get:JsonProperty("company_id")
+    @get:JsonProperty(AuthResponseFields.COMPANY_ID)
     val companyId: Int,
     val role: String,
 )
 
 data class TokenResponse(
-    @get:JsonProperty("access_token")
+    @get:JsonProperty(AuthResponseFields.ACCESS_TOKEN)
     val accessToken: String,
-    @get:JsonProperty("token_type")
-    val tokenType: String = "bearer",
-    @get:JsonProperty("expires_in_minutes")
+    @get:JsonProperty(AuthResponseFields.TOKEN_TYPE)
+    val tokenType: String = AuthTokenContract.BEARER_TOKEN_TYPE,
+    @get:JsonProperty(AuthResponseFields.EXPIRES_IN_MINUTES)
     val expiresInMinutes: Long,
     val username: String,
     val role: String,
@@ -68,19 +68,14 @@ data class CurrentUserResponse(
     val role: String,
 )
 
-object AuthSecurityHeaders {
-    const val CSRF_HEADER_NAME = "X-GCS-CSRF"
-    const val CSRF_HEADER_VALUE = "same-origin"
-}
-
 @RestController
-@RequestMapping("/auth")
+@RequestMapping(AuthApiRoutes.ROOT)
 class AuthController(
     private val sessions: AuthSessionService,
     private val registration: AuthRegistrationService,
     private val settings: AuthRuntimeSettings,
 ) {
-    @PostMapping("/signup")
+    @PostMapping(AuthApiRoutes.SIGNUP)
     fun signup(
         @Valid
         @RequestBody request: SignupRequest,
@@ -101,14 +96,17 @@ class AuthController(
                 ),
             )
         } catch (exc: SignupRejectedException) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, exc.message ?: "signup rejected")
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, exc.message ?: AuthErrorMessages.SIGNUP_REJECTED)
         } catch (exc: IllegalArgumentException) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, exc.message ?: "invalid signup request")
+            throw ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                exc.message ?: AuthErrorMessages.INVALID_SIGNUP_REQUEST,
+            )
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(userResponse(user))
     }
 
-    @PostMapping("/login")
+    @PostMapping(AuthApiRoutes.LOGIN)
     fun login(
         @RequestBody request: LoginRequest,
         @RequestHeader(HttpHeaders.ORIGIN, required = false) origin: String?,
@@ -118,11 +116,11 @@ class AuthController(
         assertTrustedOrigin(origin, referer)
         assertCsrfHeader(csrfHeader)
         val tokens = sessions.login(request.username, request.password)
-            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials")
+            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthErrorMessages.INVALID_CREDENTIALS)
         return tokenResponse(tokens.principal, tokens.accessToken, tokens.refreshToken, tokens.expiresInMinutes)
     }
 
-    @PostMapping("/refresh")
+    @PostMapping(AuthApiRoutes.REFRESH)
     fun refresh(
         servletRequest: HttpServletRequest,
         @RequestHeader(HttpHeaders.ORIGIN, required = false) origin: String?,
@@ -135,12 +133,12 @@ class AuthController(
             ?.firstOrNull { it.name == settings.refreshCookieName }
             ?.value
         if (refreshToken.isNullOrBlank()) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "refresh token required")
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthErrorMessages.REFRESH_TOKEN_REQUIRED)
         }
         val tokens = try {
             sessions.refresh(refreshToken)
         } catch (_: JWTVerificationException) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "invalid token")
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthErrorMessages.INVALID_TOKEN)
         }
         if (tokens == null) {
             @Suppress("UNCHECKED_CAST")
@@ -151,19 +149,19 @@ class AuthController(
         return tokenResponse(tokens.principal, tokens.accessToken, tokens.refreshToken, tokens.expiresInMinutes)
     }
 
-    @GetMapping("/me")
+    @GetMapping(AuthApiRoutes.ME)
     fun me(@RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorization: String?): CurrentUserResponse {
-        val token = authorization?.removePrefix("Bearer ")?.takeIf { it != authorization }
-            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "authentication required")
+        val token = authorization?.removePrefix(AuthTokenContract.BEARER_PREFIX)?.takeIf { it != authorization }
+            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthErrorMessages.AUTHENTICATION_REQUIRED)
         val principal = try {
             sessions.verifyAccessToken(token)
         } catch (_: JWTVerificationException) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "invalid token")
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, AuthErrorMessages.INVALID_TOKEN)
         }
         return CurrentUserResponse(username = principal.username, role = principal.role.name.lowercase())
     }
 
-    @PostMapping("/logout")
+    @PostMapping(AuthApiRoutes.LOGOUT)
     fun logout(
         servletRequest: HttpServletRequest,
         @RequestHeader(HttpHeaders.ORIGIN, required = false) origin: String?,
@@ -232,13 +230,13 @@ class AuthController(
             return
         }
         if (requestOrigin !in settings.allowedOrigins) {
-            throw ResponseStatusException(HttpStatus.FORBIDDEN, "untrusted request origin")
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, AuthErrorMessages.UNTRUSTED_REQUEST_ORIGIN)
         }
     }
 
     private fun assertCsrfHeader(value: String?) {
         if (value != AuthSecurityHeaders.CSRF_HEADER_VALUE) {
-            throw ResponseStatusException(HttpStatus.FORBIDDEN, "csrf header required")
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, AuthErrorMessages.CSRF_HEADER_REQUIRED)
         }
     }
 }

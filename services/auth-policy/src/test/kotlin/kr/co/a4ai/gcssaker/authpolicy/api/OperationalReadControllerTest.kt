@@ -174,5 +174,5 @@ class OperationalReadControllerTest {
         sessions.login(username, "pass")?.accessToken ?: error("login failed")
 
     private fun bearer(token: String): String =
-        "Bearer $token"
+        "${AuthTokenContract.BEARER_PREFIX}$token"
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { apiUrl, LOCAL_WEBCAM_STREAM_ID, LOCAL_WEBCAM_WHIP_URL, WEBRTC_ICE_SERVERS } from "../../../config";
+import { DASHBOARD_API_ROUTES } from "../../apiRoutes";
 import { authenticatedFetch } from "../../auth/authApi";
 import { loadWebRtcIceServers } from "../iceServers";
 import "./LocalWebcamPublisher.css";
@@ -212,7 +213,7 @@ export function LocalWebcamPublisher({
   async function postGpsTelemetry(position: GeolocationPosition): Promise<void> {
     try {
       const response = await authenticatedFetch(
-        apiUrl("/telemetry/"),
+        apiUrl(DASHBOARD_API_ROUTES.telemetryIngest),
         {
           method: "POST",
           headers: { Accept: "application/json", "Content-Type": "application/json" },

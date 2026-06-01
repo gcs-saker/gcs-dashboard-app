@@ -1,6 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
 import jakarta.servlet.http.Cookie
+import kr.co.a4ai.gcssaker.authpolicy.AllowedOrigins
 import kr.co.a4ai.gcssaker.authpolicy.AuthRuntimeSettings
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthRegistrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
@@ -10,6 +11,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvite
+import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvites
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -42,7 +44,7 @@ class AuthControllerTest {
         refreshCookieName = REFRESH_COOKIE_NAME,
         refreshCookieSecure = false,
         refreshCookieSameSite = "lax",
-        allowedOrigins = setOf(TRUSTED_ORIGIN),
+        allowedOrigins = AllowedOrigins.of(setOf(TRUSTED_ORIGIN)),
         operatorUsername = OPERATOR_USERNAME,
         operatorPassword = OPERATOR_PASSWORD,
         operatorCompanyId = 1,
@@ -51,7 +53,7 @@ class AuthControllerTest {
         smokePassword = "m7-smoke-pass",
         smokeCompanyId = 1,
         smokeGroupId = "co-a",
-        signupInvites = listOf(SignupInvite(VIEWER_INVITE_CODE, 1, GroupId("co-a"))),
+        signupInvites = SignupInvites.of(listOf(SignupInvite(VIEWER_INVITE_CODE, 1, GroupId("co-a")))),
     )
     private val tokenService = JwtTokenService(
         secret = settings.jwtSecret,
@@ -117,7 +119,7 @@ class AuthControllerTest {
 
         assertEquals(HttpStatus.OK, response.statusCode)
         val body = requireNotNull(response.body)
-        assertEquals("bearer", body.tokenType)
+        assertEquals(AuthTokenContract.BEARER_TOKEN_TYPE, body.tokenType)
         assertEquals(30, body.expiresInMinutes)
         assertEquals(OPERATOR_USERNAME, body.username)
         assertEquals("operator", body.role)
@@ -206,7 +208,7 @@ class AuthControllerTest {
             login().body,
         )
 
-        val currentUser = controller.me("Bearer ${login.accessToken}")
+        val currentUser = controller.me("${AuthTokenContract.BEARER_PREFIX}${login.accessToken}")
 
         assertEquals(CurrentUserResponse("operator01", "operator"), currentUser)
     }
@@ -251,7 +253,7 @@ class AuthControllerTest {
         }
 
         assertEquals(HttpStatus.FORBIDDEN, error.statusCode)
-        assertEquals("csrf header required", error.reason)
+        assertEquals(AuthErrorMessages.CSRF_HEADER_REQUIRED, error.reason)
     }
 
     @Test
@@ -278,7 +280,7 @@ class AuthControllerTest {
             controller.me(null)
         }
         val invalidError = assertFailsWith<ResponseStatusException> {
-            controller.me("Bearer not-a-token")
+            controller.me("${AuthTokenContract.BEARER_PREFIX}not-a-token")
         }
 
         assertEquals(HttpStatus.UNAUTHORIZED, missingError.statusCode)

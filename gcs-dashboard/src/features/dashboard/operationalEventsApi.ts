@@ -1,4 +1,5 @@
 import { apiUrl } from "../../config";
+import { DASHBOARD_API_ROUTES } from "../apiRoutes";
 import { authenticatedFetch } from "../auth/authApi";
 import type { OperationalEvent, OperationalEventFilters } from "./operationalEvents";
 
@@ -29,7 +30,7 @@ export function buildOperationalEventsUrl(filters: OperationalEventFilters): str
   if (filters.from) params.set("from", localDateTimeToInstant(filters.from));
   if (filters.to) params.set("to", localDateTimeToInstant(filters.to));
   const query = params.toString();
-  return `${apiUrl("/ops/events")}${query ? `?${query}` : ""}`;
+  return `${apiUrl(DASHBOARD_API_ROUTES.operationalEvents)}${query ? `?${query}` : ""}`;
 }
 
 function localDateTimeToInstant(value: string): string {

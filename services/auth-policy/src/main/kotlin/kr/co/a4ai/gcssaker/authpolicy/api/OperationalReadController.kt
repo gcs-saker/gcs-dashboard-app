@@ -53,17 +53,17 @@ data class AssetReadResponse(
     val id: Int,
     val cid: String,
     val uuid: String,
-    @get:JsonProperty("company_id")
+    @get:JsonProperty(AuthResponseFields.COMPANY_ID)
     val companyId: Int,
     val type: String,
     val name: String,
     val description: String?,
-    @get:JsonProperty("image_url")
+    @get:JsonProperty(AuthResponseFields.IMAGE_URL)
     val imageUrl: String?,
     val status: String,
-    @get:JsonProperty("created_at")
+    @get:JsonProperty(AuthResponseFields.CREATED_AT)
     val createdAt: Instant,
-    @get:JsonProperty("updated_at")
+    @get:JsonProperty(AuthResponseFields.UPDATED_AT)
     val updatedAt: Instant,
 )
 
@@ -72,7 +72,7 @@ class OperationalReadController(
     private val repository: OperationalReadRepository,
     private val principalResolver: BearerPrincipalResolver,
 ) {
-    @GetMapping("/telemetry/all")
+    @GetMapping(OperationalReadApiRoutes.TELEMETRY_ALL)
     fun telemetryAll(
         @RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
     ): List<TelemetryReadResponse> {
@@ -80,7 +80,7 @@ class OperationalReadController(
         return repository.telemetryFor(principal).map { it.toResponse() }
     }
 
-    @PostMapping("/telemetry/")
+    @PostMapping(OperationalReadApiRoutes.TELEMETRY_INGEST)
     fun ingestTelemetry(
         @RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
         @RequestBody request: TelemetryIngestRequest,
@@ -89,7 +89,7 @@ class OperationalReadController(
         return repository.upsertTelemetry(request.toReadModel(principal)).toResponse()
     }
 
-    @GetMapping("/asset/{gatewayUuid}")
+    @GetMapping(OperationalReadApiRoutes.ASSET_BY_GATEWAY)
     fun assetsForGateway(
         @PathVariable gatewayUuid: String,
         @RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
@@ -101,7 +101,7 @@ class OperationalReadController(
 
 private fun TelemetryIngestRequest.toReadModel(principal: AuthenticatedPrincipal): TelemetryReadModel {
     val telemetryUuid = uuid?.trim()?.takeIf { it.isNotEmpty() }
-        ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "uuid is required")
+        ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, AuthErrorMessages.UUID_REQUIRED)
     return TelemetryReadModel(
         uuid = telemetryUuid,
         latitude = latitude ?: 0.0,

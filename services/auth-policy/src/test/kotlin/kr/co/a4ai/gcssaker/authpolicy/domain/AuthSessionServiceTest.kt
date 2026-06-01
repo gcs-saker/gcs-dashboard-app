@@ -4,11 +4,15 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class AuthSessionServiceTest {
     private val passwordHasher = PasswordHasher()
@@ -86,6 +90,43 @@ class AuthSessionServiceTest {
 
         assertEquals(tokens.principal, principal)
         assertEquals(1, principalCache.reads)
+    }
+
+    @Test
+    fun `user repository save is synchronized for concurrent duplicate username writes`() {
+        val repository: AuthUserRepository = InMemoryAuthUserRepository(emptyList())
+        val executor = Executors.newFixedThreadPool(2)
+        val start = CountDownLatch(1)
+        val done = CountDownLatch(2)
+        val results = java.util.Collections.synchronizedList(mutableListOf<Result<AuthUser>>())
+
+        repeat(2) { index ->
+            executor.submit {
+                start.await()
+                results.add(
+                    runCatching {
+                        repository.save(
+                            AuthUser(
+                                username = "dupe",
+                                email = "dupe-$index@example.test",
+                                passwordHash = "hash",
+                                role = UserRole.VIEWER,
+                                groupId = GroupId("co-a"),
+                            ),
+                        )
+                    },
+                )
+                done.countDown()
+            }
+        }
+
+        start.countDown()
+
+        assertTrue(done.await(2, TimeUnit.SECONDS))
+        executor.shutdown()
+        assertEquals(1, results.count { it.isSuccess })
+        assertEquals(1, results.count { it.isFailure })
+        assertNotNull(repository.findByUsername("dupe"))
     }
 
     private class RecordingPrincipalCache : PrincipalCache {

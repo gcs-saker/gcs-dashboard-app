@@ -1,16 +1,17 @@
 import { apiUrl } from "../../config";
+import { DASHBOARD_API_ROUTES } from "../apiRoutes";
 import { authenticatedFetch } from "../auth/authApi";
 import type { TimeSyncConfigInput, TimeSyncHealth, TimeSyncMode, TimeSyncStatus } from "./timeSync";
 
 export async function fetchTimeSyncStatus(fetcher: typeof fetch = fetch): Promise<TimeSyncStatus> {
-  const response = await authenticatedFetch(apiUrl("/ops/time/status"), {
+  const response = await authenticatedFetch(apiUrl(DASHBOARD_API_ROUTES.timeSyncStatus), {
     headers: { Accept: "application/json" },
   }, fetcher);
   return parseTimeSyncResponse(response);
 }
 
 export async function checkTimeSync(fetcher: typeof fetch = fetch): Promise<TimeSyncStatus> {
-  const response = await authenticatedFetch(apiUrl("/ops/time/check"), {
+  const response = await authenticatedFetch(apiUrl(DASHBOARD_API_ROUTES.timeSyncCheck), {
     method: "POST",
     headers: { Accept: "application/json" },
   }, fetcher);
@@ -21,7 +22,7 @@ export async function updateTimeSyncConfig(
   config: TimeSyncConfigInput,
   fetcher: typeof fetch = fetch,
 ): Promise<TimeSyncStatus> {
-  const response = await authenticatedFetch(apiUrl("/ops/time/config"), {
+  const response = await authenticatedFetch(apiUrl(DASHBOARD_API_ROUTES.timeSyncConfig), {
     method: "PUT",
     headers: {
       Accept: "application/json",
