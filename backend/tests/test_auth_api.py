@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from api import control
+from api.contracts import AuthProtocol
 from api.auth import get_password_hash
 from core.db import Base, get_db
 from core.security import AuthSettings, create_access_token, create_refresh_token
@@ -16,6 +17,7 @@ from sql.company_sql import Company
 from sql.user_sql import User
 
 TEST_AUTH_SECRET = "test-auth-secret-for-gcs-saker-at-least-32-characters"
+TEST_CSRF_HEADERS = {AuthProtocol.CSRF_HEADER_NAME: AuthProtocol.CSRF_HEADER_VALUE}
 
 
 @pytest.fixture
@@ -121,14 +123,28 @@ def test_cookie_auth_posts_accept_configured_origin(auth_client: TestClient) -> 
     login_response = auth_client.post(
         "/auth/login",
         json={"username": "operator01", "password": "correct-password"},
-        headers={"Origin": "http://localhost:5173"},
+        headers={"Origin": "http://localhost:5173", **TEST_CSRF_HEADERS},
     )
     assert login_response.status_code == 200
 
-    refresh_response = auth_client.post("/auth/refresh", headers={"Origin": "http://localhost:5173"})
+    refresh_response = auth_client.post(
+        "/auth/refresh",
+        headers={"Origin": "http://localhost:5173", **TEST_CSRF_HEADERS},
+    )
 
     assert refresh_response.status_code == 200
     assert refresh_response.json()["access_token"]
+
+
+def test_cookie_auth_posts_reject_allowed_origin_without_csrf_header(auth_client: TestClient) -> None:
+    response = auth_client.post(
+        "/auth/login",
+        json={"username": "operator01", "password": "correct-password"},
+        headers={"Origin": "http://localhost:5173"},
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "csrf header required"}
 
 
 def test_refresh_rejects_missing_invalid_and_deleted_user_cookie(

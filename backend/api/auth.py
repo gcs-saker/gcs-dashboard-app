@@ -43,6 +43,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 @router.post(AuthRoutes.SIGNUP, response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def signup(user: UserCreate, request: Request, db: Annotated[Session, Depends(get_db)]) -> User:
     _assert_trusted_request_origin(request)
+    _assert_browser_csrf_header(request)
     username_exists, email_exists = db.query(
         exists().where(User.username == user.username).label("username_exists"),
         exists().where(User.email == user.email).label("email_exists"),
@@ -80,6 +81,7 @@ def login(
     db: Annotated[Session, Depends(get_db)],
 ) -> TokenResponse:
     _assert_trusted_request_origin(request)
+    _assert_browser_csrf_header(request)
     db_user = (
         db.query(User.username, User.password_hash, User.role)
         .filter(User.username == user.username)
@@ -116,6 +118,7 @@ def login(
 @router.post(AuthRoutes.REFRESH, response_model=TokenResponse)
 def refresh_session(request: Request, response: Response, db: Annotated[Session, Depends(get_db)]) -> TokenResponse | JSONResponse:
     _assert_trusted_request_origin(request)
+    _assert_browser_csrf_header(request)
     try:
         auth_settings = AuthSettings.from_env()
     except AuthConfigError as exc:
@@ -158,6 +161,7 @@ def refresh_session(request: Request, response: Response, db: Annotated[Session,
 @router.post(AuthRoutes.LOGOUT, status_code=status.HTTP_204_NO_CONTENT)
 def logout(request: Request, response: Response) -> Response:
     _assert_trusted_request_origin(request)
+    _assert_browser_csrf_header(request)
     try:
         auth_settings = AuthSettings.from_env()
     except AuthConfigError as exc:
@@ -202,6 +206,13 @@ def _assert_trusted_request_origin(request: Request) -> None:
     allowed_origins = set(WebSecuritySettings.from_env().allowed_origins)
     if request_origin not in allowed_origins:
         raise ForbiddenApiError(AuthErrorDetails.UNTRUSTED_REQUEST_ORIGIN)
+
+
+def _assert_browser_csrf_header(request: Request) -> None:
+    if not (request.headers.get("origin") or request.headers.get("referer")):
+        return
+    if request.headers.get(AuthProtocol.CSRF_HEADER_NAME) != AuthProtocol.CSRF_HEADER_VALUE:
+        raise ForbiddenApiError(AuthErrorDetails.CSRF_HEADER_REQUIRED)
 
 
 def _origin_from_referer(referer: str | None) -> str | None:
