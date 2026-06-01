@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { HLSFallbackPlayerProps, WebRTCPlayerProps } from "../types";
+import { normalizeBrowserMediaUrl } from "../hooks/useRealtimePlayback";
 import { RealtimePlayer } from "./RealtimePlayer";
 
 vi.mock("./WebRTCPlayer", () => ({
@@ -19,6 +20,8 @@ vi.mock("./WebRTCPlayer", () => ({
               iceConnectionState: "connected",
               errorMessage: null,
               hasVideoFrame: true,
+              hasAudioTrack: true,
+              isAudioActive: true,
               firstFrameLatencyMs: 812,
             })
           }
@@ -34,6 +37,8 @@ vi.mock("./WebRTCPlayer", () => ({
               iceConnectionState: "failed",
               errorMessage: "WebRTC connection failed",
               hasVideoFrame: false,
+              hasAudioTrack: false,
+              isAudioActive: false,
               firstFrameLatencyMs: null,
             })
           }
@@ -93,6 +98,21 @@ describe("RealtimePlayer", () => {
     );
     expect(screen.getByText("webrtc:https://media.example.test/raw/sample/front/whep")).toBeInTheDocument();
     expect(screen.getByText("online")).toBeInTheDocument();
+  });
+
+  test("normalizes deployed media URLs away from localhost and insecure same-host http", () => {
+    expect(
+      normalizeBrowserMediaUrl(
+        "http://localhost:8080/webrtc/raw/local/webcam/whep",
+        "https://gcs.example.test/",
+      ),
+    ).toBe("https://gcs.example.test/webrtc/raw/local/webcam/whep");
+    expect(
+      normalizeBrowserMediaUrl(
+        "http://gcs.example.test/webrtc/raw/local/webcam/whep",
+        "https://gcs.example.test/",
+      ),
+    ).toBe("https://gcs.example.test/webrtc/raw/local/webcam/whep");
   });
 
   test("retries WebRTC with bounded backoff before HLS fallback", async () => {
@@ -190,6 +210,17 @@ describe("RealtimePlayer", () => {
     render(<RealtimePlayer streamId="raw.missing.front" fetcher={fetcher} />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Playback API request failed with 404");
+    expect(screen.queryByTestId("webrtc-player")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hls-fallback-player")).not.toBeInTheDocument();
+  });
+
+  test("contains malformed playback payloads inside the realtime player", async () => {
+    const fetcher = vi.fn(async () => jsonResponse({ access_token: "unexpected-auth-payload" }));
+
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Playback API response is invalid");
+    expect(screen.getByText("mode: error")).toBeInTheDocument();
     expect(screen.queryByTestId("webrtc-player")).not.toBeInTheDocument();
     expect(screen.queryByTestId("hls-fallback-player")).not.toBeInTheDocument();
   });

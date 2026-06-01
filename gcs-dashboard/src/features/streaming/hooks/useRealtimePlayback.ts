@@ -6,6 +6,7 @@ import type {
   RealtimePlayerMode,
   RealtimePlayerSnapshot,
   StreamPlaybackResponse,
+  StreamPlaybackUrls,
   StreamRuntimeStatus,
 } from "../types";
 import {
@@ -111,6 +112,28 @@ export function useRealtimePlayback({
   };
 }
 
+export function normalizeBrowserMediaUrl(url: string | null, pageHref?: string): string | null {
+  if (!url || typeof window === "undefined") return url;
+
+  const resolvedPageHref = pageHref ?? window.location.href;
+  const pageUrl = new URL(resolvedPageHref);
+  const mediaUrl = new URL(url, pageUrl.href);
+  const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+  const isLocalMediaUrl = localHosts.has(mediaUrl.hostname);
+  const isLocalPage = localHosts.has(pageUrl.hostname);
+
+  if (isLocalMediaUrl && !isLocalPage) {
+    return `${pageUrl.origin}${mediaUrl.pathname}${mediaUrl.search}${mediaUrl.hash}`;
+  }
+
+  if (pageUrl.protocol === "https:" && mediaUrl.protocol === "http:" && mediaUrl.hostname === pageUrl.hostname) {
+    mediaUrl.protocol = "https:";
+    return mediaUrl.toString();
+  }
+
+  return url;
+}
+
 function realtimeReducer(state: RealtimeState, action: RealtimeAction): RealtimeState {
   switch (action.type) {
     case "loading":
@@ -120,13 +143,13 @@ function realtimeReducer(state: RealtimeState, action: RealtimeAction): Realtime
     case "loaded":
       return {
         ...state,
-        mode: action.playback.playbackUrls.webrtc ? "webrtc" : "hls",
+        mode: normalizeBrowserMediaUrl(action.playback.playbackUrls.webrtc) ? "webrtc" : "hls",
         streamStatus: action.playback.status,
         errorMessage: null,
-        playback: action.playback,
+        playback: normalizePlaybackResponse(action.playback),
         reconnectDelayMs: null,
         webrtcRetryAttempt: 0,
-        fallbackReason: action.playback.playbackUrls.webrtc
+        fallbackReason: normalizeBrowserMediaUrl(action.playback.playbackUrls.webrtc)
           ? initialState.fallbackReason
           : "WebRTC URL is unavailable. Playing HLS fallback.",
       };
@@ -192,6 +215,16 @@ function realtimeReducer(state: RealtimeState, action: RealtimeAction): Realtime
   }
 }
 
+function normalizePlaybackResponse(playback: StreamPlaybackResponse): StreamPlaybackResponse {
+  return {
+    ...playback,
+    playbackUrls: {
+      webrtc: normalizeBrowserMediaUrl(playback.playbackUrls.webrtc),
+      hls: normalizeBrowserMediaUrl(playback.playbackUrls.hls),
+    },
+  };
+}
+
 async function fetchPlayback(
   streamId: string,
   fetcher: typeof fetch,
@@ -209,5 +242,30 @@ async function fetchPlayback(
     throw new Error(`Playback API request failed with ${response.status}`);
   }
 
-  return (await response.json()) as StreamPlaybackResponse;
+  const payload = await response.json();
+  if (!isStreamPlaybackResponse(payload)) {
+    throw new Error("Playback API response is invalid");
+  }
+
+  return payload;
+}
+
+function isStreamPlaybackResponse(payload: unknown): payload is StreamPlaybackResponse {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+
+  const candidate = payload as Partial<StreamPlaybackResponse>;
+  const playbackUrls = candidate.playbackUrls as Partial<StreamPlaybackUrls> | undefined;
+  return (
+    typeof candidate.streamId === "string" &&
+    isStreamRuntimeStatus(candidate.status) &&
+    !!playbackUrls &&
+    (typeof playbackUrls.webrtc === "string" || playbackUrls.webrtc === null) &&
+    (typeof playbackUrls.hls === "string" || playbackUrls.hls === null)
+  );
+}
+
+function isStreamRuntimeStatus(status: unknown): status is StreamRuntimeStatus {
+  return status === "registered" || status === "online" || status === "offline" || status === "unknown";
 }

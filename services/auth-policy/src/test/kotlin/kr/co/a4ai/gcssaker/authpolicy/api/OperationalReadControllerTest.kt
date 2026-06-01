@@ -83,6 +83,44 @@ class OperationalReadControllerTest {
     }
 
     @Test
+    fun `telemetry ingest upserts the read model for the authenticated group`() {
+        val token = bearer(accessToken("viewer-a"))
+
+        val ingested = controller.ingestTelemetry(
+            token,
+            TelemetryIngestRequest(
+                uuid = "raw.mobile.gps",
+                latitude = 35.882,
+                longitude = 128.61,
+                altitude = 42.0,
+                magneticX = 1.0,
+                magneticY = 2.0,
+                magneticZ = 3.0,
+                soc = "88",
+                phoneBatterySOC = 77.0,
+                velocity = 4.5,
+                totalDistance = 120.0,
+                epochTime = 65,
+                portDistance = 9.0,
+            ),
+        )
+        val telemetry = controller.telemetryAll(token)
+
+        assertEquals("raw.mobile.gps", ingested.uuid)
+        assertEquals("00:01:05", ingested.epochTime)
+        assertTrue(telemetry.any { it.uuid == "raw.mobile.gps" && it.latitude == 35.882 })
+    }
+
+    @Test
+    fun `telemetry ingest rejects blank uuid`() {
+        val error = org.junit.jupiter.api.assertThrows<ResponseStatusException> {
+            controller.ingestTelemetry(bearer(accessToken("viewer-a")), TelemetryIngestRequest(uuid = " "))
+        }
+
+        assertEquals(HttpStatus.BAD_REQUEST, error.statusCode)
+    }
+
+    @Test
     fun `asset read model hides another group assets`() {
         val response = controller.assetsForGateway("raw.company-b.front", bearer(accessToken("viewer-a")))
 

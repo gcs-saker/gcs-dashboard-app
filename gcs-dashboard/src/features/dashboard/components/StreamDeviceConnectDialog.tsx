@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { DashboardStreamSlot } from "../streamTypes";
 import type { StreamDeviceOption } from "../streamDevices";
 
@@ -16,6 +17,12 @@ export function StreamDeviceConnectDialog({
   onConnect,
   onDisconnect,
 }: StreamDeviceConnectDialogProps) {
+  const [displayName, setDisplayName] = useState("");
+  const connectWithDisplayName = (device: StreamDeviceOption): void => {
+    const trimmedDisplayName = displayName.trim();
+    onConnect(trimmedDisplayName ? { ...device, name: trimmedDisplayName } : device);
+  };
+
   return (
     <div className="widget-dialog__backdrop">
       <section
@@ -32,18 +39,24 @@ export function StreamDeviceConnectDialog({
         </header>
 
         <div className="widget-dialog__list">
+          <label className="stream-connect-dialog__name-field">
+            <span>표시 이름</span>
+            <input
+              onChange={(event) => setDisplayName(event.target.value)}
+              placeholder="예: 북문 휴대폰 카메라"
+              value={displayName}
+            />
+          </label>
           {devices.map((device) => (
             <button
               className="widget-dialog__item stream-connect-dialog__device"
               key={device.id}
-              onClick={() => onConnect(device)}
+              onClick={() => connectWithDisplayName(device)}
               type="button"
             >
               <span>
                 <strong>{device.name}</strong>
-                <small>
-                  {device.streamPath} / {device.mediaType.toUpperCase()}
-                </small>
+                <small>{device.mediaType.toUpperCase()} 장비</small>
               </span>
               <span className={`ops-badge is-${device.status}`}>
                 {device.status === "online" ? "정상" : device.status}
