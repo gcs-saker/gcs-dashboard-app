@@ -124,6 +124,10 @@ describe("WebRTCPlayer", () => {
       type: "answer",
       sdp: "mock-answer-sdp",
     });
+    await waitFor(() => {
+      expect(screen.getByTestId("webrtc-player").getAttribute("data-whep-response-ms")).toMatch(/^\d+$/);
+    });
+    expect(screen.getByText(/whep: \d+ms/)).toBeInTheDocument();
   });
 
   test("uses TURN servers returned by the backend ICE API", async () => {
@@ -190,6 +194,9 @@ describe("WebRTCPlayer", () => {
         iceConnectionState: "connected",
         hasVideoFrame: false,
         firstFrameLatencyMs: null,
+        signalingTimings: expect.objectContaining({
+          whepResponseMs: expect.any(Number),
+        }),
       }),
     );
   });

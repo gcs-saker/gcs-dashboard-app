@@ -23,6 +23,14 @@ vi.mock("./WebRTCPlayer", () => ({
               hasAudioTrack: true,
               isAudioActive: true,
               firstFrameLatencyMs: 812,
+              signalingTimings: {
+                iceServersLoadedMs: 10,
+                offerCreatedMs: 20,
+                localDescriptionSetMs: 30,
+                iceGatheringDoneMs: 40,
+                whepResponseMs: 120,
+                remoteDescriptionSetMs: 130,
+              },
             })
           }
         >
@@ -40,6 +48,14 @@ vi.mock("./WebRTCPlayer", () => ({
               hasAudioTrack: false,
               isAudioActive: false,
               firstFrameLatencyMs: null,
+              signalingTimings: {
+                iceServersLoadedMs: 10,
+                offerCreatedMs: 20,
+                localDescriptionSetMs: 30,
+                iceGatheringDoneMs: 40,
+                whepResponseMs: 503,
+                remoteDescriptionSetMs: null,
+              },
             })
           }
         >
