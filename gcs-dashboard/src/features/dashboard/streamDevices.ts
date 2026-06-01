@@ -6,7 +6,7 @@ import type {
   DashboardStreamStatus,
 } from "./streamTypes";
 import { apiUrl, LOCAL_WEBCAM_STREAM_ID, streamApiV1Url } from "../../config";
-import { DASHBOARD_API_ROUTES, STREAM_API_ROUTES } from "../apiRoutes";
+import { DASHBOARD_API_ROUTES, STREAM_API_ROUTES } from "@/features/apiRoutes";
 import { AuthApiError, authenticatedFetch } from "../auth/authApi";
 
 export type StreamDeviceGeometry = DashboardStreamGeometry;

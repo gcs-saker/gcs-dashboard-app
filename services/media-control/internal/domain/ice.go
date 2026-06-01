@@ -17,6 +17,29 @@ type IceServer struct {
 	Healthy    bool          `json:"healthy"`
 }
 
+type IceServerList struct {
+	values []IceServer
+}
+
+func NewIceServerList(servers []IceServer) IceServerList {
+	values := append([]IceServer(nil), servers...)
+	return IceServerList{values: values}
+}
+
+func (l IceServerList) Values() []IceServer {
+	return append([]IceServer(nil), l.values...)
+}
+
+func (l IceServerList) Healthy() IceServerList {
+	healthy := make([]IceServer, 0, len(l.values))
+	for _, server := range l.values {
+		if server.Healthy {
+			healthy = append(healthy, server)
+		}
+	}
+	return NewIceServerList(healthy)
+}
+
 func NewIceServer(url string, kind IceServerKind, username string, credential string, healthy bool) (IceServer, error) {
 	if url == "" {
 		return IceServer{}, fmt.Errorf("ice server url must not be blank")
@@ -31,11 +54,5 @@ func NewIceServer(url string, kind IceServerKind, username string, credential st
 }
 
 func HealthyIceServers(servers []IceServer) []IceServer {
-	healthy := make([]IceServer, 0, len(servers))
-	for _, server := range servers {
-		if server.Healthy {
-			healthy = append(healthy, server)
-		}
-	}
-	return healthy
+	return NewIceServerList(servers).Healthy().Values()
 }

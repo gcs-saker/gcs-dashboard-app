@@ -5,30 +5,6 @@ import App from "../../App";
 import { AUTH_JSON_HEADERS } from "./authApi";
 import { clearAuthSession } from "./authStorage";
 
-vi.mock("../../component/MainMap", () => ({
-  default: function MockMainMap() {
-    return <section aria-label="mock-map" />;
-  },
-}));
-
-vi.mock("../../component/HLSPlayer", () => ({
-  default: function MockHLSPlayer() {
-    return <div data-testid="hls-player">HLS player</div>;
-  },
-}));
-
-vi.mock("../../component/ControlPanel", () => ({
-  default: function MockControlPanel() {
-    return <div data-testid="control-panel">Control panel</div>;
-  },
-}));
-
-vi.mock("../../component/TelemetryDashboard", () => ({
-  default: function MockTelemetryDashboard() {
-    return <div data-testid="telemetry-dashboard">samples:0</div>;
-  },
-}));
-
 vi.mock("../streaming/components/StreamingSmokeDashboard", () => ({
   StreamingSmokeDashboard: function MockStreamingSmokeDashboard() {
     return <div data-testid="streaming-smoke-dashboard">Streaming smoke</div>;

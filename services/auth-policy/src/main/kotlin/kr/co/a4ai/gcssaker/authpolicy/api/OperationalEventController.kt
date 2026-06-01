@@ -3,35 +3,20 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import org.springframework.web.server.ResponseStatusException
 import java.time.Instant
-
-data class OperationalEventResponse(
-    val id: String,
-    val occurredAt: Instant,
-    val severity: String,
-    val category: String,
-    val source: String,
-    val message: String,
-    val connections: Int,
-    val latencyMs: Long,
-    val throughputMbps: Double,
-)
 
 @RestController
 class OperationalEventController(
     private val repository: OperationalEventRepository,
     private val principalResolver: BearerPrincipalResolver,
 ) {
-    @GetMapping(OpsApiRoutes.EVENTS)
+    @GetMapping(OperationalEventApiRoutes.EVENTS)
     fun events(
-        @RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
+        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @RequestParam(required = false) query: String?,
         @RequestParam(required = false) severity: String?,
         @RequestParam(required = false) from: String?,
@@ -42,7 +27,7 @@ class OperationalEventController(
             principal,
             OperationalEventQuery(
                 query = query,
-                severity = severity?.takeUnless { it.equals(OperationalQueryValues.ALL, ignoreCase = true) },
+                severity = severity?.takeUnless { it.equals(OperationalEventQueryValues.ALL, ignoreCase = true) },
                 from = parseInstantQuery("from", from),
                 to = parseInstantQuery("to", to),
             ),
@@ -55,7 +40,7 @@ private fun parseInstantQuery(name: String, value: String?): Instant? {
         return null
     }
     return runCatching { Instant.parse(value) }
-        .getOrElse { throw ResponseStatusException(HttpStatus.BAD_REQUEST, "$name must be ISO-8601 instant") }
+        .getOrElse { throw BadRequestApiError("$name ${OperationalEventApiErrors.INSTANT_QUERY_REQUIRED}") }
 }
 
 private fun OperationalEventReadModel.toResponse(): OperationalEventResponse =

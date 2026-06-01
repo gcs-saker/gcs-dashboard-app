@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Annotated, Generic, TypeAlias, TypeVar
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
+from api.contracts import StreamErrorDetails, StreamRoutes
+from api.errors import NotFoundApiError, UnprocessableEntityApiError
 from config import WebRtcIceSettings
 from model.stream_model import StreamPathError, validate_stream_id, validate_stream_path
 from modules.streaming.domain import StreamDescriptor
@@ -42,14 +44,14 @@ class StreamLookupOperation(ABC, Generic[StreamResponseT]):
         try:
             descriptor = self._require_registered_stream()
         except StreamPathError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
+            raise UnprocessableEntityApiError(str(exc)) from exc
         return self.build_response(descriptor)
 
     def _require_registered_stream(self) -> StreamDescriptor:
         stream_path = validate_stream_id(self.stream_id)
         descriptor = self.service.get_registered_stream(stream_path.stream_id)
         if descriptor is None:
-            raise HTTPException(status_code=404, detail="stream is not registered")
+            raise NotFoundApiError(StreamErrorDetails.STREAM_NOT_REGISTERED)
         return descriptor
 
     @abstractmethod
@@ -72,7 +74,7 @@ class StreamStatusOperation(StreamLookupOperation[StreamStatusResponse]):
         return StreamStatusResponse.from_domain(descriptor)
 
 
-@v1_router.get("/streams", response_model=list[StreamDescriptorResponse])
+@v1_router.get(StreamRoutes.STREAMS, response_model=list[StreamDescriptorResponse])
 async def list_streams(service: StreamServiceDependency) -> list[StreamDescriptorResponse]:
     return [
         StreamDescriptorResponse.from_domain(descriptor)
@@ -80,7 +82,7 @@ async def list_streams(service: StreamServiceDependency) -> list[StreamDescripto
     ]
 
 
-@v1_router.get("/streams/ice-servers", response_model=list[IceServerResponse])
+@v1_router.get(StreamRoutes.ICE_SERVERS, response_model=list[IceServerResponse])
 async def list_stream_ice_servers() -> list[IceServerResponse]:
     return [
         IceServerResponse(**server)
@@ -88,7 +90,7 @@ async def list_stream_ice_servers() -> list[IceServerResponse]:
     ]
 
 
-@v1_router.get("/streams/{stream_id}/playback", response_model=StreamPlaybackResponse)
+@v1_router.get(StreamRoutes.PLAYBACK, response_model=StreamPlaybackResponse)
 async def get_stream_playback(
     stream_id: str,
     service: StreamServiceDependency,
@@ -96,7 +98,7 @@ async def get_stream_playback(
     return StreamPlaybackOperation(service, stream_id).execute()
 
 
-@v1_router.get("/streams/{stream_id}/status", response_model=StreamStatusResponse)
+@v1_router.get(StreamRoutes.STREAM_STATUS, response_model=StreamStatusResponse)
 async def get_stream_status(
     stream_id: str,
     service: StreamServiceDependency,
@@ -104,7 +106,7 @@ async def get_stream_status(
     return StreamStatusOperation(service, stream_id).execute()
 
 
-@v1_router.get("/streams/{stream_id}", response_model=StreamDescriptorResponse)
+@v1_router.get(StreamRoutes.STREAM_DETAIL, response_model=StreamDescriptorResponse)
 async def get_stream(
     stream_id: str,
     service: StreamServiceDependency,
@@ -112,22 +114,22 @@ async def get_stream(
     return StreamDetailOperation(service, stream_id).execute()
 
 
-@router.get("/status")
+@router.get(StreamRoutes.STATUS)
 async def stream_status():
     return {"stream": "ready"}
 
 
-@router.get("/paths/from-id/{stream_id}")
+@router.get(StreamRoutes.PATH_FROM_ID)
 async def resolve_stream_id(stream_id: str):
     try:
         return validate_stream_id(stream_id).to_api_dict()
     except StreamPathError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise UnprocessableEntityApiError(str(exc)) from exc
 
 
-@router.get("/paths/from-path/{stream_path:path}")
+@router.get(StreamRoutes.PATH_FROM_PATH)
 async def resolve_stream_path(stream_path: str):
     try:
         return validate_stream_path(stream_path).to_api_dict()
     except StreamPathError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise UnprocessableEntityApiError(str(exc)) from exc

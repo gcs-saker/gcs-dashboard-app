@@ -3,11 +3,14 @@ from __future__ import annotations
 from typing import Annotated, cast
 from urllib.parse import urlsplit
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import JSONResponse
 from passlib.context import CryptContext
+from sqlalchemy import exists
 from sqlalchemy.orm import Session
 
+from api.contracts import AuthErrorDetails, AuthProtocol, AuthRoutes
+from api.errors import BadRequestApiError, ForbiddenApiError, ServiceUnavailableApiError, UnauthorizedApiError
 from config import WebSecuritySettings
 from core.db import get_db
 from core.security import (
@@ -37,26 +40,30 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(AuthRoutes.SIGNUP, response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def signup(user: UserCreate, request: Request, db: Annotated[Session, Depends(get_db)]) -> User:
     _assert_trusted_request_origin(request)
-    db_user = db.query(User).filter(User.username == user.username).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
+    username_exists, email_exists = db.query(
+        exists().where(User.username == user.username).label("username_exists"),
+        exists().where(User.email == user.email).label("email_exists"),
+    ).one()
+    if username_exists:
+        raise BadRequestApiError(AuthErrorDetails.USERNAME_ALREADY_REGISTERED)
+    if email_exists:
+        raise BadRequestApiError(AuthErrorDetails.EMAIL_ALREADY_REGISTERED)
 
-    db_email = db.query(User).filter(User.email == user.email).first()
-    if db_email:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    db_company = db.query(Company).filter(Company.invite_code == user.inviteCode).first()
-    if not db_company:
-        raise HTTPException(status_code=400, detail="Invalid invite code Input")
+    company_id = cast(
+        int | None,
+        db.query(Company.id).filter(Company.invite_code == user.inviteCode).scalar(),
+    )
+    if company_id is None:
+        raise BadRequestApiError(AuthErrorDetails.INVALID_INVITE_CODE)
 
     new_user = User(
         username=user.username,
         email=user.email,
         password_hash=get_password_hash(user.password),
-        company_id=db_company.id,
+        company_id=company_id,
         role=normalize_role(user.role),
     )
     db.add(new_user)
@@ -65,7 +72,7 @@ def signup(user: UserCreate, request: Request, db: Annotated[Session, Depends(ge
     return new_user
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(AuthRoutes.LOGIN, response_model=TokenResponse)
 def login(
     user: UserLogin,
     request: Request,
@@ -73,9 +80,13 @@ def login(
     db: Annotated[Session, Depends(get_db)],
 ) -> TokenResponse:
     _assert_trusted_request_origin(request)
-    db_user = db.query(User).filter(User.username == user.username).first()
+    db_user = (
+        db.query(User.username, User.password_hash, User.role)
+        .filter(User.username == user.username)
+        .first()
+    )
     if not db_user or not verify_password(user.password, cast(str, db_user.password_hash)):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        raise UnauthorizedApiError(AuthErrorDetails.INVALID_CREDENTIALS)
 
     try:
         auth_settings = AuthSettings.from_env()
@@ -90,82 +101,73 @@ def login(
             settings=auth_settings,
         )
     except AuthConfigError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
+        raise ServiceUnavailableApiError(str(exc)) from exc
 
     _set_refresh_cookie(response, refresh_token, auth_settings)
     return TokenResponse(
         access_token=token,
-        token_type="bearer",
+        token_type=AuthProtocol.BEARER_TOKEN_TYPE,
         expires_in_minutes=auth_settings.access_token_expire_minutes,
         username=cast(str, db_user.username),
         role=normalize_role(cast(str | None, db_user.role)),
     )
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post(AuthRoutes.REFRESH, response_model=TokenResponse)
 def refresh_session(request: Request, response: Response, db: Annotated[Session, Depends(get_db)]) -> TokenResponse | JSONResponse:
     _assert_trusted_request_origin(request)
     try:
         auth_settings = AuthSettings.from_env()
     except AuthConfigError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
+        raise ServiceUnavailableApiError(str(exc)) from exc
 
     refresh_token = request.cookies.get(auth_settings.refresh_cookie_name)
     if not refresh_token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="refresh token required")
+        raise UnauthorizedApiError(AuthErrorDetails.REFRESH_TOKEN_REQUIRED)
 
     refresh_user = decode_refresh_token(refresh_token, settings=auth_settings)
-    db_user = db.query(User).filter(User.username == refresh_user.username).first()
+    db_user = db.query(User.role).filter(User.username == refresh_user.username).first()
     if not db_user:
         error_response = JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"detail": "invalid refresh session"},
+            content={"detail": AuthErrorDetails.INVALID_REFRESH_SESSION},
         )
         _clear_refresh_cookie(error_response, auth_settings)
         return error_response
 
     access_token = create_access_token(
-        cast(str, db_user.username),
+        refresh_user.username,
         cast(str | None, db_user.role),
         settings=auth_settings,
     )
     rotated_refresh_token = create_refresh_token(
-        cast(str, db_user.username),
+        refresh_user.username,
         cast(str | None, db_user.role),
         settings=auth_settings,
     )
     _set_refresh_cookie(response, rotated_refresh_token, auth_settings)
     return TokenResponse(
         access_token=access_token,
-        token_type="bearer",
+        token_type=AuthProtocol.BEARER_TOKEN_TYPE,
         expires_in_minutes=auth_settings.access_token_expire_minutes,
-        username=cast(str, db_user.username),
+        username=refresh_user.username,
         role=normalize_role(cast(str | None, db_user.role)),
     )
 
 
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+@router.post(AuthRoutes.LOGOUT, status_code=status.HTTP_204_NO_CONTENT)
 def logout(request: Request, response: Response) -> Response:
     _assert_trusted_request_origin(request)
     try:
         auth_settings = AuthSettings.from_env()
     except AuthConfigError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
+        raise ServiceUnavailableApiError(str(exc)) from exc
     _clear_refresh_cookie(response, auth_settings)
     response.status_code = status.HTTP_204_NO_CONTENT
     return response
 
 
-@router.get("/me", response_model=AuthenticatedUserResponse)
+@router.get(AuthRoutes.ME, response_model=AuthenticatedUserResponse)
 def read_current_user(current_user: Annotated[AuthenticatedUser, Depends(get_current_user)]):
     return AuthenticatedUserResponse(username=current_user.username, role=current_user.role)
 
@@ -199,10 +201,7 @@ def _assert_trusted_request_origin(request: Request) -> None:
 
     allowed_origins = set(WebSecuritySettings.from_env().allowed_origins)
     if request_origin not in allowed_origins:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="untrusted request origin",
-        )
+        raise ForbiddenApiError(AuthErrorDetails.UNTRUSTED_REQUEST_ORIGIN)
 
 
 def _origin_from_referer(referer: str | None) -> str | None:

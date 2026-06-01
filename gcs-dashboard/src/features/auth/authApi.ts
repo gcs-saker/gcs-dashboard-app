@@ -1,5 +1,5 @@
 import { authUrl } from "../../config";
-import { AUTH_ROUTES } from "../apiRoutes";
+import { AUTH_ROUTES } from "@/features/apiRoutes";
 import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 import type { AuthenticatedUser, LoginRequest, SignupRequest, SignupResponse, TokenResponse } from "./types";
 

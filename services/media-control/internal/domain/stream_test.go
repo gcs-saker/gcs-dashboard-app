@@ -19,6 +19,20 @@ func TestNewStreamPathTrimsWhitespace(t *testing.T) {
 	}
 }
 
+func TestStreamListDefensivelyCopiesValues(t *testing.T) {
+	path, _ := NewStreamPath("raw/local/webcam")
+	streams := []StreamDescriptor{{Path: path, Ready: true, Status: StreamStatusOnline}}
+
+	list := NewStreamList(streams)
+	streams[0].Status = StreamStatusOffline
+	values := list.Values()
+	values[0].Status = StreamStatusOffline
+
+	if list.Values()[0].Status != StreamStatusOnline {
+		t.Fatalf("expected stream list to protect internal values")
+	}
+}
+
 func TestParseStreamIDMatchesDashboardContract(t *testing.T) {
 	parsed, err := ParseStreamID("raw.local.webcam")
 	if err != nil {

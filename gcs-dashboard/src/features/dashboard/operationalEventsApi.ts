@@ -1,5 +1,5 @@
 import { apiUrl } from "../../config";
-import { DASHBOARD_API_ROUTES } from "../apiRoutes";
+import { DASHBOARD_API_ROUTES } from "@/features/apiRoutes";
 import { authenticatedFetch } from "../auth/authApi";
 import type { OperationalEvent, OperationalEventFilters } from "./operationalEvents";
 

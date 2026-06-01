@@ -4,6 +4,7 @@ from typing import Annotated, Protocol
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy import text
 
+from api.contracts import HealthRoutes
 from api.stream import StreamServiceDependency
 from core.db import engine
 from modules.health.domain import HealthCheckResult, HealthReport
@@ -31,7 +32,7 @@ def get_database_probe() -> DatabaseProbe:
 DatabaseProbeDependency = Annotated[DatabaseProbe, Depends(get_database_probe)]
 
 
-@router.get("/healthz", response_model=HealthReportResponse)
+@router.get(HealthRoutes.HEALTHZ, response_model=HealthReportResponse)
 async def healthz() -> HealthReportResponse:
     report = HealthReport.from_checks(
         SERVICE_NAME,
@@ -42,7 +43,7 @@ async def healthz() -> HealthReportResponse:
     return HealthReportResponse.from_domain(report)
 
 
-@router.get("/readyz", response_model=HealthReportResponse)
+@router.get(HealthRoutes.READYZ, response_model=HealthReportResponse)
 async def readyz(
     response: Response,
     service: StreamServiceDependency,

@@ -1,6 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
 object AuthSecurityHeaders {
+    const val AUTHORIZATION_HEADER_NAME = "Authorization"
     const val CSRF_HEADER_NAME = "X-GCS-CSRF"
     const val CSRF_HEADER_VALUE = "same-origin"
 }

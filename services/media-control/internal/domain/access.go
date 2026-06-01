@@ -33,14 +33,14 @@ func DenyStream(streamID string, reason string) StreamAccessDecision {
 
 type StreamGroupResolver struct {
 	defaultGroupID string
-	groupsByPath   map[string]string
+	mappings       StreamGroupMappings
 }
 
-func NewStreamGroupResolver(defaultGroupID string, encodedMappings string) (StreamGroupResolver, error) {
-	defaultGroupID = strings.TrimSpace(defaultGroupID)
-	if defaultGroupID == "" {
-		return StreamGroupResolver{}, fmt.Errorf("default publisher group id must not be blank")
-	}
+type StreamGroupMappings struct {
+	valuesByRoute map[string]string
+}
+
+func NewStreamGroupMappings(encodedMappings string) (StreamGroupMappings, error) {
 	mappings := map[string]string{}
 	for _, item := range strings.Split(encodedMappings, ",") {
 		item = strings.TrimSpace(item)
@@ -49,28 +49,47 @@ func NewStreamGroupResolver(defaultGroupID string, encodedMappings string) (Stre
 		}
 		key, value, ok := strings.Cut(item, "=")
 		if !ok {
-			return StreamGroupResolver{}, fmt.Errorf("stream group mapping must use path=group format")
+			return StreamGroupMappings{}, fmt.Errorf("stream group mapping must use path=group format")
 		}
 		parsed, err := ParseStreamIDOrPath(strings.TrimSpace(key))
 		if err != nil {
-			return StreamGroupResolver{}, err
+			return StreamGroupMappings{}, err
 		}
 		groupID := strings.TrimSpace(value)
 		if groupID == "" {
-			return StreamGroupResolver{}, fmt.Errorf("stream group mapping group id must not be blank")
+			return StreamGroupMappings{}, fmt.Errorf("stream group mapping group id must not be blank")
 		}
 		mappings[parsed.Path] = groupID
 		mappings[parsed.StreamID] = groupID
 	}
-	return StreamGroupResolver{defaultGroupID: defaultGroupID, groupsByPath: mappings}, nil
+	return StreamGroupMappings{valuesByRoute: mappings}, nil
+}
+
+func (m StreamGroupMappings) Find(stream ParsedStreamPath) (string, bool) {
+	if mappedGroupID, ok := m.valuesByRoute[stream.Path]; ok {
+		return mappedGroupID, true
+	}
+	if mappedGroupID, ok := m.valuesByRoute[stream.StreamID]; ok {
+		return mappedGroupID, true
+	}
+	return "", false
+}
+
+func NewStreamGroupResolver(defaultGroupID string, encodedMappings string) (StreamGroupResolver, error) {
+	defaultGroupID = strings.TrimSpace(defaultGroupID)
+	if defaultGroupID == "" {
+		return StreamGroupResolver{}, fmt.Errorf("default publisher group id must not be blank")
+	}
+	mappings, err := NewStreamGroupMappings(encodedMappings)
+	if err != nil {
+		return StreamGroupResolver{}, err
+	}
+	return StreamGroupResolver{defaultGroupID: defaultGroupID, mappings: mappings}, nil
 }
 
 func (r StreamGroupResolver) TargetFor(stream ParsedStreamPath) StreamAccessTarget {
 	publisherGroupID := r.defaultGroupID
-	if mappedGroupID, ok := r.groupsByPath[stream.Path]; ok {
-		publisherGroupID = mappedGroupID
-	}
-	if mappedGroupID, ok := r.groupsByPath[stream.StreamID]; ok {
+	if mappedGroupID, ok := r.mappings.Find(stream); ok {
 		publisherGroupID = mappedGroupID
 	}
 	return StreamAccessTarget{

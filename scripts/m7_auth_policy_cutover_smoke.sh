@@ -64,8 +64,10 @@ require_command() {
 run_check() {
   bash -n "$0"
   grep -q "class AuthController" "${REPO_ROOT}/services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthController.kt"
-  grep -q "@PostMapping(\"/signup\")" "${REPO_ROOT}/services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthController.kt"
-  grep -q "@PostMapping(\"/login\")" "${REPO_ROOT}/services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthController.kt"
+  grep -q "@PostMapping(AuthApiRoutes.SIGNUP)" "${REPO_ROOT}/services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthController.kt"
+  grep -q "@PostMapping(AuthApiRoutes.LOGIN)" "${REPO_ROOT}/services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthController.kt"
+  grep -q "const val SIGNUP = \"/signup\"" "${REPO_ROOT}/services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthApiRoutes.kt"
+  grep -q "const val LOGIN = \"/login\"" "${REPO_ROOT}/services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthApiRoutes.kt"
   grep -q "VITE_AUTH_API_BASE_URL" "${REPO_ROOT}/gcs-dashboard/src/config.ts"
   grep -q "location /auth-policy/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "AUTH_POLICY_ALLOWED_ORIGINS" "${REPO_ROOT}/deploy/compose/compose.single-node.poc.yml"

@@ -37,3 +37,19 @@ func TestStreamGroupResolverRejectsInvalidMapping(t *testing.T) {
 		t.Fatal("expected invalid mapping to fail")
 	}
 }
+
+func TestStreamGroupMappingsResolveBothPathAndStreamID(t *testing.T) {
+	mappings, err := NewStreamGroupMappings("raw.sample.front=co-b,raw/local/webcam=co-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fromID, _ := ParseStreamID("raw.sample.front")
+	fromPath, _ := ParseStreamPath("raw/local/webcam")
+
+	if groupID, ok := mappings.Find(fromID); !ok || groupID != "co-b" {
+		t.Fatalf("expected stream id mapping, got %q ok=%v", groupID, ok)
+	}
+	if groupID, ok := mappings.Find(fromPath); !ok || groupID != "co-a" {
+		t.Fatalf("expected stream path mapping, got %q ok=%v", groupID, ok)
+	}
+}
