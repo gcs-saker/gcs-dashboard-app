@@ -6,7 +6,7 @@ const authBaseUrl = normalizeLocalDevBaseUrl(
 const streamApiBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_STREAM_API_BASE_URL ?? apiBaseUrl, "/api");
 const hlsBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_HLS_BASE_URL ?? "/hls", "/hls");
 const defaultStreamId = import.meta.env.VITE_DEFAULT_STREAM_ID ?? "CID001";
-const defaultStunUrl = import.meta.env.VITE_WEBRTC_STUN_URL ?? "stun:stun.l.google.com:19302";
+const defaultStunUrl = import.meta.env.VITE_WEBRTC_STUN_URL ?? "stun:localhost:3478";
 const localWebcamWhipUrl = normalizeLocalDevBaseUrl(
   import.meta.env.VITE_LOCAL_WEBCAM_WHIP_URL ?? "/webrtc/raw/local/webcam/whip",
   "/webrtc/raw/local/webcam/whip",

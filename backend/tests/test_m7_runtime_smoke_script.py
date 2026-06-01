@@ -24,6 +24,9 @@ def test_m7_runtime_smoke_ports_override_public_playback_urls():
     assert "MEDIAMTX_PUBLIC_HLS_BASE_URL" in script
     assert "MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL" in script
     assert "MEDIA_CONTROL_PUBLIC_HLS_BASE_URL" in script
+    assert "AUTH_POLICY_BASE_URL" in script
+    assert "MEDIA_CONTROL_STREAM_GROUP_MAP" in script
+    assert "VITE_AUTH_API_BASE_URL" in script
     assert "VITE_STREAM_API_BASE_URL" in script
     assert "VITE_LOCAL_WEBCAM_WHIP_URL" in script
     assert "BACKEND_CORS_ALLOW_ORIGINS" in script
@@ -33,14 +36,22 @@ def test_m7_runtime_smoke_ports_override_public_playback_urls():
     assert "http://127.0.0.1:${PUBLIC_HTTP_PORT}/webrtc" in script
     assert "http://127.0.0.1:${PUBLIC_HTTP_PORT}/hls" in script
     assert "/media-control" in script
+    assert "/auth-policy/auth" in script
     assert "stun:127.0.0.1:${TURN_PRIMARY_HOST_PORT}" in script
     assert "turn:127.0.0.1:${TURN_PRIMARY_HOST_PORT}?transport=udp" in script
     assert "http://127.0.0.1:${PUBLIC_HTTP_PORT},http://localhost:${PUBLIC_HTTP_PORT}" in script
 
 
-def test_m7_runtime_smoke_requires_backend_stream_status_payload():
+def test_m7_runtime_smoke_requires_backend_stream_status_payload_and_read_model_probe():
     script = (REPO_ROOT / "scripts" / "m7_single_node_runtime_smoke.sh").read_text(encoding="utf-8")
 
     assert "wait_for_stream_status" in script
     assert '"stream":"ready"' in script
+    assert "login_access_token" in script
+    assert '"raw.smoke.telemetry"' in script
+    assert "/api/telemetry/all" in script
+    assert "/api/telemetry/" in script
+    assert "/api/asset/raw.sample.front" in script
     assert "compose restart edge" in script
+    assert "auth-policy health/ready/telemetry ingest-read/asset reads" in script
+    assert "media-control stream status" in script

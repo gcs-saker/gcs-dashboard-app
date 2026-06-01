@@ -1,75 +1,45 @@
-import { render } from "@testing-library/react";
-import { describe, expect, test, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, test } from "vitest";
 import { TacticalLeafletMap } from "./TacticalLeafletMap";
 import type { DashboardStreamSlot } from "../streamTypes";
 
-const popupContents: unknown[] = [];
-const mapSetView = vi.fn();
-const markerLayer = {
-  addTo: vi.fn(function addTo() {
-    return markerLayer;
-  }),
-  clearLayers: vi.fn(),
-  remove: vi.fn(),
+const stream: DashboardStreamSlot = {
+  id: "raw.local.webcam",
+  title: "로컬 웹캠",
+  status: "online",
+  mode: "EO",
+  detail: "closed network map test",
+  streamPath: "raw.local.webcam",
+  geometry: {
+    lat: 35.871435,
+    lng: 128.601445,
+    altitudeM: 12,
+    headingDeg: 24,
+    pitchDeg: 0,
+    rollDeg: 0,
+    yawDeg: 24,
+    fovDeg: 64,
+    source: "telemetry",
+  },
 };
 
-vi.mock("leaflet", () => ({
-  default: {
-    map: vi.fn(() => ({
-      getZoom: vi.fn(() => 14),
-      remove: vi.fn(),
-      setView: mapSetView,
-      zoomIn: vi.fn(),
-      zoomOut: vi.fn(),
-    })),
-    tileLayer: vi.fn(() => ({
-      addTo: vi.fn(),
-    })),
-    layerGroup: vi.fn(() => markerLayer),
-    circleMarker: vi.fn(() => {
-      const marker = {
-        bindPopup: vi.fn((content: unknown) => {
-        popupContents.push(content);
-          return marker;
-        }),
-        addTo: vi.fn(),
-      };
-      return marker;
-    }),
-  },
-}));
-
 describe("TacticalLeafletMap", () => {
-  test("binds stream metadata to Leaflet popups as text nodes instead of HTML", () => {
-    popupContents.length = 0;
-    const stream: DashboardStreamSlot = {
-      id: "raw.xss",
-      title: '<img src=x onerror="alert(1)">',
-      status: "online",
-      mode: "EO",
-      detail: "xss test",
-      streamPath: '<script>alert("path")</script>',
-      geometry: {
-        lat: 35.871435,
-        lng: 128.601445,
-        altitudeM: 10,
-        headingDeg: 0,
-        pitchDeg: 0,
-        rollDeg: 0,
-        yawDeg: 0,
-        fovDeg: 60,
-      },
-    };
-
+  test("renders a closed-network map without external tile providers", () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
 
-    expect(popupContents).toHaveLength(1);
-    const popup = popupContents[0] as HTMLElement;
-    expect(popup).toBeInstanceOf(HTMLElement);
-    expect(popup.querySelector("img")).toBeNull();
-    expect(popup.querySelector("script")).toBeNull();
-    expect(popup.querySelector("strong")?.textContent).toBe('<img src=x onerror="alert(1)">');
-    expect(popup.textContent).toContain('<script>alert("path")</script>');
-    expect(popup.textContent).toContain("기본 좌표");
+    expect(screen.getByTestId("offline-tactical-map")).toBeInTheDocument();
+    expect(screen.getByTestId("map-coordinate-source")).toHaveTextContent("실시간 GPS");
+    expect(screen.getByTestId("offline-map-center")).toHaveTextContent("35.871435, 128.601445");
+    expect(screen.getByRole("button", { name: /로컬 웹캠 위치/ })).toBeInTheDocument();
+  });
+
+  test("keeps zoom controls local to the offline renderer", () => {
+    render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "지도 확대" }));
+    fireEvent.click(screen.getByRole("button", { name: "지도 축소" }));
+    fireEvent.click(screen.getByRole("button", { name: "지도 중심 초기화" }));
+
+    expect(screen.getByTestId("offline-tactical-map")).toBeInTheDocument();
   });
 });

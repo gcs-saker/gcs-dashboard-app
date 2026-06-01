@@ -94,6 +94,10 @@ apply_smoke_ports() {
   export MEDIAMTX_PUBLIC_HLS_BASE_URL="${GCS_SMOKE_MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/hls}"
   export MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL="${GCS_SMOKE_MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/webrtc}"
   export MEDIA_CONTROL_PUBLIC_HLS_BASE_URL="${GCS_SMOKE_MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/hls}"
+  export AUTH_POLICY_BASE_URL="${GCS_SMOKE_AUTH_POLICY_BASE_URL:-http://auth-policy:8080}"
+  export MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID="${GCS_SMOKE_MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID:-co-a}"
+  export MEDIA_CONTROL_STREAM_GROUP_MAP="${GCS_SMOKE_MEDIA_CONTROL_STREAM_GROUP_MAP:-raw/sample/front=co-a,raw/local/webcam=co-a}"
+  export VITE_AUTH_API_BASE_URL="${GCS_SMOKE_VITE_AUTH_API_BASE_URL:-/auth-policy/auth}"
   export VITE_STREAM_API_BASE_URL="${GCS_SMOKE_VITE_STREAM_API_BASE_URL:-/media-control}"
   export VITE_LOCAL_WEBCAM_WHIP_URL="${GCS_SMOKE_VITE_LOCAL_WEBCAM_WHIP_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/webrtc/raw/local/webcam/whip}"
   export WEBRTC_STUN_URL="${GCS_SMOKE_WEBRTC_STUN_URL:-stun:127.0.0.1:${TURN_PRIMARY_HOST_PORT}}"
@@ -138,6 +142,18 @@ wait_for_stream_status() {
   return 1
 }
 
+login_access_token() {
+  local edge_base_url="$1"
+  local username="${AUTH_POLICY_OPERATOR_USERNAME:-operator01}"
+  local password="${AUTH_POLICY_OPERATOR_PASSWORD:-correct-password}"
+
+  curl -fsS \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"${username}\",\"password\":\"${password}\"}" \
+    "${edge_base_url}/auth-policy/auth/login" \
+    | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])'
+}
+
 check_required_files() {
   test -f "$COMPOSE_FILE"
   test -f "$ENV_FILE"
@@ -156,6 +172,8 @@ check_contract_text() {
   grep -q "location /stream/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /auth-policy/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /media-control/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
+  grep -q "location /api/asset/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
+  grep -q "location = /api/telemetry/all" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /webrtc/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /hls/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
 }
@@ -201,6 +219,18 @@ run_live() {
   wait_for_http "${edge_base_url}/readyz"
   wait_for_stream_status "${edge_base_url}/stream/status"
 
+  local access_token
+  access_token="$(login_access_token "$edge_base_url")"
+  curl -fsS \
+    -H "Authorization: Bearer ${access_token}" \
+    -H "Content-Type: application/json" \
+    -d '{"uuid":"raw.smoke.telemetry","latitude":35.882,"longitude":128.61,"altitude":42,"magneticX":1,"magneticY":2,"magneticZ":3,"soc":"88","phoneBatterySOC":77,"velocity":4.5,"totalDistance":120,"epochTime":65,"portDistance":9}' \
+    "${edge_base_url}/api/telemetry/" \
+    | grep -q "raw.smoke.telemetry"
+  curl -fsS -H "Authorization: Bearer ${access_token}" "${edge_base_url}/api/telemetry/all" | grep -q "raw.sample.front"
+  curl -fsS -H "Authorization: Bearer ${access_token}" "${edge_base_url}/api/telemetry/all" | grep -q "raw.smoke.telemetry"
+  curl -fsS -H "Authorization: Bearer ${access_token}" "${edge_base_url}/api/asset/raw.sample.front" | grep -q "DRN-01"
+
   runtime_probe_from_edge "http://auth-policy:8080/healthz"
   runtime_probe_from_edge "http://media-control:8081/healthz"
   runtime_probe_from_edge "http://media-control:8081/v1/ice-servers"
@@ -224,7 +254,7 @@ run_live() {
 
   echo "M7 single-node runtime smoke run passed"
   echo "Edge URL: ${edge_base_url}"
-  echo "Verified: backend health/ready, auth-policy, media-control ICE servers, MediaMTX API, TURN primary/secondary allocation"
+  echo "Verified: auth-policy health/ready/telemetry ingest-read/asset reads, media-control stream status/ICE servers, MediaMTX API, TURN primary/secondary allocation"
 
   if [[ "$STOP_STACK" == "1" ]]; then
     compose down

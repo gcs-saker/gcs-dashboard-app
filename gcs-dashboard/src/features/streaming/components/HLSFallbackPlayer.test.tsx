@@ -19,7 +19,7 @@ const hlsMock = vi.hoisted(() => {
     destroy = vi.fn();
     loadSource = vi.fn();
 
-    constructor() {
+    constructor(public config: Record<string, unknown> = {}) {
       instances.push(this);
     }
 
@@ -60,6 +60,13 @@ describe("HLSFallbackPlayer", () => {
 
     expect(screen.getByText("WebRTC failed. Playing HLS fallback.")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("fallback loading"));
+    expect(hlsMock.instances[0].config).toMatchObject({
+      lowLatencyMode: true,
+      backBufferLength: 10,
+      liveSyncDurationCount: 2,
+      maxLiveSyncPlaybackRate: 1.5,
+      capLevelToPlayerSize: true,
+    });
     expect(hlsMock.instances[0].loadSource).toHaveBeenCalledWith(hlsUrl);
     expect(hlsMock.instances[0].attachMedia).toHaveBeenCalledWith(screen.getByLabelText("HLS fallback stream"));
 

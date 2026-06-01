@@ -4,9 +4,10 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="check"
 EDGE_BASE_URL="${EDGE_BASE_URL:-http://127.0.0.1:18080}"
+AUTH_BASE_PATH="${AUTH_BASE_PATH:-/auth-policy/auth}"
 STREAM_API_BASE_PATH="${STREAM_API_BASE_PATH:-/media-control/api/v1}"
 BACKEND_CONTAINER="${BACKEND_CONTAINER:-gcs-saker-arch-poc-backend-1}"
-SEED_SMOKE_USER="${SEED_SMOKE_USER:-1}"
+SEED_SMOKE_USER="${SEED_SMOKE_USER:-0}"
 SMOKE_USERNAME="${SMOKE_USERNAME:-m7-smoke-viewer}"
 SMOKE_PASSWORD="${SMOKE_PASSWORD:-m7-smoke-pass}"
 SMOKE_STREAM_ID="${SMOKE_STREAM_ID:-raw.sample.front}"
@@ -22,9 +23,10 @@ Modes:
 
 Environment:
   EDGE_BASE_URL  Default: http://127.0.0.1:18080
+  AUTH_BASE_PATH  Default: /auth-policy/auth
   STREAM_API_BASE_PATH  Default: /media-control/api/v1
   BACKEND_CONTAINER  Default: gcs-saker-arch-poc-backend-1
-  SEED_SMOKE_USER    Seed the runtime DB before login. Default: 1
+  SEED_SMOKE_USER    Seed the Python runtime DB before legacy login. Default: 0
   SMOKE_USERNAME     Default: m7-smoke-viewer
   SMOKE_PASSWORD     Default: m7-smoke-pass
   SMOKE_STREAM_ID    Default: raw.sample.front
@@ -68,6 +70,7 @@ run_check() {
   grep -q "first-frame" "${REPO_ROOT}/docs/architecture/GCS-Saker_M7_dashboard_first_frame_smoke.md"
   grep -q "Smoke user" "${REPO_ROOT}/scripts/m7_seed_smoke_user.py"
   grep -q "playbackUrls" "$0"
+  grep -q "AUTH_BASE_PATH" "$0"
   echo "M7 dashboard first-frame smoke check passed"
 }
 
@@ -94,11 +97,11 @@ run_live() {
     -H "Content-Type: application/json" \
     -X POST \
     --data "$login_payload" \
-    "${EDGE_BASE_URL}/api/auth/login")"
+    "${EDGE_BASE_URL}${AUTH_BASE_PATH}/login")"
 
   local access_token
   access_token="$(python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])' <<<"$login_response")"
-  curl -fsS -H "Authorization: Bearer ${access_token}" "${EDGE_BASE_URL}/api/auth/me" >/dev/null
+  curl -fsS -H "Authorization: Bearer ${access_token}" "${EDGE_BASE_URL}${AUTH_BASE_PATH}/me" >/dev/null
 
   local playback_response
   playback_response="$(curl -fsS \

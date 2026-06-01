@@ -36,7 +36,7 @@ describe('App dashboard shell', () => {
     expect(screen.getByRole('heading', { name: '자산트리' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '지도' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '선택 스트림' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '서버상태 / 연결상태 / 헬스체크' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '서버 상태 상세 / 연결상태 / 헬스체크' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '지오메트리 / 텔레메트리' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'AI 결과' })).toBeInTheDocument();
   });

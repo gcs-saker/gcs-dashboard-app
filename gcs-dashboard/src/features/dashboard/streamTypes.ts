@@ -162,3 +162,10 @@ export function getDashboardStreamStatusText(status: DashboardStreamStatus): str
 export function getDashboardStreamStatusClass(status: DashboardStreamStatus): string {
   return `is-${status}`;
 }
+
+export function getDashboardStreamDisplayName(stream: Pick<DashboardStreamSlot, "detail" | "streamPath" | "title">): string {
+  const [label] = stream.detail.split(" / ");
+  const trimmed = label.trim();
+  if (trimmed && trimmed !== stream.streamPath) return trimmed;
+  return stream.title;
+}

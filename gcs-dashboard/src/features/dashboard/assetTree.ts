@@ -111,6 +111,37 @@ function streamLabelFromDetail(source: AssetTreeStreamSource): string {
   return name.trim() || source.streamPath || "스트림";
 }
 
+function aggregateStatus(children: AssetTreeNode[]): AssetTreeStatus {
+  if (children.length === 0) return "offline";
+  if (children.every((child) => child.status === "online")) return "online";
+  if (children.every((child) => child.status === "offline")) return "offline";
+  return "warning";
+}
+
+function syncKnownStreamStatuses(
+  node: AssetTreeNode,
+  streamsByPath: Map<string, AssetTreeStreamSource>,
+): AssetTreeNode {
+  const runtimeStream = streamsByPath.get(node.id);
+  const children = node.children
+    ?.filter((child) => child.id !== "group-discovered-streams")
+    .map((child) => syncKnownStreamStatuses(child, streamsByPath));
+
+  if (runtimeStream && node.type === "stream") {
+    return {
+      ...node,
+      status: statusFromStream(runtimeStream.status),
+      children,
+    };
+  }
+
+  return {
+    ...node,
+    status: children?.length ? aggregateStatus(children) : node.status,
+    children,
+  };
+}
+
 export function mergeAssetTreeWithStreams(
   root: AssetTreeNode,
   streams: AssetTreeStreamSource[],
@@ -118,7 +149,11 @@ export function mergeAssetTreeWithStreams(
   const liveStreams = streams.filter((stream): stream is AssetTreeStreamSource & { streamPath: string } =>
     Boolean(stream.streamPath),
   );
-  const knownNodeIds = new Set(collectAssetTreeNodes(root).map((node) => node.id));
+  const streamsByPath = new Map<string, AssetTreeStreamSource>(
+    liveStreams.map((stream) => [stream.streamPath, stream]),
+  );
+  const syncedRoot = syncKnownStreamStatuses(root, streamsByPath);
+  const knownNodeIds = new Set(collectAssetTreeNodes(syncedRoot).map((node) => node.id));
   const discoveredByAsset = new Map<string, AssetTreeNode[]>();
 
   for (const stream of liveStreams) {
@@ -133,24 +168,24 @@ export function mergeAssetTreeWithStreams(
     discoveredByAsset.set(assetId, [...(discoveredByAsset.get(assetId) ?? []), streamNode]);
   }
 
-  if (!discoveredByAsset.size) return root;
+  if (!discoveredByAsset.size) return syncedRoot;
 
   const discoveredGroup: AssetTreeNode = {
     id: "group-discovered-streams",
     label: "감지 스트림",
     type: "group",
-    status: "online",
+    status: aggregateStatus(Array.from(discoveredByAsset.values()).flat()),
     children: Array.from(discoveredByAsset.entries()).map(([assetId, children]) => ({
       id: `asset-${assetId.toLowerCase()}`,
       label: assetId,
       type: "device",
-      status: children.some((child) => child.status === "online") ? "online" : "warning",
+      status: aggregateStatus(children),
       children,
     })),
   };
 
   return {
-    ...root,
-    children: [...(root.children ?? []).filter((child) => child.id !== discoveredGroup.id), discoveredGroup],
+    ...syncedRoot,
+    children: [...(syncedRoot.children ?? []).filter((child) => child.id !== discoveredGroup.id), discoveredGroup],
   };
 }

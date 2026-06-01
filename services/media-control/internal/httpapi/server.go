@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -18,14 +19,30 @@ type IceServerProvider interface {
 	HealthyIceServers() []domain.IceServer
 }
 
-type Server struct {
-	streams  StreamLister
-	ice      IceServerProvider
-	playback domain.PlaybackURLBuilder
+type StreamAuthorizer interface {
+	AuthorizeStream(
+		ctx context.Context,
+		authorization string,
+		target domain.StreamAccessTarget,
+	) (domain.StreamAccessDecision, error)
 }
 
-func NewServer(streams StreamLister, ice IceServerProvider, playback domain.PlaybackURLBuilder) Server {
-	return Server{streams: streams, ice: ice, playback: playback}
+type Server struct {
+	streams    StreamLister
+	ice        IceServerProvider
+	playback   domain.PlaybackURLBuilder
+	authorizer StreamAuthorizer
+	groups     domain.StreamGroupResolver
+}
+
+func NewServer(
+	streams StreamLister,
+	ice IceServerProvider,
+	playback domain.PlaybackURLBuilder,
+	authorizer StreamAuthorizer,
+	groups domain.StreamGroupResolver,
+) Server {
+	return Server{streams: streams, ice: ice, playback: playback, authorizer: authorizer, groups: groups}
 }
 
 func (s Server) Routes() http.Handler {
@@ -33,6 +50,7 @@ func (s Server) Routes() http.Handler {
 	mux.HandleFunc("/healthz", s.healthz)
 	mux.HandleFunc("/v1/streams", s.streamList)
 	mux.HandleFunc("/v1/ice-servers", s.iceServers)
+	mux.HandleFunc("/stream/status", s.legacyStreamStatus)
 	mux.HandleFunc("/api/v1/streams/ice-servers", s.dashboardIceServers)
 	mux.HandleFunc("/api/v1/streams/", s.dashboardStreamItem)
 	mux.HandleFunc("/api/v1/streams", s.dashboardStreamList)
@@ -55,6 +73,10 @@ func (s Server) streamList(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"streams": streams})
 }
 
+func (s Server) legacyStreamStatus(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{"stream": "ready"})
+}
+
 func (s Server) iceServers(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"iceServers": s.ice.HealthyIceServers()})
 }
@@ -68,10 +90,23 @@ func (s Server) dashboardStreamList(w http.ResponseWriter, r *http.Request) {
 
 	payload := make([]streamDescriptorResponse, 0, len(streams))
 	for _, stream := range streams {
-		item, err := s.streamDescriptorResponse(stream)
+		parsed, err := domain.ParseStreamPath(string(stream.Path))
 		if err != nil {
 			continue
 		}
+		_, err = s.authorizer.AuthorizeStream(r.Context(), r.Header.Get("Authorization"), s.groups.TargetFor(parsed))
+		if errors.Is(err, domain.ErrStreamAuthenticationRequired) {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"detail": "authentication required"})
+			return
+		}
+		if errors.Is(err, domain.ErrStreamAccessDenied) {
+			continue
+		}
+		if err != nil {
+			writeJSON(w, http.StatusBadGateway, map[string]string{"detail": err.Error()})
+			return
+		}
+		item := s.streamDescriptorResponseFromParsed(stream, parsed)
 		payload = append(payload, item)
 	}
 	writeJSON(w, http.StatusOK, payload)
@@ -97,28 +132,18 @@ func (s Server) dashboardStreamItem(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"detail": "stream is not registered"})
 		return
 	}
+	parsed, err := s.authorizeDashboardStream(r.Context(), r.Header.Get("Authorization"), stream)
+	if err != nil {
+		s.writeStreamAccessError(w, err)
+		return
+	}
 
 	switch suffix {
 	case "":
-		payload, err := s.streamDescriptorResponse(stream)
-		if err != nil {
-			writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"detail": err.Error()})
-			return
-		}
-		writeJSON(w, http.StatusOK, payload)
+		writeJSON(w, http.StatusOK, s.streamDescriptorResponseFromParsed(stream, parsed))
 	case "playback":
-		payload, err := s.streamPlaybackResponse(stream)
-		if err != nil {
-			writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"detail": err.Error()})
-			return
-		}
-		writeJSON(w, http.StatusOK, payload)
+		writeJSON(w, http.StatusOK, s.streamPlaybackResponseFromParsed(stream, parsed))
 	case "status":
-		parsed, err := domain.ParseStreamPath(string(stream.Path))
-		if err != nil {
-			writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"detail": err.Error()})
-			return
-		}
 		writeJSON(w, http.StatusOK, streamStatusResponse{StreamID: parsed.StreamID, Status: stream.Status})
 	default:
 		http.NotFound(w, r)
@@ -165,6 +190,13 @@ func (s Server) streamDescriptorResponse(stream domain.StreamDescriptor) (stream
 	if err != nil {
 		return streamDescriptorResponse{}, err
 	}
+	return s.streamDescriptorResponseFromParsed(stream, parsed), nil
+}
+
+func (s Server) streamDescriptorResponseFromParsed(
+	stream domain.StreamDescriptor,
+	parsed domain.ParsedStreamPath,
+) streamDescriptorResponse {
 	playbackURLs := s.playback.Build(parsed)
 	return streamDescriptorResponse{
 		StreamID:     parsed.StreamID,
@@ -177,19 +209,51 @@ func (s Server) streamDescriptorResponse(stream domain.StreamDescriptor) (stream
 		Status:       stream.Status,
 		DisplayName:  emptyAsNil(displayName(stream, parsed)),
 		PlaybackURLs: playbackURLs,
-	}, nil
+	}
 }
 
 func (s Server) streamPlaybackResponse(stream domain.StreamDescriptor) (streamPlaybackResponse, error) {
-	descriptor, err := s.streamDescriptorResponse(stream)
+	parsed, err := domain.ParseStreamPath(string(stream.Path))
 	if err != nil {
 		return streamPlaybackResponse{}, err
 	}
+	return s.streamPlaybackResponseFromParsed(stream, parsed), nil
+}
+
+func (s Server) streamPlaybackResponseFromParsed(
+	stream domain.StreamDescriptor,
+	parsed domain.ParsedStreamPath,
+) streamPlaybackResponse {
+	descriptor := s.streamDescriptorResponseFromParsed(stream, parsed)
 	return streamPlaybackResponse{
 		StreamID:     descriptor.StreamID,
 		Status:       descriptor.Status,
 		PlaybackURLs: descriptor.PlaybackURLs,
-	}, nil
+	}
+}
+
+func (s Server) authorizeDashboardStream(
+	ctx context.Context,
+	authorization string,
+	stream domain.StreamDescriptor,
+) (domain.ParsedStreamPath, error) {
+	parsed, err := domain.ParseStreamPath(string(stream.Path))
+	if err != nil {
+		return domain.ParsedStreamPath{}, err
+	}
+	_, err = s.authorizer.AuthorizeStream(ctx, authorization, s.groups.TargetFor(parsed))
+	return parsed, err
+}
+
+func (s Server) writeStreamAccessError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, domain.ErrStreamAuthenticationRequired):
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"detail": "authentication required"})
+	case errors.Is(err, domain.ErrStreamAccessDenied):
+		writeJSON(w, http.StatusForbidden, map[string]string{"detail": "stream access denied"})
+	default:
+		writeJSON(w, http.StatusBadGateway, map[string]string{"detail": err.Error()})
+	}
 }
 
 func streamIDAndSuffix(path string) (string, string, bool) {

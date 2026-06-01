@@ -23,5 +23,7 @@ def test_m7_media_control_cutover_smoke_verifies_go_stream_contracts() -> None:
 
     assert "/media-control/api/v1/streams/ice-servers" in script
     assert "/media-control/api/v1/streams/${STREAM_ID}/playback" in script
+    assert "AUTH_BASE_PATH" in script
+    assert "Authorization: Bearer ${ACCESS_TOKEN}" in script
     assert "wait_for_media_control_stream" in script
     assert "Verified: Go stream list, detail, playback, status, ICE servers" in script

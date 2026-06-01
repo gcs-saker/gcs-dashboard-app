@@ -122,9 +122,18 @@ services:
       AUTH_POLICY_REFRESH_COOKIE_SECURE: ${AUTH_REFRESH_COOKIE_SECURE:-false}
       AUTH_POLICY_REFRESH_COOKIE_SAMESITE: ${AUTH_REFRESH_COOKIE_SAMESITE:-lax}
       AUTH_POLICY_ALLOWED_ORIGINS: ${BACKEND_CORS_ALLOW_ORIGINS:-http://localhost:8080}
+      AUTH_POLICY_SIGNUP_INVITES: ${AUTH_POLICY_SIGNUP_INVITES:-A4AI01:1:co-a}
+      AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED: ${AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED:-true}
+      AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED: ${AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED:-true}
+      SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST:-redis}
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT:-6379}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz >/dev/null"]
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - control-net
@@ -141,17 +150,32 @@ services:
       TURN_PASSWORD: ${TURN_PASSWORD:?Set TURN_PASSWORD}
       MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL: ${MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8080/webrtc}
       MEDIA_CONTROL_PUBLIC_HLS_BASE_URL: ${MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://localhost:8080/hls}
+      AUTH_POLICY_BASE_URL: ${AUTH_POLICY_BASE_URL:-http://auth-policy:8080}
+      MEDIA_CONTROL_AUTHZ_CACHE_TTL_SECONDS: ${MEDIA_CONTROL_AUTHZ_CACHE_TTL_SECONDS:-2}
+      MEDIA_CONTROL_STUN_URL: ${MEDIA_CONTROL_STUN_URL:-stun:localhost:3478}
+      MEDIA_CONTROL_TURN_PRIMARY_URL: ${MEDIA_CONTROL_TURN_PRIMARY_URL:-turn:localhost:3478?transport=udp}
+      MEDIA_CONTROL_TURN_SECONDARY_URL: ${MEDIA_CONTROL_TURN_SECONDARY_URL:-turn:localhost:3479?transport=udp}
+      MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID: ${MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID:-co-a}
+      MEDIA_CONTROL_STREAM_GROUP_MAP: ${MEDIA_CONTROL_STREAM_GROUP_MAP:-raw/sample/front=co-a,raw/local/webcam=co-a}
       MEDIA_CONTROL_LISTEN_ADDR: :8081
+      MEDIA_CONTROL_REDIS_ADDR: ${MEDIA_CONTROL_REDIS_ADDR:-redis:6379}
+      MEDIA_CONTROL_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+      MEDIA_CONTROL_STREAM_CACHE_TTL_SECONDS: ${MEDIA_CONTROL_STREAM_CACHE_TTL_SECONDS:-1}
+      MEDIA_CONTROL_STREAM_PRESENCE_TTL_SECONDS: ${MEDIA_CONTROL_STREAM_PRESENCE_TTL_SECONDS:-6}
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8081/healthz >/dev/null"]
     depends_on:
+      redis:
+        condition: service_healthy
       mediamtx:
         condition: service_started
       turn-primary:
         condition: service_started
       turn-secondary:
         condition: service_started
+      auth-policy:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - control-net
@@ -164,8 +188,8 @@ services:
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_RTSP_PORT:-8554}:8554/tcp"
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_RTMP_PORT:-1935}:1935/tcp"
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_SRT_PORT:-8890}:8890/udp"
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_ICE_UDP_PORT:-8189}:8189/udp"
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_ICE_TCP_PORT:-8189}:8189/tcp"
+      - "${MEDIAMTX_ICE_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_ICE_UDP_PORT:-8189}:8189/udp"
+      - "${MEDIAMTX_ICE_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_ICE_TCP_PORT:-8189}:8189/tcp"
     volumes:
       - type: bind
         source: ../mediamtx/mediamtx.closed-network.yml
@@ -193,9 +217,9 @@ services:
       - --no-cli
       - --no-multicast-peers
     ports:
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/tcp"
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/udp"
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_RELAY_HOST_MIN_PORT:-49160}-${TURN_PRIMARY_RELAY_HOST_MAX_PORT:-49180}:49160-49180/udp"
+      - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/tcp"
+      - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/udp"
+      - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_RELAY_HOST_MIN_PORT:-49160}-${TURN_PRIMARY_RELAY_HOST_MAX_PORT:-49180}:49160-49180/udp"
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "timeout 2 sh -c '</dev/udp/127.0.0.1/3478' || exit 0"]
@@ -220,9 +244,9 @@ services:
       - --no-cli
       - --no-multicast-peers
     ports:
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/tcp"
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/udp"
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_RELAY_HOST_MIN_PORT:-49181}-${TURN_SECONDARY_RELAY_HOST_MAX_PORT:-49200}:49181-49200/udp"
+      - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/tcp"
+      - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/udp"
+      - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_RELAY_HOST_MIN_PORT:-49181}-${TURN_SECONDARY_RELAY_HOST_MAX_PORT:-49200}:49181-49200/udp"
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "timeout 2 sh -c '</dev/udp/127.0.0.1/3478' || exit 0"]
@@ -236,7 +260,7 @@ services:
       context: ../../gcs-dashboard
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
-        VITE_AUTH_API_BASE_URL: ${VITE_AUTH_API_BASE_URL:-/api/auth}
+        VITE_AUTH_API_BASE_URL: ${VITE_AUTH_API_BASE_URL:-/auth-policy/auth}
         VITE_STREAM_API_BASE_URL: ${VITE_STREAM_API_BASE_URL:-/media-control}
         VITE_HLS_BASE_URL: ${VITE_HLS_BASE_URL:-/hls}
         VITE_DEFAULT_STREAM_ID: ${VITE_DEFAULT_STREAM_ID:-raw/local/webcam}
@@ -259,10 +283,12 @@ services:
         target: /etc/nginx/nginx.conf
         read_only: true
     depends_on:
-      backend:
+      auth-policy:
         condition: service_healthy
       dashboard:
         condition: service_healthy
+      media-control:
+        condition: service_started
       mediamtx:
         condition: service_started
     healthcheck:

@@ -20,8 +20,10 @@ def test_m7_auth_policy_cutover_smoke_contract_check_passes():
 def test_m7_auth_policy_cutover_smoke_exercises_required_auth_endpoints():
     script = (REPO_ROOT / "scripts" / "m7_auth_policy_cutover_smoke.sh").read_text(encoding="utf-8")
 
+    assert "${auth_base}/signup" in script
     assert "${auth_base}/login" in script
     assert "${auth_base}/me" in script
     assert "${auth_base}/refresh" in script
     assert "${auth_base}/logout" in script
     assert "Origin: ${EDGE_BASE_URL}" in script
+    assert "Verified: signup, login, me, refresh rotation, logout" in script

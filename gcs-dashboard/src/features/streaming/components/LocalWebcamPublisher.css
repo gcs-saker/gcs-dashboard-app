@@ -111,6 +111,33 @@
   font-size: 13px;
 }
 
+.local-webcam-publisher__gps {
+  width: fit-content;
+  min-height: 28px;
+  margin: 0;
+  padding: 5px 9px;
+  border: 1px solid rgba(126, 180, 222, 0.35);
+  background: rgba(12, 26, 38, 0.72);
+  color: #a8bed2;
+  font-size: 12px;
+}
+
+.local-webcam-publisher__gps--active {
+  border-color: rgba(95, 202, 119, 0.56);
+  color: #9ce4a7;
+}
+
+.local-webcam-publisher__gps--requesting {
+  border-color: rgba(64, 173, 255, 0.78);
+  color: #dce8f4;
+}
+
+.local-webcam-publisher__gps--error,
+.local-webcam-publisher__gps--unavailable {
+  border-color: rgba(255, 129, 112, 0.72);
+  color: #ffb0a6;
+}
+
 .local-webcam-publisher__error {
   color: #ffb0a6;
 }

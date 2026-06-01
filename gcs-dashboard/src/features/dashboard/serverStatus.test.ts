@@ -8,17 +8,21 @@ describe("serverStatus", () => {
       .fn()
       .mockResolvedValueOnce(new Response("ok", { status: 200 }))
       .mockResolvedValueOnce(new Response("ready", { status: 200 }))
+      .mockResolvedValueOnce(new Response("media", { status: 200 }))
       .mockResolvedValueOnce(new Response("[]", { status: 200 }));
 
     const status = await fetchDashboardServerStatus(fetcher as unknown as typeof fetch);
 
     expect(fetcher).toHaveBeenNthCalledWith(1, "/healthz", { headers: undefined });
     expect(fetcher).toHaveBeenNthCalledWith(2, "/readyz", { headers: undefined });
-    expect(fetcher).toHaveBeenNthCalledWith(3, "/api/v1/streams", {
+    expect(fetcher).toHaveBeenNthCalledWith(3, "/media-control/healthz", { headers: undefined });
+    expect(fetcher).toHaveBeenNthCalledWith(4, "/api/v1/streams", {
       credentials: "include",
       headers: { Accept: "application/json" },
     });
-    expect(status.server).toBe("online");
+    expect(status.apiServer).toBe("online");
+    expect(status.authServer).toBe("online");
+    expect(status.signalingServer).toBe("online");
     expect(status.readiness).toBe("online");
     expect(status.streams).toBe("online");
     expect(status.latencyMs).toBeGreaterThan(0);
@@ -28,10 +32,10 @@ describe("serverStatus", () => {
   test("reports error when backend probes fail", async () => {
     const status = await fetchDashboardServerStatus(vi.fn().mockRejectedValue(new Error("offline")));
 
-    expect(status.server).toBe("error");
+    expect(status.apiServer).toBe("error");
     expect(status.readiness).toBe("error");
     expect(status.streams).toBe("error");
-    expect(serverHealthText(status.server)).toBe("오류");
+    expect(serverHealthText(status.apiServer)).toBe("오류");
   });
 
   test("surfaces stream status 401 so polling can stop and logout", async () => {
@@ -39,6 +43,7 @@ describe("serverStatus", () => {
       .fn()
       .mockResolvedValueOnce(new Response("ok", { status: 200 }))
       .mockResolvedValueOnce(new Response("ready", { status: 200 }))
+      .mockResolvedValueOnce(new Response("media", { status: 200 }))
       .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
       .mockResolvedValueOnce(Response.json({ detail: "refresh token required" }, { status: 401 }));
 
