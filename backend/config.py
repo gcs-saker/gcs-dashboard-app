@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import os
 
-DEFAULT_WEBRTC_STUN_URL = "stun:stun.l.google.com:19302"
+DEFAULT_WEBRTC_STUN_URL = "stun:localhost:3478"
 DEFAULT_ALLOWED_ORIGINS = (
     "http://localhost:5173",
     "http://localhost:5174",

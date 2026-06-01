@@ -48,7 +48,7 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["backend"]["environment"]["MQTT_HOST"] == "${MQTT_HOST:-mqtt}"
     assert services["backend"]["environment"]["MEDIAMTX_PUBLIC_WEBRTC_BASE_URL"].startswith("${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:")
     assert services["backend"]["environment"]["WEBRTC_STUN_URL"] == (
-        "${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
+        "${WEBRTC_STUN_URL:-stun:localhost:3478}"
     )
     assert services["backend"]["environment"]["WEBRTC_TURN_URL"] == "${WEBRTC_TURN_URL:-}"
     assert services["nginx"]["build"]["args"]["VITE_API_BASE_URL"] == "${VITE_API_BASE_URL:-/api}"
@@ -59,7 +59,7 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
         "${VITE_LOCAL_WEBCAM_WHIP_URL:"
     )
     assert services["nginx"]["build"]["args"]["VITE_WEBRTC_STUN_URL"] == (
-        "${VITE_WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
+        "${VITE_WEBRTC_STUN_URL:-stun:localhost:3478}"
     )
 
 
@@ -211,7 +211,7 @@ def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
     assert "ARG VITE_STREAM_API_BASE_URL=/api" in dockerfile
     assert "ARG VITE_HLS_BASE_URL=/hls" in dockerfile
     assert "ARG VITE_LOCAL_WEBCAM_WHIP_URL=https://localhost/webrtc/raw/local/webcam/whip" in dockerfile
-    assert "ARG VITE_WEBRTC_STUN_URL=stun:stun.l.google.com:19302" in dockerfile
+    assert "ARG VITE_WEBRTC_STUN_URL=stun:localhost:3478" in dockerfile
     assert "COPY --from=builder /app/dist /usr/share/nginx/html" in dockerfile
     assert "COPY nginx.conf /etc/nginx/nginx.conf" in dockerfile
     assert "EXPOSE 3000" in dockerfile

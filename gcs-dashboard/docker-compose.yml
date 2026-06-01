@@ -57,7 +57,7 @@ services:
       MEDIAMTX_PUBLIC_WEBRTC_BASE_URL: ${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8889}
       MEDIAMTX_PUBLIC_HLS_BASE_URL: ${MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://localhost:8888}
       MEDIAMTX_API_BASE_URL: ${MEDIAMTX_API_BASE_URL:-http://mediamtx:9997}
-      WEBRTC_STUN_URL: ${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}
+      WEBRTC_STUN_URL: ${WEBRTC_STUN_URL:-stun:localhost:3478}
       WEBRTC_TURN_URL: ${WEBRTC_TURN_URL:-}
       WEBRTC_TURN_USERNAME: ${WEBRTC_TURN_USERNAME:-}
       WEBRTC_TURN_PASSWORD: ${WEBRTC_TURN_PASSWORD:-}
@@ -128,7 +128,7 @@ services:
         VITE_HLS_BASE_URL: ${VITE_HLS_BASE_URL:-/hls}
         VITE_DEFAULT_STREAM_ID: ${VITE_DEFAULT_STREAM_ID:-CID001}
         VITE_LOCAL_WEBCAM_WHIP_URL: ${VITE_LOCAL_WEBCAM_WHIP_URL:-https://localhost/webrtc/raw/local/webcam/whip}
-        VITE_WEBRTC_STUN_URL: ${VITE_WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}
+        VITE_WEBRTC_STUN_URL: ${VITE_WEBRTC_STUN_URL:-stun:localhost:3478}
     container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-dashboard
     env_file: *service_env_files
     ports:

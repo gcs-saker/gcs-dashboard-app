@@ -29,7 +29,7 @@ def test_webrtc_ice_smoke_script_check_mode_passes_without_aiortc() -> None:
 
     assert result.returncode == 0, result.stderr
     assert "WebRTC ICE smoke check passed" in result.stdout
-    assert "stun:stun.l.google.com:19302" in result.stdout
+    assert "stun:localhost:3478" in result.stdout
 
 
 def test_webrtc_ice_smoke_parser_requires_answer_ice_data() -> None:
@@ -67,4 +67,4 @@ def test_webrtc_ice_smoke_script_documents_live_whep_ice_run() -> None:
     assert "--require-connected" in script
     assert "WHEP offer/answer" in doc
     assert "ICE candidate" in doc
-    assert "stun:stun.l.google.com:19302" in doc
+    assert "stun:localhost:3478" in doc

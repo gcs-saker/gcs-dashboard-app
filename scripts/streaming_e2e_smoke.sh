@@ -11,7 +11,7 @@ SMOKE_DURATION_SECONDS="${SMOKE_DURATION_SECONDS:-20}"
 WEBRTC_BASE_URL="${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:-http://127.0.0.1:8889}"
 HLS_BASE_URL="${MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://127.0.0.1:8888}"
 WEBRTC_ICE_SMOKE="${WEBRTC_ICE_SMOKE:-0}"
-WEBRTC_STUN_URL="${VITE_WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
+WEBRTC_STUN_URL="${VITE_WEBRTC_STUN_URL:-stun:localhost:3478}"
 WEBRTC_ICE_INSECURE="${WEBRTC_ICE_INSECURE:-0}"
 WEBRTC_REQUIRE_CONNECTED="${WEBRTC_REQUIRE_CONNECTED:-0}"
 BACKEND_PID=""
@@ -36,7 +36,7 @@ Environment:
   MEDIAMTX_PUBLIC_WEBRTC_BASE_URL Default: http://127.0.0.1:8889
   MEDIAMTX_PUBLIC_HLS_BASE_URL    Default: http://127.0.0.1:8888
   WEBRTC_ICE_SMOKE                Default: 0. Set 1 to run live WHEP offer/answer ICE smoke.
-  VITE_WEBRTC_STUN_URL            Default: stun:stun.l.google.com:19302
+  VITE_WEBRTC_STUN_URL            Default: stun:localhost:3478
   WEBRTC_ICE_INSECURE             Default: 0. Set 1 for self-signed HTTPS WHEP endpoints.
   WEBRTC_REQUIRE_CONNECTED        Default: 0. Set 1 to require ICE connected/completed.
 EOF
