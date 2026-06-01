@@ -1,4 +1,4 @@
-import { apiUrl, authUrl } from "../../config";
+import { authUrl } from "../../config";
 import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 import type { AuthenticatedUser, LoginRequest, SignupRequest, SignupResponse, TokenResponse } from "./types";
 
@@ -64,7 +64,7 @@ export async function logoutRequest(fetcher: typeof fetch = fetch): Promise<void
 }
 
 export async function signupRequest(payload: SignupRequest): Promise<SignupResponse> {
-  const response = await fetch(apiUrl("/auth/signup"), {
+  const response = await fetch(authUrl("/signup"), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },

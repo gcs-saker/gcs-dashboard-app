@@ -4,9 +4,11 @@ import { DEFAULT_DASHBOARD_STREAMS } from "./streamTypes";
 import {
   connectDeviceToStreamSlot,
   disconnectStreamSlot,
+  fetchTelemetryIndex,
   fetchStreamDeviceOptions,
   mergeStreamSlotsWithDevices,
   MOCK_STREAM_DEVICES,
+  preferredSelectedStreamId,
 } from "./streamDevices";
 
 describe("streamDevices", () => {
@@ -32,23 +34,40 @@ describe("streamDevices", () => {
   });
 
   test("fetches live stream devices from the backend registry", async () => {
-    const fetcher = vi.fn().mockResolvedValue(
-      Response.json([
-        {
-          streamId: "raw.drone-07.front",
-          path: "raw/drone-07/front",
-          prefix: "raw",
-          assetId: "drone-07",
-          sensorId: "front",
-          status: "online",
-          displayName: "Drone 07 Front",
-        },
-      ]),
-    );
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(
+        Response.json([
+          {
+            streamId: "raw.drone-07.front",
+            path: "raw/drone-07/front",
+            prefix: "raw",
+            assetId: "drone-07",
+            sensorId: "front",
+            status: "online",
+            displayName: "Drone 07 Front",
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        Response.json([
+          {
+            uuid: "raw.drone-07.front",
+            latitude: 35.8842,
+            longitude: 128.6123,
+            altitude: 81,
+            velocity: 3,
+            epochTime: "00:00:10",
+          },
+        ]),
+      );
 
     const devices = await fetchStreamDeviceOptions(fetcher as unknown as typeof fetch);
 
-    expect(fetcher).toHaveBeenCalledWith("/api/v1/streams", {
+    expect(fetcher).toHaveBeenNthCalledWith(1, "/api/v1/streams", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    expect(fetcher).toHaveBeenNthCalledWith(2, "/api/telemetry/all", {
       credentials: "include",
       headers: { Accept: "application/json" },
     });
@@ -58,14 +77,41 @@ describe("streamDevices", () => {
       streamPath: "raw.drone-07.front",
       status: "online",
       geometry: {
-        lat: 35.871435,
-        lng: 128.601445,
+        lat: 35.8842,
+        lng: 128.6123,
+        altitudeM: 81,
+        source: "telemetry",
       },
     });
   });
 
+  test("indexes telemetry by uuid for map geometry updates", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      Response.json([
+        {
+          uuid: "raw.local.webcam",
+          latitude: 35.9,
+          longitude: 128.62,
+          altitude: 24,
+          velocity: 0,
+          epochTime: "00:01:00",
+        },
+      ]),
+    );
+
+    const telemetry = await fetchTelemetryIndex(fetcher as unknown as typeof fetch);
+
+    expect(telemetry.get("raw.local.webcam")).toMatchObject({
+      latitude: 35.9,
+      longitude: 128.62,
+    });
+  });
+
   test("surfaces stream registry 401 as an auth failure", async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response("unauthorized", { status: 401 }));
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
+      .mockResolvedValueOnce(Response.json([]))
+      .mockResolvedValueOnce(new Response("refresh unauthorized", { status: 401 }));
 
     await expect(fetchStreamDeviceOptions(fetcher as unknown as typeof fetch)).rejects.toMatchObject({
       status: 401,
@@ -120,6 +166,36 @@ describe("streamDevices", () => {
     });
   });
 
+  test("updates an existing stream slot when live telemetry geometry arrives", () => {
+    const liveWebcamDevice = {
+      ...MOCK_STREAM_DEVICES[3],
+      status: "online" as const,
+      geometry: {
+        ...MOCK_STREAM_DEVICES[3].geometry,
+        lat: 35.91,
+        lng: 128.63,
+        altitudeM: 30,
+        source: "telemetry" as const,
+      },
+    };
+
+    const merged = mergeStreamSlotsWithDevices(DEFAULT_DASHBOARD_STREAMS, [liveWebcamDevice]);
+    const webcam = merged.find((stream) => stream.streamPath === "raw.local.webcam");
+
+    expect(webcam?.geometry).toMatchObject({
+      lat: 35.91,
+      lng: 128.63,
+      source: "telemetry",
+    });
+  });
+
+  test("marks connected stream slots offline when registry polling returns no devices", () => {
+    const merged = mergeStreamSlotsWithDevices(DEFAULT_DASHBOARD_STREAMS, []);
+
+    expect(merged).toHaveLength(DEFAULT_DASHBOARD_STREAMS.length);
+    expect(merged.every((stream) => stream.status === "offline")).toBe(true);
+  });
+
   test("does not append duplicate stream slots across registry polling", () => {
     const firstMerge = mergeStreamSlotsWithDevices(DEFAULT_DASHBOARD_STREAMS, [
       {
@@ -137,5 +213,30 @@ describe("streamDevices", () => {
 
     expect(secondMerge.filter((stream) => stream.streamPath === "raw.local.webcam")).toHaveLength(1);
     expect(secondMerge).toHaveLength(firstMerge.length);
+  });
+
+  test("prefers the live local webcam stream when the selected sample stream is not in the registry", () => {
+    const liveWebcamDevice = {
+      ...MOCK_STREAM_DEVICES[3],
+      status: "online" as const,
+    };
+    const merged = mergeStreamSlotsWithDevices(DEFAULT_DASHBOARD_STREAMS, [liveWebcamDevice]);
+
+    expect(preferredSelectedStreamId("raw.sample.front", merged, [liveWebcamDevice])).toBe("raw.local.webcam");
+  });
+
+  test("keeps the current selection when that stream is online in the registry", () => {
+    const liveSampleDevice = {
+      ...MOCK_STREAM_DEVICES[0],
+      status: "online" as const,
+    };
+    const liveWebcamDevice = {
+      ...MOCK_STREAM_DEVICES[3],
+      status: "online" as const,
+    };
+
+    expect(
+      preferredSelectedStreamId("raw.sample.front", DEFAULT_DASHBOARD_STREAMS, [liveSampleDevice, liveWebcamDevice]),
+    ).toBe("raw.sample.front");
   });
 });

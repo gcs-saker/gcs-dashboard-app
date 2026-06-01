@@ -1,5 +1,6 @@
 from pathlib import Path
 import subprocess
+import sys
 
 import yaml
 
@@ -22,7 +23,7 @@ def load_yaml(path: Path) -> dict:
 
 def test_docker_env_check_script_passes_static_contracts() -> None:
     result = subprocess.run(
-        [str(SCRIPT)],
+        [sys.executable, str(SCRIPT)],
         check=False,
         capture_output=True,
         text=True,
@@ -83,6 +84,9 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
     assert services["media-control"]["environment"]["AUTH_POLICY_BASE_URL"] == (
         "${AUTH_POLICY_BASE_URL:-http://auth-policy:8080}"
     )
+    assert services["auth-policy"]["environment"]["AUTH_POLICY_SIGNUP_INVITES"] == (
+        "${AUTH_POLICY_SIGNUP_INVITES:-A4AI01:1:co-a}"
+    )
     assert services["media-control"]["environment"]["MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID"] == (
         "${MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID:-co-a}"
     )
@@ -95,6 +99,46 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
     assert services["media-control"]["environment"]["MEDIA_CONTROL_PUBLIC_HLS_BASE_URL"] == (
         "${MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://localhost:8080/hls}"
     )
+    assert services["media-control"]["environment"]["MEDIA_CONTROL_STUN_URL"] == (
+        "${MEDIA_CONTROL_STUN_URL:-stun:localhost:3478}"
+    )
+    assert services["media-control"]["environment"]["MEDIA_CONTROL_TURN_PRIMARY_URL"] == (
+        "${MEDIA_CONTROL_TURN_PRIMARY_URL:-turn:localhost:3478?transport=udp}"
+    )
+    assert services["media-control"]["environment"]["MEDIA_CONTROL_TURN_SECONDARY_URL"] == (
+        "${MEDIA_CONTROL_TURN_SECONDARY_URL:-turn:localhost:3479?transport=udp}"
+    )
+
+
+def test_single_node_keeps_management_ports_local_but_allows_webrtc_ice_public_bind_override() -> None:
+    compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
+    services = compose["services"]
+
+    mediamtx_ports = services["mediamtx"]["ports"]
+    turn_primary_ports = services["turn-primary"]["ports"]
+
+    assert "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_RTSP_PORT:-8554}:8554/tcp" in mediamtx_ports
+    assert "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_RTMP_PORT:-1935}:1935/tcp" in mediamtx_ports
+    assert "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_SRT_PORT:-8890}:8890/udp" in mediamtx_ports
+    assert "${MEDIAMTX_ICE_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_ICE_UDP_PORT:-8189}:8189/udp" in mediamtx_ports
+    assert "${MEDIAMTX_ICE_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_ICE_TCP_PORT:-8189}:8189/tcp" in mediamtx_ports
+    assert "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/tcp" in turn_primary_ports
+    assert "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/udp" in turn_primary_ports
+    assert (
+        "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_RELAY_HOST_MIN_PORT:-49160}-"
+        "${TURN_PRIMARY_RELAY_HOST_MAX_PORT:-49180}:49160-49180/udp"
+    ) in turn_primary_ports
+
+
+def test_single_node_edge_depends_on_active_cutover_services() -> None:
+    compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
+    edge_depends_on = compose["services"]["edge"]["depends_on"]
+
+    assert edge_depends_on["auth-policy"]["condition"] == "service_healthy"
+    assert edge_depends_on["dashboard"]["condition"] == "service_healthy"
+    assert edge_depends_on["media-control"]["condition"] == "service_started"
+    assert edge_depends_on["mediamtx"]["condition"] == "service_started"
+    assert "backend" not in edge_depends_on
 
 
 def test_compose_publishes_only_edge_https_by_default_for_external_ingress() -> None:

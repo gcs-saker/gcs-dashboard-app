@@ -91,6 +91,25 @@ func TestStreamListResponse(t *testing.T) {
 	}
 }
 
+func TestLegacyStreamStatusResponse(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	request := httptest.NewRequest(http.MethodGet, "/stream/status", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", recorder.Code)
+	}
+	var payload map[string]string
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload["stream"] != "ready" {
+		t.Fatalf("unexpected payload %#v", payload)
+	}
+}
+
 func TestDashboardStreamListContract(t *testing.T) {
 	path, _ := domain.NewStreamPath("raw/local/webcam")
 	server := newTestServer(

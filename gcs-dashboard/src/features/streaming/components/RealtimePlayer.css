@@ -11,6 +11,11 @@
   color: #dce8f4;
 }
 
+.realtime-player:has([data-audio-active="true"]) {
+  border-color: rgba(86, 211, 124, 0.95);
+  box-shadow: inset 0 0 0 1px rgba(86, 211, 124, 0.65);
+}
+
 .realtime-player > .webrtc-player,
 .realtime-player > .hls-fallback-player {
   height: 100%;

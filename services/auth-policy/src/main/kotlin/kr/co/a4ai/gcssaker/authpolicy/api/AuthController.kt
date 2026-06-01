@@ -3,9 +3,16 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.auth0.jwt.exceptions.JWTVerificationException
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.validation.Valid
+import jakarta.validation.constraints.Email
+import jakarta.validation.constraints.Size
 import kr.co.a4ai.gcssaker.authpolicy.AuthRuntimeSettings
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuthRegistrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
+import kr.co.a4ai.gcssaker.authpolicy.domain.SignupCommand
+import kr.co.a4ai.gcssaker.authpolicy.domain.SignupRejectedException
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseCookie
@@ -23,6 +30,26 @@ import java.time.Duration
 data class LoginRequest(
     val username: String,
     val password: String,
+)
+
+data class SignupRequest(
+    @field:Size(min = 3, max = 50)
+    val username: String,
+    @field:Email
+    val email: String,
+    @field:Size(min = 8, max = 128)
+    val password: String,
+    val inviteCode: String,
+    val role: String = "viewer",
+)
+
+data class UserResponse(
+    val id: Int,
+    val username: String,
+    val email: String,
+    @get:JsonProperty("company_id")
+    val companyId: Int,
+    val role: String,
 )
 
 data class TokenResponse(
@@ -45,8 +72,35 @@ data class CurrentUserResponse(
 @RequestMapping("/auth")
 class AuthController(
     private val sessions: AuthSessionService,
+    private val registration: AuthRegistrationService,
     private val settings: AuthRuntimeSettings,
 ) {
+    @PostMapping("/signup")
+    fun signup(
+        @Valid
+        @RequestBody request: SignupRequest,
+        @RequestHeader(HttpHeaders.ORIGIN, required = false) origin: String?,
+        @RequestHeader(HttpHeaders.REFERER, required = false) referer: String?,
+    ): ResponseEntity<UserResponse> {
+        assertTrustedOrigin(origin, referer)
+        val user = try {
+            registration.signup(
+                SignupCommand(
+                    username = request.username,
+                    email = request.email,
+                    password = request.password,
+                    inviteCode = request.inviteCode,
+                    role = request.role,
+                ),
+            )
+        } catch (exc: SignupRejectedException) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, exc.message ?: "signup rejected")
+        } catch (exc: IllegalArgumentException) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, exc.message ?: "invalid signup request")
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(userResponse(user))
+    }
+
     @PostMapping("/login")
     fun login(
         @RequestBody request: LoginRequest,
@@ -100,10 +154,16 @@ class AuthController(
 
     @PostMapping("/logout")
     fun logout(
+        servletRequest: HttpServletRequest,
         @RequestHeader(HttpHeaders.ORIGIN, required = false) origin: String?,
         @RequestHeader(HttpHeaders.REFERER, required = false) referer: String?,
     ): ResponseEntity<Void> {
         assertTrustedOrigin(origin, referer)
+        servletRequest.cookies
+            ?.firstOrNull { it.name == settings.refreshCookieName }
+            ?.value
+            ?.takeIf { it.isNotBlank() }
+            ?.let(sessions::revokeRefreshToken)
         return ResponseEntity.noContent()
             .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
             .build()
@@ -125,6 +185,15 @@ class AuthController(
                     role = principal.role.name.lowercase(),
                 ),
             )
+
+    private fun userResponse(user: AuthUser): UserResponse =
+        UserResponse(
+            id = user.id,
+            username = user.username,
+            email = user.email,
+            companyId = user.companyId,
+            role = user.role.name.lowercase(),
+        )
 
     private fun refreshCookie(refreshToken: String): ResponseCookie =
         ResponseCookie.from(settings.refreshCookieName, refreshToken)

@@ -41,6 +41,10 @@ Nginx edge에서는 `/media-control/` prefix로 이 서비스를 노출한다. D
 
 stream의 발행 group은 `MEDIA_CONTROL_STREAM_GROUP_MAP`의 `path=group` 매핑을 우선 사용하고, 매핑이 없으면 `MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID`를 사용한다.
 
+## ICE URL
+
+외부 브라우저에 전달하는 ICE 후보 URL은 `MEDIA_CONTROL_STUN_URL`, `MEDIA_CONTROL_TURN_PRIMARY_URL`, `MEDIA_CONTROL_TURN_SECONDARY_URL`로 주입한다. 서버 운영 환경에서는 Docker 내부 hostname이 아니라 public DNS 또는 폐쇄망 VIP를 사용해야 한다.
+
 ## 테스트
 
 ```bash

@@ -48,7 +48,7 @@ class StreamPolicyControllerTest {
         tokenService,
     )
     private val controller = StreamPolicyController(
-        sessions,
+        BearerPrincipalResolver(sessions),
         GroupPolicyService(
             listOf(
                 OrganizationUnit(GroupId("bn-1"), "1 Battalion", GroupType.BATTALION),

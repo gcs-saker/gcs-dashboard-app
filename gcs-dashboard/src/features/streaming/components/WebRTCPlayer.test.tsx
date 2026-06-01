@@ -46,6 +46,13 @@ class MockPeerConnection {
     this.iceGatheringState = "complete";
     this.onicegatheringstatechange?.call(this as unknown as RTCPeerConnection, new Event("icegatheringstatechange"));
   }
+
+  emitRemoteTrack(streams: MediaStream[]) {
+    this.ontrack?.call(this as unknown as RTCPeerConnection, {
+      streams,
+      track: { id: "video-track-1" },
+    } as unknown as RTCTrackEvent);
+  }
 }
 
 let peerConnections: MockPeerConnection[] = [];
@@ -69,6 +76,18 @@ beforeEach(() => {
     }),
   );
   vi.stubGlobal("fetch", vi.fn(async () => successfulWhepResponse));
+  vi.stubGlobal(
+    "MediaStream",
+    vi.fn(function MockMediaStream() {
+      return {
+        addTrack: vi.fn(),
+      };
+    }),
+  );
+  Object.defineProperty(HTMLMediaElement.prototype, "play", {
+    configurable: true,
+    value: vi.fn(async () => undefined),
+  });
 });
 
 afterEach(() => {
@@ -99,7 +118,7 @@ describe("WebRTCPlayer", () => {
     expect(peerConnections[0].addTransceiver).toHaveBeenCalledWith("video", { direction: "recvonly" });
     expect(peerConnections[0].addTransceiver).toHaveBeenCalledWith("audio", { direction: "recvonly" });
     expect(RTCPeerConnection).toHaveBeenCalledWith({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      iceServers: [{ urls: "stun:localhost:3478" }],
     });
     expect(peerConnections[0].setRemoteDescription).toHaveBeenCalledWith({
       type: "answer",
@@ -202,6 +221,58 @@ describe("WebRTCPlayer", () => {
     );
   });
 
+  test("attaches remote WHEP tracks even when the track event has no stream", async () => {
+    render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" />);
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    act(() => {
+      peerConnections[0].emitRemoteTrack([]);
+    });
+
+    const video = screen.getByTestId("webrtc-video") as HTMLVideoElement;
+    expect(MediaStream).toHaveBeenCalled();
+    expect(video.srcObject).toBeTruthy();
+  });
+
+  test("reports audio activity when the remote stream includes a live audio track", async () => {
+    const onStatusChange = vi.fn();
+    const audioTrack = {
+      enabled: true,
+      muted: false,
+      readyState: "live",
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    const remoteStream = {
+      getAudioTracks: () => [audioTrack],
+    } as unknown as MediaStream;
+
+    render(
+      <WebRTCPlayer
+        onStatusChange={onStatusChange}
+        whepUrl="https://media.example.test/raw/sample/front/whep"
+      />,
+    );
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    act(() => {
+      peerConnections[0].emitRemoteTrack([remoteStream]);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-active", "true");
+    });
+    expect(screen.getByText("audio")).toBeInTheDocument();
+    expect(onStatusChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        hasAudioTrack: true,
+        isAudioActive: true,
+      }),
+    );
+  });
+
   test("renders offline state without creating a peer connection", () => {
     render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" isOnline={false} />);
 
@@ -242,6 +313,26 @@ describe("WebRTCPlayer", () => {
     });
 
     await waitFor(() => expect(fetch).toHaveBeenCalled());
+  });
+
+  test("posts the WHEP offer after a bounded ICE gathering wait", async () => {
+    initialIceGatheringState = "gathering";
+
+    render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" />);
+
+    await waitFor(() => expect(peerConnections[0].setLocalDescription).toHaveBeenCalled());
+    expect(fetch).not.toHaveBeenCalledWith(
+      "https://media.example.test/raw/sample/front/whep",
+      expect.objectContaining({ method: "POST" }),
+    );
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        "https://media.example.test/raw/sample/front/whep",
+        expect.objectContaining({ method: "POST" }),
+      ),
+      { timeout: 3500 },
+    );
   });
 
   test("renders an error state when the ICE connection fails", async () => {

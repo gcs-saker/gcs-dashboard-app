@@ -62,6 +62,6 @@ describe("config API URL helpers", () => {
   });
 
   test("declares a STUN server for browser ICE candidate gathering", () => {
-    expect(WEBRTC_ICE_SERVERS).toEqual([{ urls: "stun:stun.l.google.com:19302" }]);
+    expect(WEBRTC_ICE_SERVERS).toEqual([{ urls: "stun:localhost:3478" }]);
   });
 });
