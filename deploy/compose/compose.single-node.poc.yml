@@ -158,10 +158,16 @@ services:
       MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID: ${MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID:-co-a}
       MEDIA_CONTROL_STREAM_GROUP_MAP: ${MEDIA_CONTROL_STREAM_GROUP_MAP:-raw/sample/front=co-a,raw/local/webcam=co-a}
       MEDIA_CONTROL_LISTEN_ADDR: :8081
+      MEDIA_CONTROL_REDIS_ADDR: ${MEDIA_CONTROL_REDIS_ADDR:-redis:6379}
+      MEDIA_CONTROL_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+      MEDIA_CONTROL_STREAM_CACHE_TTL_SECONDS: ${MEDIA_CONTROL_STREAM_CACHE_TTL_SECONDS:-1}
+      MEDIA_CONTROL_STREAM_PRESENCE_TTL_SECONDS: ${MEDIA_CONTROL_STREAM_PRESENCE_TTL_SECONDS:-6}
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8081/healthz >/dev/null"]
     depends_on:
+      redis:
+        condition: service_healthy
       mediamtx:
         condition: service_started
       turn-primary:
