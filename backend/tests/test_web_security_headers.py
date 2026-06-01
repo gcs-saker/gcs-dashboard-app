@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from api.contracts import AuthProtocol
 from main import app
 
 
@@ -23,7 +24,7 @@ def test_cors_only_allows_configured_origins() -> None:
             headers={
                 "Origin": "http://localhost:5173",
                 "Access-Control-Request-Method": "GET",
-                "Access-Control-Request-Headers": "Authorization",
+                "Access-Control-Request-Headers": f"Authorization, {AuthProtocol.CSRF_HEADER_NAME}",
             },
         )
         denied_response = client.options(
@@ -37,4 +38,5 @@ def test_cors_only_allows_configured_origins() -> None:
 
     assert allowed_response.status_code == 200
     assert allowed_response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert AuthProtocol.CSRF_HEADER_NAME in allowed_response.headers["access-control-allow-headers"]
     assert "access-control-allow-origin" not in denied_response.headers

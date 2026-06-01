@@ -19,10 +19,13 @@ class AuthErrorDetails:
     REFRESH_TOKEN_REQUIRED: Final = "refresh token required"
     INVALID_REFRESH_SESSION: Final = "invalid refresh session"
     UNTRUSTED_REQUEST_ORIGIN: Final = "untrusted request origin"
+    CSRF_HEADER_REQUIRED: Final = "csrf header required"
 
 
 class AuthProtocol:
     BEARER_TOKEN_TYPE: Final = "bearer"
+    CSRF_HEADER_NAME: Final = "X-GCS-CSRF"
+    CSRF_HEADER_VALUE: Final = "same-origin"
 
 
 class RootRoutes:
@@ -48,6 +51,7 @@ class SecurityHeaderNames:
     AUTHORIZATION: Final = "Authorization"
     CONTENT_TYPE: Final = "Content-Type"
     ACCEPT: Final = "Accept"
+    X_GCS_CSRF: Final = AuthProtocol.CSRF_HEADER_NAME
     X_CONTENT_TYPE_OPTIONS: Final = "X-Content-Type-Options"
     X_FRAME_OPTIONS: Final = "X-Frame-Options"
     REFERRER_POLICY: Final = "Referrer-Policy"

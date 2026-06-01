@@ -32,6 +32,7 @@ app.add_middleware(
         SecurityHeaderNames.AUTHORIZATION,
         SecurityHeaderNames.CONTENT_TYPE,
         SecurityHeaderNames.ACCEPT,
+        SecurityHeaderNames.X_GCS_CSRF,
     ],
 )
 
