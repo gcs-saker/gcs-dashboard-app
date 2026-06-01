@@ -3,11 +3,21 @@ import type { Dispatch, RefObject } from "react";
 
 import { WEBRTC_ICE_SERVERS } from "../../../config";
 import { loadWebRtcIceServers } from "../iceServers";
-import type { WebRTCPlaybackSnapshot, WebRTCPlaybackStatus } from "../types";
+import type { WebRTCPlaybackSnapshot, WebRTCPlaybackStatus, WebRTCSignalingTimings } from "../types";
 
 type PeerConnectionFactory = () => RTCPeerConnection;
+type SignalingTimingKey = keyof WebRTCSignalingTimings;
+type SignalingTimingRecorder = (stage: SignalingTimingKey) => void;
 
 const ICE_GATHERING_TIMEOUT_MS = 2500;
+const EMPTY_SIGNALING_TIMINGS: WebRTCSignalingTimings = {
+  iceServersLoadedMs: null,
+  offerCreatedMs: null,
+  localDescriptionSetMs: null,
+  iceGatheringDoneMs: null,
+  whepResponseMs: null,
+  remoteDescriptionSetMs: null,
+};
 
 interface UseWhepPlaybackOptions {
   whepUrl: string | null;
@@ -24,7 +34,8 @@ type PlaybackAction =
   | { type: "error"; message: string; connectionState?: RTCPeerConnectionState; iceConnectionState?: RTCIceConnectionState }
   | { type: "connection"; connectionState: RTCPeerConnectionState; iceConnectionState: RTCIceConnectionState }
   | { type: "first-frame"; latencyMs: number }
-  | { type: "audio-state"; hasAudioTrack: boolean; isAudioActive: boolean };
+  | { type: "audio-state"; hasAudioTrack: boolean; isAudioActive: boolean }
+  | { type: "signaling-timing"; stage: SignalingTimingKey; latencyMs: number };
 
 const initialPlaybackState: WebRTCPlaybackSnapshot = {
   status: "idle",
@@ -35,6 +46,7 @@ const initialPlaybackState: WebRTCPlaybackSnapshot = {
   hasAudioTrack: false,
   isAudioActive: false,
   firstFrameLatencyMs: null,
+  signalingTimings: EMPTY_SIGNALING_TIMINGS,
 };
 
 export function useWhepPlayback({
@@ -64,6 +76,10 @@ export function useWhepPlayback({
     let disposed = false;
     let stopAudioMonitor: (() => void) | null = null;
     const startedAt = performance.now();
+    const recordTiming: SignalingTimingRecorder = (stage) => {
+      if (disposed || abortController.signal.aborted) return;
+      dispatch({ type: "signaling-timing", stage, latencyMs: performance.now() - startedAt });
+    };
 
     const videoElement = videoRef.current;
     const handleFirstFrame = () => {
@@ -92,6 +108,7 @@ export function useWhepPlayback({
       reportWhepDebug("start", resolvedWhepUrl);
       const iceServers = peerConnectionFactory ? WEBRTC_ICE_SERVERS : await loadWebRtcIceServers(fetcher);
       if (disposed || abortController.signal.aborted) return;
+      recordTiming("iceServersLoadedMs");
       reportWhepDebug("ice-loaded", resolvedWhepUrl, { count: String(iceServers.length) });
 
       try {
@@ -149,7 +166,7 @@ export function useWhepPlayback({
         }
       };
 
-      await connectWithWhep(peerConnection, resolvedWhepUrl, fetcher, abortController.signal);
+      await connectWithWhep(peerConnection, resolvedWhepUrl, fetcher, abortController.signal, recordTiming);
     }
 
     return () => {
@@ -183,6 +200,7 @@ function playbackReducer(
         hasAudioTrack: false,
         isAudioActive: false,
         firstFrameLatencyMs: null,
+        signalingTimings: EMPTY_SIGNALING_TIMINGS,
       };
     case "playing":
       return {
@@ -194,6 +212,7 @@ function playbackReducer(
         hasAudioTrack: state.hasAudioTrack,
         isAudioActive: state.isAudioActive,
         firstFrameLatencyMs: state.firstFrameLatencyMs,
+        signalingTimings: state.signalingTimings,
       };
     case "offline":
       return {
@@ -205,6 +224,7 @@ function playbackReducer(
         hasAudioTrack: false,
         isAudioActive: false,
         firstFrameLatencyMs: null,
+        signalingTimings: EMPTY_SIGNALING_TIMINGS,
       };
     case "unsupported":
       return {
@@ -216,6 +236,7 @@ function playbackReducer(
         hasAudioTrack: false,
         isAudioActive: false,
         firstFrameLatencyMs: null,
+        signalingTimings: state.signalingTimings,
       };
     case "error":
       return {
@@ -227,6 +248,7 @@ function playbackReducer(
         hasAudioTrack: state.hasAudioTrack,
         isAudioActive: state.isAudioActive,
         firstFrameLatencyMs: state.firstFrameLatencyMs,
+        signalingTimings: state.signalingTimings,
       };
     case "connection":
       return {
@@ -246,6 +268,14 @@ function playbackReducer(
         ...state,
         hasAudioTrack: action.hasAudioTrack,
         isAudioActive: action.isAudioActive,
+      };
+    case "signaling-timing":
+      return {
+        ...state,
+        signalingTimings: {
+          ...state.signalingTimings,
+          [action.stage]: Math.max(0, Math.round(action.latencyMs)),
+        },
       };
   }
 }
@@ -340,12 +370,16 @@ async function connectWithWhep(
   whepUrl: string,
   fetcher: typeof fetch,
   signal: AbortSignal,
+  recordTiming: SignalingTimingRecorder,
 ): Promise<void> {
   const offer = await peerConnection.createOffer();
+  recordTiming("offerCreatedMs");
   reportWhepDebug("offer-created", whepUrl);
   await peerConnection.setLocalDescription(offer);
+  recordTiming("localDescriptionSetMs");
   reportWhepDebug("local-description-set", whepUrl);
   await waitForIceGatheringComplete(peerConnection, signal, ICE_GATHERING_TIMEOUT_MS);
+  recordTiming("iceGatheringDoneMs");
   reportWhepDebug("ice-wait-done", whepUrl, { state: peerConnection.iceGatheringState });
 
   if (signal.aborted) {
@@ -369,6 +403,7 @@ async function connectWithWhep(
     body: localDescription.sdp,
     signal,
   });
+  recordTiming("whepResponseMs");
   reportWhepDebug("whep-post-response", whepUrl, { status: String(response.status) });
 
   if (!response.ok) {
@@ -377,6 +412,7 @@ async function connectWithWhep(
 
   const answerSdp = await response.text();
   await peerConnection.setRemoteDescription({ type: "answer", sdp: answerSdp });
+  recordTiming("remoteDescriptionSetMs");
   reportWhepDebug("remote-description-set", whepUrl, { candidates: String(countSdpCandidates(answerSdp)) });
 }
 

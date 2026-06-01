@@ -51,6 +51,14 @@ function snapshot(overrides: Partial<WebRTCPlaybackSnapshot>): WebRTCPlaybackSna
     hasAudioTrack: false,
     isAudioActive: false,
     firstFrameLatencyMs: null,
+    signalingTimings: {
+      iceServersLoadedMs: null,
+      offerCreatedMs: null,
+      localDescriptionSetMs: null,
+      iceGatheringDoneMs: null,
+      whepResponseMs: null,
+      remoteDescriptionSetMs: null,
+    },
     ...overrides,
   };
 }

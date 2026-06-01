@@ -34,19 +34,21 @@ export function WebRTCPlayer({
     hasAudioTrack,
     isAudioActive,
     firstFrameLatencyMs,
+    signalingTimings,
   } = playback;
 
   useEffect(() => {
-    onStatusChange?.({
-      status,
-      connectionState,
-      iceConnectionState,
-      errorMessage,
-      hasVideoFrame,
-      hasAudioTrack,
-      isAudioActive,
-      firstFrameLatencyMs,
-    });
+      onStatusChange?.({
+        status,
+        connectionState,
+        iceConnectionState,
+        errorMessage,
+        hasVideoFrame,
+        hasAudioTrack,
+        isAudioActive,
+        firstFrameLatencyMs,
+        signalingTimings,
+      });
   }, [
     connectionState,
     errorMessage,
@@ -56,6 +58,7 @@ export function WebRTCPlayer({
     iceConnectionState,
     isAudioActive,
     onStatusChange,
+    signalingTimings,
     status,
   ]);
 
@@ -68,6 +71,8 @@ export function WebRTCPlayer({
       data-has-audio-track={hasAudioTrack ? "true" : "false"}
       data-audio-active={isAudioActive ? "true" : "false"}
       data-first-frame-latency-ms={firstFrameLatencyMs ?? ""}
+      data-whep-response-ms={signalingTimings.whepResponseMs ?? ""}
+      data-ice-gathering-done-ms={signalingTimings.iceGatheringDoneMs ?? ""}
     >
       <video
         ref={videoRef}
@@ -92,6 +97,9 @@ export function WebRTCPlayer({
         <span className="webrtc-player__state">ice: {iceConnectionState}</span>
         {firstFrameLatencyMs !== null ? (
           <span className="webrtc-player__state">first frame: {firstFrameLatencyMs}ms</span>
+        ) : null}
+        {signalingTimings.whepResponseMs !== null ? (
+          <span className="webrtc-player__state">whep: {signalingTimings.whepResponseMs}ms</span>
         ) : null}
         {hasAudioTrack ? (
           <span className={`webrtc-player__audio ${isAudioActive ? "is-active" : ""}`}>

@@ -69,6 +69,8 @@ export function RealtimePlayer({
               webrtcRetryAttempt,
               hasAudioTrack: snapshot.hasAudioTrack,
               isAudioActive: snapshot.isAudioActive,
+              webrtcFirstFrameLatencyMs: snapshot.firstFrameLatencyMs,
+              webrtcWhepResponseMs: snapshot.signalingTimings.whepResponseMs,
             });
 
             if (snapshot.status === "playing") {
