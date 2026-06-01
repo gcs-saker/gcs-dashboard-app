@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -128,6 +128,11 @@ describe("DashboardMvp", () => {
 
     expect(screen.getAllByText("AI 감지 overlay / raw.sample.rear")).toHaveLength(2);
     expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 기본 좌표 84deg / FOV 82deg");
+    const telemetryPanel = screen.getByLabelText("지오메트리 / 텔레메트리");
+    expect(within(telemetryPanel).getByText("raw.sample.rear")).toBeInTheDocument();
+    expect(within(telemetryPanel).getByText("35.866900")).toBeInTheDocument();
+    expect(within(telemetryPanel).getByText("128.593100")).toBeInTheDocument();
+    expect(within(telemetryPanel).getByText("기본 좌표")).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "스트리밍 3 장비 연결" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "변경 취소" }));
   });

@@ -189,6 +189,13 @@ describe("streamDevices", () => {
     });
   });
 
+  test("marks connected stream slots offline when registry polling returns no devices", () => {
+    const merged = mergeStreamSlotsWithDevices(DEFAULT_DASHBOARD_STREAMS, []);
+
+    expect(merged).toHaveLength(DEFAULT_DASHBOARD_STREAMS.length);
+    expect(merged.every((stream) => stream.status === "offline")).toBe(true);
+  });
+
   test("does not append duplicate stream slots across registry polling", () => {
     const firstMerge = mergeStreamSlotsWithDevices(DEFAULT_DASHBOARD_STREAMS, [
       {

@@ -33,7 +33,7 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
     const refreshStreams = async (): Promise<void> => {
       try {
         const devices = await fetchStreamDeviceOptions();
-        if (!isMounted || devices.length === 0) return;
+        if (!isMounted) return;
         setStreamDevices(devices);
         setStreams((current) => {
           const merged = mergeStreamSlotsWithDevices(current, devices);

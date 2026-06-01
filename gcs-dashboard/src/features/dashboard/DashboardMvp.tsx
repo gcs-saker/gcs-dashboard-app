@@ -21,20 +21,58 @@ import {
 import "./DashboardMvp.css";
 import { getMapFocusForStream } from "./mapFocus";
 import { type StreamDeviceOption } from "./streamDevices";
+import {
+  getDashboardStreamStatusText,
+  type DashboardGeometrySource,
+  type DashboardStreamSlot,
+} from "./streamTypes";
 import { useDashboardStreams } from "./hooks/useDashboardStreams";
 
 const TacticalLeafletMap = lazy(() =>
   import("./map/TacticalLeafletMap").then((module) => ({ default: module.TacticalLeafletMap })),
 );
 
-const telemetryRows = [
-  ["위도", "35.871435"],
-  ["경도", "128.601445"],
-  ["고도", "120 m AGL"],
-  ["속도", "36 km/h"],
-  ["배터리", "78%"],
-  ["링크", "95% / 42 ms"],
-];
+type TelemetryRow = [label: string, value: string];
+
+function geometrySourceLabel(source: DashboardGeometrySource | undefined): string {
+  switch (source) {
+    case "telemetry":
+      return "GPS 텔레메트리";
+    case "registry":
+      return "장비 등록값";
+    case "device":
+      return "장비 좌표";
+    case "mock":
+    default:
+      return "기본 좌표";
+  }
+}
+
+function telemetryRowsForStream(stream: DashboardStreamSlot): TelemetryRow[] {
+  const geometry = stream.geometry;
+  const streamName = stream.streamPath ?? stream.id;
+  if (!geometry) {
+    return [
+      ["스트림", streamName],
+      ["상태", getDashboardStreamStatusText(stream.status)],
+      ["좌표", "대기"],
+      ["고도", "대기"],
+      ["방위", "대기"],
+      ["좌표소스", "없음"],
+    ];
+  }
+
+  return [
+    ["스트림", streamName],
+    ["상태", getDashboardStreamStatusText(stream.status)],
+    ["위도", geometry.lat.toFixed(6)],
+    ["경도", geometry.lng.toFixed(6)],
+    ["고도", `${geometry.altitudeM.toFixed(1)} m`],
+    ["자세", `H ${geometry.headingDeg}deg / P ${geometry.pitchDeg}deg`],
+    ["FOV", `${geometry.fovDeg}deg`],
+    ["좌표소스", geometrySourceLabel(geometry.source)],
+  ];
+}
 
 export function DashboardMvp() {
   const { currentUser, logout } = useAuth();
@@ -65,6 +103,7 @@ export function DashboardMvp() {
     toggleStreamAiMode: toggleStreamAiModeState,
   } = useDashboardStreams(handleAuthFailure);
   const mapFocus = useMemo(() => getMapFocusForStream(selectedStream), [selectedStream]);
+  const telemetryRows = useMemo(() => telemetryRowsForStream(selectedStream), [selectedStream]);
   const assetTreeRoot = useMemo(() => mergeAssetTreeWithStreams(DEFAULT_ASSET_TREE, streams), [streams]);
 
   const isWidgetPinned = (widgetId: DashboardWidgetId): boolean =>
