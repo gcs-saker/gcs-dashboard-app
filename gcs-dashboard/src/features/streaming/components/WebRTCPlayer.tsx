@@ -18,13 +18,23 @@ export function WebRTCPlayer({
   title = "WebRTC stream",
   isOnline = true,
   autoPlay = true,
-  muted = true,
-  controls = false,
+  muted = false,
+  controls = true,
   className,
   onStatusChange,
 }: WebRTCPlayerProps) {
   const playback = useWhepPlayback({ whepUrl, isOnline });
-  const { videoRef, status, connectionState, iceConnectionState, errorMessage, hasVideoFrame, firstFrameLatencyMs } = playback;
+  const {
+    videoRef,
+    status,
+    connectionState,
+    iceConnectionState,
+    errorMessage,
+    hasVideoFrame,
+    hasAudioTrack,
+    isAudioActive,
+    firstFrameLatencyMs,
+  } = playback;
 
   useEffect(() => {
     onStatusChange?.({
@@ -33,9 +43,21 @@ export function WebRTCPlayer({
       iceConnectionState,
       errorMessage,
       hasVideoFrame,
+      hasAudioTrack,
+      isAudioActive,
       firstFrameLatencyMs,
     });
-  }, [connectionState, errorMessage, firstFrameLatencyMs, hasVideoFrame, iceConnectionState, onStatusChange, status]);
+  }, [
+    connectionState,
+    errorMessage,
+    firstFrameLatencyMs,
+    hasAudioTrack,
+    hasVideoFrame,
+    iceConnectionState,
+    isAudioActive,
+    onStatusChange,
+    status,
+  ]);
 
   return (
     <figure
@@ -43,6 +65,8 @@ export function WebRTCPlayer({
       data-testid="webrtc-player"
       data-playback-status={status}
       data-has-video-frame={hasVideoFrame ? "true" : "false"}
+      data-has-audio-track={hasAudioTrack ? "true" : "false"}
+      data-audio-active={isAudioActive ? "true" : "false"}
       data-first-frame-latency-ms={firstFrameLatencyMs ?? ""}
     >
       <video
@@ -68,6 +92,11 @@ export function WebRTCPlayer({
         <span className="webrtc-player__state">ice: {iceConnectionState}</span>
         {firstFrameLatencyMs !== null ? (
           <span className="webrtc-player__state">first frame: {firstFrameLatencyMs}ms</span>
+        ) : null}
+        {hasAudioTrack ? (
+          <span className={`webrtc-player__audio ${isAudioActive ? "is-active" : ""}`}>
+            {isAudioActive ? "audio" : "audio idle"}
+          </span>
         ) : null}
         {errorMessage ? <span className="webrtc-player__error">{errorMessage}</span> : null}
       </figcaption>

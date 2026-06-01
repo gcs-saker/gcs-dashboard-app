@@ -6,6 +6,7 @@ import type {
   RealtimePlayerMode,
   RealtimePlayerSnapshot,
   StreamPlaybackResponse,
+  StreamPlaybackUrls,
   StreamRuntimeStatus,
 } from "../types";
 import {
@@ -241,5 +242,30 @@ async function fetchPlayback(
     throw new Error(`Playback API request failed with ${response.status}`);
   }
 
-  return (await response.json()) as StreamPlaybackResponse;
+  const payload = await response.json();
+  if (!isStreamPlaybackResponse(payload)) {
+    throw new Error("Playback API response is invalid");
+  }
+
+  return payload;
+}
+
+function isStreamPlaybackResponse(payload: unknown): payload is StreamPlaybackResponse {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+
+  const candidate = payload as Partial<StreamPlaybackResponse>;
+  const playbackUrls = candidate.playbackUrls as Partial<StreamPlaybackUrls> | undefined;
+  return (
+    typeof candidate.streamId === "string" &&
+    isStreamRuntimeStatus(candidate.status) &&
+    !!playbackUrls &&
+    (typeof playbackUrls.webrtc === "string" || playbackUrls.webrtc === null) &&
+    (typeof playbackUrls.hls === "string" || playbackUrls.hls === null)
+  );
+}
+
+function isStreamRuntimeStatus(status: unknown): status is StreamRuntimeStatus {
+  return status === "registered" || status === "online" || status === "offline" || status === "unknown";
 }

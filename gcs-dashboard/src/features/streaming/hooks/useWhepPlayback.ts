@@ -23,7 +23,8 @@ type PlaybackAction =
   | { type: "unsupported"; message: string }
   | { type: "error"; message: string; connectionState?: RTCPeerConnectionState; iceConnectionState?: RTCIceConnectionState }
   | { type: "connection"; connectionState: RTCPeerConnectionState; iceConnectionState: RTCIceConnectionState }
-  | { type: "first-frame"; latencyMs: number };
+  | { type: "first-frame"; latencyMs: number }
+  | { type: "audio-state"; hasAudioTrack: boolean; isAudioActive: boolean };
 
 const initialPlaybackState: WebRTCPlaybackSnapshot = {
   status: "idle",
@@ -31,6 +32,8 @@ const initialPlaybackState: WebRTCPlaybackSnapshot = {
   iceConnectionState: "new",
   errorMessage: null,
   hasVideoFrame: false,
+  hasAudioTrack: false,
+  isAudioActive: false,
   firstFrameLatencyMs: null,
 };
 
@@ -59,6 +62,7 @@ export function useWhepPlayback({
     let peerConnection: RTCPeerConnection | null = null;
     const abortController = new AbortController();
     let disposed = false;
+    let stopAudioMonitor: (() => void) | null = null;
     const startedAt = performance.now();
 
     const videoElement = videoRef.current;
@@ -116,6 +120,8 @@ export function useWhepPlayback({
 
         const [stream] = event.streams;
         if (stream) {
+          stopAudioMonitor?.();
+          stopAudioMonitor = monitorAudioState(stream, dispatch);
           videoRef.current.srcObject = stream;
           requestVideoPlayback(videoRef.current);
           return;
@@ -125,6 +131,8 @@ export function useWhepPlayback({
           remoteStreamRef.current = new MediaStream();
         }
         remoteStreamRef.current.addTrack(event.track);
+        stopAudioMonitor?.();
+        stopAudioMonitor = monitorAudioState(remoteStreamRef.current, dispatch);
         videoRef.current.srcObject = remoteStreamRef.current;
         requestVideoPlayback(videoRef.current);
       };
@@ -148,6 +156,7 @@ export function useWhepPlayback({
       disposed = true;
       abortController.abort();
       peerConnection?.close();
+      stopAudioMonitor?.();
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
@@ -171,6 +180,8 @@ function playbackReducer(
         iceConnectionState: action.iceConnectionState,
         errorMessage: null,
         hasVideoFrame: false,
+        hasAudioTrack: false,
+        isAudioActive: false,
         firstFrameLatencyMs: null,
       };
     case "playing":
@@ -180,6 +191,8 @@ function playbackReducer(
         iceConnectionState: action.iceConnectionState,
         errorMessage: null,
         hasVideoFrame: state.hasVideoFrame,
+        hasAudioTrack: state.hasAudioTrack,
+        isAudioActive: state.isAudioActive,
         firstFrameLatencyMs: state.firstFrameLatencyMs,
       };
     case "offline":
@@ -189,6 +202,8 @@ function playbackReducer(
         iceConnectionState: "closed",
         errorMessage: null,
         hasVideoFrame: false,
+        hasAudioTrack: false,
+        isAudioActive: false,
         firstFrameLatencyMs: null,
       };
     case "unsupported":
@@ -198,6 +213,8 @@ function playbackReducer(
         iceConnectionState: "unsupported",
         errorMessage: action.message,
         hasVideoFrame: false,
+        hasAudioTrack: false,
+        isAudioActive: false,
         firstFrameLatencyMs: null,
       };
     case "error":
@@ -207,6 +224,8 @@ function playbackReducer(
         iceConnectionState: action.iceConnectionState ?? state.iceConnectionState,
         errorMessage: action.message,
         hasVideoFrame: state.hasVideoFrame,
+        hasAudioTrack: state.hasAudioTrack,
+        isAudioActive: state.isAudioActive,
         firstFrameLatencyMs: state.firstFrameLatencyMs,
       };
     case "connection":
@@ -222,7 +241,43 @@ function playbackReducer(
         hasVideoFrame: true,
         firstFrameLatencyMs: Math.max(0, Math.round(action.latencyMs)),
       };
+    case "audio-state":
+      return {
+        ...state,
+        hasAudioTrack: action.hasAudioTrack,
+        isAudioActive: action.isAudioActive,
+      };
   }
+}
+
+function monitorAudioState(stream: MediaStream, dispatch: Dispatch<PlaybackAction>): () => void {
+  const audioTracks = typeof stream.getAudioTracks === "function" ? stream.getAudioTracks() : [];
+  const update = () => {
+    const liveTracks = audioTracks.filter((track) => track.readyState !== "ended");
+    dispatch({
+      type: "audio-state",
+      hasAudioTrack: liveTracks.length > 0,
+      isAudioActive: liveTracks.some((track) => track.enabled && !track.muted),
+    });
+  };
+
+  update();
+  const intervalId = globalThis.setInterval(update, 500);
+  for (const track of audioTracks) {
+    track.addEventListener?.("mute", update);
+    track.addEventListener?.("unmute", update);
+    track.addEventListener?.("ended", update);
+  }
+
+  return () => {
+    globalThis.clearInterval(intervalId);
+    for (const track of audioTracks) {
+      track.removeEventListener?.("mute", update);
+      track.removeEventListener?.("unmute", update);
+      track.removeEventListener?.("ended", update);
+    }
+    dispatch({ type: "audio-state", hasAudioTrack: false, isAudioActive: false });
+  };
 }
 
 function dispatchStateFromConnection(

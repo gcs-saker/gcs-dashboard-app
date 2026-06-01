@@ -36,6 +36,7 @@
 .webrtc-player__status,
 .webrtc-player__stream,
 .webrtc-player__state,
+.webrtc-player__audio,
 .webrtc-player__error {
   min-height: 24px;
   padding: 4px 8px;
@@ -59,6 +60,16 @@
 
 .webrtc-player__status--loading {
   color: #8fc7ff;
+}
+
+.webrtc-player__audio {
+  border-color: rgba(126, 180, 222, 0.45);
+  color: #8fc7ff;
+}
+
+.webrtc-player__audio.is-active {
+  border-color: rgba(86, 211, 124, 0.8);
+  color: #8df0a7;
 }
 
 .webrtc-player__status--offline,

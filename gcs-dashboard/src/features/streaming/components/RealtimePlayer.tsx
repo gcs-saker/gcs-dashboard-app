@@ -62,6 +62,15 @@ export function RealtimePlayer({
           title={`${title} WebRTC`}
           isOnline={isOnline}
           onStatusChange={(snapshot) => {
+            onStatusChange?.({
+              mode,
+              streamStatus,
+              errorMessage,
+              webrtcRetryAttempt,
+              hasAudioTrack: snapshot.hasAudioTrack,
+              isAudioActive: snapshot.isAudioActive,
+            });
+
             if (snapshot.status === "playing") {
               playback.useWebRTC();
               return;
@@ -87,6 +96,8 @@ export function RealtimePlayer({
           streamId={streamId}
           title={`${title} HLS fallback`}
           fallbackReason={fallbackReason}
+          muted={false}
+          controls
         />
       ) : null}
 

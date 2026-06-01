@@ -235,6 +235,44 @@ describe("WebRTCPlayer", () => {
     expect(video.srcObject).toBeTruthy();
   });
 
+  test("reports audio activity when the remote stream includes a live audio track", async () => {
+    const onStatusChange = vi.fn();
+    const audioTrack = {
+      enabled: true,
+      muted: false,
+      readyState: "live",
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    const remoteStream = {
+      getAudioTracks: () => [audioTrack],
+    } as unknown as MediaStream;
+
+    render(
+      <WebRTCPlayer
+        onStatusChange={onStatusChange}
+        whepUrl="https://media.example.test/raw/sample/front/whep"
+      />,
+    );
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    act(() => {
+      peerConnections[0].emitRemoteTrack([remoteStream]);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-active", "true");
+    });
+    expect(screen.getByText("audio")).toBeInTheDocument();
+    expect(onStatusChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        hasAudioTrack: true,
+        isAudioActive: true,
+      }),
+    );
+  });
+
   test("renders offline state without creating a peer connection", () => {
     render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" isOnline={false} />);
 

@@ -8,6 +8,7 @@ import { WidgetHeaderActions } from "./components/WidgetHeaderActions";
 import { WidgetPopout } from "./components/WidgetPopout";
 import { StreamDeviceConnectDialog } from "./components/StreamDeviceConnectDialog";
 import { AssetTreePanel } from "./components/AssetTreePanel";
+import { EventLogView } from "./components/EventLogView";
 import { SystemStatusPanel } from "./components/SystemStatusPanel";
 import { DEFAULT_ASSET_TREE, mergeAssetTreeWithStreams } from "./assetTree";
 import {
@@ -23,9 +24,11 @@ import { getMapFocusForStream } from "./mapFocus";
 import { type StreamDeviceOption } from "./streamDevices";
 import {
   getDashboardStreamStatusText,
+  getDashboardStreamDisplayName,
   type DashboardGeometrySource,
   type DashboardStreamSlot,
 } from "./streamTypes";
+import type { RealtimePlayerSnapshot } from "../streaming/types";
 import { useDashboardStreams } from "./hooks/useDashboardStreams";
 
 const TacticalLeafletMap = lazy(() =>
@@ -33,6 +36,7 @@ const TacticalLeafletMap = lazy(() =>
 );
 
 type TelemetryRow = [label: string, value: string];
+type DashboardView = "dashboard" | "cctv" | "events";
 
 function geometrySourceLabel(source: DashboardGeometrySource | undefined): string {
   switch (source) {
@@ -50,7 +54,7 @@ function geometrySourceLabel(source: DashboardGeometrySource | undefined): strin
 
 function telemetryRowsForStream(stream: DashboardStreamSlot): TelemetryRow[] {
   const geometry = stream.geometry;
-  const streamName = stream.streamPath ?? stream.id;
+  const streamName = getDashboardStreamDisplayName(stream);
   if (!geometry) {
     return [
       ["스트림", streamName],
@@ -84,6 +88,8 @@ export function DashboardMvp() {
   const aiResultsWidget = getDashboardWidgetDefinition("ai-results");
   const [layout, setLayout] = useState<DashboardLayoutItem[]>(() => resetDashboardLayout());
   const [isWidgetDialogOpen, setIsWidgetDialogOpen] = useState(false);
+  const [activeView, setActiveView] = useState<DashboardView>("dashboard");
+  const [audioActiveStreamId, setAudioActiveStreamId] = useState<string | null>(null);
   const [popoutWidgetId, setPopoutWidgetId] = useState<DashboardWidgetId | null>(null);
   const [layoutMessage, setLayoutMessage] = useState("기본 레이아웃");
   const handleAuthFailure = useCallback((): void => {
@@ -167,17 +173,39 @@ export function DashboardMvp() {
     setLayoutMessage("AI 모드 옵션 변경됨");
   };
 
+  const handleSelectedPlaybackStatusChange = useCallback(
+    (streamId: string, snapshot: RealtimePlayerSnapshot): void => {
+      setAudioActiveStreamId((currentStreamId) => {
+        if (snapshot.isAudioActive) return streamId;
+        return currentStreamId === streamId ? null : currentStreamId;
+      });
+    },
+    [],
+  );
+
   return (
     <main className="ops-dashboard" aria-label="Field Ops Dashboard MVP">
       <header className="ops-dashboard__tabs" aria-label="주요 탭">
         <nav className="ops-dashboard__tab-list">
-          <button className="ops-tab is-active" type="button">
+          <button
+            className={`ops-tab ${activeView === "dashboard" ? "is-active" : ""}`}
+            onClick={() => setActiveView("dashboard")}
+            type="button"
+          >
             대시보드
           </button>
-          <button className="ops-tab" type="button">
+          <button
+            className={`ops-tab ${activeView === "cctv" ? "is-active" : ""}`}
+            onClick={() => setActiveView("cctv")}
+            type="button"
+          >
             CCTV
           </button>
-          <button className="ops-tab" type="button">
+          <button
+            className={`ops-tab ${activeView === "events" ? "is-active" : ""}`}
+            onClick={() => setActiveView("events")}
+            type="button"
+          >
             이벤트로그
           </button>
         </nav>
@@ -199,7 +227,18 @@ export function DashboardMvp() {
         </div>
       </header>
 
-      <section className="ops-dashboard__grid">
+      {activeView === "events" ? <EventLogView /> : null}
+      {activeView === "cctv" ? (
+        <section className="ops-dashboard__placeholder-view" aria-label="CCTV">
+          <StreamGrid
+            audioActiveStreamId={audioActiveStreamId}
+            onSelectStream={openStreamConnection}
+            selectedStreamId={selectedStreamId}
+            streams={streams}
+          />
+        </section>
+      ) : null}
+      {activeView === "dashboard" ? <section className="ops-dashboard__grid">
         {isWidgetVisible("asset-tree") ? <aside
           aria-labelledby="asset-tree-title"
           className={panelClass("ops-panel asset-tree", "asset-tree")}
@@ -238,12 +277,15 @@ export function DashboardMvp() {
 
         {isWidgetVisible("selected-stream") ? <SelectedStreamPanel
           controls={widgetControls("selected-stream", "선택 스트림")}
+          hasAudioActivity={selectedStream.id === audioActiveStreamId}
           isPinned={isWidgetPinned("selected-stream")}
+          onPlaybackStatusChange={handleSelectedPlaybackStatusChange}
           onToggleAiMode={toggleStreamAiMode}
           stream={selectedStream}
         /> : null}
 
         {isWidgetVisible("stream-grid") ? <StreamGrid
+          audioActiveStreamId={audioActiveStreamId}
           onSelectStream={openStreamConnection}
           selectedStreamId={selectedStreamId}
           streams={streams}
@@ -256,7 +298,7 @@ export function DashboardMvp() {
           style={{ minHeight: systemStatusWidget.minHeight, minWidth: systemStatusWidget.minWidth }}
         >
           <SystemStatusPanel
-            controls={widgetControls("system-status", "서버상태 / 연결상태 / 헬스체크")}
+            controls={widgetControls("system-status", "서버 상태 상세 / 연결상태 / 헬스체크")}
             onAuthFailure={handleAuthFailure}
           />
         </section> : null}
@@ -316,7 +358,7 @@ export function DashboardMvp() {
             </li>
           </ul>
         </section> : null}
-      </section>
+      </section> : null}
 
       {isWidgetDialogOpen ? (
         <WidgetAddDialog
