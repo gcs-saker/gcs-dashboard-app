@@ -1,7 +1,6 @@
-import { backendRootUrl, streamApiV1Url } from "../../config";
-import { BACKEND_ROOT_ROUTES, STREAM_API_ROUTES } from "@/features/apiRoutes";
+import { backendRootUrl } from "../../config";
+import { BACKEND_ROOT_ROUTES } from "@/features/apiRoutes";
 import { DASHBOARD_SERVER_HEALTH, type DashboardServerHealth } from "@/features/stateContracts";
-import { AuthApiError, authenticatedFetch } from "../auth/authApi";
 
 export interface DashboardServerStatusSnapshot {
   apiServer: DashboardServerHealth;
@@ -37,12 +36,9 @@ export async function fetchDashboardServerStatus(
       probe(fetcher, BACKEND_ROOT_ROUTES.readyz),
       probe(fetcher, BACKEND_ROOT_ROUTES.mediaControlHealthz),
       probe(fetcher, BACKEND_ROOT_ROUTES.mediaControlReadyz),
-      authenticatedFetch(streamApiV1Url(STREAM_API_ROUTES.streams), { headers: { Accept: "application/json" } }, fetcher),
+      probe(fetcher, BACKEND_ROOT_ROUTES.streamStatus),
     ]);
     const latencyMs = Math.max(1, Math.round(performance.now() - startedAt));
-    if (streamResponse.status === 401) {
-      throw new AuthApiError(streamResponse.status, "stream status authentication required");
-    }
 
     return {
       apiServer: streamResponse.ok ? healthFromLatency(latencyMs) : DASHBOARD_SERVER_HEALTH.degraded,
@@ -57,9 +53,6 @@ export async function fetchDashboardServerStatus(
       checkedAt: Date.now(),
     };
   } catch (error) {
-    if (error instanceof AuthApiError && error.status === 401) {
-      throw error;
-    }
     return {
       apiServer: DASHBOARD_SERVER_HEALTH.error,
       authServer: DASHBOARD_SERVER_HEALTH.error,

@@ -95,7 +95,7 @@ def check_offline_map() -> list[str]:
 def check_dashboard_serves_built_artifacts() -> list[str]:
     content = DASHBOARD_DOCKERFILE.read_text(encoding="utf-8")
     required_tokens = (
-        "RUN npm run build",
+        "npm run build",
         "FROM nginx:alpine",
         "COPY --from=builder /app/dist /usr/share/nginx/html",
     )

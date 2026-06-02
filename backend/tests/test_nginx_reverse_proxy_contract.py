@@ -179,6 +179,9 @@ def test_legacy_stream_prefix_is_cut_over_to_go_media_control_for_runtime_smoke(
     assert "rewrite ^/api/stream/(.*)$ /stream/$1 break;" in api_stream_location
     assert "proxy_pass http://gcs_media_control;" in api_stream_location
     assert "proxy_pass http://gcs_media_control;" in stream_location
+    for location in (api_stream_location, stream_location):
+        assert 'add_header Deprecation "true" always;' in location
+        assert 'add_header X-GCS-Replacement-Route "/media-control/api/v1/streams" always;' in location
 
 
 def test_legacy_stream_prefix_keeps_short_runtime_timeout() -> None:

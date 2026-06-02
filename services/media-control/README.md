@@ -30,6 +30,14 @@ GET /api/v1/streams/{streamId}/status
 
 Nginx edge에서는 `/media-control/` prefix로 이 서비스를 노출한다. Dashboard는 `VITE_STREAM_API_BASE_URL=/media-control`일 때 Go media-control을 사용하고, 기본 `/api`일 때 기존 Python stream API를 사용한다.
 
+## Legacy compatibility endpoint
+
+```text
+GET /stream/status
+```
+
+M7 runtime smoke와 예전 운영 체크 호환을 위해 `/stream/status`는 `{"stream":"ready"}`를 계속 반환한다. 다만 이 경로는 legacy compatibility endpoint이므로 `Deprecation: true`와 `X-GCS-Replacement-Route: /media-control/api/v1/streams` header를 함께 내려준다. 신규 운영 체크와 dashboard stream 조회는 `/media-control/api/v1/streams*`를 사용한다.
+
 ## Auth-policy 연동
 
 `AUTH_POLICY_BASE_URL`이 설정되면 media-control은 stream list/detail/playback/status 요청마다 `Authorization` header를 Spring/Kotlin auth-policy의 `POST /policy/streams/access`로 전달한다.
