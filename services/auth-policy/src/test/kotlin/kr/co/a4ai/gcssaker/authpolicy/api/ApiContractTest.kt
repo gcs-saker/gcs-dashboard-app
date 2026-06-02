@@ -22,6 +22,8 @@ class ApiContractTest {
         assertEquals(ApiContractFixtures.TIME_SYNC_STATUS, TimeSyncApiRoutes.STATUS)
         assertEquals(ApiContractFixtures.OPERATIONAL_EVENTS, OperationalEventApiRoutes.EVENTS)
         assertEquals(ApiContractFixtures.TELEMETRY_ALL, OperationalReadApiRoutes.TELEMETRY_ALL)
+        assertEquals(ApiContractFixtures.TELEMETRY_INGEST, OperationalReadApiRoutes.TELEMETRY_INGEST)
+        assertEquals(ApiContractFixtures.ASSET_BY_GATEWAY, OperationalReadApiRoutes.ASSET_BY_GATEWAY)
         assertEquals(ApiContractFixtures.STREAM_POLICY_ROOT, StreamPolicyApiRoutes.ROOT)
     }
 
@@ -91,6 +93,31 @@ class ApiContractTest {
     }
 
     @Test
+    fun `telemetry read dto field contract stays compatible with dashboard map geometry`() {
+        val payload = objectMapper.writeValueAsString(
+            TelemetryReadResponse(
+                uuid = ApiContractFixtures.STREAM_ID_VALUE,
+                latitude = ApiContractFixtures.LATITUDE_VALUE,
+                longitude = ApiContractFixtures.LONGITUDE_VALUE,
+                altitude = ApiContractFixtures.ALTITUDE_VALUE,
+                magneticX = ApiContractFixtures.MAGNETIC_X_VALUE,
+                magneticY = ApiContractFixtures.MAGNETIC_Y_VALUE,
+                magneticZ = ApiContractFixtures.MAGNETIC_Z_VALUE,
+                soc = ApiContractFixtures.SOC_VALUE,
+                phoneBatterySOC = ApiContractFixtures.PHONE_BATTERY_SOC_VALUE,
+                velocity = ApiContractFixtures.VELOCITY_VALUE,
+                totalDistance = ApiContractFixtures.TOTAL_DISTANCE_VALUE,
+                epochTime = ApiContractFixtures.EPOCH_TIME_VALUE,
+                portDistance = ApiContractFixtures.PORT_DISTANCE_VALUE,
+            ),
+        )
+
+        for (field in OperationalReadApiFields.TELEMETRY_READ_FIELDS) {
+            assertTrue(payload.contains(quoted(field)), "missing telemetry field $field")
+        }
+    }
+
+    @Test
     fun `stream policy dto field contract stays compatible with media control`() {
         val payload = objectMapper.writeValueAsString(
             StreamAccessRequest(
@@ -115,6 +142,8 @@ private object ApiContractFixtures {
     const val TIME_SYNC_STATUS = "/ops/time/status"
     const val OPERATIONAL_EVENTS = "/ops/events"
     const val TELEMETRY_ALL = "/telemetry/all"
+    const val TELEMETRY_INGEST = "/telemetry/"
+    const val ASSET_BY_GATEWAY = "/asset/{gatewayUuid}"
     const val STREAM_POLICY_ROOT = "/policy/streams"
     const val ACCESS_TOKEN_VALUE = "access-token"
     const val EXPIRES_IN_MINUTES_VALUE = 30L
@@ -133,5 +162,17 @@ private object ApiContractFixtures {
     const val STREAM_ID_VALUE = "raw.local.webcam"
     const val STREAM_PATH_VALUE = "raw/local/webcam"
     const val GROUP_ID_VALUE = "co-a"
+    const val LATITUDE_VALUE = 35.8714
+    const val LONGITUDE_VALUE = 128.6014
+    const val ALTITUDE_VALUE = 120.0
+    const val MAGNETIC_X_VALUE = 12.4
+    const val MAGNETIC_Y_VALUE = -3.2
+    const val MAGNETIC_Z_VALUE = 42.1
+    const val SOC_VALUE = "78"
+    const val PHONE_BATTERY_SOC_VALUE = 91.0
+    const val VELOCITY_VALUE = 8.5
+    const val TOTAL_DISTANCE_VALUE = 1520.0
+    const val EPOCH_TIME_VALUE = "00:10:23"
+    const val PORT_DISTANCE_VALUE = 250.0
     val INSTANT_VALUE: Instant = Instant.parse("2026-06-01T00:00:00Z")
 }

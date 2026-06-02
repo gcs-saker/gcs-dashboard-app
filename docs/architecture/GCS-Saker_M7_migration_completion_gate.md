@@ -17,6 +17,8 @@ M7 언어 전환 완료는 "repo 안에 Python 경로가 하나도 남지 않는
 | Telemetry ingest/read | `/api/telemetry/`, `/api/telemetry/all` | Spring/Kotlin auth-policy read-model |
 | Asset read | `/api/asset/*` | Spring/Kotlin auth-policy read-model |
 
+Telemetry/asset read path는 M7-14 기준으로 Python backend 의존을 제거한 active cutover 경로다. Dashboard는 기존 응답 배열 구조를 유지하되, Edge/Nginx가 `/api/telemetry/all`과 `/api/asset/*`를 auth-policy로 전달한다. Python backend는 이 read-only 화면 조회 경로의 fallback으로 보지 않는다.
+
 ## Legacy/Future Fallback
 
 | 경로 | 현재 위치 | M7 판단 |
