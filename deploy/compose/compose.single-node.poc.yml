@@ -219,7 +219,6 @@ services:
       - --max-port=${TURN_RELAY_MAX_PORT:-49200}
       - --external-ip=${TURN_EXTERNAL_IP:-127.0.0.1}
       - --no-cli
-      - --no-multicast-peers
     ports:
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/tcp"
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/udp"
@@ -246,7 +245,6 @@ services:
       - --max-port=${TURN_RELAY_MAX_PORT:-49200}
       - --external-ip=${TURN_EXTERNAL_IP:-127.0.0.1}
       - --no-cli
-      - --no-multicast-peers
     ports:
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/tcp"
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/udp"
