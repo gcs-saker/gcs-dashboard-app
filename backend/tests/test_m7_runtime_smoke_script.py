@@ -56,8 +56,11 @@ def test_m7_runtime_smoke_requires_backend_stream_status_payload_and_read_model_
     assert "/api/telemetry/all" in script
     assert "/api/telemetry/" in script
     assert "/api/asset/raw.sample.front" in script
+    assert "expect_http_status" in script
+    assert '"raw.unauthorized.telemetry"' in script
     assert "compose restart edge" in script
     assert "auth-policy health/ready/telemetry ingest-read/asset reads" in script
+    assert "unauthenticated telemetry rejection" in script
     assert "media-control stream status" in script
 
 
