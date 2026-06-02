@@ -145,7 +145,7 @@ def test_compose_port_overrides_are_documented_without_management_ports():
 def test_mediamtx_declares_local_stun_server_for_closed_network_validation():
     config = load_yaml(MEDIAMTX_CONFIG)
 
-    assert config["webrtcICEServers2"] == [{"url": "stun:localhost:3478"}]
+    assert config["webrtcICEServers2"] == [{"url": "stun:localhost:3478", "clientOnly": True}]
     assert config["webrtcSTUNGatherTimeout"] == "5s"
 
 

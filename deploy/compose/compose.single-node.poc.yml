@@ -189,6 +189,7 @@ services:
     image: ${MEDIAMTX_IMAGE:-bluenviron/mediamtx:1.15.3}
     env_file: *service_env_files
     environment:
+      MTX_WEBRTCIPSFROMINTERFACES: ${MEDIAMTX_WEBRTC_IPS_FROM_INTERFACES:-true}
       MTX_WEBRTCADDITIONALHOSTS: ${MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS:-127.0.0.1}
     ports:
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_RTSP_PORT:-8554}:8554/tcp"

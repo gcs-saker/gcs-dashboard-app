@@ -75,6 +75,7 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-mediamtx
     env_file: *service_env_files
     environment:
+      MTX_WEBRTCIPSFROMINTERFACES: ${MEDIAMTX_WEBRTC_IPS_FROM_INTERFACES:-true}
       MTX_WEBRTCADDITIONALHOSTS: ${MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS:-127.0.0.1}
     ports:
       # Browser playback: WebRTC/WHEP primary, HLS fallback.
