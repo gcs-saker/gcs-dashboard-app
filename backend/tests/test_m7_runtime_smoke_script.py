@@ -77,6 +77,13 @@ def test_mediamtx_additional_hosts_are_env_driven_for_public_nat_candidates():
     expected_override = (
         "MTX_WEBRTCADDITIONALHOSTS: ${MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS:-127.0.0.1}"
     )
+    expected_interface_override = (
+        "MTX_WEBRTCIPSFROMINTERFACES: ${MEDIAMTX_WEBRTC_IPS_FROM_INTERFACES:-true}"
+    )
     assert expected_override in single_node_compose
     assert expected_override in dashboard_compose
+    assert expected_interface_override in single_node_compose
+    assert expected_interface_override in dashboard_compose
+    assert "MEDIAMTX_WEBRTC_IPS_FROM_INTERFACES=true" in single_node_env
     assert "MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS=127.0.0.1" in single_node_env
+    assert deploy_config.count("clientOnly: true") == 3

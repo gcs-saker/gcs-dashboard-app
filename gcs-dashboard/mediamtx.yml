@@ -53,6 +53,7 @@ webrtcAdditionalHosts: []
 # Local STUN keeps closed-network deployments independent from public internet.
 webrtcICEServers2:
   - url: stun:localhost:3478
+    clientOnly: true
 webrtcSTUNGatherTimeout: 5s
 
 paths:

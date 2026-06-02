@@ -28,7 +28,7 @@ Usage:
 
 Modes:
   --check  Validate external NAT smoke contracts without network calls.
-  --run    Validate public edge, TURN allocation, WHIP publish, and WHEP first frame.
+  --run    Validate public edge, TURN allocation, WHIP publish, WHEP first frame, and candidate summary.
 
 Environment:
   EDGE_BASE_URL         Default: https://a4ai.tplinkdns.com
