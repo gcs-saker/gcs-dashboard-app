@@ -53,7 +53,9 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     )
     assert services["backend"]["environment"]["WEBRTC_TURN_URL"] == "${WEBRTC_TURN_URL:-}"
     assert services["nginx"]["build"]["args"]["VITE_API_BASE_URL"] == "${VITE_API_BASE_URL:-/api}"
-    assert services["nginx"]["build"]["args"]["VITE_AUTH_API_BASE_URL"] == "${VITE_AUTH_API_BASE_URL:-/api/auth}"
+    assert services["nginx"]["build"]["args"]["VITE_IDENTITY_API_BASE_URL"] == (
+        "${VITE_AUTH_API_BASE_URL:-/auth-policy/auth}"
+    )
     assert services["nginx"]["build"]["args"]["VITE_STREAM_API_BASE_URL"] == "${VITE_STREAM_API_BASE_URL:-/api}"
     assert services["nginx"]["build"]["args"]["VITE_HLS_BASE_URL"] == "${VITE_HLS_BASE_URL:-/hls}"
     assert services["nginx"]["build"]["args"]["VITE_LOCAL_WEBCAM_WHIP_URL"].startswith(
@@ -76,7 +78,7 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
     compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
     services = compose["services"]
 
-    assert services["dashboard"]["build"]["args"]["VITE_AUTH_API_BASE_URL"] == (
+    assert services["dashboard"]["build"]["args"]["VITE_IDENTITY_API_BASE_URL"] == (
         "${VITE_AUTH_API_BASE_URL:-/auth-policy/auth}"
     )
     assert services["dashboard"]["build"]["args"]["VITE_STREAM_API_BASE_URL"] == (
@@ -229,7 +231,8 @@ def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
 
     assert "FROM node:22 AS builder" in dockerfile
     assert "ARG VITE_API_BASE_URL=/api" in dockerfile
-    assert "ARG VITE_AUTH_API_BASE_URL=/api/auth" in dockerfile
+    assert "ARG VITE_IDENTITY_API_BASE_URL=/auth-policy/auth" in dockerfile
+    assert "RUN VITE_AUTH_API_BASE_URL=$VITE_IDENTITY_API_BASE_URL npm run build" in dockerfile
     assert "ARG VITE_STREAM_API_BASE_URL=/api" in dockerfile
     assert "ARG VITE_HLS_BASE_URL=/hls" in dockerfile
     assert "ARG VITE_LOCAL_WEBCAM_WHIP_URL=https://localhost/webrtc/raw/local/webcam/whip" in dockerfile

@@ -12,8 +12,8 @@ vi.mock("../streaming/components/StreamingSmokeDashboard", () => ({
 }));
 
 describe("SignupPage auth flow", () => {
-  const AUTH_REFRESH_URL = "/api/auth/refresh";
-  const AUTH_SIGNUP_URL = "/api/auth/signup";
+  const AUTH_REFRESH_URL = "/auth-policy/auth/refresh";
+  const AUTH_SIGNUP_URL = "/auth-policy/auth/signup";
 
   function mockRefreshMissingThenSignup(signupResponse: Response): void {
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {

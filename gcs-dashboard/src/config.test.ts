@@ -41,9 +41,9 @@ describe("config API URL helpers", () => {
     expect(backendRootUrl("/healthz")).toBe("/healthz");
   });
 
-  test("keeps auth endpoints on the legacy backend by default", () => {
-    expect(authUrl("/login")).toBe("/api/auth/login");
-    expect(authUrl("refresh")).toBe("/api/auth/refresh");
+  test("keeps auth endpoints on the Spring Kotlin auth-policy path by default", () => {
+    expect(authUrl("/login")).toBe("/auth-policy/auth/login");
+    expect(authUrl("refresh")).toBe("/auth-policy/auth/refresh");
   });
 
   test("can point auth endpoints to the Spring Kotlin auth-policy cutover path", () => {
