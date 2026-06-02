@@ -47,6 +47,10 @@ def test_m7_runtime_smoke_requires_backend_stream_status_payload_and_read_model_
 
     assert "wait_for_stream_status" in script
     assert '"stream":"ready"' in script
+    assert "media-control stream readiness" in script
+    assert "backend stream readiness" not in script
+    assert 'add_header Deprecation "true" always;' in script
+    assert 'X-GCS-Replacement-Route "/media-control/api/v1/streams"' in script
     assert "login_access_token" in script
     assert '"raw.smoke.telemetry"' in script
     assert "/api/telemetry/all" in script

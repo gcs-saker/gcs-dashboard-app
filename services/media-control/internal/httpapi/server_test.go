@@ -175,12 +175,24 @@ func TestLegacyStreamStatusResponse(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", recorder.Code)
 	}
-	var payload map[string]string
+	if recorder.Header().Get("Deprecation") != "true" {
+		t.Fatalf("expected deprecation header, got %q", recorder.Header().Get("Deprecation"))
+	}
+	if recorder.Header().Get("X-GCS-Replacement-Route") != "/media-control/api/v1/streams" {
+		t.Fatalf("unexpected replacement header %q", recorder.Header().Get("X-GCS-Replacement-Route"))
+	}
+	var payload map[string]any
 	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
 		t.Fatal(err)
 	}
 	if payload["stream"] != "ready" {
 		t.Fatalf("unexpected payload %#v", payload)
+	}
+	if payload["service"] != "media-control" || payload["status"] != "ok" {
+		t.Fatalf("expected media-control ok payload, got %#v", payload)
+	}
+	if payload["deprecated"] != true || payload["replacement"] != "/media-control/api/v1/streams" {
+		t.Fatalf("expected deprecated compatibility metadata, got %#v", payload)
 	}
 }
 

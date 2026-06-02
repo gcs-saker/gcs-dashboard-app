@@ -10,7 +10,8 @@ M7 언어 전환 완료는 "repo 안에 Python 경로가 하나도 남지 않는
 | --- | --- | --- |
 | 인증/세션 | `/auth-policy/auth/*` | Spring/Kotlin auth-policy |
 | Health/ready | `/healthz`, `/readyz` | Spring/Kotlin auth-policy |
-| Stream API | `/media-control/api/v1/streams*`, `/stream/status` | Go media-control |
+| Stream API | `/media-control/api/v1/streams*` | Go media-control |
+| Legacy stream status | `/stream/status` | Go media-control deprecated compatibility endpoint |
 | WebRTC/HLS signaling | `/webrtc/*`, `/hls/*` | MediaMTX |
 | ICE server 목록 | `/media-control/api/v1/streams/ice-servers` | Go media-control |
 | Telemetry ingest/read | `/api/telemetry/`, `/api/telemetry/all` | Spring/Kotlin auth-policy read-model |
@@ -21,6 +22,7 @@ M7 언어 전환 완료는 "repo 안에 Python 경로가 하나도 남지 않는
 | 경로 | 현재 위치 | M7 판단 |
 | --- | --- | --- |
 | `/api/auth/*` | Python backend | v0.2.0 호환 fallback. M7 dashboard build는 사용하지 않는다. |
+| `/api/stream/*`, `/stream/status` | Go media-control | Python backend에서는 제거된 legacy compatibility path다. `Deprecation: true`와 replacement route를 내려준다. |
 | `/api/control/*` | Python backend | 실제 장비 제어 정책이 확정되지 않은 future command 기능이다. |
 | `/api/v1/ai/mock/detections` | Python backend | 실제 AI overlay server 연동 전 mock contract다. |
 | `/metrics` | Python backend | 신규 서비스별 metrics 설계 전까지 legacy observation이다. |

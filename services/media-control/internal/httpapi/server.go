@@ -25,12 +25,15 @@ const (
 	contentTypeHeader                = "Content-Type"
 	jsonContentType                  = "application/json"
 	authorizationHeader              = "Authorization"
+	deprecationHeader                = "Deprecation"
 	jsonKeyDetail                    = "detail"
+	jsonKeyDeprecated                = "deprecated"
 	jsonKeyChecks                    = "checks"
 	jsonKeyIceServers                = "iceServers"
 	jsonKeyName                      = "name"
 	jsonKeyReason                    = "reason"
 	jsonKeyRequired                  = "required"
+	jsonKeyReplacement               = "replacement"
 	jsonKeyService                   = "service"
 	jsonKeyStatus                    = "status"
 	jsonKeyStream                    = "stream"
@@ -40,6 +43,9 @@ const (
 	healthStatusDegraded             = "degraded"
 	healthStatusError                = "error"
 	legacyStreamReadyStatus          = "ready"
+	legacyStreamStatusReplacement    = "/media-control/api/v1/streams"
+	legacyStreamStatusDeprecatedFlag = "true"
+	replacementRouteHeader           = "X-GCS-Replacement-Route"
 	readyCheckStreamRegistry         = "stream_registry"
 	readyCheckIceServers             = "ice_servers"
 	errStreamRegistryQueryFailed     = "stream registry query failed"
@@ -158,7 +164,15 @@ func (s Server) streamList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) legacyStreamStatus(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{jsonKeyStream: legacyStreamReadyStatus})
+	w.Header().Set(deprecationHeader, legacyStreamStatusDeprecatedFlag)
+	w.Header().Set(replacementRouteHeader, legacyStreamStatusReplacement)
+	writeJSON(w, http.StatusOK, map[string]any{
+		jsonKeyStream:      legacyStreamReadyStatus,
+		jsonKeyService:     mediaControlServiceName,
+		jsonKeyStatus:      healthStatusOK,
+		jsonKeyDeprecated:  true,
+		jsonKeyReplacement: legacyStreamStatusReplacement,
+	})
 }
 
 func (s Server) iceServers(w http.ResponseWriter, _ *http.Request) {

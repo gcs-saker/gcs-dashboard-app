@@ -138,7 +138,7 @@ wait_for_stream_status() {
     sleep "$delay_seconds"
   done
 
-  echo "Timed out waiting for ${url} to return backend stream readiness" >&2
+  echo "Timed out waiting for ${url} to return media-control stream readiness" >&2
   return 1
 }
 
@@ -170,6 +170,8 @@ check_contract_text() {
   grep -q "turn-secondary" "$COMPOSE_FILE"
   grep -q "webrtcICEServers2" "${REPO_ROOT}/deploy/mediamtx/mediamtx.closed-network.yml"
   grep -q "location /stream/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
+  grep -q 'add_header Deprecation "true" always;' "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
+  grep -q 'X-GCS-Replacement-Route "/media-control/api/v1/streams"' "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /auth-policy/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /media-control/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /api/asset/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"

@@ -11,6 +11,7 @@ export const BACKEND_ROOT_ROUTES = Object.freeze({
   readyz: "/readyz",
   mediaControlHealthz: "/media-control/healthz",
   mediaControlReadyz: "/media-control/readyz",
+  streamStatus: "/stream/status",
 });
 
 export const DASHBOARD_API_ROUTES = Object.freeze({
