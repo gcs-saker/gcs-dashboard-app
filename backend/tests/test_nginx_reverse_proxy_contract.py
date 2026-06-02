@@ -206,6 +206,8 @@ def test_reverse_proxy_policy_doc_covers_required_endpoint_decisions() -> None:
         "HTTPS redirect",
         "WSS",
         "`https://<host>/api/`",
+        "`https://<host>/api/asset/*`",
+        "`https://<host>/api/telemetry/all`",
         "`https://<host>/hls/<stream>/index.m3u8`",
         "`https://<host>/webrtc/<stream>/whep`",
         "STUN/TURN 서버는 Nginx가 proxy하지 않는다",

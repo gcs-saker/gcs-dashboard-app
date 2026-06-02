@@ -16,7 +16,11 @@ M2 Server-02 staging 배포 전에 Nginx reverse proxy의 HTTPS, WSS, API, dashb
 | --- | --- | --- | --- |
 | `http://<host>/` | Nginx | HTTPS redirect | ACME challenge를 제외하고 `https://$host$request_uri`로 redirect |
 | `https://<host>/` | `nginx:3000` | Dashboard serving | SPA/dashboard entrypoint |
-| `https://<host>/api/` | `backend:8001` | Backend API proxy | `/api/v1/*` 중심으로 proxy, 추후 legacy `/control`, `/telemetry` 경로는 API migration 이슈에서 정리 |
+| `https://<host>/api/asset/*` | `auth-policy:8080` | Asset read-model | `/asset/*`로 rewrite 후 Spring/Kotlin read-only 호환 응답 제공 |
+| `https://<host>/api/telemetry/all` | `auth-policy:8080` | Telemetry read-model | Dashboard map/geometry 조회용 read-only 호환 응답 제공 |
+| `https://<host>/api/telemetry/` | `auth-policy:8080` | Telemetry ingest/read-model | 인증된 telemetry ingest를 Spring/Kotlin read-model로 전달 |
+| `https://<host>/api/ops/*` | `auth-policy:8080` | 운영 이벤트/상태 API | Dashboard 운영 패널 조회용 API |
+| `https://<host>/api/` | `backend:8001` | Legacy/Future backend fallback | `/api/v1/*`, control, AI mock 등 아직 제품화 전 경로의 fallback |
 | `wss://<host>/ws/` | `backend:8001` | Backend WebSocket | `Upgrade`, `Connection` header를 반드시 전달 |
 | `https://<host>/hls/<stream>/index.m3u8` | `mediamtx:8888` | HLS fallback playback | `/hls/` prefix 제거 후 MediaMTX로 전달, buffering/cache off |
 | `https://<host>/webrtc/<stream>/whep` | `mediamtx:8889` | WebRTC/WHEP playback | `/webrtc/` prefix 제거 후 MediaMTX로 전달, long read timeout |
@@ -44,7 +48,8 @@ M2 Server-02 staging 배포 전에 Nginx reverse proxy의 HTTPS, WSS, API, dashb
 - reverse proxy 설정 초안 파일 존재
 - HTTP to HTTPS redirect 존재
 - HTTPS server와 certificate placeholder 존재
-- `/api/`, `/ws/`, `/hls/`, `/webrtc/` location 존재
+- `/api/asset/`, `/api/telemetry/`, `/api/ops/` active read-model location 존재
+- `/api/`, `/ws/`, `/hls/`, `/webrtc/` fallback/media location 존재
 - WebSocket upgrade header 존재
 - `9997`, `9998` 관리 포트 미노출
 
