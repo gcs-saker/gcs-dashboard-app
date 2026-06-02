@@ -74,6 +74,8 @@ services:
     image: ${MEDIAMTX_IMAGE:-bluenviron/mediamtx:1.15.3}
     container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-mediamtx
     env_file: *service_env_files
+    environment:
+      MTX_WEBRTCADDITIONALHOSTS: ${MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS:-127.0.0.1}
     ports:
       # Browser playback: WebRTC/WHEP primary, HLS fallback.
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_SIGNALING_PORT:-8889}:8889/tcp"

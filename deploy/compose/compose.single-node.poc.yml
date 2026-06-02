@@ -188,6 +188,8 @@ services:
   mediamtx:
     image: ${MEDIAMTX_IMAGE:-bluenviron/mediamtx:1.15.3}
     env_file: *service_env_files
+    environment:
+      MTX_WEBRTCADDITIONALHOSTS: ${MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS:-127.0.0.1}
     ports:
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_RTSP_PORT:-8554}:8554/tcp"
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_RTMP_PORT:-1935}:1935/tcp"
