@@ -110,7 +110,10 @@ async def wait_for_ice_gathering_complete(peer_connection: object, timeout_secon
         if getattr(peer_connection, "iceGatheringState") == "complete":
             complete.set()
 
-    await asyncio.wait_for(complete.wait(), timeout=timeout_seconds)
+    try:
+        await asyncio.wait_for(complete.wait(), timeout=timeout_seconds)
+    except asyncio.TimeoutError:
+        return
 
 
 async def wait_for_ice_connected(peer_connection: object, timeout_seconds: float) -> None:
@@ -130,7 +133,13 @@ async def wait_for_ice_connected(peer_connection: object, timeout_seconds: float
             failed_state.append(state)
             connected.set()
 
-    await asyncio.wait_for(connected.wait(), timeout=timeout_seconds)
+    try:
+        await asyncio.wait_for(connected.wait(), timeout=timeout_seconds)
+    except asyncio.TimeoutError as error:
+        final_state = str(getattr(peer_connection, "iceConnectionState"))
+        raise RuntimeError(
+            f"ICE connection did not reach connected/completed within {timeout_seconds}s: state={final_state}"
+        ) from error
 
     if failed_state:
         raise RuntimeError(f"ICE connection failed with state={failed_state[-1]}")
@@ -152,7 +161,15 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
         raise RuntimeError("aiortc is required for --run. Install with: python -m pip install aiortc") from error
 
     peer_connection = RTCPeerConnection(
-        RTCConfiguration(iceServers=[RTCIceServer(urls=[args.stun_url])]),
+        RTCConfiguration(
+            iceServers=[
+                RTCIceServer(
+                    urls=[args.ice_server_url],
+                    username=args.ice_username,
+                    credential=args.ice_credential,
+                )
+            ]
+        ),
     )
     video_tracks: asyncio.Queue[object] = asyncio.Queue()
 
@@ -196,7 +213,7 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
 
         print("WebRTC ICE smoke run passed")
         print(f"WHEP URL: {args.whep_url}")
-        print(f"STUN URL: {args.stun_url}")
+        print(f"ICE server URL: {args.ice_server_url}")
         print(f"Local offer candidates: {local_inspection.candidate_count}")
         print(f"WHEP answer candidates: {answer_inspection.candidate_count}")
         print(f"Local offer ready ms: {offer_ready_elapsed_ms:.1f}")
@@ -232,7 +249,7 @@ def run_static_check() -> int:
     print("WebRTC ICE smoke check passed")
     print(f"Required SDP markers: {', '.join(REQUIRED_SDP_MARKERS)}, candidate")
     print(f"Default WHEP URL: {DEFAULT_WHEP_URL}")
-    print(f"Default STUN URL: {DEFAULT_STUN_URL}")
+    print(f"Default ICE server URL: {DEFAULT_STUN_URL}")
     return 0
 
 
@@ -244,7 +261,10 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     mode.add_argument("--check", action="store_true", help="Run static SDP/parser contract checks.")
     mode.add_argument("--run", action="store_true", help="Run a live WHEP/ICE smoke test with aiortc.")
     parser.add_argument("--whep-url", default=DEFAULT_WHEP_URL)
-    parser.add_argument("--stun-url", default=DEFAULT_STUN_URL)
+    parser.add_argument("--stun-url", default=None, help="Deprecated alias for --ice-server-url.")
+    parser.add_argument("--ice-server-url", default=None)
+    parser.add_argument("--ice-username", default=None)
+    parser.add_argument("--ice-credential", default=None)
     parser.add_argument("--timeout-seconds", type=float, default=15)
     parser.add_argument("--insecure", action="store_true", help="Allow self-signed HTTPS WHEP endpoints.")
     parser.add_argument(
@@ -258,6 +278,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         help="Fail unless a decoded remote video frame is received.",
     )
     args = parser.parse_args(argv)
+    args.ice_server_url = args.ice_server_url or args.stun_url or DEFAULT_STUN_URL
     if not args.check and not args.run:
         args.check = True
     return args
