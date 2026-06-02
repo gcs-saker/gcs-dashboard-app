@@ -31,7 +31,7 @@ describe("authenticatedFetch", () => {
     expect(getStoredAccessToken()).toBe("fresh-access-token");
     expect(fetcher).toHaveBeenNthCalledWith(
       2,
-      "/api/auth/refresh",
+      "/auth-policy/auth/refresh",
       expect.objectContaining({ method: "POST", credentials: "include", headers: AUTH_ACCEPT_HEADERS }),
     );
     expect(fetcher).toHaveBeenNthCalledWith(
@@ -49,7 +49,7 @@ describe("authenticatedFetch", () => {
 
   test("coalesces concurrent 401 responses into one refresh request", async () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      if (String(input) === "/api/auth/refresh") {
+      if (String(input) === "/auth-policy/auth/refresh") {
         return Response.json({
           access_token: "fresh-access-token",
           token_type: "bearer",
@@ -77,12 +77,11 @@ describe("authenticatedFetch", () => {
     expect(statusResponse.status).toBe(200);
     expect(iceResponse.status).toBe(200);
     expect(getStoredAccessToken()).toBe("fresh-access-token");
-    expect(fetcher.mock.calls.filter(([input]) => String(input) === "/api/auth/refresh")).toHaveLength(1);
+    expect(fetcher.mock.calls.filter(([input]) => String(input) === "/auth-policy/auth/refresh")).toHaveLength(1);
   });
 
-  test("signup uses the configured auth API base URL", async () => {
+  test("signup uses the auth-policy API base URL by default", async () => {
     vi.resetModules();
-    vi.stubEnv("VITE_AUTH_API_BASE_URL", "/auth-policy/auth");
     const fetcher = vi.fn(async () =>
       Response.json(
         {

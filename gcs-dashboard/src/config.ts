@@ -1,7 +1,7 @@
 const apiBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_API_BASE_URL ?? "/api", "/api");
 const authBaseUrl = normalizeLocalDevBaseUrl(
-  import.meta.env.VITE_AUTH_API_BASE_URL ?? `${apiBaseUrl.replace(/\/$/, "")}/auth`,
-  "/api/auth",
+  import.meta.env.VITE_AUTH_API_BASE_URL ?? "/auth-policy/auth",
+  "/auth-policy/auth",
 );
 const streamApiBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_STREAM_API_BASE_URL ?? apiBaseUrl, "/api");
 const hlsBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_HLS_BASE_URL ?? "/hls", "/hls");

@@ -10,6 +10,7 @@
 
 ```bash
 VITE_API_BASE_URL=/api
+VITE_AUTH_API_BASE_URL=/auth-policy/auth
 VITE_HLS_BASE_URL=/hls
 VITE_LOCAL_WEBCAM_WHIP_URL=/webrtc/raw/local/webcam/whip
 VITE_DEV_PROXY_TARGET=https://a4ai.tplinkdns.com
@@ -22,9 +23,10 @@ npm run dev
 ```
 
 브라우저에서 `http://localhost:<vite-port>`로 열면 로그인 요청은 브라우저 기준
-`/api/auth/login`으로 나가고, Vite가 `https://a4ai.tplinkdns.com/api/auth/login`으로
-전달한다. DevTools에 `http://localhost:8001/auth/login`이 보이면 오래된 `.env` 또는
-shell 환경변수 `VITE_API_BASE_URL`이 남아있는 상태다.
+`/auth-policy/auth/login`으로 나가고, Vite가
+`https://a4ai.tplinkdns.com/auth-policy/auth/login`으로 전달한다. DevTools에
+`http://localhost:8001/auth/login` 또는 `/api/auth/login`이 보이면 오래된 `.env` 또는
+shell 환경변수 `VITE_AUTH_API_BASE_URL`이 남아있는 상태다.
 
 ## M1 Sample Stream
 

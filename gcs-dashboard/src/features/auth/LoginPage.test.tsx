@@ -12,8 +12,8 @@ vi.mock("../streaming/components/StreamingSmokeDashboard", () => ({
 }));
 
 describe("LoginPage auth flow", () => {
-  const AUTH_REFRESH_URL = "/api/auth/refresh";
-  const AUTH_LOGIN_URL = "/api/auth/login";
+  const AUTH_REFRESH_URL = "/auth-policy/auth/refresh";
+  const AUTH_LOGIN_URL = "/auth-policy/auth/login";
   const ISSUED_TOKEN_RESPONSE = {
     access_token: "issued-access-token",
     token_type: "bearer",
