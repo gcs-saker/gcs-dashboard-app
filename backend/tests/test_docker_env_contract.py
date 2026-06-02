@@ -211,6 +211,17 @@ def test_compose_declares_turn_service_as_opt_in_profile() -> None:
     assert "--max-port=49200" in turn["command"]
     assert "--lt-cred-mech" in turn["command"]
     assert "--user=${WEBRTC_TURN_USERNAME:-gcs-turn}:${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}" in turn["command"]
+    assert "--no-multicast-peers" not in turn["command"]
+
+
+def test_single_node_turn_services_use_coturn_supported_runtime_flags() -> None:
+    compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
+
+    for service_name in ("turn-primary", "turn-secondary"):
+        command = compose["services"][service_name]["command"]
+        assert "--lt-cred-mech" in command
+        assert "--no-cli" in command
+        assert "--no-multicast-peers" not in command
 
 
 def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
