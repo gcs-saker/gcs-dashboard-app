@@ -351,7 +351,7 @@
   left: 14px;
   position: absolute;
   top: 18px;
-  width: 42px;
+  width: 54px;
   z-index: 8;
 }
 
@@ -504,11 +504,30 @@
   color: var(--text);
   cursor: pointer;
   display: flex;
-  font-size: 1.05rem;
+  font-size: 0.92rem;
   font-weight: 900;
   height: 38px;
   justify-content: center;
   line-height: 1;
+}
+
+.map-toolbar button.is-active {
+  border-color: var(--cyan);
+  box-shadow: 0 0 16px rgba(61, 184, 255, 0.34);
+  color: var(--cyan);
+}
+
+.offline-map-marker--pin::after {
+  background: currentColor;
+  bottom: -7px;
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+  content: "";
+  height: 8px;
+  left: 50%;
+  opacity: 0.95;
+  position: absolute;
+  transform: translateX(-50%);
+  width: 10px;
 }
 
 .map-route {

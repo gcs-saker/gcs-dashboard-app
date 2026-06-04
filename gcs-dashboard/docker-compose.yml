@@ -58,9 +58,9 @@ services:
       MEDIAMTX_PUBLIC_HLS_BASE_URL: ${MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://localhost:8888}
       MEDIAMTX_API_BASE_URL: ${MEDIAMTX_API_BASE_URL:-http://mediamtx:9997}
       WEBRTC_STUN_URL: ${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}
-      DASHBOARD_MAP_PROVIDER: ${DASHBOARD_MAP_PROVIDER:-openfreemap}
-      DASHBOARD_MAP_STYLE_URL: ${DASHBOARD_MAP_STYLE_URL:-https://tiles.openfreemap.org/styles/liberty}
-      DASHBOARD_MAP_ATTRIBUTION: ${DASHBOARD_MAP_ATTRIBUTION:-OpenFreeMap, OpenMapTiles, OpenStreetMap}
+      DASHBOARD_MAP_PROVIDER: ${DASHBOARD_MAP_PROVIDER:-esri-satellite}
+      DASHBOARD_MAP_STYLE_URL: ${DASHBOARD_MAP_STYLE_URL:-https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}}
+      DASHBOARD_MAP_ATTRIBUTION: ${DASHBOARD_MAP_ATTRIBUTION:-Esri World Imagery}
       DASHBOARD_MAP_REQUIRES_API_KEY: ${DASHBOARD_MAP_REQUIRES_API_KEY:-false}
       WEBRTC_TURN_URL: ${WEBRTC_TURN_URL:-}
       WEBRTC_TURN_USERNAME: ${WEBRTC_TURN_USERNAME:-}
@@ -135,8 +135,8 @@ services:
         VITE_DEFAULT_STREAM_ID: ${VITE_DEFAULT_STREAM_ID:-CID001}
         VITE_LOCAL_WEBCAM_WHIP_URL: ${VITE_LOCAL_WEBCAM_WHIP_URL:-https://localhost/webrtc/raw/local/webcam/whip}
         VITE_WEBRTC_STUN_URL: ${VITE_WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}
-        VITE_MAP_PROVIDER: ${VITE_MAP_PROVIDER:-openfreemap}
-        VITE_MAP_STYLE_URL: ${VITE_MAP_STYLE_URL:-https://tiles.openfreemap.org/styles/liberty}
+        VITE_MAP_PROVIDER: ${VITE_MAP_PROVIDER:-esri-satellite}
+        VITE_MAP_STYLE_URL: ${VITE_MAP_STYLE_URL:-https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}}
     container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-dashboard
     env_file: *service_env_files
     ports:

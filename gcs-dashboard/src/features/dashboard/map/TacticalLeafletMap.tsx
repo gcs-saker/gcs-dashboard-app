@@ -22,6 +22,7 @@ const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
 
 export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletMapProps) {
+  const [autoFocusEnabled, setAutoFocusEnabled] = useState(true);
   const [mapConfig, setMapConfig] = useState<DashboardMapConfig>(FALLBACK_MAP_CONFIG);
   const [useOfflineMap, setUseOfflineMap] = useState(FALLBACK_MAP_CONFIG.provider === "offline");
   const handleMapError = useCallback(() => setUseOfflineMap(true), []);
@@ -41,7 +42,9 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
   if (!useOfflineMap) {
     return (
       <PublicVectorMap
+        autoFocusEnabled={autoFocusEnabled}
         mapConfig={mapConfig}
+        onAutoFocusChange={setAutoFocusEnabled}
         selectedStream={selectedStream}
         streams={streams}
         onMapError={handleMapError}
@@ -49,10 +52,27 @@ export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletM
     );
   }
 
-  return <OfflineTacticalMap selectedStream={selectedStream} streams={streams} />;
+  return (
+    <OfflineTacticalMap
+      autoFocusEnabled={autoFocusEnabled}
+      onAutoFocusChange={setAutoFocusEnabled}
+      selectedStream={selectedStream}
+      streams={streams}
+    />
+  );
 }
 
-function OfflineTacticalMap({ selectedStream, streams }: TacticalLeafletMapProps) {
+interface OfflineTacticalMapProps extends TacticalLeafletMapProps {
+  autoFocusEnabled: boolean;
+  onAutoFocusChange: (enabled: boolean) => void;
+}
+
+function OfflineTacticalMap({
+  autoFocusEnabled,
+  onAutoFocusChange,
+  selectedStream,
+  streams,
+}: OfflineTacticalMapProps) {
   const [zoom, setZoom] = useState(INITIAL_MAP_ZOOM);
   const projectedStreams = useMemo(() => projectStreams(streams, selectedStream, zoom), [selectedStream, streams, zoom]);
   const selectedGeometry = selectedStream.geometry ?? DEFAULT_MAP_CENTER;
@@ -73,13 +93,42 @@ function OfflineTacticalMap({ selectedStream, streams }: TacticalLeafletMapProps
         중심 {selectedGeometry.lat.toFixed(6)}, {selectedGeometry.lng.toFixed(6)}
       </span>
       <div className="map-toolbar" aria-label="지도 도구">
-        <button aria-label="지도 중심 초기화" type="button" onClick={() => setZoom(INITIAL_MAP_ZOOM)}>
+        <button
+          aria-label={autoFocusEnabled ? "자동 포커스 켜짐" : "자동 포커스 켜기"}
+          className={autoFocusEnabled ? "is-active" : undefined}
+          type="button"
+          onClick={() => onAutoFocusChange(true)}
+        >
+          Auto
+        </button>
+        <button
+          aria-label="지도 중심 초기화"
+          type="button"
+          onClick={() => {
+            onAutoFocusChange(false);
+            setZoom(INITIAL_MAP_ZOOM);
+          }}
+        >
           ⌖
         </button>
-        <button aria-label="지도 확대" type="button" onClick={() => setZoom((current) => Math.min(MAX_ZOOM, current + 1))}>
+        <button
+          aria-label="지도 확대"
+          type="button"
+          onClick={() => {
+            onAutoFocusChange(false);
+            setZoom((current) => Math.min(MAX_ZOOM, current + 1));
+          }}
+        >
           +
         </button>
-        <button aria-label="지도 축소" type="button" onClick={() => setZoom((current) => Math.max(MIN_ZOOM, current - 1))}>
+        <button
+          aria-label="지도 축소"
+          type="button"
+          onClick={() => {
+            onAutoFocusChange(false);
+            setZoom((current) => Math.max(MIN_ZOOM, current - 1));
+          }}
+        >
           -
         </button>
       </div>

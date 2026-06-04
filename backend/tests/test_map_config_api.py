@@ -13,9 +13,9 @@ from modules.map_config import MapConfigService
 def client() -> Generator[TestClient, None, None]:
     app.dependency_overrides[get_map_config_service] = lambda: MapConfigService(
         DashboardMapSettings(
-            provider="openfreemap",
-            style_url="https://tiles.openfreemap.org/styles/liberty",
-            attribution="OpenFreeMap, OpenMapTiles, OpenStreetMap",
+            provider="esri-satellite",
+            style_url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            attribution="Esri World Imagery",
             requires_api_key=False,
         )
     )
@@ -31,9 +31,9 @@ def test_map_config_api_returns_provider_contract(client: TestClient, auth_heade
 
     assert response.status_code == 200
     assert response.json() == {
-        "provider": "openfreemap",
-        "styleUrl": "https://tiles.openfreemap.org/styles/liberty",
-        "attribution": "OpenFreeMap, OpenMapTiles, OpenStreetMap",
+        "provider": "esri-satellite",
+        "styleUrl": "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        "attribution": "Esri World Imagery",
         "requiresApiKey": False,
     }
 

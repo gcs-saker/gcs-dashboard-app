@@ -2,9 +2,9 @@ from dataclasses import dataclass
 import os
 
 DEFAULT_WEBRTC_STUN_URL = "stun:stun.l.google.com:19302"
-DEFAULT_MAP_PROVIDER = "openfreemap"
-DEFAULT_MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
-DEFAULT_MAP_ATTRIBUTION = "OpenFreeMap, OpenMapTiles, OpenStreetMap"
+DEFAULT_MAP_PROVIDER = "esri-satellite"
+DEFAULT_MAP_STYLE_URL = "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+DEFAULT_MAP_ATTRIBUTION = "Esri World Imagery"
 DEFAULT_ALLOWED_ORIGINS = (
     "http://localhost:5173",
     "http://localhost:5174",
@@ -14,7 +14,7 @@ DEFAULT_CONTENT_SECURITY_POLICY = (
     "default-src 'self'; "
     "script-src 'self'; "
     "style-src 'self' 'unsafe-inline' https://unpkg.com; "
-    "img-src 'self' data: blob: https://tiles.openfreemap.org; "
+    "img-src 'self' data: blob: https://tiles.openfreemap.org https://services.arcgisonline.com; "
     "connect-src 'self' https: wss:; "
     "media-src 'self' blob: https:; "
     "worker-src 'self' blob:; "
@@ -128,7 +128,7 @@ class DashboardMapSettings:
     def from_env(cls) -> "DashboardMapSettings":
         provider = _empty_to_none(os.getenv("DASHBOARD_MAP_PROVIDER")) or DEFAULT_MAP_PROVIDER
         return cls(
-            provider=provider if provider in {"openfreemap", "offline", "custom"} else "custom",
+            provider=provider if provider in {"esri-satellite", "openfreemap", "offline", "custom"} else "custom",
             style_url=_empty_to_none(os.getenv("DASHBOARD_MAP_STYLE_URL")) or DEFAULT_MAP_STYLE_URL,
             attribution=_empty_to_none(os.getenv("DASHBOARD_MAP_ATTRIBUTION")) or DEFAULT_MAP_ATTRIBUTION,
             requires_api_key=_parse_bool(os.getenv("DASHBOARD_MAP_REQUIRES_API_KEY"), default=False),

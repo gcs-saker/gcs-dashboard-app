@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-MapProvider = Literal["openfreemap", "offline", "custom"]
+MapProvider = Literal["esri-satellite", "openfreemap", "offline", "custom"]
 
 
 class MapConfigResponse(BaseModel):
