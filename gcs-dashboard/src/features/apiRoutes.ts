@@ -27,4 +27,5 @@ export const DASHBOARD_API_ROUTES = Object.freeze({
 export const STREAM_API_ROUTES = Object.freeze({
   streams: "/streams",
   iceServers: "/streams/ice-servers",
+  mapConfig: "/map/config",
 });

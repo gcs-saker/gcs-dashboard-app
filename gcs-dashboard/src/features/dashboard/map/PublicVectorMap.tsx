@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import { MAP_STYLE_URL } from "@/config";
+import type { DashboardMapConfig } from "@/config";
 import type { DashboardStreamSlot } from "../streamTypes";
 import {
   coordinateSourceLabel,
@@ -14,6 +14,7 @@ import {
 } from "./mapContracts";
 
 interface PublicVectorMapProps {
+  mapConfig: DashboardMapConfig;
   selectedStream: DashboardStreamSlot;
   streams: DashboardStreamSlot[];
   onMapError: () => void;
@@ -21,7 +22,7 @@ interface PublicVectorMapProps {
 
 const INITIAL_PUBLIC_MAP_ZOOM = 14;
 
-export function PublicVectorMap({ selectedStream, streams, onMapError }: PublicVectorMapProps) {
+export function PublicVectorMap({ mapConfig, selectedStream, streams, onMapError }: PublicVectorMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const selectedGeometry = selectedStream.geometry ?? DEFAULT_MAP_CENTER;
@@ -36,7 +37,7 @@ export function PublicVectorMap({ selectedStream, streams, onMapError }: PublicV
 
     const map = new maplibregl.Map({
       container,
-      style: MAP_STYLE_URL,
+      style: mapConfig.styleUrl,
       center: [selectedGeometry.lng, selectedGeometry.lat],
       zoom: INITIAL_PUBLIC_MAP_ZOOM,
       attributionControl: false,
@@ -49,7 +50,7 @@ export function PublicVectorMap({ selectedStream, streams, onMapError }: PublicV
       mapRef.current = null;
       map.remove();
     };
-  }, [onMapError]);
+  }, [mapConfig.styleUrl, onMapError]);
 
   useEffect(() => {
     mapRef.current?.easeTo({

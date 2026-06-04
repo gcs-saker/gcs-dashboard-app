@@ -51,6 +51,13 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["backend"]["environment"]["WEBRTC_STUN_URL"] == (
         "${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
     )
+    assert services["backend"]["environment"]["DASHBOARD_MAP_PROVIDER"] == "${DASHBOARD_MAP_PROVIDER:-openfreemap}"
+    assert services["backend"]["environment"]["DASHBOARD_MAP_STYLE_URL"] == (
+        "${DASHBOARD_MAP_STYLE_URL:-https://tiles.openfreemap.org/styles/liberty}"
+    )
+    assert services["backend"]["environment"]["DASHBOARD_MAP_REQUIRES_API_KEY"] == (
+        "${DASHBOARD_MAP_REQUIRES_API_KEY:-false}"
+    )
     assert services["backend"]["environment"]["WEBRTC_TURN_URL"] == "${WEBRTC_TURN_URL:-}"
     assert services["nginx"]["build"]["args"]["VITE_API_BASE_URL"] == "${VITE_API_BASE_URL:-/api}"
     assert services["nginx"]["build"]["args"]["VITE_IDENTITY_API_BASE_URL"] == (

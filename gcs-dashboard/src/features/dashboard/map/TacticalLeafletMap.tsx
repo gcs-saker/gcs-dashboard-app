@@ -1,7 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
-import { MAP_PROVIDER } from "@/config";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { FALLBACK_MAP_CONFIG } from "@/config";
+import type { DashboardMapConfig } from "@/config";
 import type { DashboardStreamSlot } from "../streamTypes";
 import { PublicVectorMap } from "./PublicVectorMap";
+import { fetchMapConfig } from "./mapConfig";
 import {
   coordinateSourceLabel,
   coordinateText,
@@ -20,12 +22,26 @@ const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
 
 export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletMapProps) {
-  const [useOfflineMap, setUseOfflineMap] = useState(MAP_PROVIDER === "offline");
+  const [mapConfig, setMapConfig] = useState<DashboardMapConfig>(FALLBACK_MAP_CONFIG);
+  const [useOfflineMap, setUseOfflineMap] = useState(FALLBACK_MAP_CONFIG.provider === "offline");
   const handleMapError = useCallback(() => setUseOfflineMap(true), []);
+
+  useEffect(() => {
+    let disposed = false;
+    void fetchMapConfig().then((config) => {
+      if (disposed) return;
+      setMapConfig(config);
+      setUseOfflineMap(config.provider === "offline");
+    });
+    return () => {
+      disposed = true;
+    };
+  }, []);
 
   if (!useOfflineMap) {
     return (
       <PublicVectorMap
+        mapConfig={mapConfig}
         selectedStream={selectedStream}
         streams={streams}
         onMapError={handleMapError}

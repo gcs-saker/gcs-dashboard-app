@@ -2,6 +2,9 @@ from dataclasses import dataclass
 import os
 
 DEFAULT_WEBRTC_STUN_URL = "stun:stun.l.google.com:19302"
+DEFAULT_MAP_PROVIDER = "openfreemap"
+DEFAULT_MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
+DEFAULT_MAP_ATTRIBUTION = "OpenFreeMap, OpenMapTiles, OpenStreetMap"
 DEFAULT_ALLOWED_ORIGINS = (
     "http://localhost:5173",
     "http://localhost:5174",
@@ -115,6 +118,24 @@ class WebRtcIceSettings:
 
 
 @dataclass(frozen=True)
+class DashboardMapSettings:
+    provider: str = DEFAULT_MAP_PROVIDER
+    style_url: str = DEFAULT_MAP_STYLE_URL
+    attribution: str = DEFAULT_MAP_ATTRIBUTION
+    requires_api_key: bool = False
+
+    @classmethod
+    def from_env(cls) -> "DashboardMapSettings":
+        provider = _empty_to_none(os.getenv("DASHBOARD_MAP_PROVIDER")) or DEFAULT_MAP_PROVIDER
+        return cls(
+            provider=provider if provider in {"openfreemap", "offline", "custom"} else "custom",
+            style_url=_empty_to_none(os.getenv("DASHBOARD_MAP_STYLE_URL")) or DEFAULT_MAP_STYLE_URL,
+            attribution=_empty_to_none(os.getenv("DASHBOARD_MAP_ATTRIBUTION")) or DEFAULT_MAP_ATTRIBUTION,
+            requires_api_key=_parse_bool(os.getenv("DASHBOARD_MAP_REQUIRES_API_KEY"), default=False),
+        )
+
+
+@dataclass(frozen=True)
 class WebSecuritySettings:
     allowed_origins: tuple[str, ...]
     content_security_policy: str
@@ -140,3 +161,10 @@ def _csv_to_tuple(value: str | None) -> tuple[str, ...]:
     if not value:
         return ()
     return tuple(item.strip() for item in value.split(",") if item.strip())
+
+
+def _parse_bool(value: str | None, *, default: bool) -> bool:
+    normalized = _empty_to_none(value)
+    if normalized is None:
+        return default
+    return normalized.lower() in {"1", "true", "yes", "on"}

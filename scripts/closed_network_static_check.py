@@ -41,6 +41,7 @@ def check_closed_network_env() -> list[str]:
     required_values = (
         "VITE_STREAM_API_BASE_URL=/media-control",
         "VITE_MAP_PROVIDER=offline",
+        "DASHBOARD_MAP_PROVIDER=offline",
         "WEBRTC_STUN_URL=stun:10.0.0.10:3478",
         "WEBRTC_TURN_URL=turn:10.0.0.10:3478?transport=udp",
         "TIME_SYNC_MODE=closed_network",

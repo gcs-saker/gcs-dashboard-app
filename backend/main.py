@@ -2,7 +2,7 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from api import auth, control, event, health, stream, telemetry, unmaned_assets
+from api import auth, control, event, health, map_config, stream, telemetry, unmaned_assets
 from api.contracts import (
     MetricsProtocol,
     RootRoutes,
@@ -58,6 +58,12 @@ app.include_router(
     stream.v1_router,
     prefix=RouterPrefixes.API_V1,
     tags=["Stream"],
+    dependencies=[Depends(require_role("viewer"))],
+)
+app.include_router(
+    map_config.router,
+    prefix=RouterPrefixes.API_V1,
+    tags=["Map"],
     dependencies=[Depends(require_role("viewer"))],
 )
 app.include_router(

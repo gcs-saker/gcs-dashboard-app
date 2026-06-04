@@ -2,6 +2,7 @@ from api.contracts import (
     AuthRoutes,
     ControlRoutes,
     HealthRoutes,
+    MapRoutes,
     RouterPrefixes,
     StreamRoutes,
     TelemetryRoutes,
@@ -12,6 +13,7 @@ def test_python_api_route_contracts_are_domain_scoped() -> None:
     assert AuthRoutes.LOGIN == "/login"
     assert HealthRoutes.HEALTHZ == "/healthz"
     assert StreamRoutes.ICE_SERVERS == "/streams/ice-servers"
+    assert MapRoutes.CONFIG == "/map/config"
     assert TelemetryRoutes.ALL == "/all"
     assert ControlRoutes.SEND == "/"
 
