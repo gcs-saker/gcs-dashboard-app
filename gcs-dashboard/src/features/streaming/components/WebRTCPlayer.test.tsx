@@ -91,6 +91,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
@@ -118,7 +119,7 @@ describe("WebRTCPlayer", () => {
     expect(peerConnections[0].addTransceiver).toHaveBeenCalledWith("video", { direction: "recvonly" });
     expect(peerConnections[0].addTransceiver).toHaveBeenCalledWith("audio", { direction: "recvonly" });
     expect(RTCPeerConnection).toHaveBeenCalledWith({
-      iceServers: [{ urls: "stun:localhost:3478" }],
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
     expect(peerConnections[0].setRemoteDescription).toHaveBeenCalledWith({
       type: "answer",
@@ -278,6 +279,49 @@ describe("WebRTCPlayer", () => {
         isAudioActive: true,
       }),
     );
+  });
+
+  test("keeps the audio indicator stable during short remote mute events", async () => {
+    const listeners = new Map<string, () => void>();
+    const audioTrack = {
+      enabled: true,
+      muted: false,
+      readyState: "live",
+      addEventListener: vi.fn((event: string, handler: () => void) => {
+        listeners.set(event, handler);
+      }),
+      removeEventListener: vi.fn(),
+    };
+    const remoteStream = {
+      getAudioTracks: () => [audioTrack],
+    } as unknown as MediaStream;
+
+    render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" />);
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    vi.useFakeTimers();
+    act(() => {
+      peerConnections[0].emitRemoteTrack([remoteStream]);
+    });
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-active", "true");
+
+    act(() => {
+      audioTrack.muted = true;
+      listeners.get("mute")?.();
+      vi.advanceTimersByTime(1199);
+    });
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-active", "true");
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-active", "false");
+
+    act(() => {
+      audioTrack.muted = false;
+      listeners.get("unmute")?.();
+    });
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-active", "true");
   });
 
   test("renders offline state without creating a peer connection", () => {

@@ -142,10 +142,10 @@ def test_compose_port_overrides_are_documented_without_management_ports():
     assert "9998" not in env_example
 
 
-def test_mediamtx_declares_local_stun_server_for_closed_network_validation():
+def test_mediamtx_declares_public_stun_server_for_connected_network_validation():
     config = load_yaml(MEDIAMTX_CONFIG)
 
-    assert config["webrtcICEServers2"] == [{"url": "stun:localhost:3478", "clientOnly": True}]
+    assert config["webrtcICEServers2"] == [{"url": "stun:stun.l.google.com:19302", "clientOnly": True}]
     assert config["webrtcSTUNGatherTimeout"] == "5s"
 
 
@@ -153,7 +153,7 @@ def test_ice_compose_override_maps_stun_env_to_mediamtx_config():
     override = load_yaml(DOCKER_ICE_COMPOSE)
     environment = override["services"]["mediamtx"]["environment"]
 
-    assert environment["MTX_WEBRTCICESERVERS2_0_URL"] == "${WEBRTC_STUN_URL:-stun:localhost:3478}"
+    assert environment["MTX_WEBRTCICESERVERS2_0_URL"] == "${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
     assert environment["MTX_WEBRTCICESERVERS2_1_URL"] == "${WEBRTC_TURN_URL:-turn:turn:3478?transport=udp}"
     assert environment["MTX_WEBRTCICESERVERS2_1_USERNAME"] == "${WEBRTC_TURN_USERNAME:-gcs-turn}"
     assert environment["MTX_WEBRTCICESERVERS2_1_PASSWORD"] == "${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}"
@@ -163,7 +163,7 @@ def test_ice_compose_override_maps_stun_env_to_mediamtx_config():
 def test_env_example_documents_ice_server_values_without_real_turn_secret():
     env_example = DOCKER_ENV_EXAMPLE.read_text(encoding="utf-8")
 
-    assert "WEBRTC_STUN_URL=stun:localhost:3478" in env_example
+    assert "WEBRTC_STUN_URL=stun:stun.l.google.com:19302" in env_example
     assert "WEBRTC_TURN_URL=turn:a4ai.tplinkdns.com:3478?transport=udp" in env_example
     assert "WEBRTC_TURN_USERNAME=gcs-turn" in env_example
     assert "WEBRTC_TURN_PASSWORD=replace-with-secret-outside-git" in env_example

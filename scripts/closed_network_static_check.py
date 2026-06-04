@@ -13,24 +13,6 @@ import sys
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PUBLIC_GOOGLE_STUN = "stun:stun.l.google.com:19302"
-LOCAL_STUN = "stun:localhost:3478"
-
-ACTIVE_CONFIG_FILES = (
-    REPO_ROOT / "backend" / "config.py",
-    REPO_ROOT / "backend" / ".env.example",
-    REPO_ROOT / "gcs-dashboard" / ".env.example",
-    REPO_ROOT / "gcs-dashboard" / ".env.production.example",
-    REPO_ROOT / "gcs-dashboard" / ".env.staging.example",
-    REPO_ROOT / "gcs-dashboard" / ".env.closed-network.example",
-    REPO_ROOT / "gcs-dashboard" / "docker-compose.yml",
-    REPO_ROOT / "gcs-dashboard" / "docker-compose.ice.example.yml",
-    REPO_ROOT / "gcs-dashboard" / "Dockerfile",
-    REPO_ROOT / "gcs-dashboard" / "mediamtx.yml",
-    REPO_ROOT / "scripts" / "streaming_e2e_smoke.sh",
-    REPO_ROOT / "scripts" / "webrtc_ice_smoke.py",
-)
-
 OFFLINE_MAP_FILES = (
     REPO_ROOT / "gcs-dashboard" / "src" / "features" / "dashboard" / "map" / "TacticalLeafletMap.tsx",
 )
@@ -41,7 +23,6 @@ CLOSED_NETWORK_ENV = REPO_ROOT / "gcs-dashboard" / ".env.closed-network.example"
 
 def main() -> int:
     errors: list[str] = []
-    errors.extend(check_public_stun_removed())
     errors.extend(check_closed_network_env())
     errors.extend(check_offline_map())
     errors.extend(check_dashboard_serves_built_artifacts())
@@ -55,19 +36,11 @@ def main() -> int:
     return 0
 
 
-def check_public_stun_removed() -> list[str]:
-    errors: list[str] = []
-    for path in ACTIVE_CONFIG_FILES:
-        content = path.read_text(encoding="utf-8")
-        if PUBLIC_GOOGLE_STUN in content:
-            errors.append(f"{path.relative_to(REPO_ROOT)} still defaults to public Google STUN")
-    return errors
-
-
 def check_closed_network_env() -> list[str]:
     content = CLOSED_NETWORK_ENV.read_text(encoding="utf-8")
     required_values = (
         "VITE_STREAM_API_BASE_URL=/media-control",
+        "VITE_MAP_PROVIDER=offline",
         "WEBRTC_STUN_URL=stun:10.0.0.10:3478",
         "WEBRTC_TURN_URL=turn:10.0.0.10:3478?transport=udp",
         "TIME_SYNC_MODE=closed_network",
@@ -100,8 +73,6 @@ def check_dashboard_serves_built_artifacts() -> list[str]:
         "COPY --from=builder /app/dist /usr/share/nginx/html",
     )
     errors = [f"Dashboard Dockerfile missing {token}" for token in required_tokens if token not in content]
-    if LOCAL_STUN not in content:
-        errors.append("Dashboard Dockerfile must default VITE_WEBRTC_STUN_URL to local STUN")
     return errors
 
 

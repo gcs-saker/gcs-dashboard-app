@@ -59,7 +59,7 @@ def test_stream_api_v1_returns_default_stun_ice_server(client: TestClient, auth_
     response = client.get("/api/v1/streams/ice-servers", headers=auth_headers("viewer01", "viewer"))
 
     assert response.status_code == 200
-    assert response.json() == [{"urls": "stun:localhost:3478", "username": None, "credential": None}]
+    assert response.json() == [{"urls": "stun:stun.l.google.com:19302", "username": None, "credential": None}]
 
 
 def test_stream_api_v1_returns_turn_ice_server_from_env(client: TestClient, auth_headers, monkeypatch):

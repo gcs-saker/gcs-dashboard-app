@@ -6,17 +6,23 @@ const authBaseUrl = normalizeLocalDevBaseUrl(
 const streamApiBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_STREAM_API_BASE_URL ?? apiBaseUrl, "/api");
 const hlsBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_HLS_BASE_URL ?? "/hls", "/hls");
 const defaultStreamId = import.meta.env.VITE_DEFAULT_STREAM_ID ?? "CID001";
-const defaultStunUrl = import.meta.env.VITE_WEBRTC_STUN_URL ?? "stun:localhost:3478";
+const defaultStunUrl = import.meta.env.VITE_WEBRTC_STUN_URL ?? "stun:stun.l.google.com:19302";
+const defaultMapProvider = import.meta.env.VITE_MAP_PROVIDER ?? "openfreemap";
+const defaultMapStyleUrl = import.meta.env.VITE_MAP_STYLE_URL ?? "https://tiles.openfreemap.org/styles/liberty";
 const localWebcamWhipUrl = normalizeLocalDevBaseUrl(
   import.meta.env.VITE_LOCAL_WEBCAM_WHIP_URL ?? "/webrtc/raw/local/webcam/whip",
   "/webrtc/raw/local/webcam/whip",
 );
+
+export type DashboardMapProvider = "openfreemap" | "offline";
 
 export const API_BASE_URL: string = apiBaseUrl;
 export const AUTH_API_BASE_URL: string = authBaseUrl;
 export const STREAM_API_BASE_URL: string = streamApiBaseUrl;
 export const HLS_BASE_URL: string = hlsBaseUrl;
 export const DEFAULT_STREAM_ID: string = defaultStreamId;
+export const MAP_PROVIDER: DashboardMapProvider = defaultMapProvider === "offline" ? "offline" : "openfreemap";
+export const MAP_STYLE_URL: string = defaultMapStyleUrl;
 export const LOCAL_WEBCAM_STREAM_ID = "raw.local.webcam";
 export const LOCAL_WEBCAM_WHIP_URL: string = localWebcamWhipUrl;
 export const WEBRTC_ICE_SERVERS: RTCIceServer[] = defaultStunUrl

@@ -44,7 +44,7 @@ staging/production에서는 같은 키 이름을 유지하되, 값은 서버 sec
 | database | `MYSQL_*`, `DATABASE_URL` | MySQL container와 backend DB 연결 |
 | backend | `BACKEND_HTTP_PORT`, `BACKEND_IMAGE` | API service port/image |
 | mqtt | `MQTT_*` | control message broker |
-| dashboard | `DASHBOARD_HTTP_PORT`, `VITE_*` | nginx serving과 Vite build-time 값 |
+| dashboard | `DASHBOARD_HTTP_PORT`, `VITE_*` | nginx serving과 Vite build-time 값. 공개망은 `VITE_MAP_PROVIDER=openfreemap`, 폐쇄망은 `VITE_MAP_PROVIDER=offline`으로 분리 |
 | mediamtx | `MEDIAMTX_*` | playback/ingest port, public playback URL |
 | edge | `PUBLIC_HTTPS_PORT`, `NGINX_CERTS_DIR` | 외부 `443/tcp` 단일 인입과 TLS 인증서 경로 |
 | ice | `MEDIAMTX_ICE_BIND_ADDR`, `TURN_PUBLIC_BIND_ADDR`, `TURN_*` | 외부/NAT 환경 WebRTC ICE/TURN 설정 |
@@ -89,6 +89,7 @@ docker compose --env-file .env up --build
 | edge가 TLS 파일을 못 읽음 | `NGINX_CERTS_DIR` 누락 또는 `fullchain.pem`, `privkey.pem` 없음 | `docker compose logs edge` |
 | backend DB 실패 | `DATABASE_URL`, MySQL health, 계정/비밀번호 불일치 | backend log, `/readyz` |
 | WebRTC는 실패하고 HLS만 가능 | STUN/TURN/NAT/port policy 문제 | #28, #29, #30, #103 |
+| 지도가 비어 보임 | 공개 타일 provider/CSP/네트워크 차단 문제. 폐쇄망은 `VITE_MAP_PROVIDER=offline`으로 전술 지도 fallback 사용 | dashboard env, browser console, edge CSP |
 
 ## #112 반영 기준
 

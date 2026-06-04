@@ -6,7 +6,7 @@ GCS-Saker는 공개망과 폐쇄망 모두에서 동작해야 한다. 폐쇄망�
 
 ## 이번 기준선
 
-- 기본 STUN 값은 `stun:localhost:3478`이다.
+- 폐쇄망 프로필 STUN 값은 내부 STUN/TURN VIP 예시인 `stun:10.0.0.10:3478`이다.
 - 폐쇄망 profile은 `gcs-dashboard/.env.closed-network.example`에 분리한다.
 - 실제 납품 환경에서는 `10.0.0.10` 예시값을 appliance VIP 또는 내부 TURN/STUN 서버 IP로 교체한다.
 - 지도는 `TacticalLeafletMap`의 offline renderer를 사용하며 공개 tile provider를 호출하지 않는다.
