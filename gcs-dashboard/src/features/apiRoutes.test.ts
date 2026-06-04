@@ -25,5 +25,6 @@ describe("api route contracts", () => {
     expect(BACKEND_ROOT_ROUTES.streamStatus).toBe("/stream/status");
     expect(STREAM_API_ROUTES.streams).toBe("/streams");
     expect(STREAM_API_ROUTES.iceServers).toBe("/streams/ice-servers");
+    expect(STREAM_API_ROUTES.mapConfig).toBe("/map/config");
   });
 });

@@ -90,6 +90,10 @@ class StreamRoutes:
     STREAM_DETAIL: Final = "/streams/{stream_id}"
 
 
+class MapRoutes:
+    CONFIG: Final = "/map/config"
+
+
 class StreamErrorDetails:
     STREAM_NOT_REGISTERED: Final = "stream is not registered"
 

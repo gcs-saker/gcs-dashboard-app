@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { TacticalLeafletMap } from "./TacticalLeafletMap";
 import type { DashboardStreamSlot } from "../streamTypes";
@@ -44,6 +44,7 @@ const stream: DashboardStreamSlot = {
 
 afterEach(() => {
   maplibreMock().reset();
+  vi.unstubAllGlobals();
 });
 
 describe("TacticalLeafletMap", () => {
@@ -82,5 +83,37 @@ describe("TacticalLeafletMap", () => {
     });
 
     expect(screen.getByTestId("offline-tactical-map")).toBeInTheDocument();
+  });
+
+  test("applies the style URL returned by the backend map config API", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          provider: "custom",
+          styleUrl: "https://maps.example.test/style.json",
+          attribution: "Example Maps",
+          requiresApiKey: true,
+        }),
+      })),
+    );
+
+    render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
+
+    await waitFor(() => {
+      expect(maplibreMock().Map).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          style: "https://maps.example.test/style.json",
+        }),
+      );
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/v1/map/config",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Accept: "application/json" }),
+      }),
+    );
   });
 });

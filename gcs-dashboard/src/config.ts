@@ -14,7 +14,14 @@ const localWebcamWhipUrl = normalizeLocalDevBaseUrl(
   "/webrtc/raw/local/webcam/whip",
 );
 
-export type DashboardMapProvider = "openfreemap" | "offline";
+export type DashboardMapProvider = "openfreemap" | "offline" | "custom";
+
+export interface DashboardMapConfig {
+  provider: DashboardMapProvider;
+  styleUrl: string;
+  attribution: string;
+  requiresApiKey: boolean;
+}
 
 export const API_BASE_URL: string = apiBaseUrl;
 export const AUTH_API_BASE_URL: string = authBaseUrl;
@@ -23,6 +30,12 @@ export const HLS_BASE_URL: string = hlsBaseUrl;
 export const DEFAULT_STREAM_ID: string = defaultStreamId;
 export const MAP_PROVIDER: DashboardMapProvider = defaultMapProvider === "offline" ? "offline" : "openfreemap";
 export const MAP_STYLE_URL: string = defaultMapStyleUrl;
+export const FALLBACK_MAP_CONFIG: DashboardMapConfig = Object.freeze({
+  provider: MAP_PROVIDER,
+  styleUrl: MAP_STYLE_URL,
+  attribution: "OpenFreeMap, OpenMapTiles, OpenStreetMap",
+  requiresApiKey: false,
+});
 export const LOCAL_WEBCAM_STREAM_ID = "raw.local.webcam";
 export const LOCAL_WEBCAM_WHIP_URL: string = localWebcamWhipUrl;
 export const WEBRTC_ICE_SERVERS: RTCIceServer[] = defaultStunUrl
