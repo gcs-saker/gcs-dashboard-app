@@ -121,6 +121,15 @@ class OperationalReadControllerTest {
     }
 
     @Test
+    fun `telemetry ingest rejects missing access token`() {
+        val error = org.junit.jupiter.api.assertThrows<ResponseStatusException> {
+            controller.ingestTelemetry(null, TelemetryIngestRequest(uuid = "raw.mobile.gps"))
+        }
+
+        assertEquals(HttpStatus.UNAUTHORIZED, error.statusCode)
+    }
+
+    @Test
     fun `asset read model hides another group assets`() {
         val response = controller.assetsForGateway("raw.company-b.front", bearer(accessToken("viewer-a")))
 

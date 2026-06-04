@@ -142,6 +142,19 @@ wait_for_stream_status() {
   return 1
 }
 
+expect_http_status() {
+  local expected_status="$1"
+  local url="$2"
+  shift 2
+  local actual_status
+
+  actual_status="$(curl -sS -o /dev/null -w "%{http_code}" "$@" "$url")"
+  if [[ "$actual_status" != "$expected_status" ]]; then
+    echo "Expected ${url} to return ${expected_status}, got ${actual_status}" >&2
+    return 1
+  fi
+}
+
 login_access_token() {
   local edge_base_url="$1"
   local username="${AUTH_POLICY_OPERATOR_USERNAME:-operator01}"
@@ -221,6 +234,11 @@ run_live() {
   wait_for_http "${edge_base_url}/readyz"
   wait_for_stream_status "${edge_base_url}/stream/status"
 
+  expect_http_status "401" \
+    "${edge_base_url}/api/telemetry/" \
+    -H "Content-Type: application/json" \
+    -d '{"uuid":"raw.unauthorized.telemetry"}'
+
   local access_token
   access_token="$(login_access_token "$edge_base_url")"
   curl -fsS \
@@ -256,7 +274,7 @@ run_live() {
 
   echo "M7 single-node runtime smoke run passed"
   echo "Edge URL: ${edge_base_url}"
-  echo "Verified: auth-policy health/ready/telemetry ingest-read/asset reads, media-control stream status/ICE servers, MediaMTX API, TURN primary/secondary allocation"
+  echo "Verified: auth-policy health/ready/telemetry ingest-read/asset reads, unauthenticated telemetry rejection, media-control stream status/ICE servers, MediaMTX API, TURN primary/secondary allocation"
 
   if [[ "$STOP_STACK" == "1" ]]; then
     compose down
