@@ -67,8 +67,8 @@ describe("config API URL helpers", () => {
     expect(WEBRTC_ICE_SERVERS).toEqual([{ urls: "stun:stun.l.google.com:19302" }]);
   });
 
-  test("defaults to the free public OpenFreeMap provider for connected networks", () => {
-    expect(MAP_PROVIDER).toBe("openfreemap");
-    expect(MAP_STYLE_URL).toBe("https://tiles.openfreemap.org/styles/liberty");
+  test("defaults to the public satellite provider for connected networks", () => {
+    expect(MAP_PROVIDER).toBe("esri-satellite");
+    expect(MAP_STYLE_URL).toBe("https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}");
   });
 });

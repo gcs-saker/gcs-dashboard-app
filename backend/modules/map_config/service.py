@@ -17,6 +17,6 @@ class MapConfigService:
         )
 
     def _provider(self) -> MapProvider:
-        if self.settings.provider in {"openfreemap", "offline", "custom"}:
+        if self.settings.provider in {"esri-satellite", "openfreemap", "offline", "custom"}:
             return cast(MapProvider, self.settings.provider)
         return "custom"

@@ -28,16 +28,16 @@ describe("mapConfig", () => {
     );
   });
 
-  test("falls back to the public OpenFreeMap config when the API is unavailable", async () => {
+  test("falls back to the public satellite config when the API is unavailable", async () => {
     const fetcher = vi.fn(async () => ({
       ok: false,
       status: 503,
     })) as unknown as typeof fetch;
 
     await expect(fetchMapConfig(fetcher)).resolves.toEqual({
-      provider: "openfreemap",
-      styleUrl: "https://tiles.openfreemap.org/styles/liberty",
-      attribution: "OpenFreeMap, OpenMapTiles, OpenStreetMap",
+      provider: "esri-satellite",
+      styleUrl: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      attribution: "Esri World Imagery",
       requiresApiKey: false,
     });
   });

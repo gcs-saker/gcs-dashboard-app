@@ -50,7 +50,7 @@ function parseMapConfig(payload: unknown): DashboardMapConfig {
 }
 
 function parseProvider(provider: unknown): DashboardMapProvider {
-  if (provider === "openfreemap" || provider === "offline" || provider === "custom") {
+  if (provider === "esri-satellite" || provider === "openfreemap" || provider === "offline" || provider === "custom") {
     return provider;
   }
   return FALLBACK_MAP_CONFIG.provider;
