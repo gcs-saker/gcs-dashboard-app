@@ -36,6 +36,15 @@ Telemetry ingest path는 M7-15 기준으로 Spring/Kotlin auth-policy read-model
 
 구현 전 기능은 언어 전환 완료의 blocker로 보지 않는다. 다만 해당 기능을 제품 기능으로 승격하는 순간, DTO/VO, 인증/인가, runtime smoke, 단위/통합 테스트를 포함한 별도 이슈로 Spring/Kotlin 또는 Go 경로에 구현한다.
 
+Python backend는 M7 완료 이후에도 단일 노드 compose에 남을 수 있다. 이 경우의 목적은 v0.2.0 호환, 아직 제품 정책이 확정되지 않은 future/mock endpoint, 또는 별도 이슈로 승격될 기능의 임시 fallback이다. Active runtime path가 Python backend 없이 통과하면 M7 언어 전환 게이트는 통과로 판단한다.
+
+## Active/Legacy 분리 규칙
+
+1. Dashboard build-time 경로는 active cutover 서비스를 기본값으로 둔다.
+2. Edge `/healthz`, `/readyz`, telemetry/asset/ops read-model, stream control-plane은 Spring/Kotlin 또는 Go 서비스로 보낸다.
+3. Legacy/future 경로는 Nginx contract test에서 backend fallback으로 명시하되, runtime smoke 성공 조건에는 넣지 않는다.
+4. Legacy endpoint를 제품 기능으로 승격할 때는 새 이슈에서 DTO/VO, 권한 정책, runtime smoke, rollback 기준을 함께 추가한다.
+
 ## 검증 게이트
 
 1. `scripts/m7_single_node_runtime_smoke.sh --run`이 active runtime path를 모두 확인한다.

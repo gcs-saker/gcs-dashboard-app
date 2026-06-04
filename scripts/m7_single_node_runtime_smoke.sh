@@ -17,7 +17,7 @@ Usage:
 
 Modes:
   --check  Validate the runtime smoke contract without requiring a live stack.
-  --run    Start the single-node PoC stack and verify edge/backend/auth/media/TURN paths.
+  --run    Start the single-node PoC stack and verify active edge/auth-policy/media-control/MediaMTX/TURN paths.
 
 Environment:
   ENV_FILE     Compose env file. Default: deploy/compose/.env.single-node.example
@@ -274,7 +274,7 @@ run_live() {
 
   echo "M7 single-node runtime smoke run passed"
   echo "Edge URL: ${edge_base_url}"
-  echo "Verified: auth-policy health/ready/telemetry ingest-read/asset reads, unauthenticated telemetry rejection, media-control stream status/ICE servers, MediaMTX API, TURN primary/secondary allocation"
+  echo "Verified active cutover: auth-policy health/ready/telemetry ingest-read/asset reads, unauthenticated telemetry rejection, media-control stream status/ICE servers, MediaMTX API, TURN primary/secondary allocation"
 
   if [[ "$STOP_STACK" == "1" ]]; then
     compose down
