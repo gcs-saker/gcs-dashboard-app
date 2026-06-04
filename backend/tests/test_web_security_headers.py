@@ -15,6 +15,8 @@ def test_security_headers_are_attached_to_api_responses() -> None:
     assert response.headers["permissions-policy"] == "camera=(self), microphone=(self), geolocation=(self)"
     assert "default-src 'self'" in response.headers["content-security-policy"]
     assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
+    assert "https://tiles.openfreemap.org" in response.headers["content-security-policy"]
+    assert "worker-src 'self' blob:" in response.headers["content-security-policy"]
 
 
 def test_cors_only_allows_configured_origins() -> None:

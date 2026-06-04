@@ -10,6 +10,8 @@ type SignalingTimingKey = keyof WebRTCSignalingTimings;
 type SignalingTimingRecorder = (stage: SignalingTimingKey) => void;
 
 const ICE_GATHERING_TIMEOUT_MS = 2500;
+const AUDIO_STATE_POLL_INTERVAL_MS = 500;
+const AUDIO_INACTIVE_HOLD_MS = 1200;
 const EMPTY_SIGNALING_TIMINGS: WebRTCSignalingTimings = {
   iceServersLoadedMs: null,
   offerCreatedMs: null,
@@ -264,6 +266,12 @@ function playbackReducer(
         firstFrameLatencyMs: Math.max(0, Math.round(action.latencyMs)),
       };
     case "audio-state":
+      if (
+        state.hasAudioTrack === action.hasAudioTrack &&
+        state.isAudioActive === action.isAudioActive
+      ) {
+        return state;
+      }
       return {
         ...state,
         hasAudioTrack: action.hasAudioTrack,
@@ -282,17 +290,53 @@ function playbackReducer(
 
 function monitorAudioState(stream: MediaStream, dispatch: Dispatch<PlaybackAction>): () => void {
   const audioTracks = typeof stream.getAudioTracks === "function" ? stream.getAudioTracks() : [];
-  const update = () => {
+  let pendingInactiveTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
+  let lastEmitted = { hasAudioTrack: false, isAudioActive: false };
+
+  const clearPendingInactive = () => {
+    if (pendingInactiveTimer === null) return;
+    globalThis.clearTimeout(pendingInactiveTimer);
+    pendingInactiveTimer = null;
+  };
+  const emit = (next: { hasAudioTrack: boolean; isAudioActive: boolean }) => {
+    if (
+      lastEmitted.hasAudioTrack === next.hasAudioTrack &&
+      lastEmitted.isAudioActive === next.isAudioActive
+    ) {
+      return;
+    }
+    lastEmitted = next;
+    dispatch({ type: "audio-state", ...next });
+  };
+  const readAudioState = () => {
     const liveTracks = audioTracks.filter((track) => track.readyState !== "ended");
-    dispatch({
-      type: "audio-state",
+    return {
       hasAudioTrack: liveTracks.length > 0,
       isAudioActive: liveTracks.some((track) => track.enabled && !track.muted),
-    });
+    };
+  };
+  const update = () => {
+    const next = readAudioState();
+    if (next.isAudioActive || !next.hasAudioTrack) {
+      clearPendingInactive();
+      emit(next);
+      return;
+    }
+
+    if (lastEmitted.isAudioActive) {
+      if (pendingInactiveTimer !== null) return;
+      pendingInactiveTimer = globalThis.setTimeout(() => {
+        pendingInactiveTimer = null;
+        emit(readAudioState());
+      }, AUDIO_INACTIVE_HOLD_MS);
+      return;
+    }
+
+    emit(next);
   };
 
   update();
-  const intervalId = globalThis.setInterval(update, 500);
+  const intervalId = globalThis.setInterval(update, AUDIO_STATE_POLL_INTERVAL_MS);
   for (const track of audioTracks) {
     track.addEventListener?.("mute", update);
     track.addEventListener?.("unmute", update);
@@ -300,6 +344,7 @@ function monitorAudioState(stream: MediaStream, dispatch: Dispatch<PlaybackActio
   }
 
   return () => {
+    clearPendingInactive();
     globalThis.clearInterval(intervalId);
     for (const track of audioTracks) {
       track.removeEventListener?.("mute", update);

@@ -165,7 +165,7 @@ describe("LocalWebcamPublisher", () => {
 
       await waitFor(() => expect(peerConnectionConstructor).toHaveBeenCalled());
       expect(peerConnectionConstructor).toHaveBeenCalledWith({
-        iceServers: [{ urls: "stun:localhost:3478" }],
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       });
     } finally {
       globalThis.RTCPeerConnection = originalPeerConnection;

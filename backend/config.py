@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import os
 
-DEFAULT_WEBRTC_STUN_URL = "stun:localhost:3478"
+DEFAULT_WEBRTC_STUN_URL = "stun:stun.l.google.com:19302"
 DEFAULT_ALLOWED_ORIGINS = (
     "http://localhost:5173",
     "http://localhost:5174",
@@ -11,9 +11,10 @@ DEFAULT_CONTENT_SECURITY_POLICY = (
     "default-src 'self'; "
     "script-src 'self'; "
     "style-src 'self' 'unsafe-inline' https://unpkg.com; "
-    "img-src 'self' data: blob: https://*.tile.openstreetmap.org; "
+    "img-src 'self' data: blob: https://tiles.openfreemap.org; "
     "connect-src 'self' https: wss:; "
     "media-src 'self' blob: https:; "
+    "worker-src 'self' blob:; "
     "object-src 'none'; "
     "base-uri 'self'; "
     "frame-ancestors 'none'"

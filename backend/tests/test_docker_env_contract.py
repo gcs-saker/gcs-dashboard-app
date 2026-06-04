@@ -49,7 +49,7 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["backend"]["environment"]["MQTT_HOST"] == "${MQTT_HOST:-mqtt}"
     assert services["backend"]["environment"]["MEDIAMTX_PUBLIC_WEBRTC_BASE_URL"].startswith("${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:")
     assert services["backend"]["environment"]["WEBRTC_STUN_URL"] == (
-        "${WEBRTC_STUN_URL:-stun:localhost:3478}"
+        "${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
     )
     assert services["backend"]["environment"]["WEBRTC_TURN_URL"] == "${WEBRTC_TURN_URL:-}"
     assert services["nginx"]["build"]["args"]["VITE_API_BASE_URL"] == "${VITE_API_BASE_URL:-/api}"
@@ -62,7 +62,11 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
         "${VITE_LOCAL_WEBCAM_WHIP_URL:"
     )
     assert services["nginx"]["build"]["args"]["VITE_WEBRTC_STUN_URL"] == (
-        "${VITE_WEBRTC_STUN_URL:-stun:localhost:3478}"
+        "${VITE_WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
+    )
+    assert services["nginx"]["build"]["args"]["VITE_MAP_PROVIDER"] == "${VITE_MAP_PROVIDER:-openfreemap}"
+    assert services["nginx"]["build"]["args"]["VITE_MAP_STYLE_URL"] == (
+        "${VITE_MAP_STYLE_URL:-https://tiles.openfreemap.org/styles/liberty}"
     )
 
 
@@ -103,7 +107,7 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
         "${MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://localhost:8080/hls}"
     )
     assert services["media-control"]["environment"]["MEDIA_CONTROL_STUN_URL"] == (
-        "${MEDIA_CONTROL_STUN_URL:-stun:localhost:3478}"
+        "${MEDIA_CONTROL_STUN_URL:-stun:stun.l.google.com:19302}"
     )
     assert services["media-control"]["environment"]["MEDIA_CONTROL_TURN_PRIMARY_URL"] == (
         "${MEDIA_CONTROL_TURN_PRIMARY_URL:-turn:localhost:3478?transport=udp}"
@@ -236,7 +240,9 @@ def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
     assert "ARG VITE_STREAM_API_BASE_URL=/api" in dockerfile
     assert "ARG VITE_HLS_BASE_URL=/hls" in dockerfile
     assert "ARG VITE_LOCAL_WEBCAM_WHIP_URL=https://localhost/webrtc/raw/local/webcam/whip" in dockerfile
-    assert "ARG VITE_WEBRTC_STUN_URL=stun:localhost:3478" in dockerfile
+    assert "ARG VITE_WEBRTC_STUN_URL=stun:stun.l.google.com:19302" in dockerfile
+    assert "ARG VITE_MAP_PROVIDER=openfreemap" in dockerfile
+    assert "ARG VITE_MAP_STYLE_URL=https://tiles.openfreemap.org/styles/liberty" in dockerfile
     assert "COPY --from=builder /app/dist /usr/share/nginx/html" in dockerfile
     assert "COPY nginx.conf /etc/nginx/nginx.conf" in dockerfile
     assert "EXPOSE 3000" in dockerfile

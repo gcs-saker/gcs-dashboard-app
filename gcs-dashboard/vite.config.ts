@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => {
             "vendor-react": ["react", "react-dom", "react-router-dom"],
             "lazy-3d": ["three", "@react-three/fiber"],
             "lazy-hls-light": ["hls.js/light"],
+            "lazy-maplibre": ["maplibre-gl"],
             "vendor-charts": ["recharts"]
           }
         }

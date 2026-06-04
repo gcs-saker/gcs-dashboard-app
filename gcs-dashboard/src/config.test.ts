@@ -7,6 +7,8 @@ import {
   buildApiV1Url,
   buildAuthUrl,
   normalizeLocalDevBaseUrl,
+  MAP_PROVIDER,
+  MAP_STYLE_URL,
   streamApiV1Url,
   WEBRTC_ICE_SERVERS,
 } from "./config";
@@ -62,6 +64,11 @@ describe("config API URL helpers", () => {
   });
 
   test("declares a STUN server for browser ICE candidate gathering", () => {
-    expect(WEBRTC_ICE_SERVERS).toEqual([{ urls: "stun:localhost:3478" }]);
+    expect(WEBRTC_ICE_SERVERS).toEqual([{ urls: "stun:stun.l.google.com:19302" }]);
+  });
+
+  test("defaults to the free public OpenFreeMap provider for connected networks", () => {
+    expect(MAP_PROVIDER).toBe("openfreemap");
+    expect(MAP_STYLE_URL).toBe("https://tiles.openfreemap.org/styles/liberty");
   });
 });

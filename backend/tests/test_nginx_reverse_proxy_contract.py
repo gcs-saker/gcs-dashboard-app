@@ -44,6 +44,7 @@ def test_reverse_proxy_sets_browser_security_headers() -> None:
     assert "frame-ancestors 'none'" in config
     assert "object-src 'none'" in config
     assert "connect-src 'self' https: wss: stun: turn:;" in config
+    assert "worker-src 'self' blob:;" in config
     assert 'add_header Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)" always;' in config
 
 

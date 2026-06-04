@@ -317,6 +317,22 @@
   width: 10px;
 }
 
+.tactical-map__canvas--public {
+  background: #152522;
+}
+
+.tactical-map__maplibre {
+  height: 100%;
+  min-height: 294px;
+  position: relative;
+  width: 100%;
+  z-index: 0;
+}
+
+.tactical-map__canvas--public .maplibregl-canvas {
+  outline: 0;
+}
+
 .tactical-map__leaflet {
   height: 100%;
   min-height: 294px;
