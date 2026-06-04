@@ -62,6 +62,10 @@ def test_m7_runtime_smoke_requires_backend_stream_status_payload_and_read_model_
     assert "auth-policy health/ready/telemetry ingest-read/asset reads" in script
     assert "unauthenticated telemetry rejection" in script
     assert "media-control stream status" in script
+    assert "Verified active cutover" in script
+    assert "verify edge/backend/auth" not in script
+    for legacy_path in ("/api/control/", "/api/v1/ai/mock/detections", "/metrics", "/ws/"):
+        assert legacy_path not in script
 
 
 def test_mediamtx_additional_hosts_are_env_driven_for_public_nat_candidates():
