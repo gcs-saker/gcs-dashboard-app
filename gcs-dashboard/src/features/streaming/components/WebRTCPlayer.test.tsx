@@ -10,6 +10,7 @@ class MockPeerConnection {
     this.iceConnectionState = "closed";
   });
   createOffer = vi.fn(async () => ({ type: "offer", sdp: "mock-offer-sdp" }) as RTCSessionDescriptionInit);
+  getStats = vi.fn(async () => this.statsReport as unknown as RTCStatsReport);
   setLocalDescription = vi.fn(async (description: RTCSessionDescriptionInit) => {
     this.localDescription = description as RTCSessionDescription;
   });
@@ -19,6 +20,7 @@ class MockPeerConnection {
   iceConnectionState: RTCIceConnectionState = "new";
   iceGatheringState: RTCIceGatheringState;
   localDescription: RTCSessionDescription | null = null;
+  statsReport = new Map<string, Record<string, unknown>>();
   onconnectionstatechange: ((this: RTCPeerConnection, ev: Event) => unknown) | null = null;
   oniceconnectionstatechange: ((this: RTCPeerConnection, ev: Event) => unknown) | null = null;
   onicegatheringstatechange: ((this: RTCPeerConnection, ev: Event) => unknown) | null = null;
@@ -52,6 +54,10 @@ class MockPeerConnection {
       streams,
       track: { id: "video-track-1" },
     } as unknown as RTCTrackEvent);
+  }
+
+  setStats(stats: Array<Record<string, unknown>>) {
+    this.statsReport = new Map(stats.map((stat) => [String(stat.id), stat]));
   }
 }
 
@@ -277,6 +283,79 @@ describe("WebRTCPlayer", () => {
       expect.objectContaining({
         hasAudioTrack: true,
         isAudioActive: true,
+      }),
+    );
+  });
+
+  test("reports inbound audio jitter, packet loss, and ICE candidate type", async () => {
+    const onStatusChange = vi.fn();
+    const remoteStream = {
+      getAudioTracks: () => [
+        {
+          enabled: true,
+          muted: false,
+          readyState: "live",
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        },
+      ],
+    } as unknown as MediaStream;
+
+    render(
+      <WebRTCPlayer
+        onStatusChange={onStatusChange}
+        whepUrl="https://media.example.test/raw/sample/front/whep"
+      />,
+    );
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    act(() => {
+      peerConnections[0].setStats([
+        {
+          id: "audio-inbound",
+          type: "inbound-rtp",
+          kind: "audio",
+          jitter: 0.034,
+          jitterBufferDelay: 1.2,
+          jitterBufferEmittedCount: 6,
+          packetsLost: 3,
+          packetsReceived: 180,
+          concealedSamples: 960,
+        },
+        {
+          id: "pair-1",
+          type: "candidate-pair",
+          selected: true,
+          state: "succeeded",
+          localCandidateId: "local-1",
+          remoteCandidateId: "remote-1",
+          currentRoundTripTime: 0.12,
+        },
+        { id: "local-1", type: "local-candidate", candidateType: "relay", protocol: "udp" },
+        { id: "remote-1", type: "remote-candidate", candidateType: "host", protocol: "udp" },
+      ]);
+      peerConnections[0].emitRemoteTrack([remoteStream]);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-jitter-ms", "34");
+    });
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-packets-lost", "3");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-candidate-type", "relay");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-transport", "udp");
+    expect(onStatusChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        audioStats: expect.objectContaining({
+          jitterMs: 34,
+          jitterBufferDelayMs: 200,
+          packetsLost: 3,
+          packetsReceived: 180,
+          concealedSamples: 960,
+          roundTripTimeMs: 120,
+          localCandidateType: "relay",
+          remoteCandidateType: "host",
+          transportProtocol: "udp",
+        }),
       }),
     );
   });

@@ -3,7 +3,12 @@ import type { Dispatch, RefObject } from "react";
 
 import { WEBRTC_ICE_SERVERS } from "../../../config";
 import { loadWebRtcIceServers } from "../iceServers";
-import type { WebRTCPlaybackSnapshot, WebRTCPlaybackStatus, WebRTCSignalingTimings } from "../types";
+import type {
+  WebRTCAudioStats,
+  WebRTCPlaybackSnapshot,
+  WebRTCPlaybackStatus,
+  WebRTCSignalingTimings,
+} from "../types";
 
 type PeerConnectionFactory = () => RTCPeerConnection;
 type SignalingTimingKey = keyof WebRTCSignalingTimings;
@@ -12,6 +17,7 @@ type SignalingTimingRecorder = (stage: SignalingTimingKey) => void;
 const ICE_GATHERING_TIMEOUT_MS = 2500;
 const AUDIO_STATE_POLL_INTERVAL_MS = 500;
 const AUDIO_INACTIVE_HOLD_MS = 1200;
+const AUDIO_STATS_POLL_INTERVAL_MS = 1000;
 const EMPTY_SIGNALING_TIMINGS: WebRTCSignalingTimings = {
   iceServersLoadedMs: null,
   offerCreatedMs: null,
@@ -19,6 +25,17 @@ const EMPTY_SIGNALING_TIMINGS: WebRTCSignalingTimings = {
   iceGatheringDoneMs: null,
   whepResponseMs: null,
   remoteDescriptionSetMs: null,
+};
+const EMPTY_AUDIO_STATS: WebRTCAudioStats = {
+  jitterMs: null,
+  jitterBufferDelayMs: null,
+  packetsLost: null,
+  packetsReceived: null,
+  concealedSamples: null,
+  roundTripTimeMs: null,
+  localCandidateType: null,
+  remoteCandidateType: null,
+  transportProtocol: null,
 };
 
 interface UseWhepPlaybackOptions {
@@ -37,6 +54,7 @@ type PlaybackAction =
   | { type: "connection"; connectionState: RTCPeerConnectionState; iceConnectionState: RTCIceConnectionState }
   | { type: "first-frame"; latencyMs: number }
   | { type: "audio-state"; hasAudioTrack: boolean; isAudioActive: boolean }
+  | { type: "audio-stats"; stats: WebRTCAudioStats }
   | { type: "signaling-timing"; stage: SignalingTimingKey; latencyMs: number };
 
 const initialPlaybackState: WebRTCPlaybackSnapshot = {
@@ -49,6 +67,7 @@ const initialPlaybackState: WebRTCPlaybackSnapshot = {
   isAudioActive: false,
   firstFrameLatencyMs: null,
   signalingTimings: EMPTY_SIGNALING_TIMINGS,
+  audioStats: EMPTY_AUDIO_STATS,
 };
 
 export function useWhepPlayback({
@@ -77,6 +96,7 @@ export function useWhepPlayback({
     const abortController = new AbortController();
     let disposed = false;
     let stopAudioMonitor: (() => void) | null = null;
+    let stopAudioStatsMonitor: (() => void) | null = null;
     const startedAt = performance.now();
     const recordTiming: SignalingTimingRecorder = (stage) => {
       if (disposed || abortController.signal.aborted) return;
@@ -168,6 +188,7 @@ export function useWhepPlayback({
         }
       };
 
+      stopAudioStatsMonitor = monitorAudioStats(peerConnection, dispatch);
       await connectWithWhep(peerConnection, resolvedWhepUrl, fetcher, abortController.signal, recordTiming);
     }
 
@@ -176,6 +197,7 @@ export function useWhepPlayback({
       abortController.abort();
       peerConnection?.close();
       stopAudioMonitor?.();
+      stopAudioStatsMonitor?.();
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
@@ -203,6 +225,7 @@ function playbackReducer(
         isAudioActive: false,
         firstFrameLatencyMs: null,
         signalingTimings: EMPTY_SIGNALING_TIMINGS,
+        audioStats: EMPTY_AUDIO_STATS,
       };
     case "playing":
       return {
@@ -215,6 +238,7 @@ function playbackReducer(
         isAudioActive: state.isAudioActive,
         firstFrameLatencyMs: state.firstFrameLatencyMs,
         signalingTimings: state.signalingTimings,
+        audioStats: state.audioStats,
       };
     case "offline":
       return {
@@ -227,6 +251,7 @@ function playbackReducer(
         isAudioActive: false,
         firstFrameLatencyMs: null,
         signalingTimings: EMPTY_SIGNALING_TIMINGS,
+        audioStats: EMPTY_AUDIO_STATS,
       };
     case "unsupported":
       return {
@@ -239,6 +264,7 @@ function playbackReducer(
         isAudioActive: false,
         firstFrameLatencyMs: null,
         signalingTimings: state.signalingTimings,
+        audioStats: state.audioStats,
       };
     case "error":
       return {
@@ -251,6 +277,7 @@ function playbackReducer(
         isAudioActive: state.isAudioActive,
         firstFrameLatencyMs: state.firstFrameLatencyMs,
         signalingTimings: state.signalingTimings,
+        audioStats: state.audioStats,
       };
     case "connection":
       return {
@@ -277,6 +304,14 @@ function playbackReducer(
         hasAudioTrack: action.hasAudioTrack,
         isAudioActive: action.isAudioActive,
       };
+    case "audio-stats":
+      if (audioStatsEqual(state.audioStats, action.stats)) {
+        return state;
+      }
+      return {
+        ...state,
+        audioStats: action.stats,
+      };
     case "signaling-timing":
       return {
         ...state,
@@ -286,6 +321,116 @@ function playbackReducer(
         },
       };
   }
+}
+
+function monitorAudioStats(peerConnection: RTCPeerConnection, dispatch: Dispatch<PlaybackAction>): () => void {
+  let disposed = false;
+  let previousStats = EMPTY_AUDIO_STATS;
+
+  const update = () => {
+    if (typeof peerConnection.getStats !== "function") return;
+    void peerConnection.getStats().then((report) => {
+      if (disposed) return;
+      const nextStats = extractAudioStats(report);
+      if (audioStatsEqual(previousStats, nextStats)) return;
+      previousStats = nextStats;
+      dispatch({ type: "audio-stats", stats: nextStats });
+    }).catch(() => undefined);
+  };
+
+  update();
+  const intervalId = globalThis.setInterval(update, AUDIO_STATS_POLL_INTERVAL_MS);
+  return () => {
+    disposed = true;
+    globalThis.clearInterval(intervalId);
+    dispatch({ type: "audio-stats", stats: EMPTY_AUDIO_STATS });
+  };
+}
+
+function extractAudioStats(report: RTCStatsReport): WebRTCAudioStats {
+  let inboundAudio: Record<string, unknown> | null = null;
+  let selectedPair: Record<string, unknown> | null = null;
+  const statsById = new Map<string, Record<string, unknown>>();
+
+  report.forEach((stat) => {
+    const candidate = stat as unknown as Record<string, unknown>;
+    const id = typeof candidate.id === "string" ? candidate.id : null;
+    if (id) statsById.set(id, candidate);
+    if (
+      candidate.type === "inbound-rtp" &&
+      (candidate.kind === "audio" || candidate.mediaType === "audio")
+    ) {
+      inboundAudio = candidate;
+    }
+    if (
+      candidate.type === "candidate-pair" &&
+      (candidate.selected === true || candidate.nominated === true || candidate.state === "succeeded")
+    ) {
+      selectedPair = candidate;
+    }
+  });
+
+  const localCandidate = candidateFromStats(statsById, selectedPair, "localCandidateId");
+  const remoteCandidate = candidateFromStats(statsById, selectedPair, "remoteCandidateId");
+  const emittedCount = numberStat(inboundAudio, "jitterBufferEmittedCount");
+  const totalJitterBufferDelay = numberStat(inboundAudio, "jitterBufferDelay");
+  const averageJitterBufferDelayMs =
+    emittedCount !== null && emittedCount > 0 && totalJitterBufferDelay !== null
+      ? totalJitterBufferDelay * 1000 / emittedCount
+      : null;
+
+  return {
+    jitterMs: secondsToMs(numberStat(inboundAudio, "jitter")),
+    jitterBufferDelayMs: roundNullable(averageJitterBufferDelayMs),
+    packetsLost: numberStat(inboundAudio, "packetsLost"),
+    packetsReceived: numberStat(inboundAudio, "packetsReceived"),
+    concealedSamples: numberStat(inboundAudio, "concealedSamples"),
+    roundTripTimeMs: secondsToMs(numberStat(selectedPair, "currentRoundTripTime")),
+    localCandidateType: stringStat(localCandidate, "candidateType"),
+    remoteCandidateType: stringStat(remoteCandidate, "candidateType"),
+    transportProtocol: stringStat(localCandidate, "protocol") ?? stringStat(selectedPair, "protocol"),
+  };
+}
+
+function candidateFromStats(
+  statsById: Map<string, Record<string, unknown>>,
+  selectedPair: Record<string, unknown> | null,
+  key: string,
+): Record<string, unknown> | null {
+  const candidateId = stringStat(selectedPair, key);
+  return candidateId ? statsById.get(candidateId) ?? null : null;
+}
+
+function numberStat(source: Record<string, unknown> | null, key: string): number | null {
+  const value = source?.[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function stringStat(source: Record<string, unknown> | null, key: string): string | null {
+  const value = source?.[key];
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function secondsToMs(value: number | null): number | null {
+  return value === null ? null : roundNullable(value * 1000);
+}
+
+function roundNullable(value: number | null): number | null {
+  return value === null ? null : Math.max(0, Math.round(value));
+}
+
+function audioStatsEqual(left: WebRTCAudioStats, right: WebRTCAudioStats): boolean {
+  return (
+    left.jitterMs === right.jitterMs &&
+    left.jitterBufferDelayMs === right.jitterBufferDelayMs &&
+    left.packetsLost === right.packetsLost &&
+    left.packetsReceived === right.packetsReceived &&
+    left.concealedSamples === right.concealedSamples &&
+    left.roundTripTimeMs === right.roundTripTimeMs &&
+    left.localCandidateType === right.localCandidateType &&
+    left.remoteCandidateType === right.remoteCandidateType &&
+    left.transportProtocol === right.transportProtocol
+  );
 }
 
 function monitorAudioState(stream: MediaStream, dispatch: Dispatch<PlaybackAction>): () => void {

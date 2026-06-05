@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish a synthetic video track through WHIP for external NAT smoke tests."""
+"""Publish synthetic audio/video tracks through WHIP for external NAT smoke tests."""
 
 from __future__ import annotations
 
@@ -138,6 +138,47 @@ class SyntheticVideoTrack:  # aiortc VideoStreamTrack subclass at runtime.
         return frame
 
 
+class SyntheticAudioTrack:  # aiortc AudioStreamTrack subclass at runtime.
+    def __init__(self, sample_rate: int, frame_duration_ms: int) -> None:
+        from aiortc import AudioStreamTrack
+
+        class _Track(AudioStreamTrack):
+            def __init__(self, outer: "SyntheticAudioTrack") -> None:
+                super().__init__()
+                self.outer = outer
+
+            async def recv(self):  # type: ignore[no-untyped-def]
+                return await self.outer.recv()
+
+        self._track = _Track(self)
+        self.sample_rate = sample_rate
+        self.samples_per_frame = int(sample_rate * frame_duration_ms / 1000)
+        self.frame_duration = frame_duration_ms / 1000
+        self.sequence = 0
+        self.started_at = time.perf_counter()
+
+    @property
+    def track(self):  # type: ignore[no-untyped-def]
+        return self._track
+
+    async def recv(self):  # type: ignore[no-untyped-def]
+        from av import AudioFrame
+
+        target = self.started_at + (self.sequence * self.frame_duration)
+        delay = target - time.perf_counter()
+        if delay > 0:
+            await asyncio.sleep(delay)
+
+        frame = AudioFrame(format="s16", layout="mono", samples=self.samples_per_frame)
+        frame.sample_rate = self.sample_rate
+        for plane in frame.planes:
+            plane.update(bytes(plane.buffer_size))
+        frame.pts = self.sequence * self.samples_per_frame
+        frame.time_base = fractions.Fraction(1, self.sample_rate)
+        self.sequence += 1
+        return frame
+
+
 async def run_publish_smoke(args: argparse.Namespace) -> int:
     try:
         from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
@@ -156,7 +197,10 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         )
     )
     track = SyntheticVideoTrack(args.width, args.height, args.fps)
+    audio_track = None if args.no_audio else SyntheticAudioTrack(args.audio_sample_rate, args.audio_frame_duration_ms)
     peer_connection.addTrack(track.track)
+    if audio_track is not None:
+        peer_connection.addTrack(audio_track.track)
     started = time.perf_counter()
     connected_ms: float | None = None
 
@@ -186,6 +230,8 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         if connected_ms is not None:
             print(f"ICE connected latency ms: {connected_ms:.1f}")
         print(f"Synthetic frames attempted: {track.sequence}")
+        if audio_track is not None:
+            print(f"Synthetic audio frames attempted: {audio_track.sequence}")
         return 0
     finally:
         await peer_connection.close()
@@ -195,7 +241,7 @@ def run_static_check() -> int:
     print("WebRTC WHIP publish smoke check passed")
     print(f"Default WHIP URL: {DEFAULT_WHIP_URL}")
     print(f"Default ICE server URL: {DEFAULT_ICE_SERVER_URL}")
-    print("Live mode publishes a synthetic yuv420p video track and records WHIP/ICE timing")
+    print("Live mode publishes synthetic yuv420p video and Opus audio tracks and records WHIP/ICE timing")
     return 0
 
 
@@ -213,6 +259,9 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--width", type=int, default=640)
     parser.add_argument("--height", type=int, default=360)
     parser.add_argument("--fps", type=int, default=15)
+    parser.add_argument("--no-audio", action="store_true")
+    parser.add_argument("--audio-sample-rate", type=int, default=48000)
+    parser.add_argument("--audio-frame-duration-ms", type=int, default=20)
     parser.add_argument("--insecure", action="store_true")
     parser.add_argument("--require-connected", action="store_true")
     args = parser.parse_args(argv)

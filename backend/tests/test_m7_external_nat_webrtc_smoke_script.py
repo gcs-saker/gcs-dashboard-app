@@ -44,4 +44,4 @@ def test_webrtc_whip_publish_smoke_check_passes_without_aiortc() -> None:
     )
 
     assert "WebRTC WHIP publish smoke check passed" in result.stdout
-    assert "synthetic yuv420p video track" in result.stdout
+    assert "synthetic yuv420p video and Opus audio tracks" in result.stdout

@@ -35,21 +35,24 @@ export function WebRTCPlayer({
     isAudioActive,
     firstFrameLatencyMs,
     signalingTimings,
+    audioStats,
   } = playback;
 
   useEffect(() => {
-      onStatusChange?.({
-        status,
-        connectionState,
-        iceConnectionState,
-        errorMessage,
-        hasVideoFrame,
-        hasAudioTrack,
-        isAudioActive,
-        firstFrameLatencyMs,
-        signalingTimings,
-      });
+    onStatusChange?.({
+      status,
+      connectionState,
+      iceConnectionState,
+      errorMessage,
+      hasVideoFrame,
+      hasAudioTrack,
+      isAudioActive,
+      firstFrameLatencyMs,
+      signalingTimings,
+      audioStats,
+    });
   }, [
+    audioStats,
     connectionState,
     errorMessage,
     firstFrameLatencyMs,
@@ -73,6 +76,10 @@ export function WebRTCPlayer({
       data-first-frame-latency-ms={firstFrameLatencyMs ?? ""}
       data-whep-response-ms={signalingTimings.whepResponseMs ?? ""}
       data-ice-gathering-done-ms={signalingTimings.iceGatheringDoneMs ?? ""}
+      data-audio-jitter-ms={audioStats.jitterMs ?? ""}
+      data-audio-packets-lost={audioStats.packetsLost ?? ""}
+      data-ice-candidate-type={audioStats.localCandidateType ?? ""}
+      data-ice-transport={audioStats.transportProtocol ?? ""}
     >
       <video
         ref={videoRef}

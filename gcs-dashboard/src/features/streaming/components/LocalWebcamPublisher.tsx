@@ -23,6 +23,7 @@ type WebcamPublisherStatus =
 type PublisherStepId = "camera" | "ice" | "signaling" | "media";
 type PublisherStepState = "pending" | "active" | "complete" | "error";
 type PublisherGpsStatus = "idle" | "requesting" | "active" | "unavailable" | "error";
+type AudioCaptureMode = "low-latency" | "quality";
 
 const ICE_GATHERING_TIMEOUT_MS = 5_000;
 const MEDIA_CONNECTION_TIMEOUT_MS = 8_000;
@@ -58,6 +59,7 @@ export function LocalWebcamPublisher({
   const [gpsDetail, setGpsDetail] = useState("GPS 대기");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [failedStep, setFailedStep] = useState<PublisherStepId | null>(null);
+  const [audioMode, setAudioMode] = useState<AudioCaptureMode>("low-latency");
   const steps = useMemo(() => getPublisherSteps(status, failedStep), [failedStep, status]);
 
   useEffect(() => {
@@ -77,7 +79,7 @@ export function LocalWebcamPublisher({
     try {
       setFailedStep(null);
       setStatus("requesting-camera");
-      const stream = await mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await mediaDevices.getUserMedia({ video: true, audio: audioCaptureConstraints(audioMode) });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -318,6 +320,30 @@ export function LocalWebcamPublisher({
           중지
         </button>
       </div>
+      <fieldset className="local-webcam-publisher__audio-mode" disabled={isBusy(status) || status === "published"}>
+        <legend>음성 처리</legend>
+        <label>
+          <input
+            checked={audioMode === "low-latency"}
+            name="audio-mode"
+            onChange={() => setAudioMode("low-latency")}
+            type="radio"
+            value="low-latency"
+          />
+          저지연
+        </label>
+        <label>
+          <input
+            checked={audioMode === "quality"}
+            name="audio-mode"
+            onChange={() => setAudioMode("quality")}
+            type="radio"
+            value="quality"
+          />
+          음질
+        </label>
+        <span>{getAudioModeDetail(audioMode)}</span>
+      </fieldset>
       <video ref={videoRef} className="local-webcam-publisher__video" aria-label="Local camera preview" autoPlay muted playsInline />
       <p className="local-webcam-publisher__status-detail" aria-live="polite">
         {getStatusDetail(status)}
@@ -342,6 +368,32 @@ function getGpsStatusLabel(status: PublisherGpsStatus): string {
 }
 
 export default LocalWebcamPublisher;
+
+function audioCaptureConstraints(mode: AudioCaptureMode): boolean | MediaTrackConstraints {
+  if (mode === "quality") {
+    return {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+      channelCount: 1,
+      sampleRate: 48_000,
+    };
+  }
+  return {
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false,
+    channelCount: 1,
+    sampleRate: 48_000,
+  };
+}
+
+function getAudioModeDetail(mode: AudioCaptureMode): string {
+  if (mode === "quality") {
+    return "잡음/에코 처리를 켜지만 지연이 늘 수 있습니다.";
+  }
+  return "브라우저 음성 후처리를 줄여 지연을 우선합니다.";
+}
 
 function waitForIceGatheringComplete(
   peerConnection: RTCPeerConnection,
