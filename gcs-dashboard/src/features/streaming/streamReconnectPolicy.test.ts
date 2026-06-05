@@ -59,6 +59,17 @@ function snapshot(overrides: Partial<WebRTCPlaybackSnapshot>): WebRTCPlaybackSna
       whepResponseMs: null,
       remoteDescriptionSetMs: null,
     },
+    audioStats: {
+      jitterMs: null,
+      jitterBufferDelayMs: null,
+      packetsLost: null,
+      packetsReceived: null,
+      concealedSamples: null,
+      roundTripTimeMs: null,
+      localCandidateType: null,
+      remoteCandidateType: null,
+      transportProtocol: null,
+    },
     ...overrides,
   };
 }

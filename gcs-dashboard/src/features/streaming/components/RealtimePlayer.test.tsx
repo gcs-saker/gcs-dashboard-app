@@ -5,6 +5,18 @@ import type { HLSFallbackPlayerProps, WebRTCPlayerProps } from "../types";
 import { normalizeBrowserMediaUrl } from "../hooks/useRealtimePlayback";
 import { RealtimePlayer } from "./RealtimePlayer";
 
+const emptyAudioStats = {
+  jitterMs: null,
+  jitterBufferDelayMs: null,
+  packetsLost: null,
+  packetsReceived: null,
+  concealedSamples: null,
+  roundTripTimeMs: null,
+  localCandidateType: null,
+  remoteCandidateType: null,
+  transportProtocol: null,
+};
+
 vi.mock("./WebRTCPlayer", () => ({
   WebRTCPlayer: function MockWebRTCPlayer({ whepUrl, streamId, onStatusChange }: WebRTCPlayerProps) {
     return (
@@ -31,6 +43,11 @@ vi.mock("./WebRTCPlayer", () => ({
                 whepResponseMs: 120,
                 remoteDescriptionSetMs: 130,
               },
+              audioStats: {
+                ...emptyAudioStats,
+                jitterMs: 24,
+                packetsLost: 1,
+              },
             })
           }
         >
@@ -56,6 +73,7 @@ vi.mock("./WebRTCPlayer", () => ({
                 whepResponseMs: 503,
                 remoteDescriptionSetMs: null,
               },
+              audioStats: emptyAudioStats,
             })
           }
         >

@@ -36,6 +36,16 @@ describe("LocalWebcamPublisher", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
     expect(await screen.findByRole("status")).toHaveTextContent("미리보기 준비");
+    expect(mediaDevices.getUserMedia).toHaveBeenCalledWith({
+      video: true,
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+        sampleRate: 48000,
+      },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
 
@@ -49,6 +59,34 @@ describe("LocalWebcamPublisher", () => {
         body: "v=0\r\nmock-offer",
       }),
     );
+  });
+
+  test("can switch publisher audio capture to quality mode before preview", async () => {
+    const track = { stop: vi.fn() } as unknown as MediaStreamTrack;
+    const mediaStream = { getTracks: () => [track] } as unknown as MediaStream;
+    const mediaDevices = {
+      getUserMedia: vi.fn(async () => mediaStream),
+    } as unknown as MediaDevices;
+
+    render(<LocalWebcamPublisher mediaDevices={mediaDevices} />);
+
+    expect(screen.getByText("브라우저 음성 후처리를 줄여 지연을 우선합니다.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "음질" }));
+    expect(screen.getByText("잡음/에코 처리를 켜지만 지연이 늘 수 있습니다.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
+
+    await waitFor(() => {
+      expect(mediaDevices.getUserMedia).toHaveBeenCalledWith({
+        video: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+          sampleRate: 48000,
+        },
+      });
+    });
   });
 
   test("waits for ICE gathering before sending the WHIP offer", async () => {

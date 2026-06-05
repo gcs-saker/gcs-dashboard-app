@@ -10,6 +10,7 @@ export interface WebRTCPlaybackSnapshot {
   isAudioActive: boolean;
   firstFrameLatencyMs: number | null;
   signalingTimings: WebRTCSignalingTimings;
+  audioStats: WebRTCAudioStats;
 }
 
 export interface WebRTCSignalingTimings {
@@ -19,6 +20,18 @@ export interface WebRTCSignalingTimings {
   iceGatheringDoneMs: number | null;
   whepResponseMs: number | null;
   remoteDescriptionSetMs: number | null;
+}
+
+export interface WebRTCAudioStats {
+  jitterMs: number | null;
+  jitterBufferDelayMs: number | null;
+  packetsLost: number | null;
+  packetsReceived: number | null;
+  concealedSamples: number | null;
+  roundTripTimeMs: number | null;
+  localCandidateType: string | null;
+  remoteCandidateType: string | null;
+  transportProtocol: string | null;
 }
 
 export interface WebRTCPlayerProps {
@@ -78,6 +91,8 @@ export interface RealtimePlayerSnapshot {
   isAudioActive?: boolean;
   webrtcFirstFrameLatencyMs?: number | null;
   webrtcWhepResponseMs?: number | null;
+  audioJitterMs?: number | null;
+  audioPacketsLost?: number | null;
 }
 
 export interface RealtimePlayerProps {
