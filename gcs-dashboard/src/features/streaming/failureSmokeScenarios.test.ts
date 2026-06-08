@@ -10,7 +10,14 @@ describe("failureSmokeScenarios", () => {
   test("documents at least three operational failure cases", () => {
     expect(FAILURE_SMOKE_SCENARIOS.length).toBeGreaterThanOrEqual(3);
     expect(requiredFailureSmokeScenarioIds()).toEqual(
-      expect.arrayContaining(["backend-api-down", "playback-api-failure", "mediamtx-down"]),
+      expect.arrayContaining([
+        "backend-api-down",
+        "playback-api-failure",
+        "mediamtx-down",
+        "redis-cache-down",
+        "turn-cluster-down",
+        "runtime-restart",
+      ]),
     );
   });
 
@@ -24,7 +31,7 @@ describe("failureSmokeScenarios", () => {
 
   test("marks browser smoke scenarios that need real runtime verification", () => {
     expect(browserSmokeScenarioIds()).toEqual(
-      expect.arrayContaining(["backend-api-down", "mediamtx-down"]),
+      expect.arrayContaining(["backend-api-down", "mediamtx-down", "turn-cluster-down", "runtime-restart"]),
     );
   });
 });

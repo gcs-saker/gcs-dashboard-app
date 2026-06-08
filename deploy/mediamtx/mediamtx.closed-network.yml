@@ -48,12 +48,15 @@ webrtcIPsFromInterfaces: true
 webrtcAdditionalHosts: []
 webrtcICEServers2:
   - url: stun:turn-primary:3478
+    clientOnly: true
   - url: turn:turn-primary:3478
     username: ${TURN_USERNAME}
     password: ${TURN_PASSWORD}
+    clientOnly: true
   - url: turn:turn-secondary:3478
     username: ${TURN_USERNAME}
     password: ${TURN_PASSWORD}
+    clientOnly: true
 webrtcSTUNGatherTimeout: 5s
 
 paths:

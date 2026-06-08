@@ -18,13 +18,25 @@ export function WebRTCPlayer({
   title = "WebRTC stream",
   isOnline = true,
   autoPlay = true,
-  muted = true,
-  controls = false,
+  muted = false,
+  controls = true,
   className,
   onStatusChange,
 }: WebRTCPlayerProps) {
   const playback = useWhepPlayback({ whepUrl, isOnline });
-  const { videoRef, status, connectionState, iceConnectionState, errorMessage } = playback;
+  const {
+    videoRef,
+    status,
+    connectionState,
+    iceConnectionState,
+    errorMessage,
+    hasVideoFrame,
+    hasAudioTrack,
+    isAudioActive,
+    firstFrameLatencyMs,
+    signalingTimings,
+    audioStats,
+  } = playback;
 
   useEffect(() => {
     onStatusChange?.({
@@ -32,13 +44,47 @@ export function WebRTCPlayer({
       connectionState,
       iceConnectionState,
       errorMessage,
+      hasVideoFrame,
+      hasAudioTrack,
+      isAudioActive,
+      firstFrameLatencyMs,
+      signalingTimings,
+      audioStats,
     });
-  }, [connectionState, errorMessage, iceConnectionState, onStatusChange, status]);
+  }, [
+    audioStats,
+    connectionState,
+    errorMessage,
+    firstFrameLatencyMs,
+    hasAudioTrack,
+    hasVideoFrame,
+    iceConnectionState,
+    isAudioActive,
+    onStatusChange,
+    signalingTimings,
+    status,
+  ]);
 
   return (
-    <figure className={["webrtc-player", className].filter(Boolean).join(" ")}>
+    <figure
+      className={["webrtc-player", className].filter(Boolean).join(" ")}
+      data-testid="webrtc-player"
+      data-playback-status={status}
+      data-has-video-frame={hasVideoFrame ? "true" : "false"}
+      data-has-audio-track={hasAudioTrack ? "true" : "false"}
+      data-audio-active={isAudioActive ? "true" : "false"}
+      data-first-frame-latency-ms={firstFrameLatencyMs ?? ""}
+      data-whep-response-ms={signalingTimings.whepResponseMs ?? ""}
+      data-ice-gathering-done-ms={signalingTimings.iceGatheringDoneMs ?? ""}
+      data-audio-jitter-ms={audioStats.jitterMs ?? ""}
+      data-audio-packets-lost={audioStats.packetsLost ?? ""}
+      data-ice-candidate-type={audioStats.localCandidateType ?? ""}
+      data-ice-transport={audioStats.transportProtocol ?? ""}
+      data-relay-fallback-reason={audioStats.relayFallbackReason ?? ""}
+    >
       <video
         ref={videoRef}
+        data-testid="webrtc-video"
         aria-label={title}
         autoPlay={autoPlay}
         muted={muted}
@@ -57,6 +103,17 @@ export function WebRTCPlayer({
         {streamId ? <span className="webrtc-player__stream">{streamId}</span> : null}
         <span className="webrtc-player__state">pc: {connectionState}</span>
         <span className="webrtc-player__state">ice: {iceConnectionState}</span>
+        {firstFrameLatencyMs !== null ? (
+          <span className="webrtc-player__state">first frame: {firstFrameLatencyMs}ms</span>
+        ) : null}
+        {signalingTimings.whepResponseMs !== null ? (
+          <span className="webrtc-player__state">whep: {signalingTimings.whepResponseMs}ms</span>
+        ) : null}
+        {hasAudioTrack ? (
+          <span className={`webrtc-player__audio ${isAudioActive ? "is-active" : ""}`}>
+            {isAudioActive ? "audio" : "audio idle"}
+          </span>
+        ) : null}
         {errorMessage ? <span className="webrtc-player__error">{errorMessage}</span> : null}
       </figcaption>
     </figure>

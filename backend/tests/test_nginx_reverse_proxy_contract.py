@@ -44,6 +44,7 @@ def test_reverse_proxy_sets_browser_security_headers() -> None:
     assert "frame-ancestors 'none'" in config
     assert "object-src 'none'" in config
     assert "connect-src 'self' https: wss: stun: turn:;" in config
+    assert "worker-src 'self' blob:;" in config
     assert 'add_header Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)" always;' in config
 
 
@@ -51,22 +52,30 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     config = read_config()
 
     assert "upstream gcs_dashboard" in config
-    assert "server nginx:3000;" in config
+    assert "server dashboard:3000;" in config
     assert "upstream gcs_backend" in config
+    assert "upstream gcs_auth_policy" in config
+    assert "upstream gcs_media_control" in config
     assert "upstream gcs_mediamtx_hls" in config
     assert "upstream gcs_mediamtx_webrtc" in config
+    assert "resolver 127.0.0.11 valid=10s ipv6=off;" in config
     assert "location /api/auth/" in config
+    assert "location /auth-policy/" in config
+    assert "location /media-control/" in config
     assert "location /api/control/" in config
     assert "location /api/asset/" in config
+    assert "location = /api/telemetry/all" in config
     assert "location /api/telemetry/" in config
+    assert "location /api/ops/" in config
     assert "location /api/stream/" in config
+    assert "location /stream/" in config
     assert "location /api/" in config
     assert "location /hls/" in config
     assert "location /webrtc/" in config
     assert "proxy_pass http://gcs_dashboard;" in extract_locations(config, "/")[-1]
 
 
-def test_reverse_proxy_routes_root_and_api_health_checks_to_backend() -> None:
+def test_reverse_proxy_routes_root_health_checks_to_auth_policy() -> None:
     config = read_config()
 
     healthz_location = extract_exact_location(config, "/healthz")
@@ -74,8 +83,8 @@ def test_reverse_proxy_routes_root_and_api_health_checks_to_backend() -> None:
     api_healthz_location = extract_exact_location(config, "/api/healthz")
     api_readyz_location = extract_exact_location(config, "/api/readyz")
 
-    assert "proxy_pass http://gcs_backend/healthz;" in healthz_location
-    assert "proxy_pass http://gcs_backend/readyz;" in readyz_location
+    assert "proxy_pass http://gcs_auth_policy/healthz;" in healthz_location
+    assert "proxy_pass http://gcs_auth_policy/readyz;" in readyz_location
     assert "proxy_pass http://gcs_backend/healthz;" in api_healthz_location
     assert "proxy_pass http://gcs_backend/readyz;" in api_readyz_location
     assert "proxy_read_timeout 10s;" in healthz_location
@@ -98,18 +107,39 @@ def test_media_proxy_rewrites_public_prefixes_to_mediamtx_paths() -> None:
     webrtc_location = extract_location(config, "/webrtc/")
 
     assert "rewrite ^/hls/(.*)$ /$1 break;" in hls_location
-    assert "proxy_pass http://gcs_mediamtx_hls;" in hls_location
+    assert 'set $gcs_mediamtx_hls "mediamtx:8888";' in hls_location
+    assert "proxy_pass http://$gcs_mediamtx_hls;" in hls_location
     assert "rewrite ^/webrtc/(.*)$ /$1 break;" in webrtc_location
-    assert "proxy_pass http://gcs_mediamtx_webrtc;" in webrtc_location
+    assert 'set $gcs_mediamtx_webrtc "mediamtx:8889";' in webrtc_location
+    assert "proxy_pass http://$gcs_mediamtx_webrtc;" in webrtc_location
 
 
 def test_auth_proxy_rewrites_dashboard_api_auth_prefix_to_backend_auth_router() -> None:
     config = read_config()
     auth_location = extract_location(config, "/api/auth/")
 
+    assert "Legacy fallback only" in auth_location
     assert "rewrite ^/api/auth/(.*)$ /auth/$1 break;" in auth_location
     assert "proxy_pass http://gcs_backend;" in auth_location
     assert "proxy_read_timeout 60s;" in auth_location
+
+
+def test_auth_policy_cutover_prefix_rewrites_to_spring_auth_policy() -> None:
+    config = read_config()
+    auth_policy_location = extract_location(config, "/auth-policy/")
+
+    assert "rewrite ^/auth-policy/(.*)$ /$1 break;" in auth_policy_location
+    assert "proxy_pass http://gcs_auth_policy;" in auth_policy_location
+    assert "proxy_read_timeout 60s;" in auth_policy_location
+
+
+def test_media_control_cutover_prefix_rewrites_to_go_media_control() -> None:
+    config = read_config()
+    media_control_location = extract_location(config, "/media-control/")
+
+    assert "rewrite ^/media-control/(.*)$ /$1 break;" in media_control_location
+    assert "proxy_pass http://gcs_media_control;" in media_control_location
+    assert "proxy_read_timeout 60s;" in media_control_location
 
 
 def test_legacy_api_prefixes_are_rewritten_to_backend_routers() -> None:
@@ -117,14 +147,55 @@ def test_legacy_api_prefixes_are_rewritten_to_backend_routers() -> None:
 
     expected_rewrites = {
         "/api/control/": "rewrite ^/api/control/(.*)$ /control/$1 break;",
-        "/api/asset/": "rewrite ^/api/asset/(.*)$ /asset/$1 break;",
-        "/api/telemetry/": "rewrite ^/api/telemetry/(.*)$ /telemetry/$1 break;",
-        "/api/stream/": "rewrite ^/api/stream/(.*)$ /stream/$1 break;",
     }
     for public_prefix, rewrite in expected_rewrites.items():
         location = extract_location(config, public_prefix)
         assert rewrite in location
         assert "proxy_pass http://gcs_backend;" in location
+
+
+def test_legacy_control_prefix_is_marked_as_future_command_fallback() -> None:
+    config = read_config()
+    control_location = extract_location(config, "/api/control/")
+
+    assert "Future/legacy command fallback" in control_location
+    assert "proxy_pass http://gcs_backend;" in control_location
+
+
+def test_read_only_asset_telemetry_and_ops_paths_are_cut_over_to_auth_policy() -> None:
+    config = read_config()
+    asset_location = extract_location(config, "/api/asset/")
+    telemetry_all_location = extract_exact_location(config, "/api/telemetry/all")
+    telemetry_location = extract_location(config, "/api/telemetry/")
+    ops_location = extract_location(config, "/api/ops/")
+
+    assert "rewrite ^/api/asset/(.*)$ /asset/$1 break;" in asset_location
+    assert "proxy_pass http://gcs_auth_policy;" in asset_location
+    assert "proxy_pass http://gcs_auth_policy/telemetry/all;" in telemetry_all_location
+    assert "rewrite ^/api/telemetry/(.*)$ /telemetry/$1 break;" in telemetry_location
+    assert "proxy_pass http://gcs_auth_policy;" in telemetry_location
+    assert "rewrite ^/api/ops/(.*)$ /ops/$1 break;" in ops_location
+    assert "proxy_pass http://gcs_auth_policy;" in ops_location
+
+
+def test_legacy_stream_prefix_is_cut_over_to_go_media_control_for_runtime_smoke() -> None:
+    config = read_config()
+    api_stream_location = extract_location(config, "/api/stream/")
+    stream_location = extract_location(config, "/stream/")
+
+    assert "rewrite ^/api/stream/(.*)$ /stream/$1 break;" in api_stream_location
+    assert "proxy_pass http://gcs_media_control;" in api_stream_location
+    assert "proxy_pass http://gcs_media_control;" in stream_location
+    for location in (api_stream_location, stream_location):
+        assert 'add_header Deprecation "true" always;' in location
+        assert 'add_header X-GCS-Replacement-Route "/media-control/api/v1/streams" always;' in location
+
+
+def test_legacy_stream_prefix_keeps_short_runtime_timeout() -> None:
+    config = read_config()
+    location = extract_location(config, "/stream/")
+
+    assert "proxy_read_timeout 60s;" in location
 
 
 def test_versioned_api_prefix_stays_on_backend_api_namespace() -> None:
@@ -142,6 +213,8 @@ def test_reverse_proxy_policy_doc_covers_required_endpoint_decisions() -> None:
         "HTTPS redirect",
         "WSS",
         "`https://<host>/api/`",
+        "`https://<host>/api/asset/*`",
+        "`https://<host>/api/telemetry/all`",
         "`https://<host>/hls/<stream>/index.m3u8`",
         "`https://<host>/webrtc/<stream>/whep`",
         "STUN/TURN 서버는 Nginx가 proxy하지 않는다",

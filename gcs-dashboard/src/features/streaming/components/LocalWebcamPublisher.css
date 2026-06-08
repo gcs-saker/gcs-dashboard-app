@@ -96,6 +96,40 @@
   opacity: 0.45;
 }
 
+.local-webcam-publisher__audio-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  width: fit-content;
+  max-width: min(100%, 960px);
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid rgba(126, 180, 222, 0.35);
+  background: rgba(12, 26, 38, 0.72);
+  color: #dce8f4;
+  font-size: 12px;
+}
+
+.local-webcam-publisher__audio-mode legend {
+  padding: 0 4px;
+  color: #8fc7ff;
+}
+
+.local-webcam-publisher__audio-mode label {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.local-webcam-publisher__audio-mode span {
+  color: #a8bed2;
+}
+
+.local-webcam-publisher__audio-mode:disabled {
+  opacity: 0.65;
+}
+
 .local-webcam-publisher__video {
   width: min(100%, 960px);
   min-height: 260px;
@@ -109,6 +143,33 @@
   margin: 0;
   color: #a8bed2;
   font-size: 13px;
+}
+
+.local-webcam-publisher__gps {
+  width: fit-content;
+  min-height: 28px;
+  margin: 0;
+  padding: 5px 9px;
+  border: 1px solid rgba(126, 180, 222, 0.35);
+  background: rgba(12, 26, 38, 0.72);
+  color: #a8bed2;
+  font-size: 12px;
+}
+
+.local-webcam-publisher__gps--active {
+  border-color: rgba(95, 202, 119, 0.56);
+  color: #9ce4a7;
+}
+
+.local-webcam-publisher__gps--requesting {
+  border-color: rgba(64, 173, 255, 0.78);
+  color: #dce8f4;
+}
+
+.local-webcam-publisher__gps--error,
+.local-webcam-publisher__gps--unavailable {
+  border-color: rgba(255, 129, 112, 0.72);
+  color: #ffb0a6;
 }
 
 .local-webcam-publisher__error {

@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { AuthProvider } from "../auth/AuthProvider";
 import { clearAuthSession, storeAuthSession } from "../auth/authStorage";
 import { DashboardMvp } from "./DashboardMvp";
@@ -27,6 +27,7 @@ describe("DashboardMvp", () => {
 
   afterEach(() => {
     clearAuthSession();
+    vi.unstubAllGlobals();
     window.history.pushState({}, "", "/");
   });
 
@@ -35,6 +36,7 @@ describe("DashboardMvp", () => {
 
     expect(screen.getByRole("main", { name: "Field Ops Dashboard MVP" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "대시보드" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "운영설정" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "웹캠 송출" })).toHaveAttribute("href", "/publisher");
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "지도 확대" })).toBeInTheDocument();
@@ -42,7 +44,7 @@ describe("DashboardMvp", () => {
     expect(screen.getByRole("heading", { name: "자산트리" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "지도" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "선택 스트림" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "서버상태 / 연결상태 / 헬스체크" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "서버 상태 상세 / 연결상태 / 헬스체크" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "지오메트리 / 텔레메트리" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "AI 결과" })).toBeInTheDocument();
   });
@@ -122,12 +124,17 @@ describe("DashboardMvp", () => {
     expect(screen.getByRole("button", { name: "스트리밍 2 선택" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "스트리밍 3 선택" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "스트리밍 4 선택" })).toBeInTheDocument();
-    expect(screen.getAllByText("전방 EO / raw.sample.front")).toHaveLength(2);
+    expect(screen.getAllByText("전방 EO").length).toBeGreaterThanOrEqual(2);
 
     await user.click(screen.getByRole("button", { name: "스트리밍 3 선택" }));
 
-    expect(screen.getAllByText("AI 감지 overlay / raw.sample.rear")).toHaveLength(2);
+    expect(screen.getAllByText("AI 감지 overlay").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 기본 좌표 84deg / FOV 82deg");
+    const telemetryPanel = screen.getByLabelText("지오메트리 / 텔레메트리");
+    expect(within(telemetryPanel).getByText("AI 감지 overlay")).toBeInTheDocument();
+    expect(within(telemetryPanel).getByText("35.866900")).toBeInTheDocument();
+    expect(within(telemetryPanel).getByText("128.593100")).toBeInTheDocument();
+    expect(within(telemetryPanel).getByText("기본 좌표")).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "스트리밍 3 장비 연결" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "변경 취소" }));
   });
@@ -155,14 +162,14 @@ describe("DashboardMvp", () => {
     await user.click(screen.getByRole("button", { name: /DRN-01 전방 EO/ }));
 
     expect(screen.queryByRole("dialog", { name: "스트리밍 4 장비 연결" })).not.toBeInTheDocument();
-    expect(screen.getAllByText("DRN-01 전방 EO / raw.sample.front")).toHaveLength(2);
+    expect(screen.getAllByText("DRN-01 전방 EO").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 4 기본 좌표 130deg / FOV 72deg");
     expect(screen.getByRole("status")).toHaveTextContent("스트리밍 장비 연결됨");
 
     await user.click(screen.getByRole("button", { name: "스트리밍 4 선택" }));
     await user.click(screen.getByRole("button", { name: "연결 해제" }));
 
-    expect(screen.getAllByText("장비 미연결")).toHaveLength(2);
+    expect(screen.getAllByText("장비 미연결").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByRole("status")).toHaveTextContent("스트리밍 장비 연결 해제됨");
   });
 
@@ -170,8 +177,8 @@ describe("DashboardMvp", () => {
     renderDashboard();
 
     expect(screen.getByText("GCS-SAKER")).toBeInTheDocument();
-    expect(screen.getByText("서버상태")).toBeInTheDocument();
-    expect(screen.getByText("연결 자산")).toBeInTheDocument();
+    expect(screen.getByText("API 서버")).toBeInTheDocument();
+    expect(screen.getByText("Signaling 서버")).toBeInTheDocument();
     expect(screen.getByText("탐지")).toBeInTheDocument();
     expect(screen.getByText("처리 지연")).toBeInTheDocument();
   });
@@ -179,8 +186,8 @@ describe("DashboardMvp", () => {
   test("renders hierarchical asset tree nodes", () => {
     renderDashboard();
 
-    expect(screen.getByText("전방 EO")).toBeInTheDocument();
-    expect(screen.getByText("후방 AI")).toBeInTheDocument();
+    expect(screen.getAllByText("전방 EO").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("후방 AI").length).toBeGreaterThan(0);
   });
 
   test("clears the JWT session when logging out", async () => {
@@ -191,5 +198,33 @@ describe("DashboardMvp", () => {
 
     expect(window.localStorage.getItem("gcs_saker_access_token")).toBeNull();
     expect(window.location.pathname).toBe("/login");
+  });
+
+  test("opens time sync settings from the operations settings tab", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        mode: "public",
+        sourceHost: "pool.ntp.org",
+        sourcePort: 123,
+        driftWarnMs: 1000,
+        updatedAt: "1970-01-01T00:00:00Z",
+        updatedBy: "system",
+        serverTime: "2026-06-01T00:00:00Z",
+        monotonicMs: 42000,
+        timezone: "UTC",
+        checkedAt: "2026-06-01T00:00:00Z",
+        health: "ok",
+        message: "pool.ntp.org:123 기준으로 시간 소스가 설정되었습니다.",
+      }),
+    } as Response)));
+    renderDashboard();
+
+    await user.click(screen.getByRole("button", { name: "운영설정" }));
+
+    expect(await screen.findByLabelText("시간 동기화 설정")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "설정 저장" })).toBeInTheDocument();
   });
 });

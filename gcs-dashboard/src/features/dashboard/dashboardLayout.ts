@@ -60,7 +60,7 @@ export const DASHBOARD_WIDGET_REGISTRY: Record<DashboardWidgetId, DashboardWidge
   },
   "system-status": {
     id: "system-status",
-    title: "서버상태 / 연결상태 / 헬스체크",
+    title: "서버 상태 상세 / 연결상태 / 헬스체크",
     minWidth: 300,
     minHeight: 180,
     defaultPosition: { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },

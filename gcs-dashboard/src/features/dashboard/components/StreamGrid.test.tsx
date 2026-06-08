@@ -70,6 +70,20 @@ describe("SelectedStreamPanel", () => {
 
     expect(screen.getByRole("heading", { name: "선택 스트림" })).toBeInTheDocument();
     expect(screen.getByText("스트리밍 3")).toBeInTheDocument();
-    expect(screen.getByText("AI 감지 overlay / raw.sample.rear")).toBeInTheDocument();
+    expect(screen.getByText("AI 감지 overlay")).toBeInTheDocument();
+  });
+
+  test("marks the stream card that is receiving audio", () => {
+    render(
+      <StreamGrid
+        audioActiveStreamId="raw.sample.front"
+        onSelectStream={() => undefined}
+        selectedStreamId="raw.sample.front"
+        streams={DEFAULT_DASHBOARD_STREAMS}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "스트리밍 1 선택" })).toHaveClass("has-audio");
+    expect(screen.getByText("음성")).toBeInTheDocument();
   });
 });

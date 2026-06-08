@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy import Column, BigInteger, String, Enum, ForeignKey
+from sqlalchemy import Column, BigInteger, String, Enum, ForeignKey, Index
 from core.db import Base
 from sqlalchemy.orm import relationship
 
@@ -35,6 +35,10 @@ class UnmannedAsset(Base):
 
 class GatewayAsset(Base):
     __tablename__ = "gateway_assets"
+    __table_args__ = (
+        Index("idx_gateway_assets_asset_id", "asset_id"),
+    )
+
     gateway_id = Column(BigInteger, ForeignKey("gateway.id"), primary_key=True)
     asset_id = Column(BigInteger, ForeignKey("unmanned_assets.id"), primary_key=True)
 

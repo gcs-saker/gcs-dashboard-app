@@ -1,6 +1,21 @@
-import { apiUrl } from "../../config";
+import { authUrl } from "../../config";
+import { AUTH_ROUTES } from "@/features/apiRoutes";
 import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 import type { AuthenticatedUser, LoginRequest, SignupRequest, SignupResponse, TokenResponse } from "./types";
+
+export const CSRF_HEADER_NAME = "X-GCS-CSRF";
+export const CSRF_HEADER_VALUE = "same-origin";
+export const AUTH_CSRF_HEADERS = Object.freeze({
+  [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
+});
+export const AUTH_JSON_HEADERS = Object.freeze({
+  "Content-Type": "application/json",
+  [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
+});
+export const AUTH_ACCEPT_HEADERS = Object.freeze({
+  Accept: "application/json",
+  [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
+});
 
 let refreshInFlight: Promise<TokenResponse> | null = null;
 
@@ -24,10 +39,10 @@ async function parseError(response: Response): Promise<string> {
 }
 
 export async function loginRequest(credentials: LoginRequest): Promise<TokenResponse> {
-  const response = await fetch(apiUrl("/auth/login"), {
+  const response = await fetch(authUrl(AUTH_ROUTES.login), {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: AUTH_JSON_HEADERS,
     body: JSON.stringify(credentials),
   });
 
@@ -39,10 +54,10 @@ export async function loginRequest(credentials: LoginRequest): Promise<TokenResp
 }
 
 export async function refreshSessionRequest(fetcher: typeof fetch = fetch): Promise<TokenResponse> {
-  const response = await fetcher(apiUrl("/auth/refresh"), {
+  const response = await fetcher(authUrl(AUTH_ROUTES.refresh), {
     method: "POST",
     credentials: "include",
-    headers: { Accept: "application/json" },
+    headers: AUTH_ACCEPT_HEADERS,
   });
 
   if (!response.ok) {
@@ -56,18 +71,19 @@ export async function refreshSessionRequest(fetcher: typeof fetch = fetch): Prom
 }
 
 export async function logoutRequest(fetcher: typeof fetch = fetch): Promise<void> {
-  await fetcher(apiUrl("/auth/logout"), {
+  await fetcher(authUrl(AUTH_ROUTES.logout), {
     method: "POST",
     credentials: "include",
+    headers: AUTH_CSRF_HEADERS,
   });
   clearAuthSession();
 }
 
 export async function signupRequest(payload: SignupRequest): Promise<SignupResponse> {
-  const response = await fetch(apiUrl("/auth/signup"), {
+  const response = await fetch(authUrl(AUTH_ROUTES.signup), {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: AUTH_JSON_HEADERS,
     body: JSON.stringify(payload),
   });
 
@@ -79,7 +95,7 @@ export async function signupRequest(payload: SignupRequest): Promise<SignupRespo
 }
 
 export async function fetchCurrentUser(accessToken: string): Promise<AuthenticatedUser> {
-  const response = await fetch(apiUrl("/auth/me"), {
+  const response = await fetch(authUrl(AUTH_ROUTES.me), {
     credentials: "include",
     headers: { Authorization: `Bearer ${accessToken}` },
   });

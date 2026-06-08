@@ -2,7 +2,11 @@ import { useEffect } from "react";
 
 import { useRealtimePlayback } from "../hooks/useRealtimePlayback";
 import type { RealtimePlayerProps } from "../types";
-import { describeWebRTCFailure, isRecoverableWebRTCFailure } from "../streamReconnectPolicy";
+import {
+  describeWebRTCFailure,
+  isRecoverableWebRTCFailure,
+  shouldSkipWebRTCRetryAfterRelayFailure,
+} from "../streamReconnectPolicy";
 import { HLSFallbackPlayer } from "./HLSFallbackPlayer";
 import "./RealtimePlayer.css";
 import { WebRTCPlayer } from "./WebRTCPlayer";
@@ -62,13 +66,31 @@ export function RealtimePlayer({
           title={`${title} WebRTC`}
           isOnline={isOnline}
           onStatusChange={(snapshot) => {
+            onStatusChange?.({
+              mode,
+              streamStatus,
+              errorMessage,
+              webrtcRetryAttempt,
+              hasAudioTrack: snapshot.hasAudioTrack,
+              isAudioActive: snapshot.isAudioActive,
+              webrtcFirstFrameLatencyMs: snapshot.firstFrameLatencyMs,
+              webrtcWhepResponseMs: snapshot.signalingTimings.whepResponseMs,
+              audioJitterMs: snapshot.audioStats.jitterMs,
+              audioPacketsLost: snapshot.audioStats.packetsLost,
+            });
+
             if (snapshot.status === "playing") {
               playback.useWebRTC();
               return;
             }
 
             if (isRecoverableWebRTCFailure(snapshot)) {
-              playback.scheduleWebRTCRetry(describeWebRTCFailure(snapshot));
+              const reason = describeWebRTCFailure(snapshot);
+              if (shouldSkipWebRTCRetryAfterRelayFailure(snapshot)) {
+                playback.useHLSFallback(reason);
+                return;
+              }
+              playback.scheduleWebRTCRetry(reason);
             }
           }}
         />
@@ -87,6 +109,8 @@ export function RealtimePlayer({
           streamId={streamId}
           title={`${title} HLS fallback`}
           fallbackReason={fallbackReason}
+          muted={false}
+          controls
         />
       ) : null}
 

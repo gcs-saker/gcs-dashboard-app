@@ -7,11 +7,18 @@ import { StreamPanelErrorBoundary } from "./StreamPanelErrorBoundary";
 interface StreamGridProps {
   streams: DashboardStreamSlot[];
   selectedStreamId: string;
+  audioActiveStreamId?: string | null;
   onSelectStream: (streamId: string) => void;
   renderCard?: (stream: DashboardStreamSlot, isSelected: boolean) => ReactNode;
 }
 
-export function StreamGrid({ streams, selectedStreamId, onSelectStream, renderCard }: StreamGridProps) {
+export function StreamGrid({
+  streams,
+  selectedStreamId,
+  audioActiveStreamId = null,
+  onSelectStream,
+  renderCard,
+}: StreamGridProps) {
   return (
     <section
       aria-label="다중 스트림"
@@ -26,7 +33,12 @@ export function StreamGrid({ streams, selectedStreamId, onSelectStream, renderCa
             {renderCard ? (
               renderCard(stream, isSelected)
             ) : (
-              <StreamCard isSelected={isSelected} onSelect={onSelectStream} stream={stream} />
+              <StreamCard
+                hasAudioActivity={stream.id === audioActiveStreamId}
+                isSelected={isSelected}
+                onSelect={onSelectStream}
+                stream={stream}
+              />
             )}
           </StreamPanelErrorBoundary>
         );

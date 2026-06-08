@@ -2,6 +2,8 @@ import type { WebRTCPlaybackSnapshot } from "./types";
 
 export const DEFAULT_WEBRTC_RECONNECT_DELAYS_MS = [500, 1000] as const;
 
+const RELAY_CANDIDATE_TYPE = "relay";
+
 const RECOVERABLE_CONNECTION_STATES = new Set<RTCPeerConnectionState>([
   "disconnected",
   "failed",
@@ -53,6 +55,16 @@ export function describeWebRTCFailure(snapshot: WebRTCPlaybackSnapshot): string 
   }
 
   return "WebRTC connection interrupted";
+}
+
+export function shouldSkipWebRTCRetryAfterRelayFailure(snapshot: WebRTCPlaybackSnapshot): boolean {
+  return (
+    isRecoverableWebRTCFailure(snapshot) &&
+    (
+      snapshot.audioStats.localCandidateType === RELAY_CANDIDATE_TYPE ||
+      snapshot.audioStats.relayFallbackReason !== null
+    )
+  );
 }
 
 function isRecoverableConnectionState(

@@ -2,7 +2,21 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { HLSFallbackPlayerProps, WebRTCPlayerProps } from "../types";
+import { normalizeBrowserMediaUrl } from "../hooks/useRealtimePlayback";
 import { RealtimePlayer } from "./RealtimePlayer";
+
+const emptyAudioStats = {
+  jitterMs: null,
+  jitterBufferDelayMs: null,
+  packetsLost: null,
+  packetsReceived: null,
+  concealedSamples: null,
+  roundTripTimeMs: null,
+  localCandidateType: null,
+  remoteCandidateType: null,
+  transportProtocol: null,
+  relayFallbackReason: null,
+};
 
 vi.mock("./WebRTCPlayer", () => ({
   WebRTCPlayer: function MockWebRTCPlayer({ whepUrl, streamId, onStatusChange }: WebRTCPlayerProps) {
@@ -18,6 +32,23 @@ vi.mock("./WebRTCPlayer", () => ({
               connectionState: "connected",
               iceConnectionState: "connected",
               errorMessage: null,
+              hasVideoFrame: true,
+              hasAudioTrack: true,
+              isAudioActive: true,
+              firstFrameLatencyMs: 812,
+              signalingTimings: {
+                iceServersLoadedMs: 10,
+                offerCreatedMs: 20,
+                localDescriptionSetMs: 30,
+                iceGatheringDoneMs: 40,
+                whepResponseMs: 120,
+                remoteDescriptionSetMs: 130,
+              },
+              audioStats: {
+                ...emptyAudioStats,
+                jitterMs: 24,
+                packetsLost: 1,
+              },
             })
           }
         >
@@ -31,10 +62,53 @@ vi.mock("./WebRTCPlayer", () => ({
               connectionState: "failed",
               iceConnectionState: "failed",
               errorMessage: "WebRTC connection failed",
+              hasVideoFrame: false,
+              hasAudioTrack: false,
+              isAudioActive: false,
+              firstFrameLatencyMs: null,
+              signalingTimings: {
+                iceServersLoadedMs: 10,
+                offerCreatedMs: 20,
+                localDescriptionSetMs: 30,
+                iceGatheringDoneMs: 40,
+                whepResponseMs: 503,
+                remoteDescriptionSetMs: null,
+              },
+              audioStats: emptyAudioStats,
             })
           }
         >
           webrtc failed
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            onStatusChange?.({
+              status: "error",
+              connectionState: "failed",
+              iceConnectionState: "failed",
+              errorMessage: "WebRTC relay candidate failed",
+              hasVideoFrame: false,
+              hasAudioTrack: true,
+              isAudioActive: false,
+              firstFrameLatencyMs: null,
+              signalingTimings: {
+                iceServersLoadedMs: 10,
+                offerCreatedMs: 20,
+                localDescriptionSetMs: 30,
+                iceGatheringDoneMs: 40,
+                whepResponseMs: 503,
+                remoteDescriptionSetMs: null,
+              },
+              audioStats: {
+                ...emptyAudioStats,
+                localCandidateType: "relay",
+                relayFallbackReason: "local-direct-candidate-failed",
+              },
+            })
+          }
+        >
+          relay failed
         </button>
       </div>
     );
@@ -91,6 +165,21 @@ describe("RealtimePlayer", () => {
     expect(screen.getByText("online")).toBeInTheDocument();
   });
 
+  test("normalizes deployed media URLs away from localhost and insecure same-host http", () => {
+    expect(
+      normalizeBrowserMediaUrl(
+        "http://localhost:8080/webrtc/raw/local/webcam/whep",
+        "https://gcs.example.test/",
+      ),
+    ).toBe("https://gcs.example.test/webrtc/raw/local/webcam/whep");
+    expect(
+      normalizeBrowserMediaUrl(
+        "http://gcs.example.test/webrtc/raw/local/webcam/whep",
+        "https://gcs.example.test/",
+      ),
+    ).toBe("https://gcs.example.test/webrtc/raw/local/webcam/whep");
+  });
+
   test("retries WebRTC with bounded backoff before HLS fallback", async () => {
     const fetcher = vi.fn(async () =>
       jsonResponse({
@@ -119,6 +208,28 @@ describe("RealtimePlayer", () => {
     expect(screen.getByTestId("hls-fallback-player")).toBeInTheDocument();
     expect(screen.getByText("hls:https://media.example.test/raw/sample/front/index.m3u8")).toBeInTheDocument();
     expect(screen.getByText("reason:WebRTC connection failed")).toBeInTheDocument();
+  });
+
+  test("falls back immediately after relay candidate failure to avoid repeated TURN allocation", async () => {
+    const fetcher = vi.fn(async () =>
+      jsonResponse({
+        streamId: "raw.sample.front",
+        status: "online",
+        playbackUrls: {
+          webrtc: "https://media.example.test/raw/sample/front/whep",
+          hls: "https://media.example.test/raw/sample/front/index.m3u8",
+        },
+      }),
+    );
+
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} reconnectDelaysMs={[25, 50]} />);
+    await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "relay failed" }));
+
+    expect(screen.queryByText(/스트림 재연결 중/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("hls-fallback-player")).toBeInTheDocument();
+    expect(screen.getByText("reason:WebRTC relay candidate failed")).toBeInTheDocument();
   });
 
   test("renders a clear error when WebRTC fails and no HLS fallback exists", async () => {
@@ -186,6 +297,17 @@ describe("RealtimePlayer", () => {
     render(<RealtimePlayer streamId="raw.missing.front" fetcher={fetcher} />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Playback API request failed with 404");
+    expect(screen.queryByTestId("webrtc-player")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hls-fallback-player")).not.toBeInTheDocument();
+  });
+
+  test("contains malformed playback payloads inside the realtime player", async () => {
+    const fetcher = vi.fn(async () => jsonResponse({ access_token: "unexpected-auth-payload" }));
+
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Playback API response is invalid");
+    expect(screen.getByText("mode: error")).toBeInTheDocument();
     expect(screen.queryByTestId("webrtc-player")).not.toBeInTheDocument();
     expect(screen.queryByTestId("hls-fallback-player")).not.toBeInTheDocument();
   });

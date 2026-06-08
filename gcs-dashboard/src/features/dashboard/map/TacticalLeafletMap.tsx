@@ -1,116 +1,150 @@
-import L, { type LatLngExpression, type LayerGroup, type Map as LeafletMap } from "leaflet";
-import "leaflet/dist/leaflet.css";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { FALLBACK_MAP_CONFIG } from "@/config";
+import type { DashboardMapConfig } from "@/config";
 import type { DashboardStreamSlot } from "../streamTypes";
+import { PublicVectorMap } from "./PublicVectorMap";
+import { fetchMapConfig } from "./mapConfig";
+import {
+  coordinateSourceLabel,
+  coordinateText,
+  DEFAULT_MAP_CENTER,
+  INITIAL_MAP_ZOOM,
+  markerClassForStream,
+  projectStreams,
+} from "./mapContracts";
 
 interface TacticalLeafletMapProps {
   selectedStream: DashboardStreamSlot;
   streams: DashboardStreamSlot[];
 }
 
-const DEFAULT_CENTER: LatLngExpression = [35.871435, 128.601445];
-const DEFAULT_ZOOM = 14;
-
-function coordinateSourceLabel(stream: DashboardStreamSlot): string {
-  switch (stream.geometry?.source) {
-    case "telemetry":
-      return "실시간 GPS";
-    case "device":
-      return "장비 좌표";
-    case "registry":
-      return "등록 좌표";
-    case "mock":
-    case undefined:
-      return "기본 좌표";
-  }
-}
-
-function geometryForStream(stream: DashboardStreamSlot): LatLngExpression {
-  return stream.geometry ? [stream.geometry.lat, stream.geometry.lng] : DEFAULT_CENTER;
-}
-
-function popupContentForStream(stream: DashboardStreamSlot): HTMLElement {
-  const wrapper = document.createElement("div");
-  const title = document.createElement("strong");
-  title.textContent = stream.title;
-  wrapper.append(
-    title,
-    document.createElement("br"),
-    document.createTextNode(stream.streamPath ?? "stream pending"),
-    document.createElement("br"),
-    document.createTextNode(coordinateSourceLabel(stream)),
-  );
-  return wrapper;
-}
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 5;
 
 export function TacticalLeafletMap({ selectedStream, streams }: TacticalLeafletMapProps) {
-  const mapElementRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<LeafletMap | null>(null);
-  const markerLayerRef = useRef<LayerGroup | null>(null);
+  const [autoFocusEnabled, setAutoFocusEnabled] = useState(true);
+  const [mapConfig, setMapConfig] = useState<DashboardMapConfig>(FALLBACK_MAP_CONFIG);
+  const [useOfflineMap, setUseOfflineMap] = useState(FALLBACK_MAP_CONFIG.provider === "offline");
+  const handleMapError = useCallback(() => setUseOfflineMap(true), []);
 
   useEffect(() => {
-    if (!mapElementRef.current || mapRef.current) return;
-
-    const map = L.map(mapElementRef.current, {
-      center: DEFAULT_CENTER,
-      zoom: DEFAULT_ZOOM,
-      zoomControl: false,
+    let disposed = false;
+    void fetchMapConfig().then((config) => {
+      if (disposed) return;
+      setMapConfig(config);
+      setUseOfflineMap(config.provider === "offline");
     });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap",
-    }).addTo(map);
-    const markerLayer = L.layerGroup().addTo(map);
-    mapRef.current = map;
-    markerLayerRef.current = markerLayer;
-
     return () => {
-      markerLayer.remove();
-      map.remove();
-      mapRef.current = null;
-      markerLayerRef.current = null;
+      disposed = true;
     };
   }, []);
 
-  useEffect(() => {
-    const map = mapRef.current;
-    const markerLayer = markerLayerRef.current;
-    if (!map || !markerLayer) return;
-
-    markerLayer.clearLayers();
-    for (const stream of streams) {
-      if (!stream.geometry) continue;
-      const isSelected = stream.id === selectedStream.id;
-      L.circleMarker(geometryForStream(stream), {
-        color: isSelected ? "#3db8ff" : "#59d174",
-        fillColor: isSelected ? "#3db8ff" : "#59d174",
-        fillOpacity: isSelected ? 0.62 : 0.42,
-        radius: isSelected ? 10 : 7,
-      })
-        .bindPopup(popupContentForStream(stream))
-        .addTo(markerLayer);
-    }
-    map.setView(geometryForStream(selectedStream), Math.max(map.getZoom(), DEFAULT_ZOOM), {
-      animate: true,
-    });
-  }, [selectedStream, streams]);
+  if (!useOfflineMap) {
+    return (
+      <PublicVectorMap
+        autoFocusEnabled={autoFocusEnabled}
+        mapConfig={mapConfig}
+        onAutoFocusChange={setAutoFocusEnabled}
+        selectedStream={selectedStream}
+        streams={streams}
+        onMapError={handleMapError}
+      />
+    );
+  }
 
   return (
-    <div className="tactical-map__canvas tactical-map__canvas--leaflet">
-      <div ref={mapElementRef} className="tactical-map__leaflet" />
+    <OfflineTacticalMap
+      autoFocusEnabled={autoFocusEnabled}
+      onAutoFocusChange={setAutoFocusEnabled}
+      selectedStream={selectedStream}
+      streams={streams}
+    />
+  );
+}
+
+interface OfflineTacticalMapProps extends TacticalLeafletMapProps {
+  autoFocusEnabled: boolean;
+  onAutoFocusChange: (enabled: boolean) => void;
+}
+
+function OfflineTacticalMap({
+  autoFocusEnabled,
+  onAutoFocusChange,
+  selectedStream,
+  streams,
+}: OfflineTacticalMapProps) {
+  const [zoom, setZoom] = useState(INITIAL_MAP_ZOOM);
+  const projectedStreams = useMemo(() => projectStreams(streams, selectedStream, zoom), [selectedStream, streams, zoom]);
+  const selectedGeometry = selectedStream.geometry ?? DEFAULT_MAP_CENTER;
+
+  return (
+    <div
+      className="tactical-map__canvas tactical-map__canvas--offline"
+      data-testid="offline-tactical-map"
+      aria-label="폐쇄망 오프라인 전술 지도"
+    >
+      <div className="offline-map-grid" aria-hidden="true" />
+      <div className="offline-map-roads" aria-hidden="true" />
+      <div className="offline-map-river" aria-hidden="true" />
       <span className="map-coordinate-source" data-testid="map-coordinate-source">
         {coordinateSourceLabel(selectedStream)}
       </span>
+      <span className="offline-map-center" data-testid="offline-map-center">
+        중심 {selectedGeometry.lat.toFixed(6)}, {selectedGeometry.lng.toFixed(6)}
+      </span>
       <div className="map-toolbar" aria-label="지도 도구">
-        <button aria-label="지도 중심 초기화" type="button" onClick={() => mapRef.current?.setView(DEFAULT_CENTER, DEFAULT_ZOOM)}>
+        <button
+          aria-label={autoFocusEnabled ? "자동 포커스 켜짐" : "자동 포커스 켜기"}
+          className={autoFocusEnabled ? "is-active" : undefined}
+          type="button"
+          onClick={() => onAutoFocusChange(true)}
+        >
+          Auto
+        </button>
+        <button
+          aria-label="지도 중심 초기화"
+          type="button"
+          onClick={() => {
+            onAutoFocusChange(false);
+            setZoom(INITIAL_MAP_ZOOM);
+          }}
+        >
           ⌖
         </button>
-        <button aria-label="지도 확대" type="button" onClick={() => mapRef.current?.zoomIn()}>
+        <button
+          aria-label="지도 확대"
+          type="button"
+          onClick={() => {
+            onAutoFocusChange(false);
+            setZoom((current) => Math.min(MAX_ZOOM, current + 1));
+          }}
+        >
           +
         </button>
-        <button aria-label="지도 축소" type="button" onClick={() => mapRef.current?.zoomOut()}>
+        <button
+          aria-label="지도 축소"
+          type="button"
+          onClick={() => {
+            onAutoFocusChange(false);
+            setZoom((current) => Math.max(MIN_ZOOM, current - 1));
+          }}
+        >
           -
         </button>
       </div>
+      {projectedStreams.map(({ stream, left, top }) => (
+        <button
+          key={stream.id}
+          className={markerClassForStream(stream, selectedStream)}
+          style={{ left: `${left}%`, top: `${top}%` }}
+          type="button"
+          title={`${stream.title} / ${coordinateText(stream)}`}
+          aria-label={`${stream.title} 위치 ${coordinateText(stream)}`}
+        >
+          <span className="offline-map-marker__dot" />
+          <span className="offline-map-marker__label">{stream.title}</span>
+        </button>
+      ))}
     </div>
   );
 }

@@ -1,34 +1,29 @@
-from typing import Any
+from typing import Any, cast
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from core.db import get_db
-from sql.mediate_sql import Gateway, UnmannedAsset, GatewayAsset
-from core.security import get_current_user
 
-from datetime import timedelta
+from api.contracts import AssetErrorDetails, AssetRoutes
+from api.errors import NotFoundApiError
+from core.db import get_db
+from sql.mediate_sql import Gateway, GatewayAsset, UnmannedAsset
 
 router = APIRouter()
 node_store: dict[str, dict[str, Any]] = {}
 
-@router.get("/{uuid}")
+
+@router.get(AssetRoutes.BY_GATEWAY_UUID)
 async def get_asset(uuid: str, db: Session = Depends(get_db)):
-     # 1) gateway 찾기
-    gateway = db.query(Gateway).filter(Gateway.uuid == uuid).first()
-    if not gateway:
-        raise HTTPException(status_code=404, detail="Gateway not found")
+    gateway_id = cast(int | None, db.query(Gateway.id).filter(Gateway.uuid == uuid).scalar())
+    if gateway_id is None:
+        raise NotFoundApiError(AssetErrorDetails.GATEWAY_NOT_FOUND)
 
-    # 2) 매핑 찾기
-    mappings = db.query(GatewayAsset).filter(
-        GatewayAsset.gateway_id == gateway.id
-    ).all()
-    asset_ids = [m.asset_id for m in mappings]
-    if not asset_ids:
-        return []
-
-    # 3) 자산 목록 반환 (JSON 변환)
-    assets = db.query(UnmannedAsset).filter(UnmannedAsset.id.in_(asset_ids)).all()
-    
-    print(assets)
+    # gateway 존재 확인 뒤 join으로 mapping + asset 조회를 한 번에 처리한다.
+    assets = (
+        db.query(UnmannedAsset)
+        .join(GatewayAsset, GatewayAsset.asset_id == UnmannedAsset.id)
+        .filter(GatewayAsset.gateway_id == gateway_id)
+        .all()
+    )
 
     return assets

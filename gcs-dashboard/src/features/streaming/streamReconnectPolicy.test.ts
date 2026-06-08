@@ -4,6 +4,7 @@ import {
   describeWebRTCFailure,
   getNextWebRTCRetryDelay,
   isRecoverableWebRTCFailure,
+  shouldSkipWebRTCRetryAfterRelayFailure,
   shouldFallbackAfterWebRTCRetry,
 } from "./streamReconnectPolicy";
 import type { WebRTCPlaybackSnapshot } from "./types";
@@ -39,6 +40,23 @@ describe("streamReconnectPolicy", () => {
       "WebRTC peer connection failed",
     );
   });
+
+  test("skips repeated WebRTC retries after relay candidate failure", () => {
+    expect(
+      shouldSkipWebRTCRetryAfterRelayFailure(
+        snapshot({
+          status: "error",
+          connectionState: "failed",
+          audioStats: {
+            ...snapshot({}).audioStats,
+            localCandidateType: "relay",
+            relayFallbackReason: "local-direct-candidate-failed",
+          },
+        }),
+      ),
+    ).toBe(true);
+    expect(shouldSkipWebRTCRetryAfterRelayFailure(snapshot({ connectionState: "failed" }))).toBe(false);
+  });
 });
 
 function snapshot(overrides: Partial<WebRTCPlaybackSnapshot>): WebRTCPlaybackSnapshot {
@@ -47,6 +65,30 @@ function snapshot(overrides: Partial<WebRTCPlaybackSnapshot>): WebRTCPlaybackSna
     connectionState: "connecting",
     iceConnectionState: "checking",
     errorMessage: null,
+    hasVideoFrame: false,
+    hasAudioTrack: false,
+    isAudioActive: false,
+    firstFrameLatencyMs: null,
+    signalingTimings: {
+      iceServersLoadedMs: null,
+      offerCreatedMs: null,
+      localDescriptionSetMs: null,
+      iceGatheringDoneMs: null,
+      whepResponseMs: null,
+      remoteDescriptionSetMs: null,
+    },
+    audioStats: {
+      jitterMs: null,
+      jitterBufferDelayMs: null,
+      packetsLost: null,
+      packetsReceived: null,
+      concealedSamples: null,
+      roundTripTimeMs: null,
+      localCandidateType: null,
+      remoteCandidateType: null,
+      transportProtocol: null,
+      relayFallbackReason: null,
+    },
     ...overrides,
   };
 }

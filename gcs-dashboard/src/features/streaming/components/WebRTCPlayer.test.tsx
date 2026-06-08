@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { WebRTCPlayer } from "./WebRTCPlayer";
@@ -10,6 +10,7 @@ class MockPeerConnection {
     this.iceConnectionState = "closed";
   });
   createOffer = vi.fn(async () => ({ type: "offer", sdp: "mock-offer-sdp" }) as RTCSessionDescriptionInit);
+  getStats = vi.fn(async () => this.statsReport as unknown as RTCStatsReport);
   setLocalDescription = vi.fn(async (description: RTCSessionDescriptionInit) => {
     this.localDescription = description as RTCSessionDescription;
   });
@@ -19,6 +20,7 @@ class MockPeerConnection {
   iceConnectionState: RTCIceConnectionState = "new";
   iceGatheringState: RTCIceGatheringState;
   localDescription: RTCSessionDescription | null = null;
+  statsReport = new Map<string, Record<string, unknown>>();
   onconnectionstatechange: ((this: RTCPeerConnection, ev: Event) => unknown) | null = null;
   oniceconnectionstatechange: ((this: RTCPeerConnection, ev: Event) => unknown) | null = null;
   onicegatheringstatechange: ((this: RTCPeerConnection, ev: Event) => unknown) | null = null;
@@ -46,6 +48,17 @@ class MockPeerConnection {
     this.iceGatheringState = "complete";
     this.onicegatheringstatechange?.call(this as unknown as RTCPeerConnection, new Event("icegatheringstatechange"));
   }
+
+  emitRemoteTrack(streams: MediaStream[]) {
+    this.ontrack?.call(this as unknown as RTCPeerConnection, {
+      streams,
+      track: { id: "video-track-1" },
+    } as unknown as RTCTrackEvent);
+  }
+
+  setStats(stats: Array<Record<string, unknown>>) {
+    this.statsReport = new Map(stats.map((stat) => [String(stat.id), stat]));
+  }
 }
 
 let peerConnections: MockPeerConnection[] = [];
@@ -69,9 +82,22 @@ beforeEach(() => {
     }),
   );
   vi.stubGlobal("fetch", vi.fn(async () => successfulWhepResponse));
+  vi.stubGlobal(
+    "MediaStream",
+    vi.fn(function MockMediaStream() {
+      return {
+        addTrack: vi.fn(),
+      };
+    }),
+  );
+  Object.defineProperty(HTMLMediaElement.prototype, "play", {
+    configurable: true,
+    value: vi.fn(async () => undefined),
+  });
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
@@ -99,12 +125,19 @@ describe("WebRTCPlayer", () => {
     expect(peerConnections[0].addTransceiver).toHaveBeenCalledWith("video", { direction: "recvonly" });
     expect(peerConnections[0].addTransceiver).toHaveBeenCalledWith("audio", { direction: "recvonly" });
     expect(RTCPeerConnection).toHaveBeenCalledWith({
+      bundlePolicy: "max-bundle",
+      iceCandidatePoolSize: 0,
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      iceTransportPolicy: "all",
     });
     expect(peerConnections[0].setRemoteDescription).toHaveBeenCalledWith({
       type: "answer",
       sdp: "mock-answer-sdp",
     });
+    await waitFor(() => {
+      expect(screen.getByTestId("webrtc-player").getAttribute("data-whep-response-ms")).toMatch(/^\d+$/);
+    });
+    expect(screen.getByText(/whep: \d+ms/)).toBeInTheDocument();
   });
 
   test("uses TURN servers returned by the backend ICE API", async () => {
@@ -126,6 +159,8 @@ describe("WebRTCPlayer", () => {
 
     await waitFor(() => {
       expect(RTCPeerConnection).toHaveBeenCalledWith({
+        bundlePolicy: "max-bundle",
+        iceCandidatePoolSize: 0,
         iceServers: [
           { urls: "stun:stun.example.test:3478" },
           {
@@ -134,6 +169,7 @@ describe("WebRTCPlayer", () => {
             credential: "test-secret",
           },
         ],
+        iceTransportPolicy: "all",
       });
     });
     expect(fetch).toHaveBeenNthCalledWith(
@@ -169,8 +205,213 @@ describe("WebRTCPlayer", () => {
         status: "playing",
         connectionState: "connected",
         iceConnectionState: "connected",
+        hasVideoFrame: false,
+        firstFrameLatencyMs: null,
+        signalingTimings: expect.objectContaining({
+          whepResponseMs: expect.any(Number),
+        }),
       }),
     );
+  });
+
+  test("records first video frame latency for browser smoke checks", async () => {
+    const onStatusChange = vi.fn();
+    render(
+      <WebRTCPlayer
+        whepUrl="https://media.example.test/raw/sample/front/whep"
+        streamId="raw.sample.front"
+        onStatusChange={onStatusChange}
+      />,
+    );
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    fireEvent.loadedData(screen.getByTestId("webrtc-video"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-has-video-frame", "true");
+    });
+    expect(screen.getByTestId("webrtc-player").getAttribute("data-first-frame-latency-ms")).toMatch(/^\d+$/);
+    expect(screen.getByText(/first frame: \d+ms/)).toBeInTheDocument();
+    expect(onStatusChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        hasVideoFrame: true,
+        firstFrameLatencyMs: expect.any(Number),
+      }),
+    );
+  });
+
+  test("attaches remote WHEP tracks even when the track event has no stream", async () => {
+    render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" />);
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    act(() => {
+      peerConnections[0].emitRemoteTrack([]);
+    });
+
+    const video = screen.getByTestId("webrtc-video") as HTMLVideoElement;
+    expect(MediaStream).toHaveBeenCalled();
+    expect(video.srcObject).toBeTruthy();
+  });
+
+  test("reports audio activity when the remote stream includes a live audio track", async () => {
+    const onStatusChange = vi.fn();
+    const audioTrack = {
+      enabled: true,
+      muted: false,
+      readyState: "live",
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    const remoteStream = {
+      getAudioTracks: () => [audioTrack],
+    } as unknown as MediaStream;
+
+    render(
+      <WebRTCPlayer
+        onStatusChange={onStatusChange}
+        whepUrl="https://media.example.test/raw/sample/front/whep"
+      />,
+    );
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    act(() => {
+      peerConnections[0].emitRemoteTrack([remoteStream]);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-active", "true");
+    });
+    expect(screen.getByText("audio")).toBeInTheDocument();
+    expect(onStatusChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        hasAudioTrack: true,
+        isAudioActive: true,
+      }),
+    );
+  });
+
+  test("reports inbound audio jitter, packet loss, and ICE candidate type", async () => {
+    const onStatusChange = vi.fn();
+    const remoteStream = {
+      getAudioTracks: () => [
+        {
+          enabled: true,
+          muted: false,
+          readyState: "live",
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        },
+      ],
+    } as unknown as MediaStream;
+
+    render(
+      <WebRTCPlayer
+        onStatusChange={onStatusChange}
+        whepUrl="https://media.example.test/raw/sample/front/whep"
+      />,
+    );
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    act(() => {
+      peerConnections[0].setStats([
+        {
+          id: "audio-inbound",
+          type: "inbound-rtp",
+          kind: "audio",
+          jitter: 0.034,
+          jitterBufferDelay: 1.2,
+          jitterBufferEmittedCount: 6,
+          packetsLost: 3,
+          packetsReceived: 180,
+          concealedSamples: 960,
+        },
+        {
+          id: "pair-1",
+          type: "candidate-pair",
+          selected: true,
+          state: "succeeded",
+          localCandidateId: "local-1",
+          remoteCandidateId: "remote-1",
+          currentRoundTripTime: 0.12,
+        },
+        { id: "local-1", type: "local-candidate", candidateType: "relay", protocol: "udp" },
+        { id: "remote-1", type: "remote-candidate", candidateType: "host", protocol: "udp" },
+      ]);
+      peerConnections[0].emitRemoteTrack([remoteStream]);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-jitter-ms", "34");
+    }, { timeout: 2_500 });
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-packets-lost", "3");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-candidate-type", "relay");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-transport", "udp");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute(
+      "data-relay-fallback-reason",
+      "local-nat-or-firewall-fallback",
+    );
+    expect(onStatusChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        audioStats: expect.objectContaining({
+          jitterMs: 34,
+          jitterBufferDelayMs: 200,
+          packetsLost: 3,
+          packetsReceived: 180,
+          concealedSamples: 960,
+          roundTripTimeMs: 120,
+          localCandidateType: "relay",
+          remoteCandidateType: "host",
+          transportProtocol: "udp",
+          relayFallbackReason: "local-nat-or-firewall-fallback",
+        }),
+      }),
+    );
+  });
+
+  test("keeps the audio indicator stable during short remote mute events", async () => {
+    const listeners = new Map<string, () => void>();
+    const audioTrack = {
+      enabled: true,
+      muted: false,
+      readyState: "live",
+      addEventListener: vi.fn((event: string, handler: () => void) => {
+        listeners.set(event, handler);
+      }),
+      removeEventListener: vi.fn(),
+    };
+    const remoteStream = {
+      getAudioTracks: () => [audioTrack],
+    } as unknown as MediaStream;
+
+    render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" />);
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    vi.useFakeTimers();
+    act(() => {
+      peerConnections[0].emitRemoteTrack([remoteStream]);
+    });
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-active", "true");
+
+    act(() => {
+      audioTrack.muted = true;
+      listeners.get("mute")?.();
+      vi.advanceTimersByTime(1199);
+    });
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-active", "true");
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-active", "false");
+
+    act(() => {
+      audioTrack.muted = false;
+      listeners.get("unmute")?.();
+    });
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-active", "true");
   });
 
   test("renders offline state without creating a peer connection", () => {
@@ -213,6 +454,26 @@ describe("WebRTCPlayer", () => {
     });
 
     await waitFor(() => expect(fetch).toHaveBeenCalled());
+  });
+
+  test("posts the WHEP offer after a bounded ICE gathering wait", async () => {
+    initialIceGatheringState = "gathering";
+
+    render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" />);
+
+    await waitFor(() => expect(peerConnections[0].setLocalDescription).toHaveBeenCalled());
+    expect(fetch).not.toHaveBeenCalledWith(
+      "https://media.example.test/raw/sample/front/whep",
+      expect.objectContaining({ method: "POST" }),
+    );
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        "https://media.example.test/raw/sample/front/whep",
+        expect.objectContaining({ method: "POST" }),
+      ),
+      { timeout: 3500 },
+    );
   });
 
   test("renders an error state when the ICE connection fails", async () => {

@@ -120,7 +120,7 @@ curl http://127.0.0.1:8888/raw/sample/front/index.m3u8
 
 localhost/LAN 환경에서는 기본 ICE 서버 없이도 재생될 수 있다. 외부망이나 NAT 환경에서 WebRTC가 실패하면 다음을 확인한다.
 
-- dashboard bundle에 `VITE_WEBRTC_STUN_URL=stun:stun.l.google.com:19302`가 주입되었는가?
+- dashboard bundle에 `VITE_WEBRTC_STUN_URL=stun:stun.l.google.com:19302` 또는 폐쇄망 STUN/TURN VIP가 주입되었는가?
 - `docs/m1/mediamtx-ice-servers.md`의 STUN/TURN 설정을 적용했는가?
 - `MEDIAMTX_STUN_URL`이 `.env` 또는 배포 설정으로 주입되었는가?
 - `8189/udp`, `8189/tcp`, `8889/tcp`가 방화벽에서 열려 있는가?

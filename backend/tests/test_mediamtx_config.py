@@ -142,10 +142,10 @@ def test_compose_port_overrides_are_documented_without_management_ports():
     assert "9998" not in env_example
 
 
-def test_mediamtx_declares_public_stun_server_for_m2_webrtc_validation():
+def test_mediamtx_declares_public_stun_server_for_connected_network_validation():
     config = load_yaml(MEDIAMTX_CONFIG)
 
-    assert config["webrtcICEServers2"] == [{"url": "stun:stun.l.google.com:19302"}]
+    assert config["webrtcICEServers2"] == [{"url": "stun:stun.l.google.com:19302", "clientOnly": True}]
     assert config["webrtcSTUNGatherTimeout"] == "5s"
 
 

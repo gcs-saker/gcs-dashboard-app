@@ -6,9 +6,11 @@ from __future__ import annotations
 import argparse
 import asyncio
 from dataclasses import dataclass
+import ipaddress
 import ssl
 import sys
-from typing import Sequence
+import time
+from typing import Iterable, Sequence
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -21,11 +23,22 @@ FAILED_ICE_STATES = {"failed", "closed", "disconnected"}
 
 
 @dataclass(frozen=True)
+class CandidateSummary:
+    total: int
+    host: int
+    srflx: int
+    relay: int
+    private_or_loopback: int
+    public_or_dns: int
+
+
+@dataclass(frozen=True)
 class SdpInspection:
     has_ice_ufrag: bool
     has_ice_pwd: bool
     has_fingerprint: bool
     candidate_count: int
+    candidates: CandidateSummary
     has_video_media: bool
     has_audio_media: bool
 
@@ -41,14 +54,66 @@ class SdpInspection:
 
 def inspect_sdp(sdp: str) -> SdpInspection:
     lines = [line.strip() for line in sdp.splitlines()]
+    candidates = summarize_candidates(line for line in lines if line.startswith("a=candidate:"))
     return SdpInspection(
         has_ice_ufrag=any(line.startswith("a=ice-ufrag:") for line in lines),
         has_ice_pwd=any(line.startswith("a=ice-pwd:") for line in lines),
         has_fingerprint=any(line.startswith("a=fingerprint:") for line in lines),
-        candidate_count=sum(1 for line in lines if line.startswith("a=candidate:")),
+        candidate_count=candidates.total,
+        candidates=candidates,
         has_video_media=any(line.startswith("m=video ") for line in lines),
         has_audio_media=any(line.startswith("m=audio ") for line in lines),
     )
+
+
+def summarize_candidates(candidate_lines: Iterable[str]) -> CandidateSummary:
+    total = 0
+    host_count = 0
+    srflx_count = 0
+    relay_count = 0
+    private_or_loopback_count = 0
+    public_or_dns_count = 0
+
+    for line in candidate_lines:
+        total += 1
+        parts = line.split()
+        candidate_type = _candidate_type(parts)
+        address = parts[4] if len(parts) > 4 else ""
+        if candidate_type == "host":
+            host_count += 1
+        elif candidate_type == "srflx":
+            srflx_count += 1
+        elif candidate_type == "relay":
+            relay_count += 1
+
+        if _is_private_or_loopback(address):
+            private_or_loopback_count += 1
+        else:
+            public_or_dns_count += 1
+
+    return CandidateSummary(
+        total=total,
+        host=host_count,
+        srflx=srflx_count,
+        relay=relay_count,
+        private_or_loopback=private_or_loopback_count,
+        public_or_dns=public_or_dns_count,
+    )
+
+
+def _candidate_type(parts: Sequence[str]) -> str:
+    try:
+        return parts[parts.index("typ") + 1]
+    except (ValueError, IndexError):
+        return "unknown"
+
+
+def _is_private_or_loopback(address: str) -> bool:
+    try:
+        parsed = ipaddress.ip_address(address)
+    except ValueError:
+        return False
+    return parsed.is_private or parsed.is_loopback or parsed.is_link_local
 
 
 def require_webrtc_sdp(sdp: str, label: str) -> SdpInspection:
@@ -109,7 +174,10 @@ async def wait_for_ice_gathering_complete(peer_connection: object, timeout_secon
         if getattr(peer_connection, "iceGatheringState") == "complete":
             complete.set()
 
-    await asyncio.wait_for(complete.wait(), timeout=timeout_seconds)
+    try:
+        await asyncio.wait_for(complete.wait(), timeout=timeout_seconds)
+    except asyncio.TimeoutError:
+        return
 
 
 async def wait_for_ice_connected(peer_connection: object, timeout_seconds: float) -> None:
@@ -129,7 +197,13 @@ async def wait_for_ice_connected(peer_connection: object, timeout_seconds: float
             failed_state.append(state)
             connected.set()
 
-    await asyncio.wait_for(connected.wait(), timeout=timeout_seconds)
+    try:
+        await asyncio.wait_for(connected.wait(), timeout=timeout_seconds)
+    except asyncio.TimeoutError as error:
+        final_state = str(getattr(peer_connection, "iceConnectionState"))
+        raise RuntimeError(
+            f"ICE connection did not reach connected/completed within {timeout_seconds}s: state={final_state}"
+        ) from error
 
     if failed_state:
         raise RuntimeError(f"ICE connection failed with state={failed_state[-1]}")
@@ -139,6 +213,11 @@ async def wait_for_ice_connected(peer_connection: object, timeout_seconds: float
         raise RuntimeError(f"ICE connection did not reach connected/completed: state={final_state}")
 
 
+async def wait_for_video_frame(track_queue: asyncio.Queue[object], timeout_seconds: float) -> object:
+    track = await asyncio.wait_for(track_queue.get(), timeout=timeout_seconds)
+    return await asyncio.wait_for(track.recv(), timeout=timeout_seconds)  # type: ignore[attr-defined]
+
+
 async def run_webrtc_smoke(args: argparse.Namespace) -> int:
     try:
         from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
@@ -146,12 +225,27 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
         raise RuntimeError("aiortc is required for --run. Install with: python -m pip install aiortc") from error
 
     peer_connection = RTCPeerConnection(
-        RTCConfiguration(iceServers=[RTCIceServer(urls=[args.stun_url])]),
+        RTCConfiguration(
+            iceServers=[
+                RTCIceServer(
+                    urls=[args.ice_server_url],
+                    username=args.ice_username,
+                    credential=args.ice_credential,
+                )
+            ]
+        ),
     )
+    video_tracks: asyncio.Queue[object] = asyncio.Queue()
+
+    @peer_connection.on("track")  # type: ignore[attr-defined]
+    def on_track(track: object) -> None:
+        if getattr(track, "kind", "") == "video":
+            video_tracks.put_nowait(track)
 
     try:
         peer_connection.addTransceiver("video", direction="recvonly")
 
+        started = time.perf_counter()
         offer = await peer_connection.createOffer()
         await peer_connection.setLocalDescription(offer)
         await wait_for_ice_gathering_complete(peer_connection, args.timeout_seconds)
@@ -161,28 +255,51 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
             raise RuntimeError("Local WebRTC offer SDP was not created")
 
         local_inspection = require_webrtc_sdp(local_description.sdp, "local offer")
+        offer_ready_elapsed_ms = (time.perf_counter() - started) * 1000
         answer_sdp = post_whep_offer(args.whep_url, local_description.sdp, args.insecure)
+        answer_elapsed_ms = (time.perf_counter() - started) * 1000
         answer_inspection = require_webrtc_sdp(answer_sdp, "WHEP answer")
 
         await peer_connection.setRemoteDescription(
             RTCSessionDescription(sdp=answer_sdp, type="answer"),
         )
 
-        if args.require_connected:
+        if args.require_connected or args.require_video_frame:
             await wait_for_ice_connected(peer_connection, args.timeout_seconds)
         else:
             await asyncio.sleep(0.2)
 
+        frame = None
+        first_frame_elapsed_ms = None
+        if args.require_video_frame:
+            frame = await wait_for_video_frame(video_tracks, args.timeout_seconds)
+            first_frame_elapsed_ms = (time.perf_counter() - started) * 1000
+
         print("WebRTC ICE smoke run passed")
         print(f"WHEP URL: {args.whep_url}")
-        print(f"STUN URL: {args.stun_url}")
+        print(f"ICE server URL: {args.ice_server_url}")
         print(f"Local offer candidates: {local_inspection.candidate_count}")
+        print_candidate_summary("Local offer", local_inspection.candidates)
         print(f"WHEP answer candidates: {answer_inspection.candidate_count}")
+        print_candidate_summary("WHEP answer", answer_inspection.candidates)
+        print(f"Local offer ready ms: {offer_ready_elapsed_ms:.1f}")
+        print(f"WHEP answer latency ms: {answer_elapsed_ms:.1f}")
         print(f"ICE gathering state: {peer_connection.iceGatheringState}")
         print(f"ICE connection state: {peer_connection.iceConnectionState}")
+        if frame is not None and first_frame_elapsed_ms is not None:
+            print(f"First video frame latency ms: {first_frame_elapsed_ms:.1f}")
+            print(f"First video frame size: {frame.width}x{frame.height}")  # type: ignore[attr-defined]
         return 0
     finally:
         await peer_connection.close()
+
+
+def print_candidate_summary(label: str, summary: CandidateSummary) -> None:
+    print(
+        f"{label} candidate summary: "
+        f"host={summary.host}, srflx={summary.srflx}, relay={summary.relay}, "
+        f"private_or_loopback={summary.private_or_loopback}, public_or_dns={summary.public_or_dns}"
+    )
 
 
 def run_static_check() -> int:
@@ -205,8 +322,9 @@ def run_static_check() -> int:
 
     print("WebRTC ICE smoke check passed")
     print(f"Required SDP markers: {', '.join(REQUIRED_SDP_MARKERS)}, candidate")
+    print_candidate_summary("Sample", inspection.candidates)
     print(f"Default WHEP URL: {DEFAULT_WHEP_URL}")
-    print(f"Default STUN URL: {DEFAULT_STUN_URL}")
+    print(f"Default ICE server URL: {DEFAULT_STUN_URL}")
     return 0
 
 
@@ -218,7 +336,10 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     mode.add_argument("--check", action="store_true", help="Run static SDP/parser contract checks.")
     mode.add_argument("--run", action="store_true", help="Run a live WHEP/ICE smoke test with aiortc.")
     parser.add_argument("--whep-url", default=DEFAULT_WHEP_URL)
-    parser.add_argument("--stun-url", default=DEFAULT_STUN_URL)
+    parser.add_argument("--stun-url", default=None, help="Deprecated alias for --ice-server-url.")
+    parser.add_argument("--ice-server-url", default=None)
+    parser.add_argument("--ice-username", default=None)
+    parser.add_argument("--ice-credential", default=None)
     parser.add_argument("--timeout-seconds", type=float, default=15)
     parser.add_argument("--insecure", action="store_true", help="Allow self-signed HTTPS WHEP endpoints.")
     parser.add_argument(
@@ -226,7 +347,13 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         action="store_true",
         help="Fail unless ICE reaches connected/completed after applying the WHEP answer.",
     )
+    parser.add_argument(
+        "--require-video-frame",
+        action="store_true",
+        help="Fail unless a decoded remote video frame is received.",
+    )
     args = parser.parse_args(argv)
+    args.ice_server_url = args.ice_server_url or args.stun_url or DEFAULT_STUN_URL
     if not args.check and not args.run:
         args.check = True
     return args
