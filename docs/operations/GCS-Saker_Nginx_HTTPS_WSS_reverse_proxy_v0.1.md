@@ -16,6 +16,8 @@ M2 Server-02 staging 배포 전에 Nginx reverse proxy의 HTTPS, WSS, API, dashb
 | --- | --- | --- | --- |
 | `http://<host>/` | Nginx | HTTPS redirect | ACME challenge를 제외하고 `https://$host$request_uri`로 redirect |
 | `https://<host>/` | `nginx:3000` | Dashboard serving | SPA/dashboard entrypoint |
+| `https://<host>/healthz`, `https://<host>/readyz` | `auth-policy:8080` | Root liveness/readiness smoke | M7 인증/인가 cutover 기준 root health endpoint |
+| `https://<host>/api/healthz`, `https://<host>/api/readyz` | `backend:8001` | API namespace smoke | 운영 점검에서 API 단일 prefix를 사용할 때 backend health endpoint로 proxy |
 | `https://<host>/api/asset/*` | `auth-policy:8080` | Asset read-model | `/asset/*`로 rewrite 후 Spring/Kotlin read-only 호환 응답 제공 |
 | `https://<host>/api/telemetry/all` | `auth-policy:8080` | Telemetry read-model | Dashboard map/geometry 조회용 read-only 호환 응답 제공 |
 | `https://<host>/api/telemetry/` | `auth-policy:8080` | Telemetry ingest/read-model | 인증된 telemetry ingest를 Spring/Kotlin read-model로 전달 |
@@ -48,6 +50,8 @@ M2 Server-02 staging 배포 전에 Nginx reverse proxy의 HTTPS, WSS, API, dashb
 - reverse proxy 설정 초안 파일 존재
 - HTTP to HTTPS redirect 존재
 - HTTPS server와 certificate placeholder 존재
+- `/healthz`, `/readyz` root auth-policy health location 존재
+- `/api/healthz`, `/api/readyz` backend API namespace health location 존재
 - `/api/asset/`, `/api/telemetry/`, `/api/ops/` active read-model location 존재
 - `/api/`, `/ws/`, `/hls/`, `/webrtc/` fallback/media location 존재
 - WebSocket upgrade header 존재

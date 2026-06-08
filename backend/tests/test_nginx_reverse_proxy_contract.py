@@ -80,11 +80,17 @@ def test_reverse_proxy_routes_root_health_checks_to_auth_policy() -> None:
 
     healthz_location = extract_exact_location(config, "/healthz")
     readyz_location = extract_exact_location(config, "/readyz")
+    api_healthz_location = extract_exact_location(config, "/api/healthz")
+    api_readyz_location = extract_exact_location(config, "/api/readyz")
 
     assert "proxy_pass http://gcs_auth_policy/healthz;" in healthz_location
     assert "proxy_pass http://gcs_auth_policy/readyz;" in readyz_location
+    assert "proxy_pass http://gcs_backend/healthz;" in api_healthz_location
+    assert "proxy_pass http://gcs_backend/readyz;" in api_readyz_location
     assert "proxy_read_timeout 10s;" in healthz_location
     assert "proxy_read_timeout 10s;" in readyz_location
+    assert "proxy_read_timeout 10s;" in api_healthz_location
+    assert "proxy_read_timeout 10s;" in api_readyz_location
 
 
 def test_reverse_proxy_keeps_mediamtx_management_ports_private() -> None:
