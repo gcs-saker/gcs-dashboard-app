@@ -53,6 +53,10 @@ stream의 발행 group은 `MEDIA_CONTROL_STREAM_GROUP_MAP`의 `path=group` 매�
 
 외부 브라우저에 전달하는 ICE 후보 URL은 `MEDIA_CONTROL_STUN_URL`, `MEDIA_CONTROL_TURN_PRIMARY_URL`, `MEDIA_CONTROL_TURN_SECONDARY_URL`로 주입한다. 서버 운영 환경에서는 Docker 내부 hostname이 아니라 public DNS 또는 폐쇄망 VIP를 사용해야 한다.
 
+TURN relay allocation 부하를 줄이기 위해 media-control은 기본적으로 건강한 TURN 서버를 1개만 ICE API에 포함한다. STUN 후보는 그대로 전달하고, primary TURN이 건강하지 않을 때 secondary TURN이 선택된다. 운영자가 장애 전환보다 동시 후보 제공을 우선해야 하는 환경에서는 `MEDIA_CONTROL_TURN_MAX_HEALTHY_SERVERS`를 늘릴 수 있지만, 브라우저가 여러 TURN allocation을 만들 수 있으므로 기본값 `1`을 권장한다.
+
+`MEDIA_CONTROL_REDIS_ADDR`가 설정되면 ICE 서버 목록은 `MEDIA_CONTROL_ICE_SERVER_CACHE_KEY`에 짧게 캐시된다. 기본 TTL은 `MEDIA_CONTROL_ICE_SERVER_CACHE_TTL_SECONDS=10`이며, Redis 장애 시에는 캐시만 degraded 처리하고 upstream registry를 직접 사용한다. ICE 서버 목록에는 TURN credential이 포함될 수 있으므로 Redis는 내부망, 인증, 방화벽 뒤에서만 운용한다.
+
 ## 테스트
 
 ```bash

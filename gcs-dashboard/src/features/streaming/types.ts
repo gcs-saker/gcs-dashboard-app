@@ -32,6 +32,7 @@ export interface WebRTCAudioStats {
   localCandidateType: string | null;
   remoteCandidateType: string | null;
   transportProtocol: string | null;
+  relayFallbackReason: string | null;
 }
 
 export interface WebRTCPlayerProps {

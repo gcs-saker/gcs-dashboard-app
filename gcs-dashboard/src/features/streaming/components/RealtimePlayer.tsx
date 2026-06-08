@@ -2,7 +2,11 @@ import { useEffect } from "react";
 
 import { useRealtimePlayback } from "../hooks/useRealtimePlayback";
 import type { RealtimePlayerProps } from "../types";
-import { describeWebRTCFailure, isRecoverableWebRTCFailure } from "../streamReconnectPolicy";
+import {
+  describeWebRTCFailure,
+  isRecoverableWebRTCFailure,
+  shouldSkipWebRTCRetryAfterRelayFailure,
+} from "../streamReconnectPolicy";
 import { HLSFallbackPlayer } from "./HLSFallbackPlayer";
 import "./RealtimePlayer.css";
 import { WebRTCPlayer } from "./WebRTCPlayer";
@@ -81,7 +85,12 @@ export function RealtimePlayer({
             }
 
             if (isRecoverableWebRTCFailure(snapshot)) {
-              playback.scheduleWebRTCRetry(describeWebRTCFailure(snapshot));
+              const reason = describeWebRTCFailure(snapshot);
+              if (shouldSkipWebRTCRetryAfterRelayFailure(snapshot)) {
+                playback.useHLSFallback(reason);
+                return;
+              }
+              playback.scheduleWebRTCRetry(reason);
             }
           }}
         />

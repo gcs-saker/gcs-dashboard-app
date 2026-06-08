@@ -175,7 +175,13 @@ func (s Server) legacyStreamStatus(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-func (s Server) iceServers(w http.ResponseWriter, _ *http.Request) {
+func (s Server) iceServers(w http.ResponseWriter, r *http.Request) {
+	_, err := s.authorizer.AuthorizeStream(r.Context(), r.Header.Get(authorizationHeader), s.groups.IceServersTarget())
+	if err != nil {
+		s.writeStreamAccessError(w, err)
+		return
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{jsonKeyIceServers: s.ice.HealthyIceServers()})
 }
 
@@ -248,7 +254,13 @@ func (s Server) dashboardStreamItem(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s Server) dashboardIceServers(w http.ResponseWriter, _ *http.Request) {
+func (s Server) dashboardIceServers(w http.ResponseWriter, r *http.Request) {
+	_, err := s.authorizer.AuthorizeStream(r.Context(), r.Header.Get(authorizationHeader), s.groups.IceServersTarget())
+	if err != nil {
+		s.writeStreamAccessError(w, err)
+		return
+	}
+
 	servers := s.ice.HealthyIceServers()
 	payload := make([]iceServerResponse, 0, len(servers))
 	for _, server := range servers {

@@ -152,6 +152,29 @@ func TestIceServersResponse(t *testing.T) {
 	}
 }
 
+func TestIceServersRequiresAuthorizationBeforeReturningTurnCredentials(t *testing.T) {
+	ice, _ := domain.NewIceServer("turn:turn-primary:3478", domain.IceServerTURN, "gcs-turn", "secret", true)
+	server := newTestServerWithAuthorizer(
+		fakeStreams{},
+		fakeIce{servers: []domain.IceServer{ice}},
+		fakeAuthorizer{errByStream: map[string]error{
+			"control.ice-servers": domain.ErrStreamAuthenticationRequired,
+		}},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/v1/ice-servers", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", recorder.Code)
+	}
+	body := recorder.Body.String()
+	if strings.Contains(body, "gcs-turn") || strings.Contains(body, "secret") || strings.Contains(body, "turn-primary") {
+		t.Fatalf("unauthorized ICE response leaked TURN data: %s", body)
+	}
+}
+
 func TestStreamListResponse(t *testing.T) {
 	path, _ := domain.NewStreamPath("raw/local/webcam")
 	server := newTestServer(fakeStreams{streams: []domain.StreamDescriptor{{Path: path, Ready: true, Status: domain.StreamStatusOnline}}}, fakeIce{})
@@ -383,6 +406,51 @@ func TestDashboardIceServersContract(t *testing.T) {
 	}
 	if payload[0]["username"] != "gcs-turn" {
 		t.Fatalf("unexpected username %v", payload[0]["username"])
+	}
+}
+
+func TestDashboardIceServersRequiresAuthorizationBeforeReturningTurnCredentials(t *testing.T) {
+	ice, _ := domain.NewIceServer("turn:turn-primary:3478", domain.IceServerTURN, "gcs-turn", "secret", true)
+	server := newTestServerWithAuthorizer(
+		fakeStreams{},
+		fakeIce{servers: []domain.IceServer{ice}},
+		fakeAuthorizer{errByStream: map[string]error{
+			"control.ice-servers": domain.ErrStreamAuthenticationRequired,
+		}},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/ice-servers", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", recorder.Code)
+	}
+	body := recorder.Body.String()
+	if strings.Contains(body, "gcs-turn") || strings.Contains(body, "secret") || strings.Contains(body, "turn-primary") {
+		t.Fatalf("unauthorized ICE response leaked TURN data: %s", body)
+	}
+}
+
+func TestDashboardIceServersForwardsAuthorizationHeader(t *testing.T) {
+	ice, _ := domain.NewIceServer("turn:turn-primary:3478", domain.IceServerTURN, "gcs-turn", "secret", true)
+	observedAuth := ""
+	server := newTestServerWithAuthorizer(
+		fakeStreams{},
+		fakeIce{servers: []domain.IceServer{ice}},
+		fakeAuthorizer{observedAuth: &observedAuth},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/ice-servers", nil)
+	request.Header.Set("Authorization", "Bearer dashboard-token")
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", recorder.Code)
+	}
+	if observedAuth != "Bearer dashboard-token" {
+		t.Fatalf("expected authorization header to be forwarded, got %q", observedAuth)
 	}
 }
 

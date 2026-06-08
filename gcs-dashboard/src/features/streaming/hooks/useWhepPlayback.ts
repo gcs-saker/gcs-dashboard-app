@@ -18,6 +18,11 @@ const ICE_GATHERING_TIMEOUT_MS = 2500;
 const AUDIO_STATE_POLL_INTERVAL_MS = 500;
 const AUDIO_INACTIVE_HOLD_MS = 1200;
 const AUDIO_STATS_POLL_INTERVAL_MS = 1000;
+const DIRECT_FIRST_RTC_CONFIGURATION = Object.freeze({
+  bundlePolicy: "max-bundle",
+  iceCandidatePoolSize: 0,
+  iceTransportPolicy: "all",
+} satisfies Omit<RTCConfiguration, "iceServers">);
 const EMPTY_SIGNALING_TIMINGS: WebRTCSignalingTimings = {
   iceServersLoadedMs: null,
   offerCreatedMs: null,
@@ -36,6 +41,7 @@ const EMPTY_AUDIO_STATS: WebRTCAudioStats = {
   localCandidateType: null,
   remoteCandidateType: null,
   transportProtocol: null,
+  relayFallbackReason: null,
 };
 
 interface UseWhepPlaybackOptions {
@@ -389,6 +395,7 @@ function extractAudioStats(report: RTCStatsReport): WebRTCAudioStats {
     localCandidateType: stringStat(localCandidate, "candidateType"),
     remoteCandidateType: stringStat(remoteCandidate, "candidateType"),
     transportProtocol: stringStat(localCandidate, "protocol") ?? stringStat(selectedPair, "protocol"),
+    relayFallbackReason: relayFallbackReason(localCandidate, remoteCandidate),
   };
 }
 
@@ -411,6 +418,26 @@ function stringStat(source: Record<string, unknown> | null, key: string): string
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+function relayFallbackReason(
+  localCandidate: Record<string, unknown> | null,
+  remoteCandidate: Record<string, unknown> | null,
+): string | null {
+  if (stringStat(localCandidate, "candidateType") !== "relay") {
+    return null;
+  }
+  const remoteType = stringStat(remoteCandidate, "candidateType");
+  if (remoteType === "relay") {
+    return "both-peers-relayed";
+  }
+  if (remoteType === "srflx") {
+    return "local-direct-candidate-failed";
+  }
+  if (remoteType === "host") {
+    return "local-nat-or-firewall-fallback";
+  }
+  return "relay-selected";
+}
+
 function secondsToMs(value: number | null): number | null {
   return value === null ? null : roundNullable(value * 1000);
 }
@@ -429,7 +456,8 @@ function audioStatsEqual(left: WebRTCAudioStats, right: WebRTCAudioStats): boole
     left.roundTripTimeMs === right.roundTripTimeMs &&
     left.localCandidateType === right.localCandidateType &&
     left.remoteCandidateType === right.remoteCandidateType &&
-    left.transportProtocol === right.transportProtocol
+    left.transportProtocol === right.transportProtocol &&
+    left.relayFallbackReason === right.relayFallbackReason
   );
 }
 
@@ -642,13 +670,13 @@ function createPeerConnection(iceServers: RTCIceServer[], whepUrl: string): RTCP
   }
 
   try {
-    return new RTCPeerConnection({ iceServers });
+    return new RTCPeerConnection({ ...DIRECT_FIRST_RTC_CONFIGURATION, iceServers });
   } catch (primaryError) {
     reportWhepDebug("pc-primary-config-failed", whepUrl, { message: messageFromUnknown(primaryError) });
   }
 
   try {
-    return new RTCPeerConnection({ iceServers: WEBRTC_ICE_SERVERS });
+    return new RTCPeerConnection({ ...DIRECT_FIRST_RTC_CONFIGURATION, iceServers: WEBRTC_ICE_SERVERS });
   } catch (fallbackError) {
     reportWhepDebug("pc-fallback-config-failed", whepUrl, { message: messageFromUnknown(fallbackError) });
   }

@@ -125,7 +125,10 @@ describe("WebRTCPlayer", () => {
     expect(peerConnections[0].addTransceiver).toHaveBeenCalledWith("video", { direction: "recvonly" });
     expect(peerConnections[0].addTransceiver).toHaveBeenCalledWith("audio", { direction: "recvonly" });
     expect(RTCPeerConnection).toHaveBeenCalledWith({
+      bundlePolicy: "max-bundle",
+      iceCandidatePoolSize: 0,
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      iceTransportPolicy: "all",
     });
     expect(peerConnections[0].setRemoteDescription).toHaveBeenCalledWith({
       type: "answer",
@@ -156,6 +159,8 @@ describe("WebRTCPlayer", () => {
 
     await waitFor(() => {
       expect(RTCPeerConnection).toHaveBeenCalledWith({
+        bundlePolicy: "max-bundle",
+        iceCandidatePoolSize: 0,
         iceServers: [
           { urls: "stun:stun.example.test:3478" },
           {
@@ -164,6 +169,7 @@ describe("WebRTCPlayer", () => {
             credential: "test-secret",
           },
         ],
+        iceTransportPolicy: "all",
       });
     });
     expect(fetch).toHaveBeenNthCalledWith(
@@ -339,10 +345,14 @@ describe("WebRTCPlayer", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-jitter-ms", "34");
-    });
+    }, { timeout: 2_500 });
     expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-packets-lost", "3");
     expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-candidate-type", "relay");
     expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-transport", "udp");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute(
+      "data-relay-fallback-reason",
+      "local-nat-or-firewall-fallback",
+    );
     expect(onStatusChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
         audioStats: expect.objectContaining({
@@ -355,6 +365,7 @@ describe("WebRTCPlayer", () => {
           localCandidateType: "relay",
           remoteCandidateType: "host",
           transportProtocol: "udp",
+          relayFallbackReason: "local-nat-or-firewall-fallback",
         }),
       }),
     );

@@ -11,6 +11,11 @@ var (
 	ErrStreamAccessDenied           = errors.New("stream access denied")
 )
 
+const (
+	controlPlaneIceServersStreamID = "control.ice-servers"
+	controlPlaneIceServersPath     = "control/ice-servers"
+)
+
 type StreamAccessTarget struct {
 	StreamID         string `json:"streamId"`
 	Path             string `json:"path"`
@@ -96,6 +101,14 @@ func (r StreamGroupResolver) TargetFor(stream ParsedStreamPath) StreamAccessTarg
 		StreamID:         stream.StreamID,
 		Path:             stream.Path,
 		PublisherGroupID: publisherGroupID,
+	}
+}
+
+func (r StreamGroupResolver) IceServersTarget() StreamAccessTarget {
+	return StreamAccessTarget{
+		StreamID:         controlPlaneIceServersStreamID,
+		Path:             controlPlaneIceServersPath,
+		PublisherGroupID: r.defaultGroupID,
 	}
 }
 

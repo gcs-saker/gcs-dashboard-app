@@ -80,6 +80,7 @@ export function WebRTCPlayer({
       data-audio-packets-lost={audioStats.packetsLost ?? ""}
       data-ice-candidate-type={audioStats.localCandidateType ?? ""}
       data-ice-transport={audioStats.transportProtocol ?? ""}
+      data-relay-fallback-reason={audioStats.relayFallbackReason ?? ""}
     >
       <video
         ref={videoRef}

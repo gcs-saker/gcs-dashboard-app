@@ -63,9 +63,28 @@ func main() {
 		)
 	}
 
+	var iceServerProvider httpapi.IceServerProvider = turn.NewRegistryWithTurnLimit(
+		iceServers,
+		turn.StaticProbe{},
+		getenvInt("MEDIA_CONTROL_TURN_MAX_HEALTHY_SERVERS", 1),
+	)
+	iceServerCacheTTL := getenvDuration("MEDIA_CONTROL_ICE_SERVER_CACHE_TTL_SECONDS", 10*time.Second)
+	if redisAddress != "" && iceServerCacheTTL > 0 {
+		iceServerProvider = turn.NewCachedIceServerProvider(
+			iceServerProvider,
+			streamcache.NewRedisStringCache(
+				redisAddress,
+				getenv("MEDIA_CONTROL_REDIS_PASSWORD", ""),
+				getenvDuration("MEDIA_CONTROL_REDIS_TIMEOUT_SECONDS", 500*time.Millisecond),
+			),
+			getenv("MEDIA_CONTROL_ICE_SERVER_CACHE_KEY", "gcs-saker:media-control:ice-servers"),
+			iceServerCacheTTL,
+		)
+	}
+
 	server := httpapi.NewServer(
 		streamLister,
-		turn.NewRegistry(iceServers, turn.StaticProbe{}),
+		iceServerProvider,
 		playback,
 		&authorizer,
 		groupResolver,
@@ -115,4 +134,16 @@ func getenvDuration(key string, fallback time.Duration) time.Duration {
 		return fallback
 	}
 	return time.Duration(seconds * float64(time.Second))
+}
+
+func getenvInt(key string, fallback int) int {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed < 0 {
+		return fallback
+	}
+	return parsed
 }

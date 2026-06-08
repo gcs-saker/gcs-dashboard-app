@@ -15,6 +15,7 @@ const emptyAudioStats = {
   localCandidateType: null,
   remoteCandidateType: null,
   transportProtocol: null,
+  relayFallbackReason: null,
 };
 
 vi.mock("./WebRTCPlayer", () => ({
@@ -78,6 +79,36 @@ vi.mock("./WebRTCPlayer", () => ({
           }
         >
           webrtc failed
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            onStatusChange?.({
+              status: "error",
+              connectionState: "failed",
+              iceConnectionState: "failed",
+              errorMessage: "WebRTC relay candidate failed",
+              hasVideoFrame: false,
+              hasAudioTrack: true,
+              isAudioActive: false,
+              firstFrameLatencyMs: null,
+              signalingTimings: {
+                iceServersLoadedMs: 10,
+                offerCreatedMs: 20,
+                localDescriptionSetMs: 30,
+                iceGatheringDoneMs: 40,
+                whepResponseMs: 503,
+                remoteDescriptionSetMs: null,
+              },
+              audioStats: {
+                ...emptyAudioStats,
+                localCandidateType: "relay",
+                relayFallbackReason: "local-direct-candidate-failed",
+              },
+            })
+          }
+        >
+          relay failed
         </button>
       </div>
     );
@@ -177,6 +208,28 @@ describe("RealtimePlayer", () => {
     expect(screen.getByTestId("hls-fallback-player")).toBeInTheDocument();
     expect(screen.getByText("hls:https://media.example.test/raw/sample/front/index.m3u8")).toBeInTheDocument();
     expect(screen.getByText("reason:WebRTC connection failed")).toBeInTheDocument();
+  });
+
+  test("falls back immediately after relay candidate failure to avoid repeated TURN allocation", async () => {
+    const fetcher = vi.fn(async () =>
+      jsonResponse({
+        streamId: "raw.sample.front",
+        status: "online",
+        playbackUrls: {
+          webrtc: "https://media.example.test/raw/sample/front/whep",
+          hls: "https://media.example.test/raw/sample/front/index.m3u8",
+        },
+      }),
+    );
+
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} reconnectDelaysMs={[25, 50]} />);
+    await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "relay failed" }));
+
+    expect(screen.queryByText(/스트림 재연결 중/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("hls-fallback-player")).toBeInTheDocument();
+    expect(screen.getByText("reason:WebRTC relay candidate failed")).toBeInTheDocument();
   });
 
   test("renders a clear error when WebRTC fails and no HLS fallback exists", async () => {
