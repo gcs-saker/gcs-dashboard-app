@@ -195,20 +195,100 @@ stream routing은 인증/인가 domain에서 먼저 판단하고, media-control�
 
 ## GraphQL 검토 위치
 
-GraphQL은 media path에 넣지 않는다. 후보 위치는 dashboard BFF다.
+M7-06 결론은 “GraphQL을 지금 바로 도입하지 않고, REST + typed API contract를 유지한 뒤 dashboard read path가 복잡해지는 시점에 TanStack Query를 먼저 도입한다”이다. GraphQL은 media path가 아니라 dashboard BFF 후보로만 둔다.
 
-적합한 경우:
+### 비교 결론
 
-- dashboard가 group, asset, stream, telemetry summary를 한 번에 조합해야 한다.
-- 권한 필터링된 tree query가 복잡해진다.
+| 후보 | 장점 | 단점 | 폐쇄망 영향 | M7 판단 |
+| --- | --- | --- | --- | --- |
+| REST + typed apiClient | 단순하고 현재 코드와 맞다. endpoint/header/status contract를 상수화하기 쉽다. | 화면별 조합 query가 늘면 round-trip이 증가한다. | 외부 의존이 거의 없고 offline packaging이 쉽다. | 현재 기본값으로 유지한다. |
+| REST + TanStack Query | server state cache, retry, stale time, background refetch가 명확하다. dashboard polling/rendering을 줄이기 좋다. | 의존성 추가와 query key 설계가 필요하다. | npm offline cache에 패키지를 포함해야 한다. | M3 dashboard read path부터 우선 후보로 둔다. |
+| GraphQL BFF | group/asset/stream/telemetry summary를 한 번에 조합하기 좋다. schema로 view model contract를 고정할 수 있다. | schema/resolver/auth/cache 테스트 비용이 늘고, 잘못 쓰면 media/control boundary가 흐려진다. | 서버 binary/image와 schema 관리가 추가된다. | BFF가 필요한 복합 화면이 3개 이상 생길 때 재검토한다. |
+| gRPC/internal service call | Spring/Go 내부 service 간 typed contract와 latency에 유리하다. | browser가 직접 쓰기 어렵고 gateway/transcoding이 필요하다. | protobuf compiler/toolchain을 offline package에 포함해야 한다. | 외부 API가 아니라 auth-policy/media-control 내부 호출 후보로 둔다. |
 
-부적합한 경우:
+### 현 단계 권장 구조
 
-- WebRTC/WHEP/HLS 송수신
-- 고빈도 telemetry ingest
-- 단순 CRUD
+```mermaid
+flowchart LR
+    Dashboard["React dashboard"] --> TypedRest["typed REST apiClient"]
+    TypedRest --> Edge["Nginx edge"]
+    Edge --> Backend["FastAPI legacy bridge"]
+    Edge --> AuthPolicy["Spring auth-policy"]
+    Edge --> MediaControl["Go media-control"]
+    Edge --> MediaMTX["MediaMTX WHEP/HLS"]
 
-M7-06에서 REST + TanStack Query, GraphQL BFF, gRPC 내부 호출을 비교한다.
+    Dashboard -.next.-> TanStack["TanStack Query server-state cache"]
+    TanStack --> TypedRest
+    Dashboard -.later.-> GraphqlBff["GraphQL BFF candidate"]
+    GraphqlBff -.aggregate.-> AuthPolicy
+    GraphqlBff -.aggregate.-> MediaControl
+    GraphqlBff -.aggregate.-> Backend
+```
+
+원칙은 단순하다.
+
+- WebRTC/WHEP/HLS/RTSP/SRT는 GraphQL을 통과하지 않는다.
+- 고빈도 telemetry ingest도 GraphQL을 통과하지 않는다.
+- GraphQL은 dashboard가 “이미 저장된 상태”를 읽고 조합하는 BFF 후보일 뿐이다.
+- 인증/인가 결정은 GraphQL resolver 안에 흩뿌리지 않고 auth-policy decision을 호출한다.
+
+### TanStack Query를 먼저 보는 이유
+
+현재 dashboard는 stream list, system status, operational event, time sync, telemetry/map처럼 주기 조회가 많다. 이 영역은 GraphQL보다 server state cache가 먼저 필요하다.
+
+TanStack Query를 도입하면 아래 문제가 줄어든다.
+
+- 여러 컴포넌트가 같은 endpoint를 따로 호출하는 중복 요청
+- `useEffect` polling cleanup 누락
+- loading/error/retry 상태 중복 구현
+- stream list나 server status가 갱신될 때 불필요한 전체 dashboard rerender
+
+단, query key는 문자열을 직접 쓰지 않고 frontend state contract에 `readonly` 객체로 둔다. 예: `QUERY_KEYS.streams.list`, `QUERY_KEYS.ops.events(filters)`.
+
+### GraphQL 도입 조건
+
+GraphQL은 아래 조건이 실제로 생길 때만 도입한다.
+
+1. 한 화면이 group tree, asset tree, stream list, telemetry summary, alert count를 동시에 필요로 한다.
+2. REST 조합으로 같은 권한 필터링을 여러 endpoint에 반복 구현한다.
+3. dashboard view model이 frontend에서 과하게 조립되어 render 비용과 버그가 늘어난다.
+4. resolver별 권한 테스트와 schema contract test를 운영할 여력이 있다.
+
+### 최소 schema 후보
+
+GraphQL BFF를 도입한다면 schema는 dashboard read model만 포함한다.
+
+```graphql
+type Query {
+  dashboardOverview(groupId: ID!): DashboardOverview!
+  streamNode(id: ID!): StreamNode
+}
+
+type DashboardOverview {
+  group: GroupNode!
+  assets: [AssetNode!]!
+  streams: [StreamNode!]!
+  telemetrySummary: TelemetrySummary!
+  alertSummary: AlertSummary!
+}
+```
+
+resolver boundary:
+
+- `group`, `assets`: auth-policy 또는 group/registry service에서 권한 필터링된 read model만 받는다.
+- `streams`: media-control이 auth-policy decision을 거친 stream만 반환한다.
+- `telemetrySummary`: latest cache/read model만 조회한다. ingest path는 건드리지 않는다.
+- `alertSummary`: 운영 read model만 조회한다.
+
+### 테스트 기준
+
+GraphQL을 실제 도입하는 PR은 아래 테스트가 있어야 한다.
+
+- schema snapshot/contract test
+- resolver별 auth-policy decision mock test
+- REST와 GraphQL의 dashboard read model parity test
+- 폐쇄망 offline dependency packaging test
+- media path가 GraphQL을 우회한다는 route contract test
 
 ## 실행
 
