@@ -38,10 +38,107 @@ python3 scripts/closed_network_static_check.py
 7. dashboard에서 시간 동기화 모드를 `폐쇄망`으로 설정하고 내부 time server를 점검한다.
 8. 송출 단말이 `/webrtc/raw/local/webcam/whip`으로 송출하고 dashboard에서 WHEP playback을 확인한다.
 
+## M7 offline runtime packaging 전략
+
+폐쇄망 납품 산출물은 “현장에서 인터넷으로 받아 설치한다”가 아니라 “검증된 bundle을 반입한다”를 기본값으로 둔다. M2 #193에서 시작한 폐쇄망 profile 검증은 M7에서 single-node appliance package로 확장한다.
+
+### 반입 산출물
+
+| 산출물 | 예시 | 목적 |
+| --- | --- | --- |
+| compose bundle | `deploy/compose/*.yml`, `.env.closed-network.example` | 서비스 구동 순서와 환경값 계약 고정 |
+| Docker image tarball | `gcs-saker-images-<version>.tar` | 외부 registry 없이 `docker load` |
+| image manifest | `images.manifest.txt` | image name/tag/digest 목록 고정 |
+| checksum | `SHA256SUMS` | 반입 중 손상/변조 여부 확인 |
+| signature | `SHA256SUMS.sig` 또는 내부 서명 파일 | 내부 보안 절차가 요구할 경우 무결성 보증 |
+| dependency cache | npm cache, pip wheelhouse, Gradle cache, Go module cache | 현장 rebuild가 필요할 때 registry 접속 제거 |
+| runtime install bundle | Docker Engine 또는 containerd/Podman offline package | Docker 미설치 환경 대응 |
+| internal CA bundle | 내부 CA root, nginx cert chain 설치 가이드 | 사설 인증서 경고 없이 HTTPS/WSS 운영 |
+| operation runbook | 설치, 점검, rollback, backup 문서 | 운영자가 Codex 없이 복구 가능해야 함 |
+
+secret은 산출물에 포함하지 않는다. 현장별 `.env`는 별도 보안 채널로 생성하고, GitHub/문서/PR에는 실제 비밀번호, token, private key를 기록하지 않는다.
+
+### Docker가 이미 설치된 환경
+
+1. `SHA256SUMS`를 검증한다.
+2. `docker load -i gcs-saker-images-<version>.tar`를 실행한다.
+3. `docker image ls`와 `images.manifest.txt`를 비교한다.
+4. 현장 `.env.closed-network`를 작성한다.
+5. `docker compose --env-file .env.closed-network -f compose.single-node.poc.yml config --quiet`로 계약을 확인한다.
+6. `docker compose ... up -d`로 구동한다.
+7. `scripts/closed_network_static_check.py`, runtime smoke, publish/play smoke를 순서대로 실행한다.
+
+이 경로의 장점은 설치 범위가 작고 rollback이 단순하다는 점이다. 단점은 Docker Engine 버전과 compose plugin 버전이 너무 낮으면 compose schema나 healthcheck 동작이 달라질 수 있다는 점이다.
+
+### Docker가 설치되지 않은 환경
+
+Docker 자체가 없으면 `docker load`도 불가능하다. 이 경우 납품 bundle은 아래 중 하나를 포함해야 한다.
+
+1. Docker Engine offline install package
+2. containerd + nerdctl offline package
+3. Podman + compose 호환 layer
+4. 완전 appliance image 또는 OS image
+
+우선순위는 Docker Engine offline install이다. 이유는 현재 compose, healthcheck, image naming, 운영 runbook이 Docker Compose를 기준으로 작성되어 있기 때문이다. 다만 군/공공 폐쇄망에서 Docker 설치가 정책상 제한되면 containerd/Podman 대안을 별도 profile로 검증한다.
+
+Docker 미설치 환경의 절차:
+
+1. OS/CPU architecture를 확인한다.
+2. 승인된 offline runtime package를 설치한다.
+3. runtime service를 enable/start한다.
+4. 내부 registry를 쓸지, tarball `load`를 쓸지 결정한다.
+5. image tarball을 반입하고 runtime별 load 명령을 실행한다.
+6. compose 호환성을 확인한다.
+7. same-node smoke와 rollback 절차를 실행한다.
+
+### 언어별 dependency offline cache
+
+현장에서는 rebuild가 필요하지 않도록 image tarball을 우선 제공한다. 그래도 보안 패치나 현장 수정으로 rebuild가 필요할 수 있으므로 dependency cache를 별도 산출물로 둔다.
+
+| 영역 | offline 산출물 | 검증 |
+| --- | --- | --- |
+| Frontend/npm | `package-lock.json`, npm cache tar 또는 내부 npm mirror snapshot | `npm ci --offline` 또는 내부 registry only build |
+| Backend/Python | `requirements.txt`, wheelhouse | `pip install --no-index --find-links wheelhouse -r requirements.txt` |
+| Spring/Gradle | Gradle distribution zip, Maven dependency cache | `./gradlew --offline check` |
+| Go/media-control | `go.sum`, module cache 또는 vendor directory | `GONOSUMDB`/`GOPROXY=off go test ./...` |
+| Docker images | pinned image tag + digest | `docker image inspect` digest 비교 |
+
+cache는 편의 기능이 아니라 재현성 산출물이다. 공개망에서 성공한 build가 폐쇄망에서 `npm install`, `pip install`, `gradle`, `go mod download`, `docker pull` 때문에 멈추면 납품 실패로 본다.
+
+### 내부 CA와 HTTPS/WSS
+
+폐쇄망에서도 HTTP 평문 운영을 기본값으로 두지 않는다. 자체 CA 또는 기관 내부 CA를 사용해 Nginx edge에 인증서를 올리고, dashboard/API/WSS/WebRTC signaling을 HTTPS/WSS 단일 진입점으로 제공한다.
+
+필수 확인:
+
+- browser/Android 단말이 내부 CA root를 신뢰하는지
+- Nginx certificate chain이 누락되지 않았는지
+- `Secure`, `HttpOnly`, `SameSite` cookie 정책이 HTTPS profile에서 활성화되는지
+- WHEP/WHIP signaling URL이 `https://` 또는 `wss://` 기준으로 내려가는지
+
+### 무결성 및 rollback
+
+폐쇄망 bundle은 반입 전후로 같은 checksum을 가져야 한다.
+
+```bash
+sha256sum -c SHA256SUMS
+```
+
+rollback은 새 bundle을 지우는 방식이 아니라 이전 image tag와 이전 `.env`/compose snapshot으로 되돌리는 방식이다. 따라서 release마다 아래를 보관한다.
+
+- image tarball
+- compose/env template
+- DB backup 또는 migration 전 dump
+- smoke 결과
+- checksum/signature
+
 ## 아직 실제 장비에서 확인해야 할 것
 
 - 내부 TURN relay allocation 성공 여부
 - 내부 NTP/chrony와 서버 clock drift
 - 외부 DNS 차단 상태에서 dashboard 최초 로딩
 - 오프라인 Docker image tarball load 절차
+- Docker 미설치 환경에서 runtime offline install 절차
+- Gradle/npm/pip/Go dependency cache 기반 rebuild 절차
+- 내부 CA 기반 HTTPS/WSS 신뢰 체인
 - 폐쇄망 tile package가 필요할 경우 MBTiles 또는 내부 tile server 선택
