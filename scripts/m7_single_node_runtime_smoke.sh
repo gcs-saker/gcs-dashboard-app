@@ -162,6 +162,8 @@ login_access_token() {
 
   curl -fsS \
     -H "Content-Type: application/json" \
+    -H "Origin: ${edge_base_url}" \
+    -H "X-GCS-CSRF: same-origin" \
     -d "{\"username\":\"${username}\",\"password\":\"${password}\"}" \
     "${edge_base_url}/auth-policy/auth/login" \
     | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])'
@@ -215,6 +217,12 @@ runtime_probe_from_edge() {
   compose exec -T edge wget -q -O- "$url" >/dev/null
 }
 
+runtime_probe_from_edge_with_auth() {
+  local url="$1"
+  local access_token="$2"
+  compose exec -T edge wget -q -O- --header "Authorization: Bearer ${access_token}" "$url" >/dev/null
+}
+
 run_live() {
   require_command docker
   require_command curl
@@ -253,8 +261,8 @@ run_live() {
 
   runtime_probe_from_edge "http://auth-policy:8080/healthz"
   runtime_probe_from_edge "http://media-control:8081/healthz"
-  runtime_probe_from_edge "http://media-control:8081/v1/ice-servers"
-  runtime_probe_from_edge "http://media-control:8081/api/v1/streams/ice-servers"
+  runtime_probe_from_edge_with_auth "http://media-control:8081/v1/ice-servers" "$access_token"
+  runtime_probe_from_edge_with_auth "http://media-control:8081/api/v1/streams/ice-servers" "$access_token"
   runtime_probe_from_edge "http://mediamtx:9997/v3/config/global/get"
 
   python3 "${REPO_ROOT}/scripts/turn_relay_smoke.py" \

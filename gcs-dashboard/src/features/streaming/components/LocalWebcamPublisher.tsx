@@ -23,11 +23,29 @@ type WebcamPublisherStatus =
 type PublisherStepId = "camera" | "ice" | "signaling" | "media";
 type PublisherStepState = "pending" | "active" | "complete" | "error";
 type PublisherGpsStatus = "idle" | "requesting" | "active" | "unavailable" | "error";
+type PublisherDeviceStatus = "idle" | "loading" | "loaded" | "unavailable" | "error";
 type AudioCaptureMode = "low-latency" | "quality";
 
 const ICE_GATHERING_TIMEOUT_MS = 5_000;
 const MEDIA_CONNECTION_TIMEOUT_MS = 8_000;
 const RECONNECT_DELAYS_MS = [1_000, 2_000, 5_000] as const;
+const DEFAULT_CAMERA_DEVICE_ID = "__default_camera__";
+const FRONT_CAMERA_DEVICE_ID = "__front_camera__";
+const REAR_CAMERA_DEVICE_ID = "__rear_camera__";
+const DEFAULT_MICROPHONE_DEVICE_ID = "__default_microphone__";
+const NO_MICROPHONE_DEVICE_ID = "__no_microphone__";
+
+interface PublisherStreamTarget {
+  id: string;
+  label: string;
+  whipPath: string;
+}
+
+const DEFAULT_STREAM_TARGETS: readonly PublisherStreamTarget[] = [
+  { id: LOCAL_WEBCAM_STREAM_ID, label: "기본 웹캠", whipPath: "raw/local/webcam" },
+  { id: "raw.local.front", label: "휴대폰 전면", whipPath: "raw/local/front" },
+  { id: "raw.local.rear", label: "휴대폰 후면", whipPath: "raw/local/rear" },
+] as const;
 
 interface LocalWebcamPublisherProps {
   streamId?: string;
@@ -60,13 +78,62 @@ export function LocalWebcamPublisher({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [failedStep, setFailedStep] = useState<PublisherStepId | null>(null);
   const [audioMode, setAudioMode] = useState<AudioCaptureMode>("low-latency");
+  const streamTargets = useMemo(() => ensureStreamTargets(DEFAULT_STREAM_TARGETS, streamId, whipUrl), [streamId, whipUrl]);
+  const [selectedStreamId, setSelectedStreamId] = useState(streamId);
+  const [selectedVideoDeviceId, setSelectedVideoDeviceId] = useState(DEFAULT_CAMERA_DEVICE_ID);
+  const [selectedAudioDeviceId, setSelectedAudioDeviceId] = useState(DEFAULT_MICROPHONE_DEVICE_ID);
+  const [videoInputs, setVideoInputs] = useState<MediaDeviceInfo[]>([]);
+  const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
+  const [deviceStatus, setDeviceStatus] = useState<PublisherDeviceStatus>("idle");
+  const selectedStreamTarget = useMemo(
+    () => streamTargets.find((target) => target.id === selectedStreamId) ?? streamTargets[0],
+    [selectedStreamId, streamTargets],
+  );
+  const selectedWhipUrl = useMemo(
+    () => buildWhipUrl(whipUrl, selectedStreamTarget.whipPath),
+    [selectedStreamTarget.whipPath, whipUrl],
+  );
   const steps = useMemo(() => getPublisherSteps(status, failedStep), [failedStep, status]);
 
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
 
+  useEffect(() => {
+    if (!streamTargets.some((target) => target.id === selectedStreamId)) {
+      setSelectedStreamId(streamTargets[0].id);
+    }
+  }, [selectedStreamId, streamTargets]);
+
+  useEffect(() => {
+    void refreshMediaDevices();
+    if (!mediaDevices?.addEventListener) {
+      return undefined;
+    }
+    const handleDeviceChange = () => {
+      void refreshMediaDevices();
+    };
+    mediaDevices.addEventListener("devicechange", handleDeviceChange);
+    return () => mediaDevices.removeEventListener?.("devicechange", handleDeviceChange);
+  }, [mediaDevices]);
+
   useEffect(() => () => stopAll(), []);
+
+  async function refreshMediaDevices(): Promise<void> {
+    if (!mediaDevices?.enumerateDevices) {
+      setDeviceStatus("unavailable");
+      return;
+    }
+    try {
+      setDeviceStatus("loading");
+      const devices = await mediaDevices.enumerateDevices();
+      setVideoInputs(devices.filter((device) => device.kind === "videoinput"));
+      setAudioInputs(devices.filter((device) => device.kind === "audioinput"));
+      setDeviceStatus("loaded");
+    } catch {
+      setDeviceStatus("error");
+    }
+  }
 
   async function startPreview(): Promise<void> {
     if (!mediaDevices?.getUserMedia) {
@@ -79,11 +146,15 @@ export function LocalWebcamPublisher({
     try {
       setFailedStep(null);
       setStatus("requesting-camera");
-      const stream = await mediaDevices.getUserMedia({ video: true, audio: audioCaptureConstraints(audioMode) });
+      const stream = await mediaDevices.getUserMedia({
+        video: videoCaptureConstraints(selectedVideoDeviceId),
+        audio: audioCaptureConstraints(audioMode, selectedAudioDeviceId),
+      });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
+      void refreshMediaDevices();
       setErrorMessage(null);
       setStatus("previewing");
     } catch (error) {
@@ -128,7 +199,7 @@ export function LocalWebcamPublisher({
 
       currentStep = "signaling";
       setStatus("sending-offer");
-      const response = await fetcher(whipUrl, {
+      const response = await fetcher(selectedWhipUrl, {
         method: "POST",
         headers: { Accept: "application/sdp", "Content-Type": "application/sdp" },
         body: sdp,
@@ -220,7 +291,7 @@ export function LocalWebcamPublisher({
           method: "POST",
           headers: { Accept: "application/json", "Content-Type": "application/json" },
           body: JSON.stringify({
-            uuid: streamId,
+            uuid: selectedStreamTarget.id,
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             altitude: position.coords.altitude ?? 0,
@@ -294,8 +365,8 @@ export function LocalWebcamPublisher({
         <span className="local-webcam-publisher__badge" role="status" aria-live="polite">
           {getStatusLabel(status)}
         </span>
-        <span className="local-webcam-publisher__stream">{streamId}</span>
-        <span className="local-webcam-publisher__whip">{whipUrl}</span>
+        <span className="local-webcam-publisher__stream">{selectedStreamTarget.id}</span>
+        <span className="local-webcam-publisher__whip">{selectedWhipUrl}</span>
       </header>
       <ol className="local-webcam-publisher__steps" aria-label="WebRTC 송출 단계">
         {steps.map((step) => (
@@ -320,6 +391,64 @@ export function LocalWebcamPublisher({
           중지
         </button>
       </div>
+      <fieldset className="local-webcam-publisher__field-group" disabled={isBusy(status) || status === "published"}>
+        <legend>송출 stream</legend>
+        <label>
+          대상
+          <select
+            aria-label="송출 stream 선택"
+            onChange={(event) => setSelectedStreamId(event.currentTarget.value)}
+            value={selectedStreamTarget.id}
+          >
+            {streamTargets.map((target) => (
+              <option key={target.id} value={target.id}>
+                {target.label} / {target.id}
+              </option>
+            ))}
+          </select>
+        </label>
+        <span>{selectedStreamTarget.whipPath}</span>
+      </fieldset>
+      <fieldset className="local-webcam-publisher__field-group" disabled={isBusy(status) || status === "published"}>
+        <legend>입력 장치</legend>
+        <label>
+          카메라
+          <select
+            aria-label="카메라 입력 선택"
+            onChange={(event) => setSelectedVideoDeviceId(event.currentTarget.value)}
+            value={selectedVideoDeviceId}
+          >
+            <option value={DEFAULT_CAMERA_DEVICE_ID}>기본 카메라</option>
+            <option value={FRONT_CAMERA_DEVICE_ID}>전면 카메라 요청</option>
+            <option value={REAR_CAMERA_DEVICE_ID}>후면 카메라 요청</option>
+            {videoInputs.map((device, index) => (
+              <option key={device.deviceId || `video-${index}`} value={device.deviceId}>
+                {device.label || `카메라 ${index + 1}`}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          마이크
+          <select
+            aria-label="마이크 입력 선택"
+            onChange={(event) => setSelectedAudioDeviceId(event.currentTarget.value)}
+            value={selectedAudioDeviceId}
+          >
+            <option value={DEFAULT_MICROPHONE_DEVICE_ID}>기본 마이크</option>
+            <option value={NO_MICROPHONE_DEVICE_ID}>마이크 끄기</option>
+            {audioInputs.map((device, index) => (
+              <option key={device.deviceId || `audio-${index}`} value={device.deviceId}>
+                {device.label || `마이크 ${index + 1}`}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="button" onClick={() => void refreshMediaDevices()}>
+          장치 새로고침
+        </button>
+        <span>{getDeviceStatusDetail(deviceStatus, videoInputs.length, audioInputs.length)}</span>
+      </fieldset>
       <fieldset className="local-webcam-publisher__audio-mode" disabled={isBusy(status) || status === "published"}>
         <legend>음성 처리</legend>
         <label>
@@ -369,23 +498,110 @@ function getGpsStatusLabel(status: PublisherGpsStatus): string {
 
 export default LocalWebcamPublisher;
 
-function audioCaptureConstraints(mode: AudioCaptureMode): boolean | MediaTrackConstraints {
-  if (mode === "quality") {
-    return {
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true,
-      channelCount: 1,
-      sampleRate: 48_000,
-    };
+function videoCaptureConstraints(selectedDeviceId: string): boolean | MediaTrackConstraints {
+  if (selectedDeviceId === FRONT_CAMERA_DEVICE_ID) {
+    return { facingMode: { ideal: "user" } };
   }
-  return {
-    echoCancellation: false,
-    noiseSuppression: false,
-    autoGainControl: false,
+  if (selectedDeviceId === REAR_CAMERA_DEVICE_ID) {
+    return { facingMode: { ideal: "environment" } };
+  }
+  if (selectedDeviceId !== DEFAULT_CAMERA_DEVICE_ID) {
+    return { deviceId: { exact: selectedDeviceId } };
+  }
+  return true;
+}
+
+function audioCaptureConstraints(mode: AudioCaptureMode, selectedDeviceId = DEFAULT_MICROPHONE_DEVICE_ID): boolean | MediaTrackConstraints {
+  if (selectedDeviceId === NO_MICROPHONE_DEVICE_ID) {
+    return false;
+  }
+  const constraints: MediaTrackConstraints = {
+    echoCancellation: mode === "quality",
+    noiseSuppression: mode === "quality",
+    autoGainControl: mode === "quality",
     channelCount: 1,
     sampleRate: 48_000,
   };
+  if (selectedDeviceId !== DEFAULT_MICROPHONE_DEVICE_ID) {
+    constraints.deviceId = { exact: selectedDeviceId };
+  }
+  return constraints;
+}
+
+function ensureStreamTargets(
+  defaultTargets: readonly PublisherStreamTarget[],
+  streamId: string,
+  whipUrl: string,
+): PublisherStreamTarget[] {
+  const explicitTarget: PublisherStreamTarget = {
+    id: streamId,
+    label: "현재 설정",
+    whipPath: inferWhipPath(whipUrl) ?? streamIdToWhipPath(streamId),
+  };
+  if (defaultTargets.some((target) => target.id === explicitTarget.id)) {
+    return [...defaultTargets];
+  }
+  return [explicitTarget, ...defaultTargets];
+}
+
+function streamIdToWhipPath(streamId: string): string {
+  return streamId.split(".").join("/");
+}
+
+function inferWhipPath(whipUrl: string): string | null {
+  const suffix = "/whip";
+  const suffixIndex = whipUrl.indexOf(suffix);
+  if (suffixIndex === -1) {
+    return null;
+  }
+  const marker = "/webrtc/";
+  const markerIndex = whipUrl.lastIndexOf(marker, suffixIndex);
+  if (markerIndex !== -1) {
+    return whipUrl.slice(markerIndex + marker.length, suffixIndex);
+  }
+  const pathStartIndex = whipUrl.lastIndexOf("/", Math.max(0, suffixIndex - 1));
+  const schemeIndex = whipUrl.indexOf("://");
+  const originEndIndex = schemeIndex === -1 ? -1 : whipUrl.indexOf("/", schemeIndex + 3);
+  const fallbackStartIndex = originEndIndex === -1 ? 0 : originEndIndex + 1;
+  const inferredPath = whipUrl.slice(fallbackStartIndex, suffixIndex).replace(/^\/+/, "");
+  if (pathStartIndex === -1 || !inferredPath) {
+    return null;
+  }
+  return inferredPath;
+}
+
+function buildWhipUrl(baseWhipUrl: string, whipPath: string): string {
+  const suffix = "/whip";
+  const suffixIndex = baseWhipUrl.indexOf(suffix);
+  if (suffixIndex === -1) {
+    return `/webrtc/${whipPath}/whip`;
+  }
+  const marker = "/webrtc/";
+  const markerIndex = baseWhipUrl.lastIndexOf(marker, suffixIndex);
+  if (markerIndex !== -1) {
+    return `${baseWhipUrl.slice(0, markerIndex)}${marker}${whipPath}${baseWhipUrl.slice(suffixIndex)}`;
+  }
+  const inferredPath = inferWhipPath(baseWhipUrl);
+  if (inferredPath) {
+    return baseWhipUrl.replace(`/${inferredPath}${suffix}`, `/${whipPath}${suffix}`);
+  }
+  return `/webrtc/${whipPath}/whip`;
+}
+
+function getDeviceStatusDetail(status: PublisherDeviceStatus, videoCount: number, audioCount: number): string {
+  if (status === "loading") {
+    return "장치 목록 확인 중";
+  }
+  if (status === "loaded") {
+    return `카메라 ${videoCount}개 / 마이크 ${audioCount}개 감지`;
+  }
+  if (status === "unavailable") {
+    return "브라우저 장치 목록 API를 사용할 수 없습니다.";
+  }
+  if (status === "error") {
+    return "장치 목록을 읽지 못했습니다.";
+  }
+  return "장치 목록 대기";
 }
 
 function getAudioModeDetail(mode: AudioCaptureMode): string {

@@ -96,6 +96,7 @@
   opacity: 0.45;
 }
 
+.local-webcam-publisher__field-group,
 .local-webcam-publisher__audio-mode {
   display: flex;
   flex-wrap: wrap;
@@ -111,21 +112,39 @@
   font-size: 12px;
 }
 
+.local-webcam-publisher__field-group legend,
 .local-webcam-publisher__audio-mode legend {
   padding: 0 4px;
   color: #8fc7ff;
 }
 
+.local-webcam-publisher__field-group label,
 .local-webcam-publisher__audio-mode label {
   display: inline-flex;
   gap: 5px;
   align-items: center;
 }
 
+.local-webcam-publisher__field-group select {
+  min-height: 30px;
+  border: 1px solid rgba(126, 180, 222, 0.45);
+  background: #07111b;
+  color: #dce8f4;
+}
+
+.local-webcam-publisher__field-group button {
+  min-height: 30px;
+  border: 1px solid rgba(126, 180, 222, 0.45);
+  background: #0c1a26;
+  color: #dce8f4;
+}
+
+.local-webcam-publisher__field-group span,
 .local-webcam-publisher__audio-mode span {
   color: #a8bed2;
 }
 
+.local-webcam-publisher__field-group:disabled,
 .local-webcam-publisher__audio-mode:disabled {
   opacity: 0.65;
 }

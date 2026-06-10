@@ -61,6 +61,88 @@ describe("LocalWebcamPublisher", () => {
     );
   });
 
+  test("can select a rear-camera stream target before publishing", async () => {
+    const track = { stop: vi.fn() } as unknown as MediaStreamTrack;
+    const mediaStream = { getTracks: () => [track] } as unknown as MediaStream;
+    const mediaDevices = {
+      enumerateDevices: vi.fn(async () => []),
+      getUserMedia: vi.fn(async () => mediaStream),
+    } as unknown as MediaDevices;
+    const peerConnection = createPeerConnectionMock();
+    const fetcher = vi.fn(async () => ({
+      ok: true,
+      text: async () => "v=0\r\nmock-answer",
+    })) as unknown as typeof fetch;
+
+    render(
+      <LocalWebcamPublisher
+        mediaDevices={mediaDevices}
+        peerConnectionFactory={() => peerConnection}
+        fetcher={fetcher}
+        whipUrl="http://media.example.test/webrtc/raw/local/webcam/whip"
+      />,
+    );
+
+    fireEvent.change(screen.getByRole("combobox", { name: "송출 stream 선택" }), {
+      target: { value: "raw.local.rear" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "카메라 입력 선택" }), {
+      target: { value: "__rear_camera__" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
+
+    await waitFor(() => {
+      expect(mediaDevices.getUserMedia).toHaveBeenCalledWith({
+        video: { facingMode: { ideal: "environment" } },
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 1,
+          sampleRate: 48000,
+        },
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"));
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://media.example.test/webrtc/raw/local/rear/whip",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  test("can use an enumerated camera and disable microphone capture", async () => {
+    const track = { stop: vi.fn() } as unknown as MediaStreamTrack;
+    const mediaStream = { getTracks: () => [track] } as unknown as MediaStream;
+    const mediaDevices = {
+      enumerateDevices: vi.fn(async () => [
+        createMediaDevice("videoinput", "camera-2", "Rear USB"),
+        createMediaDevice("audioinput", "mic-1", "Desk Mic"),
+      ]),
+      getUserMedia: vi.fn(async () => mediaStream),
+    } as unknown as MediaDevices;
+
+    render(<LocalWebcamPublisher mediaDevices={mediaDevices} />);
+
+    await screen.findByRole("option", { name: "Rear USB" });
+    fireEvent.change(screen.getByRole("combobox", { name: "카메라 입력 선택" }), {
+      target: { value: "camera-2" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "마이크 입력 선택" }), {
+      target: { value: "__no_microphone__" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
+
+    await waitFor(() => {
+      expect(mediaDevices.getUserMedia).toHaveBeenCalledWith({
+        video: { deviceId: { exact: "camera-2" } },
+        audio: false,
+      });
+    });
+  });
+
   test("can switch publisher audio capture to quality mode before preview", async () => {
     const track = { stop: vi.fn() } as unknown as MediaStreamTrack;
     const mediaStream = { getTracks: () => [track] } as unknown as MediaStream;
@@ -358,4 +440,14 @@ function createGeolocationMock(coords: Partial<GeolocationCoordinates>): Geoloca
     }),
     clearWatch: vi.fn(),
   } as unknown as Geolocation;
+}
+
+function createMediaDevice(kind: MediaDeviceKind, deviceId: string, label: string): MediaDeviceInfo {
+  return {
+    deviceId,
+    groupId: "mock-group",
+    kind,
+    label,
+    toJSON: () => ({ deviceId, groupId: "mock-group", kind, label }),
+  };
 }

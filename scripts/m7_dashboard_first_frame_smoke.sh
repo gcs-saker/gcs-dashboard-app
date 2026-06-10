@@ -95,6 +95,8 @@ run_live() {
   login_payload="$(python3 -c 'import json, os; print(json.dumps({"username": os.environ["SMOKE_USERNAME"], "password": os.environ["SMOKE_PASSWORD"]}))')"
   login_response="$(curl -fsS \
     -H "Content-Type: application/json" \
+    -H "Origin: ${EDGE_BASE_URL}" \
+    -H "X-GCS-CSRF: same-origin" \
     -X POST \
     --data "$login_payload" \
     "${EDGE_BASE_URL}${AUTH_BASE_PATH}/login")"
