@@ -99,6 +99,7 @@ run_live() {
   signup_response="$(curl -fsS \
     -H "Content-Type: application/json" \
     -H "Origin: ${EDGE_BASE_URL}" \
+    -H "X-GCS-CSRF: same-origin" \
     -X POST \
     --data "$signup_payload" \
     "${auth_base}/signup")"
@@ -109,6 +110,7 @@ run_live() {
     -c "$cookie_jar" \
     -H "Content-Type: application/json" \
     -H "Origin: ${EDGE_BASE_URL}" \
+    -H "X-GCS-CSRF: same-origin" \
     -X POST \
     --data "$login_payload" \
     "${auth_base}/login")"
@@ -123,6 +125,7 @@ run_live() {
     -c "$cookie_jar" \
     -H "Accept: application/json" \
     -H "Origin: ${EDGE_BASE_URL}" \
+    -H "X-GCS-CSRF: same-origin" \
     -X POST \
     "${auth_base}/refresh")"
   python3 -c 'import json, sys; payload=json.load(sys.stdin); assert payload["access_token"]; assert payload["username"]' <<<"$refresh_response" >/dev/null
@@ -133,6 +136,7 @@ run_live() {
     -w "%{http_code}" \
     -b "$cookie_jar" \
     -H "Origin: ${EDGE_BASE_URL}" \
+    -H "X-GCS-CSRF: same-origin" \
     -X POST \
     "${auth_base}/logout")"
   if [[ "$logout_status" != "204" ]]; then
