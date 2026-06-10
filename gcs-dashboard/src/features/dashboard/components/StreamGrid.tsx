@@ -8,7 +8,9 @@ interface StreamGridProps {
   streams: DashboardStreamSlot[];
   selectedStreamId: string;
   audioActiveStreamId?: string | null;
+  talkbackTargetStreamIds?: string[];
   onSelectStream: (streamId: string) => void;
+  onToggleTalkbackTarget?: (streamPath: string) => void;
   renderCard?: (stream: DashboardStreamSlot, isSelected: boolean) => ReactNode;
 }
 
@@ -16,7 +18,9 @@ export function StreamGrid({
   streams,
   selectedStreamId,
   audioActiveStreamId = null,
+  talkbackTargetStreamIds = [],
   onSelectStream,
+  onToggleTalkbackTarget,
   renderCard,
 }: StreamGridProps) {
   return (
@@ -35,8 +39,10 @@ export function StreamGrid({
             ) : (
               <StreamCard
                 hasAudioActivity={stream.id === audioActiveStreamId}
+                isTalkbackTarget={Boolean(stream.streamPath && talkbackTargetStreamIds.includes(stream.streamPath))}
                 isSelected={isSelected}
                 onSelect={onSelectStream}
+                onToggleTalkbackTarget={onToggleTalkbackTarget}
                 stream={stream}
               />
             )}

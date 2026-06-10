@@ -83,7 +83,29 @@ describe("SelectedStreamPanel", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "스트리밍 1 선택" })).toHaveClass("has-audio");
+    expect(screen.getByRole("button", { name: "스트리밍 1 선택" }).closest(".stream-card")).toHaveClass("has-audio");
     expect(screen.getByText("음성")).toBeInTheDocument();
+  });
+
+  test("toggles talkback target selection independently from stream focus", async () => {
+    const user = userEvent.setup();
+    const onSelectStream = vi.fn();
+    const onToggleTalkbackTarget = vi.fn();
+
+    render(
+      <StreamGrid
+        onSelectStream={onSelectStream}
+        onToggleTalkbackTarget={onToggleTalkbackTarget}
+        selectedStreamId="raw.sample.front"
+        streams={DEFAULT_DASHBOARD_STREAMS}
+        talkbackTargetStreamIds={["raw.sample.rear"]}
+      />,
+    );
+
+    await user.click(screen.getAllByRole("button", { name: "음성 송신 대상" })[0]);
+
+    expect(onToggleTalkbackTarget).toHaveBeenCalledWith("raw.sample.front");
+    expect(onSelectStream).not.toHaveBeenCalled();
+    expect(screen.getAllByRole("button", { name: "음성 송신 대상" })[2]).toHaveAttribute("aria-pressed", "true");
   });
 });

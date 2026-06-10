@@ -9,6 +9,7 @@ import { WidgetPopout } from "./components/WidgetPopout";
 import { StreamDeviceConnectDialog } from "./components/StreamDeviceConnectDialog";
 import { AssetTreePanel } from "./components/AssetTreePanel";
 import { SystemStatusPanel } from "./components/SystemStatusPanel";
+import { TalkbackControlPanel } from "./components/TalkbackControlPanel";
 import { DEFAULT_ASSET_TREE, mergeAssetTreeWithStreams } from "./assetTree";
 import {
   getDashboardWidgetDefinition,
@@ -95,6 +96,7 @@ export function DashboardMvp() {
   const [isWidgetDialogOpen, setIsWidgetDialogOpen] = useState(false);
   const [activeView, setActiveView] = useState<DashboardView>("dashboard");
   const [audioActiveStreamId, setAudioActiveStreamId] = useState<string | null>(null);
+  const [talkbackTargetStreamIds, setTalkbackTargetStreamIds] = useState<string[]>([]);
   const [popoutWidgetId, setPopoutWidgetId] = useState<DashboardWidgetId | null>(null);
   const [layoutMessage, setLayoutMessage] = useState("기본 레이아웃");
   const handleAuthFailure = useCallback((): void => {
@@ -188,6 +190,15 @@ export function DashboardMvp() {
     [],
   );
 
+  const toggleTalkbackTarget = useCallback((streamPath: string): void => {
+    setTalkbackTargetStreamIds((current) =>
+      current.includes(streamPath)
+        ? current.filter((targetStreamPath) => targetStreamPath !== streamPath)
+        : [...current, streamPath],
+    );
+    setLayoutMessage("Talkback 대상 변경됨");
+  }, []);
+
   return (
     <main className="ops-dashboard" aria-label="Field Ops Dashboard MVP">
       <header className="ops-dashboard__tabs" aria-label="주요 탭">
@@ -223,6 +234,7 @@ export function DashboardMvp() {
         </nav>
         <div className="ops-dashboard__actions">
           <span role="status">{layoutMessage}</span>
+          <TalkbackControlPanel selectedStreamIds={talkbackTargetStreamIds} streams={streams} />
           {currentUser ? <span className="ops-user-chip">{currentUser.username}</span> : null}
           <a className="ops-command-button is-primary" href="/publisher" role="button">
             웹캠 송출
@@ -254,7 +266,9 @@ export function DashboardMvp() {
           <StreamGrid
             audioActiveStreamId={audioActiveStreamId}
             onSelectStream={openStreamConnection}
+            onToggleTalkbackTarget={toggleTalkbackTarget}
             selectedStreamId={selectedStreamId}
+            talkbackTargetStreamIds={talkbackTargetStreamIds}
             streams={streams}
           />
         </section>
@@ -308,7 +322,9 @@ export function DashboardMvp() {
         {isWidgetVisible("stream-grid") ? <StreamGrid
           audioActiveStreamId={audioActiveStreamId}
           onSelectStream={openStreamConnection}
+          onToggleTalkbackTarget={toggleTalkbackTarget}
           selectedStreamId={selectedStreamId}
+          talkbackTargetStreamIds={talkbackTargetStreamIds}
           streams={streams}
         /> : null}
 

@@ -168,7 +168,7 @@ assert_json_contract() {
   local expected="$2"
   local payload
   if [[ "$expected" == "ice" ]]; then
-    payload="$(curl -fsS "$url")"
+    payload="$(curl -fsS -H "Authorization: Bearer ${ACCESS_TOKEN}" "$url")"
   else
     payload="$(curl -fsS -H "Authorization: Bearer ${ACCESS_TOKEN}" "$url")"
   fi
