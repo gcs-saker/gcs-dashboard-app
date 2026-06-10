@@ -191,6 +191,45 @@
   color: #ffb0a6;
 }
 
+.talkback-audio-receiver {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 960px);
+  padding: 8px 10px;
+  border: 1px solid rgba(126, 180, 222, 0.35);
+  background: rgba(12, 26, 38, 0.72);
+  color: #dce8f4;
+  font-size: 12px;
+}
+
+.talkback-audio-receiver__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.talkback-audio-receiver__controls button {
+  min-height: 30px;
+  border: 1px solid rgba(126, 180, 222, 0.45);
+  background: #0c1a26;
+  color: #dce8f4;
+}
+
+.talkback-audio-receiver__media {
+  width: min(100%, 420px);
+  min-height: 36px;
+  background: #000;
+}
+
+.talkback-audio-receiver__url {
+  color: #a8bed2;
+}
+
+.talkback-audio-receiver__error {
+  color: #ffb0a6;
+}
+
 .local-webcam-publisher__error {
   color: #ffb0a6;
 }

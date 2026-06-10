@@ -15,6 +15,7 @@ const localWebcamWhipUrl = normalizeLocalDevBaseUrl(
   import.meta.env.VITE_LOCAL_WEBCAM_WHIP_URL ?? "/webrtc/raw/local/webcam/whip",
   "/webrtc/raw/local/webcam/whip",
 );
+const talkbackOperatorId = import.meta.env.VITE_TALKBACK_OPERATOR_ID ?? "operator";
 
 export type DashboardMapProvider = "esri-satellite" | "openfreemap" | "offline" | "custom";
 
@@ -40,6 +41,7 @@ export const FALLBACK_MAP_CONFIG: DashboardMapConfig = Object.freeze({
 });
 export const LOCAL_WEBCAM_STREAM_ID = "raw.local.webcam";
 export const LOCAL_WEBCAM_WHIP_URL: string = localWebcamWhipUrl;
+export const TALKBACK_OPERATOR_ID: string = talkbackOperatorId;
 export const WEBRTC_ICE_SERVERS: RTCIceServer[] = defaultStunUrl
   ? [{ urls: defaultStunUrl }]
   : [];

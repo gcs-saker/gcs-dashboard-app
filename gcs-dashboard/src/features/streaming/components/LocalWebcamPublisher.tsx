@@ -4,6 +4,7 @@ import { apiUrl, LOCAL_WEBCAM_STREAM_ID, LOCAL_WEBCAM_WHIP_URL, WEBRTC_ICE_SERVE
 import { DASHBOARD_API_ROUTES } from "@/features/apiRoutes";
 import { authenticatedFetch } from "../../auth/authApi";
 import { loadWebRtcIceServers } from "../iceServers";
+import { TalkbackAudioReceiver } from "./TalkbackAudioReceiver";
 import "./LocalWebcamPublisher.css";
 
 type WebcamPublisherStatus =
@@ -480,6 +481,7 @@ export function LocalWebcamPublisher({
       <p className={`local-webcam-publisher__gps local-webcam-publisher__gps--${gpsStatus}`} aria-live="polite">
         GPS: {getGpsStatusLabel(gpsStatus)} / {gpsDetail}
       </p>
+      <TalkbackAudioReceiver streamId={selectedStreamTarget.id} />
       {errorMessage ? <p className="local-webcam-publisher__error">{errorMessage}</p> : null}
     </main>
   );

@@ -340,7 +340,7 @@ describe("LocalWebcamPublisher", () => {
 
     firstPeerConnection.disconnect();
 
-    expect(await screen.findByRole("status")).toHaveTextContent("재연결 중");
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("재연결 중"));
     expect(screen.getByText(/송출 미디어 연결이 끊겼습니다/)).toBeInTheDocument();
 
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"), { timeout: 2_000 });
