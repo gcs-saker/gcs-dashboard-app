@@ -1,38 +1,39 @@
-# GCS Dashboard 실행 안내
+# GCS Dashboard Windows 실행 안내
 
-이 문서는 npm 기준으로 프론트엔드 화면을 로컬 PC에서 실행하는 방법을 설명합니다.
+이 문서는 Windows PC에서 npm 기준으로 프론트엔드 화면을 실행하는 방법을 설명합니다.
 
 ## 1. 준비물
 
-먼저 PC에 Node.js가 설치되어 있어야 합니다.
+먼저 Windows PC에 Node.js가 설치되어 있어야 합니다.
 
 - Node.js 설치: https://nodejs.org
 - 설치할 때는 LTS 버전을 권장합니다.
 - Node.js를 설치하면 npm도 함께 설치됩니다.
 
-설치가 끝난 뒤 터미널에서 아래 명령이 동작하면 준비가 완료된 상태입니다.
+설치가 끝난 뒤 명령 프롬프트 또는 PowerShell에서 아래 명령이 동작하면 준비가 완료된 상태입니다.
 
-```bash
+```cmd
 node -v
 npm -v
 ```
 
 ## 2. 소스코드 받기
 
-Git을 사용할 수 있으면 아래처럼 받습니다.
+Git을 사용할 수 있으면 명령 프롬프트 또는 PowerShell에서 아래처럼 받습니다.
 
-```bash
+```cmd
 git clone https://github.com/gcs-saker/gcs-dashboard-app.git
 cd gcs-dashboard-app
 ```
 
-Git 사용이 어렵다면 GitHub에서 ZIP 파일을 내려받아 압축을 푼 뒤, 압축을 푼 폴더로 이동합니다.
+Git 사용이 어렵다면 GitHub에서 ZIP 파일을 내려받아 압축을 풉니다.
+그 다음 압축을 푼 폴더에서 주소 표시줄에 `cmd`를 입력하고 Enter를 누르면 해당 위치에서 명령 프롬프트가 열립니다.
 
 ## 3. 프론트엔드 실행
 
-저장소 루트에서 아래 명령을 순서대로 실행합니다.
+저장소 루트에서 명령 프롬프트 또는 PowerShell을 열고 아래 명령을 순서대로 실행합니다.
 
-```bash
+```cmd
 cd gcs-dashboard
 npm ci
 npm start
@@ -60,9 +61,19 @@ Ctrl + C
 
 개발 서버가 아니라 정적 배포 파일을 만들고 싶으면 아래 명령을 실행합니다.
 
-```bash
+명령 프롬프트(CMD) 기준:
+
+```cmd
 cd gcs-dashboard
-CI=false npm run build
+set CI=false&& npm run build
+```
+
+PowerShell 기준:
+
+```powershell
+cd gcs-dashboard
+$env:CI="false"
+npm run build
 ```
 
 성공하면 `gcs-dashboard/build` 폴더가 생성됩니다.
@@ -72,5 +83,6 @@ CI=false npm run build
 - `npm ci`는 처음 한 번 실행하면 됩니다.
 - 소스가 바뀌었거나 의존성이 바뀐 경우 다시 실행할 수 있습니다.
 - 인터넷 연결이 없으면 `npm ci`에서 패키지 다운로드가 실패할 수 있습니다.
+- `npm start` 실행 중 Windows 보안 경고가 뜨면 사내 보안 정책에 따라 허용 여부를 선택해야 합니다.
 - 백엔드, 지도 타일, 영상 스트림 서버에 연결되지 않는 환경에서는 일부 데이터나 영상이 비어 보일 수 있습니다.
 - 화면 실행만 확인하는 경우에는 `npm start`로 충분합니다.
