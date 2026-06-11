@@ -77,8 +77,12 @@ export function WebRTCPlayer({
       data-whep-response-ms={signalingTimings.whepResponseMs ?? ""}
       data-ice-gathering-done-ms={signalingTimings.iceGatheringDoneMs ?? ""}
       data-audio-jitter-ms={audioStats.jitterMs ?? ""}
+      data-audio-jitter-buffer-delay-ms={audioStats.jitterBufferDelayMs ?? ""}
       data-audio-packets-lost={audioStats.packetsLost ?? ""}
+      data-audio-packets-received={audioStats.packetsReceived ?? ""}
+      data-ice-round-trip-time-ms={audioStats.roundTripTimeMs ?? ""}
       data-ice-candidate-type={audioStats.localCandidateType ?? ""}
+      data-remote-ice-candidate-type={audioStats.remoteCandidateType ?? ""}
       data-ice-transport={audioStats.transportProtocol ?? ""}
       data-relay-fallback-reason={audioStats.relayFallbackReason ?? ""}
     >

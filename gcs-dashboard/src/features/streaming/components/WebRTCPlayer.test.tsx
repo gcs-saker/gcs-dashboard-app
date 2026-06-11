@@ -346,8 +346,12 @@ describe("WebRTCPlayer", () => {
     await waitFor(() => {
       expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-jitter-ms", "34");
     }, { timeout: 2_500 });
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-jitter-buffer-delay-ms", "200");
     expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-packets-lost", "3");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-packets-received", "180");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-round-trip-time-ms", "120");
     expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-candidate-type", "relay");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-remote-ice-candidate-type", "host");
     expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-transport", "udp");
     expect(screen.getByTestId("webrtc-player")).toHaveAttribute(
       "data-relay-fallback-reason",
