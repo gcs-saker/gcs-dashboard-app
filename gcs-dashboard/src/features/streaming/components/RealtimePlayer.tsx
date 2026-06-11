@@ -17,9 +17,10 @@ export function RealtimePlayer({
   className,
   fetcher,
   reconnectDelaysMs,
+  playbackReadyRetryDelaysMs,
   onStatusChange,
 }: RealtimePlayerProps) {
-  const playback = useRealtimePlayback({ streamId, fetcher, reconnectDelaysMs });
+  const playback = useRealtimePlayback({ streamId, fetcher, reconnectDelaysMs, playbackReadyRetryDelaysMs });
   const {
     mode,
     streamStatus,
@@ -59,7 +60,7 @@ export function RealtimePlayer({
       ) : null}
 
       {mode === "webrtc" ? (
-          <WebRTCPlayer
+        <WebRTCPlayer
           key={`${streamId}-${webrtcRetryAttempt}`}
           whepUrl={playbackUrls?.webrtc ?? null}
           streamId={streamId}

@@ -292,13 +292,42 @@ describe("RealtimePlayer", () => {
   });
 
   test("renders API error state", async () => {
-    const fetcher = vi.fn(async () => jsonResponse({ detail: "missing" }, 404));
+    const fetcher = vi.fn(async () => jsonResponse({ detail: "invalid stream id" }, 422));
 
     render(<RealtimePlayer streamId="raw.missing.front" fetcher={fetcher} />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Playback API request failed with 404");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Playback API request failed with 422");
     expect(screen.queryByTestId("webrtc-player")).not.toBeInTheDocument();
     expect(screen.queryByTestId("hls-fallback-player")).not.toBeInTheDocument();
+  });
+
+  test("polls playback readiness before surfacing a temporary missing stream error", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ detail: "stream is not ready" }, 404))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          streamId: "raw.sample.front",
+          status: "online",
+          playbackUrls: {
+            webrtc: "https://media.example.test/raw/sample/front/whep",
+            hls: "https://media.example.test/raw/sample/front/index.m3u8",
+          },
+        }),
+      );
+
+    render(
+      <RealtimePlayer
+        streamId="raw.sample.front"
+        fetcher={fetcher}
+        playbackReadyRetryDelaysMs={[1]}
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("loading playback");
+    await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   test("contains malformed playback payloads inside the realtime player", async () => {
