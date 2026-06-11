@@ -15,6 +15,8 @@ type SignalingTimingKey = keyof WebRTCSignalingTimings;
 type SignalingTimingRecorder = (stage: SignalingTimingKey) => void;
 
 const ICE_GATHERING_TIMEOUT_MS = 2500;
+const WHEP_READY_RETRY_STATUS_CODES = new Set([404, 409, 425, 503]);
+const WHEP_READY_RETRY_DELAYS_MS = [500, 1_000, 2_000] as const;
 const AUDIO_STATE_POLL_INTERVAL_MS = 500;
 const AUDIO_INACTIVE_HOLD_MS = 1200;
 const AUDIO_STATS_POLL_INTERVAL_MS = 1000;
@@ -62,6 +64,12 @@ type PlaybackAction =
   | { type: "audio-state"; hasAudioTrack: boolean; isAudioActive: boolean }
   | { type: "audio-stats"; stats: WebRTCAudioStats }
   | { type: "signaling-timing"; stage: SignalingTimingKey; latencyMs: number };
+
+class WhepHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`WHEP request failed with ${status}`);
+  }
+}
 
 const initialPlaybackState: WebRTCPlaybackSnapshot = {
   status: "idle",
@@ -612,26 +620,84 @@ async function connectWithWhep(
   }
 
   reportWhepDebug("whep-post-start", whepUrl, { candidates: String(countSdpCandidates(localDescription.sdp)) });
+  const response = await postWhepOfferWithReadyRetry(whepUrl, localDescription.sdp, fetcher, signal, recordTiming);
+
+  const answerSdp = await response.text();
+  await peerConnection.setRemoteDescription({ type: "answer", sdp: answerSdp });
+  recordTiming("remoteDescriptionSetMs");
+  reportWhepDebug("remote-description-set", whepUrl, { candidates: String(countSdpCandidates(answerSdp)) });
+}
+
+async function postWhepOfferWithReadyRetry(
+  whepUrl: string,
+  offerSdp: string,
+  fetcher: typeof fetch,
+  signal: AbortSignal,
+  recordTiming: SignalingTimingRecorder,
+): Promise<Response> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await postWhepOffer(whepUrl, offerSdp, fetcher, signal, recordTiming);
+    } catch (error) {
+      if (!(error instanceof WhepHttpError) || !isRetryableWhepStatus(error.status) || attempt >= WHEP_READY_RETRY_DELAYS_MS.length) {
+        throw error;
+      }
+      const delayMs = WHEP_READY_RETRY_DELAYS_MS[attempt];
+      attempt += 1;
+      reportWhepDebug("whep-ready-retry", whepUrl, { status: String(error.status), delayMs: String(delayMs) });
+      await sleepUnlessAborted(delayMs, signal);
+    }
+  }
+}
+
+async function postWhepOffer(
+  whepUrl: string,
+  offerSdp: string,
+  fetcher: typeof fetch,
+  signal: AbortSignal,
+  recordTiming: SignalingTimingRecorder,
+): Promise<Response> {
   const response = await fetcher(whepUrl, {
     method: "POST",
     headers: {
       Accept: "application/sdp",
       "Content-Type": "application/sdp",
     },
-    body: localDescription.sdp,
+    body: offerSdp,
     signal,
   });
   recordTiming("whepResponseMs");
   reportWhepDebug("whep-post-response", whepUrl, { status: String(response.status) });
 
   if (!response.ok) {
-    throw new Error(`WHEP request failed with ${response.status}`);
+    throw new WhepHttpError(response.status);
   }
 
-  const answerSdp = await response.text();
-  await peerConnection.setRemoteDescription({ type: "answer", sdp: answerSdp });
-  recordTiming("remoteDescriptionSetMs");
-  reportWhepDebug("remote-description-set", whepUrl, { candidates: String(countSdpCandidates(answerSdp)) });
+  return response;
+}
+
+function isRetryableWhepStatus(status: number): boolean {
+  return WHEP_READY_RETRY_STATUS_CODES.has(status);
+}
+
+function sleepUnlessAborted(delayMs: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) {
+    return Promise.reject(new Error("WebRTC playback was aborted"));
+  }
+  return new Promise((resolve, reject) => {
+    const cleanup = () => signal.removeEventListener("abort", abort);
+    const timeoutId = globalThis.setTimeout(() => {
+      cleanup();
+      resolve();
+    }, delayMs);
+    const abort = () => {
+      globalThis.clearTimeout(timeoutId);
+      cleanup();
+      reject(new Error("WebRTC playback was aborted"));
+    };
+    signal.addEventListener("abort", abort, { once: true });
+  });
 }
 
 function waitForIceGatheringComplete(
