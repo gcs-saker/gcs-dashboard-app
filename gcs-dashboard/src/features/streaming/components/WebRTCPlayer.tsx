@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { useWhepPlayback } from "../hooks/useWhepPlayback";
 import type { WebRTCPlayerProps } from "../types";
@@ -23,6 +23,7 @@ export function WebRTCPlayer({
   className,
   onStatusChange,
 }: WebRTCPlayerProps) {
+  const onStatusChangeRef = useRef(onStatusChange);
   const playback = useWhepPlayback({ whepUrl, isOnline });
   const {
     videoRef,
@@ -39,7 +40,11 @@ export function WebRTCPlayer({
   } = playback;
 
   useEffect(() => {
-    onStatusChange?.({
+    onStatusChangeRef.current = onStatusChange;
+  }, [onStatusChange]);
+
+  useEffect(() => {
+    onStatusChangeRef.current?.({
       status,
       connectionState,
       iceConnectionState,
@@ -60,7 +65,6 @@ export function WebRTCPlayer({
     hasVideoFrame,
     iceConnectionState,
     isAudioActive,
-    onStatusChange,
     signalingTimings,
     status,
   ]);
