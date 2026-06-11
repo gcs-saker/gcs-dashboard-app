@@ -113,6 +113,50 @@ describe("LocalWebcamPublisher", () => {
     );
   });
 
+  test("keeps device selection available while published and resets capture when the camera changes", async () => {
+    const track = { stop: vi.fn() } as unknown as MediaStreamTrack;
+    const mediaStream = { getTracks: () => [track] } as unknown as MediaStream;
+    const mediaDevices = {
+      enumerateDevices: vi.fn(async () => [
+        createMediaDevice("videoinput", "camera-1", "Front Camera"),
+        createMediaDevice("videoinput", "camera-2", "Rear Camera"),
+      ]),
+      getUserMedia: vi.fn(async () => mediaStream),
+    } as unknown as MediaDevices;
+    const peerConnection = createPeerConnectionMock();
+    const fetcher = vi.fn(async () => ({
+      ok: true,
+      text: async () => "v=0\r\nmock-answer",
+    })) as unknown as typeof fetch;
+
+    render(
+      <LocalWebcamPublisher
+        mediaDevices={mediaDevices}
+        peerConnectionFactory={() => peerConnection}
+        fetcher={fetcher}
+        whipUrl="http://media.example.test/raw/local/webcam/whip"
+      />,
+    );
+
+    await screen.findByRole("option", { name: "Rear Camera" });
+    fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("미리보기 준비");
+
+    fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"));
+
+    const cameraSelect = screen.getByRole("combobox", { name: "카메라 입력 선택" });
+    expect(cameraSelect).not.toBeDisabled();
+
+    fireEvent.change(cameraSelect, { target: { value: "camera-2" } });
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("대기"));
+    expect(track.stop).toHaveBeenCalled();
+    expect(peerConnection.close).toHaveBeenCalled();
+    expect(cameraSelect).toHaveValue("camera-2");
+    expect(screen.getByRole("button", { name: "카메라 준비" })).toBeEnabled();
+  });
+
   test("can use an enumerated camera and disable microphone capture", async () => {
     const track = { stop: vi.fn() } as unknown as MediaStreamTrack;
     const mediaStream = { getTracks: () => [track] } as unknown as MediaStream;

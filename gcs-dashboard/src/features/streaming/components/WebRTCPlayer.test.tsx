@@ -466,15 +466,32 @@ describe("WebRTCPlayer", () => {
       "fetch",
       vi.fn(async () => ({
         ok: false,
-        status: 503,
+        status: 422,
         text: vi.fn(),
       })),
     );
 
     render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" />);
 
-    expect(await screen.findByText("WHEP request failed with 503")).toBeInTheDocument();
+    expect(await screen.findByText("WHEP request failed with 422")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("error");
+  });
+
+  test("retries a WHEP 404 while the stream path is not ready", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 404, text: vi.fn() })
+      .mockResolvedValueOnce(successfulWhepResponse);
+    vi.stubGlobal("fetch", fetcher);
+
+    render(<WebRTCPlayer whepUrl="https://media.example.test/talkback/raw/local/webcam/operator/whep" />);
+
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2), { timeout: 1_500 });
+    expect(peerConnections[0].setRemoteDescription).toHaveBeenCalledWith({
+      type: "answer",
+      sdp: "mock-answer-sdp",
+    });
   });
 
   test("waits for ICE gathering before posting the WHEP offer", async () => {

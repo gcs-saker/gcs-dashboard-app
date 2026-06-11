@@ -11,6 +11,7 @@ export function TalkbackAudioReceiver({ streamId }: TalkbackAudioReceiverProps) 
   const [enabled, setEnabled] = useState(false);
   const whepUrl = useMemo(() => enabled ? talkbackWhepUrl(streamId) : null, [enabled, streamId]);
   const playback = useWhepPlayback({ whepUrl, isOnline: enabled });
+  const errorMessage = talkbackErrorMessage(playback.errorMessage);
 
   return (
     <section className="talkback-audio-receiver" aria-label="관제 음성 수신">
@@ -19,7 +20,7 @@ export function TalkbackAudioReceiver({ streamId }: TalkbackAudioReceiverProps) 
         <button type="button" onClick={() => setEnabled((current) => !current)}>
           {enabled ? "수신 중지" : "수신 시작"}
         </button>
-        <span aria-live="polite">{enabled ? playback.status : "idle"}</span>
+        <span aria-live="polite">{enabled ? talkbackStatusLabel(playback.status) : "idle"}</span>
       </div>
       {enabled ? (
         <>
@@ -32,9 +33,26 @@ export function TalkbackAudioReceiver({ streamId }: TalkbackAudioReceiverProps) 
             playsInline
           />
           <span className="talkback-audio-receiver__url">{whepUrl}</span>
-          {playback.errorMessage ? <span className="talkback-audio-receiver__error">{playback.errorMessage}</span> : null}
+          {errorMessage ? <span className="talkback-audio-receiver__error">{errorMessage}</span> : null}
         </>
       ) : null}
     </section>
   );
+}
+
+function talkbackStatusLabel(status: string): string {
+  if (status === "loading") {
+    return "관제 음성 대기";
+  }
+  return status;
+}
+
+function talkbackErrorMessage(message: string | null): string | null {
+  if (!message) {
+    return null;
+  }
+  if (message.includes("WHEP request failed with 404")) {
+    return "관제 음성 송신이 아직 시작되지 않았습니다. 대시보드에서 마이크 송신을 먼저 시작하세요.";
+  }
+  return message;
 }

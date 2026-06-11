@@ -244,6 +244,48 @@ export function LocalWebcamPublisher({
     setFailedStep(null);
   }
 
+  function resetCaptureForInputChange(): void {
+    if (statusRef.current === "idle") {
+      setFailedStep(null);
+      setErrorMessage(null);
+      return;
+    }
+
+    clearReconnectTimer();
+    stopGpsTelemetry();
+    reconnectAttemptRef.current = 0;
+    peerConnectionRef.current?.close();
+    peerConnectionRef.current = null;
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setStatus("idle");
+    setFailedStep(null);
+    setErrorMessage(null);
+  }
+
+  function handleStreamTargetChange(nextStreamId: string): void {
+    setSelectedStreamId(nextStreamId);
+    resetCaptureForInputChange();
+  }
+
+  function handleVideoDeviceChange(nextDeviceId: string): void {
+    setSelectedVideoDeviceId(nextDeviceId);
+    resetCaptureForInputChange();
+  }
+
+  function handleAudioDeviceChange(nextDeviceId: string): void {
+    setSelectedAudioDeviceId(nextDeviceId);
+    resetCaptureForInputChange();
+  }
+
+  function handleAudioModeChange(nextAudioMode: AudioCaptureMode): void {
+    setAudioMode(nextAudioMode);
+    resetCaptureForInputChange();
+  }
+
   function startGpsTelemetry(): void {
     if (!geolocation) {
       setGpsStatus("unavailable");
@@ -392,13 +434,13 @@ export function LocalWebcamPublisher({
           중지
         </button>
       </div>
-      <fieldset className="local-webcam-publisher__field-group" disabled={isBusy(status) || status === "published"}>
+      <fieldset className="local-webcam-publisher__field-group" disabled={isBusy(status)}>
         <legend>송출 stream</legend>
         <label>
           대상
           <select
             aria-label="송출 stream 선택"
-            onChange={(event) => setSelectedStreamId(event.currentTarget.value)}
+            onChange={(event) => handleStreamTargetChange(event.currentTarget.value)}
             value={selectedStreamTarget.id}
           >
             {streamTargets.map((target) => (
@@ -410,13 +452,13 @@ export function LocalWebcamPublisher({
         </label>
         <span>{selectedStreamTarget.whipPath}</span>
       </fieldset>
-      <fieldset className="local-webcam-publisher__field-group" disabled={isBusy(status) || status === "published"}>
+      <fieldset className="local-webcam-publisher__field-group" disabled={isBusy(status)}>
         <legend>입력 장치</legend>
         <label>
           카메라
           <select
             aria-label="카메라 입력 선택"
-            onChange={(event) => setSelectedVideoDeviceId(event.currentTarget.value)}
+            onChange={(event) => handleVideoDeviceChange(event.currentTarget.value)}
             value={selectedVideoDeviceId}
           >
             <option value={DEFAULT_CAMERA_DEVICE_ID}>기본 카메라</option>
@@ -433,7 +475,7 @@ export function LocalWebcamPublisher({
           마이크
           <select
             aria-label="마이크 입력 선택"
-            onChange={(event) => setSelectedAudioDeviceId(event.currentTarget.value)}
+            onChange={(event) => handleAudioDeviceChange(event.currentTarget.value)}
             value={selectedAudioDeviceId}
           >
             <option value={DEFAULT_MICROPHONE_DEVICE_ID}>기본 마이크</option>
@@ -450,13 +492,13 @@ export function LocalWebcamPublisher({
         </button>
         <span>{getDeviceStatusDetail(deviceStatus, videoInputs.length, audioInputs.length)}</span>
       </fieldset>
-      <fieldset className="local-webcam-publisher__audio-mode" disabled={isBusy(status) || status === "published"}>
+      <fieldset className="local-webcam-publisher__audio-mode" disabled={isBusy(status)}>
         <legend>음성 처리</legend>
         <label>
           <input
             checked={audioMode === "low-latency"}
             name="audio-mode"
-            onChange={() => setAudioMode("low-latency")}
+            onChange={() => handleAudioModeChange("low-latency")}
             type="radio"
             value="low-latency"
           />
@@ -466,7 +508,7 @@ export function LocalWebcamPublisher({
           <input
             checked={audioMode === "quality"}
             name="audio-mode"
-            onChange={() => setAudioMode("quality")}
+            onChange={() => handleAudioModeChange("quality")}
             type="radio"
             value="quality"
           />
