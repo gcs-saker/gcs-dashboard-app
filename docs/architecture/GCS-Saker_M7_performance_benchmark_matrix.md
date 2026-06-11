@@ -27,6 +27,13 @@ WebRTC media 계측은 같은 report에 별도 smoke 수치로 함께 기록한�
 - `hls_master_latency_ms`
 - `hls_variant_latency_ms`
 
+ICE 경로는 최소 두 profile을 같은 stream id로 비교한다.
+
+| profile | 의미 | 판단 기준 |
+| --- | --- | --- |
+| `stun-direct` | STUN 후보로 direct/srflx 경로가 성립하는지 확인 | TURN relay 없이 first frame이 뜨면 TURN 부하 절감 가능 |
+| `turn-relay` | 강제 relay 또는 direct 실패 fallback 경로 확인 | CGNAT/symmetric NAT 상황에서도 연결 보장 |
+
 ## profile 파일 예시
 비밀번호는 파일에 직접 넣지 않고 환경 변수로 주입한다.
 
@@ -62,6 +69,17 @@ scripts/m7_performance_benchmark_matrix.py \
   --output /path/to/m7-benchmark-result.json
 ```
 
+자체서명 인증서를 쓰는 staging 서버는 TLS 검증 실패가 benchmark 자체를 막을 수 있다. 이때만 다음처럼 의도를 명시하고 실행한다.
+
+```bash
+M7_BENCHMARK_PASSWORD='smoke-password' \
+scripts/m7_performance_benchmark_matrix.py \
+  --profile-json /path/to/m7-benchmark-profiles.json \
+  --iterations 30 \
+  --warmup 5 \
+  --insecure
+```
+
 ## 결과 해석
 - p50은 평소 사용감에 가깝다.
 - p95는 사용자가 가끔 겪는 느림과 운영 tail latency를 보여준다.
@@ -73,6 +91,7 @@ scripts/m7_performance_benchmark_matrix.py \
 ## 완료 기준
 - legacy, v0.2.0, m7 중 실행 가능한 profile이 같은 script로 측정된다.
 - 결과 JSON에 `schemaVersion: m7-performance-benchmark-v1`가 포함된다.
+- 결과 JSON 또는 check output에 `iceProfileLabels: ["stun-direct", "turn-relay"]`가 포함된다.
 - API/HLS metric은 p50/p95/max/errors를 가진다.
 - WebRTC media 수치는 `m7_publish_play_smoke.sh --run` 또는 browser first-frame smoke 결과와 함께 보고한다.
 - Docker daemon, 포트, 권한 문제로 live run이 실패하면 실패 지점과 재실행 조건을 남긴다.

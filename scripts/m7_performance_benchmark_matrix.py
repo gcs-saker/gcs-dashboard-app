@@ -5,6 +5,7 @@ import argparse
 import http.cookiejar
 import json
 import os
+import ssl
 import statistics
 import sys
 import time
@@ -31,6 +32,10 @@ MEDIA_SMOKE_METRICS = (
     "first_video_frame_latency_ms",
     "hls_master_latency_ms",
     "hls_variant_latency_ms",
+)
+ICE_PROFILE_LABELS = (
+    "stun-direct",
+    "turn-relay",
 )
 
 
@@ -134,9 +139,16 @@ def measure_metric(
     return summarize_metric(name, samples, errors)
 
 
-def measure_profile(profile: BenchmarkProfile, iterations: int, warmup: int) -> dict[str, Any]:
+def build_http_opener(cookie_jar: http.cookiejar.CookieJar, insecure_tls: bool) -> urllib.request.OpenerDirector:
+    handlers: list[Any] = [urllib.request.HTTPCookieProcessor(cookie_jar)]
+    if insecure_tls:
+        handlers.append(urllib.request.HTTPSHandler(context=ssl._create_unverified_context()))
+    return urllib.request.build_opener(*handlers)
+
+
+def measure_profile(profile: BenchmarkProfile, iterations: int, warmup: int, insecure_tls: bool) -> dict[str, Any]:
     cookie_jar = http.cookiejar.CookieJar()
-    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
+    opener = build_http_opener(cookie_jar, insecure_tls)
     edge_base = profile.edge_base_url.rstrip("/")
     auth_base = f"{edge_base}{profile.auth_base_path.rstrip('/')}"
     stream_base = f"{edge_base}{profile.stream_base_path.rstrip('/')}"
@@ -210,6 +222,7 @@ def measure_profile(profile: BenchmarkProfile, iterations: int, warmup: int) -> 
         "label": profile.label,
         "edgeBaseUrl": edge_base,
         "streamId": profile.stream_id,
+        "tlsVerification": "disabled" if insecure_tls else "system-default",
         "metrics": metrics,
     }
 
@@ -246,6 +259,7 @@ def build_check_report() -> dict[str, Any]:
         "schemaVersion": SCHEMA_VERSION,
         "requiredMetrics": list(REQUIRED_METRICS),
         "mediaSmokeMetrics": list(MEDIA_SMOKE_METRICS),
+        "iceProfileLabels": list(ICE_PROFILE_LABELS),
         "profileLabels": ["legacy", "v0.2.0", "m7"],
     }
 
@@ -257,6 +271,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--iterations", type=int, default=30)
     parser.add_argument("--warmup", type=int, default=5)
     parser.add_argument("--output", type=Path, help="Optional JSON output path.")
+    parser.add_argument(
+        "--insecure",
+        action="store_true",
+        help="Disable TLS certificate verification for self-signed staging endpoints.",
+    )
     return parser.parse_args()
 
 
@@ -277,7 +296,9 @@ def main() -> int:
         "schemaVersion": SCHEMA_VERSION,
         "iterations": args.iterations,
         "warmup": args.warmup,
-        "profiles": [measure_profile(profile, args.iterations, args.warmup) for profile in profiles],
+        "iceProfileLabels": list(ICE_PROFILE_LABELS),
+        "tlsVerification": "disabled" if args.insecure else "system-default",
+        "profiles": [measure_profile(profile, args.iterations, args.warmup, args.insecure) for profile in profiles],
     }
     output = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
     if args.output:

@@ -214,6 +214,41 @@ describe("WebRTCPlayer", () => {
     );
   });
 
+  test("does not re-emit identical playback snapshots when only the parent callback changes", async () => {
+    const firstStatusChange = vi.fn();
+    const secondStatusChange = vi.fn();
+    const { rerender } = render(
+      <WebRTCPlayer
+        whepUrl="https://media.example.test/raw/sample/front/whep"
+        streamId="raw.sample.front"
+        onStatusChange={firstStatusChange}
+      />,
+    );
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(firstStatusChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          signalingTimings: expect.objectContaining({
+            remoteDescriptionSetMs: expect.any(Number),
+          }),
+        }),
+      ),
+    );
+    firstStatusChange.mockClear();
+
+    rerender(
+      <WebRTCPlayer
+        whepUrl="https://media.example.test/raw/sample/front/whep"
+        streamId="raw.sample.front"
+        onStatusChange={secondStatusChange}
+      />,
+    );
+
+    expect(firstStatusChange).not.toHaveBeenCalled();
+    expect(secondStatusChange).not.toHaveBeenCalled();
+  });
+
   test("records first video frame latency for browser smoke checks", async () => {
     const onStatusChange = vi.fn();
     render(
@@ -346,8 +381,12 @@ describe("WebRTCPlayer", () => {
     await waitFor(() => {
       expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-jitter-ms", "34");
     }, { timeout: 2_500 });
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-jitter-buffer-delay-ms", "200");
     expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-packets-lost", "3");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-packets-received", "180");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-round-trip-time-ms", "120");
     expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-candidate-type", "relay");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-remote-ice-candidate-type", "host");
     expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-transport", "udp");
     expect(screen.getByTestId("webrtc-player")).toHaveAttribute(
       "data-relay-fallback-reason",

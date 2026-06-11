@@ -19,6 +19,7 @@ interface UseRealtimePlaybackOptions {
   streamId: string;
   fetcher?: typeof fetch;
   reconnectDelaysMs?: readonly number[];
+  playbackReadyRetryDelaysMs?: readonly number[];
 }
 
 type RealtimeAction =
@@ -47,11 +48,25 @@ const initialState: RealtimeState = {
   reconnectDelayMs: null,
   webrtcRetryAttempt: 0,
 };
+const PLAYBACK_READY_RETRY_DELAYS_MS = Object.freeze([500, 1000, 2000] as const);
+const PLAYBACK_READY_RETRY_STATUS = Object.freeze(new Set([404, 409, 425, 503]));
+const PLAYBACK_API_ACCEPT_HEADER = Object.freeze({ Accept: "application/json" });
+
+class PlaybackApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(`Playback API request failed with ${status}`);
+    this.name = "PlaybackApiError";
+    this.status = status;
+  }
+}
 
 export function useRealtimePlayback({
   streamId,
   fetcher = fetch,
   reconnectDelaysMs = DEFAULT_WEBRTC_RECONNECT_DELAYS_MS,
+  playbackReadyRetryDelaysMs = PLAYBACK_READY_RETRY_DELAYS_MS,
 }: UseRealtimePlaybackOptions): RealtimeState & {
   useWebRTC: () => void;
   useHLSFallback: (reason: string) => void;
@@ -64,7 +79,7 @@ export function useRealtimePlayback({
 
     dispatch({ type: "loading" });
 
-    void fetchPlayback(streamId, fetcher, abortController.signal)
+    void fetchPlaybackWithReadyRetry(streamId, fetcher, abortController.signal, playbackReadyRetryDelaysMs)
       .then((playback) => {
         if (playback.status === "offline") {
           dispatch({ type: "offline", playback });
@@ -87,7 +102,7 @@ export function useRealtimePlayback({
     return () => {
       abortController.abort();
     };
-  }, [fetcher, streamId]);
+  }, [fetcher, playbackReadyRetryDelaysMs, streamId]);
 
   useEffect(() => {
     if (state.mode !== "reconnecting" || state.reconnectDelayMs === null) {
@@ -232,14 +247,12 @@ async function fetchPlayback(
 ): Promise<StreamPlaybackResponse> {
   const response = await authenticatedFetch(streamApiV1Url(`/streams/${encodeURIComponent(streamId)}/playback`), {
     method: "GET",
-    headers: {
-      Accept: "application/json",
-    },
+    headers: PLAYBACK_API_ACCEPT_HEADER,
     signal,
   }, fetcher);
 
   if (!response.ok) {
-    throw new Error(`Playback API request failed with ${response.status}`);
+    throw new PlaybackApiError(response.status);
   }
 
   const payload = await response.json();
@@ -248,6 +261,47 @@ async function fetchPlayback(
   }
 
   return payload;
+}
+
+async function fetchPlaybackWithReadyRetry(
+  streamId: string,
+  fetcher: typeof fetch,
+  signal: AbortSignal,
+  retryDelaysMs: readonly number[],
+): Promise<StreamPlaybackResponse> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await fetchPlayback(streamId, fetcher, signal);
+    } catch (error) {
+      if (
+        signal.aborted ||
+        !(error instanceof PlaybackApiError) ||
+        !PLAYBACK_READY_RETRY_STATUS.has(error.status) ||
+        attempt >= retryDelaysMs.length
+      ) {
+        throw error;
+      }
+      await waitUnlessAborted(retryDelaysMs[attempt], signal);
+    }
+  }
+}
+
+function waitUnlessAborted(delayMs: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    const timeoutId = globalThis.setTimeout(resolve, delayMs);
+    signal.addEventListener(
+      "abort",
+      () => {
+        globalThis.clearTimeout(timeoutId);
+        resolve();
+      },
+      { once: true },
+    );
+  });
 }
 
 function isStreamPlaybackResponse(payload: unknown): payload is StreamPlaybackResponse {

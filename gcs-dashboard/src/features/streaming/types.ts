@@ -102,5 +102,6 @@ export interface RealtimePlayerProps {
   className?: string;
   fetcher?: typeof fetch;
   reconnectDelaysMs?: readonly number[];
+  playbackReadyRetryDelaysMs?: readonly number[];
   onStatusChange?: (snapshot: RealtimePlayerSnapshot) => void;
 }

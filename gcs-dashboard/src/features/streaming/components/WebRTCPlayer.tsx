@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { useWhepPlayback } from "../hooks/useWhepPlayback";
 import type { WebRTCPlayerProps } from "../types";
@@ -23,6 +23,7 @@ export function WebRTCPlayer({
   className,
   onStatusChange,
 }: WebRTCPlayerProps) {
+  const onStatusChangeRef = useRef(onStatusChange);
   const playback = useWhepPlayback({ whepUrl, isOnline });
   const {
     videoRef,
@@ -39,7 +40,11 @@ export function WebRTCPlayer({
   } = playback;
 
   useEffect(() => {
-    onStatusChange?.({
+    onStatusChangeRef.current = onStatusChange;
+  }, [onStatusChange]);
+
+  useEffect(() => {
+    onStatusChangeRef.current?.({
       status,
       connectionState,
       iceConnectionState,
@@ -60,7 +65,6 @@ export function WebRTCPlayer({
     hasVideoFrame,
     iceConnectionState,
     isAudioActive,
-    onStatusChange,
     signalingTimings,
     status,
   ]);
@@ -77,8 +81,12 @@ export function WebRTCPlayer({
       data-whep-response-ms={signalingTimings.whepResponseMs ?? ""}
       data-ice-gathering-done-ms={signalingTimings.iceGatheringDoneMs ?? ""}
       data-audio-jitter-ms={audioStats.jitterMs ?? ""}
+      data-audio-jitter-buffer-delay-ms={audioStats.jitterBufferDelayMs ?? ""}
       data-audio-packets-lost={audioStats.packetsLost ?? ""}
+      data-audio-packets-received={audioStats.packetsReceived ?? ""}
+      data-ice-round-trip-time-ms={audioStats.roundTripTimeMs ?? ""}
       data-ice-candidate-type={audioStats.localCandidateType ?? ""}
+      data-remote-ice-candidate-type={audioStats.remoteCandidateType ?? ""}
       data-ice-transport={audioStats.transportProtocol ?? ""}
       data-relay-fallback-reason={audioStats.relayFallbackReason ?? ""}
     >
