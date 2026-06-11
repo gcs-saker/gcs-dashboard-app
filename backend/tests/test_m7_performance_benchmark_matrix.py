@@ -21,6 +21,7 @@ def test_m7_performance_benchmark_check_prints_stable_schema() -> None:
     payload = json.loads(result.stdout)
     assert payload["schemaVersion"] == "m7-performance-benchmark-v1"
     assert payload["profileLabels"] == ["legacy", "v0.2.0", "m7"]
+    assert payload["iceProfileLabels"] == ["stun-direct", "turn-relay"]
     for metric in [
         "auth_login",
         "auth_refresh",
@@ -30,6 +31,11 @@ def test_m7_performance_benchmark_check_prints_stable_schema() -> None:
         "hls_manifest",
     ]:
         assert metric in payload["requiredMetrics"]
+    for metric in [
+        "whep_answer_latency_ms",
+        "first_video_frame_latency_ms",
+    ]:
+        assert metric in payload["mediaSmokeMetrics"]
 
 
 def test_m7_performance_benchmark_document_explains_comparison_contract() -> None:
@@ -43,6 +49,9 @@ def test_m7_performance_benchmark_document_explains_comparison_contract() -> Non
         "p95",
         "whep_answer_latency_ms",
         "first_video_frame_latency_ms",
+        "stun-direct",
+        "turn-relay",
+        "--insecure",
         "passwordEnv",
     ]
     for phrase in required_phrases:
@@ -55,3 +64,5 @@ def test_m7_performance_benchmark_script_uses_password_env_not_literal_secret() 
     assert "passwordEnv" in content
     assert "M7_BENCHMARK_PASSWORD" not in content
     assert "schemaVersion" in content
+    assert "--insecure" in content
+    assert "iceProfileLabels" in content
