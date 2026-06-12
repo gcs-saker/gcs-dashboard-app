@@ -35,6 +35,22 @@ export interface DashboardStreamSlot {
   geometry?: DashboardStreamGeometry | null;
 }
 
+export const CCTV_EMPTY_STREAM_ID_PREFIX = "cctv-empty-";
+
+export function createEmptyCctvStreamSlot(channelNumber: number): DashboardStreamSlot {
+  const paddedChannelNumber = channelNumber.toString().padStart(2, "0");
+  return {
+    id: `${CCTV_EMPTY_STREAM_ID_PREFIX}${channelNumber}`,
+    title: `CCTV ${paddedChannelNumber}`,
+    status: DASHBOARD_STREAM_STATUS.offline,
+    mode: DASHBOARD_STREAM_MODE.eo,
+    detail: "클릭하여 채널 변경",
+    connectedDeviceId: null,
+    streamPath: null,
+    geometry: null,
+  };
+}
+
 export interface StreamWidgetDefinition {
   id: string;
   title: string;

@@ -77,6 +77,7 @@ export function WebRTCPlayer({
       data-has-video-frame={hasVideoFrame ? "true" : "false"}
       data-has-audio-track={hasAudioTrack ? "true" : "false"}
       data-audio-active={isAudioActive ? "true" : "false"}
+      data-audio-level={audioStats.audioLevel ?? ""}
       data-first-frame-latency-ms={firstFrameLatencyMs ?? ""}
       data-whep-response-ms={signalingTimings.whepResponseMs ?? ""}
       data-ice-gathering-done-ms={signalingTimings.iceGatheringDoneMs ?? ""}

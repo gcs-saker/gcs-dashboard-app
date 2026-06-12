@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import App from './App';
 import { clearAuthSession, storeAuthSession } from './features/auth/authStorage';
@@ -30,15 +31,21 @@ describe('App dashboard shell', () => {
   });
 
   test('renders the core dashboard regions', async () => {
+    const user = userEvent.setup();
     render(<App />);
 
     expect(await screen.findByRole('main', { name: 'Field Ops Dashboard MVP' }, { timeout: 3000 })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '자산트리' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '자산트리' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '지도' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '선택 스트림' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '서버 상태 상세 / 연결상태 / 헬스체크' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '서버 상태 상세 / 연결상태 / 헬스체크' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '지오메트리 / 텔레메트리' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'AI 결과' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '운용 요약' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'AI 결과' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '자산' }));
+
+    expect(screen.getByRole('heading', { name: '자산트리' })).toBeInTheDocument();
   });
 
   test('renders the streaming smoke dashboard when requested by query string', async () => {

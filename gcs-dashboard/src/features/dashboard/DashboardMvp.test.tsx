@@ -36,29 +36,40 @@ describe("DashboardMvp", () => {
 
     expect(screen.getByRole("main", { name: "Field Ops Dashboard MVP" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "대시보드" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "서버상태" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "운영설정" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "웹캠 송출" })).toHaveAttribute("href", "/publisher");
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "자산" })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "지도 확대" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "지도 축소" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "자산트리" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "자산트리" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "지도" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "선택 스트림" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "서버 상태 상세 / 연결상태 / 헬스체크" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "서버 상태 상세 / 연결상태 / 헬스체크" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "지오메트리 / 텔레메트리" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "AI 결과" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "운용 요약" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "음성 파형 분석" })).toBeInTheDocument();
+    expect(screen.getByLabelText("최근 상태")).toBeInTheDocument();
+    expect(screen.getByText("선택 스트림 품질")).toBeInTheDocument();
+    expect(screen.getByText("현재 선택")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "AI 결과" })).not.toBeInTheDocument();
   });
 
-  test("marks dashboard regions with widget ids for custom layout editing", () => {
+  test("marks dashboard regions with widget ids for custom layout editing", async () => {
+    const user = userEvent.setup();
     const { container } = renderDashboard();
 
-    expect(container.querySelector('[data-widget-id="asset-tree"]')).toBeInTheDocument();
     expect(container.querySelector('[data-widget-id="tactical-map"]')).toBeInTheDocument();
     expect(container.querySelector('[data-widget-id="selected-stream"]')).toBeInTheDocument();
     expect(container.querySelector('[data-widget-id="stream-grid"]')).toBeInTheDocument();
-    expect(container.querySelector('[data-widget-id="system-status"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-widget-id="ops-summary"]')).toBeInTheDocument();
     expect(container.querySelector('[data-widget-id="telemetry-panel"]')).toBeInTheDocument();
-    expect(container.querySelector('[data-widget-id="ai-results"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-widget-id="ai-results"]')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "자산" }));
+
+    expect(container.querySelector('[data-widget-id="asset-tree"]')).toBeInTheDocument();
   });
 
   test("opens and closes the widget add dialog from the dashboard toolbar", async () => {
@@ -97,6 +108,7 @@ describe("DashboardMvp", () => {
     const user = userEvent.setup();
     renderDashboard();
 
+    await user.click(screen.getByRole("button", { name: "자산" }));
     const assetTools = screen.getByLabelText("자산트리 위젯 도구");
     const pinButton = assetTools.querySelector('button[title="자산트리 고정"]');
     const popoutButton = assetTools.querySelector('button[title="자산트리 팝아웃"]');
@@ -129,9 +141,17 @@ describe("DashboardMvp", () => {
     await user.click(screen.getByRole("button", { name: "스트리밍 3 선택" }));
 
     expect(screen.getAllByText("AI 감지 overlay").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("스트리밍 3 / AI 감지 overlay")).toBeInTheDocument();
+    expect(screen.getByLabelText("최근 상태")).toHaveTextContent("AI 감지 overlay 선택됨");
     expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 기본 좌표 84deg / FOV 82deg");
     const telemetryPanel = screen.getByLabelText("지오메트리 / 텔레메트리");
-    expect(within(telemetryPanel).getByText("AI 감지 overlay")).toBeInTheDocument();
+    expect(within(telemetryPanel).getAllByText("AI 감지 overlay").length).toBeGreaterThanOrEqual(1);
+    const compass = within(telemetryPanel).getByLabelText("기체 방위와 지도 기준 방위");
+    expect(compass).toHaveTextContent("기체 084deg");
+    expect(compass).toHaveTextContent("지도 084deg");
+    expect(compass).toHaveTextContent("차이 0deg");
+    expect(within(telemetryPanel).getAllByText("기체 방위").length).toBeGreaterThanOrEqual(1);
+    expect(within(telemetryPanel).getAllByText("지도 기준").length).toBeGreaterThanOrEqual(1);
     expect(within(telemetryPanel).getByText("35.866900")).toBeInTheDocument();
     expect(within(telemetryPanel).getByText("128.593100")).toBeInTheDocument();
     expect(within(telemetryPanel).getByText("기본 좌표")).toBeInTheDocument();
@@ -176,16 +196,74 @@ describe("DashboardMvp", () => {
   test("renders operational status placeholders needed before live backend wiring", () => {
     renderDashboard();
 
-    expect(screen.getByText("GCS-SAKER")).toBeInTheDocument();
-    expect(screen.getByText("API 서버")).toBeInTheDocument();
-    expect(screen.getByText("Signaling 서버")).toBeInTheDocument();
-    expect(screen.getByText("탐지")).toBeInTheDocument();
-    expect(screen.getByText("처리 지연")).toBeInTheDocument();
+    expect(screen.getByText("GPS")).toBeInTheDocument();
+    expect(screen.getByText("Talkback")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "음성 파형 분석" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "AI 결과" })).not.toBeInTheDocument();
   });
 
-  test("renders hierarchical asset tree nodes", () => {
+  test("moves server status into a standalone page", async () => {
+    const user = userEvent.setup();
     renderDashboard();
 
+    await user.click(screen.getByRole("button", { name: "서버상태" }));
+
+    expect(screen.getByRole("heading", { name: "서버 상태 상세 / 연결상태 / 헬스체크" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "서비스 의존 구조도" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "네트워크 RTT 추세" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "운영 진단" })).toBeInTheDocument();
+    expect(screen.getByText("API 서버")).toBeInTheDocument();
+    expect(screen.getByText("Signaling 서버")).toBeInTheDocument();
+  });
+
+  test("renders CCTV as a configurable channel wall", async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    await user.click(screen.getByRole("button", { name: "CCTV" }));
+
+    expect(screen.getByRole("heading", { name: "통합 CCTV 월" })).toBeInTheDocument();
+    expect(screen.getByText(/16\s*채널 감시 레이아웃/)).toBeInTheDocument();
+    expect(screen.getByText("CCTV 16")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /선택/ })).toHaveLength(16);
+
+    await user.click(screen.getByRole("button", { name: "5x5" }));
+
+    expect(screen.getByText(/25\s*채널 감시 레이아웃/)).toBeInTheDocument();
+    expect(screen.getByText("CCTV 25")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /선택/ })).toHaveLength(25);
+
+    await user.click(screen.getByRole("button", { name: "3x3" }));
+
+    expect(screen.getByText(/9\s*채널 감시 레이아웃/)).toBeInTheDocument();
+    expect(screen.getByText("CCTV 09")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /선택/ })).toHaveLength(9);
+  });
+
+  test("opens the device change dialog from empty CCTV 5x5 channels", async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    await user.click(screen.getByRole("button", { name: "CCTV" }));
+    await user.click(screen.getByRole("button", { name: "5x5" }));
+    await user.click(screen.getByRole("button", { name: "CCTV 25 선택" }));
+
+    expect(screen.getByRole("dialog", { name: "CCTV 25 장비 연결" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /DRN-01 전방 EO/ }));
+
+    expect(screen.queryByRole("dialog", { name: "CCTV 25 장비 연결" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "CCTV 25 선택" })).toHaveTextContent("DRN-01 전방 EO");
+    expect(screen.getByRole("status")).toHaveTextContent("스트리밍 장비 연결됨");
+  });
+
+  test("renders hierarchical asset tree nodes", async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    await user.click(screen.getByRole("button", { name: "자산" }));
+
+    expect(screen.getByText("GCS-SAKER")).toBeInTheDocument();
     expect(screen.getAllByText("전방 EO").length).toBeGreaterThan(0);
     expect(screen.getAllByText("후방 AI").length).toBeGreaterThan(0);
   });

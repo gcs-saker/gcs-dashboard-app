@@ -55,7 +55,9 @@ export function RealtimePlayer({
 
       {mode === "loading" ? (
         <div className="realtime-player__placeholder" role="status" aria-live="polite">
-          loading playback
+          <span className="realtime-player__signal" aria-hidden="true" />
+          <strong>스트림 신호 확인 중</strong>
+          <span>WebRTC 경로와 송출 상태를 확인하고 있습니다.</span>
         </div>
       ) : null}
 
@@ -74,6 +76,7 @@ export function RealtimePlayer({
               webrtcRetryAttempt,
               hasAudioTrack: snapshot.hasAudioTrack,
               isAudioActive: snapshot.isAudioActive,
+              audioLevel: snapshot.audioStats.audioLevel,
               webrtcFirstFrameLatencyMs: snapshot.firstFrameLatencyMs,
               webrtcWhepResponseMs: snapshot.signalingTimings.whepResponseMs,
               audioJitterMs: snapshot.audioStats.jitterMs,
@@ -99,8 +102,9 @@ export function RealtimePlayer({
 
       {mode === "reconnecting" ? (
         <div className="realtime-player__placeholder realtime-player__placeholder--reconnecting" role="status" aria-live="polite">
-          스트림 재연결 중
-          {reconnectDelayMs !== null ? ` (${reconnectDelayMs}ms)` : ""}
+          <span className="realtime-player__signal" aria-hidden="true" />
+          <strong>스트림 재연결 중</strong>
+          <span>{reconnectDelayMs !== null ? `${reconnectDelayMs}ms 후 다시 시도합니다.` : "미디어 경로를 다시 연결하고 있습니다."}</span>
         </div>
       ) : null}
 
@@ -117,13 +121,17 @@ export function RealtimePlayer({
 
       {mode === "offline" ? (
         <div className="realtime-player__placeholder realtime-player__placeholder--offline" role="status">
-          stream offline
+          <span className="realtime-player__signal" aria-hidden="true" />
+          <strong>송출 신호 없음</strong>
+          <span>장비가 연결되면 자동으로 수신을 재개합니다.</span>
         </div>
       ) : null}
 
       {mode === "error" ? (
         <div className="realtime-player__placeholder realtime-player__placeholder--error" role="alert">
-          {errorMessage ?? "realtime playback failed"}
+          <span className="realtime-player__signal" aria-hidden="true" />
+          <strong>수신 경로 오류</strong>
+          <span>{errorMessage ?? "실시간 재생 경로를 열 수 없습니다."}</span>
         </div>
       ) : null}
     </section>

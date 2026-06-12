@@ -356,6 +356,7 @@ describe("WebRTCPlayer", () => {
           id: "audio-inbound",
           type: "inbound-rtp",
           kind: "audio",
+          audioLevel: 0.42,
           jitter: 0.034,
           jitterBufferDelay: 1.2,
           jitterBufferEmittedCount: 6,
@@ -381,6 +382,7 @@ describe("WebRTCPlayer", () => {
     await waitFor(() => {
       expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-jitter-ms", "34");
     }, { timeout: 2_500 });
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-level", "0.42");
     expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-jitter-buffer-delay-ms", "200");
     expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-packets-lost", "3");
     expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-packets-received", "180");
@@ -392,22 +394,23 @@ describe("WebRTCPlayer", () => {
       "data-relay-fallback-reason",
       "local-nat-or-firewall-fallback",
     );
-    expect(onStatusChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        audioStats: expect.objectContaining({
-          jitterMs: 34,
-          jitterBufferDelayMs: 200,
-          packetsLost: 3,
-          packetsReceived: 180,
-          concealedSamples: 960,
-          roundTripTimeMs: 120,
-          localCandidateType: "relay",
-          remoteCandidateType: "host",
-          transportProtocol: "udp",
-          relayFallbackReason: "local-nat-or-firewall-fallback",
-        }),
-      }),
-    );
+    await waitFor(() => {
+      expect(
+        onStatusChange.mock.calls.some(([snapshot]) =>
+          snapshot.audioStats.audioLevel === 0.42 &&
+          snapshot.audioStats.jitterMs === 34 &&
+          snapshot.audioStats.jitterBufferDelayMs === 200 &&
+          snapshot.audioStats.packetsLost === 3 &&
+          snapshot.audioStats.packetsReceived === 180 &&
+          snapshot.audioStats.concealedSamples === 960 &&
+          snapshot.audioStats.roundTripTimeMs === 120 &&
+          snapshot.audioStats.localCandidateType === "relay" &&
+          snapshot.audioStats.remoteCandidateType === "host" &&
+          snapshot.audioStats.transportProtocol === "udp" &&
+          snapshot.audioStats.relayFallbackReason === "local-nat-or-firewall-fallback"
+        ),
+      ).toBe(true);
+    });
   });
 
   test("keeps the audio indicator stable during short remote mute events", async () => {

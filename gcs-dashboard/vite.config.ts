@@ -35,6 +35,16 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false
         },
+        "/auth-policy": {
+          target: devProxyTarget,
+          changeOrigin: true,
+          secure: false
+        },
+        "/media-control": {
+          target: devProxyTarget,
+          changeOrigin: true,
+          secure: false
+        },
         "/hls": {
           target: devProxyTarget,
           changeOrigin: true,

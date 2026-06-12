@@ -16,11 +16,12 @@ describe("dashboardLayout", () => {
       "tactical-map",
       "selected-stream",
       "stream-grid",
-      "system-status",
       "telemetry-panel",
+      "ops-summary",
       "ai-results",
     ]);
-    expect(layout.every((item) => item.visible)).toBe(true);
+    expect(layout.find((item) => item.id === "ai-results")?.visible).toBe(false);
+    expect(layout.filter((item) => item.id !== "ai-results").every((item) => item.visible)).toBe(true);
   });
 
   test("defines minimum dimensions for every dashboard widget", () => {
@@ -76,6 +77,6 @@ describe("dashboardLayout", () => {
     const pinned = setDashboardWidgetPinned(resetDashboardLayout(), "telemetry-panel", true);
 
     expect(pinned.find((item) => item.id === "telemetry-panel")?.pinned).toBe(true);
-    expect(getVisibleDashboardLayout(pinned)).toHaveLength(7);
+    expect(getVisibleDashboardLayout(pinned)).toHaveLength(6);
   });
 });

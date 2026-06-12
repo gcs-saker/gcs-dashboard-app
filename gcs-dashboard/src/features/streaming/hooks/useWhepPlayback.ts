@@ -34,6 +34,7 @@ const EMPTY_SIGNALING_TIMINGS: WebRTCSignalingTimings = {
   remoteDescriptionSetMs: null,
 };
 const EMPTY_AUDIO_STATS: WebRTCAudioStats = {
+  audioLevel: null,
   jitterMs: null,
   jitterBufferDelayMs: null,
   packetsLost: null,
@@ -394,6 +395,7 @@ function extractAudioStats(report: RTCStatsReport): WebRTCAudioStats {
       : null;
 
   return {
+    audioLevel: numberStat(inboundAudio, "audioLevel"),
     jitterMs: secondsToMs(numberStat(inboundAudio, "jitter")),
     jitterBufferDelayMs: roundNullable(averageJitterBufferDelayMs),
     packetsLost: numberStat(inboundAudio, "packetsLost"),
@@ -456,6 +458,7 @@ function roundNullable(value: number | null): number | null {
 
 function audioStatsEqual(left: WebRTCAudioStats, right: WebRTCAudioStats): boolean {
   return (
+    left.audioLevel === right.audioLevel &&
     left.jitterMs === right.jitterMs &&
     left.jitterBufferDelayMs === right.jitterBufferDelayMs &&
     left.packetsLost === right.packetsLost &&

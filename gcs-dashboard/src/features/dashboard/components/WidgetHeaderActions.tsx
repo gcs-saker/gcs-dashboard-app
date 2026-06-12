@@ -37,7 +37,7 @@ export function WidgetHeaderActions({
         POP
       </button>
       <button
-        className="widget-icon-button"
+        className="widget-icon-button is-danger"
         onClick={() => onHide(widgetId)}
         title={`${title} 숨김`}
         type="button"
