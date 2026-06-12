@@ -20,6 +20,10 @@ const WHEP_READY_RETRY_DELAYS_MS = [500, 1_000, 2_000] as const;
 const AUDIO_STATE_POLL_INTERVAL_MS = 500;
 const AUDIO_INACTIVE_HOLD_MS = 1200;
 const AUDIO_STATS_POLL_INTERVAL_MS = 1000;
+const AUDIO_ANALYSIS_FFT_SIZE = 256;
+const AUDIO_ANALYSIS_UPDATE_INTERVAL_MS = 120;
+const AUDIO_ANALYSIS_MIN_DELTA = 0.01;
+const AUDIO_ANALYSIS_GAIN = 4;
 const DIRECT_FIRST_RTC_CONFIGURATION = Object.freeze({
   bundlePolicy: "max-bundle",
   iceCandidatePoolSize: 0,
@@ -63,6 +67,7 @@ type PlaybackAction =
   | { type: "connection"; connectionState: RTCPeerConnectionState; iceConnectionState: RTCIceConnectionState }
   | { type: "first-frame"; latencyMs: number }
   | { type: "audio-state"; hasAudioTrack: boolean; isAudioActive: boolean }
+  | { type: "audio-level"; audioLevel: number | null }
   | { type: "audio-stats"; stats: WebRTCAudioStats }
   | { type: "signaling-timing"; stage: SignalingTimingKey; latencyMs: number };
 
@@ -111,6 +116,7 @@ export function useWhepPlayback({
     const abortController = new AbortController();
     let disposed = false;
     let stopAudioMonitor: (() => void) | null = null;
+    let stopAudioLevelMonitor: (() => void) | null = null;
     let stopAudioStatsMonitor: (() => void) | null = null;
     const startedAt = performance.now();
     const recordTiming: SignalingTimingRecorder = (stage) => {
@@ -175,7 +181,9 @@ export function useWhepPlayback({
         const [stream] = event.streams;
         if (stream) {
           stopAudioMonitor?.();
+          stopAudioLevelMonitor?.();
           stopAudioMonitor = monitorAudioState(stream, dispatch);
+          stopAudioLevelMonitor = monitorAudioLevel(stream, dispatch);
           videoRef.current.srcObject = stream;
           requestVideoPlayback(videoRef.current);
           return;
@@ -186,7 +194,9 @@ export function useWhepPlayback({
         }
         remoteStreamRef.current.addTrack(event.track);
         stopAudioMonitor?.();
+        stopAudioLevelMonitor?.();
         stopAudioMonitor = monitorAudioState(remoteStreamRef.current, dispatch);
+        stopAudioLevelMonitor = monitorAudioLevel(remoteStreamRef.current, dispatch);
         videoRef.current.srcObject = remoteStreamRef.current;
         requestVideoPlayback(videoRef.current);
       };
@@ -212,6 +222,7 @@ export function useWhepPlayback({
       abortController.abort();
       peerConnection?.close();
       stopAudioMonitor?.();
+      stopAudioLevelMonitor?.();
       stopAudioStatsMonitor?.();
       if (videoRef.current) {
         videoRef.current.srcObject = null;
@@ -319,14 +330,31 @@ function playbackReducer(
         hasAudioTrack: action.hasAudioTrack,
         isAudioActive: action.isAudioActive,
       };
-    case "audio-stats":
-      if (audioStatsEqual(state.audioStats, action.stats)) {
+    case "audio-level": {
+      if (state.audioStats.audioLevel === action.audioLevel) {
         return state;
       }
       return {
         ...state,
-        audioStats: action.stats,
+        audioStats: {
+          ...state.audioStats,
+          audioLevel: action.audioLevel,
+        },
       };
+    }
+    case "audio-stats": {
+      const mergedStats = {
+        ...action.stats,
+        audioLevel: action.stats.audioLevel ?? state.audioStats.audioLevel,
+      };
+      if (audioStatsEqual(state.audioStats, mergedStats)) {
+        return state;
+      }
+      return {
+        ...state,
+        audioStats: mergedStats,
+      };
+    }
     case "signaling-timing":
       return {
         ...state,
@@ -537,6 +565,102 @@ function monitorAudioState(stream: MediaStream, dispatch: Dispatch<PlaybackActio
     }
     dispatch({ type: "audio-state", hasAudioTrack: false, isAudioActive: false });
   };
+}
+
+function monitorAudioLevel(stream: MediaStream, dispatch: Dispatch<PlaybackAction>): () => void {
+  const audioTracks = typeof stream.getAudioTracks === "function" ? stream.getAudioTracks() : [];
+  if (audioTracks.length === 0) {
+    dispatch({ type: "audio-level", audioLevel: null });
+    return () => undefined;
+  }
+
+  const AudioContextConstructor = resolveAudioContextConstructor();
+  if (!AudioContextConstructor) {
+    return () => dispatch({ type: "audio-level", audioLevel: null });
+  }
+
+  let disposed = false;
+  let animationFrameId: number | null = null;
+  let audioContext: AudioContext | null = null;
+  let sourceNode: MediaStreamAudioSourceNode | null = null;
+  let analyserNode: AnalyserNode | null = null;
+  let sampleBuffer: Uint8Array<ArrayBuffer> | null = null;
+  let lastEmittedLevel: number | null = null;
+  let lastSampledAt = 0;
+
+  try {
+    audioContext = new AudioContextConstructor();
+    analyserNode = audioContext.createAnalyser();
+    analyserNode.fftSize = AUDIO_ANALYSIS_FFT_SIZE;
+    analyserNode.smoothingTimeConstant = 0.72;
+    sourceNode = audioContext.createMediaStreamSource(stream);
+    sourceNode.connect(analyserNode);
+    sampleBuffer = new Uint8Array(analyserNode.fftSize);
+  } catch {
+    dispatch({ type: "audio-level", audioLevel: null });
+    return () => undefined;
+  }
+
+  const emitLevel = (audioLevel: number | null) => {
+    if (
+      lastEmittedLevel !== null &&
+      audioLevel !== null &&
+      Math.abs(lastEmittedLevel - audioLevel) < AUDIO_ANALYSIS_MIN_DELTA
+    ) {
+      return;
+    }
+    if (lastEmittedLevel === audioLevel) {
+      return;
+    }
+    lastEmittedLevel = audioLevel;
+    dispatch({ type: "audio-level", audioLevel });
+  };
+
+  const sampleAudioLevel = (sampledAt: number) => {
+    if (disposed || !analyserNode || !sampleBuffer) return;
+    animationFrameId = globalThis.requestAnimationFrame(sampleAudioLevel);
+    if (sampledAt - lastSampledAt < AUDIO_ANALYSIS_UPDATE_INTERVAL_MS) return;
+    lastSampledAt = sampledAt;
+    analyserNode.getByteTimeDomainData(sampleBuffer);
+    emitLevel(calculateRmsAudioLevel(sampleBuffer));
+  };
+
+  void audioContext.resume?.().catch(() => undefined);
+  animationFrameId = globalThis.requestAnimationFrame(sampleAudioLevel);
+
+  return () => {
+    disposed = true;
+    if (animationFrameId !== null) {
+      globalThis.cancelAnimationFrame(animationFrameId);
+    }
+    sourceNode?.disconnect();
+    analyserNode?.disconnect();
+    void audioContext?.close?.().catch(() => undefined);
+    dispatch({ type: "audio-level", audioLevel: null });
+  };
+}
+
+function resolveAudioContextConstructor(): typeof AudioContext | null {
+  const audioGlobal = globalThis as typeof globalThis & {
+    webkitAudioContext?: typeof AudioContext;
+  };
+  return audioGlobal.AudioContext ?? audioGlobal.webkitAudioContext ?? null;
+}
+
+function calculateRmsAudioLevel(samples: ArrayLike<number>): number {
+  if (samples.length === 0) return 0;
+  let sumSquares = 0;
+  for (let index = 0; index < samples.length; index += 1) {
+    const sample = samples[index] ?? 128;
+    const normalizedSample = (sample - 128) / 128;
+    sumSquares += normalizedSample * normalizedSample;
+  }
+  const rms = Math.sqrt(sumSquares / samples.length);
+  return Math.min(1, roundAudioLevel(rms * AUDIO_ANALYSIS_GAIN));
+}
+
+function roundAudioLevel(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 function dispatchStateFromConnection(

@@ -328,6 +328,83 @@ describe("WebRTCPlayer", () => {
     );
   });
 
+  test("reports a real audio level from the remote MediaStream analyser when RTC stats are empty", async () => {
+    const onStatusChange = vi.fn();
+    const animationFrameCallbacks = new Map<number, FrameRequestCallback>();
+    let animationFrameId = 0;
+    const waveformSamples = new Uint8Array(256).fill(144);
+    const analyserNode = {
+      fftSize: 256,
+      smoothingTimeConstant: 0,
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      getByteTimeDomainData: vi.fn((samples: Uint8Array) => {
+        samples.set(waveformSamples);
+      }),
+    };
+    const sourceNode = {
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    };
+    const audioContext = {
+      close: vi.fn(async () => undefined),
+      createAnalyser: vi.fn(() => analyserNode),
+      createMediaStreamSource: vi.fn(() => sourceNode),
+      resume: vi.fn(async () => undefined),
+    };
+    const audioTrack = {
+      enabled: true,
+      muted: false,
+      readyState: "live",
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    const remoteStream = {
+      getAudioTracks: () => [audioTrack],
+    } as unknown as MediaStream;
+
+    vi.stubGlobal(
+      "AudioContext",
+      vi.fn(function MockAudioContext() {
+        return audioContext;
+      }),
+    );
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn((callback: FrameRequestCallback) => {
+        animationFrameId += 1;
+        animationFrameCallbacks.set(animationFrameId, callback);
+        return animationFrameId;
+      }),
+    );
+    vi.stubGlobal("cancelAnimationFrame", vi.fn((id: number) => animationFrameCallbacks.delete(id)));
+
+    render(
+      <WebRTCPlayer
+        onStatusChange={onStatusChange}
+        whepUrl="https://media.example.test/raw/sample/front/whep"
+      />,
+    );
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    act(() => {
+      peerConnections[0].emitRemoteTrack([remoteStream]);
+    });
+    act(() => {
+      animationFrameCallbacks.get(1)?.(200);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-level", "0.5");
+    });
+    expect(audioContext.createMediaStreamSource).toHaveBeenCalledWith(remoteStream);
+    expect(onStatusChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        audioStats: expect.objectContaining({ audioLevel: 0.5 }),
+      }),
+    );
+  });
+
   test("reports inbound audio jitter, packet loss, and ICE candidate type", async () => {
     const onStatusChange = vi.fn();
     const remoteStream = {
