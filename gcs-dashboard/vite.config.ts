@@ -2,6 +2,14 @@ import react from "@vitejs/plugin-react";
 import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 
+const manualChunkRules: Array<[chunkName: string, packageNames: string[]]> = [
+  ["vendor-react", ["react", "react-dom", "react-router-dom"]],
+  ["lazy-3d", ["three", "@react-three/fiber"]],
+  ["lazy-hls-light", ["hls.js"]],
+  ["lazy-maplibre", ["maplibre-gl"]],
+  ["vendor-charts", ["recharts"]],
+];
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "");
   const devProxyTarget = env.VITE_DEV_PROXY_TARGET || "https://a4ai.tplinkdns.com";
@@ -16,12 +24,13 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         output: {
-          manualChunks: {
-            "vendor-react": ["react", "react-dom", "react-router-dom"],
-            "lazy-3d": ["three", "@react-three/fiber"],
-            "lazy-hls-light": ["hls.js/light"],
-            "lazy-maplibre": ["maplibre-gl"],
-            "vendor-charts": ["recharts"]
+          manualChunks(moduleId) {
+            for (const [chunkName, packageNames] of manualChunkRules) {
+              if (packageNames.some((packageName) => moduleId.includes(`/node_modules/${packageName}/`))) {
+                return chunkName;
+              }
+            }
+            return undefined;
           }
         }
       }
