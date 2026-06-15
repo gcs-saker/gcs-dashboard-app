@@ -26,6 +26,7 @@ import { type StreamDeviceOption } from "./streamDevices";
 import {
   CCTV_EMPTY_STREAM_ID_PREFIX,
   createEmptyCctvStreamSlot,
+  getDashboardStreamStatusClass,
   getDashboardStreamStatusText,
   getDashboardStreamDisplayName,
   type DashboardGeometrySource,
@@ -159,6 +160,7 @@ export function DashboardMvp() {
     navigate("/login?reason=session-expired", { replace: true });
   }, [logout, navigate]);
   const {
+    connectManualStreamAddress,
     connectStreamDevice: connectStreamDeviceState,
     disconnectCurrentStreamSlot: disconnectCurrentStreamSlotState,
     editingStream,
@@ -232,6 +234,11 @@ export function DashboardMvp() {
     connectStreamDeviceState(device);
     setLayoutMessage("스트리밍 장비 연결됨");
   }, [connectStreamDeviceState]);
+
+  const connectStreamAddress = useCallback((address: string, displayName: string): void => {
+    connectManualStreamAddress(address, displayName);
+    setLayoutMessage("스트리밍 주소 연결됨");
+  }, [connectManualStreamAddress]);
 
   const disconnectCurrentStreamSlot = useCallback((): void => {
     disconnectCurrentStreamSlotState();
@@ -415,6 +422,15 @@ export function DashboardMvp() {
             className={`stream-grid--cctv is-${cctvGridSize}x${cctvGridSize} is-${cctvQualityMode}`}
             onSelectStream={openStreamConnection}
             onToggleTalkbackTarget={toggleTalkbackTarget}
+            renderCard={(stream, isSelected) => (
+              <CctvChannelCard
+                hasAudioActivity={stream.id === audioActiveStreamId}
+                isSelected={isSelected}
+                onSelect={openStreamConnection}
+                qualityMode={cctvQualityMode}
+                stream={stream}
+              />
+            )}
             selectedStreamId={selectedStreamId}
             talkbackTargetStreamIds={talkbackTargetStreamIds}
             streams={cctvStreams}
@@ -571,12 +587,59 @@ export function DashboardMvp() {
             setEditingStreamId(null);
             setLayoutMessage("스트림 연결 변경 취소됨");
           }}
+          onConnectAddress={connectStreamAddress}
           onConnect={connectStreamDevice}
           onDisconnect={disconnectCurrentStreamSlot}
           stream={editingStream}
         />
       ) : null}
     </main>
+  );
+}
+
+function CctvChannelCard({
+  stream,
+  isSelected,
+  hasAudioActivity,
+  qualityMode,
+  onSelect,
+}: {
+  stream: DashboardStreamSlot;
+  isSelected: boolean;
+  hasAudioActivity: boolean;
+  qualityMode: CctvQualityMode;
+  onSelect: (streamId: string) => void;
+}) {
+  const selectStream = useCallback(() => onSelect(stream.id), [onSelect, stream.id]);
+  const sourceLabel = stream.sourceUrl ?? stream.streamPath ?? "주소 미연결";
+  const statusText = getDashboardStreamStatusText(stream.status);
+
+  return (
+    <article className={`cctv-channel-card ${isSelected ? "is-selected" : ""} ${hasAudioActivity ? "has-audio" : ""}`}>
+      <button
+        aria-label={`${stream.title} 선택`}
+        aria-pressed={isSelected}
+        className="cctv-channel-card__viewport"
+        onClick={selectStream}
+        type="button"
+      >
+        <span className="cctv-channel-card__scanline" />
+        <span className="cctv-channel-card__reticle" />
+        <span className="cctv-channel-card__empty">{stream.streamPath ? getDashboardStreamDisplayName(stream) : "채널 미연결"}</span>
+      </button>
+      <div className="cctv-channel-card__meta">
+        <strong>{stream.title}</strong>
+        <span className={`ops-badge ${getDashboardStreamStatusClass(stream.status)}`}>{statusText}</span>
+        {hasAudioActivity ? <span className="cctv-channel-card__audio">음성</span> : null}
+      </div>
+      <div className="cctv-channel-card__footer">
+        <span title={sourceLabel}>{sourceLabel}</span>
+        <em>{qualityMode === "preview" ? "Preview" : "High"}</em>
+      </div>
+      <button className="cctv-channel-card__connect" onClick={selectStream} type="button">
+        주소 연결
+      </button>
+    </article>
   );
 }
 

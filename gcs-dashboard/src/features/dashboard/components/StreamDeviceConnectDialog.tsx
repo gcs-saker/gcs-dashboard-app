@@ -7,6 +7,7 @@ interface StreamDeviceConnectDialogProps {
   stream: DashboardStreamSlot;
   onCancel: () => void;
   onConnect: (device: StreamDeviceOption) => void;
+  onConnectAddress: (address: string, displayName: string) => void;
   onDisconnect: () => void;
 }
 
@@ -15,12 +16,23 @@ export function StreamDeviceConnectDialog({
   stream,
   onCancel,
   onConnect,
+  onConnectAddress,
   onDisconnect,
 }: StreamDeviceConnectDialogProps) {
   const [displayName, setDisplayName] = useState("");
+  const [streamAddress, setStreamAddress] = useState(stream.sourceUrl ?? stream.streamPath ?? "");
+  const [addressError, setAddressError] = useState<string | null>(null);
   const connectWithDisplayName = (device: StreamDeviceOption): void => {
     const trimmedDisplayName = displayName.trim();
     onConnect(trimmedDisplayName ? { ...device, name: trimmedDisplayName } : device);
+  };
+  const connectAddress = (): void => {
+    try {
+      setAddressError(null);
+      onConnectAddress(streamAddress, displayName);
+    } catch (error) {
+      setAddressError(error instanceof Error ? error.message : "스트림 주소를 확인해야 합니다.");
+    }
   };
 
   return (
@@ -39,14 +51,32 @@ export function StreamDeviceConnectDialog({
         </header>
 
         <div className="widget-dialog__list">
-          <label className="stream-connect-dialog__name-field">
-            <span>표시 이름</span>
-            <input
-              onChange={(event) => setDisplayName(event.target.value)}
-              placeholder="예: 북문 휴대폰 카메라"
-              value={displayName}
-            />
-          </label>
+          <div className="stream-connect-dialog__manual">
+            <label className="stream-connect-dialog__name-field">
+              <span>기억할 이름</span>
+              <input
+                onChange={(event) => setDisplayName(event.target.value)}
+                placeholder="예: 북문 휴대폰 카메라"
+                value={displayName}
+              />
+            </label>
+            <label className="stream-connect-dialog__name-field">
+              <span>스트림 주소 / Path</span>
+              <input
+                onChange={(event) => setStreamAddress(event.target.value)}
+                placeholder="raw/local/webcam 또는 https://.../webrtc/raw/local/webcam/whep"
+                value={streamAddress}
+              />
+            </label>
+            <button className="ops-command-button is-primary" onClick={connectAddress} type="button">
+              주소 연결
+            </button>
+            {addressError ? <p className="stream-connect-dialog__error" role="alert">{addressError}</p> : null}
+          </div>
+          <div className="stream-connect-dialog__section-title">
+            <span>감지된 스트리밍 장비</span>
+            <strong>{devices.length}개</strong>
+          </div>
           {devices.map((device) => (
             <button
               className="widget-dialog__item stream-connect-dialog__device"
@@ -56,7 +86,7 @@ export function StreamDeviceConnectDialog({
             >
               <span>
                 <strong>{device.name}</strong>
-                <small>{device.mediaType.toUpperCase()} 장비</small>
+                <small>{device.mediaType.toUpperCase()} · {device.streamPath}</small>
               </span>
               <span className={`ops-badge is-${device.status}`}>
                 {device.status === "online" ? "정상" : device.status}

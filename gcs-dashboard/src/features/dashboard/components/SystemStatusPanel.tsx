@@ -22,6 +22,11 @@ interface RttSample {
   latencyMs: number | null;
 }
 
+const RTT_HISTORY_LIMIT = 60;
+const RTT_CHART_WIDTH = 640;
+const RTT_CHART_HEIGHT = 180;
+const RTT_CHART_PADDING = 28;
+
 export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs = 5000, variant = "panel" }: SystemStatusPanelProps) {
   const [status, setStatus] = useState<DashboardServerStatusSnapshot>(DEFAULT_SERVER_STATUS);
   const [rttHistory, setRttHistory] = useState<RttSample[]>([]);
@@ -34,7 +39,10 @@ export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs 
         const snapshot = await fetchDashboardServerStatus(fetcher);
         if (isMounted) {
           setStatus(snapshot);
-          setRttHistory((current) => [...current.slice(-17), { checkedAt: snapshot.checkedAt ?? Date.now(), latencyMs: snapshot.latencyMs }]);
+          setRttHistory((current) => [
+            ...current.slice(-(RTT_HISTORY_LIMIT - 1)),
+            { checkedAt: snapshot.checkedAt ?? Date.now(), latencyMs: snapshot.latencyMs },
+          ]);
         }
       } catch (error) {
         if (error instanceof AuthApiError && error.status === 401) {
@@ -90,6 +98,7 @@ export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs 
     () => Math.max(120, ...rttHistory.map((sample) => sample.latencyMs ?? 0)),
     [rttHistory],
   );
+  const rttChart = useMemo(() => buildRttChart(rttHistory, rttMax), [rttHistory, rttMax]);
   const latestRttText = status.latencyMs ? `${status.latencyMs} ms` : "측정 대기";
 
   const primaryPanel = (
@@ -143,16 +152,29 @@ export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs 
             <h2>네트워크 RTT 추세</h2>
             <span className="ops-badge">{latestRttText}</span>
           </div>
-          <div className="system-rtt-chart">
-            {(rttHistory.length ? rttHistory : [{ checkedAt: Date.now(), latencyMs: null }]).map((sample, index) => (
-              <span
-                aria-label={sample.latencyMs ? `${sample.latencyMs} ms` : "측정 대기"}
-                className={sample.latencyMs && sample.latencyMs > 450 ? "is-warning" : ""}
-                key={`${sample.checkedAt}-${index}`}
-                style={{ height: `${sample.latencyMs ? Math.max(8, (sample.latencyMs / rttMax) * 100) : 8}%` }}
-                title={sample.latencyMs ? `${sample.latencyMs} ms` : "측정 대기"}
-              />
-            ))}
+          <div className="system-rtt-chart" role="img" aria-label={`최근 RTT 추세, 현재 ${latestRttText}`}>
+            <svg viewBox={`0 0 ${RTT_CHART_WIDTH} ${RTT_CHART_HEIGHT}`} preserveAspectRatio="none">
+              <line className="system-rtt-chart__axis" x1={RTT_CHART_PADDING} y1={RTT_CHART_PADDING} x2={RTT_CHART_PADDING} y2={RTT_CHART_HEIGHT - RTT_CHART_PADDING} />
+              <line className="system-rtt-chart__axis" x1={RTT_CHART_PADDING} y1={RTT_CHART_HEIGHT - RTT_CHART_PADDING} x2={RTT_CHART_WIDTH - RTT_CHART_PADDING} y2={RTT_CHART_HEIGHT - RTT_CHART_PADDING} />
+              {[0.25, 0.5, 0.75].map((ratio) => {
+                const y = RTT_CHART_PADDING + (RTT_CHART_HEIGHT - RTT_CHART_PADDING * 2) * ratio;
+                return <line className="system-rtt-chart__grid" key={ratio} x1={RTT_CHART_PADDING} y1={y} x2={RTT_CHART_WIDTH - RTT_CHART_PADDING} y2={y} />;
+              })}
+              {rttChart.path ? <path className="system-rtt-chart__line" d={rttChart.path} /> : null}
+              {rttChart.points.map((point) => (
+                <circle
+                  className={point.latencyMs > 450 ? "is-warning" : ""}
+                  cx={point.x}
+                  cy={point.y}
+                  key={`${point.checkedAt}-${point.x}`}
+                  r="3.2"
+                />
+              ))}
+              <text x={RTT_CHART_PADDING} y="18">{rttMax}ms</text>
+              <text x={RTT_CHART_PADDING} y={RTT_CHART_HEIGHT - 6}>0ms</text>
+              <text x={RTT_CHART_WIDTH - 92} y={RTT_CHART_HEIGHT - 6}>현재</text>
+              <text x={RTT_CHART_PADDING + 8} y={RTT_CHART_HEIGHT - 6}>{rttChart.oldestLabel}</text>
+            </svg>
           </div>
           <p>최근 응답 지연을 기준으로 API, 인증, signaling 경로의 체감 상태를 판단합니다.</p>
         </section>
@@ -209,4 +231,31 @@ export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs 
   }
 
   return primaryPanel;
+}
+
+function buildRttChart(samples: RttSample[], maxLatencyMs: number): {
+  oldestLabel: string;
+  path: string;
+  points: Array<{ checkedAt: number; latencyMs: number; x: number; y: number }>;
+} {
+  const validSamples = samples.filter((sample): sample is RttSample & { latencyMs: number } => sample.latencyMs !== null);
+  const chartWidth = RTT_CHART_WIDTH - RTT_CHART_PADDING * 2;
+  const chartHeight = RTT_CHART_HEIGHT - RTT_CHART_PADDING * 2;
+  const denominator = Math.max(1, validSamples.length - 1);
+  const points = validSamples.map((sample, index) => {
+    const x = RTT_CHART_PADDING + chartWidth * (index / denominator);
+    const y = RTT_CHART_HEIGHT - RTT_CHART_PADDING - chartHeight * (Math.min(maxLatencyMs, sample.latencyMs) / maxLatencyMs);
+    return { checkedAt: sample.checkedAt, latencyMs: sample.latencyMs, x, y };
+  });
+  return {
+    oldestLabel: validSamples[0] ? relativeMinutesLabel(validSamples[0].checkedAt) : "대기",
+    path: points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" "),
+    points,
+  };
+}
+
+function relativeMinutesLabel(checkedAt: number): string {
+  const diffMs = Math.max(0, Date.now() - checkedAt);
+  const minutes = Math.max(1, Math.round(diffMs / 60_000));
+  return `${minutes}분 전`;
 }

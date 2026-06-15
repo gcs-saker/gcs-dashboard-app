@@ -53,6 +53,9 @@ export const StreamCard = memo(function StreamCard({
         <span className="stream-card__detail">{getDashboardStreamDisplayName(stream)}</span>
       </button>
       {isSelected ? <span className="stream-card__selected-link">현재 선택</span> : null}
+      <button className="stream-card__connect" onClick={selectStream} type="button">
+        주소 연결
+      </button>
       {onToggleTalkbackTarget ? (
         <button
           aria-pressed={isTalkbackTarget}
@@ -77,6 +80,7 @@ function areStreamCardPropsEqual(previous: StreamCardProps, next: StreamCardProp
     previous.stream.detail === next.stream.detail &&
     previous.stream.connectedDeviceId === next.stream.connectedDeviceId &&
     previous.stream.streamPath === next.stream.streamPath &&
+    previous.stream.sourceUrl === next.stream.sourceUrl &&
     previous.stream.aiModeEnabled === next.stream.aiModeEnabled &&
     previous.isSelected === next.isSelected &&
     previous.hasAudioActivity === next.hasAudioActivity &&

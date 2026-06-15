@@ -304,6 +304,10 @@ export function EventLogView() {
                   <dd>{selectedEvent.throughputMbps.toFixed(1)} Mbps</dd>
                 </div>
               </dl>
+              <section className="event-log-view__raw" aria-label="운영 이벤트 원문">
+                <span>운영 이벤트 원문</span>
+                <pre>{formatOperationalEventPayload(selectedEvent)}</pre>
+              </section>
             </>
           ) : (
             <p>표시할 이벤트가 없습니다.</p>
@@ -359,4 +363,18 @@ function diagnoseAction(event: OperationalEvent): string {
   if (event.category === "signaling") return "signaling 서버 health와 WHEP/WHIP route 응답 코드를 확인합니다.";
   if (event.category === "stream") return "송출자 상태, stream path, MediaMTX 로그를 확인합니다.";
   return "해당 서비스 health와 최근 배포/재시작 이력을 확인합니다.";
+}
+
+function formatOperationalEventPayload(event: OperationalEvent): string {
+  return [
+    `id=${event.id}`,
+    `occurredAt=${event.occurredAt}`,
+    `severity=${event.severity}`,
+    `category=${event.category}`,
+    `source=${event.source}`,
+    `message=${event.message}`,
+    `connections=${event.connections}`,
+    `latencyMs=${event.latencyMs}`,
+    `throughputMbps=${event.throughputMbps.toFixed(1)}`,
+  ].join("\n");
 }

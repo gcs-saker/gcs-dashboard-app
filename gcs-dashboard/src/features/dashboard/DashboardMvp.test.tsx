@@ -257,6 +257,27 @@ describe("DashboardMvp", () => {
     expect(screen.getByRole("status")).toHaveTextContent("스트리밍 장비 연결됨");
   });
 
+  test("connects a manual stream address from a CCTV channel", async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    await user.click(screen.getByRole("button", { name: "CCTV" }));
+    await user.click(screen.getByRole("button", { name: "CCTV 09 선택" }));
+
+    const dialog = screen.getByRole("dialog", { name: "CCTV 09 장비 연결" });
+    expect(dialog).toBeInTheDocument();
+
+    await user.clear(within(dialog).getByLabelText("기억할 이름"));
+    await user.type(within(dialog).getByLabelText("기억할 이름"), "휴대폰 후면 카메라");
+    await user.clear(within(dialog).getByLabelText("스트림 주소 / Path"));
+    await user.type(within(dialog).getByLabelText("스트림 주소 / Path"), "https://a4ai.tplinkdns.com/webrtc/raw/local/webcam/whep");
+    await user.click(within(dialog).getByRole("button", { name: "주소 연결" }));
+
+    expect(screen.queryByRole("dialog", { name: "CCTV 09 장비 연결" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "CCTV 09 선택" })).toHaveTextContent("휴대폰 후면 카메라");
+    expect(screen.getByRole("status")).toHaveTextContent("스트리밍 주소 연결됨");
+  });
+
   test("renders hierarchical asset tree nodes", async () => {
     const user = userEvent.setup();
     renderDashboard();

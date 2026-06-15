@@ -71,6 +71,8 @@ describe("EventLogView", () => {
     expect(screen.getByText("원인 후보")).toBeInTheDocument();
     expect(screen.getByText("영향 범위")).toBeInTheDocument();
     expect(screen.getByText("권장 조치")).toBeInTheDocument();
+    expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("category=network");
+    expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("latencyMs=164");
     await waitFor(() => expect(screen.queryByText("만료된 세션으로 스트림 접근 거절")).not.toBeInTheDocument());
     expect(fetch).toHaveBeenLastCalledWith(
       "/api/ops/events?severity=warn",

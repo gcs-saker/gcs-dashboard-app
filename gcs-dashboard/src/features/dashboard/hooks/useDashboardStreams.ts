@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   connectDeviceToStreamSlot,
+  createManualStreamDeviceOption,
   disconnectStreamSlot,
   fetchStreamDeviceOptions,
   mergeStreamSlotsWithDevices,
@@ -15,10 +16,20 @@ import {
   type DashboardStreamSlot,
 } from "../streamTypes";
 import { AuthApiError } from "../../auth/authApi";
+import {
+  applyStreamDeviceAliases,
+  loadStreamPreferences,
+  saveStreamPreferences,
+  setStreamDeviceAlias,
+  type StreamPreferencesSnapshot,
+} from "../streamPreferences";
 
 export function useDashboardStreams(onAuthFailure?: () => void) {
+  const [preferences, setPreferences] = useState<StreamPreferencesSnapshot>(() => loadStreamPreferences());
   const [streams, setStreams] = useState(() => DEFAULT_DASHBOARD_STREAMS);
-  const [streamDevices, setStreamDevices] = useState<StreamDeviceOption[]>(MOCK_STREAM_DEVICES);
+  const [streamDevices, setStreamDevices] = useState<StreamDeviceOption[]>(() =>
+    applyStreamDeviceAliases(MOCK_STREAM_DEVICES, preferences.deviceAliases),
+  );
   const [selectedStreamId, setSelectedStreamId] = useState(DEFAULT_DASHBOARD_STREAMS[0].id);
   const [editingStreamId, setEditingStreamId] = useState<string | null>(null);
 
@@ -37,7 +48,7 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
 
     const refreshStreams = async (): Promise<void> => {
       try {
-        const devices = await fetchStreamDeviceOptions();
+        const devices = applyStreamDeviceAliases(await fetchStreamDeviceOptions(), preferences.deviceAliases);
         if (!isMounted) return;
         setStreamDevices((current) => (areStreamDevicesEqual(current, devices) ? current : devices));
         setStreams((current) => {
@@ -70,7 +81,7 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
         globalThis.clearInterval(intervalId);
       }
     };
-  }, [onAuthFailure]);
+  }, [onAuthFailure, preferences.deviceAliases]);
 
   const openStreamConnection = useCallback((streamId: string): void => {
     setStreams((current) => ensureEditableCctvSlot(current, streamId));
@@ -79,6 +90,11 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
   }, []);
 
   const connectStreamDevice = useCallback((device: StreamDeviceOption): void => {
+    setPreferences((current) => {
+      const next = setStreamDeviceAlias(current, device.id, device.name);
+      saveStreamPreferences(next);
+      return next;
+    });
     setStreams((current) =>
       current.map((stream) =>
         stream.id === editingStreamId ? connectDeviceToStreamSlot(stream, device) : stream,
@@ -89,6 +105,24 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
     }
     setEditingStreamId(null);
   }, [editingStreamId]);
+
+  const connectManualStreamAddress = useCallback((address: string, displayName: string): void => {
+    if (!editingStreamId) return;
+    const editingStreamTitle = streams.find((stream) => stream.id === editingStreamId)?.title ?? "직접 연결";
+    const device = createManualStreamDeviceOption(address, displayName, editingStreamTitle);
+    setPreferences((current) => {
+      const next = setStreamDeviceAlias(current, device.id, device.name);
+      saveStreamPreferences(next);
+      return next;
+    });
+    setStreams((current) =>
+      current.map((stream) =>
+        stream.id === editingStreamId ? connectDeviceToStreamSlot(stream, device) : stream,
+      ),
+    );
+    setSelectedStreamId(editingStreamId);
+    setEditingStreamId(null);
+  }, [editingStreamId, streams]);
 
   const disconnectCurrentStreamSlot = useCallback((): void => {
     setStreams((current) =>
@@ -106,6 +140,7 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
   }, []);
 
   return {
+    connectManualStreamAddress,
     connectStreamDevice,
     disconnectCurrentStreamSlot,
     editingStream,
@@ -137,6 +172,7 @@ function areStreamDevicesEqual(previous: StreamDeviceOption[], next: StreamDevic
       device.mediaType === nextDevice.mediaType &&
       device.status === nextDevice.status &&
       device.streamPath === nextDevice.streamPath &&
+      device.sourceUrl === nextDevice.sourceUrl &&
       device.geometry.lat === nextDevice.geometry.lat &&
       device.geometry.lng === nextDevice.geometry.lng &&
       device.geometry.altitudeM === nextDevice.geometry.altitudeM &&
@@ -162,6 +198,7 @@ function areStreamSlotsEqual(previous: DashboardStreamSlot[], next: DashboardStr
       stream.detail === nextStream.detail &&
       stream.connectedDeviceId === nextStream.connectedDeviceId &&
       stream.streamPath === nextStream.streamPath &&
+      stream.sourceUrl === nextStream.sourceUrl &&
       stream.aiModeEnabled === nextStream.aiModeEnabled &&
       stream.geometry?.lat === nextStream.geometry?.lat &&
       stream.geometry?.lng === nextStream.geometry?.lng &&
