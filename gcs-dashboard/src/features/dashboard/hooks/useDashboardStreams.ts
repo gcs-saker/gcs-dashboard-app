@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   connectDeviceToStreamSlot,
+  createManualStreamDeviceOption,
   disconnectStreamSlot,
   fetchStreamDeviceOptions,
   mergeStreamSlotsWithDevices,
@@ -8,12 +9,27 @@ import {
   preferredSelectedStreamId,
   type StreamDeviceOption,
 } from "../streamDevices";
-import { DEFAULT_DASHBOARD_STREAMS } from "../streamTypes";
+import {
+  CCTV_EMPTY_STREAM_ID_PREFIX,
+  createEmptyCctvStreamSlot,
+  DEFAULT_DASHBOARD_STREAMS,
+  type DashboardStreamSlot,
+} from "../streamTypes";
 import { AuthApiError } from "../../auth/authApi";
+import {
+  applyStreamDeviceAliases,
+  loadStreamPreferences,
+  saveStreamPreferences,
+  setStreamDeviceAlias,
+  type StreamPreferencesSnapshot,
+} from "../streamPreferences";
 
 export function useDashboardStreams(onAuthFailure?: () => void) {
+  const [preferences, setPreferences] = useState<StreamPreferencesSnapshot>(() => loadStreamPreferences());
   const [streams, setStreams] = useState(() => DEFAULT_DASHBOARD_STREAMS);
-  const [streamDevices, setStreamDevices] = useState<StreamDeviceOption[]>(MOCK_STREAM_DEVICES);
+  const [streamDevices, setStreamDevices] = useState<StreamDeviceOption[]>(() =>
+    applyStreamDeviceAliases(MOCK_STREAM_DEVICES, preferences.deviceAliases),
+  );
   const [selectedStreamId, setSelectedStreamId] = useState(DEFAULT_DASHBOARD_STREAMS[0].id);
   const [editingStreamId, setEditingStreamId] = useState<string | null>(null);
 
@@ -32,13 +48,13 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
 
     const refreshStreams = async (): Promise<void> => {
       try {
-        const devices = await fetchStreamDeviceOptions();
+        const devices = applyStreamDeviceAliases(await fetchStreamDeviceOptions(), preferences.deviceAliases);
         if (!isMounted) return;
-        setStreamDevices(devices);
+        setStreamDevices((current) => (areStreamDevicesEqual(current, devices) ? current : devices));
         setStreams((current) => {
           const merged = mergeStreamSlotsWithDevices(current, devices);
           setSelectedStreamId((currentSelectedId) => preferredSelectedStreamId(currentSelectedId, merged, devices));
-          return merged;
+          return areStreamSlotsEqual(current, merged) ? current : merged;
         });
       } catch (error) {
         if (error instanceof AuthApiError && error.status === 401) {
@@ -65,14 +81,20 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
         globalThis.clearInterval(intervalId);
       }
     };
-  }, [onAuthFailure]);
+  }, [onAuthFailure, preferences.deviceAliases]);
 
-  const openStreamConnection = (streamId: string): void => {
+  const openStreamConnection = useCallback((streamId: string): void => {
+    setStreams((current) => ensureEditableCctvSlot(current, streamId));
     setSelectedStreamId(streamId);
     setEditingStreamId(streamId);
-  };
+  }, []);
 
-  const connectStreamDevice = (device: StreamDeviceOption): void => {
+  const connectStreamDevice = useCallback((device: StreamDeviceOption): void => {
+    setPreferences((current) => {
+      const next = setStreamDeviceAlias(current, device.id, device.name);
+      saveStreamPreferences(next);
+      return next;
+    });
     setStreams((current) =>
       current.map((stream) =>
         stream.id === editingStreamId ? connectDeviceToStreamSlot(stream, device) : stream,
@@ -82,24 +104,43 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
       setSelectedStreamId(editingStreamId);
     }
     setEditingStreamId(null);
-  };
+  }, [editingStreamId]);
 
-  const disconnectCurrentStreamSlot = (): void => {
+  const connectManualStreamAddress = useCallback((address: string, displayName: string): void => {
+    if (!editingStreamId) return;
+    const editingStreamTitle = streams.find((stream) => stream.id === editingStreamId)?.title ?? "직접 연결";
+    const device = createManualStreamDeviceOption(address, displayName, editingStreamTitle);
+    setPreferences((current) => {
+      const next = setStreamDeviceAlias(current, device.id, device.name);
+      saveStreamPreferences(next);
+      return next;
+    });
+    setStreams((current) =>
+      current.map((stream) =>
+        stream.id === editingStreamId ? connectDeviceToStreamSlot(stream, device) : stream,
+      ),
+    );
+    setSelectedStreamId(editingStreamId);
+    setEditingStreamId(null);
+  }, [editingStreamId, streams]);
+
+  const disconnectCurrentStreamSlot = useCallback((): void => {
     setStreams((current) =>
       current.map((stream) => (stream.id === editingStreamId ? disconnectStreamSlot(stream) : stream)),
     );
     setEditingStreamId(null);
-  };
+  }, [editingStreamId]);
 
-  const toggleStreamAiMode = (streamId: string): void => {
+  const toggleStreamAiMode = useCallback((streamId: string): void => {
     setStreams((current) =>
       current.map((stream) =>
         stream.id === streamId ? { ...stream, aiModeEnabled: !stream.aiModeEnabled } : stream,
       ),
     );
-  };
+  }, []);
 
   return {
+    connectManualStreamAddress,
     connectStreamDevice,
     disconnectCurrentStreamSlot,
     editingStream,
@@ -111,4 +152,63 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
     streams,
     toggleStreamAiMode,
   };
+}
+
+function ensureEditableCctvSlot(streams: DashboardStreamSlot[], streamId: string): DashboardStreamSlot[] {
+  if (streams.some((stream) => stream.id === streamId)) return streams;
+  if (!streamId.startsWith(CCTV_EMPTY_STREAM_ID_PREFIX)) return streams;
+  const channelNumber = Number(streamId.replace(CCTV_EMPTY_STREAM_ID_PREFIX, ""));
+  if (!Number.isInteger(channelNumber) || channelNumber < 1) return streams;
+  return [...streams, createEmptyCctvStreamSlot(channelNumber)];
+}
+
+function areStreamDevicesEqual(previous: StreamDeviceOption[], next: StreamDeviceOption[]): boolean {
+  if (previous.length !== next.length) return false;
+  return previous.every((device, index) => {
+    const nextDevice = next[index];
+    return (
+      device.id === nextDevice.id &&
+      device.name === nextDevice.name &&
+      device.mediaType === nextDevice.mediaType &&
+      device.status === nextDevice.status &&
+      device.streamPath === nextDevice.streamPath &&
+      device.sourceUrl === nextDevice.sourceUrl &&
+      device.geometry.lat === nextDevice.geometry.lat &&
+      device.geometry.lng === nextDevice.geometry.lng &&
+      device.geometry.altitudeM === nextDevice.geometry.altitudeM &&
+      device.geometry.headingDeg === nextDevice.geometry.headingDeg &&
+      device.geometry.pitchDeg === nextDevice.geometry.pitchDeg &&
+      device.geometry.rollDeg === nextDevice.geometry.rollDeg &&
+      device.geometry.yawDeg === nextDevice.geometry.yawDeg &&
+      device.geometry.fovDeg === nextDevice.geometry.fovDeg &&
+      device.geometry.source === nextDevice.geometry.source
+    );
+  });
+}
+
+function areStreamSlotsEqual(previous: DashboardStreamSlot[], next: DashboardStreamSlot[]): boolean {
+  if (previous.length !== next.length) return false;
+  return previous.every((stream, index) => {
+    const nextStream = next[index];
+    return (
+      stream.id === nextStream.id &&
+      stream.title === nextStream.title &&
+      stream.status === nextStream.status &&
+      stream.mode === nextStream.mode &&
+      stream.detail === nextStream.detail &&
+      stream.connectedDeviceId === nextStream.connectedDeviceId &&
+      stream.streamPath === nextStream.streamPath &&
+      stream.sourceUrl === nextStream.sourceUrl &&
+      stream.aiModeEnabled === nextStream.aiModeEnabled &&
+      stream.geometry?.lat === nextStream.geometry?.lat &&
+      stream.geometry?.lng === nextStream.geometry?.lng &&
+      stream.geometry?.altitudeM === nextStream.geometry?.altitudeM &&
+      stream.geometry?.headingDeg === nextStream.geometry?.headingDeg &&
+      stream.geometry?.pitchDeg === nextStream.geometry?.pitchDeg &&
+      stream.geometry?.rollDeg === nextStream.geometry?.rollDeg &&
+      stream.geometry?.yawDeg === nextStream.geometry?.yawDeg &&
+      stream.geometry?.fovDeg === nextStream.geometry?.fovDeg &&
+      stream.geometry?.source === nextStream.geometry?.source
+    );
+  });
 }

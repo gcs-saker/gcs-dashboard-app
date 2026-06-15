@@ -42,7 +42,14 @@ describe("TimeSyncSettingsView", () => {
     render(<TimeSyncSettingsView />);
 
     expect(screen.getByLabelText("시간 동기화 설정")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "운영설정" })).toBeInTheDocument();
     expect(await screen.findByText("pool.ntp.org:123 기준으로 시간 소스가 설정되었습니다.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "스트리밍" }));
+    expect(screen.getByText("CCTV 기본")).toBeInTheDocument();
+    expect(screen.getByText("선택 확대")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "시간 동기화" }));
 
     await user.click(screen.getByRole("button", { name: "폐쇄망" }));
     await user.clear(screen.getByLabelText("시간 서버"));

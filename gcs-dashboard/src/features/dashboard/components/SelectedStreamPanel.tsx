@@ -34,7 +34,10 @@ export function SelectedStreamPanel({
       style={{ minHeight: SELECTED_STREAM_WIDGET.minHeight }}
     >
       <div className="ops-panel__header">
-        <h2 id="selected-stream-title">선택 스트림</h2>
+        <span className="selected-stream__heading">
+          <h2 id="selected-stream-title">선택 스트림</h2>
+          <span>{stream.title} / {getDashboardStreamDisplayName(stream)}</span>
+        </span>
         <span className="ops-panel__header-actions">
           <span className={`ops-badge ${getDashboardStreamStatusClass(stream.status)}`}>
             {getDashboardStreamStatusText(stream.status)}

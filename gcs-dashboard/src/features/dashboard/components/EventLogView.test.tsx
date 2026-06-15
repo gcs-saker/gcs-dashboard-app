@@ -56,12 +56,23 @@ describe("EventLogView", () => {
 
     expect(screen.getByLabelText("이벤트로그")).toBeInTheDocument();
     expect(screen.getByLabelText("시간대별 네트워크 지표")).toBeInTheDocument();
-    expect(screen.getByText(/Connections/)).toBeInTheDocument();
-    expect(await screen.findByText("헬스체크 정상")).toBeInTheDocument();
+    expect(screen.getByText("운영 이벤트 타임라인")).toBeInTheDocument();
+    expect(screen.getByText("이벤트 상세")).toBeInTheDocument();
+    expect(screen.getByText("연결 합계")).toBeInTheDocument();
+    expect(screen.getByLabelText("분류")).toBeInTheDocument();
+    expect(screen.getByLabelText("서버")).toBeInTheDocument();
+    expect(screen.getByLabelText("빠른 이벤트 필터")).toBeInTheDocument();
+    expect(screen.getByText("전체 이벤트")).toBeInTheDocument();
+    expect((await screen.findAllByText("헬스체크 정상")).length).toBeGreaterThanOrEqual(1);
 
-    await user.selectOptions(screen.getByLabelText("강도"), "warn");
+    await user.click(screen.getByRole("button", { name: "WARN" }));
 
-    expect(await screen.findByText("직접 ICE 후보 실패 후 릴레이 경로 사용")).toBeInTheDocument();
+    expect((await screen.findAllByText("직접 ICE 후보 실패 후 릴레이 경로 사용")).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("원인 후보")).toBeInTheDocument();
+    expect(screen.getByText("영향 범위")).toBeInTheDocument();
+    expect(screen.getByText("권장 조치")).toBeInTheDocument();
+    expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("category=network");
+    expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("latencyMs=164");
     await waitFor(() => expect(screen.queryByText("만료된 세션으로 스트림 접근 거절")).not.toBeInTheDocument());
     expect(fetch).toHaveBeenLastCalledWith(
       "/api/ops/events?severity=warn",
@@ -70,6 +81,15 @@ describe("EventLogView", () => {
         headers: { Accept: "application/json" },
       }),
     );
+
+    await user.selectOptions(screen.getByLabelText("분류"), "network");
+    expect((await screen.findAllByText("TURN 릴레이")).length).toBeGreaterThanOrEqual(1);
+
+    await user.selectOptions(screen.getByLabelText("서버"), "TURN 릴레이");
+    expect((await screen.findAllByText("직접 ICE 후보 실패 후 릴레이 경로 사용")).length).toBeGreaterThanOrEqual(1);
+
+    await user.click(screen.getByRole("button", { name: "초기화" }));
+    expect(screen.getByText("전체 이벤트")).toBeInTheDocument();
   });
 });
 

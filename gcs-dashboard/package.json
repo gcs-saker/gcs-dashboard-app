@@ -27,13 +27,15 @@
     "three": "0.184.0"
   },
   "devDependencies": {
+    "@emnapi/core": "1.11.1",
+    "@emnapi/runtime": "1.11.1",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.2.0",
     "@vitest/coverage-istanbul": "4.1.7",
     "jsdom": "29.1.1",
     "typescript": "6.0.3",
-    "vite": "7.3.3",
+    "vite": "8.0.16",
     "vitest": "4.1.7"
   },
   "overrides": {

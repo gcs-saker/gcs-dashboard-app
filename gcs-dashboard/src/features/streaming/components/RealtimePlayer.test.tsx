@@ -6,6 +6,7 @@ import { normalizeBrowserMediaUrl } from "../hooks/useRealtimePlayback";
 import { RealtimePlayer } from "./RealtimePlayer";
 
 const emptyAudioStats = {
+  audioLevel: null,
   jitterMs: null,
   jitterBufferDelayMs: null,
   packetsLost: null,
@@ -46,6 +47,7 @@ vi.mock("./WebRTCPlayer", () => ({
               },
               audioStats: {
                 ...emptyAudioStats,
+                audioLevel: 0.58,
                 jitterMs: 24,
                 packetsLost: 1,
               },
@@ -151,7 +153,7 @@ describe("RealtimePlayer", () => {
 
     render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} />);
 
-    expect(screen.getByRole("status")).toHaveTextContent("loading playback");
+    expect(screen.getByRole("status")).toHaveTextContent("스트림 신호 확인 중");
     await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
 
     expect(fetcher).toHaveBeenCalledWith(
@@ -198,7 +200,7 @@ describe("RealtimePlayer", () => {
     fireEvent.click(screen.getByRole("button", { name: "webrtc failed" }));
 
     expect(screen.queryByTestId("webrtc-player")).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("스트림 재연결 중 (25ms)");
+    expect(screen.getByRole("status")).toHaveTextContent("스트림 재연결 중25ms 후 다시 시도합니다.");
 
     await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
 
@@ -286,7 +288,7 @@ describe("RealtimePlayer", () => {
 
     render(<RealtimePlayer streamId="raw.sample.thermal" fetcher={fetcher} />);
 
-    expect(await screen.findByText("stream offline")).toBeInTheDocument();
+    expect(await screen.findByText("송출 신호 없음")).toBeInTheDocument();
     expect(screen.queryByTestId("webrtc-player")).not.toBeInTheDocument();
     expect(screen.queryByTestId("hls-fallback-player")).not.toBeInTheDocument();
   });
@@ -324,7 +326,7 @@ describe("RealtimePlayer", () => {
       />,
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent("loading playback");
+    expect(screen.getByRole("status")).toHaveTextContent("스트림 신호 확인 중");
     await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
     expect(fetcher).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();

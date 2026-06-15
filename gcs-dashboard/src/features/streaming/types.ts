@@ -23,6 +23,7 @@ export interface WebRTCSignalingTimings {
 }
 
 export interface WebRTCAudioStats {
+  audioLevel: number | null;
   jitterMs: number | null;
   jitterBufferDelayMs: number | null;
   packetsLost: number | null;
@@ -90,6 +91,7 @@ export interface RealtimePlayerSnapshot {
   webrtcRetryAttempt?: number;
   hasAudioTrack?: boolean;
   isAudioActive?: boolean;
+  audioLevel?: number | null;
   webrtcFirstFrameLatencyMs?: number | null;
   webrtcWhepResponseMs?: number | null;
   audioJitterMs?: number | null;

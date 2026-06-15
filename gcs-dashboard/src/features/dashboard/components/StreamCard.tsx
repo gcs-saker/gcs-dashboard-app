@@ -1,3 +1,4 @@
+import { memo, useCallback } from "react";
 import type { DashboardStreamSlot } from "../streamTypes";
 import {
   getDashboardStreamDisplayName,
@@ -14,7 +15,7 @@ interface StreamCardProps {
   onToggleTalkbackTarget?: (streamPath: string) => void;
 }
 
-export function StreamCard({
+export const StreamCard = memo(function StreamCard({
   stream,
   isSelected,
   hasAudioActivity = false,
@@ -23,13 +24,20 @@ export function StreamCard({
   onToggleTalkbackTarget,
 }: StreamCardProps) {
   const canTalkback = Boolean(stream.streamPath);
+  const selectStream = useCallback(() => onSelect(stream.id), [onSelect, stream.id]);
+  const toggleTalkback = useCallback(() => {
+    if (stream.streamPath) {
+      onToggleTalkbackTarget?.(stream.streamPath);
+    }
+  }, [onToggleTalkbackTarget, stream.streamPath]);
+
   return (
     <article className={`stream-card ${isSelected ? "is-selected" : ""} ${hasAudioActivity ? "has-audio" : ""} ${isTalkbackTarget ? "is-talkback-target" : ""}`}>
       <button
         aria-label={`${stream.title} 선택`}
         aria-pressed={isSelected}
         className="stream-card__select"
-        onClick={() => onSelect(stream.id)}
+        onClick={selectStream}
         type="button"
       >
         <span className="stream-card__topline">
@@ -44,17 +52,40 @@ export function StreamCard({
         </span>
         <span className="stream-card__detail">{getDashboardStreamDisplayName(stream)}</span>
       </button>
+      {isSelected ? <span className="stream-card__selected-link">현재 선택</span> : null}
+      <button className="stream-card__connect" onClick={selectStream} type="button">
+        주소 연결
+      </button>
       {onToggleTalkbackTarget ? (
         <button
           aria-pressed={isTalkbackTarget}
           className="stream-card__talkback"
           disabled={!canTalkback}
-          onClick={() => stream.streamPath && onToggleTalkbackTarget(stream.streamPath)}
+          onClick={toggleTalkback}
           type="button"
         >
           음성 송신 대상
         </button>
       ) : null}
     </article>
+  );
+}, areStreamCardPropsEqual);
+
+function areStreamCardPropsEqual(previous: StreamCardProps, next: StreamCardProps): boolean {
+  return (
+    previous.stream.id === next.stream.id &&
+    previous.stream.title === next.stream.title &&
+    previous.stream.status === next.stream.status &&
+    previous.stream.mode === next.stream.mode &&
+    previous.stream.detail === next.stream.detail &&
+    previous.stream.connectedDeviceId === next.stream.connectedDeviceId &&
+    previous.stream.streamPath === next.stream.streamPath &&
+    previous.stream.sourceUrl === next.stream.sourceUrl &&
+    previous.stream.aiModeEnabled === next.stream.aiModeEnabled &&
+    previous.isSelected === next.isSelected &&
+    previous.hasAudioActivity === next.hasAudioActivity &&
+    previous.isTalkbackTarget === next.isTalkbackTarget &&
+    previous.onSelect === next.onSelect &&
+    previous.onToggleTalkbackTarget === next.onToggleTalkbackTarget
   );
 }

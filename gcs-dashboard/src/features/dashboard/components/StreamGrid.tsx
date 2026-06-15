@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { DashboardStreamSlot } from "../streamTypes";
 import { STREAM_GRID_WIDGET } from "../streamTypes";
 import { StreamCard } from "./StreamCard";
@@ -8,6 +8,7 @@ interface StreamGridProps {
   streams: DashboardStreamSlot[];
   selectedStreamId: string;
   audioActiveStreamId?: string | null;
+  className?: string;
   talkbackTargetStreamIds?: string[];
   onSelectStream: (streamId: string) => void;
   onToggleTalkbackTarget?: (streamPath: string) => void;
@@ -18,15 +19,18 @@ export function StreamGrid({
   streams,
   selectedStreamId,
   audioActiveStreamId = null,
+  className = "",
   talkbackTargetStreamIds = [],
   onSelectStream,
   onToggleTalkbackTarget,
   renderCard,
 }: StreamGridProps) {
+  const talkbackTargetPaths = useMemo(() => new Set(talkbackTargetStreamIds), [talkbackTargetStreamIds]);
+
   return (
     <section
       aria-label="다중 스트림"
-      className="stream-grid"
+      className={`stream-grid ${className}`.trim()}
       data-widget-id={STREAM_GRID_WIDGET.id}
       style={{ minHeight: STREAM_GRID_WIDGET.minHeight }}
     >
@@ -39,7 +43,7 @@ export function StreamGrid({
             ) : (
               <StreamCard
                 hasAudioActivity={stream.id === audioActiveStreamId}
-                isTalkbackTarget={Boolean(stream.streamPath && talkbackTargetStreamIds.includes(stream.streamPath))}
+                isTalkbackTarget={Boolean(stream.streamPath && talkbackTargetPaths.has(stream.streamPath))}
                 isSelected={isSelected}
                 onSelect={onSelectStream}
                 onToggleTalkbackTarget={onToggleTalkbackTarget}

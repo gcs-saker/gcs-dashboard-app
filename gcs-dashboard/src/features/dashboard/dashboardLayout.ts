@@ -5,8 +5,8 @@ export type DashboardWidgetId =
   | "tactical-map"
   | "selected-stream"
   | "stream-grid"
-  | "system-status"
   | "telemetry-panel"
+  | "ops-summary"
   | "ai-results";
 
 export interface DashboardGridPosition {
@@ -58,19 +58,19 @@ export const DASHBOARD_WIDGET_REGISTRY: Record<DashboardWidgetId, DashboardWidge
     minHeight: STREAM_GRID_WIDGET.minHeight,
     defaultPosition: { column: 3, row: 2, columnSpan: 1, rowSpan: 1 },
   },
-  "system-status": {
-    id: "system-status",
-    title: "서버 상태 상세 / 연결상태 / 헬스체크",
-    minWidth: 300,
-    minHeight: 180,
-    defaultPosition: { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },
-  },
   "telemetry-panel": {
     id: "telemetry-panel",
     title: "지오메트리 / 텔레메트리",
-    minWidth: 420,
-    minHeight: 180,
-    defaultPosition: { column: 2, row: 2, columnSpan: 1, rowSpan: 1 },
+    minWidth: 280,
+    minHeight: 140,
+    defaultPosition: { column: 1, row: 1, columnSpan: 1, rowSpan: 1 },
+  },
+  "ops-summary": {
+    id: "ops-summary",
+    title: "운용 요약",
+    minWidth: 280,
+    minHeight: 140,
+    defaultPosition: { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },
   },
   "ai-results": {
     id: "ai-results",
@@ -86,15 +86,15 @@ const DEFAULT_DASHBOARD_WIDGET_ORDER: DashboardWidgetId[] = [
   "tactical-map",
   "selected-stream",
   "stream-grid",
-  "system-status",
   "telemetry-panel",
+  "ops-summary",
   "ai-results",
 ];
 
 export const DEFAULT_DASHBOARD_LAYOUT: DashboardLayoutItem[] = DEFAULT_DASHBOARD_WIDGET_ORDER.map((widgetId) => ({
   ...DASHBOARD_WIDGET_REGISTRY[widgetId],
   pinned: false,
-  visible: true,
+  visible: widgetId !== "ai-results",
 }));
 
 export function getDashboardWidgetDefinition(widgetId: DashboardWidgetId): DashboardWidgetDefinition {

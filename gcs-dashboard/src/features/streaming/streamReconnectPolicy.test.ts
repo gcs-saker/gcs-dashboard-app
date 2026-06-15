@@ -78,6 +78,7 @@ function snapshot(overrides: Partial<WebRTCPlaybackSnapshot>): WebRTCPlaybackSna
       remoteDescriptionSetMs: null,
     },
     audioStats: {
+      audioLevel: null,
       jitterMs: null,
       jitterBufferDelayMs: null,
       packetsLost: null,

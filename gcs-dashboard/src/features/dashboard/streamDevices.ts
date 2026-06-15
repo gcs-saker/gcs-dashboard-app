@@ -15,6 +15,7 @@ export interface StreamDeviceOption {
   id: string;
   name: string;
   streamPath: string;
+  sourceUrl?: string | null;
   status: DashboardStreamStatus;
   mediaType: "eo" | "ir" | "ai" | "map";
   geometry: StreamDeviceGeometry;
@@ -138,6 +139,7 @@ export function connectDeviceToStreamSlot(
     mode: modeForMediaType(device.mediaType),
     status: device.status,
     streamPath: device.streamPath,
+    sourceUrl: device.sourceUrl ?? null,
     geometry: device.geometry,
   };
 }
@@ -149,8 +151,50 @@ export function disconnectStreamSlot(stream: DashboardStreamSlot): DashboardStre
     detail: "장비 미연결",
     status: "offline",
     streamPath: null,
+    sourceUrl: null,
     geometry: null,
   };
+}
+
+export function createManualStreamDeviceOption(
+  address: string,
+  displayName: string,
+  fallbackTitle: string,
+): StreamDeviceOption {
+  const streamPath = normalizeStreamAddress(address);
+  const normalizedDisplayName = displayName.trim() || fallbackTitle || streamPath;
+  return {
+    id: `manual-${streamPath}`,
+    name: normalizedDisplayName,
+    streamPath,
+    sourceUrl: address.trim(),
+    status: "online",
+    mediaType: mediaTypeFromStreamPath(streamPath),
+    geometry: defaultGeometryForStream(streamPath, "device"),
+  };
+}
+
+export function normalizeStreamAddress(address: string): string {
+  const trimmedAddress = address.trim();
+  if (!trimmedAddress) {
+    throw new Error("스트림 주소를 입력해야 합니다.");
+  }
+
+  const urlPath = streamPathFromUrl(trimmedAddress);
+  const rawPath = urlPath ?? trimmedAddress;
+  const withoutQuery = rawPath.split(/[?#]/)[0] ?? rawPath;
+  const withoutEdgePrefix = withoutQuery
+    .replace(/^\/+/, "")
+    .replace(/^webrtc\//, "")
+    .replace(/\/whip$/i, "")
+    .replace(/\/whep$/i, "")
+    .replace(/^hls\//, "")
+    .replace(/\/index\.m3u8$/i, "");
+  const normalized = withoutEdgePrefix.replace(/\//g, ".").replace(/\.+/g, ".").replace(/^\./, "").replace(/\.$/, "");
+  if (!/^(raw|ai|archive)\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)?$/.test(normalized)) {
+    throw new Error("스트림 주소는 raw/asset/sensor 또는 raw.asset.sensor 형식이어야 합니다.");
+  }
+  return normalized;
 }
 
 export async function fetchStreamDeviceOptions(fetcher: typeof fetch = fetch): Promise<StreamDeviceOption[]> {
@@ -225,6 +269,7 @@ export function mergeStreamSlotsWithDevices(
       detail: `${device.name} / ${device.streamPath}`,
       mode: modeForMediaType(device.mediaType),
       status: device.status,
+      sourceUrl: device.sourceUrl ?? stream.sourceUrl ?? null,
       geometry: shouldPreferDeviceGeometry(device.geometry) ? device.geometry : stream.geometry ?? device.geometry,
     };
   });
@@ -240,6 +285,7 @@ export function mergeStreamSlotsWithDevices(
       detail: `${device.name} / ${device.streamPath}`,
       connectedDeviceId: device.id,
       streamPath: device.streamPath,
+      sourceUrl: device.sourceUrl ?? null,
       geometry: device.geometry,
     }));
 
@@ -311,6 +357,22 @@ function dashboardStatusFromRegistryStatus(status: StreamRegistryResponse["statu
     case "unknown":
       return "degraded";
   }
+}
+
+function streamPathFromUrl(value: string): string | null {
+  try {
+    const parsed = new URL(value, typeof window === "undefined" ? "https://dashboard.local" : window.location.href);
+    return parsed.pathname;
+  } catch {
+    return null;
+  }
+}
+
+function mediaTypeFromStreamPath(streamPath: string): StreamDeviceOption["mediaType"] {
+  const lowered = streamPath.toLowerCase();
+  if (lowered.includes("thermal") || lowered.includes("ir")) return "ir";
+  if (lowered.startsWith("ai.")) return "ai";
+  return "eo";
 }
 
 function defaultGeometryForStream(streamId: string, source: DashboardGeometrySource = "mock"): StreamDeviceGeometry {
