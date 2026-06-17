@@ -1,31 +1,33 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { TacticalLeafletMap } from "./TacticalLeafletMap";
 import type { DashboardStreamSlot } from "../streamTypes";
 
-interface MaplibreTestMock {
+interface LeafletTestMock {
   instances: Array<{
-    easeTo: ReturnType<typeof vi.fn>;
     emit: (event: string) => void;
-    emitError: () => void;
+    latLngToContainerPoint: ReturnType<typeof vi.fn>;
+    panTo: ReturnType<typeof vi.fn>;
+    setView: ReturnType<typeof vi.fn>;
     zoomIn: ReturnType<typeof vi.fn>;
     zoomOut: ReturnType<typeof vi.fn>;
   }>;
-  Marker: ReturnType<typeof vi.fn>;
   Map: ReturnType<typeof vi.fn>;
-  markers: Array<{
-    lngLat: [number, number];
-    setLngLat: ReturnType<typeof vi.fn>;
-  }>;
   reset: () => void;
+  tileLayer: ReturnType<typeof vi.fn>;
+  tileLayers: Array<{
+    emitError: () => void;
+    options: Record<string, unknown>;
+    urlTemplate: string;
+  }>;
 }
 
 declare global {
-  var __gcsMaplibreMock: MaplibreTestMock;
+  var __gcsLeafletMock: LeafletTestMock;
 }
 
-function maplibreMock(): MaplibreTestMock {
-  return globalThis.__gcsMaplibreMock;
+function leafletMock(): LeafletTestMock {
+  return globalThis.__gcsLeafletMock;
 }
 
 const stream: DashboardStreamSlot = {
@@ -67,7 +69,7 @@ const remoteStream: DashboardStreamSlot = {
 };
 
 afterEach(() => {
-  maplibreMock().reset();
+  leafletMock().reset();
   vi.unstubAllGlobals();
 });
 
@@ -76,32 +78,54 @@ describe("TacticalLeafletMap", () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
 
     expect(screen.getByTestId("public-tactical-map")).toBeInTheDocument();
-    expect(maplibreMock().Map).toHaveBeenCalledWith(
+    expect(leafletMock().Map).toHaveBeenCalledWith(expect.any(HTMLElement), {
+      attributionControl: false,
+      zoomControl: false,
+    });
+    expect(leafletMock().instances[0].setView).toHaveBeenCalledWith([35.871435, 128.601445], 14, { animate: false });
+    expect(leafletMock().tileLayer).toHaveBeenCalledWith(
+      "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       expect.objectContaining({
-        center: [128.601445, 35.871435],
-        style: expect.objectContaining({
-          layers: [
-            {
-              id: "satellite",
-              source: "satellite",
-              type: "raster",
-            },
-          ],
-          sources: {
-            satellite: expect.objectContaining({
-              tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
-              type: "raster",
-            }),
-          },
-        }),
+        attribution: "Esri World Imagery",
+        tileSize: 256,
       }),
     );
     expect(screen.getByTestId("map-coordinate-source")).toHaveTextContent("실시간 GPS");
     expect(screen.getByTestId("offline-map-center")).toHaveTextContent("35.871435, 128.601445");
     expect(screen.getByRole("button", { name: /로컬 웹캠 위치/ })).toBeInTheDocument();
-    expect(maplibreMock().Marker).toHaveBeenCalledTimes(1);
-    expect(maplibreMock().markers[0].setLngLat).toHaveBeenCalledWith([128.601445, 35.871435]);
+    expect(leafletMock().instances[0].latLngToContainerPoint).toHaveBeenCalledWith([35.871435, 128.601445]);
     expect(screen.getByRole("button", { name: "자동 포커스 켜짐" })).toHaveClass("is-active");
+  });
+
+  test("opens a compact device popup when a public stream pin is clicked", () => {
+    const onSelectStream = vi.fn();
+    render(<TacticalLeafletMap onSelectStream={onSelectStream} selectedStream={stream} streams={[stream]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /로컬 웹캠 위치/ }));
+
+    expect(onSelectStream).toHaveBeenCalledWith("raw.local.webcam");
+    expect(screen.getByLabelText("로컬 웹캠 단말 정보")).toBeInTheDocument();
+    expect(screen.getByText("단말 ID")).toBeInTheDocument();
+    expect(screen.getByText("미등록")).toBeInTheDocument();
+    expect(screen.getByText("raw.local.webcam")).toBeInTheDocument();
+    expect(screen.getByText("35.871435, 128.601445")).toBeInTheDocument();
+    expect(screen.getByText("24deg / 64deg")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "지도 정보 닫기" }));
+
+    expect(screen.queryByLabelText("로컬 웹캠 단말 정보")).not.toBeInTheDocument();
+  });
+
+  test("copies popup coordinates to the clipboard", async () => {
+    const writeText = vi.fn(async () => undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /로컬 웹캠 위치/ }));
+    fireEvent.click(screen.getByRole("button", { name: "좌표 복사" }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("35.871435, 128.601445"));
+    expect(screen.getByRole("status")).toHaveTextContent("복사됨");
   });
 
   test("keeps zoom controls bound to the public vector map renderer", () => {
@@ -111,16 +135,16 @@ describe("TacticalLeafletMap", () => {
     fireEvent.click(screen.getByRole("button", { name: "지도 축소" }));
     fireEvent.click(screen.getByRole("button", { name: "지도 중심 초기화" }));
 
-    expect(maplibreMock().instances[0].zoomIn).toHaveBeenCalledTimes(1);
-    expect(maplibreMock().instances[0].zoomOut).toHaveBeenCalledTimes(1);
-    expect(maplibreMock().instances[0].easeTo).toHaveBeenCalled();
+    expect(leafletMock().instances[0].zoomIn).toHaveBeenCalledTimes(1);
+    expect(leafletMock().instances[0].zoomOut).toHaveBeenCalledTimes(1);
+    expect(leafletMock().instances[0].panTo).toHaveBeenCalled();
   });
 
   test("disables auto focus on direct map interaction and restores selected stream focus from the auto button", () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
 
     act(() => {
-      maplibreMock().instances[0].emit("dragstart");
+      leafletMock().instances[0].emit("dragstart");
     });
 
     expect(screen.getByRole("button", { name: "자동 포커스 켜기" })).not.toHaveClass("is-active");
@@ -128,11 +152,10 @@ describe("TacticalLeafletMap", () => {
     fireEvent.click(screen.getByRole("button", { name: "자동 포커스 켜기" }));
 
     expect(screen.getByRole("button", { name: "자동 포커스 켜짐" })).toHaveClass("is-active");
-    expect(maplibreMock().instances[0].easeTo).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        center: [128.601445, 35.871435],
-      }),
-    );
+    expect(leafletMock().instances[0].panTo).toHaveBeenLastCalledWith([35.871435, 128.601445], {
+      animate: true,
+      duration: 0.28,
+    });
   });
 
   test("focuses the selected stream GPS while auto focus is enabled", () => {
@@ -140,21 +163,36 @@ describe("TacticalLeafletMap", () => {
 
     rerender(<TacticalLeafletMap selectedStream={remoteStream} streams={[stream, remoteStream]} />);
 
-    expect(maplibreMock().instances[0].easeTo).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        center: [128.6211, 35.8842],
-      }),
-    );
+    expect(leafletMock().instances[0].panTo).toHaveBeenLastCalledWith([35.8842, 128.6211], {
+      animate: true,
+      duration: 0.28,
+    });
   });
 
   test("falls back to the closed-network offline renderer when public map loading fails", () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
 
     act(() => {
-      maplibreMock().instances[0].emitError();
+      leafletMock().tileLayers[0].emitError();
     });
 
     expect(screen.getByTestId("offline-tactical-map")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("공개 지도 연결 실패로 오프라인 지도로 전환됨");
+  });
+
+  test("opens the same device popup from the closed-network offline map pins", () => {
+    render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
+
+    act(() => {
+      leafletMock().tileLayers[0].emitError();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /로컬 웹캠 위치/ }));
+
+    const popup = screen.getByLabelText("로컬 웹캠 단말 정보");
+    expect(popup).toBeInTheDocument();
+    expect(within(popup).getByText("상태")).toBeInTheDocument();
+    expect(within(popup).getByText("정상")).toBeInTheDocument();
+    expect(within(popup).getByText("실시간 GPS")).toBeInTheDocument();
   });
 
   test("applies the style URL returned by the backend map config API", async () => {
@@ -175,9 +213,11 @@ describe("TacticalLeafletMap", () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
 
     await waitFor(() => {
-      expect(maplibreMock().Map).toHaveBeenLastCalledWith(
+      expect(leafletMock().tileLayer).toHaveBeenLastCalledWith(
+        "https://maps.example.test/style.json",
         expect.objectContaining({
-          style: "https://maps.example.test/style.json",
+          attribution: "Example Maps",
+          tileSize: 256,
         }),
       );
     });

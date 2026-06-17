@@ -5,6 +5,8 @@ import {
   connectDeviceToStreamSlot,
   createManualStreamDeviceOption,
   disconnectStreamSlot,
+  buildTelemetryHistoryPath,
+  fetchTelemetryHistory,
   fetchTelemetryIndex,
   fetchStreamDeviceOptions,
   mergeStreamSlotsWithDevices,
@@ -129,6 +131,33 @@ describe("streamDevices", () => {
       latitude: 35.9,
       longitude: 128.62,
     });
+  });
+
+  test("fetches telemetry history for selected stream paths", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      Response.json([
+        {
+          recordedAt: "2026-06-01T00:00:00Z",
+          telemetry: {
+            uuid: "raw/local/webcam",
+            latitude: 35.9,
+            longitude: 128.62,
+            altitude: 24,
+            velocity: 0,
+            epochTime: "00:01:00",
+          },
+        },
+      ]),
+    );
+
+    const history = await fetchTelemetryHistory("raw/local/webcam", 25, fetcher as unknown as typeof fetch);
+
+    expect(buildTelemetryHistoryPath("raw/local/webcam", 25)).toBe("/telemetry/raw%2Flocal%2Fwebcam/history?limit=25");
+    expect(fetcher).toHaveBeenCalledWith("/api/telemetry/raw%2Flocal%2Fwebcam/history?limit=25", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    expect(history[0].telemetry.latitude).toBe(35.9);
   });
 
   test("surfaces stream registry 401 as an auth failure", async () => {

@@ -94,6 +94,16 @@ describe('App dashboard shell', () => {
     expect(window.location.search).toContain('redirect=%2F');
   });
 
+  test('allows local dev dashboard UI preview without auth server', async () => {
+    clearAuthSession();
+    window.history.pushState({}, '', '/?uiPreview=1');
+
+    render(<App />);
+
+    expect(await screen.findByRole('main', { name: 'Field Ops Dashboard MVP' }, { timeout: 3000 })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/');
+  });
+
   test('redirects unauthenticated streaming smoke query access to login', async () => {
     clearAuthSession();
     window.history.pushState({}, '', '/?streamingSmoke=1');

@@ -1,4 +1,4 @@
-package kr.co.a4ai.gcssaker.authpolicy
+package kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis
 
 import org.springframework.data.redis.core.StringRedisTemplate
 import java.time.Duration

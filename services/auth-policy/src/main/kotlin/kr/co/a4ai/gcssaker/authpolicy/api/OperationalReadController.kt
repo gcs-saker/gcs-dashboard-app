@@ -4,12 +4,14 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.AssetReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryHistoryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -18,6 +20,7 @@ class OperationalReadController(
     private val principalResolver: BearerPrincipalResolver,
 ) {
     @GetMapping(OperationalReadApiRoutes.TELEMETRY_ALL)
+    @RequiresBearerAuth
     fun telemetryAll(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
     ): List<TelemetryReadResponse> {
@@ -26,6 +29,7 @@ class OperationalReadController(
     }
 
     @PostMapping(OperationalReadApiRoutes.TELEMETRY_INGEST)
+    @RequiresBearerAuth
     fun ingestTelemetry(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @RequestBody request: TelemetryIngestRequest,
@@ -34,7 +38,19 @@ class OperationalReadController(
         return repository.upsertTelemetry(request.toReadModel(principal)).toResponse()
     }
 
+    @GetMapping(OperationalReadApiRoutes.TELEMETRY_HISTORY)
+    @RequiresBearerAuth
+    fun telemetryHistory(
+        @PathVariable uuid: String,
+        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestParam(required = false) limit: Int?,
+    ): List<TelemetryHistoryResponse> {
+        val principal = principalResolver.requirePrincipal(authorization)
+        return repository.telemetryHistoryFor(principal, uuid, limit?.coerceIn(1, 500) ?: 100).map { it.toResponse() }
+    }
+
     @GetMapping(OperationalReadApiRoutes.ASSET_BY_GATEWAY)
+    @RequiresBearerAuth
     fun assetsForGateway(
         @PathVariable gatewayUuid: String,
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
@@ -88,6 +104,12 @@ private fun TelemetryReadModel.toResponse(): TelemetryReadResponse =
         totalDistance = totalDistance,
         epochTime = epochTime,
         portDistance = portDistance,
+    )
+
+private fun TelemetryHistoryReadModel.toResponse(): TelemetryHistoryResponse =
+    TelemetryHistoryResponse(
+        recordedAt = recordedAt,
+        telemetry = telemetry.toResponse(),
     )
 
 private fun AssetReadModel.toResponse(): AssetReadResponse =

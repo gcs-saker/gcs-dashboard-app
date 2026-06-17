@@ -48,6 +48,30 @@ class InMemoryAuthUserRepository(users: Collection<AuthUser>) : AuthUserReposito
     }
 }
 
+class CachedAuthUserRepository(
+    private val delegate: AuthUserRepository,
+) : AuthUserRepository {
+    private val usersByUsername = ConcurrentHashMap<String, AuthUser>()
+    private val usersByEmail = ConcurrentHashMap<String, AuthUser>()
+
+    override fun findByUsername(username: String): AuthUser? =
+        usersByUsername[username] ?: delegate.findByUsername(username)?.also(::cache)
+
+    override fun findByEmail(email: String): AuthUser? {
+        val normalizedEmail = email.lowercase()
+        return usersByEmail[normalizedEmail] ?: delegate.findByEmail(email)?.also(::cache)
+    }
+
+    @Synchronized
+    override fun save(user: AuthUser): AuthUser =
+        delegate.save(user).also(::cache)
+
+    private fun cache(user: AuthUser) {
+        usersByUsername[user.username] = user
+        usersByEmail[user.email.lowercase()] = user
+    }
+}
+
 data class SignupInvite(
     val code: String,
     val companyId: Int,

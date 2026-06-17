@@ -30,6 +30,22 @@ SHOW INDEX FROM unmanned_assets;
 
 2. 실제 실행 계획 확인
 
+M7 전환 경로의 핵심 쿼리는 먼저 아래 contract script로 확인한다.
+
+```bash
+scripts/m7_db_query_plan_contract.py --check
+scripts/m7_db_query_plan_contract.py
+```
+
+첫 번째 명령은 JSON schema와 대상 쿼리 목록을 출력한다. 두 번째 명령은 운영 DB 또는 staging DB에서 실행할 `EXPLAIN ANALYZE` SQL을 출력한다. 실제 운영 DB 실행 전에는 backup/staging에서 먼저 검증한다.
+
+현재 M7 query plan contract 대상:
+
+- `operational_events_keyset_page`
+- `operational_events_metrics`
+- `operational_events_severity_counts`
+- `telemetry_latest_lookup`
+
 ```sql
 EXPLAIN ANALYZE
 SELECT COUNT(*)
@@ -465,3 +481,136 @@ stream list 같은 hot cache가 동시에 만료되면 media-control 또는 MySQ
 5. connection pool size와 `pool_recycle`, `pool_size`, `max_overflow`를 운영 부하에 맞춰 조정한다.
 6. Redis key contract 문서를 추가하고 TTL/jitter/stampede 정책을 테스트로 고정한다.
 7. 운영 이벤트 로그가 커지기 전 cursor pagination과 `(severity, created_at)` 계열 index를 검증한다.
+
+## 12. ORM / Query Builder / Raw SQL 선택 기준
+
+검토 자료: [ORM은 항상 답일까? 대규모 서비스에서 쿼리 성능을 다루는 방법](https://velog.io/@tmdwns1521/ORM%EC%9D%80-%ED%95%AD%EC%83%81-%EB%8B%B5%EC%9D%BC%EA%B9%8C-%EB%8C%80%EA%B7%9C%EB%AA%A8-%EC%84%9C%EB%B9%84%EC%8A%A4%EC%97%90%EC%84%9C-%EC%BF%BC%EB%A6%AC-%EC%84%B1%EB%8A%A5%EC%9D%84-%EB%8B%A4%EB%A3%A8%EB%8A%94-%EB%B0%A9%EB%B2%95)
+
+결론은 ORM을 버리는 것이 아니다. GCS-Saker는 실시간 스트리밍과 운영 대시보드를 같이 다루므로, 경로별로 다른 query 전략을 선택해야 한다.
+
+| 구간 | 기본 선택 | 전환 조건 | GCS-Saker 적용 |
+| --- | --- | --- | --- |
+| 단순 CRUD | JPA repository / SQLAlchemy ORM | 단일 row 또는 작은 aggregate root | user, invite, group, time sync config |
+| 동적 검색 | QueryDSL/Specification 또는 명시 query builder | 조건 조합, 정렬, 필터, page가 자주 바뀜 | event log filter, asset search, future admin user search |
+| 긴 목록 | keyset pagination | offset이 커지거나 tail latency가 커짐 | `operational_events` page, event log infinite scroll |
+| 통계/운영 그래프 | Raw SQL/JdbcTemplate | `GROUP BY`, 조건부 집계, window function, 실행계획 제어 필요 | `/ops/events/metrics`, RTT/connection/throughput trend |
+| 고빈도 latest state | DB upsert + Redis latest cache | select 후 update/insert race 또는 round-trip 증가 | telemetry/GPS latest, stream presence |
+| 대량 쓰기 | batch insert/update | row 단위 ORM save가 반복됨 | telemetry history, operational audit future sink |
+| 외부 API 동반 작업 | 짧은 DB transaction + 보상/멱등성 | 외부 API가 transaction 안에 들어가려 함 | AI overlay 요청, notification, stream control future path |
+
+### 12.1 JPA/ORM을 쓰는 기준
+
+ORM은 아래 조건에서 유지한다.
+
+- 엔티티 lifecycle과 domain invariant가 중요하다.
+- query가 단순하고 실행계획이 안정적이다.
+- row 수가 작거나 index lookup 1회로 끝난다.
+- transaction 경계가 짧고 명확하다.
+
+GCS-Saker 기준 후보:
+
+- 사용자 계정 생성/수정
+- 초대코드 검증
+- 조직/그룹 권한 모델
+- 운영 설정 저장
+
+단, ORM을 쓰더라도 `SELECT *`에 가까운 엔티티 전체 materialization은 hot path에서 피한다. 필요한 field만 반환하는 DTO projection 또는 read model을 둔다.
+
+### 12.2 Query Builder 계열을 쓰는 기준
+
+동적 조건이 많지만 도메인 모델과 연동되어야 하면 QueryDSL 또는 Spring Data Specification 계열을 검토한다.
+
+후보:
+
+- 이벤트 로그 검색: severity, category, source, time range, keyword 조합
+- 장비/자산 검색: 조직, status, type, stream status 조합
+- 사용자 관리 화면: role, group, locked status, 최근 접속 시간 조합
+
+주의:
+
+- 동적 조건을 만든 뒤 실제 SQL을 반드시 로그로 확인한다.
+- `LIKE '%keyword%'`는 index를 잘 타지 못하므로 운영 데이터가 커지면 full-text index 또는 별도 검색 저장소를 검토한다.
+- page는 offset보다 cursor/keyset을 기본값으로 둔다.
+
+### 12.3 Raw SQL을 쓰는 기준
+
+아래 조건에서는 Raw SQL/JdbcTemplate을 허용한다.
+
+- DB aggregate 함수가 핵심이다.
+- window function 또는 조건부 집계가 필요하다.
+- ORM이 불필요한 join 또는 entity hydration을 만든다.
+- 실행계획과 index 사용을 직접 제어해야 한다.
+
+이미 적용된 사례:
+
+- `JdbcOperationalEventRepository.metricsFor`
+  - `COUNT(1)`, `SUM(connections)`, `MIN/AVG/MAX(latency_ms)`, `AVG(throughput_mbps)`를 DB에서 집계한다.
+  - 전체 event row를 JVM으로 가져와 계산하지 않는다.
+- `JdbcOperationalEventRepository.eventPageFor`
+  - `occurred_at + id` cursor 기반 keyset pagination을 사용한다.
+  - 큰 offset scan을 피한다.
+
+다음 적용 후보:
+
+- connection count / RTT trend를 time bucket으로 집계
+- stream별 최근 장애율
+- 조직/그룹별 활성 stream 수
+- telemetry/GPS latest + history 분리 후 history aggregate
+
+### 12.4 N+1 회귀 기준
+
+기능이 정상이어도 N+1은 운영에서 장애가 된다. 아래 경로는 반드시 query count 회귀 테스트를 둔다.
+
+| 경로 | 위험 | 방어 |
+| --- | --- | --- |
+| user -> group -> child groups | 조직 계층 순회 N+1 | 필요한 depth projection 또는 recursive query 검토 |
+| stream -> telemetry -> asset | stream card 렌더링 N+1 | stream summary read model |
+| event -> related stream/asset | 이벤트 로그 상세 N+1 | 상세 열람 시 lazy fetch, 목록은 projection |
+| dashboard initial load | 여러 widget이 각자 query | API composition 또는 GraphQL projection |
+
+테스트 기준:
+
+- 작은 fixture에서 query count를 고정한다.
+- 목록 API는 page size와 무관하게 query count가 선형 증가하지 않아야 한다.
+- GraphQL resolver에는 DataLoader 또는 batch loader를 둔다.
+
+### 12.5 Transaction 기준
+
+트랜잭션은 넓게 잡지 않는다. 특히 외부 API, AI 서버, MediaMTX/coturn 제어, push notification 호출은 DB transaction 안에 넣지 않는다.
+
+권장 순서:
+
+1. DB에서 상태 전이를 짧게 commit한다.
+2. outbox/audit/event record를 남긴다.
+3. 외부 호출은 비동기 후처리로 실행한다.
+4. 실패 시 보상 작업 또는 retry policy를 적용한다.
+
+현재 적용된 방향:
+
+- operational audit publisher는 비동기 후처리로 분리했다.
+- executor 거절 또는 sink 실패가 본 요청을 실패시키지 않도록 격리했다.
+
+### 12.6 실행 계획을 보고 결정한다
+
+ORM, QueryBuilder, Raw SQL 중 무엇이 맞는지는 감으로 정하지 않는다.
+
+새 query가 hot path에 들어가면 아래 산출물을 남긴다.
+
+```text
+- SQL 원문 또는 생성 SQL
+- EXPLAIN / EXPLAIN ANALYZE 결과
+- 사용 index
+- 예상 row 수와 실제 row 수
+- p50 / p95 latency
+- row materialization 수
+- filesort / temporary table 여부
+- transaction lock wait 여부
+```
+
+M7 이후 PR 기준:
+
+- 단순 CRUD는 ORM 허용
+- 운영 그래프/통계는 Raw SQL 또는 DB projection 우선
+- 긴 목록은 keyset pagination 우선
+- GraphQL은 projection과 query limit을 함께 둔다
+- Redis는 성능 보조 수단이지 정합성 원장의 대체물이 아니다

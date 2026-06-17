@@ -2,6 +2,8 @@ package kr.co.a4ai.gcssaker.authpolicy
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.CachedAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthRegistrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
@@ -31,13 +33,37 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import kr.co.a4ai.gcssaker.authpolicy.domain.parseTimeSyncMode
 import kr.co.a4ai.gcssaker.authpolicy.domain.normalizedSourceHost
 import kr.co.a4ai.gcssaker.authpolicy.api.BearerPrincipalResolver
+import kr.co.a4ai.gcssaker.authpolicy.api.AuthApiRoutes
+import kr.co.a4ai.gcssaker.authpolicy.api.CorrelationIdFilter
+import kr.co.a4ai.gcssaker.authpolicy.api.FixedWindowRateLimiter
+import kr.co.a4ai.gcssaker.authpolicy.api.GraphQlQueryPolicy
+import kr.co.a4ai.gcssaker.authpolicy.api.RateLimitFilter
+import kr.co.a4ai.gcssaker.authpolicy.application.AsyncOperationalAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.application.InMemoryOperationalAuditSink
+import kr.co.a4ai.gcssaker.authpolicy.application.NoopOperationalAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.application.OperationalAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.application.OperationalAuditPublisherMetrics
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalReadRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalEventRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisOperationalEventRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisPrincipalCache
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisRefreshSessionStore
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisCachePolicy
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisTemplateStringKeyValueStore
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.core.env.Environment
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
+import org.springframework.core.task.TaskExecutor
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ThreadPoolExecutor
+import javax.sql.DataSource
 
 @Configuration
 class AuthPolicyConfig {
@@ -61,33 +87,21 @@ class AuthPolicyConfig {
     fun authUserRepository(
         settings: AuthRuntimeSettings,
         passwordHasher: PasswordHasher,
-    ): InMemoryAuthUserRepository =
-        InMemoryAuthUserRepository(
-            listOf(
-                AuthUser(
-                    id = 1,
-                    username = settings.operatorUsername,
-                    email = "${settings.operatorUsername}@example.test",
-                    passwordHash = passwordHasher.hash(settings.operatorPassword),
-                    companyId = settings.operatorCompanyId,
-                    role = UserRole.OPERATOR,
-                    groupId = GroupId(settings.operatorGroupId),
-                ),
-                AuthUser(
-                    id = 2,
-                    username = settings.smokeUsername,
-                    email = "${settings.smokeUsername}@example.test",
-                    passwordHash = passwordHasher.hash(settings.smokePassword),
-                    companyId = settings.smokeCompanyId,
-                    role = UserRole.VIEWER,
-                    groupId = GroupId(settings.smokeGroupId),
-                ),
-            ),
-        )
+        dataSource: ObjectProvider<DataSource>,
+    ): AuthUserRepository {
+        val initialUsers = seedAuthUsers(settings, passwordHasher)
+        val repository = if (settings.jdbcPersistenceEnabled) {
+            dataSource.getIfAvailable()?.let { JdbcAuthUserRepository(it, initialUsers) }
+                ?: InMemoryAuthUserRepository(initialUsers)
+        } else {
+            InMemoryAuthUserRepository(initialUsers)
+        }
+        return if (settings.l1AuthUserCacheEnabled) CachedAuthUserRepository(repository) else repository
+    }
 
     @Bean
     fun authSessionService(
-        users: InMemoryAuthUserRepository,
+        users: AuthUserRepository,
         passwordHasher: PasswordHasher,
         tokenService: JwtTokenService,
         principalCache: PrincipalCache,
@@ -118,12 +132,69 @@ class AuthPolicyConfig {
     }
 
     @Bean
+    fun operationalPostProcessingExecutor(settings: AuthRuntimeSettings): TaskExecutor =
+        ThreadPoolTaskExecutor().apply {
+            corePoolSize = settings.postProcessingCorePoolSize
+            maxPoolSize = settings.postProcessingMaxPoolSize
+            queueCapacity = settings.postProcessingQueueCapacity
+            setThreadNamePrefix("auth-policy-post-")
+            setRejectedExecutionHandler(ThreadPoolExecutor.CallerRunsPolicy())
+            initialize()
+        }
+
+    @Bean
+    fun operationalAuditSink(): InMemoryOperationalAuditSink = InMemoryOperationalAuditSink()
+
+    @Bean
+    fun operationalAuditPublisherMetrics(): OperationalAuditPublisherMetrics = OperationalAuditPublisherMetrics()
+
+    @Bean
+    fun operationalAuditPublisher(
+        settings: AuthRuntimeSettings,
+        operationalPostProcessingExecutor: TaskExecutor,
+        auditSink: InMemoryOperationalAuditSink,
+        auditMetrics: OperationalAuditPublisherMetrics,
+    ): OperationalAuditPublisher =
+        if (settings.asyncPostProcessingEnabled) {
+            AsyncOperationalAuditPublisher(operationalPostProcessingExecutor, auditSink, auditMetrics)
+        } else {
+            NoopOperationalAuditPublisher
+        }
+
+    @Bean
     fun bearerPrincipalResolver(sessions: AuthSessionService): BearerPrincipalResolver =
         BearerPrincipalResolver(sessions)
 
     @Bean
+    fun graphQlQueryPolicy(): GraphQlQueryPolicy = GraphQlQueryPolicy()
+
+    @Bean
+    fun correlationIdFilterRegistration(): FilterRegistrationBean<CorrelationIdFilter> =
+        FilterRegistrationBean(CorrelationIdFilter()).apply {
+            order = 1
+            addUrlPatterns("/*")
+        }
+
+    @Bean
+    fun authRateLimiter(settings: AuthRuntimeSettings): FixedWindowRateLimiter =
+        FixedWindowRateLimiter(
+            maxRequests = settings.authRateLimitPerMinute,
+            window = Duration.ofMinutes(1),
+        )
+
+    @Bean
+    fun rateLimitFilterRegistration(
+        settings: AuthRuntimeSettings,
+        authRateLimiter: FixedWindowRateLimiter,
+    ): FilterRegistrationBean<RateLimitFilter> =
+        FilterRegistrationBean(RateLimitFilter(authRateLimiter, settings.authRateLimitEnabled)).apply {
+            order = 2
+            addUrlPatterns("${AuthApiRoutes.ROOT}/*")
+        }
+
+    @Bean
     fun authRegistrationService(
-        users: InMemoryAuthUserRepository,
+        users: AuthUserRepository,
         passwordHasher: PasswordHasher,
         settings: AuthRuntimeSettings,
     ): AuthRegistrationService =
@@ -141,7 +212,10 @@ class AuthPolicyConfig {
         )
 
     @Bean
-    fun operationalReadRepository(): OperationalReadRepository {
+    fun operationalReadRepository(
+        settings: AuthRuntimeSettings,
+        dataSource: ObjectProvider<DataSource>,
+    ): OperationalReadRepository {
         val group = GroupId("co-a")
         val timestamp = Instant.parse("2026-05-29T00:00:00Z")
         val sampleGateway = "raw.sample.front"
@@ -159,94 +233,137 @@ class AuthPolicyConfig {
             updatedAt = timestamp,
             groupId = group,
         )
-        return InMemoryOperationalReadRepository(
-            telemetry = listOf(
-                TelemetryReadModel(
-                    uuid = sampleGateway,
-                    latitude = 35.8714,
-                    longitude = 128.6014,
-                    altitude = 120.0,
-                    magneticX = 12.4,
-                    magneticY = -3.2,
-                    magneticZ = 42.1,
-                    soc = "78",
-                    phoneBatterySOC = 91.0,
-                    velocity = 8.5,
-                    totalDistance = 1520.0,
-                    epochTime = "00:10:23",
-                    portDistance = 250.0,
-                    groupId = group,
-                ),
+        val telemetry = listOf(
+            TelemetryReadModel(
+                uuid = sampleGateway,
+                latitude = 35.8714,
+                longitude = 128.6014,
+                altitude = 120.0,
+                magneticX = 12.4,
+                magneticY = -3.2,
+                magneticZ = 42.1,
+                soc = "78",
+                phoneBatterySOC = 91.0,
+                velocity = 8.5,
+                totalDistance = 1520.0,
+                epochTime = "00:10:23",
+                portDistance = 250.0,
+                groupId = group,
             ),
-            assetsByGateway = mapOf(sampleGateway to listOf(sampleAsset)),
+        )
+        val assetsByGateway = mapOf(sampleGateway to listOf(sampleAsset))
+        if (settings.jdbcPersistenceEnabled) {
+            dataSource.getIfAvailable()?.let {
+                return JdbcOperationalReadRepository(
+                    dataSource = it,
+                    telemetry = telemetry,
+                    assetsByGateway = assetsByGateway,
+                )
+            }
+        }
+        return InMemoryOperationalReadRepository(
+            telemetry = telemetry,
+            assetsByGateway = assetsByGateway,
         )
     }
 
     @Bean
-    fun operationalEventRepository(): OperationalEventRepository {
+    fun operationalEventRepository(
+        settings: AuthRuntimeSettings,
+        dataSource: ObjectProvider<DataSource>,
+        redisTemplate: ObjectProvider<StringRedisTemplate>,
+        objectMapper: ObjectMapper,
+    ): OperationalEventRepository {
+        val initialEvents = seedOperationalEvents()
+        val repository = if (settings.jdbcPersistenceEnabled) {
+            dataSource.getIfAvailable()?.let { JdbcOperationalEventRepository(it, initialEvents) }
+                ?: InMemoryOperationalEventRepository(initialEvents)
+        } else {
+            InMemoryOperationalEventRepository(initialEvents)
+        }
+        if (!settings.redisOperationalEventCacheEnabled) {
+            return repository
+        }
+        return redisTemplate.getIfAvailable()
+            ?.let {
+                RedisOperationalEventRepository(
+                    delegate = repository,
+                    store = RedisTemplateStringKeyValueStore(it),
+                    objectMapper = objectMapper,
+                    policy = RedisCachePolicy(
+                        keyPrefix = settings.operationalEventCacheKeyPrefix,
+                        ttl = Duration.ofSeconds(settings.operationalEventCacheTtlSeconds),
+                        staleKeyPrefix = settings.operationalEventStaleCacheKeyPrefix,
+                        staleTtl = Duration.ofSeconds(settings.operationalEventStaleCacheTtlSeconds),
+                        ttlJitterRatio = settings.operationalEventCacheTtlJitterRatio,
+                    ),
+                )
+            }
+            ?: repository
+    }
+
+    private fun seedOperationalEvents(): List<OperationalEventReadModel> {
         val group = GroupId("co-a")
-        return InMemoryOperationalEventRepository(
-            listOf(
-                OperationalEventReadModel(
-                    id = "ops-health-001",
-                    occurredAt = Instant.parse("2026-06-01T00:00:00Z"),
-                    severity = "info",
-                    category = "api",
-                    source = "API 서버",
-                    message = "헬스체크 정상",
-                    connections = 12,
-                    latencyMs = 42,
-                    throughputMbps = 18.4,
-                    groupId = group,
-                ),
-                OperationalEventReadModel(
-                    id = "ops-signaling-001",
-                    occurredAt = Instant.parse("2026-06-01T00:05:00Z"),
-                    severity = "info",
-                    category = "signaling",
-                    source = "Signaling 서버",
-                    message = "WebRTC WHEP 연결 수립",
-                    connections = 3,
-                    latencyMs = 88,
-                    throughputMbps = 42.1,
-                    groupId = group,
-                ),
-                OperationalEventReadModel(
-                    id = "ops-network-001",
-                    occurredAt = Instant.parse("2026-06-01T00:12:00Z"),
-                    severity = "warn",
-                    category = "network",
-                    source = "TURN 릴레이",
-                    message = "직접 ICE 후보 실패 후 릴레이 경로 사용",
-                    connections = 5,
-                    latencyMs = 164,
-                    throughputMbps = 31.6,
-                    groupId = group,
-                ),
-                OperationalEventReadModel(
-                    id = "ops-stream-001",
-                    occurredAt = Instant.parse("2026-06-01T00:24:00Z"),
-                    severity = "warn",
-                    category = "stream",
-                    source = "Stream Registry",
-                    message = "송출 종료 감지",
-                    connections = 1,
-                    latencyMs = 110,
-                    throughputMbps = 0.0,
-                    groupId = group,
-                ),
-                OperationalEventReadModel(
-                    id = "ops-security-001",
-                    occurredAt = Instant.parse("2026-06-01T00:31:00Z"),
-                    severity = "error",
-                    category = "security",
-                    source = "인증/인가 서버",
-                    message = "만료된 세션으로 스트림 접근 거절",
-                    connections = 0,
-                    latencyMs = 73,
-                    throughputMbps = 0.0,
-                    groupId = group,
-                ),
+        return listOf(
+            OperationalEventReadModel(
+                id = "ops-health-001",
+                occurredAt = Instant.parse("2026-06-01T00:00:00Z"),
+                severity = "info",
+                category = "api",
+                source = "API 서버",
+                message = "헬스체크 정상",
+                connections = 12,
+                latencyMs = 42,
+                throughputMbps = 18.4,
+                groupId = group,
+            ),
+            OperationalEventReadModel(
+                id = "ops-signaling-001",
+                occurredAt = Instant.parse("2026-06-01T00:05:00Z"),
+                severity = "info",
+                category = "signaling",
+                source = "Signaling 서버",
+                message = "WebRTC WHEP 연결 수립",
+                connections = 3,
+                latencyMs = 88,
+                throughputMbps = 42.1,
+                groupId = group,
+            ),
+            OperationalEventReadModel(
+                id = "ops-network-001",
+                occurredAt = Instant.parse("2026-06-01T00:12:00Z"),
+                severity = "warn",
+                category = "network",
+                source = "TURN 릴레이",
+                message = "직접 ICE 후보 실패 후 릴레이 경로 사용",
+                connections = 5,
+                latencyMs = 164,
+                throughputMbps = 31.6,
+                groupId = group,
+            ),
+            OperationalEventReadModel(
+                id = "ops-stream-001",
+                occurredAt = Instant.parse("2026-06-01T00:24:00Z"),
+                severity = "warn",
+                category = "stream",
+                source = "Stream Registry",
+                message = "송출 종료 감지",
+                connections = 1,
+                latencyMs = 110,
+                throughputMbps = 0.0,
+                groupId = group,
+            ),
+            OperationalEventReadModel(
+                id = "ops-security-001",
+                occurredAt = Instant.parse("2026-06-01T00:31:00Z"),
+                severity = "error",
+                category = "security",
+                source = "인증/인가 서버",
+                message = "만료된 세션으로 스트림 접근 거절",
+                connections = 0,
+                latencyMs = 73,
+                throughputMbps = 0.0,
+                groupId = group,
             ),
         )
     }
@@ -272,6 +389,31 @@ class AuthPolicyConfig {
     @Bean
     fun timeSyncStatusService(repository: TimeSyncConfigRepository): TimeSyncStatusService =
         TimeSyncStatusService(repository)
+
+    private fun seedAuthUsers(
+        settings: AuthRuntimeSettings,
+        passwordHasher: PasswordHasher,
+    ): List<AuthUser> =
+        listOf(
+            AuthUser(
+                id = 1,
+                username = settings.operatorUsername,
+                email = "${settings.operatorUsername}@example.test",
+                passwordHash = passwordHasher.hash(settings.operatorPassword),
+                companyId = settings.operatorCompanyId,
+                role = UserRole.OPERATOR,
+                groupId = GroupId(settings.operatorGroupId),
+            ),
+            AuthUser(
+                id = 2,
+                username = settings.smokeUsername,
+                email = "${settings.smokeUsername}@example.test",
+                passwordHash = passwordHasher.hash(settings.smokePassword),
+                companyId = settings.smokeCompanyId,
+                role = UserRole.VIEWER,
+                groupId = GroupId(settings.smokeGroupId),
+            ),
+        )
 }
 
 data class AuthRuntimeSettings(
@@ -294,6 +436,20 @@ data class AuthRuntimeSettings(
     val signupInvites: SignupInvites,
     val redisPrincipalCacheEnabled: Boolean = true,
     val redisRefreshSessionEnabled: Boolean = true,
+    val jdbcPersistenceEnabled: Boolean = true,
+    val l1AuthUserCacheEnabled: Boolean = true,
+    val redisOperationalEventCacheEnabled: Boolean = true,
+    val operationalEventCacheKeyPrefix: String = "gcs:ops-events:",
+    val operationalEventCacheTtlSeconds: Long = 5,
+    val operationalEventStaleCacheKeyPrefix: String = "gcs:ops-events:stale:",
+    val operationalEventStaleCacheTtlSeconds: Long = 60,
+    val operationalEventCacheTtlJitterRatio: Double = 0.2,
+    val authRateLimitEnabled: Boolean = true,
+    val authRateLimitPerMinute: Int = 60,
+    val asyncPostProcessingEnabled: Boolean = true,
+    val postProcessingCorePoolSize: Int = 2,
+    val postProcessingMaxPoolSize: Int = 4,
+    val postProcessingQueueCapacity: Int = 256,
 ) {
     companion object {
         private const val DEFAULT_SECRET = "local-auth-policy-secret-at-least-32-characters"
@@ -330,6 +486,22 @@ data class AuthRuntimeSettings(
                 signupInvites = signupInvites(env),
                 redisPrincipalCacheEnabled = boolEnv(env, "AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED", true),
                 redisRefreshSessionEnabled = boolEnv(env, "AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED", true),
+                jdbcPersistenceEnabled = boolEnv(env, "AUTH_POLICY_JDBC_PERSISTENCE_ENABLED", true),
+                l1AuthUserCacheEnabled = boolEnv(env, "AUTH_POLICY_L1_AUTH_USER_CACHE_ENABLED", true),
+                redisOperationalEventCacheEnabled = boolEnv(env, "AUTH_POLICY_REDIS_OPERATIONAL_EVENT_CACHE_ENABLED", true),
+                operationalEventCacheKeyPrefix = env.getProperty("AUTH_POLICY_OPERATIONAL_EVENT_CACHE_KEY_PREFIX")
+                    ?: "gcs:ops-events:",
+                operationalEventCacheTtlSeconds = longEnv(env, "AUTH_POLICY_OPERATIONAL_EVENT_CACHE_TTL_SECONDS", 5),
+                operationalEventStaleCacheKeyPrefix = env.getProperty("AUTH_POLICY_OPERATIONAL_EVENT_STALE_CACHE_KEY_PREFIX")
+                    ?: "gcs:ops-events:stale:",
+                operationalEventStaleCacheTtlSeconds = longEnv(env, "AUTH_POLICY_OPERATIONAL_EVENT_STALE_CACHE_TTL_SECONDS", 60),
+                operationalEventCacheTtlJitterRatio = doubleEnv(env, "AUTH_POLICY_OPERATIONAL_EVENT_CACHE_TTL_JITTER_RATIO", 0.2),
+                authRateLimitEnabled = boolEnv(env, "AUTH_POLICY_RATE_LIMIT_ENABLED", true),
+                authRateLimitPerMinute = intEnv(env, "AUTH_POLICY_AUTH_RATE_LIMIT_PER_MINUTE", 60),
+                asyncPostProcessingEnabled = boolEnv(env, "AUTH_POLICY_ASYNC_POST_PROCESSING_ENABLED", true),
+                postProcessingCorePoolSize = intEnv(env, "AUTH_POLICY_POST_PROCESSING_CORE_POOL_SIZE", 2),
+                postProcessingMaxPoolSize = intEnv(env, "AUTH_POLICY_POST_PROCESSING_MAX_POOL_SIZE", 4),
+                postProcessingQueueCapacity = intEnv(env, "AUTH_POLICY_POST_PROCESSING_QUEUE_CAPACITY", 256),
             )
 
         private fun longEnv(env: Environment, name: String, defaultValue: Long): Long =
@@ -340,6 +512,9 @@ data class AuthRuntimeSettings(
 
         private fun boolEnv(env: Environment, name: String, defaultValue: Boolean): Boolean =
             env.getProperty(name)?.lowercase()?.let { it == "true" || it == "1" } ?: defaultValue
+
+        private fun doubleEnv(env: Environment, name: String, defaultValue: Double): Double =
+            env.getProperty(name)?.toDoubleOrNull()?.takeIf { it >= 0.0 } ?: defaultValue
 
         private fun csvEnv(env: Environment, name: String): Set<String> =
             env.getProperty(name)

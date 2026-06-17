@@ -24,6 +24,7 @@ class TimeSyncController(
     private val principalResolver: BearerPrincipalResolver,
 ) {
     @GetMapping(TimeSyncApiRoutes.STATUS)
+    @RequiresBearerAuth
     fun status(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
     ): TimeSyncStatusResponse {
@@ -32,6 +33,7 @@ class TimeSyncController(
     }
 
     @PostMapping(TimeSyncApiRoutes.CHECK)
+    @RequiresBearerAuth
     fun check(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
     ): TimeSyncStatusResponse {
@@ -40,6 +42,7 @@ class TimeSyncController(
     }
 
     @PutMapping(TimeSyncApiRoutes.CONFIG)
+    @RequiresBearerAuth
     fun updateConfig(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @RequestBody request: TimeSyncConfigRequest,

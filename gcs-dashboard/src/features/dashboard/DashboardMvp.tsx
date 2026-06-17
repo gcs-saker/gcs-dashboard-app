@@ -1,8 +1,12 @@
-import { lazy, Suspense, useCallback, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
+import { AudioWaveformPanel } from "./components/AudioWaveformPanel";
+import { CctvChannelCard, type CctvQualityMode } from "./components/CctvChannelCard";
+import { OpsSummaryPanel } from "./components/OpsSummaryPanel";
 import { SelectedStreamPanel } from "./components/SelectedStreamPanel";
 import { StreamGrid } from "./components/StreamGrid";
+import { TelemetryPanel } from "./components/TelemetryPanel";
 import { WidgetAddDialog } from "./components/WidgetAddDialog";
 import { WidgetHeaderActions } from "./components/WidgetHeaderActions";
 import { WidgetPopout } from "./components/WidgetPopout";
@@ -17,124 +21,30 @@ import {
   setDashboardWidgetPinned,
   setDashboardWidgetVisible,
   type DashboardLayoutItem,
-  type DashboardWidgetDefinition,
   type DashboardWidgetId,
 } from "./dashboardLayout";
-import "./DashboardMvp.css";
+import "./DashboardMvp.scss";
 import { getMapFocusForStream } from "./mapFocus";
 import { type StreamDeviceOption } from "./streamDevices";
 import {
   CCTV_EMPTY_STREAM_ID_PREFIX,
   createEmptyCctvStreamSlot,
-  getDashboardStreamStatusClass,
-  getDashboardStreamStatusText,
-  getDashboardStreamDisplayName,
-  type DashboardGeometrySource,
   type DashboardStreamSlot,
 } from "./streamTypes";
 import type { RealtimePlayerSnapshot } from "../streaming/types";
 import { useDashboardStreams } from "./hooks/useDashboardStreams";
+import { telemetryRowsForStream, type AudioAnalysisSnapshot } from "./dashboardPresentation";
 
-const TacticalLeafletMap = lazy(() =>
-  import("./map/TacticalLeafletMap").then((module) => ({ default: module.TacticalLeafletMap })),
-);
-const EventLogView = lazy(() =>
-  import("./components/EventLogView").then((module) => ({ default: module.EventLogView })),
-);
-const TimeSyncSettingsView = lazy(() =>
-  import("./components/TimeSyncSettingsView").then((module) => ({ default: module.TimeSyncSettingsView })),
-);
+const loadTacticalLeafletMap = () => import("./map/TacticalLeafletMap");
+const loadEventLogView = () => import("./components/EventLogView");
+const loadTimeSyncSettingsView = () => import("./components/TimeSyncSettingsView");
 
-type TelemetryRow = [label: string, value: string];
+const TacticalLeafletMap = lazy(() => loadTacticalLeafletMap().then((module) => ({ default: module.TacticalLeafletMap })));
+const EventLogView = lazy(() => loadEventLogView().then((module) => ({ default: module.EventLogView })));
+const TimeSyncSettingsView = lazy(() => loadTimeSyncSettingsView().then((module) => ({ default: module.TimeSyncSettingsView })));
+
 type DashboardView = "dashboard" | "cctv" | "events" | "status" | "settings";
 type CctvLayoutMode = "3x3" | "4x4" | "5x5" | "auto";
-type CctvQualityMode = "preview" | "high";
-
-interface AudioAnalysisSnapshot {
-  streamId: string;
-  title: string;
-  mode: RealtimePlayerSnapshot["mode"];
-  streamStatus: RealtimePlayerSnapshot["streamStatus"];
-  hasAudioTrack: boolean;
-  isAudioActive: boolean;
-  audioLevel: number | null;
-  firstFrameLatencyMs: number | null;
-  whepResponseMs: number | null;
-  jitterMs: number | null;
-  packetsLost: number | null;
-}
-
-type StatusTone = "good" | "warning" | "danger" | "muted" | "info";
-
-interface StatusNote {
-  label: string;
-  tone: StatusTone;
-}
-
-interface StatusTile extends StatusNote {
-  value: string;
-}
-
-function geometrySourceLabel(source: DashboardGeometrySource | undefined): string {
-  switch (source) {
-    case "telemetry":
-      return "GPS 텔레메트리";
-    case "registry":
-      return "장비 등록값";
-    case "device":
-      return "장비 좌표";
-    case "mock":
-    default:
-      return "기본 좌표";
-  }
-}
-
-function telemetryRowsForStream(stream: DashboardStreamSlot): TelemetryRow[] {
-  const geometry = stream.geometry;
-  const streamName = getDashboardStreamDisplayName(stream);
-  if (!geometry) {
-    return [
-      ["스트림", streamName],
-      ["상태", getDashboardStreamStatusText(stream.status)],
-      ["좌표", "대기"],
-      ["고도", "대기"],
-      ["방위", "대기"],
-      ["좌표소스", "없음"],
-    ];
-  }
-
-  return [
-    ["스트림", streamName],
-    ["상태", getDashboardStreamStatusText(stream.status)],
-    ["위도", geometry.lat.toFixed(6)],
-    ["경도", geometry.lng.toFixed(6)],
-    ["고도", `${geometry.altitudeM.toFixed(1)} m`],
-    ["기체 방위", formatBearing(geometry.headingDeg)],
-    ["지도 기준", formatBearing(geometry.yawDeg)],
-    ["방위 차이", formatBearingDelta(geometry.headingDeg, geometry.yawDeg)],
-    ["피치 / 롤", `${formatSignedDegree(geometry.pitchDeg)} / ${formatSignedDegree(geometry.rollDeg)}`],
-    ["FOV", `${geometry.fovDeg}deg`],
-    ["좌표소스", geometrySourceLabel(geometry.source)],
-  ];
-}
-
-function normalizeDegrees(value: number): number {
-  return ((value % 360) + 360) % 360;
-}
-
-function formatBearing(value: number): string {
-  return `${Math.round(normalizeDegrees(value)).toString().padStart(3, "0")}deg`;
-}
-
-function formatSignedDegree(value: number): string {
-  const rounded = Math.round(value * 10) / 10;
-  return `${rounded > 0 ? "+" : ""}${rounded}deg`;
-}
-
-function formatBearingDelta(headingDeg: number, mapBearingDeg: number): string {
-  const delta = ((headingDeg - mapBearingDeg + 540) % 360) - 180;
-  return formatSignedDegree(delta);
-}
 
 export function DashboardMvp() {
   const { currentUser, logout } = useAuth();
@@ -165,6 +75,7 @@ export function DashboardMvp() {
     disconnectCurrentStreamSlot: disconnectCurrentStreamSlotState,
     editingStream,
     openStreamConnection: openStreamConnectionState,
+    selectStream: selectStreamState,
     selectedStream,
     selectedStreamId,
     setEditingStreamId,
@@ -177,6 +88,21 @@ export function DashboardMvp() {
   const assetTreeRoot = useMemo(() => mergeAssetTreeWithStreams(DEFAULT_ASSET_TREE, streams), [streams]);
   const cctvGridSize = getCctvGridSize(cctvLayoutMode);
   const cctvStreams = useMemo(() => buildCctvGridStreams(streams, cctvGridSize), [streams, cctvGridSize]);
+
+  useEffect(() => {
+    const preloadDashboardChunks = () => {
+      void loadEventLogView();
+      void loadTimeSyncSettingsView();
+      void loadTacticalLeafletMap();
+    };
+    if (typeof window === "undefined") return;
+    if ("requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(preloadDashboardChunks, { timeout: 2600 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+    const timeoutId = globalThis.setTimeout(preloadDashboardChunks, 1600);
+    return () => globalThis.clearTimeout(timeoutId);
+  }, []);
 
   const isWidgetPinned = useCallback(
     (widgetId: DashboardWidgetId): boolean => layout.find((item) => item.id === widgetId)?.pinned ?? false,
@@ -229,6 +155,17 @@ export function DashboardMvp() {
     openStreamConnectionState(streamId);
     setLayoutMessage("스트림 슬롯 선택됨");
   }, [openStreamConnectionState]);
+
+  const selectMapStream = useCallback((streamId: string): void => {
+    selectStreamState(streamId);
+    setLayoutMessage("지도 핀 스트림 선택됨");
+  }, [selectStreamState]);
+
+  const selectAssetTreeStream = useCallback((streamId: string): void => {
+    selectStreamState(streamId);
+    setIsAssetDrawerOpen(false);
+    setLayoutMessage("자산트리 스트림 선택됨");
+  }, [selectStreamState]);
 
   const connectStreamDevice = useCallback((device: StreamDeviceOption): void => {
     connectStreamDeviceState(device);
@@ -342,31 +279,35 @@ export function DashboardMvp() {
           </button>
         </nav>
         <div className="ops-dashboard__actions">
-          <button
-            aria-controls="asset-tree-drawer"
-            aria-expanded={isAssetDrawerOpen}
-            className="ops-command-button asset-menu-button"
-            onClick={() => setIsAssetDrawerOpen(true)}
-            type="button"
-          >
-            <span aria-hidden="true">☰</span>
-            자산
-          </button>
-          <span role="status">{layoutMessage}</span>
+          <div className="ops-dashboard__action-group">
+            <button
+              aria-controls="asset-tree-drawer"
+              aria-expanded={isAssetDrawerOpen}
+              className="ops-command-button asset-menu-button"
+              onClick={() => setIsAssetDrawerOpen(true)}
+              type="button"
+            >
+              <span aria-hidden="true">☰</span>
+              자산
+            </button>
+            <span className="ops-layout-status" role="status">{layoutMessage}</span>
+          </div>
           <TalkbackControlPanel selectedStreamIds={talkbackTargetStreamIds} streams={streams} />
-          {currentUser ? <span className="ops-user-chip">{currentUser.username}</span> : null}
-          <a className="ops-command-button is-primary" href="/publisher" role="button">
-            웹캠 송출
-          </a>
-          <button className="ops-command-button" onClick={handleLogout} type="button">
-            로그아웃
-          </button>
-          <button className="ops-command-button" onClick={() => setIsWidgetDialogOpen(true)} type="button">
-            위젯 추가
-          </button>
-          <button className="ops-command-button" onClick={resetLayout} type="button">
-            초기화
-          </button>
+          <div className="ops-dashboard__action-group">
+            <a aria-label="웹캠 송출" className="ops-command-button is-primary" href="/publisher" role="button">
+              송출
+            </a>
+            <button aria-label="위젯 추가" className="ops-command-button" onClick={() => setIsWidgetDialogOpen(true)} type="button">
+              레이아웃
+            </button>
+            <button className="ops-command-button" onClick={resetLayout} type="button">
+              초기화
+            </button>
+          </div>
+          <details className="ops-user-menu">
+            <summary>{currentUser ? currentUser.username : "미리보기"}</summary>
+            <button onClick={handleLogout} type="button">로그아웃</button>
+          </details>
         </div>
       </header>
 
@@ -391,6 +332,11 @@ export function DashboardMvp() {
             <div>
               <h2>통합 CCTV 월</h2>
               <span>{cctvGridSize * cctvGridSize}채널 감시 레이아웃 · {cctvQualityMode === "preview" ? "저화질 Preview" : "고화질 확인"}</span>
+            </div>
+            <div className="cctv-view__summary" aria-label="CCTV 운영 요약">
+              <span>LIVE {streams.filter((stream) => stream.status === "online").length}</span>
+              <span>FALLBACK {streams.filter((stream) => stream.status === "fallback").length}</span>
+              <span>OFFLINE {streams.filter((stream) => stream.status === "offline").length}</span>
             </div>
             <div className="cctv-view__controls" aria-label="CCTV 보기 설정">
               {(["3x3", "4x4", "5x5", "auto"] as CctvLayoutMode[]).map((mode) => (
@@ -458,7 +404,7 @@ export function DashboardMvp() {
               </div>
             }
           >
-            <TacticalLeafletMap selectedStream={selectedStream} streams={streams} />
+            <TacticalLeafletMap onSelectStream={selectMapStream} selectedStream={selectedStream} streams={streams} />
           </Suspense>
           <span className="map-focus__label" data-testid="map-focus-label">
             {mapFocus.label}
@@ -551,6 +497,7 @@ export function DashboardMvp() {
                   {widgetControls("asset-tree", "자산트리")}
                 </>
               }
+              onSelectStream={selectAssetTreeStream}
               root={assetTreeRoot}
             />
           </aside>
@@ -595,334 +542,6 @@ export function DashboardMvp() {
       ) : null}
     </main>
   );
-}
-
-function CctvChannelCard({
-  stream,
-  isSelected,
-  hasAudioActivity,
-  qualityMode,
-  onSelect,
-}: {
-  stream: DashboardStreamSlot;
-  isSelected: boolean;
-  hasAudioActivity: boolean;
-  qualityMode: CctvQualityMode;
-  onSelect: (streamId: string) => void;
-}) {
-  const selectStream = useCallback(() => onSelect(stream.id), [onSelect, stream.id]);
-  const sourceLabel = stream.sourceUrl ?? stream.streamPath ?? "주소 미연결";
-  const statusText = getDashboardStreamStatusText(stream.status);
-
-  return (
-    <article className={`cctv-channel-card ${isSelected ? "is-selected" : ""} ${hasAudioActivity ? "has-audio" : ""}`}>
-      <button
-        aria-label={`${stream.title} 선택`}
-        aria-pressed={isSelected}
-        className="cctv-channel-card__viewport"
-        onClick={selectStream}
-        type="button"
-      >
-        <span className="cctv-channel-card__scanline" />
-        <span className="cctv-channel-card__reticle" />
-        <span className="cctv-channel-card__empty">{stream.streamPath ? getDashboardStreamDisplayName(stream) : "채널 미연결"}</span>
-      </button>
-      <div className="cctv-channel-card__meta">
-        <strong>{stream.title}</strong>
-        <span className={`ops-badge ${getDashboardStreamStatusClass(stream.status)}`}>{statusText}</span>
-        {hasAudioActivity ? <span className="cctv-channel-card__audio">음성</span> : null}
-      </div>
-      <div className="cctv-channel-card__footer">
-        <span title={sourceLabel}>{sourceLabel}</span>
-        <em>{qualityMode === "preview" ? "Preview" : "High"}</em>
-      </div>
-      <button className="cctv-channel-card__connect" onClick={selectStream} type="button">
-        주소 연결
-      </button>
-    </article>
-  );
-}
-
-function AudioWaveformPanel({
-  analysis,
-  selectedStream,
-}: {
-  analysis: AudioAnalysisSnapshot | null;
-  selectedStream: DashboardStreamSlot;
-}) {
-  const isSelectedAnalysis = analysis?.streamId === selectedStream.id;
-  const isActive = Boolean(isSelectedAnalysis && analysis?.isAudioActive);
-  const hasTrack = Boolean(isSelectedAnalysis && analysis?.hasAudioTrack);
-  const audioLevel = isSelectedAnalysis ? analysis?.audioLevel ?? null : null;
-  const bars = useMemo(() => buildAudioWaveformBars(audioLevel, isActive), [audioLevel, isActive]);
-  const sourceName = isSelectedAnalysis ? analysis?.title : selectedStream.title;
-  const modeText = isSelectedAnalysis ? formatPlaybackMode(analysis?.mode ?? null, selectedStream.status) : "대기";
-  const latencyText = isSelectedAnalysis && analysis?.firstFrameLatencyMs !== null ? `${analysis?.firstFrameLatencyMs} ms` : "대기";
-  const jitterText = isSelectedAnalysis && analysis?.jitterMs !== null ? `${analysis?.jitterMs} ms` : "대기";
-  const lostText = isSelectedAnalysis && analysis?.packetsLost !== null ? String(analysis?.packetsLost) : "0";
-  const levelText = audioLevel !== null ? `${Math.round(audioLevel * 100)}%` : "대기";
-  const latencyTone = getLatencyTone(analysis?.firstFrameLatencyMs ?? null);
-  const jitterTone = getJitterTone(analysis?.jitterMs ?? null);
-  const lossTone = getPacketLossTone(analysis?.packetsLost ?? null);
-
-  return (
-    <section aria-labelledby="audio-waveform-title" className={`ops-panel audio-waveform ${isActive ? "has-audio" : ""}`}>
-      <div className="ops-panel__header">
-        <h2 id="audio-waveform-title">음성 파형 분석</h2>
-        <span className="ops-panel__header-actions">
-          <span className={`ops-badge ${isActive ? "is-online" : hasTrack ? "is-warning" : "is-offline"}`}>
-            {isActive ? "수신 중" : hasTrack ? "음성 대기" : "신호 대기"}
-          </span>
-        </span>
-      </div>
-      <div className="audio-waveform__body">
-        <div className="audio-waveform__caption">
-          <span>선택 스트림 품질</span>
-          <strong>{modeText}</strong>
-        </div>
-        <div className="audio-waveform__scope" aria-label="수신 음성 파형">
-          {bars.map((height, index) => (
-            <span key={`${selectedStream.id}-${index}`} style={{ "--bar-height": `${height}%` } as CSSProperties} />
-          ))}
-        </div>
-        <dl>
-          <div>
-            <dt>대상</dt>
-            <dd>{sourceName}</dd>
-          </div>
-          <div>
-            <dt>레벨</dt>
-            <dd>{levelText}</dd>
-          </div>
-          <div className={`is-${latencyTone}`}>
-            <dt>지연</dt>
-            <dd>{latencyText}</dd>
-          </div>
-          <div className={`is-${jitterTone}`}>
-            <dt>지터</dt>
-            <dd>{jitterText}</dd>
-          </div>
-          <div className={`is-${lossTone}`}>
-            <dt>손실</dt>
-            <dd>{lostText}</dd>
-          </div>
-        </dl>
-      </div>
-    </section>
-  );
-}
-
-function OpsSummaryPanel({
-  audioAnalysis,
-  controls,
-  selectedStream,
-  streamCount,
-  talkbackTargetCount,
-  widget,
-}: {
-  audioAnalysis: AudioAnalysisSnapshot | null;
-  controls: ReactNode;
-  selectedStream: DashboardStreamSlot;
-  streamCount: number;
-  talkbackTargetCount: number;
-  widget: DashboardWidgetDefinition;
-}) {
-  const gpsText = selectedStream.geometry ? "좌표 수신" : "좌표 대기";
-  const audioText = audioAnalysis?.streamId === selectedStream.id && audioAnalysis.isAudioActive ? "음성 수신" : "음성 대기";
-  const aiText = selectedStream.aiModeEnabled ? "AI 준비" : "AI 꺼짐";
-  const selectedStatusText = getDashboardStreamStatusText(selectedStream.status);
-  const statusTiles: StatusTile[] = [
-    { label: "스트림", value: `${streamCount}개`, tone: "info" },
-    { label: "GPS", value: gpsText, tone: selectedStream.geometry ? "good" : "muted" },
-    { label: "오디오", value: audioText, tone: audioText === "음성 수신" ? "good" : "muted" },
-    { label: "Talkback", value: talkbackTargetCount ? `${talkbackTargetCount} 대상` : "대기", tone: talkbackTargetCount ? "info" : "muted" },
-  ];
-  const statusNotes: StatusNote[] = [
-    { label: selectedStream.geometry ? "GPS 정상" : "GPS 대기", tone: selectedStream.geometry ? "good" : "muted" },
-    {
-      label: selectedStream.status === "online" ? "WebRTC 직접 연결" : selectedStatusText,
-      tone: selectedStream.status === "online" ? "good" : selectedStream.status === "offline" ? "danger" : "warning",
-    },
-    {
-      label: audioAnalysis?.jitterMs !== null && audioAnalysis?.jitterMs !== undefined
-        ? `음성 지터 ${Math.round(audioAnalysis.jitterMs)}ms`
-        : "음성 분석 대기",
-      tone: getJitterTone(audioAnalysis?.jitterMs ?? null),
-    },
-    { label: aiText, tone: selectedStream.aiModeEnabled ? "info" : "muted" },
-  ];
-  const recentEvents: StatusNote[] = [
-    { label: `${getDashboardStreamDisplayName(selectedStream)} 선택됨`, tone: "info" },
-    { label: selectedStream.geometry ? "지도 포커스 좌표 동기화" : "지도 좌표 대기", tone: selectedStream.geometry ? "good" : "muted" },
-    {
-      label: audioAnalysis?.streamId === selectedStream.id ? `재생 경로 ${formatPlaybackMode(audioAnalysis.mode, selectedStream.status)}` : "재생 품질 수집 대기",
-      tone: audioAnalysis?.streamId === selectedStream.id ? "info" : "muted",
-    },
-  ];
-
-  return (
-    <section
-      aria-labelledby="ops-summary-title"
-      className="ops-panel ops-summary"
-      data-widget-id={widget.id}
-      style={{ minHeight: widget.minHeight, minWidth: widget.minWidth }}
-    >
-      <div className="ops-panel__header">
-        <h2 id="ops-summary-title">운용 요약</h2>
-        {controls}
-      </div>
-      <div className="ops-summary__body">
-        <div className="ops-summary__selected">
-          <span>선택 스트림</span>
-          <strong>{getDashboardStreamDisplayName(selectedStream)}</strong>
-          <em className={`ops-summary__state is-${selectedStream.status}`}>{selectedStatusText}</em>
-        </div>
-        <dl className="ops-summary__tiles">
-          {statusTiles.map((tile) => (
-            <div className={`is-${tile.tone}`} key={tile.label}>
-              <dt>{tile.label}</dt>
-              <dd>{tile.value}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="ops-summary__notes" aria-label="주의 / 상태">
-          <span>주의 / 상태</span>
-          <ul>
-            {statusNotes.map((note) => (
-              <li className={`is-${note.tone}`} key={note.label}>{note.label}</li>
-            ))}
-          </ul>
-        </div>
-        <div className="ops-summary__events" aria-label="최근 상태">
-          <span>최근 상태</span>
-          <ul>
-            {recentEvents.map((event) => (
-              <li className={`is-${event.tone}`} key={event.label}>{event.label}</li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function TelemetryPanel({
-  controls,
-  isPinned,
-  rows,
-  stream,
-  widget,
-}: {
-  controls: ReactNode;
-  isPinned: boolean;
-  rows: TelemetryRow[];
-  stream: DashboardStreamSlot;
-  widget: DashboardWidgetDefinition;
-}) {
-  const geometry = stream.geometry;
-  const streamName = getDashboardStreamDisplayName(stream);
-  const heading = geometry ? formatBearing(geometry.headingDeg) : "대기";
-  const mapBearing = geometry ? formatBearing(geometry.yawDeg) : "대기";
-  const bearingDelta = geometry ? formatBearingDelta(geometry.headingDeg, geometry.yawDeg) : "대기";
-  const headingRotation = geometry ? `rotate(${normalizeDegrees(geometry.headingDeg)}deg)` : undefined;
-  const mapRotation = geometry ? `rotate(${normalizeDegrees(geometry.yawDeg)}deg)` : undefined;
-  const primaryMetrics: TelemetryRow[] = [
-    ["고도", geometry ? `${geometry.altitudeM.toFixed(1)} m` : "대기"],
-    ["기체 방위", heading],
-    ["지도 기준", mapBearing],
-  ];
-
-  return (
-    <section
-      aria-labelledby="telemetry-title"
-      className={`ops-panel telemetry-panel ${isPinned ? "is-pinned" : ""}`}
-      data-widget-id={widget.id}
-      style={{ minHeight: widget.minHeight, minWidth: widget.minWidth }}
-    >
-      <div className="ops-panel__header">
-        <h2 id="telemetry-title">지오메트리 / 텔레메트리</h2>
-        {controls}
-      </div>
-      <div className="telemetry-panel__body">
-        <div className="telemetry-panel__identity">
-          <span>선택 스트림</span>
-          <strong>{streamName}</strong>
-          <em className={`ops-summary__state is-${stream.status}`}>{getDashboardStreamStatusText(stream.status)}</em>
-        </div>
-        <div className="telemetry-compass" aria-label="기체 방위와 지도 기준 방위">
-          <div className="telemetry-compass__dial">
-            <span className="telemetry-compass__north">N</span>
-            <span className="telemetry-compass__needle" style={{ transform: headingRotation }} />
-            <span className="telemetry-compass__map-bearing" style={{ transform: mapRotation }} />
-          </div>
-          <div className="telemetry-compass__legend">
-            <span>기체 {heading}</span>
-            <span>지도 {mapBearing}</span>
-            <strong>차이 {bearingDelta}</strong>
-          </div>
-        </div>
-        <dl className="telemetry-panel__metrics">
-          {primaryMetrics.map(([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-        <dl className="telemetry-panel__details">
-          {rows.map(([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-    </section>
-  );
-}
-
-function buildAudioWaveformBars(audioLevel: number | null, isActive: boolean): number[] {
-  if (!isActive || audioLevel === null) {
-    return Array.from({ length: 28 }, () => 4);
-  }
-  const normalizedLevel = Math.min(1, Math.max(0, audioLevel));
-  const baseHeight = 12 + normalizedLevel * 76;
-  return Array.from({ length: 28 }, (_, index) => {
-    const phase = Math.sin(index * 0.86) * 0.26 + Math.cos(index * 0.43) * 0.18;
-    return Math.max(6, Math.min(94, baseHeight * (0.72 + phase)));
-  });
-}
-
-function formatPlaybackMode(mode: RealtimePlayerSnapshot["mode"] | null, streamStatus: DashboardStreamSlot["status"]): string {
-  if (mode === "webrtc") return "WebRTC";
-  if (mode === "hls") return "HLS fallback";
-  if (mode === "reconnecting") return "재연결";
-  if (mode === "loading") return "연결 확인";
-  if (mode === "error") return "경로 오류";
-  if (mode === "offline" || streamStatus === "offline") return "오프라인";
-  return "대기";
-}
-
-function getLatencyTone(value: number | null): StatusTone {
-  if (value === null) return "muted";
-  if (value <= 450) return "good";
-  if (value <= 900) return "warning";
-  return "danger";
-}
-
-function getJitterTone(value: number | null): StatusTone {
-  if (value === null) return "muted";
-  if (value <= 30) return "good";
-  if (value <= 80) return "warning";
-  return "danger";
-}
-
-function getPacketLossTone(value: number | null): StatusTone {
-  if (value === null) return "muted";
-  if (value <= 0) return "good";
-  if (value <= 3) return "warning";
-  return "danger";
 }
 
 function getCctvGridSize(mode: CctvLayoutMode): number {

@@ -40,6 +40,11 @@ export interface TelemetryReadResponse {
   epochTime: string;
 }
 
+export interface TelemetryHistoryResponse {
+  recordedAt: string;
+  telemetry: TelemetryReadResponse;
+}
+
 export const MOCK_STREAM_DEVICES: StreamDeviceOption[] = [
   {
     id: "device-drn-01-front",
@@ -242,6 +247,37 @@ export async function fetchTelemetryIndex(fetcher: typeof fetch = fetch): Promis
   return new Map(telemetry.map((item) => [item.uuid, item]));
 }
 
+export async function fetchTelemetryHistory(
+  uuid: string,
+  limit = 100,
+  fetcher: typeof fetch = fetch,
+): Promise<TelemetryHistoryResponse[]> {
+  const response = await authenticatedFetch(
+    apiUrl(buildTelemetryHistoryPath(uuid, limit)),
+    {
+      headers: { Accept: "application/json" },
+    },
+    fetcher,
+  );
+  if (response.status === 401) {
+    throw new AuthApiError(response.status, "telemetry history authentication required");
+  }
+  if (!response.ok) {
+    return [];
+  }
+
+  const payload = await response.json();
+  if (!Array.isArray(payload) || !payload.every(isTelemetryHistoryResponse)) {
+    throw new Error("telemetry history response is invalid");
+  }
+  return payload;
+}
+
+export function buildTelemetryHistoryPath(uuid: string, limit = 100): string {
+  const boundedLimit = Math.max(1, Math.min(500, Math.round(limit)));
+  return `${DASHBOARD_API_ROUTES.telemetryIngest}${encodeURIComponent(uuid)}${DASHBOARD_API_ROUTES.telemetryHistorySuffix}?limit=${boundedLimit}`;
+}
+
 export function mergeStreamSlotsWithDevices(
   streams: DashboardStreamSlot[],
   devices: StreamDeviceOption[],
@@ -345,6 +381,25 @@ function geometryFromTelemetry(telemetry: TelemetryReadResponse): StreamDeviceGe
     fovDeg: 60,
     source: "telemetry",
   };
+}
+
+function isTelemetryHistoryResponse(payload: unknown): payload is TelemetryHistoryResponse {
+  if (!payload || typeof payload !== "object") return false;
+  const candidate = payload as Partial<TelemetryHistoryResponse>;
+  return typeof candidate.recordedAt === "string" && isTelemetryReadResponse(candidate.telemetry);
+}
+
+function isTelemetryReadResponse(payload: unknown): payload is TelemetryReadResponse {
+  if (!payload || typeof payload !== "object") return false;
+  const candidate = payload as Partial<TelemetryReadResponse>;
+  return (
+    typeof candidate.uuid === "string" &&
+    typeof candidate.latitude === "number" &&
+    typeof candidate.longitude === "number" &&
+    typeof candidate.altitude === "number" &&
+    typeof candidate.velocity === "number" &&
+    typeof candidate.epochTime === "string"
+  );
 }
 
 function dashboardStatusFromRegistryStatus(status: StreamRegistryResponse["status"]): DashboardStreamStatus {

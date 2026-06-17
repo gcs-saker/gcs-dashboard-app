@@ -1,45 +1,45 @@
 declare module "leaflet" {
-  export type LatLngExpression = [number, number];
+  export interface LeafletPoint {
+    x: number;
+    y: number;
+  }
 
-  export interface Map {
-    getZoom(): number;
+  export interface LeafletMap {
+    addControl(control: unknown): this;
+    off(eventName: string, handler: () => void): this;
+    on(eventName: string, handler: () => void): this;
+    panTo(latLng: readonly [number, number], options?: { animate?: boolean; duration?: number }): this;
     remove(): void;
-    setView(center: LatLngExpression, zoom: number, options?: { animate?: boolean }): this;
+    setView(latLng: readonly [number, number], zoom: number, options?: { animate?: boolean }): this;
+    latLngToContainerPoint(latLng: readonly [number, number]): LeafletPoint;
     zoomIn(): this;
     zoomOut(): this;
   }
 
-  export interface Layer {
-    addTo(target: Map | LayerGroup): this;
-    remove(): void;
+  export interface TileLayer {
+    addTo(map: LeafletMap): this;
+    off(eventName: string, handler: () => void): this;
+    on(eventName: string, handler: () => void): this;
   }
 
-  export interface LayerGroup extends Layer {
-    clearLayers(): this;
-  }
+  export function map(
+    container: HTMLElement,
+    options?: {
+      attributionControl?: boolean;
+      zoomControl?: boolean;
+    },
+  ): LeafletMap;
 
-  export interface TileLayerOptions {
-    attribution?: string;
-  }
+  export function tileLayer(
+    urlTemplate: string,
+    options?: {
+      attribution?: string;
+      maxZoom?: number;
+      tileSize?: number;
+    },
+  ): TileLayer;
 
-  export interface CircleMarkerOptions {
-    color?: string;
-    fillColor?: string;
-    fillOpacity?: number;
-    radius?: number;
+  export class Control {
+    static Attribution: new (options?: { position?: string; prefix?: false | string }) => unknown;
   }
-
-  export interface CircleMarker extends Layer {
-    bindPopup(content: string | HTMLElement): this;
-  }
-
-  export interface LeafletStatic {
-    circleMarker(center: LatLngExpression, options?: CircleMarkerOptions): CircleMarker;
-    layerGroup(): LayerGroup;
-    map(element: HTMLElement, options?: { center?: LatLngExpression; zoom?: number; zoomControl?: boolean }): Map;
-    tileLayer(url: string, options?: TileLayerOptions): Layer;
-  }
-
-  const L: LeafletStatic;
-  export default L;
 }

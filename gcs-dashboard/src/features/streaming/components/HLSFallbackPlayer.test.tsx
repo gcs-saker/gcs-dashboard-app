@@ -69,6 +69,7 @@ describe("HLSFallbackPlayer", () => {
     });
     expect(hlsMock.instances[0].loadSource).toHaveBeenCalledWith(hlsUrl);
     expect(hlsMock.instances[0].attachMedia).toHaveBeenCalledWith(screen.getByLabelText("HLS fallback stream"));
+    expect(screen.getByLabelText("HLS fallback stream")).toHaveAttribute("preload", "none");
 
     act(() => {
       hlsMock.instances[0].emit("manifestParsed");

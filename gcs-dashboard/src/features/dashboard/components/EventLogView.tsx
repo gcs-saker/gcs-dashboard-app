@@ -1,11 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import {
+  summarizeOperationalEventMetrics,
   summarizeOperationalEvents,
   type OperationalEvent,
   type OperationalEventCategory,
   type OperationalEventFilters,
 } from "../operationalEvents";
+import { useOperationalEventMetrics } from "../hooks/useOperationalEventMetrics";
 import { useOperationalEvents } from "../hooks/useOperationalEvents";
+import { useVirtualList } from "../hooks/useVirtualList";
+import { useEventLogStore } from "../stores/useEventLogStore";
 
 const severityLabels = {
   all: "전체",
@@ -23,18 +27,20 @@ const categoryLabels: Record<OperationalEventCategory, string> = {
 };
 
 const eventCategories: OperationalEventCategory[] = ["api", "signaling", "network", "stream", "security"];
+const EVENT_ROW_HEIGHT_PX = 112;
 
 export function EventLogView() {
-  const [filters, setFilters] = useState<OperationalEventFilters>({
-    query: "",
-    severity: "all",
-    from: "",
-    to: "",
-  });
-  const [categoryFilter, setCategoryFilter] = useState<"all" | OperationalEventCategory>("all");
-  const [sourceFilter, setSourceFilter] = useState("all");
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const filters = useEventLogStore((state) => state.filters);
+  const patchFilters = useEventLogStore((state) => state.patchFilters);
+  const categoryFilter = useEventLogStore((state) => state.categoryFilter);
+  const setCategoryFilter = useEventLogStore((state) => state.setCategoryFilter);
+  const sourceFilter = useEventLogStore((state) => state.sourceFilter);
+  const setSourceFilter = useEventLogStore((state) => state.setSourceFilter);
+  const selectedEventId = useEventLogStore((state) => state.selectedEventId);
+  const setSelectedEventId = useEventLogStore((state) => state.setSelectedEventId);
+  const resetFilters = useEventLogStore((state) => state.resetFilters);
   const { events: rawEvents, errorMessage, isLoading, lastUpdatedAt } = useOperationalEvents(filters);
+  const eventMetrics = useOperationalEventMetrics(filters);
   const events = useMemo(
     () =>
       rawEvents.filter((event) => {
@@ -44,7 +50,14 @@ export function EventLogView() {
       }),
     [categoryFilter, rawEvents, sourceFilter],
   );
-  const summary = useMemo(() => summarizeOperationalEvents(events), [events]);
+  const canUseServerMetrics = categoryFilter === "all" && sourceFilter === "all" && eventMetrics.metrics !== null;
+  const summary = useMemo(
+    () => canUseServerMetrics && eventMetrics.metrics
+      ? summarizeOperationalEventMetrics(eventMetrics.metrics)
+      : summarizeOperationalEvents(events),
+    [canUseServerMetrics, eventMetrics.metrics, events],
+  );
+  const throughputLabel = canUseServerMetrics ? "Avg Throughput" : "Peak Throughput";
   const peakThroughput = Math.max(1, summary.peakThroughputMbps);
   const categoryStats = useMemo(() => summarizeCategories(events), [events]);
   const sourceOptions = useMemo(() => Array.from(new Set(rawEvents.map((event) => event.source))).sort(), [rawEvents]);
@@ -63,11 +76,16 @@ export function EventLogView() {
     [categoryFilter, filters.from, filters.query, filters.severity, filters.to, sourceFilter],
   );
 
-  const resetFilters = (): void => {
-    setFilters({ query: "", severity: "all", from: "", to: "" });
-    setCategoryFilter("all");
-    setSourceFilter("all");
-  };
+  const currentIncidents = useMemo(
+    () => events.filter((event) => event.severity === "error" || event.severity === "warn").slice(0, 3),
+    [events],
+  );
+  const { onScroll: onTimelineScroll, range: timelineRange } = useVirtualList({
+    itemCount: events.length,
+    itemHeight: EVENT_ROW_HEIGHT_PX,
+    overscan: 5,
+  });
+  const visibleTimelineEvents = events.slice(timelineRange.startIndex, timelineRange.endIndex);
 
   useEffect(() => {
     if (!selectedEventId && events[0]) {
@@ -88,18 +106,40 @@ export function EventLogView() {
           <p>스트리밍, 인증, 네트워크, 보안 이벤트를 시간 흐름과 운영 지표로 함께 확인합니다.</p>
         </div>
         <div className="event-log-view__sync">
-          {isLoading ? <span role="status">이벤트 갱신 중</span> : <span>감시 중</span>}
-          {lastUpdatedAt ? <strong>{new Date(lastUpdatedAt).toLocaleTimeString("ko-KR")} 갱신</strong> : <strong>초기화 중</strong>}
+          {isLoading || eventMetrics.isLoading ? <span role="status">이벤트 갱신 중</span> : <span>감시 중</span>}
+          {lastUpdatedAt || eventMetrics.lastUpdatedAt ? (
+            <strong>{new Date(Math.max(lastUpdatedAt ?? 0, eventMetrics.lastUpdatedAt ?? 0)).toLocaleTimeString("ko-KR")} 갱신</strong>
+          ) : <strong>초기화 중</strong>}
         </div>
       </header>
 
       <div className="event-log-view__summary" aria-label="운영 지표 요약">
         <MetricCard label="연결 합계" value={summary.connections.toLocaleString("ko-KR")} tone="info" />
         <MetricCard label="평균 RTT" value={`${summary.avgLatencyMs} ms`} tone={summary.avgLatencyMs > 120 ? "warning" : "good"} />
-        <MetricCard label="Peak Throughput" value={`${summary.peakThroughputMbps.toFixed(1)} Mbps`} tone="info" />
+        <MetricCard label={throughputLabel} value={`${summary.peakThroughputMbps.toFixed(1)} Mbps`} tone="info" />
         <MetricCard label="WARN" value={String(summary.warnings)} tone={summary.warnings > 0 ? "warning" : "muted"} />
         <MetricCard label="ERROR" value={String(summary.errors)} tone={summary.errors > 0 ? "danger" : "muted"} />
       </div>
+
+      <section className="event-log-view__incident-strip" aria-label="현재 주의 이벤트">
+        <div>
+          <span>현재 장애 / 주의</span>
+          <strong>{currentIncidents.length ? `${currentIncidents.length}건 확인 필요` : "중요 이벤트 없음"}</strong>
+        </div>
+        {currentIncidents.length ? (
+          <ul>
+            {currentIncidents.map((event) => (
+              <li className={`is-${event.severity}`} key={event.id}>
+                <span>{event.severity.toUpperCase()}</span>
+                <strong>{event.source}</strong>
+                <em>{event.message}</em>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>WARN/ERROR 이벤트가 없습니다. 운영 추세만 모니터링하면 됩니다.</p>
+        )}
+      </section>
 
       <div className="event-log-view__quickbar" aria-label="빠른 이벤트 필터">
         <div>
@@ -109,7 +149,7 @@ export function EventLogView() {
               aria-pressed={filters.severity === severity}
               className={filters.severity === severity ? "is-active" : ""}
               key={severity}
-              onClick={() => setFilters((current) => ({ ...current, severity }))}
+              onClick={() => patchFilters({ severity })}
               type="button"
             >
               {severityLabels[severity]}
@@ -125,7 +165,7 @@ export function EventLogView() {
           <span>내용 / 출처 / 분류</span>
           <input
             aria-label="내용"
-            onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))}
+            onChange={(event) => patchFilters({ query: event.target.value })}
             placeholder="검색어 입력"
             value={filters.query}
           />
@@ -135,7 +175,7 @@ export function EventLogView() {
           <select
             aria-label="강도"
             onChange={(event) =>
-              setFilters((current) => ({ ...current, severity: event.target.value as OperationalEventFilters["severity"] }))
+              patchFilters({ severity: event.target.value as OperationalEventFilters["severity"] })
             }
             value={filters.severity}
           >
@@ -175,7 +215,7 @@ export function EventLogView() {
         <label>
           <span>시작</span>
           <input
-            onChange={(event) => setFilters((current) => ({ ...current, from: event.target.value }))}
+            onChange={(event) => patchFilters({ from: event.target.value })}
             type="datetime-local"
             value={filters.from}
           />
@@ -183,14 +223,16 @@ export function EventLogView() {
         <label>
           <span>종료</span>
           <input
-            onChange={(event) => setFilters((current) => ({ ...current, to: event.target.value }))}
+            onChange={(event) => patchFilters({ to: event.target.value })}
             type="datetime-local"
             value={filters.to}
           />
         </label>
       </div>
 
-      {errorMessage ? <p className="event-log-view__error" role="alert">{errorMessage}</p> : null}
+      {errorMessage || eventMetrics.errorMessage ? (
+        <p className="event-log-view__error" role="alert">{errorMessage ?? eventMetrics.errorMessage}</p>
+      ) : null}
 
       <div className="event-log-view__workspace">
         <section className="event-log-view__chart-panel" aria-label="시간대별 네트워크 지표">
@@ -234,12 +276,21 @@ export function EventLogView() {
             <h3>운영 이벤트 타임라인</h3>
             <span>{filters.severity === "all" ? "전체 강도" : severityLabels[filters.severity]}</span>
           </div>
-          <div className="event-log-view__list">
-            {events.map((event) => (
+          <div
+            className="event-log-view__list"
+            onScroll={onTimelineScroll}
+            role="listbox"
+            style={{ "--virtual-list-height": `${timelineRange.totalHeight}px` } as React.CSSProperties}
+          >
+            <div className="event-log-view__virtual-spacer">
+              <div className="event-log-view__virtual-window" style={{ transform: `translateY(${timelineRange.offsetTop}px)` }}>
+                {visibleTimelineEvents.map((event) => (
               <button
                 className={`event-log-item is-${event.severity} ${selectedEvent?.id === event.id ? "is-selected" : ""}`}
                 key={event.id}
                 onClick={() => setSelectedEventId(event.id)}
+                role="option"
+                aria-selected={selectedEvent?.id === event.id}
                 type="button"
               >
                 <span>{new Date(event.occurredAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
@@ -248,7 +299,9 @@ export function EventLogView() {
                 <p>{event.message}</p>
                 <small>{categoryLabels[event.category]} · RTT {event.latencyMs} ms · 연결 {event.connections}</small>
               </button>
-            ))}
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 

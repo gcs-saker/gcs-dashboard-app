@@ -112,6 +112,19 @@ class OperationalReadControllerTest {
     }
 
     @Test
+    fun `telemetry history returns selected stream samples without exposing other groups`() {
+        val token = bearer(accessToken("viewer-a"))
+        controller.ingestTelemetry(token, TelemetryIngestRequest(uuid = "raw.mobile.history", latitude = 35.88))
+        controller.ingestTelemetry(token, TelemetryIngestRequest(uuid = "raw.mobile.history", latitude = 35.89))
+
+        val history = controller.telemetryHistory("raw.mobile.history", token, limit = 10)
+        val hidden = controller.telemetryHistory("raw.company-b.front", token, limit = 10)
+
+        assertEquals(setOf(35.89, 35.88), history.map { it.telemetry.latitude }.toSet())
+        assertTrue(hidden.isEmpty())
+    }
+
+    @Test
     fun `telemetry ingest rejects blank uuid`() {
         val error = org.junit.jupiter.api.assertThrows<ResponseStatusException> {
             controller.ingestTelemetry(bearer(accessToken("viewer-a")), TelemetryIngestRequest(uuid = " "))

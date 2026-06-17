@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "2.3.20"
     kotlin("plugin.spring") version "2.3.20"
+    kotlin("plugin.jpa") version "2.3.20"
     id("org.springframework.boot") version "3.5.8"
     id("io.spring.dependency-management") version "1.1.7"
     jacoco
@@ -17,6 +18,9 @@ java {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-graphql")
+    implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("com.auth0:java-jwt:4.5.0")
@@ -24,7 +28,10 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.graphql:spring-graphql-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("com.h2database:h2")
+    runtimeOnly("com.mysql:mysql-connector-j")
 }
 
 kotlin {

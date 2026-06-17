@@ -42,6 +42,9 @@ export type DashboardGeometrySource =
 export const DASHBOARD_QUERY_KEYS = Object.freeze({
   serverStatus: ["dashboard", "server-status"],
   operationalEvents: ["dashboard", "operational-events"],
+  operationalEventMetrics: ["dashboard", "operational-event-metrics"],
+  operationalEventBuckets: ["dashboard", "operational-event-buckets"],
+  telemetryHistory: ["dashboard", "telemetry-history"],
   timeSyncStatus: ["dashboard", "time-sync-status"],
   streams: ["dashboard", "streams"],
   iceServers: ["streaming", "ice-servers"],

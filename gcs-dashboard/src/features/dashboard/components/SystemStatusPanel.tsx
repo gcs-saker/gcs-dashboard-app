@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -7,7 +8,7 @@ import {
   type DashboardServerStatusSnapshot,
 } from "../serverStatus";
 import { AuthApiError } from "../../auth/authApi";
-import { DASHBOARD_SERVER_HEALTH } from "@/features/stateContracts";
+import { DASHBOARD_QUERY_KEYS, DASHBOARD_SERVER_HEALTH } from "@/features/stateContracts";
 
 interface SystemStatusPanelProps {
   controls?: ReactNode;
@@ -27,43 +28,35 @@ const RTT_CHART_WIDTH = 640;
 const RTT_CHART_HEIGHT = 180;
 const RTT_CHART_PADDING = 28;
 
+interface RttStats {
+  avgLatencyMs: number | null;
+  maxLatencyMs: number | null;
+  minLatencyMs: number | null;
+}
+
 export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs = 5000, variant = "panel" }: SystemStatusPanelProps) {
-  const [status, setStatus] = useState<DashboardServerStatusSnapshot>(DEFAULT_SERVER_STATUS);
   const [rttHistory, setRttHistory] = useState<RttSample[]>([]);
+  const statusQuery = useQuery({
+    queryKey: [...DASHBOARD_QUERY_KEYS.serverStatus, refreshMs, fetcher ? "custom-fetcher" : "default-fetcher"],
+    queryFn: () => fetchDashboardServerStatus(fetcher),
+    initialData: DEFAULT_SERVER_STATUS,
+    refetchInterval: refreshMs > 0 ? refreshMs : false,
+  });
+  const status = statusQuery.data;
 
   useEffect(() => {
-    let isMounted = true;
-    let intervalId: ReturnType<typeof globalThis.setInterval> | null = null;
-    const refresh = async (): Promise<void> => {
-      try {
-        const snapshot = await fetchDashboardServerStatus(fetcher);
-        if (isMounted) {
-          setStatus(snapshot);
-          setRttHistory((current) => [
-            ...current.slice(-(RTT_HISTORY_LIMIT - 1)),
-            { checkedAt: snapshot.checkedAt ?? Date.now(), latencyMs: snapshot.latencyMs },
-          ]);
-        }
-      } catch (error) {
-        if (error instanceof AuthApiError && error.status === 401) {
-          if (intervalId) {
-            globalThis.clearInterval(intervalId);
-          }
-          onAuthFailure?.();
-        }
-      }
-    };
+    if (statusQuery.error instanceof AuthApiError && statusQuery.error.status === 401) {
+      onAuthFailure?.();
+    }
+  }, [onAuthFailure, statusQuery.error]);
 
-    void refresh();
-    intervalId = globalThis.setInterval(() => void refresh(), refreshMs);
-
-    return () => {
-      isMounted = false;
-      if (intervalId) {
-        globalThis.clearInterval(intervalId);
-      }
-    };
-  }, [fetcher, onAuthFailure, refreshMs]);
+  useEffect(() => {
+    if (!status.checkedAt) return;
+    setRttHistory((current) => [
+      ...current.slice(-(RTT_HISTORY_LIMIT - 1)),
+      { checkedAt: status.checkedAt ?? Date.now(), latencyMs: status.latencyMs },
+    ]);
+  }, [status.checkedAt, status.latencyMs]);
 
   const rows = useMemo(
     () => [
@@ -99,7 +92,18 @@ export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs 
     [rttHistory],
   );
   const rttChart = useMemo(() => buildRttChart(rttHistory, rttMax), [rttHistory, rttMax]);
+  const rttStats = useMemo(() => buildRttStats(rttHistory), [rttHistory]);
   const latestRttText = status.latencyMs ? `${status.latencyMs} ms` : "측정 대기";
+  const impactItems = useMemo(
+    () =>
+      [
+        ["API", status.apiServer, status.apiServer === DASHBOARD_SERVER_HEALTH.online ? "조회/제어 정상" : "대시보드 데이터 지연 가능"],
+        ["Auth", status.authServer, status.authServer === DASHBOARD_SERVER_HEALTH.online ? "세션 확인 정상" : "로그인/토큰 갱신 영향"],
+        ["Signaling", status.signalingServer, status.signalingServer === DASHBOARD_SERVER_HEALTH.online ? "WHIP/WHEP 정상" : "신규 스트림 연결 영향"],
+        ["Streams", status.streams, status.streams === DASHBOARD_SERVER_HEALTH.online ? "Registry 정상" : "스트림 목록/상태 반영 지연"],
+      ] as const,
+    [status.apiServer, status.authServer, status.signalingServer, status.streams],
+  );
 
   const primaryPanel = (
     <section className={variant === "page" ? "ops-panel system-status-page__panel" : undefined}>
@@ -127,7 +131,7 @@ export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs 
       <div className="system-status-page">
         <header className="system-status-page__hero">
           <div>
-            <span>Operations Topology</span>
+            <span>Operations Health</span>
             <h2>서버 상태</h2>
             <p>API, 인증, signaling, stream registry의 상태와 장애 영향 범위를 함께 확인합니다.</p>
           </div>
@@ -135,6 +139,28 @@ export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs 
             전체 {serverHealthText(status.readiness)}
           </span>
         </header>
+
+        <section className="system-status-page__state-preview" aria-label="상태 시안">
+          {[
+            ["정상", "is-online", "느린 녹색 테두리"],
+            ["주의", "is-degraded", "노란 경고 강조"],
+            ["불량", "is-error", "빨간 알림 강조"],
+            ["미연결", "is-offline", "무채색 고정 상태"],
+          ].map(([label, stateClass, description]) => (
+            <article className={`system-state-sample ${stateClass}`} key={label}>
+              <span className={`status-dot ${stateClass}`} />
+              <strong>{label}</strong>
+              <em>{description}</em>
+            </article>
+          ))}
+        </section>
+
+        {status.readiness !== DASHBOARD_SERVER_HEALTH.online ? (
+          <section className={`system-status-alert is-${status.readiness}`} role="alert">
+            <strong>서버 상태 확인 필요</strong>
+            <span>{serverHealthText(status.readiness)} 상태입니다. 인증, signaling, stream registry 영향 범위를 우선 확인하세요.</span>
+          </section>
+        ) : null}
 
         <section className="system-status-page__services" aria-label="서비스 상태 카드">
           {serviceCards.map(([name, description, health]) => (
@@ -153,6 +179,20 @@ export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs 
             <span className="ops-badge">{latestRttText}</span>
           </div>
           <div className="system-rtt-chart" role="img" aria-label={`최근 RTT 추세, 현재 ${latestRttText}`}>
+            <dl className="system-rtt-stats" aria-label="RTT 통계">
+              <div>
+                <dt>최저</dt>
+                <dd>{formatRttStat(rttStats.minLatencyMs)}</dd>
+              </div>
+              <div>
+                <dt>평균</dt>
+                <dd>{formatRttStat(rttStats.avgLatencyMs)}</dd>
+              </div>
+              <div>
+                <dt>최고</dt>
+                <dd>{formatRttStat(rttStats.maxLatencyMs)}</dd>
+              </div>
+            </dl>
             <svg viewBox={`0 0 ${RTT_CHART_WIDTH} ${RTT_CHART_HEIGHT}`} preserveAspectRatio="none">
               <line className="system-rtt-chart__axis" x1={RTT_CHART_PADDING} y1={RTT_CHART_PADDING} x2={RTT_CHART_PADDING} y2={RTT_CHART_HEIGHT - RTT_CHART_PADDING} />
               <line className="system-rtt-chart__axis" x1={RTT_CHART_PADDING} y1={RTT_CHART_HEIGHT - RTT_CHART_PADDING} x2={RTT_CHART_WIDTH - RTT_CHART_PADDING} y2={RTT_CHART_HEIGHT - RTT_CHART_PADDING} />
@@ -167,7 +207,7 @@ export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs 
                   cx={point.x}
                   cy={point.y}
                   key={`${point.checkedAt}-${point.x}`}
-                  r="3.2"
+                  r="2.2"
                 />
               ))}
               <text x={RTT_CHART_PADDING} y="18">{rttMax}ms</text>
@@ -179,28 +219,24 @@ export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs 
           <p>최근 응답 지연을 기준으로 API, 인증, signaling 경로의 체감 상태를 판단합니다.</p>
         </section>
 
-        <section className="ops-panel system-status-page__topology" aria-label="서비스 의존 구조도">
+        <section className="ops-panel system-status-page__impact" aria-label="장애 영향 범위">
           <div className="ops-panel__header">
-            <h2>서비스 의존 구조도</h2>
+            <h2>장애 영향 범위</h2>
             <span className={`ops-badge ${status.readiness === DASHBOARD_SERVER_HEALTH.online ? "is-online" : "is-warning"}`}>
               {serverHealthText(status.readiness)}
             </span>
           </div>
-          <div className="system-topology">
-            <span>Dashboard</span>
-            <i />
-            <span>Edge / Nginx</span>
-            <i />
-            <span>API + Auth</span>
-            <i />
-            <span>DB / Redis</span>
-            <span>MediaMTX</span>
-            <i />
-            <span>STUN / TURN</span>
-          </div>
+          <ul className="system-impact-list">
+            {impactItems.map(([name, health, description]) => (
+              <li className={`is-${health}`} key={name}>
+                <span className={`status-dot is-${health}`} />
+                <strong>{name}</strong>
+                <em>{serverHealthText(health)}</em>
+                <p>{description}</p>
+              </li>
+            ))}
+          </ul>
         </section>
-
-        {primaryPanel}
 
         <section className="ops-panel system-status-page__panel system-status-page__runbook">
           <div className="ops-panel__header">
@@ -209,20 +245,20 @@ export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs 
           </div>
           <dl>
             <div>
-              <dt>네트워크 RTT</dt>
-              <dd>{status.latencyMs ? `${status.latencyMs} ms` : "측정 대기"}</dd>
-            </div>
-            <div>
-              <dt>장애 영향</dt>
-              <dd>{status.readiness === DASHBOARD_SERVER_HEALTH.online ? "운영 영향 없음" : "기능 저하 가능"}</dd>
-            </div>
-            <div>
               <dt>우선 조치</dt>
               <dd>{status.signalingServer === DASHBOARD_SERVER_HEALTH.online ? "API/Registry 확인" : "Signaling 경로 확인"}</dd>
             </div>
             <div>
-              <dt>권장 확인</dt>
+              <dt>확인 지점</dt>
               <dd>이벤트로그, 컨테이너 health, 포트 상태</dd>
+            </div>
+            <div>
+              <dt>로그 기준</dt>
+              <dd>WARN/ERROR 증가, 401/502, ICE 실패</dd>
+            </div>
+            <div>
+              <dt>후속 조치</dt>
+              <dd>{status.readiness === DASHBOARD_SERVER_HEALTH.online ? "정상 추세 유지 확인" : "장애 영향 범위 우선 격리"}</dd>
             </div>
           </dl>
         </section>
@@ -256,6 +292,31 @@ function buildRttChart(samples: RttSample[], maxLatencyMs: number): {
 
 function relativeMinutesLabel(checkedAt: number): string {
   const diffMs = Math.max(0, Date.now() - checkedAt);
-  const minutes = Math.max(1, Math.round(diffMs / 60_000));
+  if (diffMs < 60_000) return "방금 전";
+  const minutes = Math.round(diffMs / 60_000);
   return `${minutes}분 전`;
+}
+
+function buildRttStats(samples: RttSample[]): RttStats {
+  const values = samples
+    .map((sample) => sample.latencyMs)
+    .filter((value): value is number => value !== null);
+  if (!values.length) {
+    return {
+      avgLatencyMs: null,
+      maxLatencyMs: null,
+      minLatencyMs: null,
+    };
+  }
+
+  const total = values.reduce((sum, value) => sum + value, 0);
+  return {
+    avgLatencyMs: Math.round(total / values.length),
+    maxLatencyMs: Math.max(...values),
+    minLatencyMs: Math.min(...values),
+  };
+}
+
+function formatRttStat(value: number | null): string {
+  return value === null ? "-" : `${value} ms`;
 }

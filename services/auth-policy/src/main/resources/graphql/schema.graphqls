@@ -1,0 +1,33 @@
+type Query {
+  operationalEvents(
+    query: String
+    severity: String
+    from: String
+    to: String
+  ): [OperationalEvent!]!
+  operationalEventPage(
+    query: String
+    severity: String
+    from: String
+    to: String
+    limit: Int
+    after: String
+  ): OperationalEventPage!
+}
+
+type OperationalEvent {
+  id: ID!
+  occurredAt: String!
+  severity: String!
+  category: String!
+  source: String!
+  message: String!
+  connections: Int!
+  latencyMs: Int!
+  throughputMbps: Float!
+}
+
+type OperationalEventPage {
+  events: [OperationalEvent!]!
+  nextCursor: String
+}

@@ -129,6 +129,9 @@ services:
       AUTH_POLICY_SIGNUP_INVITES: ${AUTH_POLICY_SIGNUP_INVITES:-A4AI01:1:co-a}
       AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED: ${AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED:-true}
       AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED: ${AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED:-true}
+      SPRING_DATASOURCE_URL: ${AUTH_POLICY_DATASOURCE_URL:-jdbc:mysql://mysql-legacy:3306/${MYSQL_DATABASE:-gcs_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-gcs_app}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}
       TIME_SYNC_MODE: ${TIME_SYNC_MODE:-public}
       TIME_SYNC_SOURCE_HOST: ${TIME_SYNC_SOURCE_HOST:-pool.ntp.org}
       TIME_SYNC_SOURCE_PORT: ${TIME_SYNC_SOURCE_PORT:-123}
@@ -140,6 +143,8 @@ services:
       <<: *health_defaults
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz >/dev/null"]
     depends_on:
+      mysql-legacy:
+        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped

@@ -102,6 +102,7 @@ class AuthController(
     }
 
     @GetMapping(AuthApiRoutes.ME)
+    @RequiresBearerAuth
     fun me(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
     ): CurrentUserResponse {

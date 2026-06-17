@@ -15,6 +15,8 @@
 | --- | --- | --- |
 | `auth_login` | 로그인 API p50/p95 | DB password hash, auth-policy latency, Redis/session path |
 | `auth_refresh` | refresh API p50/p95 | refresh token store, cookie/session policy |
+| `ops_event_metrics` | 운영 이벤트 집계 API p50/p95 | DB aggregate query, Redis bypass, dashboard graph path |
+| `ops_event_graphql_page` | 운영 이벤트 GraphQL page query p50/p95 | GraphQL resolver, keyset pagination, projection path |
 | `stream_list` | stream registry 조회 p50/p95 | media-control cache, MediaMTX API polling, 권한 필터 |
 | `stream_playback` | playback URL 계약 p50/p95 | stream id parsing, URL builder, 권한 결정 |
 | `stream_ice_servers` | ICE 서버 목록 p50/p95 | Redis ICE server cache, auth gate, TURN config lookup |
@@ -44,6 +46,8 @@ ICE 경로는 최소 두 profile을 같은 stream id로 비교한다.
       "label": "m7",
       "edgeBaseUrl": "http://127.0.0.1:18080",
       "authBasePath": "/auth-policy/auth",
+      "opsBasePath": "/auth-policy/ops",
+      "graphQlBasePath": "/auth-policy/graphql",
       "streamBasePath": "/media-control/api/v1",
       "username": "m7-smoke-viewer",
       "passwordEnv": "M7_BENCHMARK_PASSWORD",
@@ -84,6 +88,8 @@ scripts/m7_performance_benchmark_matrix.py \
 - p50은 평소 사용감에 가깝다.
 - p95는 사용자가 가끔 겪는 느림과 운영 tail latency를 보여준다.
 - `stream_ice_servers`가 느리면 TURN/STUN 목록 조회 cache, auth decision, Redis path를 본다.
+- `ops_event_metrics`가 느리면 DB aggregate query와 인덱스 범위, Redis wrapper가 집계 경로를 가로막는지 본다.
+- `ops_event_graphql_page`가 느리면 GraphQL resolver, keyset pagination, projection 필드 수, query security interceptor를 본다.
 - `stream_list`가 느리면 MediaMTX API polling, stream cache TTL, 권한 필터를 본다.
 - `hls_manifest`가 느리면 stream publish readiness, HLS segment generation, edge proxy timeout을 본다.
 - WebRTC first frame은 API latency보다 ICE candidate 품질, TURN relay 여부, browser decoder 상태의 영향을 더 크게 받는다.

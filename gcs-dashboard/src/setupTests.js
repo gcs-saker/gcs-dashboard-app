@@ -77,3 +77,84 @@ vi.mock('maplibre-gl', () => ({
     Marker: maplibreMock.Marker,
   },
 }));
+
+const leafletMock = vi.hoisted(() => {
+  const instances = [];
+  const tileLayers = [];
+  const Map = vi.fn((container, options = {}) => {
+    const eventHandlers = new globalThis.Map();
+    const instance = {
+      addControl: vi.fn(),
+      container,
+      emit: (event) => eventHandlers.get(event)?.forEach((handler) => handler()),
+      latLngToContainerPoint: vi.fn(([lat, lng]) => ({
+        x: Math.round((Number(lng) - 128.55) * 5000),
+        y: Math.round((35.91 - Number(lat)) * 5000),
+      })),
+      off: vi.fn((event, handler) => {
+        const handlers = eventHandlers.get(event) ?? [];
+        eventHandlers.set(event, handlers.filter((candidate) => candidate !== handler));
+      }),
+      on: vi.fn((event, handler) => {
+        const handlers = eventHandlers.get(event) ?? [];
+        handlers.push(handler);
+        eventHandlers.set(event, handlers);
+      }),
+      options,
+      panTo: vi.fn(),
+      remove: vi.fn(),
+      setView: vi.fn(function setView() {
+        return instance;
+      }),
+      zoomIn: vi.fn(),
+      zoomOut: vi.fn(),
+    };
+    instances.push(instance);
+    return instance;
+  });
+  const tileLayer = vi.fn((urlTemplate, options = {}) => {
+    const eventHandlers = new globalThis.Map();
+    const layer = {
+      addTo: vi.fn(() => layer),
+      emitError: () => eventHandlers.get('tileerror')?.forEach((handler) => handler()),
+      off: vi.fn((event, handler) => {
+        const handlers = eventHandlers.get(event) ?? [];
+        eventHandlers.set(event, handlers.filter((candidate) => candidate !== handler));
+      }),
+      on: vi.fn((event, handler) => {
+        const handlers = eventHandlers.get(event) ?? [];
+        handlers.push(handler);
+        eventHandlers.set(event, handlers);
+      }),
+      options,
+      urlTemplate,
+    };
+    tileLayers.push(layer);
+    return layer;
+  });
+  const Attribution = vi.fn();
+  return {
+    Attribution,
+    instances,
+    Map,
+    reset: () => {
+      instances.length = 0;
+      tileLayers.length = 0;
+      Map.mockClear();
+      tileLayer.mockClear();
+      Attribution.mockClear();
+    },
+    tileLayer,
+    tileLayers,
+  };
+});
+
+globalThis.__gcsLeafletMock = leafletMock;
+
+vi.mock('leaflet', () => ({
+  Control: {
+    Attribution: leafletMock.Attribution,
+  },
+  map: leafletMock.Map,
+  tileLayer: leafletMock.tileLayer,
+}));

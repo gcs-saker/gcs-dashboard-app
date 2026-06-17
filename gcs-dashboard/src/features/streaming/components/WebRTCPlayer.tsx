@@ -12,6 +12,17 @@ const statusLabel = {
   offline: "offline",
 } as const;
 
+const emptyIceCandidateStats = {
+  total: 0,
+  host: 0,
+  srflx: 0,
+  relay: 0,
+  prflx: 0,
+  unknown: 0,
+  udp: 0,
+  tcp: 0,
+} as const;
+
 export function WebRTCPlayer({
   whepUrl,
   streamId,
@@ -37,6 +48,7 @@ export function WebRTCPlayer({
     firstFrameLatencyMs,
     signalingTimings,
     audioStats,
+    iceCandidateStats = emptyIceCandidateStats,
   } = playback;
 
   useEffect(() => {
@@ -55,6 +67,7 @@ export function WebRTCPlayer({
       firstFrameLatencyMs,
       signalingTimings,
       audioStats,
+      iceCandidateStats,
     });
   }, [
     audioStats,
@@ -64,6 +77,7 @@ export function WebRTCPlayer({
     hasAudioTrack,
     hasVideoFrame,
     iceConnectionState,
+    iceCandidateStats,
     isAudioActive,
     signalingTimings,
     status,
@@ -90,6 +104,12 @@ export function WebRTCPlayer({
       data-remote-ice-candidate-type={audioStats.remoteCandidateType ?? ""}
       data-ice-transport={audioStats.transportProtocol ?? ""}
       data-relay-fallback-reason={audioStats.relayFallbackReason ?? ""}
+      data-ice-candidate-total={iceCandidateStats.total}
+      data-ice-candidate-host={iceCandidateStats.host}
+      data-ice-candidate-srflx={iceCandidateStats.srflx}
+      data-ice-candidate-relay={iceCandidateStats.relay}
+      data-ice-candidate-udp={iceCandidateStats.udp}
+      data-ice-candidate-tcp={iceCandidateStats.tcp}
     >
       <video
         ref={videoRef}

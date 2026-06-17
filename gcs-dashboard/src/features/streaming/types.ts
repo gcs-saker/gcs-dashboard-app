@@ -11,6 +11,7 @@ export interface WebRTCPlaybackSnapshot {
   firstFrameLatencyMs: number | null;
   signalingTimings: WebRTCSignalingTimings;
   audioStats: WebRTCAudioStats;
+  iceCandidateStats?: WebRTCIceCandidateStats;
 }
 
 export interface WebRTCSignalingTimings {
@@ -34,6 +35,17 @@ export interface WebRTCAudioStats {
   remoteCandidateType: string | null;
   transportProtocol: string | null;
   relayFallbackReason: string | null;
+}
+
+export interface WebRTCIceCandidateStats {
+  total: number;
+  host: number;
+  srflx: number;
+  relay: number;
+  prflx: number;
+  unknown: number;
+  udp: number;
+  tcp: number;
 }
 
 export interface WebRTCPlayerProps {
@@ -65,6 +77,8 @@ export interface HLSFallbackPlayerProps {
   autoPlay?: boolean;
   muted?: boolean;
   controls?: boolean;
+  preload?: HTMLVideoElement["preload"];
+  poster?: string;
   className?: string;
   onStatusChange?: (snapshot: HLSFallbackSnapshot) => void;
 }
@@ -96,6 +110,9 @@ export interface RealtimePlayerSnapshot {
   webrtcWhepResponseMs?: number | null;
   audioJitterMs?: number | null;
   audioPacketsLost?: number | null;
+  iceCandidateTotal?: number;
+  iceCandidateRelay?: number;
+  iceCandidateSrflx?: number;
 }
 
 export interface RealtimePlayerProps {

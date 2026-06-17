@@ -18,6 +18,9 @@ describe("api route contracts", () => {
       telemetryAll: "/telemetry/all",
       telemetryIngest: "/telemetry/",
       operationalEvents: "/ops/events",
+      operationalEventMetrics: "/ops/events/metrics",
+      operationalEventBuckets: "/ops/events/buckets",
+      telemetryHistorySuffix: "/history",
     });
   });
 

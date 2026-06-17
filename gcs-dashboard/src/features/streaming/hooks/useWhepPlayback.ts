@@ -5,6 +5,7 @@ import { WEBRTC_ICE_SERVERS } from "../../../config";
 import { loadWebRtcIceServers } from "../iceServers";
 import type {
   WebRTCAudioStats,
+  WebRTCIceCandidateStats,
   WebRTCPlaybackSnapshot,
   WebRTCPlaybackStatus,
   WebRTCSignalingTimings,
@@ -50,6 +51,16 @@ const EMPTY_AUDIO_STATS: WebRTCAudioStats = {
   transportProtocol: null,
   relayFallbackReason: null,
 };
+const EMPTY_ICE_CANDIDATE_STATS: WebRTCIceCandidateStats = {
+  total: 0,
+  host: 0,
+  srflx: 0,
+  relay: 0,
+  prflx: 0,
+  unknown: 0,
+  udp: 0,
+  tcp: 0,
+};
 
 interface UseWhepPlaybackOptions {
   whepUrl: string | null;
@@ -69,6 +80,7 @@ type PlaybackAction =
   | { type: "audio-state"; hasAudioTrack: boolean; isAudioActive: boolean }
   | { type: "audio-level"; audioLevel: number | null }
   | { type: "audio-stats"; stats: WebRTCAudioStats }
+  | { type: "ice-candidate"; candidate: RTCIceCandidate }
   | { type: "signaling-timing"; stage: SignalingTimingKey; latencyMs: number };
 
 class WhepHttpError extends Error {
@@ -88,6 +100,7 @@ const initialPlaybackState: WebRTCPlaybackSnapshot = {
   firstFrameLatencyMs: null,
   signalingTimings: EMPTY_SIGNALING_TIMINGS,
   audioStats: EMPTY_AUDIO_STATS,
+  iceCandidateStats: EMPTY_ICE_CANDIDATE_STATS,
 };
 
 export function useWhepPlayback({
@@ -213,6 +226,12 @@ export function useWhepPlayback({
         }
       };
 
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          dispatch({ type: "ice-candidate", candidate: event.candidate });
+        }
+      };
+
       stopAudioStatsMonitor = monitorAudioStats(peerConnection, dispatch);
       await connectWithWhep(peerConnection, resolvedWhepUrl, fetcher, abortController.signal, recordTiming);
     }
@@ -252,6 +271,7 @@ function playbackReducer(
         firstFrameLatencyMs: null,
         signalingTimings: EMPTY_SIGNALING_TIMINGS,
         audioStats: EMPTY_AUDIO_STATS,
+        iceCandidateStats: EMPTY_ICE_CANDIDATE_STATS,
       };
     case "playing":
       return {
@@ -265,6 +285,7 @@ function playbackReducer(
         firstFrameLatencyMs: state.firstFrameLatencyMs,
         signalingTimings: state.signalingTimings,
         audioStats: state.audioStats,
+        iceCandidateStats: state.iceCandidateStats,
       };
     case "offline":
       return {
@@ -278,6 +299,7 @@ function playbackReducer(
         firstFrameLatencyMs: null,
         signalingTimings: EMPTY_SIGNALING_TIMINGS,
         audioStats: EMPTY_AUDIO_STATS,
+        iceCandidateStats: EMPTY_ICE_CANDIDATE_STATS,
       };
     case "unsupported":
       return {
@@ -291,6 +313,7 @@ function playbackReducer(
         firstFrameLatencyMs: null,
         signalingTimings: state.signalingTimings,
         audioStats: state.audioStats,
+        iceCandidateStats: state.iceCandidateStats,
       };
     case "error":
       return {
@@ -304,6 +327,7 @@ function playbackReducer(
         firstFrameLatencyMs: state.firstFrameLatencyMs,
         signalingTimings: state.signalingTimings,
         audioStats: state.audioStats,
+        iceCandidateStats: state.iceCandidateStats,
       };
     case "connection":
       return {
@@ -355,6 +379,11 @@ function playbackReducer(
         audioStats: mergedStats,
       };
     }
+    case "ice-candidate":
+      return {
+        ...state,
+        iceCandidateStats: incrementIceCandidateStats(state.iceCandidateStats ?? EMPTY_ICE_CANDIDATE_STATS, action.candidate),
+      };
     case "signaling-timing":
       return {
         ...state,
@@ -364,6 +393,38 @@ function playbackReducer(
         },
       };
   }
+}
+
+function incrementIceCandidateStats(
+  current: WebRTCIceCandidateStats,
+  candidate: RTCIceCandidate,
+): WebRTCIceCandidateStats {
+  const candidateType = normalizeIceCandidateType(candidate.type);
+  const protocol = normalizeIceCandidateProtocol(candidate.protocol, candidate.candidate);
+  return {
+    ...current,
+    total: current.total + 1,
+    [candidateType]: current[candidateType] + 1,
+    ...(protocol ? { [protocol]: current[protocol] + 1 } : {}),
+  };
+}
+
+function normalizeIceCandidateType(candidateType: RTCIceCandidateType | null | undefined): keyof Pick<WebRTCIceCandidateStats, "host" | "srflx" | "relay" | "prflx" | "unknown"> {
+  if (candidateType === "host" || candidateType === "srflx" || candidateType === "relay" || candidateType === "prflx") {
+    return candidateType;
+  }
+  return "unknown";
+}
+
+function normalizeIceCandidateProtocol(
+  protocol: RTCIceProtocol | null | undefined,
+  rawCandidate: string,
+): keyof Pick<WebRTCIceCandidateStats, "udp" | "tcp"> | null {
+  if (protocol === "udp" || protocol === "tcp") return protocol;
+  const lowered = rawCandidate.toLowerCase();
+  if (lowered.includes(" udp ")) return "udp";
+  if (lowered.includes(" tcp ")) return "tcp";
+  return null;
 }
 
 function monitorAudioStats(peerConnection: RTCPeerConnection, dispatch: Dispatch<PlaybackAction>): () => void {

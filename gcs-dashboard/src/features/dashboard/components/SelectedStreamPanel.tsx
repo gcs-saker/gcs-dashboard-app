@@ -61,7 +61,11 @@ export function SelectedStreamPanel({
             title={stream.title}
           />
         ) : (
-          <div className="reticle" />
+          <div className="selected-stream__empty">
+            <span className="selected-stream__empty-kicker">NO ACTIVE STREAM</span>
+            <strong>스트림 주소를 연결하세요</strong>
+            <p>탐지된 장비 또는 직접 입력한 WHEP/HLS 경로를 선택하면 이 영역에서 수신 상태를 확인합니다.</p>
+          </div>
         )}
         <div className="selected-stream__meta">
           <strong>{stream.title}</strong>
