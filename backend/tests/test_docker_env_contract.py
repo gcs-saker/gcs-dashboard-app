@@ -10,6 +10,7 @@ SCRIPT = REPO_ROOT / "scripts" / "docker_env_check.py"
 COMPOSE_FILE = REPO_ROOT / "gcs-dashboard" / "docker-compose.yml"
 SINGLE_NODE_COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
 EDGE_HTTPS_OVERRIDE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.edge-https.override.yml"
+DRAGONFLY_OVERRIDE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.dragonfly.override.yml"
 MEDIAMTX_CONFIG = REPO_ROOT / "gcs-dashboard" / "mediamtx.yml"
 DASHBOARD_DOCKERFILE = REPO_ROOT / "gcs-dashboard" / "Dockerfile"
 DASHBOARD_DOCKERIGNORE = REPO_ROOT / "gcs-dashboard" / ".dockerignore"
@@ -87,6 +88,47 @@ def test_single_node_mqtt_healthcheck_uses_container_available_probe() -> None:
 
     assert mqtt_healthcheck == ["CMD-SHELL", "nc -z 127.0.0.1 1883"]
     assert "/dev/tcp" not in " ".join(mqtt_healthcheck)
+
+
+def test_single_node_keeps_redis_as_default_cache_runtime() -> None:
+    compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
+    redis = compose["services"]["redis"]
+
+    assert redis["image"] == "redis:7.4-alpine"
+    assert redis["command"] == [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${REDIS_PASSWORD:?Set REDIS_PASSWORD}",
+    ]
+    assert redis["healthcheck"]["test"] == [
+        "CMD-SHELL",
+        'redis-cli -a "$${REDIS_PASSWORD}" ping | grep PONG',
+    ]
+
+
+def test_dragonfly_override_replaces_only_cache_runtime_contract() -> None:
+    override = load_yaml(DRAGONFLY_OVERRIDE_FILE)
+    redis = override["services"]["redis"]
+
+    assert redis["image"] == "${DRAGONFLY_IMAGE:?Set DRAGONFLY_IMAGE}"
+    assert redis["command"] == [
+        "dragonfly",
+        "--requirepass=${REDIS_PASSWORD:?Set REDIS_PASSWORD}",
+        "--dir=/data",
+    ]
+    assert redis["volumes"] == ["dragonfly-data:/data"]
+    assert redis["healthcheck"] == {"disable": True}
+    assert "dragonfly-data" in override["volumes"]
+
+
+def test_dragonfly_override_uses_application_readiness_instead_of_container_cli_healthcheck() -> None:
+    override = load_yaml(DRAGONFLY_OVERRIDE_FILE)
+    services = override["services"]
+
+    assert services["auth-policy"]["depends_on"]["redis"]["condition"] == "service_started"
+    assert services["media-control"]["depends_on"]["redis"]["condition"] == "service_started"
 
 
 def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> None:
