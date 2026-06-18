@@ -21,6 +21,7 @@ import {
   setDashboardWidgetPinned,
   setDashboardWidgetVisible,
   type DashboardLayoutItem,
+  type DashboardWidgetDefinition,
   type DashboardWidgetId,
 } from "./dashboardLayout";
 import "./DashboardMvp.scss";
@@ -50,6 +51,24 @@ type CctvLayoutMode = "3x3" | "4x4" | "5x5" | "auto";
 interface StreamAvailabilityNotification {
   id: string;
   message: string;
+}
+
+function normalizeDegrees(value: number): number {
+  return ((value % 360) + 360) % 360;
+}
+
+function formatBearing(value: number): string {
+  return `${Math.round(normalizeDegrees(value)).toString().padStart(3, "0")}deg`;
+}
+
+function formatSignedDegree(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  return `${rounded > 0 ? "+" : ""}${rounded}deg`;
+}
+
+function formatBearingDelta(headingDeg: number, mapBearingDeg: number): string {
+  const delta = ((headingDeg - mapBearingDeg + 540) % 360) - 180;
+  return formatSignedDegree(delta);
 }
 
 export function DashboardMvp() {
