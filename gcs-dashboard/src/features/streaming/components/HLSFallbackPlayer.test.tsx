@@ -79,6 +79,26 @@ describe("HLSFallbackPlayer", () => {
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
     expect(screen.getByText("mode: hlsjs")).toBeInTheDocument();
     expect(screen.getByText("저지연 HLS")).toBeInTheDocument();
+    expect(screen.getByText("WebCodecs: fallback")).toBeInTheDocument();
+  });
+
+  test("reports WebCodecs capability in status snapshots", async () => {
+    vi.stubGlobal("VideoDecoder", function VideoDecoder() {});
+    vi.stubGlobal("VideoFrame", function VideoFrame() {});
+    vi.spyOn(HTMLMediaElement.prototype, "canPlayType").mockReturnValue("");
+    const onStatusChange = vi.fn();
+
+    render(<HLSFallbackPlayer hlsUrl={hlsUrl} onStatusChange={onStatusChange} />);
+
+    await waitFor(() => expect(onStatusChange).toHaveBeenCalled());
+    expect(onStatusChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        webCodecs: {
+          supported: true,
+          reason: "ready",
+        },
+      }),
+    );
   });
 
   test("uses stable HLS fallback mode by default to reduce playback stalls", async () => {

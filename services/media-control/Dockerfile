@@ -10,6 +10,8 @@ FROM alpine:3.20
 RUN adduser -D -H media
 USER media
 COPY --from=build /out/media-control /usr/local/bin/media-control
+ENV GOGC=100
+ENV GOMEMLIMIT=512MiB
 EXPOSE 8081
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget -q -O- http://127.0.0.1:8081/healthz >/dev/null

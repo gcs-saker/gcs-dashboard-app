@@ -38,6 +38,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
     volumes:
       - postgres-geo-data:/var/lib/postgresql/data
+      - type: bind
+        source: ../postgres/init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gcs_geo} -d ${POSTGRES_DB:-gcs_geo}"]
@@ -86,6 +90,8 @@ services:
       MQTT_HOST: ${MQTT_HOST:-mqtt}
       MQTT_PORT: ${MQTT_PORT:-1883}
       MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-gcs_backend_pub}
+      TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS: ${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}
+      CONTROL_MESSAGE_SENDER: ${CONTROL_MESSAGE_SENDER:-mqtt}
       MEDIAMTX_PUBLIC_WEBRTC_BASE_URL: ${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8080/webrtc}
       MEDIAMTX_PUBLIC_HLS_BASE_URL: ${MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://localhost:8080/hls}
       MEDIAMTX_API_BASE_URL: ${MEDIAMTX_API_BASE_URL:-http://mediamtx:9997}
@@ -174,6 +180,8 @@ services:
       MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID: ${MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID:-co-a}
       MEDIA_CONTROL_STREAM_GROUP_MAP: ${MEDIA_CONTROL_STREAM_GROUP_MAP:-raw/sample/front=co-a,raw/local/webcam=co-a}
       MEDIA_CONTROL_LISTEN_ADDR: :8081
+      GOGC: ${MEDIA_CONTROL_GOGC:-100}
+      GOMEMLIMIT: ${MEDIA_CONTROL_GOMEMLIMIT:-512MiB}
       MEDIA_CONTROL_REDIS_ADDR: ${MEDIA_CONTROL_REDIS_ADDR:-redis:6379}
       MEDIA_CONTROL_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
       MEDIA_CONTROL_STREAM_CACHE_TTL_SECONDS: ${MEDIA_CONTROL_STREAM_CACHE_TTL_SECONDS:-1}

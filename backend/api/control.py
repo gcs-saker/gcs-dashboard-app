@@ -1,18 +1,23 @@
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
 
 from api.contracts import ControlProtocol, ControlRoutes
 from api.errors import ServiceUnavailableApiError
 from model.control_model import ControlCommand
-from mqtt.client import publish_control_command
+from modules.messaging.control_publisher import ControlMessagePublisher, get_control_message_publisher
+from modules.messaging.sender import MessageSenderError
 
 router = APIRouter()
 
 
 @router.post(ControlRoutes.SEND)
-async def control_robot(command: ControlCommand):
+async def control_robot(
+    command: ControlCommand,
+    publisher: Annotated[ControlMessagePublisher, Depends(get_control_message_publisher)],
+):
     try:
-        topic = f"{ControlProtocol.TOPIC_PREFIX}/{command.cid}"
-        publish_control_command(topic, command.direction)
-        return {"status": ControlProtocol.SENT_STATUS, "topic": topic, "message": command.direction}
-    except Exception as e:
+        result = publisher.publish(command)
+        return {"status": ControlProtocol.SENT_STATUS, "topic": result.destination, "message": command.direction}
+    except MessageSenderError as e:
         raise ServiceUnavailableApiError(str(e))

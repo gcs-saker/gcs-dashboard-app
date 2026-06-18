@@ -73,6 +73,10 @@ export interface HLSFallbackSnapshot {
   mode: HLSPlaybackMode;
   latencyMode: HLSLatencyMode;
   errorMessage: string | null;
+  webCodecs?: {
+    supported: boolean;
+    reason: "ready" | "missing-video-decoder" | "missing-video-frame";
+  };
 }
 
 export interface HLSFallbackPlayerProps {

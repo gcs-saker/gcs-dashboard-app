@@ -1,0 +1,34 @@
+services:
+  redis:
+    image: ${DRAGONFLY_IMAGE:?Set DRAGONFLY_IMAGE}
+    command:
+      - dragonfly
+      - --requirepass=${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+      - --dir=/data
+    volumes:
+      - dragonfly-data:/data
+    healthcheck:
+      disable: true
+
+  auth-policy:
+    depends_on:
+      mysql-legacy:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  media-control:
+    depends_on:
+      redis:
+        condition: service_started
+      mediamtx:
+        condition: service_started
+      turn-primary:
+        condition: service_started
+      turn-secondary:
+        condition: service_started
+      auth-policy:
+        condition: service_healthy
+
+volumes:
+  dragonfly-data:

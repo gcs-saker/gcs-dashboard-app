@@ -45,6 +45,7 @@ postgres-data/
 redis-data/
 mediamtx-recordings/
 coturn-state/
+deploy/mosquitto/passwords.local
 
 # OS / editor
 .DS_Store

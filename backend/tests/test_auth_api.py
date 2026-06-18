@@ -7,17 +7,31 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from api import control
 from api.contracts import AuthProtocol
 from api.auth import get_password_hash
 from core.db import Base, get_db
 from core.security import AuthSettings, create_access_token, create_refresh_token
 from main import app
+from modules.messaging.control_publisher import ControlMessagePublisher, get_control_message_publisher
+from modules.messaging.sender import MessageEnvelope, MessageSenderUnavailable
 from sql.company_sql import Company
 from sql.user_sql import User
 
 TEST_AUTH_SECRET = "test-auth-secret-for-gcs-saker-at-least-32-characters"
 TEST_CSRF_HEADERS = {AuthProtocol.CSRF_HEADER_NAME: AuthProtocol.CSRF_HEADER_VALUE}
+
+
+class RecordingMessageSender:
+    def __init__(self, published: list[tuple[str, str | bytes]]) -> None:
+        self._published = published
+
+    def send(self, envelope: MessageEnvelope) -> None:
+        self._published.append((envelope.destination, envelope.payload))
+
+
+class FailingMessageSender:
+    def send(self, envelope: MessageEnvelope) -> None:
+        raise MessageSenderUnavailable("gRPC message sender is not implemented yet")
 
 
 @pytest.fixture
@@ -375,15 +389,12 @@ def test_stream_api_requires_authentication_and_accepts_viewer_token(
 
 
 def test_control_api_requires_operator_role(
-    monkeypatch,
     auth_headers: Callable[[str, str], dict[str, str]],
 ) -> None:
-    published: list[tuple[str, str]] = []
-
-    def fake_publish(topic: str, command: str) -> None:
-        published.append((topic, command))
-
-    monkeypatch.setattr(control, "publish_control_command", fake_publish)
+    published: list[tuple[str, str | bytes]] = []
+    app.dependency_overrides[get_control_message_publisher] = lambda: ControlMessagePublisher(
+        RecordingMessageSender(published)
+    )
 
     with TestClient(app) as client:
         viewer_response = client.post(
@@ -403,6 +414,55 @@ def test_control_api_requires_operator_role(
         assert operator_response.json()["status"] == "sent"
         assert published == [("robot/control/CID001", "stop")]
 
+    app.dependency_overrides.pop(get_control_message_publisher, None)
+
+
+def test_control_api_can_publish_protobuf_v2_command_payload(
+    auth_headers: Callable[[str, str], dict[str, str]],
+) -> None:
+    published: list[tuple[str, str | bytes]] = []
+    app.dependency_overrides[get_control_message_publisher] = lambda: ControlMessagePublisher(
+        RecordingMessageSender(published)
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/control/",
+            json={
+                "cid": "CID001",
+                "direction": "stop",
+                "payload_format": "protobuf",
+                "org_id": "a4ai",
+                "group_id": "co-a",
+                "stream_id": "raw.mobile.front",
+            },
+            headers=auth_headers("operator01", "operator"),
+        )
+
+    assert response.status_code == 200
+    assert response.json()["topic"] == "gcs/a4ai/co-a/CID001/command"
+    assert len(published) == 1
+    assert published[0][0] == "gcs/a4ai/co-a/CID001/command"
+    assert isinstance(published[0][1], bytes)
+    app.dependency_overrides.pop(get_control_message_publisher, None)
+
+
+def test_control_api_returns_503_when_selected_sender_is_unavailable(
+    auth_headers: Callable[[str, str], dict[str, str]],
+) -> None:
+    app.dependency_overrides[get_control_message_publisher] = lambda: ControlMessagePublisher(FailingMessageSender())
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/control/",
+            json={"cid": "CID001", "direction": "stop"},
+            headers=auth_headers("operator01", "operator"),
+        )
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "gRPC message sender is not implemented yet"}
+    app.dependency_overrides.pop(get_control_message_publisher, None)
+
 
 @pytest.mark.parametrize(
     "payload",
@@ -413,16 +473,13 @@ def test_control_api_requires_operator_role(
     ],
 )
 def test_control_api_rejects_untrusted_command_payloads(
-    monkeypatch,
     auth_headers: Callable[[str, str], dict[str, str]],
     payload: dict[str, str],
 ) -> None:
-    published: list[tuple[str, str]] = []
-
-    def fake_publish(topic: str, command: str) -> None:
-        published.append((topic, command))
-
-    monkeypatch.setattr(control, "publish_control_command", fake_publish)
+    published: list[tuple[str, str | bytes]] = []
+    app.dependency_overrides[get_control_message_publisher] = lambda: ControlMessagePublisher(
+        RecordingMessageSender(published)
+    )
 
     with TestClient(app) as client:
         response = client.post(
@@ -433,3 +490,4 @@ def test_control_api_rejects_untrusted_command_payloads(
 
     assert response.status_code == 422
     assert published == []
+    app.dependency_overrides.pop(get_control_message_publisher, None)

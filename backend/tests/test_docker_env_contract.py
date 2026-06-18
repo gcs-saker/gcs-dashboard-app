@@ -10,10 +10,12 @@ SCRIPT = REPO_ROOT / "scripts" / "docker_env_check.py"
 COMPOSE_FILE = REPO_ROOT / "gcs-dashboard" / "docker-compose.yml"
 SINGLE_NODE_COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
 EDGE_HTTPS_OVERRIDE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.edge-https.override.yml"
+DRAGONFLY_OVERRIDE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.dragonfly.override.yml"
 MEDIAMTX_CONFIG = REPO_ROOT / "gcs-dashboard" / "mediamtx.yml"
 DASHBOARD_DOCKERFILE = REPO_ROOT / "gcs-dashboard" / "Dockerfile"
 DASHBOARD_DOCKERIGNORE = REPO_ROOT / "gcs-dashboard" / ".dockerignore"
 BACKEND_DOCKERIGNORE = REPO_ROOT / "backend" / ".dockerignore"
+MEDIA_CONTROL_DOCKERFILE = REPO_ROOT / "services" / "media-control" / "Dockerfile"
 ENV_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_Docker_env_주입_가이드_v0.1.md"
 
 
@@ -47,6 +49,10 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["backend"]["environment"]["AUTH_REFRESH_COOKIE_SECURE"] == "${AUTH_REFRESH_COOKIE_SECURE:-false}"
     assert services["backend"]["environment"]["AUTH_REFRESH_COOKIE_SAMESITE"] == "${AUTH_REFRESH_COOKIE_SAMESITE:-lax}"
     assert services["backend"]["environment"]["MQTT_HOST"] == "${MQTT_HOST:-mqtt}"
+    assert services["backend"]["environment"]["TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS"] == (
+        "${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}"
+    )
+    assert services["backend"]["environment"]["CONTROL_MESSAGE_SENDER"] == "${CONTROL_MESSAGE_SENDER:-mqtt}"
     assert services["backend"]["environment"]["MEDIAMTX_PUBLIC_WEBRTC_BASE_URL"].startswith("${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:")
     assert services["backend"]["environment"]["WEBRTC_STUN_URL"] == (
         "${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
@@ -83,6 +89,47 @@ def test_single_node_mqtt_healthcheck_uses_container_available_probe() -> None:
 
     assert mqtt_healthcheck == ["CMD-SHELL", "nc -z 127.0.0.1 1883"]
     assert "/dev/tcp" not in " ".join(mqtt_healthcheck)
+
+
+def test_single_node_keeps_redis_as_default_cache_runtime() -> None:
+    compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
+    redis = compose["services"]["redis"]
+
+    assert redis["image"] == "redis:7.4-alpine"
+    assert redis["command"] == [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${REDIS_PASSWORD:?Set REDIS_PASSWORD}",
+    ]
+    assert redis["healthcheck"]["test"] == [
+        "CMD-SHELL",
+        'redis-cli -a "$${REDIS_PASSWORD}" ping | grep PONG',
+    ]
+
+
+def test_dragonfly_override_replaces_only_cache_runtime_contract() -> None:
+    override = load_yaml(DRAGONFLY_OVERRIDE_FILE)
+    redis = override["services"]["redis"]
+
+    assert redis["image"] == "${DRAGONFLY_IMAGE:?Set DRAGONFLY_IMAGE}"
+    assert redis["command"] == [
+        "dragonfly",
+        "--requirepass=${REDIS_PASSWORD:?Set REDIS_PASSWORD}",
+        "--dir=/data",
+    ]
+    assert redis["volumes"] == ["dragonfly-data:/data"]
+    assert redis["healthcheck"] == {"disable": True}
+    assert "dragonfly-data" in override["volumes"]
+
+
+def test_dragonfly_override_uses_application_readiness_instead_of_container_cli_healthcheck() -> None:
+    override = load_yaml(DRAGONFLY_OVERRIDE_FILE)
+    services = override["services"]
+
+    assert services["auth-policy"]["depends_on"]["redis"]["condition"] == "service_started"
+    assert services["media-control"]["depends_on"]["redis"]["condition"] == "service_started"
 
 
 def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> None:
@@ -122,6 +169,20 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
     assert services["media-control"]["environment"]["MEDIA_CONTROL_TURN_SECONDARY_URL"] == (
         "${MEDIA_CONTROL_TURN_SECONDARY_URL:-turn:localhost:3479?transport=udp}"
     )
+    assert services["media-control"]["environment"]["GOGC"] == "${MEDIA_CONTROL_GOGC:-100}"
+    assert services["media-control"]["environment"]["GOMEMLIMIT"] == "${MEDIA_CONTROL_GOMEMLIMIT:-512MiB}"
+
+    assert services["backend"]["environment"]["TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS"] == (
+        "${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}"
+    )
+
+
+def test_media_control_dockerfile_pins_go_runtime_gc_profile() -> None:
+    dockerfile = MEDIA_CONTROL_DOCKERFILE.read_text(encoding="utf-8")
+
+    assert "ENV GOGC=100" in dockerfile
+    assert "ENV GOMEMLIMIT=512MiB" in dockerfile
+    assert 'ENTRYPOINT ["/usr/local/bin/media-control"]' in dockerfile
 
 
 def test_single_node_keeps_management_ports_local_but_allows_webrtc_ice_public_bind_override() -> None:

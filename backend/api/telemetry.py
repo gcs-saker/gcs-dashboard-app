@@ -10,9 +10,6 @@ from core.security import AuthenticatedUser, get_current_user
 from model.telemetry_model import TelemetryCreate, TelemetryResponse
 from sql.telemetry_sql import Telemetry
 
-from datetime import timedelta
-
-
 router = APIRouter()
 node_store: dict[str | None, dict[str, Any]] = {}
 
@@ -32,7 +29,10 @@ async def receive_telemetry(data: TelemetryCreate, db: Session = Depends(get_db)
     # 메모리 저장
     node_store[data.uuid] = node
 
-    # DB upsert
+    return upsert_telemetry(data, db)
+
+
+def upsert_telemetry(data: TelemetryCreate, db: Session) -> Any:
     if _is_mysql_session(db):
         payload: dict[str, Any] = data.model_dump(exclude_unset=True)
         _upsert_mysql_telemetry(db, payload)
@@ -46,12 +46,6 @@ async def receive_telemetry(data: TelemetryCreate, db: Session = Depends(get_db)
             setattr(db_obj, key, value)
     else:
         insert_payload: dict[str, Any] = data.model_dump()
-
-        # ✅ epochTime이 숫자면 문자열(HH:MM:SS)로 변환
-        if isinstance(insert_payload.get("epochTime"), (int, float)):
-            seconds = int(insert_payload["epochTime"])
-            hours_text, minutes_text, seconds_text = str(timedelta(seconds=seconds)).split(":")
-            insert_payload["epochTime"] = f"{int(hours_text):02}:{int(minutes_text):02}:{int(float(seconds_text)):02}"
 
         db_obj = Telemetry(**insert_payload)
         db.add(db_obj)

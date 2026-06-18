@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from collections.abc import Awaitable, Callable
 
 from fastapi import Depends, FastAPI, Request, Response
@@ -13,12 +14,20 @@ from api.contracts import (
 from config import WebSecuritySettings
 from core.security import require_role
 from modules.ai_contract.router import router as mock_ai_router
+from mqtt.subscriber import start_optional_telemetry_subscriber
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_optional_telemetry_subscriber(app)
+    yield
 
 app = FastAPI(
     title="GCS Backend API",
     description="드론/로봇 제어 및 영상 처리 백엔드",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 web_security_settings = WebSecuritySettings.from_env()
@@ -49,6 +58,7 @@ async def add_security_headers(
     response.headers.setdefault(SecurityHeaderNames.PERMISSIONS_POLICY, SecurityHeaderValues.SELF_DEVICE_PERMISSIONS)
     response.headers.setdefault(SecurityHeaderNames.CONTENT_SECURITY_POLICY, web_security_settings.content_security_policy)
     return response
+
 
 # 📦 API 라우터 등록
 app.include_router(auth.router, prefix=RouterPrefixes.AUTH, tags=["auth"])

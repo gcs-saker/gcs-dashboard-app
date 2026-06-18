@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package gcs.saker.v1;
+
+import "gcs/saker/v1/common.proto";
+
+option go_package = "github.com/gcs-saker/gcs-dashboard-app/contracts/gen/go/gcs/saker/v1;sakerv1";
+option java_multiple_files = true;
+option java_package = "kr.co.a4ai.gcssaker.contracts.v1";
+
+enum OverlayKind {
+  OVERLAY_KIND_UNSPECIFIED = 0;
+  OVERLAY_KIND_BOUNDING_BOX = 1;
+  OVERLAY_KIND_POLYGON = 2;
+  OVERLAY_KIND_LABEL = 3;
+  OVERLAY_KIND_AUDIO_ALERT = 4;
+}
+
+message OverlayPoint {
+  double x = 1;
+  double y = 2;
+}
+
+message AiOverlayEvent {
+  string event_id = 1;
+  string stream_id = 2;
+  string model_id = 3;
+  OverlayKind kind = 4;
+  string label = 5;
+  double confidence = 6;
+  repeated OverlayPoint points = 7;
+  GeoPoint geo_anchor = 8;
+  Timestamped time = 9;
+
+  reserved 10 to 20;
+}
