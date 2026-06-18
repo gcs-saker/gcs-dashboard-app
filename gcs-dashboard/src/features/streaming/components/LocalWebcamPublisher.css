@@ -216,6 +216,28 @@
   color: #dce8f4;
 }
 
+.talkback-audio-receiver__audio {
+  min-height: 26px;
+  padding: 4px 8px;
+  border: 1px solid rgba(126, 180, 222, 0.45);
+  color: #8fc7ff;
+}
+
+.talkback-audio-receiver__audio--receiving {
+  border-color: rgba(86, 211, 124, 0.8);
+  color: #8df0a7;
+}
+
+.talkback-audio-receiver__audio--track-muted {
+  border-color: rgba(255, 211, 138, 0.72);
+  color: #ffd38a;
+}
+
+.talkback-audio-receiver__audio--playback-blocked {
+  border-color: rgba(255, 111, 111, 0.75);
+  color: #ffb0a6;
+}
+
 .talkback-audio-receiver__media {
   width: min(100%, 420px);
   min-height: 36px;

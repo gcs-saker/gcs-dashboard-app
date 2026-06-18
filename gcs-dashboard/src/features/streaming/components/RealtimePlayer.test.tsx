@@ -36,6 +36,8 @@ vi.mock("./WebRTCPlayer", () => ({
               hasVideoFrame: true,
               hasAudioTrack: true,
               isAudioActive: true,
+              audioPlaybackState: "receiving",
+              audioDiagnosticMessage: "오디오 수신 중",
               firstFrameLatencyMs: 812,
               signalingTimings: {
                 iceServersLoadedMs: 10,
@@ -81,6 +83,8 @@ vi.mock("./WebRTCPlayer", () => ({
               hasVideoFrame: false,
               hasAudioTrack: false,
               isAudioActive: false,
+              audioPlaybackState: "no-track",
+              audioDiagnosticMessage: "오디오 트랙 없음",
               firstFrameLatencyMs: null,
               signalingTimings: {
                 iceServersLoadedMs: 10,
@@ -107,6 +111,8 @@ vi.mock("./WebRTCPlayer", () => ({
               hasVideoFrame: false,
               hasAudioTrack: true,
               isAudioActive: false,
+              audioPlaybackState: "track-muted",
+              audioDiagnosticMessage: "오디오 트랙 수신 중이나 무음 또는 mute 상태",
               firstFrameLatencyMs: null,
               signalingTimings: {
                 iceServersLoadedMs: 10,
@@ -136,12 +142,14 @@ vi.mock("./HLSFallbackPlayer", () => ({
     hlsUrl,
     streamId,
     fallbackReason,
+    latencyMode,
   }: HLSFallbackPlayerProps) {
     return (
       <div data-testid="hls-fallback-player">
         <span>hls:{hlsUrl}</span>
         <span>stream:{streamId}</span>
         <span>reason:{fallbackReason}</span>
+        <span>latency:{latencyMode}</span>
       </div>
     );
   },
@@ -252,6 +260,7 @@ describe("RealtimePlayer", () => {
     expect(screen.getByTestId("hls-fallback-player")).toBeInTheDocument();
     expect(screen.getByText("hls:https://media.example.test/raw/sample/front/index.m3u8")).toBeInTheDocument();
     expect(screen.getByText("reason:WebRTC connection failed")).toBeInTheDocument();
+    expect(screen.getByText("latency:stable")).toBeInTheDocument();
   });
 
   test("falls back immediately after relay candidate failure to avoid repeated TURN allocation", async () => {

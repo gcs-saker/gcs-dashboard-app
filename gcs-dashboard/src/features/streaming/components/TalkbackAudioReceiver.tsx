@@ -21,6 +21,14 @@ export function TalkbackAudioReceiver({ streamId }: TalkbackAudioReceiverProps) 
           {enabled ? "수신 중지" : "수신 시작"}
         </button>
         <span aria-live="polite">{enabled ? talkbackStatusLabel(playback.status) : "idle"}</span>
+        {enabled ? (
+          <span
+            className={`talkback-audio-receiver__audio talkback-audio-receiver__audio--${playback.audioPlaybackState ?? "no-track"}`}
+            title={playback.audioDiagnosticMessage ?? "오디오 트랙 없음"}
+          >
+            {talkbackAudioLabel(playback.audioPlaybackState)}
+          </span>
+        ) : null}
       </div>
       {enabled ? (
         <>
@@ -38,6 +46,13 @@ export function TalkbackAudioReceiver({ streamId }: TalkbackAudioReceiverProps) 
       ) : null}
     </section>
   );
+}
+
+function talkbackAudioLabel(audioPlaybackState: string | undefined): string {
+  if (audioPlaybackState === "receiving") return "오디오 수신";
+  if (audioPlaybackState === "track-muted") return "무음 수신";
+  if (audioPlaybackState === "playback-blocked") return "브라우저 차단";
+  return "오디오 대기";
 }
 
 function talkbackStatusLabel(status: string): string {

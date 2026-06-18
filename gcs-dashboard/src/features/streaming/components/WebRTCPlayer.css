@@ -67,9 +67,20 @@
   color: #8fc7ff;
 }
 
+.webrtc-player__audio--receiving,
 .webrtc-player__audio.is-active {
   border-color: rgba(86, 211, 124, 0.8);
   color: #8df0a7;
+}
+
+.webrtc-player__audio--track-muted {
+  border-color: rgba(255, 211, 138, 0.72);
+  color: #ffd38a;
+}
+
+.webrtc-player__audio--playback-blocked {
+  border-color: rgba(255, 111, 111, 0.75);
+  color: #ffb0a6;
 }
 
 .webrtc-player__status--offline,

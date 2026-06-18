@@ -1,27 +1,30 @@
 import { useEffect, useReducer, useRef } from "react";
 import type { RefObject } from "react";
 
-import type { HLSFallbackSnapshot, HLSPlaybackMode } from "../types";
+import type { HLSFallbackSnapshot, HLSLatencyMode, HLSPlaybackMode } from "../types";
 
 type HlsConstructor = typeof import("hls.js").default;
 
 interface UseHlsFallbackPlaybackOptions {
   hlsUrl: string | null;
+  latencyMode?: HLSLatencyMode;
 }
 
 type HlsAction =
-  | { type: "loading"; mode: HLSPlaybackMode }
-  | { type: "playing"; mode: HLSPlaybackMode }
-  | { type: "error"; mode: HLSPlaybackMode; message: string };
+  | { type: "loading"; mode: HLSPlaybackMode; latencyMode: HLSLatencyMode }
+  | { type: "playing"; mode: HLSPlaybackMode; latencyMode: HLSLatencyMode }
+  | { type: "error"; mode: HLSPlaybackMode; latencyMode: HLSLatencyMode; message: string };
 
 const initialHlsState: HLSFallbackSnapshot = {
   status: "idle",
   mode: "unsupported",
+  latencyMode: "stable",
   errorMessage: null,
 };
 
 export function useHlsFallbackPlayback({
   hlsUrl,
+  latencyMode = "stable",
 }: UseHlsFallbackPlaybackOptions): HLSFallbackSnapshot & {
   videoRef: RefObject<HTMLVideoElement | null>;
 } {
@@ -36,7 +39,7 @@ export function useHlsFallbackPlayback({
     }
 
     if (!hlsUrl) {
-      dispatch({ type: "error", mode: "unsupported", message: "HLS URL is required" });
+      dispatch({ type: "error", mode: "unsupported", latencyMode, message: "HLS URL is required" });
       return undefined;
     }
 
@@ -46,10 +49,10 @@ export function useHlsFallbackPlayback({
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       const onLoadedMetadata = () => {
         void video.play();
-        dispatch({ type: "playing", mode: "native" });
+        dispatch({ type: "playing", mode: "native", latencyMode });
       };
 
-      dispatch({ type: "loading", mode: "native" });
+      dispatch({ type: "loading", mode: "native", latencyMode });
       video.src = hlsUrl;
       video.addEventListener("loadedmetadata", onLoadedMetadata);
       cleanup = () => {
@@ -72,28 +75,23 @@ export function useHlsFallbackPlayback({
           dispatch({
             type: "error",
             mode: "unsupported",
+            latencyMode,
             message: "HLS playback is not supported in this browser",
           });
           return;
         }
 
-        const hls = new Hls({
-          lowLatencyMode: true,
-          backBufferLength: 10,
-          liveSyncDurationCount: 2,
-          maxLiveSyncPlaybackRate: 1.5,
-          capLevelToPlayerSize: true,
-        });
+        const hls = new Hls(hlsConfigForLatencyMode(latencyMode));
 
-        dispatch({ type: "loading", mode: "hlsjs" });
+        dispatch({ type: "loading", mode: "hlsjs", latencyMode });
         hls.loadSource(hlsUrl);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           void video.play();
-          dispatch({ type: "playing", mode: "hlsjs" });
+          dispatch({ type: "playing", mode: "hlsjs", latencyMode });
         });
         hls.on(Hls.Events.ERROR, () => {
-          dispatch({ type: "error", mode: "hlsjs", message: "HLS playback failed" });
+          dispatch({ type: "error", mode: "hlsjs", latencyMode, message: "HLS playback failed" });
         });
 
         cleanup = () => {
@@ -102,7 +100,7 @@ export function useHlsFallbackPlayback({
       })
       .catch(() => {
         if (!disposed) {
-          dispatch({ type: "error", mode: "hlsjs", message: "HLS playback failed" });
+          dispatch({ type: "error", mode: "hlsjs", latencyMode, message: "HLS playback failed" });
         }
       });
 
@@ -110,7 +108,7 @@ export function useHlsFallbackPlayback({
       disposed = true;
       cleanup?.();
     };
-  }, [hlsUrl]);
+  }, [hlsUrl, latencyMode]);
 
   return { ...snapshot, videoRef };
 }
@@ -124,23 +122,46 @@ function hlsReducer(
       return {
         status: "loading",
         mode: action.mode,
+        latencyMode: action.latencyMode,
         errorMessage: null,
       };
     case "playing":
       return {
         status: "playing",
         mode: action.mode,
+        latencyMode: action.latencyMode,
         errorMessage: null,
       };
     case "error":
       return {
         status: "error",
         mode: action.mode,
+        latencyMode: action.latencyMode,
         errorMessage: action.message,
       };
   }
 
   return state;
+}
+
+function hlsConfigForLatencyMode(latencyMode: HLSLatencyMode): Record<string, unknown> {
+  if (latencyMode === "low-latency") {
+    return {
+      lowLatencyMode: true,
+      backBufferLength: 10,
+      liveSyncDurationCount: 2,
+      maxLiveSyncPlaybackRate: 1.5,
+      capLevelToPlayerSize: true,
+    };
+  }
+
+  return {
+    lowLatencyMode: false,
+    backBufferLength: 30,
+    liveSyncDurationCount: 4,
+    maxLiveSyncPlaybackRate: 1.2,
+    capLevelToPlayerSize: true,
+  };
 }
 
 async function loadHlsConstructor(): Promise<HlsConstructor> {

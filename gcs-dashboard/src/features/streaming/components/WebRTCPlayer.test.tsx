@@ -373,12 +373,45 @@ describe("WebRTCPlayer", () => {
     await waitFor(() => {
       expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-active", "true");
     });
-    expect(screen.getByText("audio")).toBeInTheDocument();
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-playback-state", "receiving");
+    expect(screen.getByText("audio receiving")).toBeInTheDocument();
     expect(onStatusChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
         hasAudioTrack: true,
         isAudioActive: true,
+        audioPlaybackState: "receiving",
+        audioDiagnosticMessage: "오디오 수신 중",
       }),
+    );
+  });
+
+  test("separates received audio tracks from browser autoplay blocks", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockRejectedValue(new Error("autoplay blocked"));
+    const audioTrack = {
+      enabled: true,
+      muted: false,
+      readyState: "live",
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    const remoteStream = {
+      getAudioTracks: () => [audioTrack],
+    } as unknown as MediaStream;
+
+    render(<WebRTCPlayer whepUrl="https://media.example.test/raw/sample/front/whep" />);
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    act(() => {
+      peerConnections[0].emitRemoteTrack([remoteStream]);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-has-audio-track", "true");
+      expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-audio-playback-state", "playback-blocked");
+    });
+    expect(screen.getByText("audio blocked")).toHaveAttribute(
+      "title",
+      "브라우저 자동재생 정책으로 오디오 재생이 차단됨",
     );
   });
 

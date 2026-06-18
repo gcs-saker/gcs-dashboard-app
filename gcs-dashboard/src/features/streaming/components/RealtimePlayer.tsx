@@ -76,6 +76,8 @@ export function RealtimePlayer({
               webrtcRetryAttempt,
               hasAudioTrack: snapshot.hasAudioTrack,
               isAudioActive: snapshot.isAudioActive,
+              audioPlaybackState: snapshot.audioPlaybackState,
+              audioDiagnosticMessage: snapshot.audioDiagnosticMessage,
               audioLevel: snapshot.audioStats.audioLevel,
               webrtcFirstFrameLatencyMs: snapshot.firstFrameLatencyMs,
               webrtcWhepResponseMs: snapshot.signalingTimings.whepResponseMs,
@@ -122,6 +124,7 @@ export function RealtimePlayer({
           streamId={streamId}
           title={`${title} HLS fallback`}
           fallbackReason={fallbackReason}
+          latencyMode="stable"
           muted={false}
           controls
         />
