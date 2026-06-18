@@ -18,6 +18,7 @@ export const DASHBOARD_API_ROUTES = Object.freeze({
   assetByGatewayPrefix: "/asset/",
   operationalEvents: "/ops/events",
   operationalEventsPage: "/ops/events/page",
+  operationalEventsStream: "/ops/events/stream",
   operationalEventMetrics: "/ops/events/metrics",
   operationalEventBuckets: "/ops/events/buckets",
   telemetryAll: "/telemetry/all",

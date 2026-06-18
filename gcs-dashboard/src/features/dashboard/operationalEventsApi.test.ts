@@ -2,12 +2,15 @@ import { describe, expect, test, vi } from "vitest";
 import {
   buildOperationalEventBucketsUrl,
   buildOperationalEventPageUrl,
+  buildOperationalEventStreamUrl,
   buildOperationalEventMetricsUrl,
   buildOperationalEventsUrl,
+  consumeOperationalEventStream,
   fetchOperationalEventBuckets,
   fetchOperationalEventPage,
   fetchOperationalEventMetrics,
   fetchOperationalEvents,
+  parseOperationalEventSseBuffer,
 } from "./operationalEventsApi";
 import type { OperationalEventFilters } from "./operationalEvents";
 
@@ -22,6 +25,7 @@ describe("operationalEventsApi", () => {
 
     expect(buildOperationalEventsUrl(filters)).toContain("/api/ops/events?query=ice&severity=warn&from=");
     expect(buildOperationalEventPageUrl(filters, 25)).toContain("/api/ops/events/page?query=ice&severity=warn&from=");
+    expect(buildOperationalEventStreamUrl(filters)).toContain("/api/ops/events/stream?query=ice&severity=warn&from=");
     expect(buildOperationalEventPageUrl(filters, 25)).toContain("limit=25");
     expect(buildOperationalEventMetricsUrl(filters)).toContain("/api/ops/events/metrics?query=ice&severity=warn&from=");
     expect(buildOperationalEventBucketsUrl(filters)).toContain("/api/ops/events/buckets?query=ice&severity=warn&from=");
@@ -171,6 +175,60 @@ describe("operationalEventsApi", () => {
     expect(buckets[0].avgLatencyMs).toBe(60);
     expect(fetcher).toHaveBeenCalledWith("/api/ops/events/buckets", expect.objectContaining({ credentials: "include" }));
   });
+
+  test("parses operational event SSE messages split across chunks", () => {
+    const first = parseOperationalEventSseBuffer("event: operational-event\ndata: {\"id\":\"evt-");
+    const second = parseOperationalEventSseBuffer(`${first.remaining}001\"}\n\n`);
+
+    expect(first.messages).toEqual([]);
+    expect(second.messages).toEqual([{ event: "operational-event", data: "{\"id\":\"evt-001\"}" }]);
+  });
+
+  test("consumes operational event stream with authenticated fetch", async () => {
+    const event = {
+      id: "evt-stream-001",
+      occurredAt: "2026-06-01T00:00:00Z",
+      severity: "info",
+      category: "stream",
+      eventType: "stream.online",
+      sourceService: "media-control",
+      source: "스트림 Registry",
+      message: "신규 스트림 감지",
+      connections: 2,
+      latencyMs: 30,
+      throughputMbps: 12,
+      streamId: "raw/local/webcam",
+      connectionId: "conn-001",
+      icePath: "srflx",
+      relayFallbackReason: null,
+    };
+    const fetcher = vi.fn(async () =>
+      streamResponse([
+        `event: operational-event\ndata: ${JSON.stringify(event)}\n\n`,
+        "event: heartbeat\ndata: {\"checkedAt\":\"2026-06-01T00:00:01Z\"}\n\n",
+      ]),
+    );
+    const onEvent = vi.fn();
+    const onHeartbeat = vi.fn();
+
+    await consumeOperationalEventStream(
+      { query: "", severity: "all", from: "", to: "" },
+      { onEvent, onHeartbeat },
+      { fetcher },
+    );
+
+    expect(fetcher).toHaveBeenCalledWith("/api/ops/events/stream", expect.objectContaining({ credentials: "include" }));
+    expect(onEvent).toHaveBeenCalledWith(event);
+    expect(onHeartbeat).toHaveBeenCalledWith("2026-06-01T00:00:01Z");
+  });
+
+  test("rejects malformed stream events before merging into dashboard state", async () => {
+    const fetcher = vi.fn(async () => streamResponse(["event: operational-event\ndata: {\"id\":\"bad\"}\n\n"]));
+
+    await expect(
+      consumeOperationalEventStream({ query: "", severity: "all", from: "", to: "" }, { onEvent: vi.fn() }, { fetcher }),
+    ).rejects.toThrow("Operational event stream payload is invalid");
+  });
 });
 
 function jsonResponse(payload: unknown, status = 200): Response {
@@ -178,5 +236,19 @@ function jsonResponse(payload: unknown, status = 200): Response {
     ok: status >= 200 && status < 300,
     status,
     json: async () => payload,
+  } as Response;
+}
+
+function streamResponse(chunks: string[]): Response {
+  const encoder = new TextEncoder();
+  return {
+    ok: true,
+    status: 200,
+    body: new ReadableStream({
+      start(controller) {
+        chunks.forEach((chunk) => controller.enqueue(encoder.encode(chunk)));
+        controller.close();
+      },
+    }),
   } as Response;
 }

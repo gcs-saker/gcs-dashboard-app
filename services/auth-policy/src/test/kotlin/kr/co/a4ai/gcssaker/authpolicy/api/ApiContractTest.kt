@@ -24,6 +24,7 @@ class ApiContractTest {
         assertEquals(ApiContractFixtures.TIME_SYNC_STATUS, TimeSyncApiRoutes.STATUS)
         assertEquals(ApiContractFixtures.OPERATIONAL_EVENTS, OperationalEventApiRoutes.EVENTS)
         assertEquals(ApiContractFixtures.OPERATIONAL_EVENTS_PAGE, OperationalEventApiRoutes.EVENTS_PAGE)
+        assertEquals(ApiContractFixtures.OPERATIONAL_EVENTS_STREAM, OperationalEventApiRoutes.EVENTS_STREAM)
         assertEquals(ApiContractFixtures.OPERATIONAL_EVENTS_METRICS, OperationalEventApiRoutes.EVENTS_METRICS)
         assertEquals(ApiContractFixtures.OPERATIONAL_EVENTS_BUCKETS, OperationalEventApiRoutes.EVENTS_BUCKETS)
         assertEquals(ApiContractFixtures.GRAPHQL, GraphQlApiRoutes.GRAPHQL)
@@ -48,6 +49,7 @@ class ApiContractTest {
             AuthController::class to "me",
             OperationalEventController::class to "events",
             OperationalEventController::class to "eventPage",
+            OperationalEventController::class to "eventStream",
             OperationalEventController::class to "metrics",
             OperationalEventController::class to "buckets",
             OperationalEventGraphQlController::class to "operationalEvents",
@@ -86,6 +88,7 @@ class ApiContractTest {
             TimeSyncApiRoutes.CONFIG,
             OperationalEventApiRoutes.EVENTS,
             OperationalEventApiRoutes.EVENTS_PAGE,
+            OperationalEventApiRoutes.EVENTS_STREAM,
             OperationalEventApiRoutes.EVENTS_METRICS,
             OperationalEventApiRoutes.EVENTS_BUCKETS,
             OperationalReadApiRoutes.TELEMETRY_ALL,
@@ -266,6 +269,7 @@ private object ApiContractFixtures {
     const val TIME_SYNC_STATUS = "/ops/time/status"
     const val OPERATIONAL_EVENTS = "/ops/events"
     const val OPERATIONAL_EVENTS_PAGE = "/ops/events/page"
+    const val OPERATIONAL_EVENTS_STREAM = "/ops/events/stream"
     const val OPERATIONAL_EVENTS_METRICS = "/ops/events/metrics"
     const val OPERATIONAL_EVENTS_BUCKETS = "/ops/events/buckets"
     const val GRAPHQL = "/graphql"

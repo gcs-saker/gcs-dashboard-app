@@ -19,6 +19,7 @@ describe("api route contracts", () => {
       telemetryIngest: "/telemetry/",
       operationalEvents: "/ops/events",
       operationalEventsPage: "/ops/events/page",
+      operationalEventsStream: "/ops/events/stream",
       operationalEventMetrics: "/ops/events/metrics",
       operationalEventBuckets: "/ops/events/buckets",
       telemetryHistorySuffix: "/history",
