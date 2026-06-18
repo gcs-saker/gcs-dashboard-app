@@ -32,6 +32,13 @@ export function TalkbackControlPanel({
           ? selectedStreams.map(getDashboardStreamDisplayName).join(", ")
           : "대상 없음"}
       </span>
+      <span
+        className={`talkback-panel__mic ${talkback.hasLocalAudioTrack ? "has-track" : ""}`}
+        aria-label={`마이크 입력 ${formatMicLevel(talkback.micLevel)}`}
+      >
+        <i style={{ width: `${Math.round((talkback.micLevel ?? 0) * 100)}%` }} />
+        <em>{talkback.hasLocalAudioTrack ? `MIC ${formatMicLevel(talkback.micLevel)}` : "MIC 대기"}</em>
+      </span>
       <button
         className={`ops-command-button ${isActive ? "is-active" : ""}`}
         disabled={selectedStreamPaths.length === 0 || isActive}
@@ -56,6 +63,11 @@ export function TalkbackControlPanel({
       {talkback.errorMessage ? <span className="talkback-panel__error">{talkback.errorMessage}</span> : null}
     </section>
   );
+}
+
+function formatMicLevel(level: number | null): string {
+  if (level === null) return "대기";
+  return `${Math.round(level * 100)}%`;
 }
 
 function talkbackStatusText(status: ReturnType<typeof useWhipAudioPublisher>["status"]): string {

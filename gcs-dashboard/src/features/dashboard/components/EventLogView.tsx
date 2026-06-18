@@ -27,7 +27,8 @@ const categoryLabels: Record<OperationalEventCategory, string> = {
 };
 
 const eventCategories: OperationalEventCategory[] = ["api", "signaling", "network", "stream", "security"];
-const EVENT_ROW_HEIGHT_PX = 112;
+const EVENT_ROW_HEIGHT_PX = 96;
+const NETWORK_FLOW_EVENT_LIMIT = 24;
 
 export function EventLogView() {
   const filters = useEventLogStore((state) => state.filters);
@@ -60,6 +61,10 @@ export function EventLogView() {
   const throughputLabel = canUseServerMetrics ? "Avg Throughput" : "Peak Throughput";
   const peakThroughput = Math.max(1, summary.peakThroughputMbps);
   const categoryStats = useMemo(() => summarizeCategories(events), [events]);
+  const networkFlowEvents = useMemo(
+    () => events.slice(0, NETWORK_FLOW_EVENT_LIMIT).reverse(),
+    [events],
+  );
   const sourceOptions = useMemo(() => Array.from(new Set(rawEvents.map((event) => event.source))).sort(), [rawEvents]);
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedEventId) ?? events[0] ?? null,
@@ -238,10 +243,10 @@ export function EventLogView() {
         <section className="event-log-view__chart-panel" aria-label="시간대별 네트워크 지표">
           <div className="event-log-view__panel-header">
             <h3>네트워크 흐름</h3>
-            <span>{events.length} events</span>
+            <span>최근 {networkFlowEvents.length}/{events.length} events</span>
           </div>
           <div className="event-log-view__chart">
-            {events.map((event) => (
+            {networkFlowEvents.map((event) => (
               <button
                 aria-label={`${event.source} ${event.message}`}
                 className={`event-log-view__bar is-${event.severity} ${selectedEvent?.id === event.id ? "is-selected" : ""}`}

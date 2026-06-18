@@ -110,6 +110,11 @@ export interface RealtimePlayerSnapshot {
   webrtcWhepResponseMs?: number | null;
   audioJitterMs?: number | null;
   audioPacketsLost?: number | null;
+  iceRoundTripTimeMs?: number | null;
+  localCandidateType?: string | null;
+  remoteCandidateType?: string | null;
+  iceTransportProtocol?: string | null;
+  relayFallbackReason?: string | null;
   iceCandidateTotal?: number;
   iceCandidateRelay?: number;
   iceCandidateSrflx?: number;

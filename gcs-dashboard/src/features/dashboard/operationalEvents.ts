@@ -20,6 +20,11 @@ export interface OperationalEventFilters {
   to: string;
 }
 
+export interface OperationalEventPage {
+  events: OperationalEvent[];
+  nextCursor: string | null;
+}
+
 export interface OperationalEventSeverityCount {
   severity: OperationalEventSeverity;
   count: number;

@@ -103,6 +103,11 @@ export interface AudioAnalysisSnapshot {
   whepResponseMs: number | null;
   jitterMs: number | null;
   packetsLost: number | null;
+  iceRoundTripTimeMs: number | null;
+  localCandidateType: string | null;
+  remoteCandidateType: string | null;
+  iceTransportProtocol: string | null;
+  relayFallbackReason: string | null;
 }
 
 export interface StatusNote {
@@ -162,7 +167,10 @@ export function buildAudioWaveformBars(audioLevel: number | null, isActive: bool
   });
 }
 
-export function formatPlaybackMode(mode: RealtimePlayerSnapshot["mode"] | null, streamStatus: DashboardStreamSlot["status"]): string {
+export function formatPlaybackMode(
+  mode: RealtimePlayerSnapshot["mode"] | null,
+  streamStatus: DashboardStreamSlot["status"] | RealtimePlayerSnapshot["streamStatus"],
+): string {
   if (mode === "webrtc") return "WebRTC";
   if (mode === "hls") return "HLS fallback";
   if (mode === "reconnecting") return "재연결";

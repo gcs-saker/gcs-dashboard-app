@@ -1,9 +1,11 @@
 import { describe, expect, test, vi } from "vitest";
 import {
   buildOperationalEventBucketsUrl,
+  buildOperationalEventPageUrl,
   buildOperationalEventMetricsUrl,
   buildOperationalEventsUrl,
   fetchOperationalEventBuckets,
+  fetchOperationalEventPage,
   fetchOperationalEventMetrics,
   fetchOperationalEvents,
 } from "./operationalEventsApi";
@@ -19,6 +21,8 @@ describe("operationalEventsApi", () => {
     };
 
     expect(buildOperationalEventsUrl(filters)).toContain("/api/ops/events?query=ice&severity=warn&from=");
+    expect(buildOperationalEventPageUrl(filters, 25)).toContain("/api/ops/events/page?query=ice&severity=warn&from=");
+    expect(buildOperationalEventPageUrl(filters, 25)).toContain("limit=25");
     expect(buildOperationalEventMetricsUrl(filters)).toContain("/api/ops/events/metrics?query=ice&severity=warn&from=");
     expect(buildOperationalEventBucketsUrl(filters)).toContain("/api/ops/events/buckets?query=ice&severity=warn&from=");
   });
@@ -52,6 +56,41 @@ describe("operationalEventsApi", () => {
     await expect(
       fetchOperationalEvents({ query: "", severity: "all", from: "", to: "" }, fetcher),
     ).rejects.toThrow("Operational events response is invalid");
+  });
+
+  test("fetches and validates keyset operational event page payloads", async () => {
+    const fetcher = vi.fn(async () =>
+      jsonResponse({
+        events: [
+          {
+            id: "evt-001",
+            occurredAt: "2026-06-01T00:00:00Z",
+            severity: "warn",
+            category: "network",
+            source: "TURN 릴레이",
+            message: "직접 ICE 후보 실패",
+            connections: 7,
+            latencyMs: 80,
+            throughputMbps: 20,
+          },
+        ],
+        nextCursor: "cursor-001",
+      }),
+    );
+
+    const page = await fetchOperationalEventPage({ query: "", severity: "all", from: "", to: "" }, fetcher, 25);
+
+    expect(page.events).toHaveLength(1);
+    expect(page.nextCursor).toBe("cursor-001");
+    expect(fetcher).toHaveBeenCalledWith("/api/ops/events/page?limit=25", expect.objectContaining({ credentials: "include" }));
+  });
+
+  test("rejects malformed operational event page payloads before rendering", async () => {
+    const fetcher = vi.fn(async () => jsonResponse({ events: [{ id: "bad" }], nextCursor: 42 }));
+
+    await expect(
+      fetchOperationalEventPage({ query: "", severity: "all", from: "", to: "" }, fetcher),
+    ).rejects.toThrow("Operational event page response is invalid");
   });
 
   test("fetches and validates aggregate operational event metrics", async () => {

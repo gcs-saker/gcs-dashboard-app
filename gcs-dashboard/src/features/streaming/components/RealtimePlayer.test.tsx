@@ -50,6 +50,20 @@ vi.mock("./WebRTCPlayer", () => ({
                 audioLevel: 0.58,
                 jitterMs: 24,
                 packetsLost: 1,
+                roundTripTimeMs: 118,
+                localCandidateType: "srflx",
+                remoteCandidateType: "host",
+                transportProtocol: "udp",
+              },
+              iceCandidateStats: {
+                total: 2,
+                host: 1,
+                srflx: 1,
+                relay: 0,
+                prflx: 0,
+                unknown: 0,
+                udp: 2,
+                tcp: 0,
               },
             })
           }
@@ -165,6 +179,34 @@ describe("RealtimePlayer", () => {
     );
     expect(screen.getByText("webrtc:https://media.example.test/raw/sample/front/whep")).toBeInTheDocument();
     expect(screen.getByText("online")).toBeInTheDocument();
+  });
+
+  test("forwards ICE route metrics for TURN load diagnostics", async () => {
+    const fetcher = vi.fn(async () =>
+      jsonResponse({
+        streamId: "raw.sample.front",
+        status: "online",
+        playbackUrls: {
+          webrtc: "https://media.example.test/raw/sample/front/whep",
+          hls: "https://media.example.test/raw/sample/front/index.m3u8",
+        },
+      }),
+    );
+    const onStatusChange = vi.fn();
+
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} onStatusChange={onStatusChange} />);
+    await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "webrtc playing" }));
+
+    expect(onStatusChange).toHaveBeenCalledWith(expect.objectContaining({
+      iceRoundTripTimeMs: 118,
+      localCandidateType: "srflx",
+      remoteCandidateType: "host",
+      iceTransportProtocol: "udp",
+      iceCandidateTotal: 2,
+      iceCandidateSrflx: 1,
+      iceCandidateRelay: 0,
+    }));
   });
 
   test("normalizes deployed media URLs away from localhost and insecure same-host http", () => {

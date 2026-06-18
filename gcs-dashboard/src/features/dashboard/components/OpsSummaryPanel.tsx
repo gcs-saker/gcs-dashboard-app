@@ -36,6 +36,7 @@ export function OpsSummaryPanel({
   const audioText = audioAnalysis?.streamId === selectedStream.id && audioAnalysis.isAudioActive ? "음성 수신" : "음성 대기";
   const aiText = selectedStream.aiModeEnabled ? "AI 준비" : "AI 꺼짐";
   const selectedStatusText = getDashboardStreamStatusText(selectedStream.status);
+  const icePathNote = formatIcePathNote(audioAnalysis);
   const missionTone: StatusTone =
     selectedStream.status === "online" ? "good" : selectedStream.status === "offline" ? "danger" : "warning";
   const missionText =
@@ -53,8 +54,14 @@ export function OpsSummaryPanel({
   const statusNotes: StatusNote[] = [
     { label: selectedStream.geometry ? "GPS 정상" : "GPS 대기", tone: selectedStream.geometry ? "good" : "muted" },
     {
-      label: selectedStream.status === "online" ? "WebRTC 직접 연결" : selectedStatusText,
-      tone: selectedStream.status === "online" ? "good" : selectedStream.status === "offline" ? "danger" : "warning",
+      label: icePathNote ?? (selectedStream.status === "online" ? "WebRTC 경로 확인 중" : selectedStatusText),
+      tone: audioAnalysis?.localCandidateType === "relay"
+        ? "warning"
+        : selectedStream.status === "online"
+          ? "good"
+          : selectedStream.status === "offline"
+            ? "danger"
+            : "warning",
     },
     {
       label: audioAnalysis?.jitterMs !== null && audioAnalysis?.jitterMs !== undefined
@@ -126,4 +133,12 @@ export function OpsSummaryPanel({
       </div>
     </section>
   );
+}
+
+function formatIcePathNote(audioAnalysis: AudioAnalysisSnapshot | null): string | null {
+  if (!audioAnalysis?.localCandidateType && !audioAnalysis?.remoteCandidateType) return null;
+  const local = audioAnalysis.localCandidateType ?? "?";
+  const remote = audioAnalysis.remoteCandidateType ?? "?";
+  const protocol = audioAnalysis.iceTransportProtocol ? `/${audioAnalysis.iceTransportProtocol.toUpperCase()}` : "";
+  return `ICE ${local}->${remote}${protocol}`;
 }

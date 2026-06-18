@@ -17,6 +17,7 @@ export const BACKEND_ROOT_ROUTES = Object.freeze({
 export const DASHBOARD_API_ROUTES = Object.freeze({
   assetByGatewayPrefix: "/asset/",
   operationalEvents: "/ops/events",
+  operationalEventsPage: "/ops/events/page",
   operationalEventMetrics: "/ops/events/metrics",
   operationalEventBuckets: "/ops/events/buckets",
   telemetryAll: "/telemetry/all",

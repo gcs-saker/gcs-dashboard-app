@@ -63,6 +63,9 @@ describe("EventLogView", () => {
         return jsonResponse(metricPayload(scopedEvents));
       }
       const payload = url.includes("severity=warn") ? events.filter((event) => event.severity === "warn") : events;
+      if (url.includes("/page")) {
+        return jsonResponse({ events: payload, nextCursor: null });
+      }
       return jsonResponse(payload);
     }));
 
@@ -88,7 +91,7 @@ describe("EventLogView", () => {
     expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("category=network");
     expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("latencyMs=164");
     await waitFor(() => expect(screen.queryByText("만료된 세션으로 스트림 접근 거절")).not.toBeInTheDocument());
-    expect(fetch).toHaveBeenCalledWith("/api/ops/events?severity=warn", expect.objectContaining({
+    expect(fetch).toHaveBeenCalledWith("/api/ops/events/page?severity=warn&limit=50", expect.objectContaining({
       credentials: "include",
       headers: { Accept: "application/json" },
     }));

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { AudioWaveformPanel } from "./components/AudioWaveformPanel";
@@ -34,6 +34,7 @@ import {
 import type { RealtimePlayerSnapshot } from "../streaming/types";
 import { useDashboardStreams } from "./hooks/useDashboardStreams";
 import { telemetryRowsForStream, type AudioAnalysisSnapshot } from "./dashboardPresentation";
+import { DASHBOARD_STREAM_STATUS } from "../stateContracts";
 
 const loadTacticalLeafletMap = () => import("./map/TacticalLeafletMap");
 const loadEventLogView = () => import("./components/EventLogView");
@@ -45,6 +46,11 @@ const TimeSyncSettingsView = lazy(() => loadTimeSyncSettingsView().then((module)
 
 type DashboardView = "dashboard" | "cctv" | "events" | "status" | "settings";
 type CctvLayoutMode = "3x3" | "4x4" | "5x5" | "auto";
+
+interface StreamAvailabilityNotification {
+  id: string;
+  message: string;
+}
 
 export function DashboardMvp() {
   const { currentUser, logout } = useAuth();
@@ -65,6 +71,8 @@ export function DashboardMvp() {
   const [talkbackTargetStreamIds, setTalkbackTargetStreamIds] = useState<string[]>([]);
   const [popoutWidgetId, setPopoutWidgetId] = useState<DashboardWidgetId | null>(null);
   const [layoutMessage, setLayoutMessage] = useState("기본 레이아웃");
+  const [streamNotification, setStreamNotification] = useState<StreamAvailabilityNotification | null>(null);
+  const knownAvailableStreamIdsRef = useRef<Set<string> | null>(null);
   const handleAuthFailure = useCallback((): void => {
     logout();
     navigate("/login?reason=session-expired", { replace: true });
@@ -88,6 +96,30 @@ export function DashboardMvp() {
   const assetTreeRoot = useMemo(() => mergeAssetTreeWithStreams(DEFAULT_ASSET_TREE, streams), [streams]);
   const cctvGridSize = getCctvGridSize(cctvLayoutMode);
   const cctvStreams = useMemo(() => buildCctvGridStreams(streams, cctvGridSize), [streams, cctvGridSize]);
+
+  useEffect(() => {
+    const availableStreams = streams.filter(isReceivableStream);
+    const availableStreamIds = new Set(availableStreams.map((stream) => stream.id));
+    if (!knownAvailableStreamIdsRef.current) {
+      knownAvailableStreamIdsRef.current = availableStreamIds;
+      return;
+    }
+
+    const addedStream = availableStreams.find((stream) => !knownAvailableStreamIdsRef.current?.has(stream.id));
+    if (addedStream) {
+      setStreamNotification({
+        id: `${addedStream.id}-${Date.now()}`,
+        message: `수신 가능한 스트림 감지: ${addedStream.title}`,
+      });
+    }
+    knownAvailableStreamIdsRef.current = availableStreamIds;
+  }, [streams]);
+
+  useEffect(() => {
+    if (!streamNotification) return;
+    const timeoutId = globalThis.setTimeout(() => setStreamNotification(null), 4500);
+    return () => globalThis.clearTimeout(timeoutId);
+  }, [streamNotification]);
 
   useEffect(() => {
     const preloadDashboardChunks = () => {
@@ -202,6 +234,11 @@ export function DashboardMvp() {
         whepResponseMs: snapshot.webrtcWhepResponseMs ?? null,
         jitterMs: snapshot.audioJitterMs ?? null,
         packetsLost: snapshot.audioPacketsLost ?? null,
+        iceRoundTripTimeMs: snapshot.iceRoundTripTimeMs ?? null,
+        localCandidateType: snapshot.localCandidateType ?? null,
+        remoteCandidateType: snapshot.remoteCandidateType ?? null,
+        iceTransportProtocol: snapshot.iceTransportProtocol ?? null,
+        relayFallbackReason: snapshot.relayFallbackReason ?? null,
       };
       setAudioAnalysis((current) => {
         if (
@@ -215,7 +252,12 @@ export function DashboardMvp() {
           current.firstFrameLatencyMs === nextAnalysis.firstFrameLatencyMs &&
           current.whepResponseMs === nextAnalysis.whepResponseMs &&
           current.jitterMs === nextAnalysis.jitterMs &&
-          current.packetsLost === nextAnalysis.packetsLost
+          current.packetsLost === nextAnalysis.packetsLost &&
+          current.iceRoundTripTimeMs === nextAnalysis.iceRoundTripTimeMs &&
+          current.localCandidateType === nextAnalysis.localCandidateType &&
+          current.remoteCandidateType === nextAnalysis.remoteCandidateType &&
+          current.iceTransportProtocol === nextAnalysis.iceTransportProtocol &&
+          current.relayFallbackReason === nextAnalysis.relayFallbackReason
         ) {
           return current;
         }
@@ -310,6 +352,19 @@ export function DashboardMvp() {
           </details>
         </div>
       </header>
+
+      {streamNotification ? (
+        <div className="ops-toast-stack" aria-live="polite">
+          <button
+            className="ops-stream-toast"
+            onClick={() => setStreamNotification(null)}
+            type="button"
+          >
+            <span>STREAM</span>
+            <strong>{streamNotification.message}</strong>
+          </button>
+        </div>
+      ) : null}
 
       {activeView === "events" ? (
         <Suspense fallback={<section className="event-log-view" role="status">이벤트로그 준비 중</section>}>
@@ -574,4 +629,15 @@ function parseCctvChannelNumber(streamId: string): number | null {
   if (!streamId.startsWith(CCTV_EMPTY_STREAM_ID_PREFIX)) return null;
   const channelNumber = Number(streamId.replace(CCTV_EMPTY_STREAM_ID_PREFIX, ""));
   return Number.isInteger(channelNumber) && channelNumber > 0 ? channelNumber : null;
+}
+
+function isReceivableStream(stream: DashboardStreamSlot): boolean {
+  if (stream.id.startsWith(CCTV_EMPTY_STREAM_ID_PREFIX)) return false;
+  return (
+    Boolean(stream.streamPath || stream.sourceUrl) &&
+    (stream.status === DASHBOARD_STREAM_STATUS.online ||
+      stream.status === DASHBOARD_STREAM_STATUS.fallback ||
+      stream.status === DASHBOARD_STREAM_STATUS.degraded ||
+      stream.status === DASHBOARD_STREAM_STATUS.reconnecting)
+  );
 }

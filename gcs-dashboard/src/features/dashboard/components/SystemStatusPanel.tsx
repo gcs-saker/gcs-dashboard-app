@@ -27,6 +27,8 @@ const RTT_HISTORY_LIMIT = 60;
 const RTT_CHART_WIDTH = 640;
 const RTT_CHART_HEIGHT = 180;
 const RTT_CHART_PADDING = 28;
+let persistedServerStatusSnapshot: DashboardServerStatusSnapshot = DEFAULT_SERVER_STATUS;
+let persistedRttHistory: RttSample[] = [];
 
 interface RttStats {
   avgLatencyMs: number | null;
@@ -35,12 +37,13 @@ interface RttStats {
 }
 
 export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs = 5000, variant = "panel" }: SystemStatusPanelProps) {
-  const [rttHistory, setRttHistory] = useState<RttSample[]>([]);
+  const [rttHistory, setRttHistory] = useState<RttSample[]>(() => persistedRttHistory);
   const statusQuery = useQuery({
     queryKey: [...DASHBOARD_QUERY_KEYS.serverStatus, refreshMs, fetcher ? "custom-fetcher" : "default-fetcher"],
     queryFn: () => fetchDashboardServerStatus(fetcher),
-    initialData: DEFAULT_SERVER_STATUS,
+    initialData: persistedServerStatusSnapshot,
     refetchInterval: refreshMs > 0 ? refreshMs : false,
+    staleTime: Math.min(refreshMs, 5000),
   });
   const status = statusQuery.data;
 
@@ -52,10 +55,20 @@ export function SystemStatusPanel({ controls, fetcher, onAuthFailure, refreshMs 
 
   useEffect(() => {
     if (!status.checkedAt) return;
-    setRttHistory((current) => [
-      ...current.slice(-(RTT_HISTORY_LIMIT - 1)),
-      { checkedAt: status.checkedAt ?? Date.now(), latencyMs: status.latencyMs },
-    ]);
+    persistedServerStatusSnapshot = status;
+    setRttHistory((current) => {
+      const checkedAt = status.checkedAt ?? Date.now();
+      if (current.at(-1)?.checkedAt === checkedAt) {
+        persistedRttHistory = current;
+        return current;
+      }
+      const next = [
+        ...current.slice(-(RTT_HISTORY_LIMIT - 1)),
+        { checkedAt, latencyMs: status.latencyMs },
+      ];
+      persistedRttHistory = next;
+      return next;
+    });
   }, [status.checkedAt, status.latencyMs]);
 
   const rows = useMemo(
