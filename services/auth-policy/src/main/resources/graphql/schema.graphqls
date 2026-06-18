@@ -20,11 +20,17 @@ type OperationalEvent {
   occurredAt: String!
   severity: String!
   category: String!
+  eventType: String
+  sourceService: String
   source: String!
   message: String!
   connections: Int!
   latencyMs: Int!
   throughputMbps: Float!
+  streamId: String
+  connectionId: String
+  icePath: String
+  relayFallbackReason: String
 }
 
 type OperationalEventPage {

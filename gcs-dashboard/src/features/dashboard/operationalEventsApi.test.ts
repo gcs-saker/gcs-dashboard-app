@@ -35,11 +35,17 @@ describe("operationalEventsApi", () => {
           occurredAt: "2026-06-01T00:00:00Z",
           severity: "info",
           category: "api",
+          eventType: "health.ok",
+          sourceService: "auth-policy",
           source: "API 서버",
           message: "헬스체크 정상",
           connections: 1,
           latencyMs: 42,
           throughputMbps: 10,
+          streamId: null,
+          connectionId: null,
+          icePath: null,
+          relayFallbackReason: null,
         },
       ]),
     );
@@ -67,11 +73,17 @@ describe("operationalEventsApi", () => {
             occurredAt: "2026-06-01T00:00:00Z",
             severity: "warn",
             category: "network",
+            eventType: "ice.relay_fallback",
+            sourceService: "turn",
             source: "TURN 릴레이",
             message: "직접 ICE 후보 실패",
             connections: 7,
             latencyMs: 80,
             throughputMbps: 20,
+            streamId: "raw/local/webcam",
+            connectionId: "conn-whep-001",
+            icePath: "relay",
+            relayFallbackReason: "srflx candidate failed",
           },
         ],
         nextCursor: "cursor-001",
@@ -106,12 +118,29 @@ describe("operationalEventsApi", () => {
           { severity: "info", count: 1 },
           { severity: "warn", count: 1 },
         ],
+        icePathCounts: [
+          { icePath: "relay", count: 1 },
+        ],
+        streamSessions: [
+          {
+            streamId: "raw/local/webcam",
+            connectionId: "conn-whep-001",
+            lastOccurredAt: "2026-06-01T00:00:00Z",
+            eventCount: 2,
+            averageLatencyMs: 60,
+            averageThroughputMbps: 15,
+            icePath: "relay",
+            relayFallbackReason: "srflx candidate failed",
+          },
+        ],
       }),
     );
 
     const metrics = await fetchOperationalEventMetrics({ query: "", severity: "all", from: "", to: "" }, fetcher);
 
     expect(metrics.avgLatencyMs).toBe(60);
+    expect(metrics.icePathCounts).toEqual([{ icePath: "relay", count: 1 }]);
+    expect(metrics.streamSessions[0].streamId).toBe("raw/local/webcam");
     expect(fetcher).toHaveBeenCalledWith("/api/ops/events/metrics", expect.objectContaining({ credentials: "include" }));
   });
 

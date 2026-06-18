@@ -9,12 +9,18 @@ data class OperationalEventReadModel(
     val occurredAt: Instant,
     val severity: String,
     val category: String,
+    val eventType: String? = null,
+    val sourceService: String? = null,
     val source: String,
     val message: String,
     val connections: Int,
     val latencyMs: Long,
     val throughputMbps: Double,
     val groupId: GroupId,
+    val streamId: String? = null,
+    val connectionId: String? = null,
+    val icePath: String? = null,
+    val relayFallbackReason: String? = null,
 )
 
 data class OperationalEventQuery(
@@ -40,6 +46,22 @@ data class OperationalEventSeverityCount(
     val count: Long,
 )
 
+data class OperationalEventIcePathCount(
+    val icePath: String,
+    val count: Long,
+)
+
+data class OperationalStreamSessionMetric(
+    val streamId: String,
+    val connectionId: String?,
+    val lastOccurredAt: Instant,
+    val eventCount: Long,
+    val averageLatencyMs: Double?,
+    val averageThroughputMbps: Double?,
+    val icePath: String?,
+    val relayFallbackReason: String?,
+)
+
 data class OperationalEventMetrics(
     val totalEvents: Long,
     val totalConnections: Long,
@@ -48,6 +70,8 @@ data class OperationalEventMetrics(
     val maxLatencyMs: Long?,
     val avgThroughputMbps: Double?,
     val severityCounts: List<OperationalEventSeverityCount>,
+    val icePathCounts: List<OperationalEventIcePathCount> = emptyList(),
+    val streamSessions: List<OperationalStreamSessionMetric> = emptyList(),
 ) {
     companion object {
         fun empty(): OperationalEventMetrics =
@@ -59,6 +83,8 @@ data class OperationalEventMetrics(
                 maxLatencyMs = null,
                 avgThroughputMbps = null,
                 severityCounts = emptyList(),
+                icePathCounts = emptyList(),
+                streamSessions = emptyList(),
             )
     }
 }
@@ -135,6 +161,13 @@ interface OperationalEventRepository {
                 .eachCount()
                 .map { (severity, count) -> OperationalEventSeverityCount(severity, count.toLong()) }
                 .sortedBy { it.severity },
+            icePathCounts = events
+                .mapNotNull { it.icePath?.takeIf(String::isNotBlank) }
+                .groupingBy { it }
+                .eachCount()
+                .map { (icePath, count) -> OperationalEventIcePathCount(icePath, count.toLong()) }
+                .sortedBy { it.icePath },
+            streamSessions = events.toStreamSessionMetrics(),
         )
     }
 
@@ -195,9 +228,36 @@ class InMemoryOperationalEventRepository(
         val normalizedQuery = rawQuery.trim().lowercase()
         return source.lowercase().contains(normalizedQuery) ||
             message.lowercase().contains(normalizedQuery) ||
-            category.lowercase().contains(normalizedQuery)
+            category.lowercase().contains(normalizedQuery) ||
+            eventType.orEmpty().lowercase().contains(normalizedQuery) ||
+            sourceService.orEmpty().lowercase().contains(normalizedQuery) ||
+            streamId.orEmpty().lowercase().contains(normalizedQuery) ||
+            connectionId.orEmpty().lowercase().contains(normalizedQuery) ||
+            icePath.orEmpty().lowercase().contains(normalizedQuery) ||
+            relayFallbackReason.orEmpty().lowercase().contains(normalizedQuery)
     }
 }
 
 fun OperationalEventReadModel.toCursor(): OperationalEventCursor =
     OperationalEventCursor(occurredAt = occurredAt, id = id)
+
+fun List<OperationalEventReadModel>.toStreamSessionMetrics(): List<OperationalStreamSessionMetric> =
+    asSequence()
+        .filter { !it.streamId.isNullOrBlank() }
+        .groupBy { "${it.streamId}|${it.connectionId.orEmpty()}" }
+        .values
+        .map { events ->
+            val newest = events.maxWith(compareBy<OperationalEventReadModel> { it.occurredAt }.thenBy { it.id })
+            OperationalStreamSessionMetric(
+                streamId = requireNotNull(newest.streamId),
+                connectionId = newest.connectionId,
+                lastOccurredAt = newest.occurredAt,
+                eventCount = events.size.toLong(),
+                averageLatencyMs = events.map { it.latencyMs }.average().takeIf { !it.isNaN() },
+                averageThroughputMbps = events.map { it.throughputMbps }.average().takeIf { !it.isNaN() },
+                icePath = newest.icePath,
+                relayFallbackReason = newest.relayFallbackReason,
+            )
+        }
+        .sortedByDescending { it.lastOccurredAt }
+        .toList()

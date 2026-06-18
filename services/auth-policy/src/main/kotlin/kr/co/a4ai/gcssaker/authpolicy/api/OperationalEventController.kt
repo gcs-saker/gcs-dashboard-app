@@ -133,11 +133,17 @@ private fun OperationalEventReadModel.toResponse(): OperationalEventResponse =
         occurredAt = occurredAt,
         severity = severity,
         category = category,
+        eventType = eventType,
+        sourceService = sourceService,
         source = source,
         message = message,
         connections = connections,
         latencyMs = latencyMs,
         throughputMbps = throughputMbps,
+        streamId = streamId,
+        connectionId = connectionId,
+        icePath = icePath,
+        relayFallbackReason = relayFallbackReason,
     )
 
 private fun OperationalEventMetrics.toResponse(): OperationalEventMetricsResponse =
@@ -152,6 +158,24 @@ private fun OperationalEventMetrics.toResponse(): OperationalEventMetricsRespons
             OperationalEventSeverityCountResponse(
                 severity = it.severity,
                 count = it.count,
+            )
+        },
+        icePathCounts = icePathCounts.map {
+            OperationalEventIcePathCountResponse(
+                icePath = it.icePath,
+                count = it.count,
+            )
+        },
+        streamSessions = streamSessions.map {
+            OperationalStreamSessionMetricResponse(
+                streamId = it.streamId,
+                connectionId = it.connectionId,
+                lastOccurredAt = it.lastOccurredAt,
+                eventCount = it.eventCount,
+                averageLatencyMs = it.averageLatencyMs,
+                averageThroughputMbps = it.averageThroughputMbps,
+                icePath = it.icePath,
+                relayFallbackReason = it.relayFallbackReason,
             )
         },
     )

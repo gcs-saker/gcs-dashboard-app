@@ -83,6 +83,37 @@ class JpaOperationalEventRepositoryTest @Autowired constructor(
         assertEquals(1, statistics.prepareStatementCount)
     }
 
+    @Test
+    fun `jpa operational event query searches stream and ice diagnostic fields`() {
+        repository.saveAll(
+            listOf(
+                event("evt-relay", "co-a", "2026-06-01T00:03:00Z").apply {
+                    eventType = "ice.relay_fallback"
+                    sourceService = "turn"
+                    streamId = "raw/local/webcam"
+                    connectionId = "conn-whep-001"
+                    icePath = "relay"
+                    relayFallbackReason = "srflx candidate failed"
+                },
+                event("evt-api", "co-a", "2026-06-01T00:02:00Z"),
+            ),
+        )
+
+        val page = repository.findEventPage(
+            groupId = "co-a",
+            admin = false,
+            severity = null,
+            fromTime = null,
+            toTime = null,
+            query = "%relay%",
+            afterTime = null,
+            afterId = null,
+            pageable = PageRequest.of(0, 10),
+        )
+
+        assertEquals(listOf("evt-relay"), page.map { it.id })
+    }
+
     private fun event(id: String, groupId: String, occurredAt: String): JpaOperationalEventEntity =
         JpaOperationalEventEntity(
             id = id,

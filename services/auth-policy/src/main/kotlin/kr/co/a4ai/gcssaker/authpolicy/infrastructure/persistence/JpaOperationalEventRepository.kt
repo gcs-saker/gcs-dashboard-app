@@ -19,6 +19,12 @@ interface JpaOperationalEventRepository : JpaRepository<JpaOperationalEventEntit
               LOWER(event.source) LIKE :query
               OR LOWER(event.message) LIKE :query
               OR LOWER(event.category) LIKE :query
+              OR LOWER(COALESCE(event.eventType, '')) LIKE :query
+              OR LOWER(COALESCE(event.sourceService, '')) LIKE :query
+              OR LOWER(COALESCE(event.streamId, '')) LIKE :query
+              OR LOWER(COALESCE(event.connectionId, '')) LIKE :query
+              OR LOWER(COALESCE(event.icePath, '')) LIKE :query
+              OR LOWER(COALESCE(event.relayFallbackReason, '')) LIKE :query
           ))
           AND (:afterTime IS NULL OR (
               event.occurredAt < :afterTime

@@ -2,6 +2,7 @@ package kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventIcePathCount
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventMetrics
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPage
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPageQuery
@@ -11,6 +12,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventSeverityCount
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import kr.co.a4ai.gcssaker.authpolicy.domain.toCursor
+import kr.co.a4ai.gcssaker.authpolicy.domain.toStreamSessionMetrics
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.RowMapper
 import java.sql.Timestamp
@@ -85,7 +87,21 @@ class JdbcOperationalEventRepository(
             operationalEventSeverityCountRowMapper,
             *severityParams.toTypedArray(),
         )
-        return aggregate.copy(severityCounts = severityCounts)
+        val icePathSql = StringBuilder(OperationalEventSql.selectIcePathCountsBase)
+        val icePathParams = mutableListOf<Any>()
+        appendFilters(icePathSql, icePathParams, principal, query)
+        icePathSql.append(OperationalEventSql.andIcePathPresent)
+        icePathSql.append(OperationalEventSql.groupByIcePath)
+        val icePathCounts = jdbc.query(
+            icePathSql.toString(),
+            operationalEventIcePathCountRowMapper,
+            *icePathParams.toTypedArray(),
+        )
+        return aggregate.copy(
+            severityCounts = severityCounts,
+            icePathCounts = icePathCounts,
+            streamSessions = eventsFor(principal, query).toStreamSessionMetrics(),
+        )
     }
 
     private fun appendFilters(
@@ -115,6 +131,12 @@ class JdbcOperationalEventRepository(
             params.add(likeQuery)
             params.add(likeQuery)
             params.add(likeQuery)
+            params.add(likeQuery)
+            params.add(likeQuery)
+            params.add(likeQuery)
+            params.add(likeQuery)
+            params.add(likeQuery)
+            params.add(likeQuery)
         }
     }
 
@@ -127,12 +149,18 @@ class JdbcOperationalEventRepository(
                     Timestamp.from(event.occurredAt),
                     event.severity.lowercase(),
                     event.category,
+                    event.eventType,
+                    event.sourceService,
                     event.source,
                     event.message,
                     event.connections,
                     event.latencyMs,
                     event.throughputMbps,
                     event.groupId.value,
+                    event.streamId,
+                    event.connectionId,
+                    event.icePath,
+                    event.relayFallbackReason,
                 )
             }
         }
@@ -148,12 +176,18 @@ class JdbcOperationalEventRepository(
                 occurredAt = rs.getTimestamp(OperationalEventColumns.occurredAt).toInstant(),
                 severity = rs.getString(OperationalEventColumns.severity),
                 category = rs.getString(OperationalEventColumns.category),
+                eventType = rs.getString(OperationalEventColumns.eventType),
+                sourceService = rs.getString(OperationalEventColumns.sourceService),
                 source = rs.getString(OperationalEventColumns.source),
                 message = rs.getString(OperationalEventColumns.message),
                 connections = rs.getInt(OperationalEventColumns.connections),
                 latencyMs = rs.getLong(OperationalEventColumns.latencyMs),
                 throughputMbps = rs.getDouble(OperationalEventColumns.throughputMbps),
                 groupId = GroupId(rs.getString(OperationalEventColumns.groupId)),
+                streamId = rs.getString(OperationalEventColumns.streamId),
+                connectionId = rs.getString(OperationalEventColumns.connectionId),
+                icePath = rs.getString(OperationalEventColumns.icePath),
+                relayFallbackReason = rs.getString(OperationalEventColumns.relayFallbackReason),
             )
         }
         val operationalEventMetricsRowMapper = RowMapper<OperationalEventMetrics> { rs, _ ->
@@ -166,15 +200,23 @@ class JdbcOperationalEventRepository(
                     totalConnections = rs.getLong(OperationalEventMetricColumns.totalConnections),
                     minLatencyMs = rs.getLong(OperationalEventMetricColumns.minLatencyMs),
                     avgLatencyMs = rs.getDouble(OperationalEventMetricColumns.avgLatencyMs),
-                    maxLatencyMs = rs.getLong(OperationalEventMetricColumns.maxLatencyMs),
-                    avgThroughputMbps = rs.getDouble(OperationalEventMetricColumns.avgThroughputMbps),
-                    severityCounts = emptyList(),
-                )
+                        maxLatencyMs = rs.getLong(OperationalEventMetricColumns.maxLatencyMs),
+                        avgThroughputMbps = rs.getDouble(OperationalEventMetricColumns.avgThroughputMbps),
+                        severityCounts = emptyList(),
+                        icePathCounts = emptyList(),
+                        streamSessions = emptyList(),
+                    )
+                }
             }
-        }
         val operationalEventSeverityCountRowMapper = RowMapper<OperationalEventSeverityCount> { rs, _ ->
             OperationalEventSeverityCount(
                 severity = rs.getString(OperationalEventColumns.severity),
+                count = rs.getLong(OperationalEventMetricColumns.totalEvents),
+            )
+        }
+        val operationalEventIcePathCountRowMapper = RowMapper<OperationalEventIcePathCount> { rs, _ ->
+            OperationalEventIcePathCount(
+                icePath = rs.getString(OperationalEventColumns.icePath),
                 count = rs.getLong(OperationalEventMetricColumns.totalEvents),
             )
         }
@@ -187,6 +229,7 @@ object OperationalEventSchema {
         OperationalEventSql.alterTimestampColumns.forEach { statement -> runCatching { jdbc.execute(statement) } }
         jdbc.createIndexIfMissing(OperationalEventSql.groupOccurredIndex)
         jdbc.createIndexIfMissing(OperationalEventSql.groupSeverityOccurredIndex)
+        jdbc.createIndexIfMissing(OperationalEventSql.groupStreamOccurredIndex)
     }
 }
 
@@ -195,12 +238,18 @@ private object OperationalEventColumns {
     const val occurredAt = "occurred_at"
     const val severity = "severity"
     const val category = "category"
+    const val eventType = "event_type"
+    const val sourceService = "source_service"
     const val source = "source"
     const val message = "message"
     const val connections = "connections"
     const val latencyMs = "latency_ms"
     const val throughputMbps = "throughput_mbps"
     const val groupId = "group_id"
+    const val streamId = "stream_id"
+    const val connectionId = "connection_id"
+    const val icePath = "ice_path"
+    const val relayFallbackReason = "relay_fallback_reason"
 }
 
 private object OperationalEventMetricColumns {
@@ -216,18 +265,25 @@ private object OperationalEventSql {
     const val table = "operational_events"
     const val groupOccurredIndexName = "ix_operational_events_group_occurred"
     const val groupSeverityOccurredIndexName = "ix_operational_events_group_severity_occurred"
+    const val groupStreamOccurredIndexName = "ix_operational_events_group_stream_occurred"
     const val createTable = """
         CREATE TABLE IF NOT EXISTS operational_events (
             id VARCHAR(128) NOT NULL PRIMARY KEY,
             occurred_at DATETIME(3) NOT NULL,
             severity VARCHAR(32) NOT NULL,
             category VARCHAR(64) NOT NULL,
+            event_type VARCHAR(64),
+            source_service VARCHAR(64),
             source VARCHAR(128) NOT NULL,
             message VARCHAR(1024) NOT NULL,
             connections INT NOT NULL,
             latency_ms BIGINT NOT NULL,
             throughput_mbps DOUBLE NOT NULL,
-            group_id VARCHAR(64) NOT NULL
+            group_id VARCHAR(64) NOT NULL,
+            stream_id VARCHAR(128),
+            connection_id VARCHAR(128),
+            ice_path VARCHAR(32),
+            relay_fallback_reason VARCHAR(255)
         )
     """
     val groupOccurredIndex = JdbcIndexDefinition(
@@ -240,12 +296,24 @@ private object OperationalEventSql {
         table = table,
         columns = listOf(OperationalEventColumns.groupId, OperationalEventColumns.severity, OperationalEventColumns.occurredAt),
     )
+    val groupStreamOccurredIndex = JdbcIndexDefinition(
+        name = groupStreamOccurredIndexName,
+        table = table,
+        columns = listOf(OperationalEventColumns.groupId, OperationalEventColumns.streamId, OperationalEventColumns.occurredAt),
+    )
     val alterTimestampColumns = listOf(
         "ALTER TABLE $table MODIFY ${OperationalEventColumns.occurredAt} DATETIME(3) NOT NULL",
+        "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.eventType} VARCHAR(64)",
+        "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.sourceService} VARCHAR(64)",
+        "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.streamId} VARCHAR(128)",
+        "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.connectionId} VARCHAR(128)",
+        "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.icePath} VARCHAR(32)",
+        "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.relayFallbackReason} VARCHAR(255)",
     )
     const val selectBase = """
-        SELECT id, occurred_at, severity, category, source, message,
-               connections, latency_ms, throughput_mbps, group_id
+        SELECT id, occurred_at, severity, category, event_type, source_service, source, message,
+               connections, latency_ms, throughput_mbps, group_id,
+               stream_id, connection_id, ice_path, relay_fallback_reason
         FROM operational_events
         WHERE (group_id = ? OR ? = ?)
     """
@@ -264,6 +332,11 @@ private object OperationalEventSql {
         FROM operational_events
         WHERE (group_id = ? OR ? = ?)
     """
+    const val selectIcePathCountsBase = """
+        SELECT ice_path, COUNT(1) AS total_events
+        FROM operational_events
+        WHERE (group_id = ? OR ? = ?)
+    """
     const val andSeverity = " AND severity = ?"
     const val andOccurredAtFrom = " AND occurred_at >= ?"
     const val andOccurredAtTo = " AND occurred_at <= ?"
@@ -272,18 +345,27 @@ private object OperationalEventSql {
             LOWER(source) LIKE ?
             OR LOWER(message) LIKE ?
             OR LOWER(category) LIKE ?
+            OR LOWER(COALESCE(event_type, '')) LIKE ?
+            OR LOWER(COALESCE(source_service, '')) LIKE ?
+            OR LOWER(COALESCE(stream_id, '')) LIKE ?
+            OR LOWER(COALESCE(connection_id, '')) LIKE ?
+            OR LOWER(COALESCE(ice_path, '')) LIKE ?
+            OR LOWER(COALESCE(relay_fallback_reason, '')) LIKE ?
         )
     """
     const val andAfterCursor = " AND (occurred_at < ? OR (occurred_at = ? AND id < ?))"
+    const val andIcePathPresent = " AND ice_path IS NOT NULL AND ice_path <> ''"
     const val orderByOccurredAt = " ORDER BY occurred_at DESC, id DESC"
     const val groupBySeverity = " GROUP BY severity ORDER BY severity"
+    const val groupByIcePath = " GROUP BY ice_path ORDER BY ice_path"
     const val limit = " LIMIT ?"
     const val insert = """
         INSERT INTO operational_events (
-            id, occurred_at, severity, category, source, message,
-            connections, latency_ms, throughput_mbps, group_id
+            id, occurred_at, severity, category, event_type, source_service, source, message,
+            connections, latency_ms, throughput_mbps, group_id,
+            stream_id, connection_id, ice_path, relay_fallback_reason
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     const val existsById = "SELECT COUNT(1) FROM operational_events WHERE id = ?"
 }

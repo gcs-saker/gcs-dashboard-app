@@ -131,11 +131,17 @@ function isOperationalEvent(payload: unknown): payload is OperationalEvent {
     typeof candidate.occurredAt === "string" &&
     isSeverity(candidate.severity) &&
     isCategory(candidate.category) &&
+    isNullableString(candidate.eventType) &&
+    isNullableString(candidate.sourceService) &&
     typeof candidate.source === "string" &&
     typeof candidate.message === "string" &&
     typeof candidate.connections === "number" &&
     typeof candidate.latencyMs === "number" &&
-    typeof candidate.throughputMbps === "number"
+    typeof candidate.throughputMbps === "number" &&
+    isNullableString(candidate.streamId) &&
+    isNullableString(candidate.connectionId) &&
+    isNullableString(candidate.icePath) &&
+    isNullableString(candidate.relayFallbackReason)
   );
 }
 
@@ -165,7 +171,41 @@ function isOperationalEventMetrics(payload: unknown): payload is OperationalEven
       typeof item === "object" &&
       isSeverity((item as { severity?: unknown }).severity) &&
       typeof (item as { count?: unknown }).count === "number",
-    )
+    ) &&
+    Array.isArray(candidate.icePathCounts) &&
+    candidate.icePathCounts.every(isOperationalEventIcePathCount) &&
+    Array.isArray(candidate.streamSessions) &&
+    candidate.streamSessions.every(isOperationalStreamSessionMetric)
+  );
+}
+
+function isOperationalEventIcePathCount(payload: unknown): boolean {
+  if (!payload || typeof payload !== "object") return false;
+  const candidate = payload as { icePath?: unknown; count?: unknown };
+  return typeof candidate.icePath === "string" && typeof candidate.count === "number";
+}
+
+function isOperationalStreamSessionMetric(payload: unknown): boolean {
+  if (!payload || typeof payload !== "object") return false;
+  const candidate = payload as {
+    streamId?: unknown;
+    connectionId?: unknown;
+    lastOccurredAt?: unknown;
+    eventCount?: unknown;
+    averageLatencyMs?: unknown;
+    averageThroughputMbps?: unknown;
+    icePath?: unknown;
+    relayFallbackReason?: unknown;
+  };
+  return (
+    typeof candidate.streamId === "string" &&
+    isNullableString(candidate.connectionId) &&
+    typeof candidate.lastOccurredAt === "string" &&
+    typeof candidate.eventCount === "number" &&
+    isNullableNumber(candidate.averageLatencyMs) &&
+    isNullableNumber(candidate.averageThroughputMbps) &&
+    isNullableString(candidate.icePath) &&
+    isNullableString(candidate.relayFallbackReason)
   );
 }
 
@@ -183,6 +223,10 @@ function isOperationalEventTimeBucket(payload: unknown): payload is OperationalE
 
 function isNullableNumber(value: unknown): value is number | null {
   return value === null || typeof value === "number";
+}
+
+function isNullableString(value: unknown): value is string | null {
+  return value === null || typeof value === "string";
 }
 
 function isSeverity(value: unknown): value is OperationalEvent["severity"] {

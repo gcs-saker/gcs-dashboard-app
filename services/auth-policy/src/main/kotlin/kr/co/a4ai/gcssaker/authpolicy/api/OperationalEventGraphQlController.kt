@@ -89,11 +89,17 @@ data class OperationalEventGraphQlResponse(
     val occurredAt: String,
     val severity: String,
     val category: String,
+    val eventType: String?,
+    val sourceService: String?,
     val source: String,
     val message: String,
     val connections: Int,
     val latencyMs: Long,
     val throughputMbps: Double,
+    val streamId: String?,
+    val connectionId: String?,
+    val icePath: String?,
+    val relayFallbackReason: String?,
 )
 
 private fun parseGraphQlInstantQuery(name: String, value: String?): Instant? {
@@ -110,9 +116,15 @@ private fun OperationalEventReadModel.toGraphQlResponse(): OperationalEventGraph
         occurredAt = occurredAt.toString(),
         severity = severity,
         category = category,
+        eventType = eventType,
+        sourceService = sourceService,
         source = source,
         message = message,
         connections = connections,
         latencyMs = latencyMs,
         throughputMbps = throughputMbps,
+        streamId = streamId,
+        connectionId = connectionId,
+        icePath = icePath,
+        relayFallbackReason = relayFallbackReason,
     )
