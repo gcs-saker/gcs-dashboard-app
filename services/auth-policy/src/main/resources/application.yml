@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: gcs-saker-auth-policy
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  shutdown: graceful
+
