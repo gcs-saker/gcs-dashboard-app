@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 import { useHlsFallbackPlayback } from "../hooks/useHlsFallbackPlayback";
 import type { HLSFallbackPlayerProps } from "../types";
+import { detectWebCodecsCapability } from "../webCodecsSupport";
 import "./HLSFallbackPlayer.css";
 
 const statusLabel = {
@@ -32,15 +33,26 @@ export function HLSFallbackPlayer({
 }: HLSFallbackPlayerProps) {
   const playback = useHlsFallbackPlayback({ hlsUrl, latencyMode });
   const { videoRef, status, mode, errorMessage, latencyMode: activeLatencyMode } = playback;
+  const webCodecs = useMemo(() => detectWebCodecsCapability(), []);
 
   useEffect(() => {
-    onStatusChange?.({ status, mode, latencyMode: activeLatencyMode, errorMessage });
-  }, [activeLatencyMode, errorMessage, mode, onStatusChange, status]);
+    onStatusChange?.({
+      status,
+      mode,
+      latencyMode: activeLatencyMode,
+      errorMessage,
+      webCodecs: {
+        supported: webCodecs.supported,
+        reason: webCodecs.reason,
+      },
+    });
+  }, [activeLatencyMode, errorMessage, mode, onStatusChange, status, webCodecs.reason, webCodecs.supported]);
 
   return (
     <figure
       className={["hls-fallback-player", className].filter(Boolean).join(" ")}
       data-latency-mode={activeLatencyMode}
+      data-webcodecs={webCodecs.supported ? "ready" : "fallback"}
     >
       <video
         ref={videoRef}
@@ -65,6 +77,9 @@ export function HLSFallbackPlayer({
         {streamId ? <span className="hls-fallback-player__stream">{streamId}</span> : null}
         <span className="hls-fallback-player__mode">mode: {mode}</span>
         <span className="hls-fallback-player__latency">{latencyModeLabel[activeLatencyMode]}</span>
+        <span className="hls-fallback-player__webcodecs">
+          WebCodecs: {webCodecs.supported ? "ready" : "fallback"}
+        </span>
         {errorMessage ? <span className="hls-fallback-player__error">{errorMessage}</span> : null}
       </figcaption>
     </figure>
