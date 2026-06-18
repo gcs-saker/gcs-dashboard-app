@@ -11,6 +11,11 @@ object AuthTokenContract {
     const val BEARER_TOKEN_TYPE = "bearer"
 }
 
+object AuthResponseHeaders {
+    const val PRAGMA_HEADER_NAME = "Pragma"
+    const val PRAGMA_NO_CACHE = "no-cache"
+}
+
 object AuthApiErrors {
     const val INVALID_CREDENTIALS = "Invalid credentials"
     const val REFRESH_TOKEN_REQUIRED = "refresh token required"

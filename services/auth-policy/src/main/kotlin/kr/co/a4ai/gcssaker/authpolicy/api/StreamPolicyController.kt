@@ -1,5 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
+import kr.co.a4ai.gcssaker.authpolicy.application.NoopSecurityAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
 import kr.co.a4ai.gcssaker.authpolicy.domain.StreamPath
@@ -16,6 +18,7 @@ import java.time.Instant
 class StreamPolicyController(
     private val principalResolver: BearerPrincipalResolver,
     private val groupPolicy: GroupPolicyService,
+    private val securityAuditPublisher: SecurityAuditPublisher = NoopSecurityAuditPublisher,
 ) {
     @PostMapping(StreamPolicyApiRoutes.ACCESS)
     @RequiresBearerAuth
@@ -32,6 +35,12 @@ class StreamPolicyController(
                 startedAt = request.startedAt ?: Instant.EPOCH,
             ),
         )
+        securityAuditPublisher.publishStreamAccess(
+            principal = principal,
+            streamId = request.streamId,
+            allowed = decision.allowed,
+            reason = decision.reason,
+        )
 
         return StreamAccessResponse(
             streamId = request.streamId,
@@ -40,6 +49,7 @@ class StreamPolicyController(
             username = principal.username,
             role = principal.role.name.lowercase(),
             groupId = principal.groupId.value,
+            permissions = groupPolicy.permissionsFor(principal.role).map { it.name.lowercase() }.sorted(),
         )
     }
 }

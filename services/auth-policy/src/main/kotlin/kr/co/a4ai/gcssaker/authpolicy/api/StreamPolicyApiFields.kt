@@ -4,4 +4,5 @@ object StreamPolicyApiFields {
     const val STREAM_ID = "streamId"
     const val PUBLISHER_GROUP_ID = "publisherGroupId"
     const val GROUP_ID = "groupId"
+    const val PERMISSIONS = "permissions"
 }

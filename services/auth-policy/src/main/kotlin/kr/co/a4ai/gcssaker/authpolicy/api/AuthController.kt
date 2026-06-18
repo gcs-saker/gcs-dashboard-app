@@ -4,6 +4,8 @@ import com.auth0.jwt.exceptions.JWTVerificationException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import kr.co.a4ai.gcssaker.authpolicy.AuthRuntimeSettings
+import kr.co.a4ai.gcssaker.authpolicy.application.NoopSecurityAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthRegistrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
@@ -14,6 +16,7 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseCookie
 import org.springframework.http.ResponseEntity
+import org.springframework.http.CacheControl
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -29,6 +32,7 @@ class AuthController(
     private val sessions: AuthSessionService,
     private val registration: AuthRegistrationService,
     private val settings: AuthRuntimeSettings,
+    private val securityAuditPublisher: SecurityAuditPublisher = NoopSecurityAuditPublisher,
 ) {
     @PostMapping(AuthApiRoutes.SIGNUP)
     fun signup(
@@ -68,7 +72,11 @@ class AuthController(
         assertTrustedOrigin(origin, referer)
         assertCsrfHeader(csrfHeader)
         val tokens = sessions.login(request.username, request.password)
-            ?: throw UnauthorizedApiError(AuthApiErrors.INVALID_CREDENTIALS)
+        if (tokens == null) {
+            securityAuditPublisher.publishLoginFailed(request.username)
+            throw UnauthorizedApiError(AuthApiErrors.INVALID_CREDENTIALS)
+        }
+        securityAuditPublisher.publishLoginSucceeded(tokens.principal)
         return tokenResponse(tokens.principal, tokens.accessToken, tokens.refreshToken, tokens.expiresInMinutes)
     }
 
@@ -85,17 +93,22 @@ class AuthController(
             ?.firstOrNull { it.name == settings.refreshCookieName }
             ?.value
         if (refreshToken.isNullOrBlank()) {
+            securityAuditPublisher.publishRefreshFailed(AuthApiErrors.REFRESH_TOKEN_REQUIRED)
             throw UnauthorizedApiError(AuthApiErrors.REFRESH_TOKEN_REQUIRED)
         }
         val tokens = try {
             sessions.refresh(refreshToken)
         } catch (_: JWTVerificationException) {
+            securityAuditPublisher.publishRefreshFailed(AuthApiErrors.INVALID_TOKEN)
             throw UnauthorizedApiError(AuthApiErrors.INVALID_TOKEN)
         }
         if (tokens == null) {
+            securityAuditPublisher.publishRefreshFailed(AuthApiErrors.INVALID_TOKEN)
             @Suppress("UNCHECKED_CAST")
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
+                .cacheControl(CacheControl.noStore())
+                .header(AuthResponseHeaders.PRAGMA_HEADER_NAME, AuthResponseHeaders.PRAGMA_NO_CACHE)
                 .build<TokenResponse>()
         }
         return tokenResponse(tokens.principal, tokens.accessToken, tokens.refreshToken, tokens.expiresInMinutes)
@@ -119,6 +132,7 @@ class AuthController(
     @PostMapping(AuthApiRoutes.LOGOUT)
     fun logout(
         servletRequest: HttpServletRequest,
+        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @RequestHeader(HttpHeaders.ORIGIN, required = false) origin: String?,
         @RequestHeader(HttpHeaders.REFERER, required = false) referer: String?,
         @RequestHeader(AuthSecurityHeaders.CSRF_HEADER_NAME, required = false) csrfHeader: String?,
@@ -130,6 +144,7 @@ class AuthController(
             ?.value
             ?.takeIf { it.isNotBlank() }
             ?.let(sessions::revokeRefreshToken)
+        securityAuditPublisher.publishLogout(BearerPrincipalResolver(sessions).principalOrNull(authorization))
         return ResponseEntity.noContent()
             .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
             .build()
@@ -143,6 +158,8 @@ class AuthController(
     ): ResponseEntity<TokenResponse> =
         ResponseEntity.ok()
             .header(HttpHeaders.SET_COOKIE, refreshCookie(refreshToken).toString())
+            .cacheControl(CacheControl.noStore())
+            .header(AuthResponseHeaders.PRAGMA_HEADER_NAME, AuthResponseHeaders.PRAGMA_NO_CACHE)
             .body(
                 TokenResponse(
                     accessToken = accessToken,
@@ -180,7 +197,13 @@ class AuthController(
             .build()
 
     private fun assertTrustedOrigin(origin: String?, referer: String?) {
-        val requestOrigin = origin ?: referer?.let { URI.create(it).let { uri -> "${uri.scheme}://${uri.authority}" } }
+        val requestOrigin = origin ?: referer?.let {
+            runCatching {
+                URI.create(it).let { uri -> "${uri.scheme}://${uri.authority}" }
+            }.getOrElse {
+                throw ForbiddenApiError(AuthApiErrors.UNTRUSTED_REQUEST_ORIGIN)
+            }
+        }
         if (requestOrigin == null || settings.allowedOrigins.isEmpty()) {
             return
         }

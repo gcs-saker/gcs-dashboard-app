@@ -80,6 +80,26 @@ data class StreamRoutePolicy(
         expiresAt == null || expiresAt.isAfter(now)
 }
 
+class StreamRoutePolicies private constructor(
+    private val values: List<StreamRoutePolicy>,
+) {
+    fun activeFor(viewerGroupId: GroupId, now: Instant): List<StreamRoutePolicy> =
+        values
+            .asSequence()
+            .filter { it.viewerGroupId == viewerGroupId }
+            .filter { it.isActive(now) }
+            .toList()
+
+    fun toList(): List<StreamRoutePolicy> = values.toList()
+
+    companion object {
+        fun empty(): StreamRoutePolicies = StreamRoutePolicies(emptyList())
+
+        fun of(policies: Collection<StreamRoutePolicy>): StreamRoutePolicies =
+            StreamRoutePolicies(policies.toList())
+    }
+}
+
 data class StreamAccessDecision(
     val allowed: Boolean,
     val reason: String,

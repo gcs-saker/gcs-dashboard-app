@@ -257,6 +257,21 @@ class ApiContractTest {
         assertTrue(payload.contains(quoted(StreamPolicyApiFields.STREAM_ID)))
         assertTrue(payload.contains(quoted(StreamPolicyApiFields.PUBLISHER_GROUP_ID)))
         assertFalse(payload.contains(quoted(ApiContractFixtures.PUBLISHER_GROUP_ID_CAMEL_CASE_MISS)))
+
+        val responsePayload = objectMapper.writeValueAsString(
+            StreamAccessResponse(
+                streamId = ApiContractFixtures.STREAM_ID_VALUE,
+                allowed = true,
+                reason = ApiContractFixtures.STREAM_ACCESS_REASON_VALUE,
+                username = ApiContractFixtures.USERNAME_VALUE,
+                role = ApiContractFixtures.ROLE_VALUE,
+                groupId = ApiContractFixtures.GROUP_ID_VALUE,
+                permissions = listOf(ApiContractFixtures.PERMISSION_VIEW_STREAM_VALUE),
+            ),
+        )
+
+        assertTrue(responsePayload.contains(quoted(StreamPolicyApiFields.PERMISSIONS)))
+        assertTrue(responsePayload.contains(quoted(ApiContractFixtures.PERMISSION_VIEW_STREAM_VALUE)))
     }
 
     private fun quoted(value: String): String = "\"$value\""
@@ -299,6 +314,8 @@ private object ApiContractFixtures {
     const val STREAM_ID_VALUE = "raw.local.webcam"
     const val STREAM_PATH_VALUE = "raw/local/webcam"
     const val GROUP_ID_VALUE = "co-a"
+    const val STREAM_ACCESS_REASON_VALUE = "same group stream"
+    const val PERMISSION_VIEW_STREAM_VALUE = "view_stream"
     const val LATITUDE_VALUE = 35.8714
     const val LONGITUDE_VALUE = 128.6014
     const val ALTITUDE_VALUE = 120.0

@@ -43,6 +43,10 @@ import kr.co.a4ai.gcssaker.authpolicy.application.InMemoryOperationalAuditSink
 import kr.co.a4ai.gcssaker.authpolicy.application.NoopOperationalAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.OperationalAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.OperationalAuditPublisherMetrics
+import kr.co.a4ai.gcssaker.authpolicy.application.RepositorySecurityAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.application.RepositorySettingsAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.application.SettingsAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalEventRepository
@@ -160,6 +164,18 @@ class AuthPolicyConfig {
         } else {
             NoopOperationalAuditPublisher
         }
+
+    @Bean
+    fun settingsAuditPublisher(
+        operationalEventRepository: OperationalEventRepository,
+    ): SettingsAuditPublisher =
+        RepositorySettingsAuditPublisher(operationalEventRepository)
+
+    @Bean
+    fun securityAuditPublisher(
+        operationalEventRepository: OperationalEventRepository,
+    ): SecurityAuditPublisher =
+        RepositorySecurityAuditPublisher(operationalEventRepository)
 
     @Bean
     fun bearerPrincipalResolver(sessions: AuthSessionService): BearerPrincipalResolver =

@@ -144,6 +144,8 @@ data class OperationalEventCursor(
 interface OperationalEventRepository {
     fun eventsFor(principal: AuthenticatedPrincipal, query: OperationalEventQuery): List<OperationalEventReadModel>
 
+    fun append(event: OperationalEventReadModel)
+
     fun metricsFor(principal: AuthenticatedPrincipal, query: OperationalEventQuery): OperationalEventMetrics {
         val events = eventsFor(principal, query)
         if (events.isEmpty()) {
@@ -208,7 +210,7 @@ interface OperationalEventRepository {
 class InMemoryOperationalEventRepository(
     events: Collection<OperationalEventReadModel>,
 ) : OperationalEventRepository {
-    private val events = events.sortedByDescending { it.occurredAt }
+    private val events = java.util.concurrent.CopyOnWriteArrayList(events.sortedByDescending { it.occurredAt })
 
     override fun eventsFor(
         principal: AuthenticatedPrincipal,
@@ -223,6 +225,10 @@ class InMemoryOperationalEventRepository(
             .filter { event -> query.to == null || !event.occurredAt.isAfter(query.to) }
             .sortedWith(compareByDescending<OperationalEventReadModel> { it.occurredAt }.thenByDescending { it.id })
             .toList()
+
+    override fun append(event: OperationalEventReadModel) {
+        events.add(event)
+    }
 
     private fun OperationalEventReadModel.matchesQuery(rawQuery: String): Boolean {
         val normalizedQuery = rawQuery.trim().lowercase()

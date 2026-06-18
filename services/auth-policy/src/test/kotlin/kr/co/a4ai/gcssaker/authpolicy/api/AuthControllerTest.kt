@@ -3,8 +3,10 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 import jakarta.servlet.http.Cookie
 import kr.co.a4ai.gcssaker.authpolicy.AllowedOrigins
 import kr.co.a4ai.gcssaker.authpolicy.AuthRuntimeSettings
+import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthRegistrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
@@ -28,6 +30,7 @@ class AuthControllerTest {
     private companion object {
         const val TRUSTED_ORIGIN = "http://localhost:18080"
         const val TRUSTED_LOGIN_REFERER = "$TRUSTED_ORIGIN/login"
+        const val MALFORMED_REFERER = "http://%"
         const val UNTRUSTED_ORIGIN = "https://evil.example"
         const val OPERATOR_USERNAME = "operator01"
         const val OPERATOR_PASSWORD = "correct-password"
@@ -108,10 +111,11 @@ class AuthControllerTest {
 
     private fun logout(
         request: MockHttpServletRequest = MockHttpServletRequest(),
+        authorization: String? = null,
         origin: String? = TRUSTED_ORIGIN,
         referer: String? = null,
         csrfHeader: String? = AuthSecurityHeaders.CSRF_HEADER_VALUE,
-    ) = controller.logout(request, origin, referer, csrfHeader)
+    ) = controller.logout(request, authorization, origin, referer, csrfHeader)
 
     @Test
     fun `login returns python-compatible token response and refresh cookie`() {
@@ -128,6 +132,8 @@ class AuthControllerTest {
         assertTrue(cookie.contains("$REFRESH_COOKIE_NAME="))
         assertTrue(cookie.contains("HttpOnly"))
         assertTrue(cookie.contains("SameSite=lax"))
+        assertEquals("no-store", response.headers.cacheControl)
+        assertEquals(AuthResponseHeaders.PRAGMA_NO_CACHE, response.headers.getFirst(AuthResponseHeaders.PRAGMA_HEADER_NAME))
     }
 
     @Test
@@ -247,6 +253,16 @@ class AuthControllerTest {
     }
 
     @Test
+    fun `mutating auth endpoints reject malformed referer as forbidden instead of server error`() {
+        val error = assertFailsWith<ResponseStatusException> {
+            login(origin = null, referer = MALFORMED_REFERER)
+        }
+
+        assertEquals(HttpStatus.FORBIDDEN, error.statusCode)
+        assertEquals(AuthApiErrors.UNTRUSTED_REQUEST_ORIGIN, error.reason)
+    }
+
+    @Test
     fun `mutating auth endpoints reject missing csrf header`() {
         val error = assertFailsWith<ResponseStatusException> {
             login(csrfHeader = null)
@@ -263,6 +279,28 @@ class AuthControllerTest {
         }
 
         assertEquals(HttpStatus.UNAUTHORIZED, error.statusCode)
+    }
+
+    @Test
+    fun `login failure publishes security audit without touching password value`() {
+        val audit = RecordingSecurityAuditPublisher()
+        val auditedController = AuthController(
+            sessions = AuthSessionService(users, passwordHasher, tokenService),
+            registration = AuthRegistrationService(users, passwordHasher, settings.signupInvites),
+            settings = settings,
+            securityAuditPublisher = audit,
+        )
+
+        assertFailsWith<ResponseStatusException> {
+            auditedController.login(
+                LoginRequest(OPERATOR_USERNAME, "wrong-password"),
+                TRUSTED_ORIGIN,
+                null,
+                AuthSecurityHeaders.CSRF_HEADER_VALUE,
+            )
+        }
+
+        assertEquals(listOf("login-failed:$OPERATOR_USERNAME"), audit.events)
     }
 
     @Test
@@ -295,5 +333,34 @@ class AuthControllerTest {
         )
 
         assertEquals(HttpStatus.OK, response.statusCode)
+    }
+
+    private class RecordingSecurityAuditPublisher : SecurityAuditPublisher {
+        val events = mutableListOf<String>()
+
+        override fun publishLoginSucceeded(principal: AuthenticatedPrincipal) {
+            events.add("login-succeeded:${principal.username}")
+        }
+
+        override fun publishLoginFailed(username: String) {
+            events.add("login-failed:$username")
+        }
+
+        override fun publishLogout(principal: AuthenticatedPrincipal?) {
+            events.add("logout:${principal?.username}")
+        }
+
+        override fun publishRefreshFailed(reason: String) {
+            events.add("refresh-failed:$reason")
+        }
+
+        override fun publishStreamAccess(
+            principal: AuthenticatedPrincipal,
+            streamId: String,
+            allowed: Boolean,
+            reason: String,
+        ) {
+            events.add("stream:$streamId:$allowed")
+        }
     }
 }

@@ -21,4 +21,6 @@ data class StreamAccessResponse(
     val role: String,
     @get:JsonProperty(StreamPolicyApiFields.GROUP_ID)
     val groupId: String,
+    @get:JsonProperty(StreamPolicyApiFields.PERMISSIONS)
+    val permissions: List<String> = emptyList(),
 )

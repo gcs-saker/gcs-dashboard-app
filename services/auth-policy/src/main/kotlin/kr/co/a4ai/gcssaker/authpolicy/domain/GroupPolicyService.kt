@@ -5,7 +5,7 @@ import java.time.Instant
 
 class GroupPolicyService(
     private val groups: Collection<OrganizationUnit>,
-    private val routePolicies: Collection<StreamRoutePolicy> = emptyList(),
+    private val routePolicies: StreamRoutePolicies = StreamRoutePolicies.empty(),
     private val clock: Clock = Clock.systemUTC(),
 ) {
     private val groupsById = groups.associateBy { it.id }
@@ -41,9 +41,7 @@ class GroupPolicyService(
         stream: StreamSessionDescriptor,
         now: Instant,
     ): StreamAccessDecision? {
-        val activePolicies = routePolicies
-            .filter { it.isActive(now) }
-            .filter { it.viewerGroupId == principal.groupId }
+        val activePolicies = routePolicies.activeFor(principal.groupId, now)
 
         return activePolicies.firstNotNullOfOrNull { policy ->
             when (policy.scope) {
