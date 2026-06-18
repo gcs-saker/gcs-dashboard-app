@@ -242,6 +242,8 @@ flowchart TD
 
 - Supabase 없이 PostgreSQL/PostGIS를 geometry/time-series bounded context로 사용한다.
 - 기존 MySQL auth/legacy data는 즉시 이전하지 않는다.
+- history table과 latest read model을 분리해 dashboard 최신 위치 조회가 history 전체 정렬에 의존하지 않도록 한다.
+- spatial viewport 조회는 PostGIS GiST index와 bounding box query를 기준으로 검증한다.
 
 테스트:
 
@@ -249,6 +251,7 @@ flowchart TD
 - selected stream latest point query
 - group/asset bounding box query
 - spatial index execution plan 확인
+- compose geo profile init script mount 계약 테스트
 
 ### M8-06 gRPC internal streaming PoC
 

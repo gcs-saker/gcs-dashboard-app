@@ -38,6 +38,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
     volumes:
       - postgres-geo-data:/var/lib/postgresql/data
+      - type: bind
+        source: ../postgres/init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gcs_geo} -d ${POSTGRES_DB:-gcs_geo}"]
