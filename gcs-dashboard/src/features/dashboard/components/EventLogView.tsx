@@ -60,6 +60,11 @@ export function EventLogView() {
   );
   const throughputLabel = canUseServerMetrics ? "Avg Throughput" : "Peak Throughput";
   const peakThroughput = Math.max(1, summary.peakThroughputMbps);
+  const relayCount = eventMetrics.metrics?.icePathCounts.find((item) => item.icePath === "relay")?.count ?? 0;
+  const directCandidateCount = eventMetrics.metrics?.icePathCounts
+    .filter((item) => item.icePath === "host" || item.icePath === "srflx")
+    .reduce((total, item) => total + item.count, 0) ?? 0;
+  const streamSessionCount = eventMetrics.metrics?.streamSessions.length ?? 0;
   const categoryStats = useMemo(() => summarizeCategories(events), [events]);
   const networkFlowEvents = useMemo(
     () => events.slice(0, NETWORK_FLOW_EVENT_LIMIT).reverse(),
@@ -124,6 +129,9 @@ export function EventLogView() {
         <MetricCard label={throughputLabel} value={`${summary.peakThroughputMbps.toFixed(1)} Mbps`} tone="info" />
         <MetricCard label="WARN" value={String(summary.warnings)} tone={summary.warnings > 0 ? "warning" : "muted"} />
         <MetricCard label="ERROR" value={String(summary.errors)} tone={summary.errors > 0 ? "danger" : "muted"} />
+        <MetricCard label="TURN Relay" value={String(relayCount)} tone={relayCount > 0 ? "warning" : "good"} />
+        <MetricCard label="Direct ICE" value={String(directCandidateCount)} tone="good" />
+        <MetricCard label="Stream Sessions" value={String(streamSessionCount)} tone="info" />
       </div>
 
       <section className="event-log-view__incident-strip" aria-label="현재 주의 이벤트">
@@ -350,6 +358,30 @@ export function EventLogView() {
                   <dd>{categoryLabels[selectedEvent.category]}</dd>
                 </div>
                 <div>
+                  <dt>이벤트 타입</dt>
+                  <dd>{selectedEvent.eventType ?? "미지정"}</dd>
+                </div>
+                <div>
+                  <dt>서비스</dt>
+                  <dd>{selectedEvent.sourceService ?? "미지정"}</dd>
+                </div>
+                <div>
+                  <dt>스트림</dt>
+                  <dd>{selectedEvent.streamId ?? "미지정"}</dd>
+                </div>
+                <div>
+                  <dt>세션</dt>
+                  <dd>{selectedEvent.connectionId ?? "미지정"}</dd>
+                </div>
+                <div>
+                  <dt>ICE 경로</dt>
+                  <dd>{selectedEvent.icePath ?? "미지정"}</dd>
+                </div>
+                <div>
+                  <dt>Fallback</dt>
+                  <dd>{selectedEvent.relayFallbackReason ?? "없음"}</dd>
+                </div>
+                <div>
                   <dt>연결</dt>
                   <dd>{selectedEvent.connections}</dd>
                 </div>
@@ -429,8 +461,14 @@ function formatOperationalEventPayload(event: OperationalEvent): string {
     `occurredAt=${event.occurredAt}`,
     `severity=${event.severity}`,
     `category=${event.category}`,
+    `eventType=${event.eventType ?? ""}`,
+    `sourceService=${event.sourceService ?? ""}`,
     `source=${event.source}`,
     `message=${event.message}`,
+    `streamId=${event.streamId ?? ""}`,
+    `connectionId=${event.connectionId ?? ""}`,
+    `icePath=${event.icePath ?? ""}`,
+    `relayFallbackReason=${event.relayFallbackReason ?? ""}`,
     `connections=${event.connections}`,
     `latencyMs=${event.latencyMs}`,
     `throughputMbps=${event.throughputMbps.toFixed(1)}`,

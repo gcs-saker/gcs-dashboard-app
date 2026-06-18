@@ -13,33 +13,51 @@ const events = [
     occurredAt: "2026-06-01T00:00:00Z",
     severity: "info",
     category: "api",
+    eventType: "health.ok",
+    sourceService: "auth-policy",
     source: "API 서버",
     message: "헬스체크 정상",
     connections: 12,
     latencyMs: 42,
     throughputMbps: 18.4,
+    streamId: null,
+    connectionId: null,
+    icePath: null,
+    relayFallbackReason: null,
   },
   {
     id: "evt-002",
     occurredAt: "2026-06-01T00:12:00Z",
     severity: "warn",
     category: "network",
+    eventType: "ice.relay_fallback",
+    sourceService: "turn",
     source: "TURN 릴레이",
     message: "직접 ICE 후보 실패 후 릴레이 경로 사용",
     connections: 5,
     latencyMs: 164,
     throughputMbps: 31.6,
+    streamId: "raw/local/webcam",
+    connectionId: "conn-whep-001",
+    icePath: "relay",
+    relayFallbackReason: "srflx candidate failed",
   },
   {
     id: "evt-003",
     occurredAt: "2026-06-01T00:31:00Z",
     severity: "error",
     category: "security",
+    eventType: "auth.denied",
+    sourceService: "auth-policy",
     source: "인증/인가 서버",
     message: "만료된 세션으로 스트림 접근 거절",
     connections: 0,
     latencyMs: 73,
     throughputMbps: 0,
+    streamId: "raw/local/webcam",
+    connectionId: "conn-whep-002",
+    icePath: null,
+    relayFallbackReason: null,
   },
 ];
 
@@ -76,6 +94,9 @@ describe("EventLogView", () => {
     expect(screen.getByText("운영 이벤트 타임라인")).toBeInTheDocument();
     expect(screen.getByText("이벤트 상세")).toBeInTheDocument();
     expect(screen.getByText("연결 합계")).toBeInTheDocument();
+    expect(screen.getByText("TURN Relay")).toBeInTheDocument();
+    expect(screen.getByText("Direct ICE")).toBeInTheDocument();
+    expect(screen.getByText("Stream Sessions")).toBeInTheDocument();
     expect(screen.getByLabelText("분류")).toBeInTheDocument();
     expect(screen.getByLabelText("서버")).toBeInTheDocument();
     expect(screen.getByLabelText("빠른 이벤트 필터")).toBeInTheDocument();
@@ -89,6 +110,8 @@ describe("EventLogView", () => {
     expect(screen.getByText("영향 범위")).toBeInTheDocument();
     expect(screen.getByText("권장 조치")).toBeInTheDocument();
     expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("category=network");
+    expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("icePath=relay");
+    expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("streamId=raw/local/webcam");
     expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("latencyMs=164");
     await waitFor(() => expect(screen.queryByText("만료된 세션으로 스트림 접근 거절")).not.toBeInTheDocument());
     expect(fetch).toHaveBeenCalledWith("/api/ops/events/page?severity=warn&limit=50", expect.objectContaining({
@@ -142,5 +165,21 @@ function metricPayload(scopedEvents: typeof events) {
       severity,
       count: scopedEvents.filter((event) => event.severity === severity).length,
     })),
+    icePathCounts: ["host", "srflx", "relay"].map((icePath) => ({
+      icePath,
+      count: scopedEvents.filter((event) => event.icePath === icePath).length,
+    })),
+    streamSessions: scopedEvents
+      .filter((event) => event.streamId)
+      .map((event) => ({
+        streamId: event.streamId,
+        connectionId: event.connectionId,
+        lastOccurredAt: event.occurredAt,
+        eventCount: 1,
+        averageLatencyMs: event.latencyMs,
+        averageThroughputMbps: event.throughputMbps,
+        icePath: event.icePath,
+        relayFallbackReason: event.relayFallbackReason,
+      })),
   };
 }

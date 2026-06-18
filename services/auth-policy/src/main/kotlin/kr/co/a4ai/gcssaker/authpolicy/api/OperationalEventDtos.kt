@@ -7,11 +7,17 @@ data class OperationalEventResponse(
     val occurredAt: Instant,
     val severity: String,
     val category: String,
+    val eventType: String?,
+    val sourceService: String?,
     val source: String,
     val message: String,
     val connections: Int,
     val latencyMs: Long,
     val throughputMbps: Double,
+    val streamId: String?,
+    val connectionId: String?,
+    val icePath: String?,
+    val relayFallbackReason: String?,
 )
 
 data class OperationalEventPageResponse(
@@ -24,6 +30,22 @@ data class OperationalEventSeverityCountResponse(
     val count: Long,
 )
 
+data class OperationalEventIcePathCountResponse(
+    val icePath: String,
+    val count: Long,
+)
+
+data class OperationalStreamSessionMetricResponse(
+    val streamId: String,
+    val connectionId: String?,
+    val lastOccurredAt: Instant,
+    val eventCount: Long,
+    val averageLatencyMs: Double?,
+    val averageThroughputMbps: Double?,
+    val icePath: String?,
+    val relayFallbackReason: String?,
+)
+
 data class OperationalEventMetricsResponse(
     val totalEvents: Long,
     val totalConnections: Long,
@@ -32,6 +54,8 @@ data class OperationalEventMetricsResponse(
     val maxLatencyMs: Long?,
     val avgThroughputMbps: Double?,
     val severityCounts: List<OperationalEventSeverityCountResponse>,
+    val icePathCounts: List<OperationalEventIcePathCountResponse>,
+    val streamSessions: List<OperationalStreamSessionMetricResponse>,
 )
 
 data class OperationalEventTimeBucketResponse(

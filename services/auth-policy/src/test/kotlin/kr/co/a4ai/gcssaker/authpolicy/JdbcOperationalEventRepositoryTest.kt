@@ -23,7 +23,20 @@ class JdbcOperationalEventRepositoryTest {
             dataSource,
             listOf(
                 event("evt-a-info", "info", "api", "헬스체크 정상", GroupId("co-a"), "2026-06-01T00:00:00Z"),
-                event("evt-a-warn", "warn", "network", "직접 ICE 후보 실패", GroupId("co-a"), "2026-06-01T00:10:00Z"),
+                event(
+                    "evt-a-warn",
+                    "warn",
+                    "network",
+                    "직접 ICE 후보 실패",
+                    GroupId("co-a"),
+                    "2026-06-01T00:10:00Z",
+                    eventType = "ice.relay_fallback",
+                    sourceService = "turn",
+                    streamId = "raw/local/webcam",
+                    connectionId = "conn-whep-001",
+                    icePath = "relay",
+                    relayFallbackReason = "srflx candidate failed",
+                ),
                 event("evt-b-warn", "warn", "network", "다른 그룹 ICE 후보 실패", GroupId("co-b"), "2026-06-01T00:10:00Z"),
             ),
         )
@@ -39,6 +52,12 @@ class JdbcOperationalEventRepositoryTest {
         )
 
         assertEquals(listOf("evt-a-warn"), events.map { it.id })
+        assertEquals("ice.relay_fallback", events.single().eventType)
+        assertEquals("turn", events.single().sourceService)
+        assertEquals("raw/local/webcam", events.single().streamId)
+        assertEquals("conn-whep-001", events.single().connectionId)
+        assertEquals("relay", events.single().icePath)
+        assertEquals("srflx candidate failed", events.single().relayFallbackReason)
     }
 
     @Test
@@ -56,6 +75,7 @@ class JdbcOperationalEventRepositoryTest {
 
         assertTrue("IX_OPERATIONAL_EVENTS_GROUP_OCCURRED" in indexes)
         assertTrue("IX_OPERATIONAL_EVENTS_GROUP_SEVERITY_OCCURRED" in indexes)
+        assertTrue("IX_OPERATIONAL_EVENTS_GROUP_STREAM_OCCURRED" in indexes)
     }
 
     @Test
@@ -144,6 +164,12 @@ class JdbcOperationalEventRepositoryTest {
                     connections = 6,
                     latencyMs = 90,
                     throughputMbps = 12.0,
+                    eventType = "ice.relay_fallback",
+                    sourceService = "turn",
+                    streamId = "raw/local/webcam",
+                    connectionId = "conn-whep-001",
+                    icePath = "relay",
+                    relayFallbackReason = "srflx candidate failed",
                 ),
                 event(
                     id = "evt-b-error",
@@ -171,6 +197,11 @@ class JdbcOperationalEventRepositoryTest {
         assertEquals(90, metrics.maxLatencyMs)
         assertEquals(9.0, metrics.avgThroughputMbps)
         assertEquals(listOf("info", "warn"), metrics.severityCounts.map { it.severity })
+        assertEquals(listOf("relay"), metrics.icePathCounts.map { it.icePath })
+        assertEquals(1, metrics.icePathCounts.single().count)
+        assertEquals(listOf("raw/local/webcam"), metrics.streamSessions.map { it.streamId })
+        assertEquals("conn-whep-001", metrics.streamSessions.single().connectionId)
+        assertEquals("relay", metrics.streamSessions.single().icePath)
     }
 
     private fun event(
@@ -183,18 +214,30 @@ class JdbcOperationalEventRepositoryTest {
         connections: Int = 1,
         latencyMs: Long = 42,
         throughputMbps: Double = 1.2,
+        eventType: String? = null,
+        sourceService: String? = null,
+        streamId: String? = null,
+        connectionId: String? = null,
+        icePath: String? = null,
+        relayFallbackReason: String? = null,
     ): OperationalEventReadModel =
         OperationalEventReadModel(
             id = id,
             occurredAt = Instant.parse(occurredAt),
             severity = severity,
             category = category,
+            eventType = eventType,
+            sourceService = sourceService,
             source = "테스트",
             message = message,
             connections = connections,
             latencyMs = latencyMs,
             throughputMbps = throughputMbps,
             groupId = groupId,
+            streamId = streamId,
+            connectionId = connectionId,
+            icePath = icePath,
+            relayFallbackReason = relayFallbackReason,
         )
 
     private fun h2DataSource(): DriverManagerDataSource =

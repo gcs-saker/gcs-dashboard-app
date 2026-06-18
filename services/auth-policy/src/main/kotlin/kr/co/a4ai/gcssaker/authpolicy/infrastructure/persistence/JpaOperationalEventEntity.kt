@@ -13,6 +13,7 @@ import java.time.Instant
     indexes = [
         Index(name = "ix_operational_events_group_occurred", columnList = "group_id, occurred_at"),
         Index(name = "ix_operational_events_group_severity_occurred", columnList = "group_id, severity, occurred_at"),
+        Index(name = "ix_operational_events_group_stream_occurred", columnList = "group_id, stream_id, occurred_at"),
     ],
 )
 class JpaOperationalEventEntity(
@@ -28,6 +29,12 @@ class JpaOperationalEventEntity(
 
     @Column(name = "category", nullable = false, length = 64)
     var category: String = "",
+
+    @Column(name = "event_type", length = 64)
+    var eventType: String? = null,
+
+    @Column(name = "source_service", length = 64)
+    var sourceService: String? = null,
 
     @Column(name = "source", nullable = false, length = 128)
     var source: String = "",
@@ -46,4 +53,16 @@ class JpaOperationalEventEntity(
 
     @Column(name = "group_id", nullable = false, length = 64)
     var groupId: String = "",
+
+    @Column(name = "stream_id", length = 128)
+    var streamId: String? = null,
+
+    @Column(name = "connection_id", length = 128)
+    var connectionId: String? = null,
+
+    @Column(name = "ice_path", length = 32)
+    var icePath: String? = null,
+
+    @Column(name = "relay_fallback_reason", length = 255)
+    var relayFallbackReason: String? = null,
 )

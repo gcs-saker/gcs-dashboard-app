@@ -71,6 +71,12 @@ class OperationalEventControllerTest {
                     connections = 7,
                     latencyMs = 80,
                     throughputMbps = 20.0,
+                    eventType = "ice.relay_fallback",
+                    sourceService = "turn",
+                    streamId = "raw/local/webcam",
+                    connectionId = "conn-whep-001",
+                    icePath = "relay",
+                    relayFallbackReason = "srflx candidate failed",
                 ),
                 event(
                     id = "evt-b-error",
@@ -110,6 +116,12 @@ class OperationalEventControllerTest {
         assertEquals(1, response.size)
         assertEquals("evt-a-warn", response[0].id)
         assertEquals("TURN 릴레이", response[0].source)
+        assertEquals("ice.relay_fallback", response[0].eventType)
+        assertEquals("turn", response[0].sourceService)
+        assertEquals("raw/local/webcam", response[0].streamId)
+        assertEquals("conn-whep-001", response[0].connectionId)
+        assertEquals("relay", response[0].icePath)
+        assertEquals("srflx candidate failed", response[0].relayFallbackReason)
     }
 
     @Test
@@ -156,6 +168,9 @@ class OperationalEventControllerTest {
         assertEquals(80, response.maxLatencyMs)
         assertEquals(15.0, response.avgThroughputMbps)
         assertEquals(listOf("info", "warn"), response.severityCounts.map { it.severity })
+        assertEquals(listOf("relay"), response.icePathCounts.map { it.icePath })
+        assertEquals(listOf("raw/local/webcam"), response.streamSessions.map { it.streamId })
+        assertEquals("conn-whep-001", response.streamSessions.single().connectionId)
     }
 
     @Test
@@ -205,6 +220,12 @@ class OperationalEventControllerTest {
         connections: Int,
         latencyMs: Long,
         throughputMbps: Double,
+        eventType: String? = null,
+        sourceService: String? = null,
+        streamId: String? = null,
+        connectionId: String? = null,
+        icePath: String? = null,
+        relayFallbackReason: String? = null,
     ): OperationalEventReadModel =
         OperationalEventReadModel(
             id = id,
@@ -212,12 +233,18 @@ class OperationalEventControllerTest {
             else Instant.parse("2026-06-01T00:00:00Z"),
             severity = severity,
             category = category,
+            eventType = eventType,
+            sourceService = sourceService,
             source = source,
             message = message,
             connections = connections,
             latencyMs = latencyMs,
             throughputMbps = throughputMbps,
             groupId = groupId,
+            streamId = streamId,
+            connectionId = connectionId,
+            icePath = icePath,
+            relayFallbackReason = relayFallbackReason,
         )
 
     private fun accessToken(username: String): String =

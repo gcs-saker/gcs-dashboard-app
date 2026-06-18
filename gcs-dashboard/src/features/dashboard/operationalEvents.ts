@@ -6,11 +6,17 @@ export interface OperationalEvent {
   occurredAt: string;
   severity: OperationalEventSeverity;
   category: OperationalEventCategory;
+  eventType: string | null;
+  sourceService: string | null;
   source: string;
   message: string;
   connections: number;
   latencyMs: number;
   throughputMbps: number;
+  streamId: string | null;
+  connectionId: string | null;
+  icePath: string | null;
+  relayFallbackReason: string | null;
 }
 
 export interface OperationalEventFilters {
@@ -30,6 +36,22 @@ export interface OperationalEventSeverityCount {
   count: number;
 }
 
+export interface OperationalEventIcePathCount {
+  icePath: string;
+  count: number;
+}
+
+export interface OperationalStreamSessionMetric {
+  streamId: string;
+  connectionId: string | null;
+  lastOccurredAt: string;
+  eventCount: number;
+  averageLatencyMs: number | null;
+  averageThroughputMbps: number | null;
+  icePath: string | null;
+  relayFallbackReason: string | null;
+}
+
 export interface OperationalEventMetrics {
   totalEvents: number;
   totalConnections: number;
@@ -38,6 +60,8 @@ export interface OperationalEventMetrics {
   maxLatencyMs: number | null;
   avgThroughputMbps: number | null;
   severityCounts: OperationalEventSeverityCount[];
+  icePathCounts: OperationalEventIcePathCount[];
+  streamSessions: OperationalStreamSessionMetric[];
 }
 
 export interface OperationalEventTimeBucket {
@@ -58,11 +82,17 @@ export function filterOperationalEvents(
 
   return events.filter((event) => {
     const occurredAt = new Date(event.occurredAt).getTime();
-    const matchesQuery =
-      !query ||
-      event.message.toLowerCase().includes(query) ||
-      event.source.toLowerCase().includes(query) ||
-      event.category.toLowerCase().includes(query);
+    const matchesQuery = !query || [
+      event.message,
+      event.source,
+      event.category,
+      event.eventType,
+      event.sourceService,
+      event.streamId,
+      event.connectionId,
+      event.icePath,
+      event.relayFallbackReason,
+    ].some((value) => value?.toLowerCase().includes(query));
     const matchesSeverity = filters.severity === "all" || event.severity === filters.severity;
     const matchesFrom = fromTime === null || occurredAt >= fromTime;
     const matchesTo = toTime === null || occurredAt <= toTime;

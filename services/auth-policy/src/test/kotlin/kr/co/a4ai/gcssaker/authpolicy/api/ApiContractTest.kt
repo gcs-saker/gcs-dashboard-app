@@ -181,6 +181,24 @@ class ApiContractTest {
                         count = ApiContractFixtures.SEVERITY_COUNT_VALUE,
                     ),
                 ),
+                icePathCounts = listOf(
+                    OperationalEventIcePathCountResponse(
+                        icePath = ApiContractFixtures.ICE_PATH_VALUE,
+                        count = ApiContractFixtures.ICE_PATH_COUNT_VALUE,
+                    ),
+                ),
+                streamSessions = listOf(
+                    OperationalStreamSessionMetricResponse(
+                        streamId = ApiContractFixtures.STREAM_ID_VALUE,
+                        connectionId = ApiContractFixtures.CONNECTION_ID_VALUE,
+                        lastOccurredAt = ApiContractFixtures.INSTANT_VALUE,
+                        eventCount = ApiContractFixtures.TOTAL_EVENTS_VALUE,
+                        averageLatencyMs = ApiContractFixtures.AVG_LATENCY_MS_VALUE,
+                        averageThroughputMbps = ApiContractFixtures.AVG_THROUGHPUT_MBPS_VALUE,
+                        icePath = ApiContractFixtures.ICE_PATH_VALUE,
+                        relayFallbackReason = ApiContractFixtures.RELAY_FALLBACK_REASON_VALUE,
+                    ),
+                ),
             ),
         )
 
@@ -188,6 +206,39 @@ class ApiContractTest {
         assertTrue(payload.contains(quoted(OperationalEventApiFields.TOTAL_CONNECTIONS)))
         assertTrue(payload.contains(quoted(OperationalEventApiFields.AVG_LATENCY_MS)))
         assertTrue(payload.contains(quoted(OperationalEventApiFields.SEVERITY_COUNTS)))
+        assertTrue(payload.contains(quoted(OperationalEventApiFields.ICE_PATH_COUNTS)))
+        assertTrue(payload.contains(quoted(OperationalEventApiFields.STREAM_SESSIONS)))
+        assertTrue(payload.contains(quoted(OperationalEventApiFields.RELAY_FALLBACK_REASON)))
+    }
+
+    @Test
+    fun `operational event dto field contract carries stream session and ice diagnostics`() {
+        val payload = objectMapper.writeValueAsString(
+            OperationalEventResponse(
+                id = ApiContractFixtures.EVENT_ID_VALUE,
+                occurredAt = ApiContractFixtures.INSTANT_VALUE,
+                severity = ApiContractFixtures.SEVERITY_VALUE,
+                category = ApiContractFixtures.EVENT_CATEGORY_VALUE,
+                eventType = ApiContractFixtures.EVENT_TYPE_VALUE,
+                sourceService = ApiContractFixtures.SOURCE_SERVICE_VALUE,
+                source = ApiContractFixtures.EVENT_SOURCE_VALUE,
+                message = ApiContractFixtures.EVENT_MESSAGE_VALUE,
+                connections = ApiContractFixtures.CONNECTIONS_VALUE,
+                latencyMs = ApiContractFixtures.MIN_LATENCY_MS_VALUE,
+                throughputMbps = ApiContractFixtures.AVG_THROUGHPUT_MBPS_VALUE,
+                streamId = ApiContractFixtures.STREAM_ID_VALUE,
+                connectionId = ApiContractFixtures.CONNECTION_ID_VALUE,
+                icePath = ApiContractFixtures.ICE_PATH_VALUE,
+                relayFallbackReason = ApiContractFixtures.RELAY_FALLBACK_REASON_VALUE,
+            ),
+        )
+
+        assertTrue(payload.contains(quoted(OperationalEventApiFields.EVENT_TYPE)))
+        assertTrue(payload.contains(quoted(OperationalEventApiFields.SOURCE_SERVICE)))
+        assertTrue(payload.contains(quoted(OperationalEventApiFields.STREAM_ID)))
+        assertTrue(payload.contains(quoted(OperationalEventApiFields.CONNECTION_ID)))
+        assertTrue(payload.contains(quoted(OperationalEventApiFields.ICE_PATH)))
+        assertTrue(payload.contains(quoted(OperationalEventApiFields.RELAY_FALLBACK_REASON)))
     }
 
     @Test
@@ -264,5 +315,16 @@ private object ApiContractFixtures {
     const val AVG_THROUGHPUT_MBPS_VALUE = 12.5
     const val SEVERITY_VALUE = "warn"
     const val SEVERITY_COUNT_VALUE = 1L
+    const val EVENT_ID_VALUE = "evt-ice-001"
+    const val EVENT_CATEGORY_VALUE = "network"
+    const val EVENT_TYPE_VALUE = "ice.relay_fallback"
+    const val SOURCE_SERVICE_VALUE = "turn"
+    const val EVENT_SOURCE_VALUE = "TURN 릴레이"
+    const val EVENT_MESSAGE_VALUE = "직접 ICE 후보 실패"
+    const val CONNECTIONS_VALUE = 2
+    const val CONNECTION_ID_VALUE = "conn-whep-001"
+    const val ICE_PATH_VALUE = "relay"
+    const val ICE_PATH_COUNT_VALUE = 1L
+    const val RELAY_FALLBACK_REASON_VALUE = "srflx candidate failed"
     val INSTANT_VALUE: Instant = Instant.parse("2026-06-01T00:00:00Z")
 }
