@@ -17,6 +17,8 @@ describe("TalkbackAudioReceiver", () => {
       videoRef: { current: null },
       status: "connecting",
       errorMessage: null,
+      audioPlaybackState: "receiving",
+      audioDiagnosticMessage: "오디오 수신 중",
     });
 
     render(<TalkbackAudioReceiver streamId="raw.sample.front" />);
@@ -31,6 +33,7 @@ describe("TalkbackAudioReceiver", () => {
     });
     expect(screen.getByLabelText("관제 음성 WebRTC 수신")).toBeInTheDocument();
     expect(screen.getByText("/webrtc/talkback/raw/sample/front/operator/whep")).toBeInTheDocument();
+    expect(screen.getByText("오디오 수신")).toHaveAttribute("title", "오디오 수신 중");
   });
 
   test("explains a talkback WHEP 404 as a missing operator audio sender", async () => {
@@ -39,6 +42,8 @@ describe("TalkbackAudioReceiver", () => {
       videoRef: { current: null },
       status: "error",
       errorMessage: "WHEP request failed with 404",
+      audioPlaybackState: "no-track",
+      audioDiagnosticMessage: "오디오 트랙 없음",
     });
 
     render(<TalkbackAudioReceiver streamId="raw.local.webcam" />);

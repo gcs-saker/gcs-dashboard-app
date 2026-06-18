@@ -68,6 +68,8 @@ function snapshot(overrides: Partial<WebRTCPlaybackSnapshot>): WebRTCPlaybackSna
     hasVideoFrame: false,
     hasAudioTrack: false,
     isAudioActive: false,
+    audioPlaybackState: "no-track",
+    audioDiagnosticMessage: "오디오 트랙 없음",
     firstFrameLatencyMs: null,
     signalingTimings: {
       iceServersLoadedMs: null,

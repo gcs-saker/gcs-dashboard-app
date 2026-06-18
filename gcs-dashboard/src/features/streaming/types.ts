@@ -8,11 +8,15 @@ export interface WebRTCPlaybackSnapshot {
   hasVideoFrame: boolean;
   hasAudioTrack: boolean;
   isAudioActive: boolean;
+  audioPlaybackState: WebRTCAudioPlaybackState;
+  audioDiagnosticMessage: string;
   firstFrameLatencyMs: number | null;
   signalingTimings: WebRTCSignalingTimings;
   audioStats: WebRTCAudioStats;
   iceCandidateStats?: WebRTCIceCandidateStats;
 }
+
+export type WebRTCAudioPlaybackState = "no-track" | "receiving" | "track-muted" | "playback-blocked";
 
 export interface WebRTCSignalingTimings {
   iceServersLoadedMs: number | null;
@@ -62,10 +66,12 @@ export interface WebRTCPlayerProps {
 
 export type HLSFallbackStatus = "idle" | "loading" | "playing" | "error";
 export type HLSPlaybackMode = "hlsjs" | "native" | "unsupported";
+export type HLSLatencyMode = "low-latency" | "stable";
 
 export interface HLSFallbackSnapshot {
   status: HLSFallbackStatus;
   mode: HLSPlaybackMode;
+  latencyMode: HLSLatencyMode;
   errorMessage: string | null;
 }
 
@@ -78,6 +84,7 @@ export interface HLSFallbackPlayerProps {
   muted?: boolean;
   controls?: boolean;
   preload?: HTMLVideoElement["preload"];
+  latencyMode?: HLSLatencyMode;
   poster?: string;
   className?: string;
   onStatusChange?: (snapshot: HLSFallbackSnapshot) => void;
@@ -105,6 +112,8 @@ export interface RealtimePlayerSnapshot {
   webrtcRetryAttempt?: number;
   hasAudioTrack?: boolean;
   isAudioActive?: boolean;
+  audioPlaybackState?: WebRTCAudioPlaybackState;
+  audioDiagnosticMessage?: string;
   audioLevel?: number | null;
   webrtcFirstFrameLatencyMs?: number | null;
   webrtcWhepResponseMs?: number | null;

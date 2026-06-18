@@ -11,6 +11,11 @@ const statusLabel = {
   error: "error",
 } as const;
 
+const latencyModeLabel = {
+  "low-latency": "저지연 HLS",
+  stable: "안정 HLS",
+} as const;
+
 export function HLSFallbackPlayer({
   hlsUrl,
   streamId,
@@ -20,19 +25,23 @@ export function HLSFallbackPlayer({
   muted = true,
   controls = true,
   preload = "none",
+  latencyMode = "stable",
   poster,
   className,
   onStatusChange,
 }: HLSFallbackPlayerProps) {
-  const playback = useHlsFallbackPlayback({ hlsUrl });
-  const { videoRef, status, mode, errorMessage } = playback;
+  const playback = useHlsFallbackPlayback({ hlsUrl, latencyMode });
+  const { videoRef, status, mode, errorMessage, latencyMode: activeLatencyMode } = playback;
 
   useEffect(() => {
-    onStatusChange?.({ status, mode, errorMessage });
-  }, [errorMessage, mode, onStatusChange, status]);
+    onStatusChange?.({ status, mode, latencyMode: activeLatencyMode, errorMessage });
+  }, [activeLatencyMode, errorMessage, mode, onStatusChange, status]);
 
   return (
-    <figure className={["hls-fallback-player", className].filter(Boolean).join(" ")}>
+    <figure
+      className={["hls-fallback-player", className].filter(Boolean).join(" ")}
+      data-latency-mode={activeLatencyMode}
+    >
       <video
         ref={videoRef}
         aria-label={title}
@@ -55,6 +64,7 @@ export function HLSFallbackPlayer({
         <span className="hls-fallback-player__reason">{fallbackReason}</span>
         {streamId ? <span className="hls-fallback-player__stream">{streamId}</span> : null}
         <span className="hls-fallback-player__mode">mode: {mode}</span>
+        <span className="hls-fallback-player__latency">{latencyModeLabel[activeLatencyMode]}</span>
         {errorMessage ? <span className="hls-fallback-player__error">{errorMessage}</span> : null}
       </figcaption>
     </figure>

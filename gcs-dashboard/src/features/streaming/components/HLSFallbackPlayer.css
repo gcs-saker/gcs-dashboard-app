@@ -37,6 +37,7 @@
 .hls-fallback-player__reason,
 .hls-fallback-player__stream,
 .hls-fallback-player__mode,
+.hls-fallback-player__latency,
 .hls-fallback-player__error {
   min-height: 24px;
   padding: 4px 8px;
@@ -74,4 +75,9 @@
 .hls-fallback-player__stream,
 .hls-fallback-player__mode {
   display: none;
+}
+
+.hls-fallback-player__latency {
+  border-color: rgba(255, 211, 138, 0.72);
+  color: #ffd38a;
 }

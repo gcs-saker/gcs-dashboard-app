@@ -56,7 +56,7 @@ describe("HLSFallbackPlayer", () => {
   test("renders fallback player and starts hls.js playback when an HLS URL is provided", async () => {
     vi.spyOn(HTMLMediaElement.prototype, "canPlayType").mockReturnValue("");
 
-    render(<HLSFallbackPlayer hlsUrl={hlsUrl} streamId="raw.sample.front" />);
+    render(<HLSFallbackPlayer hlsUrl={hlsUrl} streamId="raw.sample.front" latencyMode="low-latency" />);
 
     expect(screen.getByText("WebRTC failed. Playing HLS fallback.")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("fallback loading"));
@@ -78,6 +78,23 @@ describe("HLSFallbackPlayer", () => {
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("fallback playing"));
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
     expect(screen.getByText("mode: hlsjs")).toBeInTheDocument();
+    expect(screen.getByText("저지연 HLS")).toBeInTheDocument();
+  });
+
+  test("uses stable HLS fallback mode by default to reduce playback stalls", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "canPlayType").mockReturnValue("");
+
+    render(<HLSFallbackPlayer hlsUrl={hlsUrl} streamId="raw.sample.front" />);
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("fallback loading"));
+    expect(hlsMock.instances[0].config).toMatchObject({
+      lowLatencyMode: false,
+      backBufferLength: 30,
+      liveSyncDurationCount: 4,
+      maxLiveSyncPlaybackRate: 1.2,
+      capLevelToPlayerSize: true,
+    });
+    expect(screen.getByText("안정 HLS")).toBeInTheDocument();
   });
 
   test("renders a clear fallback reason after WebRTC failure", () => {

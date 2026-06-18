@@ -45,6 +45,8 @@ export function WebRTCPlayer({
     hasVideoFrame,
     hasAudioTrack,
     isAudioActive,
+    audioPlaybackState,
+    audioDiagnosticMessage,
     firstFrameLatencyMs,
     signalingTimings,
     audioStats,
@@ -64,6 +66,8 @@ export function WebRTCPlayer({
       hasVideoFrame,
       hasAudioTrack,
       isAudioActive,
+      audioPlaybackState,
+      audioDiagnosticMessage,
       firstFrameLatencyMs,
       signalingTimings,
       audioStats,
@@ -71,6 +75,8 @@ export function WebRTCPlayer({
     });
   }, [
     audioStats,
+    audioDiagnosticMessage,
+    audioPlaybackState,
     connectionState,
     errorMessage,
     firstFrameLatencyMs,
@@ -91,6 +97,7 @@ export function WebRTCPlayer({
       data-has-video-frame={hasVideoFrame ? "true" : "false"}
       data-has-audio-track={hasAudioTrack ? "true" : "false"}
       data-audio-active={isAudioActive ? "true" : "false"}
+      data-audio-playback-state={audioPlaybackState}
       data-audio-level={audioStats.audioLevel ?? ""}
       data-first-frame-latency-ms={firstFrameLatencyMs ?? ""}
       data-whep-response-ms={signalingTimings.whepResponseMs ?? ""}
@@ -138,11 +145,12 @@ export function WebRTCPlayer({
         {signalingTimings.whepResponseMs !== null ? (
           <span className="webrtc-player__state">whep: {signalingTimings.whepResponseMs}ms</span>
         ) : null}
-        {hasAudioTrack ? (
-          <span className={`webrtc-player__audio ${isAudioActive ? "is-active" : ""}`}>
-            {isAudioActive ? "audio" : "audio idle"}
-          </span>
-        ) : null}
+        <span
+          className={`webrtc-player__audio webrtc-player__audio--${audioPlaybackState} ${isAudioActive ? "is-active" : ""}`}
+          title={audioDiagnosticMessage}
+        >
+          {audioDiagnosticLabel(audioPlaybackState)}
+        </span>
         {errorMessage ? <span className="webrtc-player__error">{errorMessage}</span> : null}
       </figcaption>
     </figure>
@@ -150,3 +158,10 @@ export function WebRTCPlayer({
 }
 
 export default WebRTCPlayer;
+
+function audioDiagnosticLabel(audioPlaybackState: string): string {
+  if (audioPlaybackState === "receiving") return "audio receiving";
+  if (audioPlaybackState === "track-muted") return "audio muted";
+  if (audioPlaybackState === "playback-blocked") return "audio blocked";
+  return "audio none";
+}

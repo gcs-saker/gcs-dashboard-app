@@ -78,6 +78,7 @@ type PlaybackAction =
   | { type: "connection"; connectionState: RTCPeerConnectionState; iceConnectionState: RTCIceConnectionState }
   | { type: "first-frame"; latencyMs: number }
   | { type: "audio-state"; hasAudioTrack: boolean; isAudioActive: boolean }
+  | { type: "audio-playback"; blocked: boolean }
   | { type: "audio-level"; audioLevel: number | null }
   | { type: "audio-stats"; stats: WebRTCAudioStats }
   | { type: "ice-candidate"; candidate: RTCIceCandidate }
@@ -97,6 +98,8 @@ const initialPlaybackState: WebRTCPlaybackSnapshot = {
   hasVideoFrame: false,
   hasAudioTrack: false,
   isAudioActive: false,
+  audioPlaybackState: "no-track",
+  audioDiagnosticMessage: "오디오 트랙 없음",
   firstFrameLatencyMs: null,
   signalingTimings: EMPTY_SIGNALING_TIMINGS,
   audioStats: EMPTY_AUDIO_STATS,
@@ -198,7 +201,7 @@ export function useWhepPlayback({
           stopAudioMonitor = monitorAudioState(stream, dispatch);
           stopAudioLevelMonitor = monitorAudioLevel(stream, dispatch);
           videoRef.current.srcObject = stream;
-          requestVideoPlayback(videoRef.current);
+          requestVideoPlayback(videoRef.current, dispatch);
           return;
         }
 
@@ -211,7 +214,7 @@ export function useWhepPlayback({
         stopAudioMonitor = monitorAudioState(remoteStreamRef.current, dispatch);
         stopAudioLevelMonitor = monitorAudioLevel(remoteStreamRef.current, dispatch);
         videoRef.current.srcObject = remoteStreamRef.current;
-        requestVideoPlayback(videoRef.current);
+        requestVideoPlayback(videoRef.current, dispatch);
       };
 
       peerConnection.onconnectionstatechange = () => {
@@ -268,6 +271,8 @@ function playbackReducer(
         hasVideoFrame: false,
         hasAudioTrack: false,
         isAudioActive: false,
+        audioPlaybackState: "no-track",
+        audioDiagnosticMessage: "오디오 트랙 없음",
         firstFrameLatencyMs: null,
         signalingTimings: EMPTY_SIGNALING_TIMINGS,
         audioStats: EMPTY_AUDIO_STATS,
@@ -282,6 +287,8 @@ function playbackReducer(
         hasVideoFrame: state.hasVideoFrame,
         hasAudioTrack: state.hasAudioTrack,
         isAudioActive: state.isAudioActive,
+        audioPlaybackState: state.audioPlaybackState,
+        audioDiagnosticMessage: state.audioDiagnosticMessage,
         firstFrameLatencyMs: state.firstFrameLatencyMs,
         signalingTimings: state.signalingTimings,
         audioStats: state.audioStats,
@@ -296,6 +303,8 @@ function playbackReducer(
         hasVideoFrame: false,
         hasAudioTrack: false,
         isAudioActive: false,
+        audioPlaybackState: "no-track",
+        audioDiagnosticMessage: "오디오 트랙 없음",
         firstFrameLatencyMs: null,
         signalingTimings: EMPTY_SIGNALING_TIMINGS,
         audioStats: EMPTY_AUDIO_STATS,
@@ -310,6 +319,8 @@ function playbackReducer(
         hasVideoFrame: false,
         hasAudioTrack: false,
         isAudioActive: false,
+        audioPlaybackState: "no-track",
+        audioDiagnosticMessage: "오디오 트랙 없음",
         firstFrameLatencyMs: null,
         signalingTimings: state.signalingTimings,
         audioStats: state.audioStats,
@@ -324,6 +335,8 @@ function playbackReducer(
         hasVideoFrame: state.hasVideoFrame,
         hasAudioTrack: state.hasAudioTrack,
         isAudioActive: state.isAudioActive,
+        audioPlaybackState: state.audioPlaybackState,
+        audioDiagnosticMessage: state.audioDiagnosticMessage,
         firstFrameLatencyMs: state.firstFrameLatencyMs,
         signalingTimings: state.signalingTimings,
         audioStats: state.audioStats,
@@ -353,6 +366,15 @@ function playbackReducer(
         ...state,
         hasAudioTrack: action.hasAudioTrack,
         isAudioActive: action.isAudioActive,
+        ...audioPlaybackDiagnostic(action.hasAudioTrack, action.isAudioActive, state.audioPlaybackState === "playback-blocked"),
+      };
+    case "audio-playback":
+      if ((state.audioPlaybackState === "playback-blocked") === action.blocked) {
+        return state;
+      }
+      return {
+        ...state,
+        ...audioPlaybackDiagnostic(state.hasAudioTrack, state.isAudioActive, action.blocked),
       };
     case "audio-level": {
       if (state.audioStats.audioLevel === action.audioLevel) {
@@ -393,6 +415,35 @@ function playbackReducer(
         },
       };
   }
+}
+
+function audioPlaybackDiagnostic(
+  hasAudioTrack: boolean,
+  isAudioActive: boolean,
+  playbackBlocked: boolean,
+): Pick<WebRTCPlaybackSnapshot, "audioPlaybackState" | "audioDiagnosticMessage"> {
+  if (playbackBlocked) {
+    return {
+      audioPlaybackState: "playback-blocked",
+      audioDiagnosticMessage: "브라우저 자동재생 정책으로 오디오 재생이 차단됨",
+    };
+  }
+  if (!hasAudioTrack) {
+    return {
+      audioPlaybackState: "no-track",
+      audioDiagnosticMessage: "오디오 트랙 없음",
+    };
+  }
+  if (!isAudioActive) {
+    return {
+      audioPlaybackState: "track-muted",
+      audioDiagnosticMessage: "오디오 트랙 수신 중이나 무음 또는 mute 상태",
+    };
+  }
+  return {
+    audioPlaybackState: "receiving",
+    audioDiagnosticMessage: "오디오 수신 중",
+  };
 }
 
 function incrementIceCandidateStats(
@@ -938,12 +989,14 @@ function createPeerConnection(iceServers: RTCIceServer[], whepUrl: string): RTCP
   return new RTCPeerConnection();
 }
 
-function requestVideoPlayback(videoElement: HTMLVideoElement): void {
+function requestVideoPlayback(videoElement: HTMLVideoElement, dispatch: Dispatch<PlaybackAction>): void {
   try {
     const playResult = videoElement.play();
-    void playResult?.catch(() => undefined);
+    void playResult
+      ?.then(() => dispatch({ type: "audio-playback", blocked: false }))
+      .catch(() => dispatch({ type: "audio-playback", blocked: true }));
   } catch {
-    // Browser autoplay policy can reject programmatic playback; the peer connection still remains valid.
+    dispatch({ type: "audio-playback", blocked: true });
   }
 }
 
