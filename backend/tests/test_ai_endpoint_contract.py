@@ -141,6 +141,22 @@ def test_ai_endpoint_response_rejects_invalid_bbox(bbox: dict[str, float]):
         )
 
 
+def test_ai_endpoint_response_rejects_raw_media_payload_fields():
+    payload = {
+        "schemaVersion": AI_CONTRACT_SCHEMA_VERSION,
+        "streamId": "raw.sample.front",
+        "frame": valid_frame(),
+        "generatedAt": GENERATED_AT,
+        "riskScore": 0.82,
+        "reportText": "작업자 접근 위험 감지",
+        "detections": [],
+        "frameDataBase64": "raw-frame-bytes-must-not-return-from-sidecar",
+    }
+
+    with pytest.raises(ValidationError):
+        AIEndpointResponse.model_validate(payload)
+
+
 def test_ai_endpoint_error_response_uses_versioned_error_schema():
     response = AIEndpointErrorResponse.model_validate(
         {

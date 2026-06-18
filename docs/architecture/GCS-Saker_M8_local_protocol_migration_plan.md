@@ -287,12 +287,15 @@ flowchart TD
 - LangChain/LangGraph는 AI job orchestration 후보로만 둔다.
 - 외부 LLM/API 의존 없이 local model 또는 mock provider로 시작한다.
 - overlay event contract를 Protobuf/JSON 양쪽에서 검증한다.
+- AI sidecar는 WebRTC/HLS media path를 중계하지 않고 overlay metadata만 반환한다.
+- sidecar 장애는 stream playback이 아니라 overlay freshness만 degraded 처리한다.
 
 테스트:
 
 - mock detection event 생성
 - overlay DTO validation
 - AI sidecar down 시 dashboard 기본 스트리밍 유지
+- raw media payload가 response contract에 섞이지 않는지 검증
 
 ### M8-08 WebCodecs and Canvas local prototype
 
