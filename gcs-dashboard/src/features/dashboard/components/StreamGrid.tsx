@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { memo, useMemo, type ReactNode } from "react";
 import type { DashboardStreamSlot } from "../streamTypes";
 import { STREAM_GRID_WIDGET } from "../streamTypes";
 import { StreamCard } from "./StreamCard";
@@ -15,7 +15,7 @@ interface StreamGridProps {
   renderCard?: (stream: DashboardStreamSlot, isSelected: boolean) => ReactNode;
 }
 
-export function StreamGrid({
+export const StreamGrid = memo(function StreamGrid({
   streams,
   selectedStreamId,
   audioActiveStreamId = null,
@@ -55,4 +55,4 @@ export function StreamGrid({
       })}
     </section>
   );
-}
+});
