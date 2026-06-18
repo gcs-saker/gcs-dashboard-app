@@ -271,6 +271,7 @@ flowchart TD
 - Spring/Go/native gateway 사이 내부 streaming API 후보로 검증한다.
 - 먼저 `gateway_service.proto`로 내부 bidi streaming 계약을 고정하고, runtime stub/codegen은 별도 단계에서 붙인다.
 - 인증 credential은 protobuf payload field가 아니라 gRPC metadata로 전달한다.
+- control-plane publish 경로는 `MessageSender` interface 뒤에 두어 MQTT/gRPC 구현체 교체를 controller 밖에서 처리한다.
 
 테스트:
 
@@ -279,6 +280,7 @@ flowchart TD
 - reconnect
 - auth metadata propagation
 - proto descriptor compile
+- MessageSender runtime selection contract
 
 ### M8-07 FastAPI AI sidecar contract
 

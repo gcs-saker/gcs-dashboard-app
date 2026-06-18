@@ -52,6 +52,7 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["backend"]["environment"]["TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS"] == (
         "${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}"
     )
+    assert services["backend"]["environment"]["CONTROL_MESSAGE_SENDER"] == "${CONTROL_MESSAGE_SENDER:-mqtt}"
     assert services["backend"]["environment"]["MEDIAMTX_PUBLIC_WEBRTC_BASE_URL"].startswith("${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:")
     assert services["backend"]["environment"]["WEBRTC_STUN_URL"] == (
         "${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
