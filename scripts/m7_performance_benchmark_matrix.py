@@ -22,6 +22,8 @@ DEFAULT_STREAM_ID = "raw.sample.front"
 REQUIRED_METRICS = (
     "auth_login",
     "auth_refresh",
+    "ops_event_metrics",
+    "ops_event_graphql_page",
     "stream_list",
     "stream_playback",
     "stream_ice_servers",
@@ -44,6 +46,8 @@ class BenchmarkProfile:
     label: str
     edge_base_url: str
     auth_base_path: str
+    ops_base_path: str
+    graphql_base_path: str
     stream_base_path: str
     username: str
     password: str
@@ -151,6 +155,8 @@ def measure_profile(profile: BenchmarkProfile, iterations: int, warmup: int, ins
     opener = build_http_opener(cookie_jar, insecure_tls)
     edge_base = profile.edge_base_url.rstrip("/")
     auth_base = f"{edge_base}{profile.auth_base_path.rstrip('/')}"
+    ops_base = f"{edge_base}{profile.ops_base_path.rstrip('/')}"
+    graphql_base = f"{edge_base}{profile.graphql_base_path.rstrip('/')}"
     stream_base = f"{edge_base}{profile.stream_base_path.rstrip('/')}"
     login_payload = {"username": profile.username, "password": profile.password}
     csrf_headers = {
@@ -184,6 +190,24 @@ def measure_profile(profile: BenchmarkProfile, iterations: int, warmup: int, ins
             iterations,
             warmup,
             lambda: json_request(opener, f"{auth_base}/refresh", "POST", headers=csrf_headers)[:2],
+        ),
+        measure_metric(
+            "ops_event_metrics",
+            iterations,
+            warmup,
+            lambda: json_request(opener, f"{ops_base}/events/metrics", "GET", headers=auth_headers)[:2],
+        ),
+        measure_metric(
+            "ops_event_graphql_page",
+            iterations,
+            warmup,
+            lambda: json_request(
+                opener,
+                graphql_base,
+                "POST",
+                payload={"query": "query { operationalEventPage(limit: 10) { events { id severity latencyMs } nextCursor } }"},
+                headers=auth_headers,
+            )[:2],
         ),
         measure_metric(
             "stream_list",
@@ -245,6 +269,8 @@ def load_profiles(path: Path) -> list[BenchmarkProfile]:
                 label=str(item["label"]),
                 edge_base_url=str(item["edgeBaseUrl"]),
                 auth_base_path=str(item.get("authBasePath", "/auth-policy/auth")),
+                ops_base_path=str(item.get("opsBasePath", "/auth-policy/ops")),
+                graphql_base_path=str(item.get("graphQlBasePath", "/auth-policy/graphql")),
                 stream_base_path=str(item.get("streamBasePath", "/media-control/api/v1")),
                 username=str(item["username"]),
                 password=str(password),

@@ -18,6 +18,7 @@ class StreamPolicyController(
     private val groupPolicy: GroupPolicyService,
 ) {
     @PostMapping(StreamPolicyApiRoutes.ACCESS)
+    @RequiresBearerAuth
     fun access(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @RequestBody request: StreamAccessRequest,

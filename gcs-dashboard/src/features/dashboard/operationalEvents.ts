@@ -20,6 +20,34 @@ export interface OperationalEventFilters {
   to: string;
 }
 
+export interface OperationalEventPage {
+  events: OperationalEvent[];
+  nextCursor: string | null;
+}
+
+export interface OperationalEventSeverityCount {
+  severity: OperationalEventSeverity;
+  count: number;
+}
+
+export interface OperationalEventMetrics {
+  totalEvents: number;
+  totalConnections: number;
+  minLatencyMs: number | null;
+  avgLatencyMs: number | null;
+  maxLatencyMs: number | null;
+  avgThroughputMbps: number | null;
+  severityCounts: OperationalEventSeverityCount[];
+}
+
+export interface OperationalEventTimeBucket {
+  bucketStart: string;
+  eventCount: number;
+  totalConnections: number;
+  avgLatencyMs: number | null;
+  avgThroughputMbps: number | null;
+}
+
 export function filterOperationalEvents(
   events: OperationalEvent[],
   filters: OperationalEventFilters,
@@ -42,7 +70,15 @@ export function filterOperationalEvents(
   });
 }
 
-export function summarizeOperationalEvents(events: OperationalEvent[]) {
+export interface OperationalEventSummary {
+  connections: number;
+  avgLatencyMs: number;
+  peakThroughputMbps: number;
+  warnings: number;
+  errors: number;
+}
+
+export function summarizeOperationalEvents(events: OperationalEvent[]): OperationalEventSummary {
   const connections = events.reduce((total, event) => total + event.connections, 0);
   const avgLatencyMs = events.length
     ? Math.round(events.reduce((total, event) => total + event.latencyMs, 0) / events.length)
@@ -51,4 +87,16 @@ export function summarizeOperationalEvents(events: OperationalEvent[]) {
   const warnings = events.filter((event) => event.severity === "warn").length;
   const errors = events.filter((event) => event.severity === "error").length;
   return { connections, avgLatencyMs, peakThroughputMbps, warnings, errors };
+}
+
+export function summarizeOperationalEventMetrics(metrics: OperationalEventMetrics): OperationalEventSummary {
+  const countFor = (severity: OperationalEventSeverity): number =>
+    metrics.severityCounts.find((item) => item.severity === severity)?.count ?? 0;
+  return {
+    connections: metrics.totalConnections,
+    avgLatencyMs: Math.round(metrics.avgLatencyMs ?? 0),
+    peakThroughputMbps: metrics.avgThroughputMbps ?? 0,
+    warnings: countFor("warn"),
+    errors: countFor("error"),
+  };
 }

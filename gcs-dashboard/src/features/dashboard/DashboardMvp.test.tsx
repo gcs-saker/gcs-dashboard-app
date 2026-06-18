@@ -1,18 +1,24 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { AuthProvider } from "../auth/AuthProvider";
 import { clearAuthSession, storeAuthSession } from "../auth/authStorage";
+import { createDashboardQueryClient } from "../queryClient";
 import { DashboardMvp } from "./DashboardMvp";
 
 function renderDashboard() {
+  const queryClient = createDashboardQueryClient();
+
   return render(
-    <BrowserRouter>
-      <AuthProvider>
-        <DashboardMvp />
-      </AuthProvider>
-    </BrowserRouter>,
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <DashboardMvp />
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -159,6 +165,19 @@ describe("DashboardMvp", () => {
     await user.click(screen.getByRole("button", { name: "변경 취소" }));
   });
 
+  test("selects a stream from the tactical map pin without opening the connect dialog", async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    await user.click(await screen.findByRole("button", { name: "스트리밍 3 위치 35.866900, 128.593100" }));
+
+    expect(screen.getByText("스트리밍 3 / AI 감지 overlay")).toBeInTheDocument();
+    expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 기본 좌표 84deg / FOV 82deg");
+    expect(screen.getByText("지도 핀 스트림 선택됨")).toBeInTheDocument();
+    expect(screen.getByLabelText("스트리밍 3 단말 정보")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "스트리밍 3 장비 연결" })).not.toBeInTheDocument();
+  });
+
   test("toggles the selected stream AI mode option", async () => {
     const user = userEvent.setup();
     renderDashboard();
@@ -208,12 +227,19 @@ describe("DashboardMvp", () => {
 
     await user.click(screen.getByRole("button", { name: "서버상태" }));
 
-    expect(screen.getByRole("heading", { name: "서버 상태 상세 / 연결상태 / 헬스체크" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "서비스 의존 구조도" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "서버 상태" })).toBeInTheDocument();
+    expect(screen.getByLabelText("상태 시안")).toBeInTheDocument();
+    const serviceCards = screen.getByLabelText("서비스 상태 카드");
+    expect(within(serviceCards).getByText("API")).toBeInTheDocument();
+    expect(within(serviceCards).getByText("Signaling")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "장애 영향 범위" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "네트워크 RTT 추세" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "운영 진단" })).toBeInTheDocument();
-    expect(screen.getByText("API 서버")).toBeInTheDocument();
-    expect(screen.getByText("Signaling 서버")).toBeInTheDocument();
+    expect(screen.getByText("최저")).toBeInTheDocument();
+    expect(screen.getByText("평균")).toBeInTheDocument();
+    expect(screen.getByText("최고")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "서버 상태 상세 / 연결상태 / 헬스체크" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "서비스 의존 구조도" })).not.toBeInTheDocument();
   });
 
   test("renders CCTV as a configurable channel wall", async () => {
@@ -287,6 +313,20 @@ describe("DashboardMvp", () => {
     expect(screen.getByText("GCS-SAKER")).toBeInTheDocument();
     expect(screen.getAllByText("전방 EO").length).toBeGreaterThan(0);
     expect(screen.getAllByText("후방 AI").length).toBeGreaterThan(0);
+  });
+
+  test("selects a stream from the asset tree without opening the connect dialog", async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    await user.click(screen.getByRole("button", { name: "자산" }));
+    await user.click(screen.getByRole("button", { name: "후방 AI" }));
+
+    expect(screen.getByText("스트리밍 3 / AI 감지 overlay")).toBeInTheDocument();
+    expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 기본 좌표 84deg / FOV 82deg");
+    expect(screen.getByText("자산트리 스트림 선택됨")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "스트리밍 3 장비 연결" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "자산트리" })).not.toBeInTheDocument();
   });
 
   test("clears the JWT session when logging out", async () => {

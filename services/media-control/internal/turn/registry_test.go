@@ -49,6 +49,24 @@ func TestHealthyIceServersLimitsHealthyTurnServersByDefault(t *testing.T) {
 	}
 }
 
+func TestHealthyIceServersKeepsStunCandidatesWhenTurnLimitIsZero(t *testing.T) {
+	primaryStun, _ := domain.NewIceServer("stun:primary", domain.IceServerSTUN, "", "", true)
+	secondaryStun, _ := domain.NewIceServer("stun:secondary", domain.IceServerSTUN, "", "", true)
+	turnServer, _ := domain.NewIceServer("turn:primary", domain.IceServerTURN, "user", "pass", true)
+
+	registry := NewRegistryWithTurnLimit([]domain.IceServer{primaryStun, secondaryStun, turnServer}, StaticProbe{}, 0)
+	healthy := registry.HealthyIceServers()
+
+	if len(healthy) != 2 {
+		t.Fatalf("expected only STUN servers when TURN limit is zero, got %d", len(healthy))
+	}
+	for _, server := range healthy {
+		if server.Kind != domain.IceServerSTUN {
+			t.Fatalf("expected TURN relay to be suppressed, got %s", server.Kind)
+		}
+	}
+}
+
 func TestHealthyIceServersAllowsConfiguredTurnLimit(t *testing.T) {
 	primary, _ := domain.NewIceServer("turn:primary", domain.IceServerTURN, "user", "pass", true)
 	secondary, _ := domain.NewIceServer("turn:secondary", domain.IceServerTURN, "user", "pass", true)

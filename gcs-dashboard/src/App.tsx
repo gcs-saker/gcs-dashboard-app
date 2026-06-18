@@ -1,9 +1,13 @@
 import { lazy, Suspense } from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./features/auth/AuthProvider";
 import { LoginPage } from "./features/auth/LoginPage";
 import { RequireAuth } from "./features/auth/RequireAuth";
 import { SignupPage } from "./features/auth/SignupPage";
+import { createDashboardQueryClient } from "./features/queryClient";
+
+const dashboardQueryClient = createDashboardQueryClient();
 
 const DashboardMvp = lazy(() => import("./features/dashboard/DashboardMvp").then((module) => ({ default: module.DashboardMvp })));
 const LocalWebcamPublisher = lazy(() =>
@@ -23,6 +27,8 @@ function RouteFallback() {
 
 function App() {
   const query = new URLSearchParams(window.location.search);
+  const isLocalPreviewHost = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost";
+  const isDashboardUiPreview = import.meta.env.DEV && isLocalPreviewHost && query.get("uiPreview") === "1";
 
   const authenticatedApp =
     query.get("streamingSmoke") === "1"
@@ -32,32 +38,38 @@ function App() {
         : <DashboardMvp />;
 
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Suspense fallback={<RouteFallback />}>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route
-              path="/publisher"
-              element={
-                <RequireAuth>
-                  <LocalWebcamPublisher />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="*"
-              element={
-                <RequireAuth>
-                  {authenticatedApp}
-                </RequireAuth>
-              }
-            />
-          </Routes>
-        </Suspense>
-      </AuthProvider>
-    </BrowserRouter>
+    <QueryClientProvider client={dashboardQueryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route
+                path="/publisher"
+                element={
+                  <RequireAuth>
+                    <LocalWebcamPublisher />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="*"
+                element={
+                  isDashboardUiPreview ? (
+                    authenticatedApp
+                  ) : (
+                    <RequireAuth>
+                      {authenticatedApp}
+                    </RequireAuth>
+                  )
+                }
+              />
+            </Routes>
+          </Suspense>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 

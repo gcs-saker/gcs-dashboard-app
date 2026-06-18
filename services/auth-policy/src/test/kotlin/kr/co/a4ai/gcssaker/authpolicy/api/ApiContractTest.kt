@@ -8,6 +8,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.reflect.full.declaredFunctions
+import kotlin.reflect.full.findAnnotation
 
 class ApiContractTest {
     private val objectMapper = ObjectMapper()
@@ -21,10 +23,52 @@ class ApiContractTest {
         assertEquals(ApiContractFixtures.HEALTHZ, HealthApiRoutes.HEALTHZ)
         assertEquals(ApiContractFixtures.TIME_SYNC_STATUS, TimeSyncApiRoutes.STATUS)
         assertEquals(ApiContractFixtures.OPERATIONAL_EVENTS, OperationalEventApiRoutes.EVENTS)
+        assertEquals(ApiContractFixtures.OPERATIONAL_EVENTS_PAGE, OperationalEventApiRoutes.EVENTS_PAGE)
+        assertEquals(ApiContractFixtures.OPERATIONAL_EVENTS_METRICS, OperationalEventApiRoutes.EVENTS_METRICS)
+        assertEquals(ApiContractFixtures.OPERATIONAL_EVENTS_BUCKETS, OperationalEventApiRoutes.EVENTS_BUCKETS)
+        assertEquals(ApiContractFixtures.GRAPHQL, GraphQlApiRoutes.GRAPHQL)
         assertEquals(ApiContractFixtures.TELEMETRY_ALL, OperationalReadApiRoutes.TELEMETRY_ALL)
         assertEquals(ApiContractFixtures.TELEMETRY_INGEST, OperationalReadApiRoutes.TELEMETRY_INGEST)
+        assertEquals(ApiContractFixtures.TELEMETRY_HISTORY, OperationalReadApiRoutes.TELEMETRY_HISTORY)
         assertEquals(ApiContractFixtures.ASSET_BY_GATEWAY, OperationalReadApiRoutes.ASSET_BY_GATEWAY)
         assertEquals(ApiContractFixtures.STREAM_POLICY_ROOT, StreamPolicyApiRoutes.ROOT)
+    }
+
+    @Test
+    fun `query field contracts are shared by rest and graphql operational event reads`() {
+        assertEquals(ApiContractFixtures.QUERY_FROM, OperationalEventQueryFields.FROM)
+        assertEquals(ApiContractFixtures.QUERY_TO, OperationalEventQueryFields.TO)
+        assertEquals(ApiContractFixtures.GRAPHQL_OPERATIONAL_EVENTS, GraphQlQueryNames.OPERATIONAL_EVENTS)
+        assertEquals(ApiContractFixtures.GRAPHQL_OPERATIONAL_EVENT_PAGE, GraphQlQueryNames.OPERATIONAL_EVENT_PAGE)
+    }
+
+    @Test
+    fun `bearer protected endpoints are marked with security contract annotation`() {
+        val bearerProtectedMethods = listOf(
+            AuthController::class to "me",
+            OperationalEventController::class to "events",
+            OperationalEventController::class to "eventPage",
+            OperationalEventController::class to "metrics",
+            OperationalEventController::class to "buckets",
+            OperationalEventGraphQlController::class to "operationalEvents",
+            OperationalEventGraphQlController::class to "operationalEventPage",
+            OperationalReadController::class to "telemetryAll",
+            OperationalReadController::class to "ingestTelemetry",
+            OperationalReadController::class to "telemetryHistory",
+            OperationalReadController::class to "assetsForGateway",
+            StreamPolicyController::class to "access",
+            TimeSyncController::class to "status",
+            TimeSyncController::class to "check",
+            TimeSyncController::class to "updateConfig",
+        )
+
+        bearerProtectedMethods.forEach { (controller, methodName) ->
+            val method = controller.declaredFunctions.single { it.name == methodName }
+            assertTrue(
+                method.findAnnotation<RequiresBearerAuth>() != null,
+                "${controller.simpleName}.$methodName must be marked as bearer protected",
+            )
+        }
     }
 
     @Test
@@ -41,8 +85,12 @@ class ApiContractTest {
             TimeSyncApiRoutes.CHECK,
             TimeSyncApiRoutes.CONFIG,
             OperationalEventApiRoutes.EVENTS,
+            OperationalEventApiRoutes.EVENTS_PAGE,
+            OperationalEventApiRoutes.EVENTS_METRICS,
+            OperationalEventApiRoutes.EVENTS_BUCKETS,
             OperationalReadApiRoutes.TELEMETRY_ALL,
             OperationalReadApiRoutes.TELEMETRY_INGEST,
+            OperationalReadApiRoutes.TELEMETRY_HISTORY,
             OperationalReadApiRoutes.ASSET_BY_GATEWAY,
             StreamPolicyApiRoutes.ROOT + StreamPolicyApiRoutes.ACCESS,
         )
@@ -118,6 +166,31 @@ class ApiContractTest {
     }
 
     @Test
+    fun `operational event metrics dto field contract stays compatible with dashboard graphs`() {
+        val payload = objectMapper.writeValueAsString(
+            OperationalEventMetricsResponse(
+                totalEvents = ApiContractFixtures.TOTAL_EVENTS_VALUE,
+                totalConnections = ApiContractFixtures.TOTAL_CONNECTIONS_VALUE,
+                minLatencyMs = ApiContractFixtures.MIN_LATENCY_MS_VALUE,
+                avgLatencyMs = ApiContractFixtures.AVG_LATENCY_MS_VALUE,
+                maxLatencyMs = ApiContractFixtures.MAX_LATENCY_MS_VALUE,
+                avgThroughputMbps = ApiContractFixtures.AVG_THROUGHPUT_MBPS_VALUE,
+                severityCounts = listOf(
+                    OperationalEventSeverityCountResponse(
+                        severity = ApiContractFixtures.SEVERITY_VALUE,
+                        count = ApiContractFixtures.SEVERITY_COUNT_VALUE,
+                    ),
+                ),
+            ),
+        )
+
+        assertTrue(payload.contains(quoted(OperationalEventApiFields.TOTAL_EVENTS)))
+        assertTrue(payload.contains(quoted(OperationalEventApiFields.TOTAL_CONNECTIONS)))
+        assertTrue(payload.contains(quoted(OperationalEventApiFields.AVG_LATENCY_MS)))
+        assertTrue(payload.contains(quoted(OperationalEventApiFields.SEVERITY_COUNTS)))
+    }
+
+    @Test
     fun `stream policy dto field contract stays compatible with media control`() {
         val payload = objectMapper.writeValueAsString(
             StreamAccessRequest(
@@ -141,8 +214,17 @@ private object ApiContractFixtures {
     const val HEALTHZ = "/healthz"
     const val TIME_SYNC_STATUS = "/ops/time/status"
     const val OPERATIONAL_EVENTS = "/ops/events"
+    const val OPERATIONAL_EVENTS_PAGE = "/ops/events/page"
+    const val OPERATIONAL_EVENTS_METRICS = "/ops/events/metrics"
+    const val OPERATIONAL_EVENTS_BUCKETS = "/ops/events/buckets"
+    const val GRAPHQL = "/graphql"
+    const val QUERY_FROM = "from"
+    const val QUERY_TO = "to"
+    const val GRAPHQL_OPERATIONAL_EVENTS = "operationalEvents"
+    const val GRAPHQL_OPERATIONAL_EVENT_PAGE = "operationalEventPage"
     const val TELEMETRY_ALL = "/telemetry/all"
     const val TELEMETRY_INGEST = "/telemetry/"
+    const val TELEMETRY_HISTORY = "/telemetry/{uuid}/history"
     const val ASSET_BY_GATEWAY = "/asset/{gatewayUuid}"
     const val STREAM_POLICY_ROOT = "/policy/streams"
     const val ACCESS_TOKEN_VALUE = "access-token"
@@ -174,5 +256,13 @@ private object ApiContractFixtures {
     const val TOTAL_DISTANCE_VALUE = 1520.0
     const val EPOCH_TIME_VALUE = "00:10:23"
     const val PORT_DISTANCE_VALUE = 250.0
+    const val TOTAL_EVENTS_VALUE = 2L
+    const val TOTAL_CONNECTIONS_VALUE = 14L
+    const val MIN_LATENCY_MS_VALUE = 51L
+    const val AVG_LATENCY_MS_VALUE = 51.0
+    const val MAX_LATENCY_MS_VALUE = 51L
+    const val AVG_THROUGHPUT_MBPS_VALUE = 12.5
+    const val SEVERITY_VALUE = "warn"
+    const val SEVERITY_COUNT_VALUE = 1L
     val INSTANT_VALUE: Instant = Instant.parse("2026-06-01T00:00:00Z")
 }

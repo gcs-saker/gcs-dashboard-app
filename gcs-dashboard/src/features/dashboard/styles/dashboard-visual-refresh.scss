@@ -1,0 +1,644 @@
+@use "./dashboard-shared" as *;
+
+.selected-stream,
+.stream-card,
+.cctv-channel-card {
+  @include hover-surface;
+}
+
+.selected-stream__viewport {
+  background:
+    linear-gradient(rgba(190, 213, 226, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(190, 213, 226, 0.04) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(61, 184, 255, 0.1), transparent 34%, rgba(86, 211, 124, 0.07)),
+    #071018;
+  background-size: 42px 42px, 42px 42px, auto, auto;
+}
+
+.selected-stream__empty {
+  align-content: center;
+  display: grid;
+  gap: 10px;
+  height: 100%;
+  justify-items: center;
+  min-height: 260px;
+  padding: 28px;
+  position: relative;
+  text-align: center;
+}
+
+.selected-stream__empty::before {
+  border: 1px solid rgba(190, 213, 226, 0.3);
+  content: "";
+  height: 92px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 92px;
+}
+
+.selected-stream__empty::after {
+  background:
+    linear-gradient(90deg, transparent 0 43%, rgba(190, 213, 226, 0.55) 44% 56%, transparent 57%),
+    linear-gradient(0deg, transparent 0 43%, rgba(190, 213, 226, 0.55) 44% 56%, transparent 57%);
+  content: "";
+  height: 124px;
+  opacity: 0.48;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 124px;
+}
+
+.selected-stream__empty-kicker,
+.stream-card__visual-status,
+.cctv-channel-card__channel {
+  @include pill-label;
+}
+
+.selected-stream__empty strong {
+  color: var(--heading);
+  font-size: clamp(1.05rem, 1.6vw, 1.42rem);
+  font-weight: 900;
+  position: relative;
+  z-index: 2;
+}
+
+.selected-stream__empty p {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 420px;
+  position: relative;
+  z-index: 2;
+}
+
+.selected-stream__meta {
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.24);
+}
+
+.stream-card {
+  outline: 1px solid rgba(255, 255, 255, 0.015);
+}
+
+.stream-card__topline {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.stream-card__topline strong {
+  color: var(--heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stream-card__visual-status {
+  bottom: 10px;
+  left: 10px;
+  position: absolute;
+  z-index: 2;
+}
+
+.stream-card__connect,
+.stream-card__talkback {
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.stream-card__connect:hover,
+.stream-card__talkback:hover:not(:disabled) {
+  background: rgba(61, 184, 255, 0.1);
+}
+
+.cctv-view {
+  background:
+    linear-gradient(180deg, rgba(7, 22, 28, 0.78), rgba(3, 10, 15, 0.86)),
+    rgba(3, 10, 15, 0.72);
+}
+
+.cctv-view__header {
+  background: rgba(5, 18, 28, 0.74);
+  box-shadow: var(--shadow-panel);
+}
+
+.cctv-channel-card {
+  position: relative;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 160ms ease;
+}
+
+.cctv-channel-card:hover {
+  border-color: rgba(61, 184, 255, 0.58);
+  transform: translateY(-1px);
+}
+
+.cctv-channel-card__channel {
+  border-radius: 4px;
+  left: 8px;
+  position: absolute;
+  top: 8px;
+}
+
+.cctv-channel-card__viewport {
+  background:
+    linear-gradient(rgba(220, 232, 242, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(220, 232, 242, 0.03) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(61, 184, 255, 0.14), transparent 36%, rgba(86, 211, 124, 0.05)),
+    linear-gradient(145deg, rgba(8, 32, 42, 0.94), rgba(3, 8, 12, 0.98));
+  background-size: 28px 28px, 28px 28px, auto, auto;
+}
+
+.event-log-view {
+  background:
+    linear-gradient(180deg, rgba(7, 22, 28, 0.72), rgba(3, 10, 15, 0.86)),
+    rgba(3, 10, 15, 0.72);
+}
+
+.event-log-view__hero,
+.system-status-page__hero,
+.time-sync-view__header {
+  box-shadow: var(--shadow-panel);
+}
+
+.event-log-view__filters input,
+.event-log-view__filters select,
+.time-sync-view__form input,
+.time-sync-view__form button,
+.time-sync-view__tabs button,
+.cctv-view__controls button,
+.event-log-view__quickbar button,
+.event-log-view__categories button,
+.event-log-view__detail-actions button {
+  @include control-transition;
+}
+
+.ops-tab,
+.stream-card__connect,
+.stream-card__talkback,
+.cctv-channel-card__connect,
+.event-log-view__quickbar button,
+.event-log-view__categories button,
+.event-log-view__detail-actions button,
+.time-sync-view__tabs button,
+.time-sync-view__form button,
+.cctv-view__controls button,
+.widget-dialog__item {
+  @include action-sheen;
+}
+
+.event-log-view__filters input:focus,
+.event-log-view__filters select:focus,
+.time-sync-view__form input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px rgba(61, 184, 255, 0.16);
+  outline: 0;
+}
+
+.event-log-item {
+  position: relative;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 120ms ease;
+}
+
+.event-log-item::before {
+  background: var(--cyan);
+  border-radius: 999px;
+  content: "";
+  inset: 10px auto 10px 0;
+  opacity: 0.42;
+  position: absolute;
+  width: 3px;
+}
+
+.event-log-item.is-warn::before {
+  background: var(--amber);
+}
+
+.event-log-item.is-error::before {
+  background: var(--red);
+}
+
+.event-log-item:hover {
+  background: rgba(8, 28, 42, 0.68);
+  transform: translateY(-1px);
+}
+
+.event-log-view__bar i {
+  border-radius: 5px 5px 0 0;
+  box-shadow: 0 0 18px rgba(61, 184, 255, 0.18);
+}
+
+.system-service-card {
+  position: relative;
+  transition: border-color 160ms ease, transform 120ms ease;
+}
+
+.system-service-card:hover {
+  border-color: rgba(61, 184, 255, 0.54);
+  transform: translateY(-1px);
+}
+
+.system-rtt-chart {
+  box-shadow: inset 0 0 0 1px rgba(220, 232, 242, 0.02);
+}
+
+.time-sync-view {
+  background:
+    linear-gradient(180deg, rgba(7, 22, 28, 0.62), transparent 220px),
+    rgba(3, 10, 15, 0.28);
+}
+
+.time-sync-view__tabs button,
+.time-sync-view__form button,
+.ops-command-button,
+.widget-icon-button {
+  border-radius: 6px;
+}
+
+.time-sync-view__policy article {
+  transition: border-color 160ms ease, transform 120ms ease;
+}
+
+.time-sync-view__policy article:hover {
+  border-color: rgba(61, 184, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.ops-dashboard__action-group {
+  align-items: center;
+  background: rgba(5, 13, 17, 0.42);
+  border: 1px solid rgba(94, 151, 181, 0.24);
+  border-radius: 6px;
+  display: flex;
+  gap: 6px;
+  min-height: 38px;
+  padding: 3px;
+}
+
+.ops-layout-status {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  padding: 0 7px;
+  white-space: nowrap;
+}
+
+.ops-user-menu {
+  position: relative;
+}
+
+.ops-user-menu summary {
+  align-items: center;
+  background: rgba(5, 13, 17, 0.74);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  font-weight: 900;
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.ops-user-menu button {
+  background: rgba(5, 13, 17, 0.96);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 34px;
+  min-width: 96px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+}
+
+.ops-summary__focus {
+  background:
+    linear-gradient(90deg, rgba(61, 184, 255, 0.12), rgba(86, 211, 124, 0.06)),
+    rgba(4, 14, 21, 0.5);
+  border: 1px solid rgba(61, 184, 255, 0.28);
+  border-radius: 6px;
+  display: grid;
+  gap: 5px;
+  min-height: 58px;
+  padding: 10px;
+}
+
+.ops-summary__focus strong {
+  color: var(--heading);
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.ops-summary__focus span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.cctv-view__summary {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.cctv-view__summary span {
+  background: rgba(5, 13, 17, 0.68);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--text);
+  min-height: 26px;
+  padding: 4px 9px;
+}
+
+.cctv-channel-card {
+  grid-template-rows: minmax(72px, 1fr) 28px 24px 24px 30px;
+}
+
+.cctv-channel-card__statusbar {
+  align-items: center;
+  background: rgba(5, 13, 17, 0.42);
+  border-top: 1px solid rgba(94, 151, 181, 0.18);
+  color: var(--muted);
+  display: grid;
+  font-size: 0.62rem;
+  font-weight: 900;
+  gap: 4px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 0 8px;
+}
+
+.cctv-channel-card__statusbar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-log-view {
+  grid-template-rows: auto auto auto auto auto 1fr;
+}
+
+.event-log-view__incident-strip {
+  align-items: stretch;
+  background:
+    linear-gradient(90deg, rgba(243, 200, 77, 0.08), rgba(61, 184, 255, 0.06)),
+    rgba(4, 14, 21, 0.56);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(180px, 0.28fr) 1fr;
+  min-height: 74px;
+  padding: 10px;
+}
+
+.event-log-view__incident-strip > div {
+  display: grid;
+  gap: 5px;
+  place-content: center start;
+}
+
+.event-log-view__incident-strip > div span,
+.event-log-view__incident-strip p,
+.event-log-view__incident-strip li em {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.event-log-view__incident-strip > div strong {
+  color: var(--heading);
+  font-size: 0.96rem;
+}
+
+.event-log-view__incident-strip p {
+  align-self: center;
+  margin: 0;
+}
+
+.event-log-view__incident-strip ul {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.event-log-view__incident-strip li {
+  align-items: center;
+  background: rgba(5, 13, 17, 0.44);
+  border: 1px solid rgba(94, 151, 181, 0.22);
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 62px minmax(90px, 0.24fr) 1fr;
+  min-height: 34px;
+  padding: 6px 8px;
+}
+
+.event-log-view__incident-strip li span {
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--amber);
+  font-size: 0.66rem;
+  font-weight: 900;
+  padding: 2px 6px;
+  text-align: center;
+}
+
+.event-log-view__incident-strip li.is-error span {
+  color: var(--red);
+}
+
+.event-log-view__incident-strip li strong {
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
+.time-sync-view__policy-header {
+  align-items: center;
+  background:
+    linear-gradient(90deg, rgba(61, 184, 255, 0.12), transparent 62%),
+    rgba(4, 14, 21, 0.48);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  display: flex;
+  gap: 12px;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  min-height: 74px;
+  padding: 14px;
+}
+
+.time-sync-view__policy-header div {
+  display: grid;
+  gap: 5px;
+}
+
+.time-sync-view__policy-header button {
+  background: rgba(5, 13, 17, 0.74);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.time-sync-view__policy em {
+  color: var(--green);
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ops-dashboard *,
+  .ops-dashboard *::before,
+  .ops-dashboard *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+@media (max-width: 1500px) {
+  .ops-dashboard {
+    overflow: auto;
+  }
+
+  .ops-dashboard__grid {
+    grid-template-columns: minmax(260px, 0.72fr) minmax(560px, 1.28fr);
+    grid-template-rows: minmax(220px, auto) minmax(360px, 54vh) minmax(260px, auto) minmax(180px, auto);
+    overflow: visible;
+  }
+
+  .asset-tree,
+  .selected-stream,
+  .stream-grid,
+  .ops-summary,
+  .telemetry-panel,
+  .audio-waveform,
+  .ai-panel {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .telemetry-panel {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .ops-summary {
+    grid-column: 1;
+    grid-row: 2 / 5;
+  }
+
+  .selected-stream {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .tactical-map {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .stream-grid,
+  .audio-waveform,
+  .ai-panel {
+    grid-column: 1 / -1;
+  }
+
+  .stream-grid {
+    grid-row: 3;
+    min-height: 260px;
+  }
+
+  .audio-waveform {
+    grid-row: 4;
+  }
+}
+
+@media (max-height: 860px) and (min-width: 1501px) {
+  .ops-dashboard__tabs {
+    min-height: 64px;
+    padding-top: 8px;
+  }
+
+  .ops-dashboard__grid {
+    grid-template-rows: minmax(190px, 0.24fr) minmax(190px, 0.24fr) minmax(150px, 0.18fr) minmax(150px, 0.18fr);
+  }
+
+  .stream-grid {
+    min-height: 300px;
+  }
+
+  .audio-waveform__scope,
+  .audio-waveform__body {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 1320px) {
+  .ops-dashboard__grid {
+    grid-template-columns: minmax(240px, 0.68fr) minmax(440px, 1.32fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .ops-dashboard {
+    overflow: auto;
+  }
+
+  .ops-dashboard__tabs {
+    gap: 8px;
+    min-height: 64px;
+    overflow-x: auto;
+    padding: 10px;
+    width: 100%;
+  }
+
+  .ops-tab {
+    min-width: 108px;
+  }
+
+  .ops-dashboard__grid {
+    grid-template-columns: 1fr;
+    padding: 6px;
+  }
+
+  .stream-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .telemetry-panel__body {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-panel ul {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-panel li {
+    border-bottom: 1px solid var(--line-soft);
+    border-right: 0;
+  }
+
+  .time-sync-view__header,
+  .time-sync-view__commands {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .time-sync-view__form {
+    grid-template-columns: 1fr;
+  }
+}

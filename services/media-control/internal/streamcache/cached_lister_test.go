@@ -102,6 +102,27 @@ func TestCachedStreamListerUsesRedisBackedListCache(t *testing.T) {
 	}
 }
 
+func TestCachedStreamListerStoresOfflinePresenceForDisconnectDetection(t *testing.T) {
+	path, _ := domain.NewStreamPath("raw/local/webcam")
+	upstream := &recordingLister{
+		streams: []domain.StreamDescriptor{{
+			Path:   path,
+			Ready:  false,
+			Status: domain.StreamStatusOffline,
+		}},
+	}
+	cache := newMemoryStringCache()
+	lister := NewCachedStreamLister(upstream, cache, "streams:list", "presence:", time.Second, 5*time.Second)
+
+	if _, err := lister.ListStreams(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	if cache.get("presence:raw/local/webcam") != "offline" {
+		t.Fatalf("expected offline presence key for disconnect detection, got %q", cache.get("presence:raw/local/webcam"))
+	}
+}
+
 func TestCachedStreamListerCoalescesConcurrentCacheMisses(t *testing.T) {
 	path, _ := domain.NewStreamPath("raw/local/webcam")
 	upstream := &recordingLister{

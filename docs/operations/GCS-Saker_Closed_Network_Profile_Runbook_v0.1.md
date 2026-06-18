@@ -42,6 +42,45 @@ python3 scripts/closed_network_static_check.py
 
 폐쇄망 납품 산출물은 “현장에서 인터넷으로 받아 설치한다”가 아니라 “검증된 bundle을 반입한다”를 기본값으로 둔다. M2 #193에서 시작한 폐쇄망 profile 검증은 M7에서 single-node appliance package로 확장한다.
 
+## M7 폐쇄망 runtime profile 계약
+
+M7부터 폐쇄망 profile은 단순 문서가 아니라 배포 전 검증 대상이다. 운영자가 아래 값을 현장망에 맞게 바꾸면 dashboard, auth-policy, media-control, coturn, time sync가 외부 인터넷 없이 같은 appliance 또는 같은 폐쇄망 대역 안에서 동작해야 한다.
+
+| 영역 | 공개망 기본값 | 폐쇄망 기준 | 운영 판단 |
+| --- | --- | --- | --- |
+| STUN | Google 또는 public STUN 가능 | 내부 STUN/TURN VIP | 직접 ICE 후보를 먼저 만들기 위해 내부 STUN을 우선한다. |
+| TURN | public DNS 가능 | 내부 coturn primary/secondary | direct 실패 시 relay만 사용한다. TURN 후보 수는 기본 1개로 제한한다. |
+| 지도 | 공개 tile provider 가능 | offline renderer 또는 내부 tile server | 외부 tile provider 호출이 있으면 폐쇄망 실패로 본다. |
+| 시간 동기화 | public NTP 가능 | 내부 NTP/chrony host | 영상/음성/AI overlay timestamp를 맞추기 위한 필수 항목이다. |
+| API 진입점 | HTTPS edge | 내부 HTTPS edge | self-signed가 아니라 내부 CA 신뢰 체인을 권장한다. |
+| dependency | public registry 가능 | image tarball/cache bundle | 현장 runtime에서 `npm install`, `gradle download`, `docker pull`을 요구하지 않는다. |
+| secret | 운영 secret manager 또는 `.env` | 현장 보안 채널 `.env` | GitHub, PR, 문서, 채팅에 실제 secret을 기록하지 않는다. |
+
+필수 환경값은 아래 계약을 따른다. 실제 IP는 예시값을 그대로 쓰지 않고 현장 appliance VIP 또는 내부 DNS로 교체한다.
+
+```env
+VITE_STREAM_API_BASE_URL=/media-control
+VITE_MAP_PROVIDER=offline
+DASHBOARD_MAP_PROVIDER=offline
+WEBRTC_STUN_URL=stun:10.0.0.10:3478
+WEBRTC_TURN_URL=turn:10.0.0.10:3478?transport=udp
+TIME_SYNC_MODE=closed_network
+TIME_SYNC_SOURCE_HOST=10.0.0.10
+MEDIA_CONTROL_STUN_URL=stun:10.0.0.10:3478
+MEDIA_CONTROL_TURN_PRIMARY_URL=turn:10.0.0.10:3478
+MEDIA_CONTROL_TURN_SECONDARY_URL=turn:10.0.0.11:3478
+MEDIA_CONTROL_TURN_MAX_HEALTHY_SERVERS=1
+```
+
+배포 전 아래 명령이 통과해야 한다.
+
+```bash
+python3 scripts/closed_network_static_check.py
+docker compose --env-file deploy/compose/.env.single-node.example -f deploy/compose/compose.single-node.poc.yml config --quiet
+```
+
+첫 번째 명령은 공개 STUN/지도 tile/runtime npm install 의존을 찾는 정적 검사다. 두 번째 명령은 compose 구문과 환경값 주입 계약을 확인한다. 실제 현장 `.env`는 `.env.single-node.example` 또는 `.env.closed-network.example`를 복사해 secret만 별도 보안 채널로 주입한다.
+
 ### 반입 산출물
 
 | 산출물 | 예시 | 목적 |

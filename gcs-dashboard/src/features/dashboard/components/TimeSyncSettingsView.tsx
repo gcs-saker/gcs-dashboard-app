@@ -209,12 +209,27 @@ function SettingsPolicyPanel({ tab }: { tab: Exclude<SettingsTab, "time"> }) {
 
   return (
     <section className="time-sync-view__policy" aria-label="운영 정책">
+      <header className="time-sync-view__policy-header">
+        <div>
+          <span>설정 묶음</span>
+          <strong>{settingsTabTitle(tab)}</strong>
+        </div>
+        <button type="button">변경 요청</button>
+      </header>
       {policies[tab].map(([label, value]) => (
         <article key={label}>
           <span>{label}</span>
           <strong>{value}</strong>
+          <em>현재 정책</em>
         </article>
       ))}
     </section>
   );
+}
+
+function settingsTabTitle(tab: Exclude<SettingsTab, "time">): string {
+  if (tab === "streaming") return "스트리밍 수신/송출 정책";
+  if (tab === "security") return "인증/인가 및 감사 정책";
+  if (tab === "map") return "지도 소스 및 마커 정책";
+  return "계정/조직 권한 정책";
 }

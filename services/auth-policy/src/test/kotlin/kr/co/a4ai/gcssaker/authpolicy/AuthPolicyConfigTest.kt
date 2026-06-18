@@ -1,7 +1,10 @@
 package kr.co.a4ai.gcssaker.authpolicy
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.StandardEnvironment
+import org.springframework.beans.factory.ObjectProvider
+import org.springframework.data.redis.core.StringRedisTemplate
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.NoopPrincipalCache
@@ -39,6 +42,7 @@ class AuthPolicyConfigTest {
                     "AUTH_POLICY_SMOKE_USERNAME" to "viewer",
                     "AUTH_POLICY_SMOKE_PASSWORD" to "viewer-password",
                     "AUTH_POLICY_SMOKE_GROUP_ID" to "co-a",
+                    "AUTH_POLICY_OPERATIONAL_EVENT_CACHE_KEY_PREFIX" to "test:ops-events:",
                 ),
             ),
         )
@@ -56,6 +60,7 @@ class AuthPolicyConfigTest {
         assertEquals("op", settings.operatorUsername)
         assertEquals("viewer", settings.smokeUsername)
         assertTrue(settings.redisPrincipalCacheEnabled)
+        assertEquals("test:ops-events:", settings.operationalEventCacheKeyPrefix)
     }
 
     @Test
@@ -88,7 +93,7 @@ class AuthPolicyConfigTest {
         val config = AuthPolicyConfig()
         val settings = AuthRuntimeSettings.fromEnvironment(StandardEnvironment())
         val passwordHasher = config.passwordHasher()
-        val repository = config.authUserRepository(settings, passwordHasher)
+        val repository = config.authUserRepository(settings, passwordHasher, EmptyObjectProvider())
         val tokenService = config.jwtTokenService(settings)
         val sessionService = config.authSessionService(
             repository,
@@ -105,7 +110,12 @@ class AuthPolicyConfigTest {
 
     @Test
     fun `configuration seeds operational event repository for dashboard log integration`() {
-        val repository = AuthPolicyConfig().operationalEventRepository()
+        val repository = AuthPolicyConfig().operationalEventRepository(
+            AuthRuntimeSettings.fromEnvironment(StandardEnvironment()),
+            EmptyObjectProvider(),
+            EmptyObjectProvider<StringRedisTemplate>(),
+            jacksonObjectMapper().findAndRegisterModules(),
+        )
         val principal = AuthenticatedPrincipal("operator01", UserRole.OPERATOR, GroupId("co-a"))
 
         val allEvents = repository.eventsFor(principal, OperationalEventQuery())
@@ -156,4 +166,8 @@ class AuthPolicyConfigTest {
             )
         }
     }
+}
+
+private class EmptyObjectProvider<T> : ObjectProvider<T> {
+    override fun getIfAvailable(): T? = null
 }

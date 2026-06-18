@@ -91,7 +91,7 @@ func (l CachedStreamLister) store(ctx context.Context, streams domain.StreamList
 		return
 	}
 	streams.ForEach(func(stream domain.StreamDescriptor) {
-		if stream.Status != domain.StreamStatusOnline {
+		if stream.Status == domain.StreamStatusUnknown {
 			return
 		}
 		_ = l.cache.Set(ctx, l.presencePrefix+string(stream.Path), string(stream.Status), l.presenceTTL)

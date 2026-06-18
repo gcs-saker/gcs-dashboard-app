@@ -19,6 +19,11 @@ data class TelemetryReadResponse(
     val portDistance: Double,
 )
 
+data class TelemetryHistoryResponse(
+    val recordedAt: Instant,
+    val telemetry: TelemetryReadResponse,
+)
+
 data class TelemetryIngestRequest(
     val uuid: String?,
     val latitude: Double? = null,

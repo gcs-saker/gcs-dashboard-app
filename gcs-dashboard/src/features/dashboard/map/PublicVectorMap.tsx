@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
-import maplibregl from "maplibre-gl";
-import type { StyleSpecification } from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
+import { useState } from "react";
+import * as L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 import type { DashboardMapConfig } from "@/config";
 import type { DashboardStreamSlot } from "../streamTypes";
@@ -11,11 +11,15 @@ import {
   DEFAULT_MAP_CENTER,
   markerClassForStream,
 } from "./mapContracts";
+import { StreamMapPopup } from "./StreamMapPopup";
 
 interface PublicVectorMapProps {
+  activeStreamId: string | null;
   autoFocusEnabled: boolean;
   mapConfig: DashboardMapConfig;
   onAutoFocusChange: (enabled: boolean) => void;
+  onStreamMarkerSelect: (streamId: string) => void;
+  onStreamPopupClose: () => void;
   selectedStream: DashboardStreamSlot;
   streams: DashboardStreamSlot[];
   onMapError: () => void;
@@ -23,51 +27,63 @@ interface PublicVectorMapProps {
 
 const INITIAL_PUBLIC_MAP_ZOOM = 14;
 const USER_INTERACTION_EVENTS = ["dragstart", "zoomstart", "rotatestart", "pitchstart"] as const;
+const MAP_POSITION_EVENTS = ["move", "zoom", "resize"] as const;
 
 interface MapFocusGeometry {
   lat: number;
   lng: number;
 }
 
+interface StreamMarkerPosition {
+  left: number;
+  stream: DashboardStreamSlot;
+  top: number;
+}
+
 export function PublicVectorMap({
+  activeStreamId,
   autoFocusEnabled,
   mapConfig,
   onAutoFocusChange,
+  onStreamMarkerSelect,
+  onStreamPopupClose,
   selectedStream,
   streams,
   onMapError,
 }: PublicVectorMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  const markersRef = useRef<maplibregl.Marker[]>([]);
+  const mapRef = useRef<L.LeafletMap | null>(null);
+  const [markerPositions, setMarkerPositions] = useState<StreamMarkerPosition[]>([]);
   const selectedGeometry = selectedStream.geometry ?? DEFAULT_MAP_CENTER;
-  const publicMapStyle = useMemo(() => mapStyleForConfig(mapConfig), [mapConfig]);
+  const activeStream = streams.find((stream) => stream.id === activeStreamId) ?? null;
+  const tileConfig = useMemo(() => tileConfigForMap(mapConfig), [mapConfig]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const map = new maplibregl.Map({
-      container,
-      style: publicMapStyle,
-      center: [selectedGeometry.lng, selectedGeometry.lat],
-      zoom: INITIAL_PUBLIC_MAP_ZOOM,
+    const map = L.map(container, {
       attributionControl: false,
-    });
+      zoomControl: false,
+    }).setView([selectedGeometry.lat, selectedGeometry.lng], INITIAL_PUBLIC_MAP_ZOOM, { animate: false });
+    const tileLayer = L.tileLayer(tileConfig.urlTemplate, {
+      attribution: tileConfig.attribution,
+      maxZoom: 19,
+      tileSize: 256,
+    }).addTo(map);
     const disableAutoFocus = () => onAutoFocusChange(false);
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
-    map.on("error", onMapError);
+    map.addControl(new L.Control.Attribution({ position: "bottomright", prefix: false }));
+    tileLayer.on("tileerror", onMapError);
     USER_INTERACTION_EVENTS.forEach((eventName) => map.on(eventName, disableAutoFocus));
     mapRef.current = map;
 
     return () => {
       USER_INTERACTION_EVENTS.forEach((eventName) => map.off?.(eventName, disableAutoFocus));
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
+      tileLayer.off("tileerror", onMapError);
       mapRef.current = null;
       map.remove();
     };
-  }, [onAutoFocusChange, onMapError, publicMapStyle]);
+  }, [onAutoFocusChange, onMapError, tileConfig.attribution, tileConfig.urlTemplate]);
 
   useEffect(() => {
     if (!autoFocusEnabled) return;
@@ -78,22 +94,25 @@ export function PublicVectorMap({
     const map = mapRef.current;
     if (!map) return;
 
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = streams
-      .filter((stream) => stream.geometry)
-      .map((stream) =>
-        new maplibregl.Marker({
-          anchor: "bottom",
-          element: createStreamMarkerElement(stream, selectedStream),
-        })
-          .setLngLat([stream.geometry?.lng ?? DEFAULT_MAP_CENTER.lng, stream.geometry?.lat ?? DEFAULT_MAP_CENTER.lat])
-          .addTo(map),
+    const updateMarkerPositions = () => {
+      setMarkerPositions(
+        streams
+          .filter((stream) => stream.geometry)
+          .map((stream) => {
+            const geometry = stream.geometry ?? DEFAULT_MAP_CENTER;
+            const point = map.latLngToContainerPoint([geometry.lat, geometry.lng]);
+            return {
+              left: point.x,
+              stream,
+              top: point.y,
+            };
+          }),
       );
-
-    return () => {
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
     };
+
+    updateMarkerPositions();
+    MAP_POSITION_EVENTS.forEach((eventName) => map.on(eventName, updateMarkerPositions));
+    return () => MAP_POSITION_EVENTS.forEach((eventName) => map.off(eventName, updateMarkerPositions));
   }, [selectedStream, streams]);
 
   const handleAutoFocusClick = () => {
@@ -122,7 +141,24 @@ export function PublicVectorMap({
       data-testid="public-tactical-map"
       aria-label="공개망 위성 전술 지도"
     >
-      <div ref={containerRef} className="tactical-map__maplibre" />
+      <div ref={containerRef} className="tactical-map__leaflet" />
+      <div className="tactical-map__marker-layer" aria-label="지도 스트림 마커">
+        {markerPositions.map(({ left, stream, top }) => (
+          <button
+            key={stream.id}
+            className={`${markerClassForStream(stream, selectedStream)} offline-map-marker--pin`}
+            style={{ left, top }}
+            type="button"
+            title={`${stream.title} / ${coordinateText(stream)}`}
+            aria-label={`${stream.title} 위치 ${coordinateText(stream)}`}
+            onClick={() => onStreamMarkerSelect(stream.id)}
+          >
+            <span className="offline-map-marker__dot" />
+            <span className="offline-map-marker__label">{stream.title}</span>
+          </button>
+        ))}
+      </div>
+      {activeStream ? <StreamMapPopup stream={activeStream} onClose={onStreamPopupClose} /> : null}
       <span className="map-coordinate-source" data-testid="map-coordinate-source">
         {coordinateSourceLabel(selectedStream)}
       </span>
@@ -152,53 +188,19 @@ export function PublicVectorMap({
   );
 }
 
-function focusSelectedStream(map: maplibregl.Map | null, geometry: MapFocusGeometry): void {
-  map?.easeTo({
-    center: [geometry.lng, geometry.lat],
-    duration: 280,
-    essential: true,
+function focusSelectedStream(map: L.LeafletMap | null, geometry: MapFocusGeometry): void {
+  map?.panTo([geometry.lat, geometry.lng], {
+    animate: true,
+    duration: 0.28,
   });
 }
 
-function mapStyleForConfig(mapConfig: DashboardMapConfig): string | StyleSpecification {
-  if (mapConfig.provider !== "esri-satellite") {
-    return mapConfig.styleUrl;
-  }
-
+function tileConfigForMap(mapConfig: DashboardMapConfig): {
+  attribution: string;
+  urlTemplate: string;
+} {
   return {
-    version: 8,
-    sources: {
-      satellite: {
-        attribution: mapConfig.attribution,
-        tiles: [mapConfig.styleUrl],
-        tileSize: 256,
-        type: "raster",
-      },
-    },
-    layers: [
-      {
-        id: "satellite",
-        source: "satellite",
-        type: "raster",
-      },
-    ],
+    attribution: mapConfig.attribution,
+    urlTemplate: mapConfig.styleUrl,
   };
-}
-
-function createStreamMarkerElement(stream: DashboardStreamSlot, selectedStream: DashboardStreamSlot): HTMLButtonElement {
-  const marker = document.createElement("button");
-  marker.className = `${markerClassForStream(stream, selectedStream)} offline-map-marker--pin`;
-  marker.type = "button";
-  marker.title = `${stream.title} / ${coordinateText(stream)}`;
-  marker.setAttribute("aria-label", `${stream.title} 위치 ${coordinateText(stream)}`);
-
-  const dot = document.createElement("span");
-  dot.className = "offline-map-marker__dot";
-
-  const label = document.createElement("span");
-  label.className = "offline-map-marker__label";
-  label.textContent = stream.title;
-
-  marker.append(dot, label);
-  return marker;
 }

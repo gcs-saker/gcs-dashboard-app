@@ -1,0 +1,55 @@
+@mixin hover-surface {
+  position: relative;
+
+  &::after {
+    background: linear-gradient(90deg, transparent, rgba(220, 232, 242, 0.06), transparent);
+    content: "";
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    transition: opacity 180ms ease;
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
+}
+
+@mixin control-transition {
+  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease, transform 120ms ease;
+}
+
+@mixin action-sheen {
+  overflow: hidden;
+  position: relative;
+
+  &::before {
+    background: linear-gradient(90deg, transparent, rgba(61, 184, 255, 0.16), transparent);
+    content: "";
+    inset: 0 auto 0 -118%;
+    pointer-events: none;
+    position: absolute;
+    transform: skewX(-18deg);
+    transition: left 520ms ease;
+    width: 78%;
+  }
+
+  &:hover::before,
+  &:focus-visible::before {
+    left: 136%;
+  }
+}
+
+@mixin pill-label {
+  background: rgba(5, 13, 17, 0.72);
+  border: 1px solid rgba(94, 151, 181, 0.42);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  min-height: 22px;
+  padding: 3px 8px;
+  position: relative;
+  z-index: 2;
+}

@@ -1,5 +1,7 @@
-import { useEffect, useReducer } from "react";
-import { fetchOperationalEvents } from "../operationalEventsApi";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { DASHBOARD_QUERY_KEYS } from "../../stateContracts";
+import { fetchOperationalEventPage } from "../operationalEventsApi";
 import type { OperationalEvent, OperationalEventFilters } from "../operationalEvents";
 
 interface OperationalEventsState {
@@ -9,80 +11,63 @@ interface OperationalEventsState {
   lastUpdatedAt: number | null;
 }
 
-type OperationalEventsAction =
-  | { type: "loading" }
-  | { type: "loaded"; events: OperationalEvent[] }
-  | { type: "error"; message: string };
-
-const initialState: OperationalEventsState = {
-  events: [],
-  errorMessage: null,
-  isLoading: true,
-  lastUpdatedAt: null,
-};
+const OPERATIONAL_EVENT_HISTORY_LIMIT = 500;
+const operationalEventHistoryByFilter = new Map<string, OperationalEvent[]>();
 
 export function useOperationalEvents(
   filters: OperationalEventFilters,
   fetcher: typeof fetch = fetch,
   pollIntervalMs = 10_000,
 ): OperationalEventsState {
-  const [state, dispatch] = useReducer(operationalEventsReducer, initialState);
+  const queryFilters = useMemo(() => ({ ...filters }), [filters]);
+  const filterKey = useMemo(() => JSON.stringify(queryFilters), [queryFilters]);
+  const [events, setEvents] = useState<OperationalEvent[]>(
+    () => operationalEventHistoryByFilter.get(filterKey) ?? [],
+  );
+  const query = useQuery<OperationalEvent[]>({
+    queryKey: [...DASHBOARD_QUERY_KEYS.operationalEvents, queryFilters],
+    queryFn: ({ signal }) =>
+      fetchOperationalEventPage(
+        queryFilters,
+        ((input, init) => fetcher(input, { ...init, signal })) as typeof fetch,
+      ).then((page) => page.events),
+    placeholderData: operationalEventHistoryByFilter.get(filterKey) ?? [],
+    refetchInterval: pollIntervalMs > 0 ? pollIntervalMs : false,
+  });
 
   useEffect(() => {
-    const abortController = new AbortController();
-    let disposed = false;
-    let timeoutId: number | null = null;
+    setEvents(operationalEventHistoryByFilter.get(filterKey) ?? []);
+  }, [filterKey]);
 
-    const load = () => {
-      dispatch({ type: "loading" });
-      void fetchOperationalEvents(filters, ((input, init) =>
-        fetcher(input, { ...init, signal: abortController.signal })) as typeof fetch)
-        .then((events) => {
-          if (disposed) return;
-          dispatch({ type: "loaded", events });
-        })
-        .catch((error) => {
-          if (disposed || abortController.signal.aborted) return;
-          dispatch({
-            type: "error",
-            message: error instanceof Error ? error.message : "Operational events request failed",
-          });
-        })
-        .finally(() => {
-          if (disposed || pollIntervalMs <= 0) return;
-          timeoutId = window.setTimeout(load, pollIntervalMs);
-        });
-    };
+  useEffect(() => {
+    if (!query.data) return;
+    setEvents((current) => {
+      const merged = mergeOperationalEvents(current, query.data ?? []);
+      operationalEventHistoryByFilter.set(filterKey, merged);
+      return merged;
+    });
+  }, [filterKey, query.data]);
 
-    load();
-
-    return () => {
-      disposed = true;
-      abortController.abort();
-      if (timeoutId !== null) {
-        window.clearTimeout(timeoutId);
-      }
-    };
-  }, [fetcher, filters, pollIntervalMs]);
-
-  return state;
+  return {
+    events,
+    errorMessage: query.error instanceof Error ? query.error.message : null,
+    isLoading: query.isLoading || query.isFetching,
+    lastUpdatedAt: query.dataUpdatedAt > 0 ? query.dataUpdatedAt : null,
+  };
 }
 
-function operationalEventsReducer(
-  state: OperationalEventsState,
-  action: OperationalEventsAction,
-): OperationalEventsState {
-  switch (action.type) {
-    case "loading":
-      return { ...state, isLoading: true, errorMessage: null };
-    case "loaded":
-      return {
-        events: action.events,
-        errorMessage: null,
-        isLoading: false,
-        lastUpdatedAt: Date.now(),
-      };
-    case "error":
-      return { ...state, errorMessage: action.message, isLoading: false };
+function mergeOperationalEvents(
+  previous: OperationalEvent[],
+  incoming: OperationalEvent[],
+): OperationalEvent[] {
+  const byId = new Map<string, OperationalEvent>();
+  for (const event of previous) {
+    byId.set(event.id, event);
   }
+  for (const event of incoming) {
+    byId.set(event.id, event);
+  }
+  return Array.from(byId.values())
+    .sort((left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime())
+    .slice(0, OPERATIONAL_EVENT_HISTORY_LIMIT);
 }

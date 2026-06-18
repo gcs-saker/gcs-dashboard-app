@@ -49,6 +49,9 @@ export const StreamCard = memo(function StreamCard({
         </span>
         <span className={`stream-card__visual mode-${stream.mode.toLowerCase()}`}>
           <span className="reticle" />
+          <span className="stream-card__visual-status">
+            {stream.streamPath ? `상태: ${getDashboardStreamStatusText(stream.status)}` : "상태: 주소 대기"}
+          </span>
         </span>
         <span className="stream-card__detail">{getDashboardStreamDisplayName(stream)}</span>
       </button>

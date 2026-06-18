@@ -19,6 +19,8 @@ export function HLSFallbackPlayer({
   autoPlay = true,
   muted = true,
   controls = true,
+  preload = "none",
+  poster,
   className,
   onStatusChange,
 }: HLSFallbackPlayerProps) {
@@ -38,6 +40,8 @@ export function HLSFallbackPlayer({
         muted={muted}
         playsInline
         controls={controls}
+        preload={preload}
+        poster={poster}
         className="hls-fallback-player__video"
       />
       <figcaption className="hls-fallback-player__overlay">

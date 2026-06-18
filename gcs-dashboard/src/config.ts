@@ -8,6 +8,7 @@ const hlsBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_HLS_BASE_URL ??
 const defaultStreamId = import.meta.env.VITE_DEFAULT_STREAM_ID ?? "CID001";
 const defaultStunUrl = import.meta.env.VITE_WEBRTC_STUN_URL ?? "stun:stun.l.google.com:19302";
 const defaultMapProvider = import.meta.env.VITE_MAP_PROVIDER ?? "esri-satellite";
+const staticAssetDeliveryMode = import.meta.env.VITE_STATIC_ASSET_DELIVERY_MODE ?? "offline-bundle";
 const defaultMapStyleUrl =
   import.meta.env.VITE_MAP_STYLE_URL
   ?? "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
@@ -18,6 +19,7 @@ const localWebcamWhipUrl = normalizeLocalDevBaseUrl(
 const talkbackOperatorId = import.meta.env.VITE_TALKBACK_OPERATOR_ID ?? "operator";
 
 export type DashboardMapProvider = "esri-satellite" | "openfreemap" | "offline" | "custom";
+export type StaticAssetDeliveryMode = "public-cdn" | "internal-cdn" | "offline-bundle";
 
 export interface DashboardMapConfig {
   provider: DashboardMapProvider;
@@ -32,6 +34,7 @@ export const STREAM_API_BASE_URL: string = streamApiBaseUrl;
 export const HLS_BASE_URL: string = hlsBaseUrl;
 export const DEFAULT_STREAM_ID: string = defaultStreamId;
 export const MAP_PROVIDER: DashboardMapProvider = parseDashboardMapProvider(defaultMapProvider);
+export const STATIC_ASSET_DELIVERY_MODE: StaticAssetDeliveryMode = parseStaticAssetDeliveryMode(staticAssetDeliveryMode);
 export const MAP_STYLE_URL: string = defaultMapStyleUrl;
 export const FALLBACK_MAP_CONFIG: DashboardMapConfig = Object.freeze({
   provider: MAP_PROVIDER,
@@ -45,6 +48,7 @@ export const TALKBACK_OPERATOR_ID: string = talkbackOperatorId;
 export const WEBRTC_ICE_SERVERS: RTCIceServer[] = defaultStunUrl
   ? [{ urls: defaultStunUrl }]
   : [];
+export const SHOULD_USE_EXTERNAL_ASSET_OPTIMIZATION = STATIC_ASSET_DELIVERY_MODE === "public-cdn";
 
 export function apiUrl(path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -116,4 +120,11 @@ function parseDashboardMapProvider(provider: string): DashboardMapProvider {
     return provider;
   }
   return "custom";
+}
+
+function parseStaticAssetDeliveryMode(mode: string): StaticAssetDeliveryMode {
+  if (mode === "public-cdn" || mode === "internal-cdn" || mode === "offline-bundle") {
+    return mode;
+  }
+  return "offline-bundle";
 }

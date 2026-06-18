@@ -25,6 +25,8 @@ def test_m7_performance_benchmark_check_prints_stable_schema() -> None:
     for metric in [
         "auth_login",
         "auth_refresh",
+        "ops_event_metrics",
+        "ops_event_graphql_page",
         "stream_list",
         "stream_playback",
         "stream_ice_servers",
@@ -51,6 +53,8 @@ def test_m7_performance_benchmark_document_explains_comparison_contract() -> Non
         "first_video_frame_latency_ms",
         "stun-direct",
         "turn-relay",
+        "ops_event_metrics",
+        "ops_event_graphql_page",
         "--insecure",
         "passwordEnv",
     ]

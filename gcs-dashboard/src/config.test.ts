@@ -10,6 +10,8 @@ import {
   MAP_PROVIDER,
   MAP_STYLE_URL,
   streamApiV1Url,
+  SHOULD_USE_EXTERNAL_ASSET_OPTIMIZATION,
+  STATIC_ASSET_DELIVERY_MODE,
   WEBRTC_ICE_SERVERS,
 } from "./config";
 
@@ -70,5 +72,10 @@ describe("config API URL helpers", () => {
   test("defaults to the public satellite provider for connected networks", () => {
     expect(MAP_PROVIDER).toBe("esri-satellite");
     expect(MAP_STYLE_URL).toBe("https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}");
+  });
+
+  test("defaults static assets to offline bundle mode for closed network delivery", () => {
+    expect(STATIC_ASSET_DELIVERY_MODE).toBe("offline-bundle");
+    expect(SHOULD_USE_EXTERNAL_ASSET_OPTIMIZATION).toBe(false);
   });
 });

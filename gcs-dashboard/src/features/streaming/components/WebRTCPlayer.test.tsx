@@ -23,6 +23,7 @@ class MockPeerConnection {
   statsReport = new Map<string, Record<string, unknown>>();
   onconnectionstatechange: ((this: RTCPeerConnection, ev: Event) => unknown) | null = null;
   oniceconnectionstatechange: ((this: RTCPeerConnection, ev: Event) => unknown) | null = null;
+  onicecandidate: ((this: RTCPeerConnection, ev: RTCPeerConnectionIceEvent) => unknown) | null = null;
   onicegatheringstatechange: ((this: RTCPeerConnection, ev: Event) => unknown) | null = null;
   ontrack: ((this: RTCPeerConnection, ev: RTCTrackEvent) => unknown) | null = null;
 
@@ -42,6 +43,12 @@ class MockPeerConnection {
   emitIceConnectionState(iceConnectionState: RTCIceConnectionState) {
     this.iceConnectionState = iceConnectionState;
     this.oniceconnectionstatechange?.call(this as unknown as RTCPeerConnection, new Event("iceconnectionstatechange"));
+  }
+
+  emitIceCandidate(candidate: Partial<RTCIceCandidate>) {
+    this.onicecandidate?.call(this as unknown as RTCPeerConnection, {
+      candidate,
+    } as RTCPeerConnectionIceEvent);
   }
 
   emitIceGatheringComplete() {
@@ -272,6 +279,53 @@ describe("WebRTCPlayer", () => {
       expect.objectContaining({
         hasVideoFrame: true,
         firstFrameLatencyMs: expect.any(Number),
+      }),
+    );
+  });
+
+  test("counts gathered ICE candidate types for TURN load diagnostics", async () => {
+    const onStatusChange = vi.fn();
+    render(
+      <WebRTCPlayer
+        onStatusChange={onStatusChange}
+        whepUrl="https://media.example.test/raw/sample/front/whep"
+        streamId="raw.sample.front"
+      />,
+    );
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    act(() => {
+      peerConnections[0].emitIceCandidate({
+        type: "host",
+        protocol: "udp",
+        candidate: "candidate:1 1 udp 1 192.0.2.10 5000 typ host",
+      });
+      peerConnections[0].emitIceCandidate({
+        type: "srflx",
+        protocol: "udp",
+        candidate: "candidate:2 1 udp 1 203.0.113.10 5001 typ srflx",
+      });
+      peerConnections[0].emitIceCandidate({
+        type: "relay",
+        protocol: "tcp",
+        candidate: "candidate:3 1 tcp 1 203.0.113.20 5002 typ relay",
+      });
+    });
+
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-candidate-total", "3");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-candidate-host", "1");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-candidate-srflx", "1");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-candidate-relay", "1");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-candidate-udp", "2");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-ice-candidate-tcp", "1");
+    expect(onStatusChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        iceCandidateStats: expect.objectContaining({
+          total: 3,
+          srflx: 1,
+          relay: 1,
+        }),
       }),
     );
   });

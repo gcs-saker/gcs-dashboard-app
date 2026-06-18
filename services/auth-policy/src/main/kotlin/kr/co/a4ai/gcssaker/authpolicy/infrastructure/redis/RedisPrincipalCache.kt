@@ -1,4 +1,4 @@
-package kr.co.a4ai.gcssaker.authpolicy
+package kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId

@@ -24,6 +24,8 @@ export interface UseWhipAudioPublisherOptions {
 export interface TalkbackPublisherSnapshot {
   status: TalkbackPublisherStatus;
   errorMessage: string | null;
+  hasLocalAudioTrack: boolean;
+  micLevel: number | null;
   targets: TalkbackTargetState[];
   start: (streamIds: string[]) => Promise<void>;
   stop: () => void;
@@ -37,6 +39,9 @@ const TALKBACK_AUDIO_CONSTRAINTS: MediaTrackConstraints = Object.freeze({
   channelCount: 1,
   sampleRate: 48_000,
 });
+const MIC_ANALYSIS_FFT_SIZE = 256;
+const MIC_ANALYSIS_INTERVAL_MS = 120;
+const MIC_LEVEL_GAIN = 4;
 
 export function useWhipAudioPublisher({
   mediaDevices = navigator.mediaDevices,
@@ -46,17 +51,24 @@ export function useWhipAudioPublisher({
 }: UseWhipAudioPublisherOptions = {}): TalkbackPublisherSnapshot {
   const localStreamRef = useRef<MediaStream | null>(null);
   const peerConnectionsRef = useRef<RTCPeerConnection[]>([]);
+  const stopMicLevelMonitorRef = useRef<(() => void) | null>(null);
   const [status, setStatus] = useState<TalkbackPublisherStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasLocalAudioTrack, setHasLocalAudioTrack] = useState(false);
+  const [micLevel, setMicLevel] = useState<number | null>(null);
   const [targets, setTargets] = useState<TalkbackTargetState[]>([]);
 
   const stop = useCallback((): void => {
     peerConnectionsRef.current.forEach((peerConnection) => peerConnection.close());
     peerConnectionsRef.current = [];
+    stopMicLevelMonitorRef.current?.();
+    stopMicLevelMonitorRef.current = null;
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
     localStreamRef.current = null;
     setStatus("idle");
     setErrorMessage(null);
+    setHasLocalAudioTrack(false);
+    setMicLevel(null);
     setTargets([]);
   }, []);
 
@@ -86,6 +98,8 @@ export function useWhipAudioPublisher({
       if (audioTracks.length === 0) {
         throw new Error("마이크 audio track을 얻지 못했습니다.");
       }
+      setHasLocalAudioTrack(true);
+      stopMicLevelMonitorRef.current = monitorLocalMicLevel(localStream, setMicLevel);
 
       setStatus("publishing");
       const iceServers = peerConnectionFactory ? WEBRTC_ICE_SERVERS : await loadWebRtcIceServers(fetcher);
@@ -110,14 +124,18 @@ export function useWhipAudioPublisher({
     } catch (error) {
       peerConnectionsRef.current.forEach((peerConnection) => peerConnection.close());
       peerConnectionsRef.current = [];
+      stopMicLevelMonitorRef.current?.();
+      stopMicLevelMonitorRef.current = null;
       localStreamRef.current?.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
       setStatus("error");
       setErrorMessage(error instanceof Error ? error.message : "talkback 송신에 실패했습니다.");
+      setHasLocalAudioTrack(false);
+      setMicLevel(null);
     }
   }, [fetcher, mediaDevices, operatorId, peerConnectionFactory, stop]);
 
-  return { status, errorMessage, targets, start, stop };
+  return { status, errorMessage, hasLocalAudioTrack, micLevel, targets, start, stop };
 }
 
 interface PublishTalkbackTargetOptions {
@@ -199,4 +217,43 @@ function waitForIceGatheringComplete(
       }
     };
   });
+}
+
+function monitorLocalMicLevel(
+  stream: MediaStream,
+  setMicLevel: (level: number | null) => void,
+): () => void {
+  const AudioContextConstructor =
+    window.AudioContext ??
+    (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextConstructor) {
+    setMicLevel(null);
+    return () => undefined;
+  }
+
+  const audioContext = new AudioContextConstructor();
+  const source = audioContext.createMediaStreamSource(stream);
+  const analyser = audioContext.createAnalyser();
+  analyser.fftSize = MIC_ANALYSIS_FFT_SIZE;
+  source.connect(analyser);
+  const samples = new Uint8Array(analyser.frequencyBinCount);
+  let intervalId: ReturnType<typeof globalThis.setInterval> | null = globalThis.setInterval(() => {
+    analyser.getByteTimeDomainData(samples);
+    let sum = 0;
+    for (const sample of samples) {
+      const centered = (sample - 128) / 128;
+      sum += centered * centered;
+    }
+    setMicLevel(Math.min(1, Math.sqrt(sum / samples.length) * MIC_LEVEL_GAIN));
+  }, MIC_ANALYSIS_INTERVAL_MS);
+
+  return () => {
+    if (intervalId) {
+      globalThis.clearInterval(intervalId);
+      intervalId = null;
+    }
+    source.disconnect();
+    void audioContext.close();
+    setMicLevel(null);
+  };
 }

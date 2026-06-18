@@ -89,6 +89,17 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
     setEditingStreamId(streamId);
   }, []);
 
+  const selectStream = useCallback((streamIdentifier: string): void => {
+    setStreams((current) => {
+      const nextStreams = ensureEditableCctvSlot(current, streamIdentifier);
+      const matchingStream = nextStreams.find((stream) => stream.id === streamIdentifier || stream.streamPath === streamIdentifier);
+      if (matchingStream) {
+        setSelectedStreamId(matchingStream.id);
+      }
+      return nextStreams;
+    });
+  }, []);
+
   const connectStreamDevice = useCallback((device: StreamDeviceOption): void => {
     setPreferences((current) => {
       const next = setStreamDeviceAlias(current, device.id, device.name);
@@ -145,6 +156,7 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
     disconnectCurrentStreamSlot,
     editingStream,
     openStreamConnection,
+    selectStream,
     selectedStream,
     selectedStreamId,
     setEditingStreamId,

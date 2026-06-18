@@ -1,6 +1,10 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import { QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { createDashboardQueryClient } from "../../queryClient";
+import { DEFAULT_OPERATIONAL_EVENT_FILTERS, useEventLogStore } from "../stores/useEventLogStore";
 import { EventLogView } from "./EventLogView";
 
 const events = [
@@ -41,6 +45,12 @@ const events = [
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  useEventLogStore.setState({
+    filters: DEFAULT_OPERATIONAL_EVENT_FILTERS,
+    categoryFilter: "all",
+    sourceFilter: "all",
+    selectedEventId: null,
+  });
 });
 
 describe("EventLogView", () => {
@@ -48,11 +58,18 @@ describe("EventLogView", () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.includes("/metrics")) {
+        const scopedEvents = url.includes("severity=warn") ? events.filter((event) => event.severity === "warn") : events;
+        return jsonResponse(metricPayload(scopedEvents));
+      }
       const payload = url.includes("severity=warn") ? events.filter((event) => event.severity === "warn") : events;
+      if (url.includes("/page")) {
+        return jsonResponse({ events: payload, nextCursor: null });
+      }
       return jsonResponse(payload);
     }));
 
-    render(<EventLogView />);
+    renderWithQueryClient(<EventLogView />);
 
     expect(screen.getByLabelText("이벤트로그")).toBeInTheDocument();
     expect(screen.getByLabelText("시간대별 네트워크 지표")).toBeInTheDocument();
@@ -74,13 +91,14 @@ describe("EventLogView", () => {
     expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("category=network");
     expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("latencyMs=164");
     await waitFor(() => expect(screen.queryByText("만료된 세션으로 스트림 접근 거절")).not.toBeInTheDocument());
-    expect(fetch).toHaveBeenLastCalledWith(
-      "/api/ops/events?severity=warn",
-      expect.objectContaining({
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      }),
-    );
+    expect(fetch).toHaveBeenCalledWith("/api/ops/events/page?severity=warn&limit=50", expect.objectContaining({
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    }));
+    expect(fetch).toHaveBeenCalledWith("/api/ops/events/metrics?severity=warn", expect.objectContaining({
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    }));
 
     await user.selectOptions(screen.getByLabelText("분류"), "network");
     expect((await screen.findAllByText("TURN 릴레이")).length).toBeGreaterThanOrEqual(1);
@@ -93,10 +111,36 @@ describe("EventLogView", () => {
   });
 });
 
+function renderWithQueryClient(ui: ReactElement) {
+  const client = createDashboardQueryClient();
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
+
 function jsonResponse(payload: unknown, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
     status,
     json: async () => payload,
   } as Response;
+}
+
+function metricPayload(scopedEvents: typeof events) {
+  const latencyValues = scopedEvents.map((event) => event.latencyMs);
+  const throughputValues = scopedEvents.map((event) => event.throughputMbps);
+  return {
+    totalEvents: scopedEvents.length,
+    totalConnections: scopedEvents.reduce((total, event) => total + event.connections, 0),
+    minLatencyMs: latencyValues.length ? Math.min(...latencyValues) : null,
+    avgLatencyMs: latencyValues.length
+      ? latencyValues.reduce((total, value) => total + value, 0) / latencyValues.length
+      : null,
+    maxLatencyMs: latencyValues.length ? Math.max(...latencyValues) : null,
+    avgThroughputMbps: throughputValues.length
+      ? throughputValues.reduce((total, value) => total + value, 0) / throughputValues.length
+      : null,
+    severityCounts: ["info", "warn", "error"].map((severity) => ({
+      severity,
+      count: scopedEvents.filter((event) => event.severity === severity).length,
+    })),
+  };
 }
