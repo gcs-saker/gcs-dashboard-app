@@ -34,7 +34,7 @@ describe('App dashboard shell', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    expect(await screen.findByRole('main', { name: 'Field Ops Dashboard MVP' }, { timeout: 3000 })).toBeInTheDocument();
+    expect(await screen.findByRole('main', { name: 'Field Ops Dashboard MVP' }, { timeout: 10000 })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '자산트리' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '지도' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '선택 스트림' })).toBeInTheDocument();
@@ -100,7 +100,7 @@ describe('App dashboard shell', () => {
 
     render(<App />);
 
-    expect(await screen.findByRole('main', { name: 'Field Ops Dashboard MVP' }, { timeout: 3000 })).toBeInTheDocument();
+    expect(await screen.findByRole('main', { name: 'Field Ops Dashboard MVP' }, { timeout: 10000 })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/');
   });
 

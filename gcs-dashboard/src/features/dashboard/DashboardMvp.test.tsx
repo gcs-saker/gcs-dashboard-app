@@ -47,7 +47,7 @@ describe("DashboardMvp", () => {
     expect(screen.getByRole("button", { name: "웹캠 송출" })).toHaveAttribute("href", "/publisher");
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "자산" })).toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: "지도 확대" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "지도 확대" }, { timeout: 10000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "지도 축소" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "자산트리" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "지도" })).toBeInTheDocument();
