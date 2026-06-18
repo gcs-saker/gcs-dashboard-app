@@ -14,6 +14,7 @@ MEDIAMTX_CONFIG = REPO_ROOT / "gcs-dashboard" / "mediamtx.yml"
 DASHBOARD_DOCKERFILE = REPO_ROOT / "gcs-dashboard" / "Dockerfile"
 DASHBOARD_DOCKERIGNORE = REPO_ROOT / "gcs-dashboard" / ".dockerignore"
 BACKEND_DOCKERIGNORE = REPO_ROOT / "backend" / ".dockerignore"
+MEDIA_CONTROL_DOCKERFILE = REPO_ROOT / "services" / "media-control" / "Dockerfile"
 ENV_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_Docker_env_주입_가이드_v0.1.md"
 
 
@@ -125,10 +126,20 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
     assert services["media-control"]["environment"]["MEDIA_CONTROL_TURN_SECONDARY_URL"] == (
         "${MEDIA_CONTROL_TURN_SECONDARY_URL:-turn:localhost:3479?transport=udp}"
     )
+    assert services["media-control"]["environment"]["GOGC"] == "${MEDIA_CONTROL_GOGC:-100}"
+    assert services["media-control"]["environment"]["GOMEMLIMIT"] == "${MEDIA_CONTROL_GOMEMLIMIT:-512MiB}"
 
     assert services["backend"]["environment"]["TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS"] == (
         "${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}"
     )
+
+
+def test_media_control_dockerfile_pins_go_runtime_gc_profile() -> None:
+    dockerfile = MEDIA_CONTROL_DOCKERFILE.read_text(encoding="utf-8")
+
+    assert "ENV GOGC=100" in dockerfile
+    assert "ENV GOMEMLIMIT=512MiB" in dockerfile
+    assert 'ENTRYPOINT ["/usr/local/bin/media-control"]' in dockerfile
 
 
 def test_single_node_keeps_management_ports_local_but_allows_webrtc_ice_public_bind_override() -> None:
