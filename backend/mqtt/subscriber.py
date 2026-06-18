@@ -9,7 +9,7 @@ import paho.mqtt.client as mqtt
 
 from mqtt.client import MqttSettings
 from mqtt.consumer_bridge import MqttConsumerBridge
-from mqtt.telemetry_sink import DbTelemetrySink
+from modules.telemetry_buffer import build_buffered_telemetry_sink
 from mqtt.topics import telemetry_subscription_topic
 
 
@@ -53,7 +53,7 @@ def build_telemetry_subscriber(
     client_factory: Callable[[str], SubscribableMqttClient] | None = None,
 ) -> MqttSubscriberRuntime:
     resolved_settings = settings or MqttSettings.from_env()
-    resolved_bridge = bridge or MqttConsumerBridge(DbTelemetrySink())
+    resolved_bridge = bridge or MqttConsumerBridge(build_buffered_telemetry_sink())
     factory = client_factory or mqtt.Client
     client = factory(resolved_settings.client_id)
     if resolved_settings.username is not None:

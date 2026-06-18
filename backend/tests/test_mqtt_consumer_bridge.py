@@ -5,6 +5,7 @@ import pytest
 from model.telemetry_model import TelemetryCreate
 from modules.protocol_v2.telemetry import TelemetryEnvelopePayload
 from mqtt.consumer_bridge import MqttConsumerBridge, parse_asset_message
+from modules.telemetry_buffer import BufferedTelemetrySink, InMemoryTelemetryWriteBuffer
 from api.telemetry import upsert_telemetry
 from core.db import Base
 from core.db import engine
@@ -41,6 +42,26 @@ def test_mqtt_consumer_bridge_decodes_protobuf_telemetry_payload() -> None:
     assert sink.items[0].latitude == 35.871435
     assert sink.items[0].longitude == 128.601445
     assert sink.items[0].phoneBatterySOC == 78.0
+
+
+def test_mqtt_consumer_bridge_can_route_telemetry_through_write_buffer() -> None:
+    buffer = InMemoryTelemetryWriteBuffer()
+    bridge = MqttConsumerBridge(BufferedTelemetrySink(buffer=buffer))
+    telemetry = TelemetryEnvelopePayload.create(
+        org_id="a4ai",
+        group_id="co-a",
+        asset_id="raw.mobile.front",
+        latitude=35.871435,
+        longitude=128.601445,
+    )
+
+    result = bridge.handle_message("gcs/a4ai/co-a/raw.mobile.front/telemetry", telemetry.to_protobuf_wire())
+
+    latest = buffer.latest_for("raw.mobile.front")
+    assert result is not None
+    assert latest is not None
+    assert latest.telemetry.latitude == 35.871435
+    assert buffer.stats().pending_history_count == 1
 
 
 def test_mqtt_consumer_bridge_rejects_topic_payload_identity_mismatch() -> None:

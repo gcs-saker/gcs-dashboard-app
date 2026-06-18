@@ -225,12 +225,14 @@ flowchart TD
 
 - Redis 기본값을 유지하되 Dragonfly compose profile을 추가한다.
 - refresh session, principal cache, ICE server list cache, stream presence가 Redis protocol subset만 사용하는지 검증한다.
+- telemetry latest state와 history queue를 분리하는 write buffer 후보로 Dragonfly를 검증한다.
 
 테스트:
 
 - Redis profile 전체 통과
 - Dragonfly profile 전체 통과
 - Redis/Dragonfly 장애 시 degraded behavior 동일성
+- write buffer drain/restore contract
 
 주의:
 
@@ -242,6 +244,7 @@ flowchart TD
 
 - Supabase 없이 PostgreSQL/PostGIS를 geometry/time-series bounded context로 사용한다.
 - 기존 MySQL auth/legacy data는 즉시 이전하지 않는다.
+- telemetry history는 batch 또는 COPY protocol 기반 bulk flush 후보로 검증한다.
 
 테스트:
 
@@ -249,6 +252,7 @@ flowchart TD
 - selected stream latest point query
 - group/asset bounding box query
 - spatial index execution plan 확인
+- bulk flush failure recovery
 
 ### M8-06 gRPC internal streaming PoC
 
