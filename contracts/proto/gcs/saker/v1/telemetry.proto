@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package gcs.saker.v1;
+
+import "gcs/saker/v1/common.proto";
+
+option go_package = "github.com/gcs-saker/gcs-dashboard-app/contracts/gen/go/gcs/saker/v1;sakerv1";
+option java_multiple_files = true;
+option java_package = "kr.co.a4ai.gcssaker.contracts.v1";
+
+message TelemetryEnvelope {
+  string event_id = 1;
+  string org_id = 2;
+  string group_id = 3;
+  string asset_id = 4;
+  AssetKind asset_kind = 5;
+  Timestamped time = 6;
+  GeoPoint position = 7;
+  double heading_deg = 8;
+  double speed_mps = 9;
+  double battery_percent = 10;
+  HealthState health = 11;
+  repeated string active_stream_ids = 12;
+
+  reserved 13 to 20;
+}
+
+message TelemetryBatch {
+  repeated TelemetryEnvelope items = 1;
+}

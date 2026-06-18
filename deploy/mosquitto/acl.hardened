@@ -1,0 +1,31 @@
+# GCS-Saker MQTT ACL
+#
+# Topic namespace:
+#   gcs/{orgId}/{groupId}/{assetId}/telemetry
+#   gcs/{orgId}/{groupId}/{assetId}/status
+#   gcs/{orgId}/{groupId}/{assetId}/command
+#   gcs/{orgId}/{groupId}/{assetId}/command_ack
+#   gcs/ops/{service}/event
+#
+# The dashboard must not connect to MQTT directly. Browser clients use REST/JSON
+# and WebRTC/HLS through the edge proxy.
+
+user gcs_backend_pub
+topic read gcs/+/+/+/telemetry
+topic read gcs/+/+/+/status
+topic write gcs/+/+/+/command
+topic read gcs/+/+/+/command_ack
+topic write gcs/ops/+/event
+
+user gcs_media_control
+topic read gcs/+/+/+/telemetry
+topic read gcs/+/+/+/status
+topic write gcs/+/+/+/command
+topic read gcs/+/+/+/command_ack
+topic write gcs/ops/media-control/event
+
+user gcs_device_gateway
+topic write gcs/+/+/+/telemetry
+topic write gcs/+/+/+/status
+topic read gcs/+/+/+/command
+topic write gcs/+/+/+/command_ack

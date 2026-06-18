@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package gcs.saker.v1;
+
+import "gcs/saker/v1/common.proto";
+
+option go_package = "github.com/gcs-saker/gcs-dashboard-app/contracts/gen/go/gcs/saker/v1;sakerv1";
+option java_multiple_files = true;
+option java_package = "kr.co.a4ai.gcssaker.contracts.v1";
+
+enum OpsSeverity {
+  OPS_SEVERITY_UNSPECIFIED = 0;
+  OPS_SEVERITY_INFO = 1;
+  OPS_SEVERITY_WARN = 2;
+  OPS_SEVERITY_ERROR = 3;
+  OPS_SEVERITY_CRITICAL = 4;
+}
+
+message OpsEvent {
+  string event_id = 1;
+  string service = 2;
+  OpsSeverity severity = 3;
+  string code = 4;
+  string message = 5;
+  Timestamped time = 6;
+  map<string, string> attributes = 7;
+
+  reserved 8 to 20;
+}

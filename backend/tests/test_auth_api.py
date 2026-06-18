@@ -378,9 +378,9 @@ def test_control_api_requires_operator_role(
     monkeypatch,
     auth_headers: Callable[[str, str], dict[str, str]],
 ) -> None:
-    published: list[tuple[str, str]] = []
+    published: list[tuple[str, str | bytes]] = []
 
-    def fake_publish(topic: str, command: str) -> None:
+    def fake_publish(topic: str, command: str | bytes) -> None:
         published.append((topic, command))
 
     monkeypatch.setattr(control, "publish_control_command", fake_publish)
@@ -404,6 +404,38 @@ def test_control_api_requires_operator_role(
         assert published == [("robot/control/CID001", "stop")]
 
 
+def test_control_api_can_publish_protobuf_v2_command_payload(
+    monkeypatch,
+    auth_headers: Callable[[str, str], dict[str, str]],
+) -> None:
+    published: list[tuple[str, str | bytes]] = []
+
+    def fake_publish(topic: str, command: str | bytes) -> None:
+        published.append((topic, command))
+
+    monkeypatch.setattr(control, "publish_control_command", fake_publish)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/control/",
+            json={
+                "cid": "CID001",
+                "direction": "stop",
+                "payload_format": "protobuf",
+                "org_id": "a4ai",
+                "group_id": "co-a",
+                "stream_id": "raw.mobile.front",
+            },
+            headers=auth_headers("operator01", "operator"),
+        )
+
+    assert response.status_code == 200
+    assert response.json()["topic"] == "gcs/a4ai/co-a/CID001/command"
+    assert len(published) == 1
+    assert published[0][0] == "gcs/a4ai/co-a/CID001/command"
+    assert isinstance(published[0][1], bytes)
+
+
 @pytest.mark.parametrize(
     "payload",
     [
@@ -417,9 +449,9 @@ def test_control_api_rejects_untrusted_command_payloads(
     auth_headers: Callable[[str, str], dict[str, str]],
     payload: dict[str, str],
 ) -> None:
-    published: list[tuple[str, str]] = []
+    published: list[tuple[str, str | bytes]] = []
 
-    def fake_publish(topic: str, command: str) -> None:
+    def fake_publish(topic: str, command: str | bytes) -> None:
         published.append((topic, command))
 
     monkeypatch.setattr(control, "publish_control_command", fake_publish)

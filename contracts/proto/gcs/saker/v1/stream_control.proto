@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package gcs.saker.v1;
+
+import "gcs/saker/v1/common.proto";
+
+option go_package = "github.com/gcs-saker/gcs-dashboard-app/contracts/gen/go/gcs/saker/v1;sakerv1";
+option java_multiple_files = true;
+option java_package = "kr.co.a4ai.gcssaker.contracts.v1";
+
+enum StreamState {
+  STREAM_STATE_UNSPECIFIED = 0;
+  STREAM_STATE_PUBLISHING = 1;
+  STREAM_STATE_PLAYABLE = 2;
+  STREAM_STATE_RECONNECTING = 3;
+  STREAM_STATE_STOPPED = 4;
+  STREAM_STATE_ERROR = 5;
+}
+
+message IceServer {
+  repeated string urls = 1;
+  string username = 2;
+  string credential = 3;
+}
+
+message StreamSessionEvent {
+  string event_id = 1;
+  string stream_id = 2;
+  string stream_path = 3;
+  string publisher_asset_id = 4;
+  string group_id = 5;
+  StreamState state = 6;
+  Timestamped time = 7;
+  repeated IceServer ice_servers = 8;
+
+  reserved 9 to 20;
+}
+
+message StreamCommand {
+  string command_id = 1;
+  string stream_id = 2;
+  string target_asset_id = 3;
+  string command_type = 4;
+  bytes payload = 5;
+  Timestamped time = 6;
+
+  reserved 7 to 20;
+}
