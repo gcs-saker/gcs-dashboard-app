@@ -256,6 +256,7 @@ flowchart TD
 
 - browser dashboard에는 gRPC bidi를 직접 붙이지 않는다.
 - Spring/Go/native gateway 사이 내부 streaming API 후보로 검증한다.
+- control-plane publish 경로는 `MessageSender` interface 뒤에 두어 MQTT/gRPC 구현체 교체를 controller 밖에서 처리한다.
 
 테스트:
 
@@ -263,6 +264,7 @@ flowchart TD
 - backpressure
 - reconnect
 - auth metadata propagation
+- MessageSender runtime selection contract
 
 ### M8-07 FastAPI AI sidecar contract
 
