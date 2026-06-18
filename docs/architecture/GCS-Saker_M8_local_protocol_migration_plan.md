@@ -269,6 +269,8 @@ flowchart TD
 
 - browser dashboard에는 gRPC bidi를 직접 붙이지 않는다.
 - Spring/Go/native gateway 사이 내부 streaming API 후보로 검증한다.
+- 먼저 `gateway_service.proto`로 내부 bidi streaming 계약을 고정하고, runtime stub/codegen은 별도 단계에서 붙인다.
+- 인증 credential은 protobuf payload field가 아니라 gRPC metadata로 전달한다.
 
 테스트:
 
@@ -276,6 +278,7 @@ flowchart TD
 - backpressure
 - reconnect
 - auth metadata propagation
+- proto descriptor compile
 
 ### M8-07 FastAPI AI sidecar contract
 

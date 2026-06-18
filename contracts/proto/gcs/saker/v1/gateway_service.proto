@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package gcs.saker.v1;
+
+import "gcs/saker/v1/common.proto";
+import "gcs/saker/v1/stream_control.proto";
+import "gcs/saker/v1/telemetry.proto";
+
+option go_package = "github.com/gcs-saker/gcs-dashboard-app/contracts/gen/go/gcs/saker/v1;sakerv1";
+option java_multiple_files = true;
+option java_package = "kr.co.a4ai.gcssaker.contracts.v1";
+
+enum GatewayAckStatus {
+  GATEWAY_ACK_STATUS_UNSPECIFIED = 0;
+  GATEWAY_ACK_STATUS_ACCEPTED = 1;
+  GATEWAY_ACK_STATUS_REJECTED = 2;
+  GATEWAY_ACK_STATUS_BACKPRESSURE = 3;
+  GATEWAY_ACK_STATUS_RECONNECT = 4;
+}
+
+message CommandAck {
+  string command_id = 1;
+  string stream_id = 2;
+  string asset_id = 3;
+  GatewayAckStatus status = 4;
+  string reason_code = 5;
+  Timestamped time = 6;
+
+  reserved 7 to 20;
+}
+
+message GatewayStreamRequest {
+  string request_id = 1;
+  string org_id = 2;
+  string group_id = 3;
+  string asset_id = 4;
+
+  oneof payload {
+    TelemetryEnvelope telemetry = 10;
+    StreamSessionEvent stream_event = 11;
+    CommandAck command_ack = 12;
+  }
+
+  reserved 13 to 30;
+}
+
+message GatewayStreamResponse {
+  string response_id = 1;
+  string request_id = 2;
+  GatewayAckStatus status = 3;
+  string reason_code = 4;
+
+  oneof payload {
+    StreamCommand command = 10;
+    TelemetryBatch telemetry_batch = 11;
+  }
+
+  reserved 12 to 30;
+}
+
+service SakerGatewayService {
+  rpc Exchange(stream GatewayStreamRequest) returns (stream GatewayStreamResponse);
+}

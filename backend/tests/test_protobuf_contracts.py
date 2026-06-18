@@ -46,6 +46,7 @@ def test_proto_files_use_stable_package_and_language_options() -> None:
 def test_evolvable_event_messages_keep_reserved_field_ranges() -> None:
     event_proto_files = [
         "ai_overlay.proto",
+        "gateway_service.proto",
         "ops_event.proto",
         "stream_control.proto",
         "telemetry.proto",
@@ -56,3 +57,14 @@ def test_evolvable_event_messages_keep_reserved_field_ranges() -> None:
         message_names = re.findall(r"message\s+(\w+)\s+\{", content)
         assert message_names, f"{file_name} has no message definitions"
         assert "reserved" in content, f"{file_name} must reserve fields for compatibility"
+
+
+def test_grpc_gateway_contract_is_internal_bidi_streaming_only() -> None:
+    content = (PROTO_ROOT / "gcs" / "saker" / "v1" / "gateway_service.proto").read_text(encoding="utf-8")
+
+    assert "service SakerGatewayService" in content
+    assert "rpc Exchange(stream GatewayStreamRequest) returns (stream GatewayStreamResponse);" in content
+    assert "oneof payload" in content
+    assert "Browser" not in content
+    assert "Dashboard" not in content
+    assert "DashboardRequest" not in content
