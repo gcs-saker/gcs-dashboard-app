@@ -16,4 +16,7 @@ class BearerPrincipalResolver(
         } catch (_: IllegalArgumentException) {
             throw UnauthorizedApiError(AuthApiErrors.INVALID_TOKEN)
         }
+
+    fun principalOrNull(authorization: String?) =
+        runCatching { requirePrincipal(authorization) }.getOrNull()
 }

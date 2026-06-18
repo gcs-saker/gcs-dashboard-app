@@ -1,5 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
+import kr.co.a4ai.gcssaker.authpolicy.application.NoopSettingsAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.application.SettingsAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfig
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfigRepository
@@ -22,6 +24,7 @@ class TimeSyncController(
     private val repository: TimeSyncConfigRepository,
     private val statusService: TimeSyncStatusService,
     private val principalResolver: BearerPrincipalResolver,
+    private val settingsAuditPublisher: SettingsAuditPublisher = NoopSettingsAuditPublisher,
 ) {
     @GetMapping(TimeSyncApiRoutes.STATUS)
     @RequiresBearerAuth
@@ -49,8 +52,9 @@ class TimeSyncController(
     ): TimeSyncStatusResponse {
         val principal = principalResolver.requirePrincipal(authorization)
         requireOperator(principal)
+        val previous = repository.current()
         try {
-            repository.update(
+            val next = repository.update(
                 UpdateTimeSyncConfigCommand(
                     mode = request.mode,
                     sourceHost = request.sourceHost,
@@ -60,6 +64,7 @@ class TimeSyncController(
                 principal,
                 Instant.now(),
             )
+            settingsAuditPublisher.publishTimeSyncConfigChanged(principal, previous, next)
         } catch (exc: IllegalArgumentException) {
             throw BadRequestApiError(exc.message ?: TimeSyncApiErrors.INVALID_TIME_SYNC_CONFIG)
         }

@@ -70,6 +70,10 @@ class RedisOperationalEventRepository(
     ): OperationalEventPage =
         delegate.eventPageFor(principal, query)
 
+    override fun append(event: OperationalEventReadModel) {
+        delegate.append(event)
+    }
+
     override fun metricsFor(
         principal: AuthenticatedPrincipal,
         query: OperationalEventQuery,

@@ -74,7 +74,7 @@ export async function logoutRequest(fetcher: typeof fetch = fetch): Promise<void
   await fetcher(authUrl(AUTH_ROUTES.logout), {
     method: "POST",
     credentials: "include",
-    headers: AUTH_CSRF_HEADERS,
+    headers: buildAuthHeaders(AUTH_CSRF_HEADERS),
   });
   clearAuthSession();
 }

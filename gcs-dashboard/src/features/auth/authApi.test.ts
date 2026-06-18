@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { AUTH_ACCEPT_HEADERS, CSRF_HEADER_NAME, CSRF_HEADER_VALUE, authenticatedFetch } from "./authApi";
-import { clearAuthSession, getStoredAccessToken } from "./authStorage";
+import { AUTH_ACCEPT_HEADERS, CSRF_HEADER_NAME, CSRF_HEADER_VALUE, authenticatedFetch, logoutRequest } from "./authApi";
+import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 
 describe("authenticatedFetch", () => {
   afterEach(() => {
@@ -113,5 +113,29 @@ describe("authenticatedFetch", () => {
         headers: expect.objectContaining({ [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE }),
       }),
     );
+  });
+
+  test("logout sends csrf and memory bearer token so the backend can audit the principal", async () => {
+    storeAuthSession({
+      accessToken: "logout-access-token",
+      expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+      user: { username: "operator01", role: "operator" },
+    });
+    const fetcher = vi.fn(async () => new Response(null, { status: 204 }));
+
+    await logoutRequest(fetcher);
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/auth-policy/auth/logout",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        headers: expect.objectContaining({
+          [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
+          Authorization: "Bearer logout-access-token",
+        }),
+      }),
+    );
+    expect(getStoredAccessToken()).toBeNull();
   });
 });

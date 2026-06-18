@@ -5,8 +5,11 @@ import kr.co.a4ai.gcssaker.authpolicy.application.InMemoryOperationalAuditSink
 import kr.co.a4ai.gcssaker.authpolicy.application.OperationalAuditPublisherMetrics
 import kr.co.a4ai.gcssaker.authpolicy.application.OperationalAuditRecord
 import kr.co.a4ai.gcssaker.authpolicy.application.OperationalAuditSink
+import kr.co.a4ai.gcssaker.authpolicy.application.RepositorySecurityAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditEventContract
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
+import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -74,6 +77,28 @@ class OperationalAuditPublisherTest {
 
         assertEquals(1, metrics.snapshot().submitted)
         assertEquals(1, metrics.snapshot().failed)
+    }
+
+    @Test
+    fun `security audit masks usernames and never records raw password or token`() {
+        val repository = InMemoryOperationalEventRepository(emptyList())
+        val publisher = RepositorySecurityAuditPublisher(
+            repository = repository,
+            now = { Instant.parse("2026-06-01T00:00:00Z") },
+        )
+
+        publisher.publishLoginFailed("operator01")
+
+        val event = repository.eventsFor(
+            SecurityAuditEventContract.UNKNOWN_PRINCIPAL,
+            OperationalEventQuery(query = SecurityAuditEventContract.EVENT_TYPE_LOGIN_FAILED),
+        ).single()
+        assertEquals("security", event.category)
+        assertEquals(SecurityAuditEventContract.EVENT_TYPE_LOGIN_FAILED, event.eventType)
+        assertEquals("로그인 실패: o***1", event.message)
+        assertEquals(false, event.message.contains("operator01"))
+        assertEquals(false, event.message.contains("password"))
+        assertEquals(false, event.message.contains("token"))
     }
 
     private object OperationalAuditFixtures {

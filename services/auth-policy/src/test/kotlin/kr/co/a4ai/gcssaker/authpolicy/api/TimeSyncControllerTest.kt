@@ -11,6 +11,9 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfig
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncMode
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncStatusService
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
+import kr.co.a4ai.gcssaker.authpolicy.application.RepositorySettingsAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalEventRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -93,6 +96,36 @@ class TimeSyncControllerTest {
         assertEquals("10.10.10.10", response.sourceHost)
         assertEquals(500, response.driftWarnMs)
         assertEquals("operator-a", response.updatedBy)
+    }
+
+    @Test
+    fun `updateConfig writes settings audit event for operator changes`() {
+        val auditRepository = InMemoryOperationalEventRepository(emptyList())
+        val auditedController = TimeSyncController(
+            repository = repository,
+            statusService = TimeSyncStatusService(repository, now = { now }, monotonicMs = { 42_000 }),
+            principalResolver = BearerPrincipalResolver(sessions),
+            settingsAuditPublisher = RepositorySettingsAuditPublisher(auditRepository, now = { now }),
+        )
+
+        auditedController.updateConfig(
+            authorization = bearer(accessToken("operator-a")),
+            request = TimeSyncConfigRequest(
+                mode = "closed_network",
+                sourceHost = "10.10.10.10",
+                sourcePort = 123,
+                driftWarnMs = 500,
+            ),
+        )
+
+        val auditEvent = auditRepository.eventsFor(
+            sessions.login("operator-a", "pass")!!.principal,
+            OperationalEventQuery(query = "time_sync.config.updated"),
+        ).single()
+        assertEquals("audit", auditEvent.category)
+        assertEquals("time_sync.config.updated", auditEvent.eventType)
+        assertEquals("auth-policy", auditEvent.sourceService)
+        assertEquals("operator-a", auditEvent.message.substringAfter("by "))
     }
 
     @Test

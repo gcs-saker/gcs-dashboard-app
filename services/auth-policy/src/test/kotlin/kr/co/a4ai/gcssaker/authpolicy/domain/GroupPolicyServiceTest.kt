@@ -69,12 +69,14 @@ class GroupPolicyServiceTest {
     fun `active cross group route policy allows sibling group stream`() {
         val policyService = GroupPolicyService(
             groups = groups,
-            routePolicies = listOf(
+            routePolicies = StreamRoutePolicies.of(
+                listOf(
                 StreamRoutePolicy(
                     viewerGroupId = companyA.id,
                     publisherGroupId = companyB.id,
                     scope = StreamRouteScope.CROSS_GROUP,
                     expiresAt = now.plusSeconds(300),
+                ),
                 ),
             ),
             clock = clock,
@@ -92,12 +94,14 @@ class GroupPolicyServiceTest {
     fun `expired cross group route policy does not allow sibling group stream`() {
         val policyService = GroupPolicyService(
             groups = groups,
-            routePolicies = listOf(
+            routePolicies = StreamRoutePolicies.of(
+                listOf(
                 StreamRoutePolicy(
                     viewerGroupId = companyA.id,
                     publisherGroupId = companyB.id,
                     scope = StreamRouteScope.CROSS_GROUP,
                     expiresAt = now.minusSeconds(1),
+                ),
                 ),
             ),
             clock = clock,
@@ -115,11 +119,13 @@ class GroupPolicyServiceTest {
     fun `descendant route policy allows child unit stream`() {
         val policyService = GroupPolicyService(
             groups = groups,
-            routePolicies = listOf(
+            routePolicies = StreamRoutePolicies.of(
+                listOf(
                 StreamRoutePolicy(
                     viewerGroupId = companyA.id,
                     publisherGroupId = companyB.id,
                     scope = StreamRouteScope.DESCENDANT_GROUPS,
+                ),
                 ),
             ),
             clock = clock,
@@ -131,5 +137,23 @@ class GroupPolicyServiceTest {
 
         assertTrue(decision.allowed)
         assertEquals("explicit descendant route policy", decision.reason)
+    }
+
+    @Test
+    fun `route policies are exposed through first class collection without leaking mutable list`() {
+        val policies = StreamRoutePolicies.of(
+            listOf(
+                StreamRoutePolicy(
+                    viewerGroupId = companyA.id,
+                    publisherGroupId = companyB.id,
+                    scope = StreamRouteScope.CROSS_GROUP,
+                    expiresAt = now.plusSeconds(300),
+                ),
+            ),
+        )
+
+        assertEquals(1, policies.activeFor(companyA.id, now).size)
+        assertEquals(emptyList(), policies.activeFor(companyA.id, now.plusSeconds(301)))
+        assertEquals(1, policies.toList().size)
     }
 }

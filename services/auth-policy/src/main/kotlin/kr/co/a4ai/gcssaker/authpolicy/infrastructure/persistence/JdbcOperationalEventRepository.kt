@@ -65,6 +65,12 @@ class JdbcOperationalEventRepository(
         )
     }
 
+    override fun append(event: OperationalEventReadModel) {
+        if (!existsById(event.id)) {
+            insert(event)
+        }
+    }
+
     override fun metricsFor(
         principal: AuthenticatedPrincipal,
         query: OperationalEventQuery,
@@ -143,27 +149,31 @@ class JdbcOperationalEventRepository(
     private fun seedEvents(initialEvents: Collection<OperationalEventReadModel>) {
         initialEvents.forEach { event ->
             if (!existsById(event.id)) {
-                jdbc.update(
-                    OperationalEventSql.insert,
-                    event.id,
-                    Timestamp.from(event.occurredAt),
-                    event.severity.lowercase(),
-                    event.category,
-                    event.eventType,
-                    event.sourceService,
-                    event.source,
-                    event.message,
-                    event.connections,
-                    event.latencyMs,
-                    event.throughputMbps,
-                    event.groupId.value,
-                    event.streamId,
-                    event.connectionId,
-                    event.icePath,
-                    event.relayFallbackReason,
-                )
+                insert(event)
             }
         }
+    }
+
+    private fun insert(event: OperationalEventReadModel) {
+        jdbc.update(
+            OperationalEventSql.insert,
+            event.id,
+            Timestamp.from(event.occurredAt),
+            event.severity.lowercase(),
+            event.category,
+            event.eventType,
+            event.sourceService,
+            event.source,
+            event.message,
+            event.connections,
+            event.latencyMs,
+            event.throughputMbps,
+            event.groupId.value,
+            event.streamId,
+            event.connectionId,
+            event.icePath,
+            event.relayFallbackReason,
+        )
     }
 
     private fun existsById(id: String): Boolean =

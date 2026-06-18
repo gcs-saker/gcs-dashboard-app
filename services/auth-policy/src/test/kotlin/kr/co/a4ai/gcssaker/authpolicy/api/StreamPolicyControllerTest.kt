@@ -10,6 +10,8 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationUnit
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
+import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -74,6 +76,7 @@ class StreamPolicyControllerTest {
         assertTrue(response.allowed)
         assertEquals("same group stream", response.reason)
         assertEquals("co-a", response.groupId)
+        assertEquals(listOf("view_stream"), response.permissions)
     }
 
     @Test
@@ -126,9 +129,69 @@ class StreamPolicyControllerTest {
         assertEquals(HttpStatus.UNAUTHORIZED, error.statusCode)
     }
 
+    @Test
+    fun `stream access decision publishes allow and deny audit events`() {
+        val audit = RecordingSecurityAuditPublisher()
+        val auditedController = StreamPolicyController(
+            BearerPrincipalResolver(sessions),
+            GroupPolicyService(
+                listOf(
+                    OrganizationUnit(GroupId("bn-1"), "1 Battalion", GroupType.BATTALION),
+                    OrganizationUnit(GroupId("co-a"), "A Company", GroupType.COMPANY, GroupId("bn-1")),
+                    OrganizationUnit(GroupId("co-b"), "B Company", GroupType.COMPANY, GroupId("bn-1")),
+                ),
+            ),
+            audit,
+        )
+        val token = accessToken("viewer-a")
+
+        auditedController.access(
+            bearer(token),
+            StreamAccessRequest(
+                streamId = "raw.sample.front",
+                path = "raw/sample/front",
+                publisherGroupId = "co-a",
+            ),
+        )
+        auditedController.access(
+            bearer(token),
+            StreamAccessRequest(
+                streamId = "raw.company-b.front",
+                path = "raw/company-b/front",
+                publisherGroupId = "co-b",
+            ),
+        )
+
+        assertEquals(
+            listOf("raw.sample.front:true:same group stream", "raw.company-b.front:false:stream is outside principal group scope"),
+            audit.events,
+        )
+    }
+
     private fun accessToken(username: String): String =
         sessions.login(username, "pass")?.accessToken ?: error("login failed")
 
     private fun bearer(token: String): String =
         "${AuthTokenContract.BEARER_PREFIX}$token"
+
+    private class RecordingSecurityAuditPublisher : SecurityAuditPublisher {
+        val events = mutableListOf<String>()
+
+        override fun publishLoginSucceeded(principal: AuthenticatedPrincipal) = Unit
+
+        override fun publishLoginFailed(username: String) = Unit
+
+        override fun publishLogout(principal: AuthenticatedPrincipal?) = Unit
+
+        override fun publishRefreshFailed(reason: String) = Unit
+
+        override fun publishStreamAccess(
+            principal: AuthenticatedPrincipal,
+            streamId: String,
+            allowed: Boolean,
+            reason: String,
+        ) {
+            events.add("$streamId:$allowed:$reason")
+        }
+    }
 }

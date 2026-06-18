@@ -189,6 +189,8 @@ class OperationalEventCacheTest {
             return eventList(principal, query)
         }
 
+        override fun append(event: OperationalEventReadModel) = Unit
+
         override fun eventPageFor(
             principal: AuthenticatedPrincipal,
             query: OperationalEventPageQuery,
@@ -242,6 +244,8 @@ class OperationalEventCacheTest {
             principal: AuthenticatedPrincipal,
             query: OperationalEventQuery,
         ): List<OperationalEventReadModel> = error("database unavailable")
+
+        override fun append(event: OperationalEventReadModel) = Unit
     }
 
     private class InMemoryStringKeyValueStore : StringKeyValueStore {
