@@ -20,7 +20,6 @@ import {
   resetDashboardLayout,
   setDashboardWidgetPinned,
   setDashboardWidgetVisible,
-  type DashboardLayoutItem,
   type DashboardWidgetDefinition,
   type DashboardWidgetId,
 } from "./dashboardLayout";
@@ -34,8 +33,10 @@ import {
 } from "./streamTypes";
 import type { RealtimePlayerSnapshot } from "../streaming/types";
 import { useDashboardStreams } from "./hooks/useDashboardStreams";
+import { useDashboardUserPreferences } from "./hooks/useDashboardUserPreferences";
 import { telemetryRowsForStream, type AudioAnalysisSnapshot } from "./dashboardPresentation";
 import { DASHBOARD_STREAM_STATUS } from "../stateContracts";
+import type { CctvLayoutMode } from "./userPreferences";
 
 const loadTacticalLeafletMap = () => import("./map/TacticalLeafletMap");
 const loadEventLogView = () => import("./components/EventLogView");
@@ -44,9 +45,6 @@ const loadTimeSyncSettingsView = () => import("./components/TimeSyncSettingsView
 const TacticalLeafletMap = lazy(() => loadTacticalLeafletMap().then((module) => ({ default: module.TacticalLeafletMap })));
 const EventLogView = lazy(() => loadEventLogView().then((module) => ({ default: module.EventLogView })));
 const TimeSyncSettingsView = lazy(() => loadTimeSyncSettingsView().then((module) => ({ default: module.TimeSyncSettingsView })));
-
-type DashboardView = "dashboard" | "cctv" | "events" | "status" | "settings";
-type CctvLayoutMode = "3x3" | "4x4" | "5x5" | "auto";
 
 interface StreamAvailabilityNotification {
   id: string;
@@ -79,14 +77,21 @@ export function DashboardMvp() {
   const telemetryWidget = getDashboardWidgetDefinition("telemetry-panel");
   const opsSummaryWidget = getDashboardWidgetDefinition("ops-summary");
   const aiResultsWidget = getDashboardWidgetDefinition("ai-results");
-  const [layout, setLayout] = useState<DashboardLayoutItem[]>(() => resetDashboardLayout());
+  const {
+    isWidgetPinned,
+    isWidgetVisible,
+    preferences,
+    resetWidgetLayout,
+    setActiveView,
+    setCctvLayoutMode,
+    setCctvQualityMode,
+    setLayout,
+    setStreamAlias,
+  } = useDashboardUserPreferences(currentUser?.username);
   const [isWidgetDialogOpen, setIsWidgetDialogOpen] = useState(false);
-  const [activeView, setActiveView] = useState<DashboardView>("dashboard");
   const [isAssetDrawerOpen, setIsAssetDrawerOpen] = useState(false);
   const [audioActiveStreamId, setAudioActiveStreamId] = useState<string | null>(null);
   const [audioAnalysis, setAudioAnalysis] = useState<AudioAnalysisSnapshot | null>(null);
-  const [cctvLayoutMode, setCctvLayoutMode] = useState<CctvLayoutMode>("4x4");
-  const [cctvQualityMode, setCctvQualityMode] = useState<CctvQualityMode>("preview");
   const [talkbackTargetStreamIds, setTalkbackTargetStreamIds] = useState<string[]>([]);
   const [popoutWidgetId, setPopoutWidgetId] = useState<DashboardWidgetId | null>(null);
   const [layoutMessage, setLayoutMessage] = useState("기본 레이아웃");
@@ -109,7 +114,12 @@ export function DashboardMvp() {
     streamDevices,
     streams,
     toggleStreamAiMode: toggleStreamAiModeState,
-  } = useDashboardStreams(handleAuthFailure);
+  } = useDashboardStreams({
+    onAuthFailure: handleAuthFailure,
+    onStreamDeviceAliasChange: setStreamAlias,
+    streamPreferences: preferences.streamPreferences,
+  });
+  const { activeView, cctvLayoutMode, cctvQualityMode, layout } = preferences;
   const mapFocus = useMemo(() => getMapFocusForStream(selectedStream), [selectedStream]);
   const telemetryRows = useMemo(() => telemetryRowsForStream(selectedStream), [selectedStream]);
   const assetTreeRoot = useMemo(() => mergeAssetTreeWithStreams(DEFAULT_ASSET_TREE, streams), [streams]);
@@ -163,15 +173,6 @@ export function DashboardMvp() {
     return () => globalThis.clearTimeout(timeoutId);
   }, []);
 
-  const isWidgetPinned = useCallback(
-    (widgetId: DashboardWidgetId): boolean => layout.find((item) => item.id === widgetId)?.pinned ?? false,
-    [layout],
-  );
-  const isWidgetVisible = useCallback(
-    (widgetId: DashboardWidgetId): boolean => layout.find((item) => item.id === widgetId)?.visible ?? false,
-    [layout],
-  );
-
   const panelClass = useCallback(
     (baseClass: string, widgetId: DashboardWidgetId): string => `${baseClass} ${isWidgetPinned(widgetId) ? "is-pinned" : ""}`,
     [isWidgetPinned],
@@ -189,10 +190,10 @@ export function DashboardMvp() {
   }, []);
 
   const resetLayout = useCallback((): void => {
-    setLayout(resetDashboardLayout());
+    resetWidgetLayout(resetDashboardLayout());
     setPopoutWidgetId(null);
     setLayoutMessage("기본 레이아웃으로 초기화됨");
-  }, []);
+  }, [resetWidgetLayout]);
 
   const handleLogout = useCallback((): void => {
     logout();

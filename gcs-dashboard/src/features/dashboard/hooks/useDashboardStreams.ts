@@ -19,13 +19,18 @@ import { AuthApiError } from "../../auth/authApi";
 import {
   applyStreamDeviceAliases,
   loadStreamPreferences,
-  saveStreamPreferences,
-  setStreamDeviceAlias,
   type StreamPreferencesSnapshot,
 } from "../streamPreferences";
 
-export function useDashboardStreams(onAuthFailure?: () => void) {
-  const [preferences, setPreferences] = useState<StreamPreferencesSnapshot>(() => loadStreamPreferences());
+interface UseDashboardStreamsOptions {
+  readonly onAuthFailure?: () => void;
+  readonly onStreamDeviceAliasChange?: (deviceId: string, alias: string) => void;
+  readonly streamPreferences?: StreamPreferencesSnapshot;
+}
+
+export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
+  const { onAuthFailure, onStreamDeviceAliasChange, streamPreferences } = options;
+  const preferences = streamPreferences ?? loadStreamPreferences();
   const [streams, setStreams] = useState(() => DEFAULT_DASHBOARD_STREAMS);
   const [streamDevices, setStreamDevices] = useState<StreamDeviceOption[]>(() =>
     applyStreamDeviceAliases(MOCK_STREAM_DEVICES, preferences.deviceAliases),
@@ -101,11 +106,7 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
   }, []);
 
   const connectStreamDevice = useCallback((device: StreamDeviceOption): void => {
-    setPreferences((current) => {
-      const next = setStreamDeviceAlias(current, device.id, device.name);
-      saveStreamPreferences(next);
-      return next;
-    });
+    onStreamDeviceAliasChange?.(device.id, device.name);
     setStreams((current) =>
       current.map((stream) =>
         stream.id === editingStreamId ? connectDeviceToStreamSlot(stream, device) : stream,
@@ -115,17 +116,13 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
       setSelectedStreamId(editingStreamId);
     }
     setEditingStreamId(null);
-  }, [editingStreamId]);
+  }, [editingStreamId, onStreamDeviceAliasChange]);
 
   const connectManualStreamAddress = useCallback((address: string, displayName: string): void => {
     if (!editingStreamId) return;
     const editingStreamTitle = streams.find((stream) => stream.id === editingStreamId)?.title ?? "직접 연결";
     const device = createManualStreamDeviceOption(address, displayName, editingStreamTitle);
-    setPreferences((current) => {
-      const next = setStreamDeviceAlias(current, device.id, device.name);
-      saveStreamPreferences(next);
-      return next;
-    });
+    onStreamDeviceAliasChange?.(device.id, device.name);
     setStreams((current) =>
       current.map((stream) =>
         stream.id === editingStreamId ? connectDeviceToStreamSlot(stream, device) : stream,
@@ -133,7 +130,7 @@ export function useDashboardStreams(onAuthFailure?: () => void) {
     );
     setSelectedStreamId(editingStreamId);
     setEditingStreamId(null);
-  }, [editingStreamId, streams]);
+  }, [editingStreamId, onStreamDeviceAliasChange, streams]);
 
   const disconnectCurrentStreamSlot = useCallback((): void => {
     setStreams((current) =>
