@@ -115,6 +115,14 @@ export function DashboardMvp() {
   const assetTreeRoot = useMemo(() => mergeAssetTreeWithStreams(DEFAULT_ASSET_TREE, streams), [streams]);
   const cctvGridSize = getCctvGridSize(cctvLayoutMode);
   const cctvStreams = useMemo(() => buildCctvGridStreams(streams, cctvGridSize), [streams, cctvGridSize]);
+  const cctvStatusSummary = useMemo(
+    () => ({
+      fallback: streams.filter((stream) => stream.status === "fallback").length,
+      offline: streams.filter((stream) => stream.status === "offline").length,
+      online: streams.filter((stream) => stream.status === "online").length,
+    }),
+    [streams],
+  );
 
   useEffect(() => {
     const availableStreams = streams.filter(isReceivableStream);
@@ -298,6 +306,18 @@ export function DashboardMvp() {
     );
     setLayoutMessage("Talkback 대상 변경됨");
   }, []);
+  const renderCctvCard = useCallback(
+    (stream: DashboardStreamSlot, isSelected: boolean) => (
+      <CctvChannelCard
+        hasAudioActivity={stream.id === audioActiveStreamId}
+        isSelected={isSelected}
+        onSelect={openStreamConnection}
+        qualityMode={cctvQualityMode}
+        stream={stream}
+      />
+    ),
+    [audioActiveStreamId, cctvQualityMode, openStreamConnection],
+  );
 
   return (
     <main className="ops-dashboard" aria-label="Field Ops Dashboard MVP">
@@ -408,9 +428,9 @@ export function DashboardMvp() {
               <span>{cctvGridSize * cctvGridSize}채널 감시 레이아웃 · {cctvQualityMode === "preview" ? "저화질 Preview" : "고화질 확인"}</span>
             </div>
             <div className="cctv-view__summary" aria-label="CCTV 운영 요약">
-              <span>LIVE {streams.filter((stream) => stream.status === "online").length}</span>
-              <span>FALLBACK {streams.filter((stream) => stream.status === "fallback").length}</span>
-              <span>OFFLINE {streams.filter((stream) => stream.status === "offline").length}</span>
+              <span>LIVE {cctvStatusSummary.online}</span>
+              <span>FALLBACK {cctvStatusSummary.fallback}</span>
+              <span>OFFLINE {cctvStatusSummary.offline}</span>
             </div>
             <div className="cctv-view__controls" aria-label="CCTV 보기 설정">
               {(["3x3", "4x4", "5x5", "auto"] as CctvLayoutMode[]).map((mode) => (
@@ -442,15 +462,7 @@ export function DashboardMvp() {
             className={`stream-grid--cctv is-${cctvGridSize}x${cctvGridSize} is-${cctvQualityMode}`}
             onSelectStream={openStreamConnection}
             onToggleTalkbackTarget={toggleTalkbackTarget}
-            renderCard={(stream, isSelected) => (
-              <CctvChannelCard
-                hasAudioActivity={stream.id === audioActiveStreamId}
-                isSelected={isSelected}
-                onSelect={openStreamConnection}
-                qualityMode={cctvQualityMode}
-                stream={stream}
-              />
-            )}
+            renderCard={renderCctvCard}
             selectedStreamId={selectedStreamId}
             talkbackTargetStreamIds={talkbackTargetStreamIds}
             streams={cctvStreams}

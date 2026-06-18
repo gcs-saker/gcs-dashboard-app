@@ -1,6 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { useVirtualList } from "./useVirtualList";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("useVirtualList", () => {
   test("renders only the visible window with overscan", () => {
@@ -28,5 +32,33 @@ describe("useVirtualList", () => {
       startIndex: 8,
       totalHeight: 40000,
     });
+  });
+
+  test("measures the container height through ref and resize observer", () => {
+    let resizeCallback: ResizeObserverCallback | null = null;
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    class MockResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resizeCallback = callback;
+      }
+
+      observe = observe;
+      disconnect = disconnect;
+    }
+    vi.stubGlobal("ResizeObserver", MockResizeObserver);
+    const { result } = renderHook(() => useVirtualList({ itemCount: 100, itemHeight: 50, overscan: 1 }));
+    const element = { clientHeight: 500, scrollTop: 0 } as HTMLElement;
+
+    act(() => result.current.containerRef(element));
+
+    expect(observe).toHaveBeenCalledWith(element);
+    expect(result.current.range.endIndex).toBe(12);
+
+    act(() => {
+      resizeCallback?.([{ contentRect: { height: 250 } } as ResizeObserverEntry], {} as ResizeObserver);
+    });
+
+    expect(result.current.range.endIndex).toBe(7);
   });
 });

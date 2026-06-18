@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { memo, useEffect, useMemo, type CSSProperties } from "react";
 import {
   summarizeOperationalEventMetrics,
   summarizeOperationalEvents,
@@ -90,12 +90,15 @@ export function EventLogView() {
     () => events.filter((event) => event.severity === "error" || event.severity === "warn").slice(0, 3),
     [events],
   );
-  const { onScroll: onTimelineScroll, range: timelineRange } = useVirtualList({
+  const { containerRef: timelineContainerRef, onScroll: onTimelineScroll, range: timelineRange } = useVirtualList({
     itemCount: events.length,
     itemHeight: EVENT_ROW_HEIGHT_PX,
     overscan: 5,
   });
-  const visibleTimelineEvents = events.slice(timelineRange.startIndex, timelineRange.endIndex);
+  const visibleTimelineEvents = useMemo(
+    () => events.slice(timelineRange.startIndex, timelineRange.endIndex),
+    [events, timelineRange.endIndex, timelineRange.startIndex],
+  );
 
   useEffect(() => {
     if (!selectedEventId && events[0]) {
@@ -292,26 +295,19 @@ export function EventLogView() {
           <div
             className="event-log-view__list"
             onScroll={onTimelineScroll}
+            ref={timelineContainerRef}
             role="listbox"
-            style={{ "--virtual-list-height": `${timelineRange.totalHeight}px` } as React.CSSProperties}
+            style={{ "--virtual-list-height": `${timelineRange.totalHeight}px` } as CSSProperties}
           >
             <div className="event-log-view__virtual-spacer">
               <div className="event-log-view__virtual-window" style={{ transform: `translateY(${timelineRange.offsetTop}px)` }}>
                 {visibleTimelineEvents.map((event) => (
-              <button
-                className={`event-log-item is-${event.severity} ${selectedEvent?.id === event.id ? "is-selected" : ""}`}
-                key={event.id}
-                onClick={() => setSelectedEventId(event.id)}
-                role="option"
-                aria-selected={selectedEvent?.id === event.id}
-                type="button"
-              >
-                <span>{new Date(event.occurredAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
-                <strong>{event.source}</strong>
-                <em>{event.severity.toUpperCase()}</em>
-                <p>{event.message}</p>
-                <small>{categoryLabels[event.category]} · RTT {event.latencyMs} ms · 연결 {event.connections}</small>
-              </button>
+                  <TimelineEventRow
+                    event={event}
+                    isSelected={selectedEvent?.id === event.id}
+                    key={event.id}
+                    onSelect={setSelectedEventId}
+                  />
                 ))}
               </div>
             </div>
@@ -407,6 +403,34 @@ export function EventLogView() {
     </section>
   );
 }
+
+interface TimelineEventRowProps {
+  event: OperationalEvent;
+  isSelected: boolean;
+  onSelect: (eventId: string) => void;
+}
+
+const TimelineEventRow = memo(function TimelineEventRow({
+  event,
+  isSelected,
+  onSelect,
+}: TimelineEventRowProps) {
+  return (
+    <button
+      aria-selected={isSelected}
+      className={`event-log-item is-${event.severity} ${isSelected ? "is-selected" : ""}`}
+      onClick={() => onSelect(event.id)}
+      role="option"
+      type="button"
+    >
+      <span>{new Date(event.occurredAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+      <strong>{event.source}</strong>
+      <em>{event.severity.toUpperCase()}</em>
+      <p>{event.message}</p>
+      <small>{categoryLabels[event.category]} · RTT {event.latencyMs} ms · 연결 {event.connections}</small>
+    </button>
+  );
+});
 
 function MetricCard({
   label,

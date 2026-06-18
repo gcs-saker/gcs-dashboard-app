@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { memo, useCallback } from "react";
 import {
   getDashboardStreamDisplayName,
   getDashboardStreamStatusClass,
@@ -16,7 +16,7 @@ interface CctvChannelCardProps {
   onSelect: (streamId: string) => void;
 }
 
-export function CctvChannelCard({
+export const CctvChannelCard = memo(function CctvChannelCard({
   stream,
   isSelected,
   hasAudioActivity,
@@ -60,4 +60,4 @@ export function CctvChannelCard({
       </button>
     </article>
   );
-}
+});

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export interface VirtualListRange {
   endIndex: number;
@@ -18,10 +18,21 @@ export function useVirtualList({
   itemHeight,
   overscan = 4,
 }: UseVirtualListOptions): {
+  containerRef: (element: HTMLElement | null) => void;
   onScroll: (event: { currentTarget: HTMLElement }) => void;
   range: VirtualListRange;
 } {
+  const [containerElement, setContainerElement] = useState<HTMLElement | null>(null);
   const [viewport, setViewport] = useState({ height: 0, scrollTop: 0 });
+
+  const containerRef = useCallback((element: HTMLElement | null): void => {
+    setContainerElement(element);
+    if (!element) return;
+    setViewport((current) => {
+      if (current.height === element.clientHeight && current.scrollTop === element.scrollTop) return current;
+      return { height: element.clientHeight, scrollTop: element.scrollTop };
+    });
+  }, []);
 
   const onScroll = useCallback((event: { currentTarget: HTMLElement }): void => {
     const { clientHeight, scrollTop } = event.currentTarget;
@@ -30,6 +41,19 @@ export function useVirtualList({
       return { height: clientHeight, scrollTop };
     });
   }, []);
+
+  useEffect(() => {
+    if (!containerElement || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      const nextHeight = Math.round(entry.contentRect.height);
+      setViewport((current) => {
+        if (current.height === nextHeight) return current;
+        return { ...current, height: nextHeight };
+      });
+    });
+    observer.observe(containerElement);
+    return () => observer.disconnect();
+  }, [containerElement]);
 
   const range = useMemo((): VirtualListRange => {
     const visibleCount = Math.ceil((viewport.height || itemHeight * 8) / itemHeight);
@@ -43,5 +67,5 @@ export function useVirtualList({
     };
   }, [itemCount, itemHeight, overscan, viewport.height, viewport.scrollTop]);
 
-  return { onScroll, range };
+  return { containerRef, onScroll, range };
 }
