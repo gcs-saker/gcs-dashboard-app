@@ -14,6 +14,10 @@ from modules.telemetry_buffer.sink import (
     TelemetryFlushResult,
     build_buffered_telemetry_sink,
 )
+from modules.telemetry_buffer.redis_queue import (
+    RedisTelemetryBufferConfig,
+    RedisTelemetryWriteBuffer,
+)
 
 __all__ = [
     "BufferedTelemetrySink",
@@ -25,5 +29,7 @@ __all__ = [
     "TelemetryBulkSink",
     "TelemetryFlushResult",
     "TelemetryWriteBuffer",
+    "RedisTelemetryBufferConfig",
+    "RedisTelemetryWriteBuffer",
     "build_buffered_telemetry_sink",
 ]

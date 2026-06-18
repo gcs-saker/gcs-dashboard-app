@@ -4,7 +4,13 @@ import pytest
 from sqlalchemy.dialects import mysql, postgresql
 
 from model.telemetry_model import TelemetryCreate
-from modules.telemetry_buffer import BufferedTelemetrySink, InMemoryTelemetryWriteBuffer, TelemetryBufferRecord
+from modules.telemetry_buffer import (
+    BufferedTelemetrySink,
+    InMemoryTelemetryWriteBuffer,
+    RedisTelemetryBufferConfig,
+    RedisTelemetryWriteBuffer,
+    TelemetryBufferRecord,
+)
 from modules.telemetry_buffer.bulk_sql import (
     TelemetryBulkBatch,
     build_mysql_latest_bulk_upsert,
@@ -26,6 +32,33 @@ class RecordingBulkSink:
 class FailingBulkSink:
     def flush(self, records: list[TelemetryBufferRecord]) -> int:
         raise RuntimeError("postgres bulk flush failed")
+
+
+class FakeRedisListClient:
+    def __init__(self) -> None:
+        self.values: dict[str, str] = {}
+        self.lists: dict[str, list[str]] = {}
+
+    def set(self, name: str, value: str) -> None:
+        self.values[name] = value
+
+    def get(self, name: str) -> str | None:
+        return self.values.get(name)
+
+    def rpush(self, name: str, value: str) -> None:
+        self.lists.setdefault(name, []).append(value)
+
+    def lpop(self, name: str) -> str | None:
+        values = self.lists.setdefault(name, [])
+        if not values:
+            return None
+        return values.pop(0)
+
+    def lpush(self, name: str, value: str) -> None:
+        self.lists.setdefault(name, []).insert(0, value)
+
+    def llen(self, name: str) -> int:
+        return len(self.lists.get(name, []))
 
 
 def telemetry(uuid: str, latitude: float) -> TelemetryCreate:
@@ -108,6 +141,51 @@ def test_buffered_sink_can_auto_flush_when_threshold_is_reached() -> None:
     assert buffer.stats().pending_history_count == 0
     assert len(bulk_sink.batches) == 1
     assert [record.telemetry.uuid for record in bulk_sink.batches[0]] == [
+        "raw.mobile.front",
+        "raw.mobile.rear",
+    ]
+
+
+def test_redis_buffer_keeps_latest_and_history_contract_without_key_scan() -> None:
+    client = FakeRedisListClient()
+    buffer = RedisTelemetryWriteBuffer(
+        client=client,
+        config=RedisTelemetryBufferConfig(key_prefix="test:telemetry"),
+    )
+    first = TelemetryBufferRecord.create(telemetry("raw.mobile.front", 35.87))
+    second = TelemetryBufferRecord.create(telemetry("raw.mobile.front", 35.88))
+
+    buffer.put_latest(first)
+    buffer.append_history(first)
+    buffer.put_latest(second)
+    buffer.append_history(second)
+
+    latest = buffer.latest_for("raw.mobile.front")
+    drained = buffer.drain_history(10)
+    stats = buffer.stats()
+
+    assert latest is not None
+    assert latest.telemetry.latitude == 35.88
+    assert [record.telemetry.latitude for record in drained] == [35.87, 35.88]
+    assert stats.latest_count == 0
+    assert stats.pending_history_count == 0
+
+
+def test_redis_buffer_restores_drained_records_in_original_order() -> None:
+    client = FakeRedisListClient()
+    buffer = RedisTelemetryWriteBuffer(client=client)
+    records = [
+        TelemetryBufferRecord.create(telemetry("raw.mobile.front", 35.87)),
+        TelemetryBufferRecord.create(telemetry("raw.mobile.rear", 35.88)),
+    ]
+    for record in records:
+        buffer.append_history(record)
+
+    drained = buffer.drain_history(10)
+    buffer.restore_history_front(drained)
+
+    restored = buffer.drain_history(10)
+    assert [record.telemetry.uuid for record in restored] == [
         "raw.mobile.front",
         "raw.mobile.rear",
     ]

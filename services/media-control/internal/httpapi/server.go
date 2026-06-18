@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -14,6 +16,7 @@ import (
 const (
 	routeHealthz                     = "/healthz"
 	routeReadyz                      = "/readyz"
+	routeRuntimeMetrics              = "/metrics/runtime"
 	routeStreams                     = "/v1/streams"
 	routeIceServers                  = "/v1/ice-servers"
 	routeLegacyStreamStatus          = "/stream/status"
@@ -30,6 +33,7 @@ const (
 	jsonKeyDeprecated                = "deprecated"
 	jsonKeyChecks                    = "checks"
 	jsonKeyIceServers                = "iceServers"
+	jsonKeyRuntime                   = "runtime"
 	jsonKeyName                      = "name"
 	jsonKeyReason                    = "reason"
 	jsonKeyRequired                  = "required"
@@ -93,6 +97,7 @@ func (s Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc(routeHealthz, s.healthz)
 	mux.HandleFunc(routeReadyz, s.readyz)
+	mux.HandleFunc(routeRuntimeMetrics, s.runtimeMetrics)
 	mux.HandleFunc(routeStreams, s.streamList)
 	mux.HandleFunc(routeIceServers, s.iceServers)
 	mux.HandleFunc(routeLegacyStreamStatus, s.legacyStreamStatus)
@@ -127,6 +132,23 @@ func (s Server) readyz(w http.ResponseWriter, r *http.Request) {
 		jsonKeyService: mediaControlServiceName,
 		jsonKeyStatus:  status,
 		jsonKeyChecks:  checks,
+	})
+}
+
+func (s Server) runtimeMetrics(w http.ResponseWriter, _ *http.Request) {
+	var stats runtime.MemStats
+	runtime.ReadMemStats(&stats)
+	writeJSON(w, http.StatusOK, map[string]any{
+		jsonKeyService: mediaControlServiceName,
+		jsonKeyRuntime: runtimeMetricsResponse{
+			Goroutines:       runtime.NumGoroutine(),
+			HeapAllocBytes:   stats.HeapAlloc,
+			HeapInUseBytes:   stats.HeapInuse,
+			NextGCBytes:      stats.NextGC,
+			PauseTotalNs:     stats.PauseTotalNs,
+			LastGCUnixNano:   stats.LastGC,
+			MemoryLimitBytes: debug.SetMemoryLimit(-1),
+		},
 	})
 }
 
@@ -431,6 +453,16 @@ type readinessCheck struct {
 	Status   string `json:"status"`
 	Required bool   `json:"required"`
 	Reason   string `json:"reason,omitempty"`
+}
+
+type runtimeMetricsResponse struct {
+	Goroutines       int    `json:"goroutines"`
+	HeapAllocBytes   uint64 `json:"heapAllocBytes"`
+	HeapInUseBytes   uint64 `json:"heapInUseBytes"`
+	NextGCBytes      uint64 `json:"nextGcBytes"`
+	PauseTotalNs     uint64 `json:"pauseTotalNs"`
+	LastGCUnixNano   uint64 `json:"lastGcUnixNano"`
+	MemoryLimitBytes int64  `json:"memoryLimitBytes"`
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

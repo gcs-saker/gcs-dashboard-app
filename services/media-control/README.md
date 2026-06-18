@@ -38,6 +38,14 @@ GET /stream/status
 
 M7 runtime smoke와 예전 운영 체크 호환을 위해 `/stream/status`는 `{"stream":"ready"}`를 계속 반환한다. 다만 이 경로는 legacy compatibility endpoint이므로 `Deprecation: true`와 `X-GCS-Replacement-Route: /media-control/api/v1/streams` header를 함께 내려준다. 신규 운영 체크와 dashboard stream 조회는 `/media-control/api/v1/streams*`를 사용한다.
 
+## Runtime metrics
+
+```text
+GET /metrics/runtime
+```
+
+Go 런타임 튜닝(`GOGC`, `GOMEMLIMIT`)이 실제 운영에서 어떤 영향을 주는지 보기 위해 goroutine, heap, GC pause, memory limit 지표를 JSON으로 제공한다. 이 endpoint는 운영망에서는 Nginx 또는 방화벽으로 내부 관리자 접근만 허용한다.
+
 ## Auth-policy 연동
 
 `AUTH_POLICY_BASE_URL`이 설정되면 media-control은 stream list/detail/playback/status 요청마다 `Authorization` header를 Spring/Kotlin auth-policy의 `POST /policy/streams/access`로 전달한다.

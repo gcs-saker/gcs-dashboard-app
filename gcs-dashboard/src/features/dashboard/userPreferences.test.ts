@@ -3,6 +3,7 @@ import { resetDashboardLayout } from "./dashboardLayout";
 import {
   createDashboardUserPreferenceKey,
   createDefaultDashboardUserPreferences,
+  type DashboardUserPreferences,
   normalizeDashboardUserPreferences,
 } from "./userPreferences";
 import { loadDashboardUserPreferences, saveDashboardUserPreferences } from "./userPreferencesStore";
@@ -66,4 +67,94 @@ describe("userPreferences", () => {
     );
     await expect(saveDashboardUserPreferences("dashboard:operator01", createDefaultDashboardUserPreferences())).resolves.toBeUndefined();
   });
+
+  test("persists and reloads dashboard settings through IndexedDB", async () => {
+    const fakeIndexedDB = createFakeIndexedDB();
+    vi.stubGlobal("indexedDB", fakeIndexedDB.indexedDB);
+    const saved: DashboardUserPreferences = {
+      ...createDefaultDashboardUserPreferences(),
+      activeView: "events",
+      cctvLayoutMode: "4x4",
+      streamPreferences: {
+        deviceAliases: {
+          "raw.mobile.front": "전방 단말",
+        },
+      },
+    };
+
+    await saveDashboardUserPreferences("dashboard:operator01", saved);
+    const loaded = await loadDashboardUserPreferences("dashboard:operator01");
+
+    expect(loaded.activeView).toBe("events");
+    expect(loaded.cctvLayoutMode).toBe("4x4");
+    expect(loaded.streamPreferences.deviceAliases).toEqual({
+      "raw.mobile.front": "전방 단말",
+    });
+    expect(fakeIndexedDB.closedCount).toBe(2);
+  });
 });
+
+function createFakeIndexedDB(): { indexedDB: IDBFactory; closedCount: number } {
+  const records = new Map<string, unknown>();
+  const state = { closedCount: 0 };
+  const database = {
+    objectStoreNames: {
+      contains: () => true,
+    },
+    createObjectStore: vi.fn(),
+    transaction: () => ({
+      objectStore: () => ({
+        get: (key: IDBValidKey) => createSuccessRequest(() => records.get(String(key))),
+        put: (value: unknown, key: IDBValidKey) =>
+          createSuccessRequest(() => {
+            records.set(String(key), value);
+            return undefined;
+          }),
+      }),
+    }),
+    close: () => {
+      state.closedCount += 1;
+    },
+  };
+
+  return {
+    indexedDB: ({
+      open: () => {
+        const request = createOpenRequest(database);
+        queueMicrotask(() => {
+          request.onsuccess?.call(request as IDBOpenDBRequest, new Event("success"));
+        });
+        return request as IDBOpenDBRequest;
+      },
+    } as unknown) as IDBFactory,
+    get closedCount() {
+      return state.closedCount;
+    },
+  };
+}
+
+function createOpenRequest(database: unknown): IDBOpenDBRequest {
+  return {
+    result: database,
+    onerror: null,
+    onsuccess: null,
+    onupgradeneeded: null,
+  } as unknown as IDBOpenDBRequest;
+}
+
+function createSuccessRequest<T>(resolveValue: () => T): IDBRequest<T> {
+  const request: {
+    result: T | undefined;
+    onerror: ((this: IDBRequest<T>, ev: Event) => unknown) | null;
+    onsuccess: ((this: IDBRequest<T>, ev: Event) => unknown) | null;
+  } = {
+    result: undefined as T | undefined,
+    onerror: null,
+    onsuccess: null,
+  };
+  queueMicrotask(() => {
+    request.result = resolveValue();
+    request.onsuccess?.call(request as unknown as IDBRequest<T>, new Event("success"));
+  });
+  return request as unknown as IDBRequest<T>;
+}
