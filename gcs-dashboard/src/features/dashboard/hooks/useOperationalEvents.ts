@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DASHBOARD_QUERY_KEYS } from "../../stateContracts";
-import { fetchOperationalEventPage } from "../operationalEventsApi";
+import { consumeOperationalEventStream, fetchOperationalEventPage } from "../operationalEventsApi";
 import type { OperationalEvent, OperationalEventFilters } from "../operationalEvents";
 
 interface OperationalEventsState {
@@ -47,6 +47,32 @@ export function useOperationalEvents(
       return merged;
     });
   }, [filterKey, query.data]);
+
+  useEffect(() => {
+    if (typeof ReadableStream === "undefined") return;
+    const controller = new AbortController();
+    consumeOperationalEventStream(
+      queryFilters,
+      {
+        onEvent: (event) => {
+          setEvents((current) => {
+            const merged = mergeOperationalEvents(current, [event]);
+            operationalEventHistoryByFilter.set(filterKey, merged);
+            return merged;
+          });
+        },
+      },
+      {
+        fetcher,
+        signal: controller.signal,
+      },
+    ).catch((error) => {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        // Polling remains active as a degraded fallback when the stream is interrupted.
+      }
+    });
+    return () => controller.abort();
+  }, [fetcher, filterKey, queryFilters]);
 
   return {
     events,

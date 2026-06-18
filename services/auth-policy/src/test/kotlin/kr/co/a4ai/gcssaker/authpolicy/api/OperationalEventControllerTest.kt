@@ -1,5 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
+import java.io.ByteArrayOutputStream
 import java.time.Duration
 import java.time.Instant
 
@@ -92,6 +95,8 @@ class OperationalEventControllerTest {
             ),
         ),
         principalResolver = BearerPrincipalResolver(sessions),
+        objectMapper = jacksonObjectMapper().registerModule(JavaTimeModule()),
+        streamPolicy = OperationalEventStreamPolicy(pollCount = 1, pollIntervalMillis = 0),
     )
 
     @Test
@@ -149,6 +154,29 @@ class OperationalEventControllerTest {
         assertEquals(listOf("evt-a-warn"), firstPage.events.map { it.id })
         assertEquals(listOf("evt-a-info"), secondPage.events.map { it.id })
         assertEquals(null, secondPage.nextCursor)
+    }
+
+    @Test
+    fun `event stream emits authenticated group events as server sent events`() {
+        val response = controller.eventStream(
+            authorization = bearer(accessToken("viewer-a")),
+            query = null,
+            severity = null,
+            from = null,
+            to = null,
+        )
+        val output = ByteArrayOutputStream()
+
+        response.body?.writeTo(output)
+        val payload = output.toString(Charsets.UTF_8)
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertEquals("no", response.headers[OperationalEventStreamContract.HEADER_ACCEL_BUFFERING]?.single())
+        assertTrue(payload.contains("event: operational-event"))
+        assertTrue(payload.contains("event: heartbeat"))
+        assertTrue(payload.contains("\"id\":\"evt-a-warn\""))
+        assertTrue(payload.contains("\"id\":\"evt-a-info\""))
+        assertTrue(!payload.contains("evt-b-error"))
     }
 
     @Test

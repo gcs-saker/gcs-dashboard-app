@@ -66,6 +66,7 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "location /api/asset/" in config
     assert "location = /api/telemetry/all" in config
     assert "location /api/telemetry/" in config
+    assert "location = /api/ops/events/stream" in config
     assert "location /api/ops/" in config
     assert "location /api/stream/" in config
     assert "location /stream/" in config
@@ -73,6 +74,18 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "location /hls/" in config
     assert "location /webrtc/" in config
     assert "proxy_pass http://gcs_dashboard;" in extract_locations(config, "/")[-1]
+
+
+def test_reverse_proxy_disables_buffering_for_operational_event_stream() -> None:
+    config = read_config()
+
+    ops_event_stream_location = extract_exact_location(config, "/api/ops/events/stream")
+
+    assert "proxy_pass http://gcs_auth_policy/ops/events/stream;" in ops_event_stream_location
+    assert "proxy_buffering off;" in ops_event_stream_location
+    assert "proxy_cache off;" in ops_event_stream_location
+    assert "proxy_read_timeout 65s;" in ops_event_stream_location
+    assert "add_header X-Accel-Buffering no always;" in ops_event_stream_location
 
 
 def test_reverse_proxy_routes_root_health_checks_to_auth_policy() -> None:

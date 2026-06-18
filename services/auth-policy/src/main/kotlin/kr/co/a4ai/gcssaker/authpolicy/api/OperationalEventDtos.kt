@@ -25,6 +25,10 @@ data class OperationalEventPageResponse(
     val nextCursor: String?,
 )
 
+data class OperationalEventStreamHeartbeatResponse(
+    val checkedAt: Instant,
+)
+
 data class OperationalEventSeverityCountResponse(
     val severity: String,
     val count: Long,

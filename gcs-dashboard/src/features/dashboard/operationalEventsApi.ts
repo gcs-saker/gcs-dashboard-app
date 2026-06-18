@@ -10,6 +10,20 @@ import type {
 } from "./operationalEvents";
 
 const DEFAULT_OPERATIONAL_EVENT_PAGE_LIMIT = 50;
+const OPERATIONAL_EVENT_STREAM_EVENT = "operational-event";
+const OPERATIONAL_EVENT_STREAM_HEARTBEAT = "heartbeat";
+const SSE_FIELD_EVENT = "event:";
+const SSE_FIELD_DATA = "data:";
+
+export interface OperationalEventStreamHandlers {
+  onEvent: (event: OperationalEvent) => void;
+  onHeartbeat?: (checkedAt: string | null) => void;
+}
+
+interface OperationalEventStreamOptions {
+  fetcher?: typeof fetch;
+  signal?: AbortSignal;
+}
 
 export async function fetchOperationalEvents(
   filters: OperationalEventFilters,
@@ -92,12 +106,51 @@ export async function fetchOperationalEventBuckets(
   return payload;
 }
 
+export async function consumeOperationalEventStream(
+  filters: OperationalEventFilters,
+  handlers: OperationalEventStreamHandlers,
+  options: OperationalEventStreamOptions = {},
+): Promise<void> {
+  const fetcher = options.fetcher ?? fetch;
+  const response = await authenticatedFetch(buildOperationalEventStreamUrl(filters), {
+    headers: { Accept: "text/event-stream" },
+    signal: options.signal,
+  }, fetcher);
+
+  if (!response.ok) {
+    throw new Error(`Operational event stream request failed with ${response.status}`);
+  }
+  if (!response.body) {
+    throw new Error("Operational event stream response body is unavailable");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    const parsed = parseOperationalEventSseBuffer(buffer);
+    buffer = parsed.remaining;
+    parsed.messages.forEach((message) => handleOperationalEventStreamMessage(message, handlers));
+    if (done) break;
+  }
+
+  const flushed = parseOperationalEventSseBuffer(`${buffer}\n\n`);
+  flushed.messages.forEach((message) => handleOperationalEventStreamMessage(message, handlers));
+}
+
 export function buildOperationalEventsUrl(filters: OperationalEventFilters): string {
   return buildOperationalEventUrl(DASHBOARD_API_ROUTES.operationalEvents, filters);
 }
 
 export function buildOperationalEventPageUrl(filters: OperationalEventFilters, limit = DEFAULT_OPERATIONAL_EVENT_PAGE_LIMIT): string {
   return buildOperationalEventUrl(DASHBOARD_API_ROUTES.operationalEventsPage, filters, limit);
+}
+
+export function buildOperationalEventStreamUrl(filters: OperationalEventFilters): string {
+  return buildOperationalEventUrl(DASHBOARD_API_ROUTES.operationalEventsStream, filters);
 }
 
 export function buildOperationalEventMetricsUrl(filters: OperationalEventFilters): string {
@@ -117,6 +170,54 @@ function buildOperationalEventUrl(route: string, filters: OperationalEventFilter
   if (limit !== undefined) params.set("limit", String(limit));
   const query = params.toString();
   return `${apiUrl(route)}${query ? `?${query}` : ""}`;
+}
+
+interface SseMessage {
+  event: string;
+  data: string;
+}
+
+export function parseOperationalEventSseBuffer(buffer: string): { messages: SseMessage[]; remaining: string } {
+  const normalized = buffer.replace(/\r\n/g, "\n");
+  const blocks = normalized.split("\n\n");
+  const remaining = blocks.pop() ?? "";
+  const messages = blocks
+    .map(parseSseBlock)
+    .filter((message): message is SseMessage => message !== null);
+  return { messages, remaining };
+}
+
+function parseSseBlock(block: string): SseMessage | null {
+  let event = "";
+  const dataLines: string[] = [];
+  for (const line of block.split("\n")) {
+    if (line.startsWith(SSE_FIELD_EVENT)) {
+      event = line.slice(SSE_FIELD_EVENT.length).trim();
+    }
+    if (line.startsWith(SSE_FIELD_DATA)) {
+      dataLines.push(line.slice(SSE_FIELD_DATA.length).trimStart());
+    }
+  }
+  if (!event || dataLines.length === 0) return null;
+  return { event, data: dataLines.join("\n") };
+}
+
+function handleOperationalEventStreamMessage(
+  message: SseMessage,
+  handlers: OperationalEventStreamHandlers,
+): void {
+  if (message.event === OPERATIONAL_EVENT_STREAM_EVENT) {
+    const payload = JSON.parse(message.data) as unknown;
+    if (!isOperationalEvent(payload)) {
+      throw new Error("Operational event stream payload is invalid");
+    }
+    handlers.onEvent(payload);
+    return;
+  }
+  if (message.event === OPERATIONAL_EVENT_STREAM_HEARTBEAT) {
+    const payload = JSON.parse(message.data) as { checkedAt?: unknown };
+    handlers.onHeartbeat?.(typeof payload.checkedAt === "string" ? payload.checkedAt : null);
+  }
 }
 
 function localDateTimeToInstant(value: string): string {
