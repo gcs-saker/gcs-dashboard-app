@@ -251,6 +251,8 @@ flowchart TD
 - latest state는 write buffer/Dragonfly cache를 우선하고, DB에는 batch 단위로 flush한다.
 - legacy MySQL/MariaDB 경로도 row별 upsert 반복이 아니라 bulk upsert statement를 사용한다.
 - 상세 계약 문서는 `docs/architecture/GCS-Saker_telemetry_storage_bulk_write_contract.md`를 기준으로 삼는다.
+- history table과 latest read model을 분리해 dashboard 최신 위치 조회가 history 전체 정렬에 의존하지 않도록 한다.
+- spatial viewport 조회는 PostGIS GiST index와 bounding box query를 기준으로 검증한다.
 
 테스트:
 
@@ -259,6 +261,7 @@ flowchart TD
 - group/asset bounding box query
 - spatial index execution plan 확인
 - bulk flush failure recovery
+- compose geo profile init script mount 계약 테스트
 
 ### M8-06 gRPC internal streaming PoC
 
