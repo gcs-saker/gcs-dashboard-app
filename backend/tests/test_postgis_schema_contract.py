@@ -1,4 +1,7 @@
 from pathlib import Path
+import json
+import subprocess
+import sys
 
 import yaml
 
@@ -7,6 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SINGLE_NODE_COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
 POSTGIS_INIT_SQL = REPO_ROOT / "deploy" / "postgres" / "init" / "001_geo_telemetry.sql"
 POSTGIS_DOC = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_M8_postgis_bounded_context.md"
+POSTGIS_RUNTIME_SMOKE = REPO_ROOT / "scripts" / "postgis_runtime_smoke.py"
 
 
 def load_yaml(path: Path) -> dict:
@@ -67,3 +71,21 @@ def test_postgis_bounded_context_doc_records_query_tuning_reasoning() -> None:
     assert "EXPLAIN (ANALYZE, BUFFERS)" in doc
     assert "primary key lookup" in doc
     assert "GiST spatial index" in doc
+
+
+def test_postgis_runtime_smoke_exposes_real_container_execution_contract() -> None:
+    result = subprocess.run(
+        [sys.executable, str(POSTGIS_RUNTIME_SMOKE), "--check"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["schemaVersion"] == "postgis-runtime-smoke-v1"
+    assert payload["command"][:3] == ["docker", "compose", "--env-file"]
+    assert "postgres-geo" in payload["command"]
+    assert "postgis_version" in payload["checks"]
+    assert "EXPLAIN (ANALYZE, BUFFERS)" in payload["sql"]
+    assert "position && ST_MakeEnvelope" in payload["sql"]

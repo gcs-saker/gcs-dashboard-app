@@ -59,5 +59,7 @@ flowchart LR
 - `BufferedTelemetrySink`: MQTT telemetry를 buffer에 넣고 threshold 기준 flush를 호출한다.
 - `TelemetryBulkSink`: PostgreSQL/PostGIS bulk adapter가 들어올 자리다.
 - `InMemoryTelemetryWriteBuffer`: 단위/통합 테스트용 구현체다.
+- `RedisTelemetryWriteBuffer`: Redis/Dragonfly 호환 list queue 구현체다. history는 `RPUSH`/`LPOP`으로 FIFO drain하고, flush 실패 시 `LPUSH`로 앞쪽에 복원한다.
+- Redis/Dragonfly 구현은 backlog 판단에 `LLEN`만 사용한다. 운영 중 `KEYS *`처럼 전체 keyspace를 막는 명령은 사용하지 않는다.
 
-후속 단계에서 `DragonflyTelemetryWriteBuffer`와 PostGIS COPY 기반 `TelemetryBulkSink`를 추가한다.
+후속 단계에서 실제 운영 Redis client wiring과 PostGIS COPY 기반 `TelemetryBulkSink`를 추가한다.

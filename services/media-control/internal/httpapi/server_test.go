@@ -132,6 +132,39 @@ func TestReadyzReturnsDegradedWhenNoIceServersAreHealthy(t *testing.T) {
 	assertReadinessCheck(t, payload, "ice_servers", "error", "no healthy ICE servers available")
 }
 
+func TestRuntimeMetricsResponseExposesRuntimeSignals(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	request := httptest.NewRequest(http.MethodGet, "/metrics/runtime", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", recorder.Code)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	runtimePayload, ok := payload["runtime"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected runtime payload, got %#v", payload)
+	}
+	for _, key := range []string{
+		"goroutines",
+		"heapAllocBytes",
+		"heapInUseBytes",
+		"nextGcBytes",
+		"pauseTotalNs",
+		"lastGcUnixNano",
+		"memoryLimitBytes",
+	} {
+		if _, ok := runtimePayload[key]; !ok {
+			t.Fatalf("expected runtime metric %q in %#v", key, runtimePayload)
+		}
+	}
+}
+
 func TestIceServersResponse(t *testing.T) {
 	ice, _ := domain.NewIceServer("stun:turn-primary:3478", domain.IceServerSTUN, "", "", true)
 	server := newTestServer(fakeStreams{}, fakeIce{servers: []domain.IceServer{ice}})
