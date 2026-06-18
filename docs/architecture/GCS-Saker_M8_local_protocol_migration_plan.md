@@ -245,6 +245,9 @@ flowchart TD
 - Supabase 없이 PostgreSQL/PostGIS를 geometry/time-series bounded context로 사용한다.
 - 기존 MySQL auth/legacy data는 즉시 이전하지 않는다.
 - telemetry history는 batch 또는 COPY protocol 기반 bulk flush 후보로 검증한다.
+- latest state는 write buffer/Dragonfly cache를 우선하고, DB에는 batch 단위로 flush한다.
+- legacy MySQL/MariaDB 경로도 row별 upsert 반복이 아니라 bulk upsert statement를 사용한다.
+- 상세 계약 문서는 `docs/architecture/GCS-Saker_telemetry_storage_bulk_write_contract.md`를 기준으로 삼는다.
 
 테스트:
 

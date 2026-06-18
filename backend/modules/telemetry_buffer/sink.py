@@ -12,6 +12,12 @@ from modules.telemetry_buffer.buffer import (
     TelemetryBufferRecord,
     TelemetryWriteBuffer,
 )
+from modules.telemetry_buffer.bulk_sql import (
+    TelemetryBulkBatch,
+    TelemetrySqlDialect,
+    build_mysql_latest_bulk_upsert,
+    build_postgres_latest_bulk_upsert,
+)
 
 
 class TelemetryBufferEnv:
@@ -32,7 +38,17 @@ class LegacyDbTelemetryBulkSink:
     def flush(self, records: list[TelemetryBufferRecord]) -> int:
         if not records:
             return 0
+        batch = TelemetryBulkBatch.from_records(records)
         with SessionLocal() as db:
+            dialect = db.get_bind().dialect.name
+            if dialect in {TelemetrySqlDialect.MYSQL, TelemetrySqlDialect.MARIADB}:
+                db.execute(build_mysql_latest_bulk_upsert(batch))
+                db.commit()
+                return len(batch)
+            if dialect == TelemetrySqlDialect.POSTGRESQL:
+                db.execute(build_postgres_latest_bulk_upsert(batch))
+                db.commit()
+                return len(batch)
             for record in records:
                 upsert_telemetry(record.telemetry, db)
         return len(records)
