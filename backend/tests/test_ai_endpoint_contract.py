@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+import asyncio
+import inspect
 
 import pytest
 from pydantic import ValidationError
@@ -8,6 +10,7 @@ from modules.ai_contract import (
     AIEndpointErrorResponse,
     AIEndpointRequest,
     AIEndpointResponse,
+    MockAIService,
 )
 
 
@@ -169,3 +172,17 @@ def test_ai_endpoint_contract_rejects_unknown_payload_fields():
 
     with pytest.raises(ValidationError):
         AIEndpointRequest.model_validate(payload)
+
+
+def test_mock_ai_service_uses_async_provider_boundary():
+    service = MockAIService(generated_at=GENERATED_AT)
+    request = AIEndpointRequest.model_validate(valid_request_payload())
+
+    assert inspect.iscoroutinefunction(service.detect)
+    assert inspect.iscoroutinefunction(service.build_error)
+
+    response = asyncio.run(service.detect(request))
+    error = asyncio.run(service.build_error(request))
+
+    assert response.generated_at == GENERATED_AT
+    assert error.generated_at == GENERATED_AT

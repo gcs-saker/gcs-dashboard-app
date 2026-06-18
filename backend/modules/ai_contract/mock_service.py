@@ -12,7 +12,7 @@ class MockAIService:
     def __init__(self, generated_at: datetime | None = None) -> None:
         self._generated_at = generated_at
 
-    def detect(self, request: AIEndpointRequest) -> AIEndpointResponse:
+    async def detect(self, request: AIEndpointRequest) -> AIEndpointResponse:
         return AIEndpointResponse.model_validate(
             {
                 "schemaVersion": AI_CONTRACT_SCHEMA_VERSION,
@@ -38,7 +38,7 @@ class MockAIService:
             }
         )
 
-    def build_error(self, request: AIEndpointRequest) -> AIEndpointErrorResponse:
+    async def build_error(self, request: AIEndpointRequest) -> AIEndpointErrorResponse:
         return AIEndpointErrorResponse.model_validate(
             {
                 "schemaVersion": AI_CONTRACT_SCHEMA_VERSION,
