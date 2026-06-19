@@ -11,6 +11,7 @@ TURN_PRIMARY_URL="${TURN_PRIMARY_URL:-turn:a4ai.tplinkdns.com:3478?transport=udp
 TURN_SECONDARY_URL="${TURN_SECONDARY_URL:-turn:a4ai.tplinkdns.com:3479?transport=udp}"
 TURN_USERNAME="${TURN_USERNAME:-${WEBRTC_TURN_USERNAME:-}}"
 TURN_PASSWORD="${TURN_PASSWORD:-${WEBRTC_TURN_PASSWORD:-}}"
+AUTH_BEARER_TOKEN="${AUTH_BEARER_TOKEN:-}"
 RUN_TURN_ALLOCATIONS="${RUN_TURN_ALLOCATIONS:-1}"
 RUN_WHIP_PUBLISH="${RUN_WHIP_PUBLISH:-1}"
 RUN_WHEP_PLAYBACK="${RUN_WHEP_PLAYBACK:-1}"
@@ -38,6 +39,7 @@ Environment:
   TURN_SECONDARY_URL    Default: turn:a4ai.tplinkdns.com:3479?transport=udp
   TURN_USERNAME         Defaults to WEBRTC_TURN_USERNAME
   TURN_PASSWORD         Defaults to WEBRTC_TURN_PASSWORD
+  AUTH_BEARER_TOKEN     Optional token for auth-protected ICE server API readiness.
   RUN_TURN_ALLOCATIONS  Default: 1
   RUN_WHIP_PUBLISH      Default: 1
   RUN_WHEP_PLAYBACK     Default: 1
@@ -98,7 +100,11 @@ append_report() {
 curl_status() {
   local url="$1"
   # shellcheck disable=SC2046
-  curl $(tls_args) -s -o /dev/null -w "%{http_code}" "$url"
+  if [[ -n "$AUTH_BEARER_TOKEN" ]]; then
+    curl $(tls_args) -H "Authorization: Bearer ${AUTH_BEARER_TOKEN}" -s -o /dev/null -w "%{http_code}" "$url"
+  else
+    curl $(tls_args) -s -o /dev/null -w "%{http_code}" "$url"
+  fi
 }
 
 run_turn_allocation() {
@@ -179,9 +185,20 @@ run_live() {
   append_report "media-control readyz HTTP status: ${media_ready_status}"
   append_report "ice server API HTTP status: ${ice_status}"
 
-  if [[ "$health_status" != "200" || "$ready_status" != "200" || "$media_ready_status" != "200" || "$ice_status" != "200" ]]; then
+  if [[ "$health_status" != "200" || "$ready_status" != "200" || "$media_ready_status" != "200" ]]; then
     echo "public edge readiness check failed" >&2
     exit 1
+  fi
+  if [[ -n "$AUTH_BEARER_TOKEN" && "$ice_status" != "200" ]]; then
+    echo "authenticated ice server API readiness check failed" >&2
+    exit 1
+  fi
+  if [[ -z "$AUTH_BEARER_TOKEN" && "$ice_status" != "200" && "$ice_status" != "401" ]]; then
+    echo "ice server API auth gate readiness check failed" >&2
+    exit 1
+  fi
+  if [[ -z "$AUTH_BEARER_TOKEN" && "$ice_status" == "401" ]]; then
+    append_report "ice server API auth gate: enforced"
   fi
 
   if [[ "$RUN_TURN_ALLOCATIONS" == "1" ]]; then
