@@ -172,6 +172,181 @@ def run_command(test_command: TestCommand, timeout_seconds: int) -> CommandResul
     )
 
 
+def detail_row(
+    kind: str,
+    subject: str,
+    expected: str,
+    observed: str,
+    evidence: str,
+    passed: bool,
+) -> dict[str, Any]:
+    return {
+        "kind": kind,
+        "subject": subject,
+        "expected": expected,
+        "observed": observed,
+        "evidence": evidence,
+        "passed": passed,
+    }
+
+
+def evaluate_evidence_paths(evidence_paths: list[str]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for evidence in evidence_paths:
+        path = REPO_ROOT / evidence
+        rows.append(
+            detail_row(
+                kind="Evidence",
+                subject=evidence,
+                expected="근거 파일 또는 디렉터리가 존재해야 함",
+                observed="존재함" if path.exists() else "없음",
+                evidence=evidence,
+                passed=path.exists(),
+            )
+        )
+    return rows
+
+
+def evaluate_required_texts(required_texts: list[dict[str, str]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in required_texts:
+        path = REPO_ROOT / item["path"]
+        text = item["text"]
+        try:
+            haystack = architecture_intent_gate.read_path_text(path)
+            found = text in haystack
+        except architecture_intent_gate.ArchitectureIntentError:
+            found = False
+        rows.append(
+            detail_row(
+                kind="Required Text",
+                subject=item["path"],
+                expected=f"'{text}' 포함",
+                observed="포함됨" if found else "찾지 못함",
+                evidence=item["path"],
+                passed=found,
+            )
+        )
+    return rows
+
+
+def evaluate_forbidden_texts(forbidden_texts: list[dict[str, str]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in forbidden_texts:
+        path = REPO_ROOT / item["path"]
+        text = item["text"]
+        try:
+            haystack = architecture_intent_gate.read_path_text(path)
+            found = text.lower() in haystack.lower()
+        except architecture_intent_gate.ArchitectureIntentError:
+            found = False
+        rows.append(
+            detail_row(
+                kind="Forbidden Text",
+                subject=item["path"],
+                expected=f"'{text}' 없어야 함",
+                observed="발견됨" if found else "없음",
+                evidence=item["path"],
+                passed=not found,
+            )
+        )
+    return rows
+
+
+def evaluate_runtime_statuses(
+    expected_statuses: dict[str, str],
+    runtime_status: dict[str, Any],
+) -> list[dict[str, Any]]:
+    stacks = runtime_status.get("stacks", {})
+    rows: list[dict[str, Any]] = []
+    for stack_name, expected_status in expected_statuses.items():
+        entry = stacks.get(stack_name, {}) if isinstance(stacks, dict) else {}
+        actual_status = entry.get("status") if isinstance(entry, dict) else None
+        next_gate = entry.get("nextGate", "") if isinstance(entry, dict) else ""
+        rows.append(
+            detail_row(
+                kind="Runtime Status",
+                subject=stack_name,
+                expected=expected_status,
+                observed=str(actual_status or "missing"),
+                evidence=next_gate or "docs/architecture/GCS-Saker_runtime_stack_status.yml",
+                passed=actual_status == expected_status,
+            )
+        )
+    return rows
+
+
+def evaluate_compose_active_services(
+    service_names: list[str],
+    compose: dict[str, Any],
+) -> list[dict[str, Any]]:
+    services = compose.get("services", {})
+    rows: list[dict[str, Any]] = []
+    for service_name in service_names:
+        service = services.get(service_name, {}) if isinstance(services, dict) else {}
+        exists = isinstance(service, dict) and bool(service)
+        profiles = service.get("profiles") if isinstance(service, dict) else None
+        rows.append(
+            detail_row(
+                kind="Compose Active Service",
+                subject=service_name,
+                expected="기본 compose에 존재하고 profiles가 없어야 함",
+                observed=f"exists={exists}, profiles={profiles}",
+                evidence="deploy/compose/compose.single-node.poc.yml",
+                passed=exists and profiles is None,
+            )
+        )
+    return rows
+
+
+def evaluate_compose_profile_services(
+    expected_profiles: dict[str, str],
+    compose: dict[str, Any],
+) -> list[dict[str, Any]]:
+    services = compose.get("services", {})
+    rows: list[dict[str, Any]] = []
+    for service_name, expected_profile in expected_profiles.items():
+        service = services.get(service_name, {}) if isinstance(services, dict) else {}
+        profiles = service.get("profiles") if isinstance(service, dict) else None
+        rows.append(
+            detail_row(
+                kind="Compose Profile Service",
+                subject=service_name,
+                expected=f"profile '{expected_profile}'에 묶여야 함",
+                observed=f"profiles={profiles}",
+                evidence="deploy/compose/compose.single-node.poc.yml",
+                passed=isinstance(profiles, list) and expected_profile in profiles,
+            )
+        )
+    return rows
+
+
+def evaluate_nginx_routes(routes: list[dict[str, str]], nginx: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for route in routes:
+        route_path = route["route"]
+        route_without_trailing_slash = route_path.rstrip("/")
+        route_markers = [
+            f"location = {route_without_trailing_slash}",
+            f"location {route_path}",
+            f"location ^~ {route_path}",
+        ]
+        route_found = any(marker in nginx for marker in route_markers)
+        proxy_pass = route["proxyPass"]
+        proxy_found = f"proxy_pass {proxy_pass}" in nginx
+        rows.append(
+            detail_row(
+                kind="Nginx Route",
+                subject=route_path,
+                expected=f"{route_path} -> {proxy_pass}",
+                observed=f"route_found={route_found}, proxy_found={proxy_found}",
+                evidence="deploy/nginx/single-node.poc.conf",
+                passed=route_found and proxy_found,
+            )
+        )
+    return rows
+
+
 def evaluate_intents() -> list[dict[str, Any]]:
     matrix = architecture_intent_gate.load_yaml(architecture_intent_gate.INTENT_MATRIX)
     runtime_status = architecture_intent_gate.load_yaml(architecture_intent_gate.RUNTIME_STATUS)
@@ -182,34 +357,16 @@ def evaluate_intents() -> list[dict[str, Any]]:
     for intent in matrix["intents"]:
         intent_id = str(intent["id"])
         assertions = intent["assertions"]
-        errors: list[str] = []
-        assertion_count = 0
-        checks = [
-            lambda: architecture_intent_gate.assert_evidence_paths(intent_id, assertions.get("evidencePaths", [])),
-            lambda: architecture_intent_gate.assert_required_texts(intent_id, assertions.get("requiredTexts", [])),
-            lambda: architecture_intent_gate.assert_forbidden_texts(intent_id, assertions.get("forbiddenTexts", [])),
-            lambda: architecture_intent_gate.assert_runtime_statuses(
-                intent_id,
-                assertions.get("runtimeStackStatuses", {}),
-                runtime_status,
-            ),
-            lambda: architecture_intent_gate.assert_compose_active_services(
-                intent_id,
-                assertions.get("composeActiveServices", []),
-                compose,
-            ),
-            lambda: architecture_intent_gate.assert_compose_profile_services(
-                intent_id,
-                assertions.get("composeProfileServices", {}),
-                compose,
-            ),
-            lambda: architecture_intent_gate.assert_nginx_routes(intent_id, assertions.get("nginxRoutes", []), nginx),
+        details = [
+            *evaluate_evidence_paths(assertions.get("evidencePaths", [])),
+            *evaluate_required_texts(assertions.get("requiredTexts", [])),
+            *evaluate_forbidden_texts(assertions.get("forbiddenTexts", [])),
+            *evaluate_runtime_statuses(assertions.get("runtimeStackStatuses", {}), runtime_status),
+            *evaluate_compose_active_services(assertions.get("composeActiveServices", []), compose),
+            *evaluate_compose_profile_services(assertions.get("composeProfileServices", {}), compose),
+            *evaluate_nginx_routes(assertions.get("nginxRoutes", []), nginx),
         ]
-        for check in checks:
-            try:
-                assertion_count += check()
-            except architecture_intent_gate.ArchitectureIntentError as error:
-                errors.append(str(error))
+        failed_details = [detail for detail in details if not detail["passed"]]
         rows.append(
             {
                 "id": intent_id,
@@ -220,9 +377,10 @@ def evaluate_intents() -> list[dict[str, Any]]:
                 "issue": intent["issue"],
                 "rationale": intent["rationale"],
                 "linkedStacks": intent["linkedStacks"],
-                "assertions": assertion_count,
-                "passed": not errors,
-                "errors": errors,
+                "assertions": len(details),
+                "passed": not failed_details,
+                "errors": [detail["observed"] for detail in failed_details],
+                "details": details,
             }
         )
     return rows
@@ -234,7 +392,7 @@ def check_contract() -> dict[str, Any]:
         "schemaVersion": SCHEMA_VERSION,
         "output": str(DEFAULT_OUTPUT),
         "commands": [command.name for command in commands],
-        "intentReport": "per-intent pass/fail cards",
+        "intentReport": "per-intent expected-vs-observed evidence tables",
     }
 
 
@@ -290,6 +448,11 @@ def render_html(results: list[CommandResult], intent_rows: list[dict[str, Any]])
     h1 {{ font-size: 32px; letter-spacing: 0; }}
     h2 {{ font-size: 20px; margin: 32px 0 14px; }}
     .muted {{ color: var(--muted); }}
+    .section-lead {{
+      color: var(--muted);
+      max-width: 960px;
+      margin: -6px 0 14px;
+    }}
     .badge {{
       display: inline-flex;
       align-items: center;
@@ -377,10 +540,64 @@ def render_html(results: list[CommandResult], intent_rows: list[dict[str, Any]])
       font-family: "SFMono-Regular", Consolas, monospace;
       font-size: 12px;
     }}
+    .intent-grid {{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }}
+    .intent-card {{
+      display: grid;
+      grid-template-columns: minmax(260px, 0.34fr) minmax(0, 0.66fr);
+      gap: 16px;
+    }}
+    .intent-body {{
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }}
+    .intent-note {{
+      border-left: 3px solid rgba(98, 182, 255, 0.6);
+      padding-left: 12px;
+      color: #d8ecf7;
+    }}
+    .intent-table-wrap {{
+      overflow: auto;
+      border: 1px solid rgba(143, 176, 195, 0.18);
+      border-radius: 8px;
+      background: #061018;
+    }}
+    .intent-detail-table {{
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+      font-size: 13px;
+    }}
+    .intent-detail-table th,
+    .intent-detail-table td {{
+      border-bottom: 1px solid rgba(143, 176, 195, 0.14);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }}
+    .intent-detail-table th {{
+      color: #b9dcff;
+      background: rgba(98, 182, 255, 0.08);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }}
+    .intent-detail-table tr:last-child td {{ border-bottom: 0; }}
+    .result-ok {{ color: var(--ok); font-weight: 800; }}
+    .result-bad {{ color: var(--bad); font-weight: 800; }}
+    .observed {{
+      color: #f1fbff;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+    }}
     @media (max-width: 920px) {{
       main {{ padding: 20px; }}
       header {{ grid-template-columns: 1fr; }}
-      .summary, .grid {{ grid-template-columns: 1fr; }}
+      .summary, .grid, .intent-card {{ grid-template-columns: 1fr; }}
     }}
   </style>
 </head>
@@ -404,7 +621,8 @@ def render_html(results: list[CommandResult], intent_rows: list[dict[str, Any]])
 
     <section>
       <h2>Design Intent Gate</h2>
-      <div class="grid">{intent_cards}</div>
+      <p class="section-lead">각 설계 의도는 단순 통과 표시가 아니라 기대값, 실제 관측값, 근거 파일 또는 명령, 결과를 행 단위로 고정합니다. 완료 보고와 코드 상태가 어긋나는 지점을 여기서 바로 확인합니다.</p>
+      <div class="intent-grid">{intent_cards}</div>
     </section>
 
     <section>
@@ -419,30 +637,61 @@ def render_html(results: list[CommandResult], intent_rows: list[dict[str, Any]])
 
 def render_intent_card(row: dict[str, Any]) -> str:
     status = "pass" if row["passed"] else "fail"
-    errors = "\n".join(row["errors"]) if row["errors"] else "No errors"
     stacks = "".join(f"<span class=\"pill\">{html.escape(stack)}</span>" for stack in row["linkedStacks"])
+    detail_rows = "\n".join(render_intent_detail(detail) for detail in row["details"])
+    failed_count = sum(1 for detail in row["details"] if not detail["passed"])
     return f"""
-<article class="card {status}">
-  <div class="card-head">
-    <div>
-      <h3>{html.escape(row['id'])} · {html.escape(row['title'])}</h3>
-      <p class="muted">{html.escape(row['rationale'])}</p>
+<article class="card intent-card {status}">
+  <div class="intent-body">
+    <div class="card-head">
+      <div>
+        <h3>{html.escape(row['id'])}</h3>
+        <p>{html.escape(row['title'])}</p>
+      </div>
+      <span class="badge {('ok' if row['passed'] else 'bad')}">{'증거 일치' if row['passed'] else '증거 불일치'}</span>
     </div>
-    <span class="badge {('ok' if row['passed'] else 'bad')}">{'PASS' if row['passed'] else 'FAIL'}</span>
+    <p class="intent-note">{html.escape(row['rationale'])}</p>
+    <div class="meta">
+      <span class="pill">{html.escape(row['category'])}</span>
+      <span class="pill">{html.escape(row['severity'])}</span>
+      <span class="pill">{html.escape(row['cadence'])}</span>
+      <span class="pill">#{row['issue']}</span>
+      <span class="pill">{row['assertions']} checks</span>
+      <span class="pill">{failed_count} failed</span>
+    </div>
+    <div class="meta">{stacks}</div>
   </div>
-  <div class="meta">
-    <span class="pill">{html.escape(row['category'])}</span>
-    <span class="pill">{html.escape(row['severity'])}</span>
-    <span class="pill">{html.escape(row['cadence'])}</span>
-    <span class="pill">#{row['issue']}</span>
-    <span class="pill">{row['assertions']} assertions</span>
+  <div class="intent-table-wrap">
+    <table class="intent-detail-table">
+      <thead>
+        <tr>
+          <th>검증 방식</th>
+          <th>대상</th>
+          <th>기대값</th>
+          <th>실제 관측값</th>
+          <th>근거</th>
+          <th>결과</th>
+        </tr>
+      </thead>
+      <tbody>{detail_rows}</tbody>
+    </table>
   </div>
-  <div class="meta">{stacks}</div>
-  <details>
-    <summary>검증 상세</summary>
-    <pre>{html.escape(errors)}</pre>
-  </details>
 </article>
+"""
+
+
+def render_intent_detail(detail: dict[str, Any]) -> str:
+    result_class = "result-ok" if detail["passed"] else "result-bad"
+    result_text = "OK" if detail["passed"] else "FAIL"
+    return f"""
+<tr>
+  <td>{html.escape(detail['kind'])}</td>
+  <td>{html.escape(detail['subject'])}</td>
+  <td>{html.escape(detail['expected'])}</td>
+  <td class="observed">{html.escape(detail['observed'])}</td>
+  <td>{html.escape(detail['evidence'])}</td>
+  <td class="{result_class}">{result_text}</td>
+</tr>
 """
 
 
