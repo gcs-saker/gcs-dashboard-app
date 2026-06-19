@@ -122,7 +122,6 @@ services:
     image: ${AUTH_POLICY_IMAGE:-gcs-saker-auth-policy:arch-poc}
     build:
       context: ../../services/auth-policy
-    profiles: ["future-services"]
     env_file: *service_env_files
     environment:
       AUTH_POLICY_JWT_ISSUER: ${AUTH_JWT_ISSUER:-gcs-saker}
@@ -161,7 +160,6 @@ services:
     image: ${MEDIA_CONTROL_IMAGE:-gcs-saker-media-control:arch-poc}
     build:
       context: ../../services/media-control
-    profiles: ["future-services"]
     env_file: *service_env_files
     environment:
       MEDIAMTX_API_BASE_URL: ${MEDIAMTX_API_BASE_URL:-http://mediamtx:9997}

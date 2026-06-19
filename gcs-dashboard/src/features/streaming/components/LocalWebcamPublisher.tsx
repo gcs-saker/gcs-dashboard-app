@@ -96,9 +96,10 @@ export function LocalWebcamPublisher({
   );
   const steps = useMemo(() => getPublisherSteps(status, failedStep), [failedStep, status]);
 
-  useEffect(() => {
-    statusRef.current = status;
-  }, [status]);
+  function updateStatus(nextStatus: WebcamPublisherStatus): void {
+    statusRef.current = nextStatus;
+    setStatus(nextStatus);
+  }
 
   useEffect(() => {
     if (!streamTargets.some((target) => target.id === selectedStreamId)) {
@@ -138,7 +139,7 @@ export function LocalWebcamPublisher({
 
   async function startPreview(): Promise<void> {
     if (!mediaDevices?.getUserMedia) {
-      setStatus("unsupported");
+      updateStatus("unsupported");
       setFailedStep("camera");
       setErrorMessage("이 브라우저에서는 카메라 캡처를 지원하지 않습니다.");
       return;
@@ -146,7 +147,7 @@ export function LocalWebcamPublisher({
 
     try {
       setFailedStep(null);
-      setStatus("requesting-camera");
+      updateStatus("requesting-camera");
       const stream = await mediaDevices.getUserMedia({
         video: videoCaptureConstraints(selectedVideoDeviceId),
         audio: audioCaptureConstraints(audioMode, selectedAudioDeviceId),
@@ -157,9 +158,9 @@ export function LocalWebcamPublisher({
       }
       void refreshMediaDevices();
       setErrorMessage(null);
-      setStatus("previewing");
+      updateStatus("previewing");
     } catch (error) {
-      setStatus("error");
+      updateStatus("error");
       setFailedStep("camera");
       setErrorMessage(error instanceof Error ? error.message : "카메라 권한을 받을 수 없습니다.");
     }
@@ -167,7 +168,7 @@ export function LocalWebcamPublisher({
 
   async function publish(): Promise<void> {
     if (!streamRef.current) {
-      setStatus("error");
+      updateStatus("error");
       setFailedStep("camera");
       setErrorMessage("송출 전 카메라 미리보기를 먼저 준비해야 합니다.");
       return;
@@ -179,7 +180,7 @@ export function LocalWebcamPublisher({
       peerConnectionRef.current?.close();
       peerConnectionRef.current = null;
       setFailedStep(null);
-      setStatus("creating-offer");
+      updateStatus("creating-offer");
       const iceServers = peerConnectionFactory ? WEBRTC_ICE_SERVERS : await loadWebRtcIceServers(fetcher);
       const peerConnection = peerConnectionFactory?.() ?? new RTCPeerConnection({ iceServers });
       peerConnectionRef.current = peerConnection;
@@ -191,7 +192,7 @@ export function LocalWebcamPublisher({
 
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
-      setStatus("gathering-ice");
+      updateStatus("gathering-ice");
       await waitForIceGatheringComplete(peerConnection);
       const sdp = peerConnection.localDescription?.sdp;
       if (!sdp) {
@@ -199,7 +200,7 @@ export function LocalWebcamPublisher({
       }
 
       currentStep = "signaling";
-      setStatus("sending-offer");
+      updateStatus("sending-offer");
       const response = await fetcher(selectedWhipUrl, {
         method: "POST",
         headers: { Accept: "application/sdp", "Content-Type": "application/sdp" },
@@ -210,20 +211,20 @@ export function LocalWebcamPublisher({
       }
 
       const answer = await response.text();
-      setStatus("signaling-complete");
+      updateStatus("signaling-complete");
       await peerConnection.setRemoteDescription({ type: "answer", sdp: answer });
       currentStep = "media";
-      setStatus("connecting-media");
+      updateStatus("connecting-media");
       await waitForPeerConnectionReady(peerConnection);
       setErrorMessage(null);
       reconnectAttemptRef.current = 0;
-      setStatus("published");
+      updateStatus("published");
       startGpsTelemetry();
     } catch (error) {
       peerConnectionRef.current?.close();
       peerConnectionRef.current = null;
       stopGpsTelemetry();
-      setStatus("error");
+      updateStatus("error");
       setFailedStep(currentStep);
       setErrorMessage(error instanceof Error ? error.message : "로컬 웹캠 송출에 실패했습니다.");
     }
@@ -240,7 +241,7 @@ export function LocalWebcamPublisher({
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
-    setStatus("idle");
+    updateStatus("idle");
     setFailedStep(null);
   }
 
@@ -261,7 +262,7 @@ export function LocalWebcamPublisher({
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
-    setStatus("idle");
+    updateStatus("idle");
     setFailedStep(null);
     setErrorMessage(null);
   }
@@ -387,7 +388,7 @@ export function LocalWebcamPublisher({
     reconnectAttemptRef.current += 1;
     setFailedStep("media");
     setErrorMessage(message);
-    setStatus("reconnecting");
+    updateStatus("reconnecting");
     reconnectTimeoutRef.current = window.setTimeout(() => {
       reconnectTimeoutRef.current = null;
       void publish();

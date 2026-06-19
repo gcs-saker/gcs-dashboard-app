@@ -1,0 +1,170 @@
+schemaVersion: gcs-saker-v2-completion-matrix-v1
+updatedAt: "2026-06-19"
+releaseName: "Saker v2"
+releaseReadiness: alpha-core
+trackerIssue: 411
+releaseGateIssue: 423
+definition:
+  alpha-core: "active core runtime과 검증 체계는 잡혔지만 production-ready release는 아니다."
+  release-candidate: "모든 release blocker가 닫히고 local/server smoke와 benchmark가 통과한 상태다."
+  production-ready: "운영 서버 배포 후 health/route/stream/degraded/external NAT 검증까지 완료된 상태다."
+decision: "현재 상태는 Saker v2 alpha-core이며, production-ready complete가 아니다."
+
+requiredGates:
+  - id: V2-GRPC-001
+    issue: 412
+    title: "gRPC internal bidirectional streaming runtime wiring"
+    expectedStateForV2: active-or-deferred-with-record
+    currentState: contract
+    releaseBlocker: true
+    evidence:
+      - contracts/proto/gcs/saker/v1/gateway_service.proto
+      - scripts/grpc_runtime_smoke.py
+      - backend/tests/test_message_sender_abstraction.py
+    missing:
+      - "Spring/Kotlin 또는 Go/Python gRPC runtime server/client wiring"
+      - "internal network port와 compose wiring"
+      - "runtime bidirectional streaming smoke"
+
+  - id: V2-PROTOBUF-001
+    issue: 413
+    title: "Protobuf event/control pipeline integration across Python Go Kotlin"
+    expectedStateForV2: active-contract
+    currentState: contract
+    releaseBlocker: true
+    evidence:
+      - contracts/proto/gcs/saker/v1
+      - backend/tests/test_protobuf_contracts.py
+      - services/media-control/internal/protocolv2
+    missing:
+      - "Kotlin/Go/Python generated DTO 또는 명시 mapper 정리"
+      - "device/native gateway path에서 실제 protobuf payload smoke"
+
+  - id: V2-POSTGIS-001
+    issue: 414
+    title: "PostgreSQL PostGIS geo profile runtime integration"
+    expectedStateForV2: profile-validated-or-deferred-with-record
+    currentState: profile
+    releaseBlocker: true
+    evidence:
+      - deploy/postgres/init/001_geo_telemetry.sql
+      - scripts/postgis_runtime_smoke.py
+      - backend/tests/test_postgis_schema_contract.py
+    missing:
+      - "geo profile container runtime smoke"
+      - "latest/history upsert"
+      - "spatial viewport explain 결과"
+
+  - id: V2-DRAGONFLY-001
+    issue: 415
+    title: "DragonFly cache profile validation and Redis fallback contract"
+    expectedStateForV2: profile-validated-or-deferred-with-record
+    currentState: profile
+    releaseBlocker: true
+    evidence:
+      - deploy/compose/compose.dragonfly.override.yml
+      - scripts/dragonfly_profile_smoke.py
+      - docs/architecture/GCS-Saker_M8_dragonfly_compatibility_profile.md
+    missing:
+      - "Redis/DragonFly 양쪽 auth/session/ICE/stream cache smoke 비교"
+      - "license/image tag/release note 기록"
+
+  - id: V2-MQTT-001
+    issue: 416
+    title: "MQTT hardened protobuf telemetry and control bridge"
+    expectedStateForV2: active-profile
+    currentState: profile
+    releaseBlocker: true
+    evidence:
+      - deploy/compose/compose.mqtt-hardened.override.yml
+      - backend/tests/test_mqtt_consumer_bridge.py
+      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/MqttTelemetryConsumerBridge.kt
+    missing:
+      - "hardened override publish/deny smoke"
+      - "protobuf telemetry/control bridge runtime smoke"
+
+  - id: V2-TELEMETRY-BULK-001
+    issue: 417
+    title: "Telemetry write buffer and DB bulk persistence tuning"
+    expectedStateForV2: benchmarked
+    currentState: contract
+    releaseBlocker: true
+    evidence:
+      - backend/modules/telemetry_buffer
+      - backend/tests/test_telemetry_write_buffer.py
+      - docs/architecture/GCS-Saker_telemetry_storage_bulk_write_contract.md
+    missing:
+      - "DB flush latency benchmark"
+      - "batch size별 write amplification/lock 영향 보고"
+
+  - id: V2-WEBRTC-ICE-001
+    issue: 418
+    title: "WebRTC TURN burden reduction and ICE observability"
+    expectedStateForV2: active-validated
+    currentState: active-partial
+    releaseBlocker: true
+    evidence:
+      - scripts/webrtc_ice_smoke.py
+      - scripts/m7_dashboard_first_frame_smoke.sh
+      - services/media-control/internal/turn
+      - gcs-dashboard/src/features/streaming/components/WebRTCPlayer.tsx
+    missing:
+      - "외부 NAT 자동 WHIP/WHEP smoke"
+      - "relay ratio, selected candidate type, first-frame latency release threshold"
+      - "TURN 장애 degraded behavior"
+
+  - id: V2-AI-WEBCODECS-001
+    issue: 419
+    title: "AI overlay sidecar contract runtime path and WebCodecs scope"
+    expectedStateForV2: contract-or-deferred-with-record
+    currentState: contract-prototype
+    releaseBlocker: false
+    evidence:
+      - contracts/proto/gcs/saker/v1/ai_overlay.proto
+      - gcs-dashboard/src/features/streaming/webCodecsPipelinePlan.ts
+      - docs/architecture/GCS-Saker_M8_ai_sidecar_overlay_contract.md
+    missing:
+      - "AI overlay sidecar runtime smoke"
+      - "WebCodecs worker/recording pipeline"
+    deferReason: "AI overlay와 WebCodecs는 Saker v2 core streaming release의 필수 media path가 아니다."
+
+  - id: V2-CLOSED-NETWORK-001
+    issue: 420
+    title: "Closed-network appliance integration gate and offline runtime"
+    expectedStateForV2: validated
+    currentState: contract
+    releaseBlocker: true
+    evidence:
+      - deploy/mediamtx/mediamtx.closed-network.yml
+      - docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md
+      - backend/tests/test_closed_network_static_check.py
+    missing:
+      - "offline install/runtime smoke"
+      - "local STUN/TURN, local map asset, local time source 검증"
+
+  - id: V2-BENCHMARK-001
+    issue: 421
+    title: "Migration benchmark matrix and final architecture evidence"
+    expectedStateForV2: passing
+    currentState: partial
+    releaseBlocker: true
+    evidence:
+      - scripts/m7_performance_benchmark_matrix.py
+      - docs/architecture/GCS-Saker_M7_performance_benchmark_matrix.md
+      - scripts/generate_test_report.py
+    missing:
+      - "runtime path별 latency/throughput/relay ratio/DB flush latency 수치"
+      - "legacy 0.2.0 대비 v2 benchmark 결과"
+
+  - id: V2-RELEASE-GATE-001
+    issue: 423
+    title: "Saker v2 production readiness gate and release cutover"
+    expectedStateForV2: passing
+    currentState: open
+    releaseBlocker: true
+    evidence:
+      - docs/architecture/GCS-Saker_v2_completion_matrix.yml
+    missing:
+      - "모든 release blocker 0개"
+      - "local/server health, route, stream, degraded, external NAT smoke"
+      - "release tag와 rollback 기준"

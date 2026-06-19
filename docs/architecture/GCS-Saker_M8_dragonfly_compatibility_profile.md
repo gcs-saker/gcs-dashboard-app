@@ -20,7 +20,7 @@ media frame, WebRTC RTP packet, HLS segment는 Redis/Dragonfly에 올리지 않�
 ```bash
 docker compose --env-file deploy/compose/.env.single-node \
   -f deploy/compose/compose.single-node.poc.yml \
-  --profile future-services up -d
+  up -d
 ```
 
 Dragonfly 후보 검증 시에만 override를 추가한다.
@@ -29,7 +29,7 @@ Dragonfly 후보 검증 시에만 override를 추가한다.
 docker compose --env-file deploy/compose/.env.single-node \
   -f deploy/compose/compose.single-node.poc.yml \
   -f deploy/compose/compose.dragonfly.override.yml \
-  --profile future-services up -d
+  up -d
 ```
 
 override는 `redis` 서비스 이름을 유지한다. 따라서 Spring과 Go 서비스는 `redis:6379` 주소 계약을 그대로 사용하고, runtime만 Dragonfly로 바뀐다.

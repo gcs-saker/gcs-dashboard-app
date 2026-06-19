@@ -173,7 +173,7 @@ export function createManualStreamDeviceOption(
     name: normalizedDisplayName,
     streamPath,
     sourceUrl: address.trim(),
-    status: "online",
+    status: "degraded",
     mediaType: mediaTypeFromStreamPath(streamPath),
     geometry: defaultGeometryForStream(streamPath, "device"),
   };

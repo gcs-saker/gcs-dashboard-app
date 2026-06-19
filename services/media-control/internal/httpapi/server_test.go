@@ -382,6 +382,24 @@ func TestDashboardStreamListRequiresAuthorizationWhenPolicyRequiresIt(t *testing
 	}
 }
 
+func TestDashboardStreamListRequiresAuthorizationBeforeQueryingRegistry(t *testing.T) {
+	server := newTestServerWithAuthorizer(
+		fakeStreams{err: errors.New("registry must not be queried before stream-list authorization")},
+		fakeIce{},
+		fakeAuthorizer{errByStream: map[string]error{
+			"control.stream-list": domain.ErrStreamAuthenticationRequired,
+		}},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 before registry access, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
 func TestDashboardPlaybackDeniesForbiddenStream(t *testing.T) {
 	path, _ := domain.NewStreamPath("raw/company-b/front")
 	server := newTestServerWithAuthorizer(
