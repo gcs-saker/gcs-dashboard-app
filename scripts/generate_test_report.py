@@ -57,6 +57,12 @@ def build_commands(include_spring: bool) -> list[TestCommand]:
             cwd=REPO_ROOT,
         ),
         TestCommand(
+            name="Saker v2 Completion Gate",
+            description="Saker v2 alpha-core/release-candidate/production-ready 상태와 남은 release blocker를 확인합니다.",
+            command=["python3", "scripts/v2_completion_gate.py", "--json"],
+            cwd=REPO_ROOT,
+        ),
+        TestCommand(
             name="Backend Pytest",
             description="Python legacy/fallback, contract, smoke helper test를 전체 실행합니다.",
             command=["python3", "-m", "pytest", "backend/tests", "-q"],

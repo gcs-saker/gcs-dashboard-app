@@ -39,6 +39,7 @@ def test_test_report_generator_contract_lists_full_check_commands() -> None:
     assert payload["principleReport"] == "project principles expected-vs-observed proof tables"
     assert {
         "Architecture Intent Gate",
+        "Saker v2 Completion Gate",
         "Backend Pytest",
         "Frontend Vitest",
         "Frontend Build",
