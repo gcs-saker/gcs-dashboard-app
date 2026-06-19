@@ -381,6 +381,7 @@ describe("LocalWebcamPublisher", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"));
+    await screen.findByText("WebRTC 미디어 연결이 완료되어 송출 중입니다.");
 
     firstPeerConnection.disconnect();
 
