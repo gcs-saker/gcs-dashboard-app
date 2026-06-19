@@ -62,7 +62,6 @@ compose() {
     --project-directory "$COMPOSE_DIR" \
     --env-file "$ENV_FILE" \
     -f "$COMPOSE_FILE" \
-    --profile future-services \
     "$@"
 }
 

@@ -208,6 +208,11 @@ func (s Server) iceServers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) dashboardStreamList(w http.ResponseWriter, r *http.Request) {
+	if _, err := s.authorizer.AuthorizeStream(r.Context(), r.Header.Get(authorizationHeader), s.groups.StreamListTarget()); err != nil {
+		s.writeStreamAccessError(w, err)
+		return
+	}
+
 	streams, err := s.streams.ListStreams(r.Context())
 	if err != nil {
 		writeJSON(w, http.StatusBadGateway, errorPayload(err.Error()))

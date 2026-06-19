@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -34,6 +35,32 @@ def test_docker_env_check_script_passes_static_contracts() -> None:
 
     assert result.returncode == 0, result.stderr
     assert "Docker env contract check passed" in result.stdout
+
+
+def test_single_node_active_runtime_compose_model_is_valid_without_future_profile() -> None:
+    if shutil.which("docker") is None:
+        import pytest
+
+        pytest.skip("docker CLI is not available")
+
+    result = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "--env-file",
+            str(SINGLE_NODE_COMPOSE_FILE.parent / ".env.single-node.example"),
+            "-f",
+            str(SINGLE_NODE_COMPOSE_FILE),
+            "config",
+            "--quiet",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_compose_declares_env_injection_for_runtime_services() -> None:

@@ -15,7 +15,7 @@ M7의 구조 이전은 코드 골격만 통과하면 안 된다. 인증/인가, 
    - TURN long-term credential allocation 정적 계약을 확인한다.
    - Docker가 있으면 `docker compose config --quiet`까지 확인한다.
 2. `--run`
-   - single-node PoC stack을 `future-services` profile까지 포함해 띄운다.
+   - single-node PoC stack을 기본 active runtime으로 띄운다.
    - edge의 `/healthz`, `/readyz`, `/stream/status`를 확인한다.
    - edge container 내부에서 `auth-policy`, `media-control`, `MediaMTX API`를 확인한다.
    - host에서 TURN primary/secondary allocation을 실제로 수행한다.

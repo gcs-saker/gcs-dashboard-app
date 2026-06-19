@@ -14,6 +14,8 @@ var (
 const (
 	controlPlaneIceServersStreamID = "control.ice-servers"
 	controlPlaneIceServersPath     = "control/ice-servers"
+	controlPlaneStreamListStreamID = "control.stream-list"
+	controlPlaneStreamListPath     = "control/stream-list"
 )
 
 type StreamAccessTarget struct {
@@ -108,6 +110,14 @@ func (r StreamGroupResolver) IceServersTarget() StreamAccessTarget {
 	return StreamAccessTarget{
 		StreamID:         controlPlaneIceServersStreamID,
 		Path:             controlPlaneIceServersPath,
+		PublisherGroupID: r.defaultGroupID,
+	}
+}
+
+func (r StreamGroupResolver) StreamListTarget() StreamAccessTarget {
+	return StreamAccessTarget{
+		StreamID:         controlPlaneStreamListStreamID,
+		Path:             controlPlaneStreamListPath,
 		PublisherGroupID: r.defaultGroupID,
 	}
 }
