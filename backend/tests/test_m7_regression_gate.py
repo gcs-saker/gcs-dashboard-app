@@ -29,6 +29,7 @@ def test_m7_regression_gate_documents_v020_and_poc_paths() -> None:
         "frontend test coverage",
         "Spring/Kotlin auth-policy",
         "Go media-control",
+        "architecture intent gate",
         "smoke: login -> dashboard -> stream list -> playback contract",
     ]
 
@@ -46,6 +47,7 @@ def test_m7_regression_gate_script_contains_full_commands() -> None:
         "npm run build",
         "./gradlew check",
         "go test ./... -cover",
+        "architecture_intent_gate.py",
         "m7_single_node_runtime_smoke.sh",
         "m7_publish_play_smoke.sh",
         "m7_dashboard_first_frame_smoke.sh",

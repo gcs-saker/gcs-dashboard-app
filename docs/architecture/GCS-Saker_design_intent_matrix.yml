@@ -1,0 +1,235 @@
+schemaVersion: gcs-saker-design-intent-matrix-v1
+updatedAt: "2026-06-19"
+purpose: "설계 의도가 코드, compose, reverse proxy, smoke gate에 실제로 반영되는지 주기적으로 검증한다."
+cadence:
+  everyIssue: "관련 unit/contract test"
+  everyPullRequest: "architecture intent gate + M7 regression check"
+  everyMilestone: "runtime smoke + external NAT WebRTC smoke + benchmark matrix"
+  beforeDeploy: "docker compose config + edge route smoke + security boundary check"
+
+intents:
+  - id: ARCH-RUNTIME-001
+    title: "active runtime은 기본 compose에서 바로 떠야 한다"
+    category: runtime
+    severity: p0
+    cadence: everyPullRequest
+    issue: 411
+    linkedStacks:
+      - springAuthPolicy
+      - goMediaControl
+      - redisCache
+      - mysqlLegacy
+      - mediamtxWebrtcHls
+      - coturnPair
+    rationale: "완료라고 말한 서비스가 선택 profile에 숨어 있으면 실제 배포와 설계 보고가 어긋난다."
+    assertions:
+      runtimeStackStatuses:
+        springAuthPolicy: active
+        goMediaControl: active
+        redisCache: active
+        mysqlLegacy: active
+        mediamtxWebrtcHls: active
+        coturnPair: active
+      composeActiveServices:
+        - auth-policy
+        - media-control
+        - redis
+        - mysql-legacy
+        - mediamtx
+        - turn-primary
+        - turn-secondary
+        - dashboard
+        - edge
+      evidencePaths:
+        - deploy/compose/compose.single-node.poc.yml
+        - docs/architecture/GCS-Saker_runtime_stack_status.yml
+
+  - id: ARCH-RUNTIME-002
+    title: "profile, contract, prototype은 active로 보고하지 않는다"
+    category: runtime
+    severity: p0
+    cadence: everyPullRequest
+    issue: 411
+    linkedStacks:
+      - grpcInternalStreaming
+      - dragonflyCacheProfile
+      - postgisGeoProfile
+      - webCodecsCanvasPipeline
+      - http3EdgeProfile
+      - aiOverlaySidecar
+    rationale: "기술명이 repo에 있다는 이유만으로 완료 처리하지 않기 위한 정직성 게이트다."
+    assertions:
+      runtimeStackStatuses:
+        grpcInternalStreaming: contract
+        dragonflyCacheProfile: profile
+        postgisGeoProfile: profile
+        webCodecsCanvasPipeline: prototype
+        http3EdgeProfile: deferred
+        aiOverlaySidecar: contract
+      composeProfileServices:
+        postgres-geo: geo
+      evidencePaths:
+        - scripts/grpc_runtime_smoke.py
+        - scripts/dragonfly_profile_smoke.py
+        - scripts/postgis_runtime_smoke.py
+        - gcs-dashboard/src/features/streaming/webCodecsPipelinePlan.ts
+
+  - id: ARCH-EDGE-001
+    title: "외부 요청은 Nginx edge를 통해 의도한 서비스로 라우팅한다"
+    category: edge-routing
+    severity: p0
+    cadence: everyPullRequest
+    issue: 411
+    linkedStacks:
+      - springAuthPolicy
+      - goMediaControl
+      - mediamtxWebrtcHls
+    rationale: "브라우저와 외부 단말이 backend, DB, cache, broker에 직접 닿지 않게 단일 edge 경계를 유지한다."
+    assertions:
+      nginxRoutes:
+        - route: /healthz
+          proxyPass: http://gcs_auth_policy/healthz
+        - route: /readyz
+          proxyPass: http://gcs_auth_policy/readyz
+        - route: /auth-policy/
+          proxyPass: http://gcs_auth_policy
+        - route: /media-control/
+          proxyPass: http://gcs_media_control
+        - route: /api/telemetry/
+          proxyPass: http://gcs_auth_policy
+        - route: /api/ops/
+          proxyPass: http://gcs_auth_policy
+        - route: /api/stream/
+          proxyPass: http://gcs_media_control
+        - route: /hls/
+          proxyPass: http://gcs_mediamtx_hls
+        - route: /webrtc/
+          proxyPass: http://gcs_mediamtx_webrtc
+      evidencePaths:
+        - deploy/nginx/single-node.poc.conf
+
+  - id: ARCH-PROTOCOL-001
+    title: "dashboard는 REST/JSON과 WebRTC만 사용하고 gRPC는 내부 경로에 둔다"
+    category: protocol-boundary
+    severity: p1
+    cadence: everyPullRequest
+    issue: 412
+    linkedStacks:
+      - grpcInternalStreaming
+      - protobufInternalContracts
+    rationale: "브라우저 호환성과 보안 경계를 위해 gRPC는 service-to-service/native gateway 후보로 제한한다."
+    assertions:
+      forbiddenTexts:
+        - path: gcs-dashboard/src
+          text: "grpc"
+      requiredTexts:
+        - path: contracts/proto/gcs/saker/v1/gateway_service.proto
+          text: "rpc Exchange(stream GatewayStreamRequest) returns (stream GatewayStreamResponse);"
+        - path: backend/modules/messaging/sender.py
+          text: "MessageSender"
+        - path: scripts/grpc_runtime_smoke.py
+          text: "status\": \"contract\""
+      evidencePaths:
+        - backend/tests/test_protobuf_contracts.py
+        - backend/tests/test_message_sender_abstraction.py
+
+  - id: ARCH-MEDIA-001
+    title: "영상/음성 media frame은 MQTT, Redis, DB가 아니라 MediaMTX/WebRTC 경로를 탄다"
+    category: media-pipeline
+    severity: p0
+    cadence: everyPullRequest
+    issue: 418
+    linkedStacks:
+      - mediamtxWebrtcHls
+      - coturnPair
+      - mqttTelemetryBridge
+    rationale: "저지연성을 위해 control/telemetry와 media frame 경로를 분리한다."
+    assertions:
+      requiredTexts:
+        - path: docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md
+          text: "media frame은 MQTT에 태우지 않는다."
+        - path: deploy/nginx/single-node.poc.conf
+          text: "location /webrtc/"
+        - path: deploy/nginx/single-node.poc.conf
+          text: "location /hls/"
+        - path: services/media-control/README.md
+          text: "WebRTC/WHEP/HLS는 MediaMTX와 coturn이 담당한다."
+      evidencePaths:
+        - scripts/m7_publish_play_smoke.sh
+        - scripts/m7_dashboard_first_frame_smoke.sh
+
+  - id: ARCH-SECURITY-001
+    title: "스트림 제어 정보와 ICE 서버 목록은 인증 후 반환한다"
+    category: security
+    severity: p0
+    cadence: everyIssue
+    issue: 418
+    linkedStacks:
+      - goMediaControl
+      - springAuthPolicy
+    rationale: "stream list, playback URL, TURN credential은 단순 조회 정보가 아니라 접근 권한이 필요한 control plane 데이터다."
+    assertions:
+      requiredTexts:
+        - path: services/media-control/internal/httpapi/server.go
+          text: "AuthorizeStream"
+        - path: services/media-control/internal/domain/access.go
+          text: "StreamListTarget"
+        - path: services/media-control/internal/httpapi/server_test.go
+          text: "TestDashboardStreamListRequiresAuthorizationBeforeQueryingRegistry"
+        - path: services/media-control/internal/httpapi/server_test.go
+          text: "TestIceServersRequiresAuthorizationBeforeReturningTurnCredentials"
+      evidencePaths:
+        - services/media-control/internal/authpolicy
+        - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api
+
+  - id: ARCH-OBS-001
+    title: "WebRTC는 API 성공이 아니라 signaling, ICE, first frame, audio 상태로 검증한다"
+    category: observability
+    severity: p1
+    cadence: everyMilestone
+    issue: 418
+    linkedStacks:
+      - mediamtxWebrtcHls
+      - coturnPair
+    rationale: "스트리밍 시스템은 HTTP 200만으로 성공을 판단할 수 없다."
+    assertions:
+      requiredTexts:
+        - path: gcs-dashboard/src/features/streaming/hooks/useWhepPlayback.ts
+          text: "first-frame"
+        - path: gcs-dashboard/src/features/streaming/hooks/useWhepPlayback.ts
+          text: "selectedPair"
+        - path: gcs-dashboard/src/features/streaming/components/WebRTCPlayer.tsx
+          text: "data-first-frame-latency-ms"
+        - path: gcs-dashboard/src/features/streaming/components/WebRTCPlayer.tsx
+          text: "data-audio-level"
+        - path: scripts/m7_dashboard_first_frame_smoke.sh
+          text: "first-frame"
+      evidencePaths:
+        - gcs-dashboard/src/features/streaming/components/WebRTCPlayer.test.tsx
+        - scripts/webrtc_ice_smoke.py
+
+  - id: ARCH-PERF-001
+    title: "성능 최적화는 benchmark matrix와 smoke gate로 회귀를 감지한다"
+    category: performance
+    severity: p1
+    cadence: everyMilestone
+    issue: 421
+    linkedStacks:
+      - mediamtxWebrtcHls
+      - redisCache
+      - goMediaControl
+      - springAuthPolicy
+    rationale: "속도 개선은 느낌이 아니라 baseline 대비 악화율과 병목 지표로 판단한다."
+    assertions:
+      requiredTexts:
+        - path: docs/architecture/GCS-Saker_M7_performance_benchmark_matrix.md
+          text: "m7-performance-benchmark-v1"
+        - path: scripts/m7_performance_benchmark_matrix.py
+          text: "schemaVersion"
+        - path: backend/tests/test_m7_performance_benchmark_matrix.py
+          text: "ops_event_graphql_page"
+        - path: backend/tests/test_protobuf_performance_baseline.py
+          text: "protobuf_bytes < result.json_bytes"
+      evidencePaths:
+        - scripts/m7_performance_benchmark_matrix.py
+        - backend/tests/test_m7_performance_benchmark_matrix.py
