@@ -19,6 +19,7 @@ import architecture_intent_gate
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = REPO_ROOT / "output" / "reports" / "gcs-saker-test-report.html"
+PRINCIPLE_MATRIX = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_principle_proof_matrix.yml"
 SCHEMA_VERSION = "gcs-saker-test-report-v1"
 
 
@@ -347,6 +348,23 @@ def evaluate_nginx_routes(routes: list[dict[str, str]], nginx: str) -> list[dict
     return rows
 
 
+def evaluate_assertions(
+    assertions: dict[str, Any],
+    runtime_status: dict[str, Any],
+    compose: dict[str, Any],
+    nginx: str,
+) -> list[dict[str, Any]]:
+    return [
+        *evaluate_evidence_paths(assertions.get("evidencePaths", [])),
+        *evaluate_required_texts(assertions.get("requiredTexts", [])),
+        *evaluate_forbidden_texts(assertions.get("forbiddenTexts", [])),
+        *evaluate_runtime_statuses(assertions.get("runtimeStackStatuses", {}), runtime_status),
+        *evaluate_compose_active_services(assertions.get("composeActiveServices", []), compose),
+        *evaluate_compose_profile_services(assertions.get("composeProfileServices", {}), compose),
+        *evaluate_nginx_routes(assertions.get("nginxRoutes", []), nginx),
+    ]
+
+
 def evaluate_intents() -> list[dict[str, Any]]:
     matrix = architecture_intent_gate.load_yaml(architecture_intent_gate.INTENT_MATRIX)
     runtime_status = architecture_intent_gate.load_yaml(architecture_intent_gate.RUNTIME_STATUS)
@@ -357,15 +375,7 @@ def evaluate_intents() -> list[dict[str, Any]]:
     for intent in matrix["intents"]:
         intent_id = str(intent["id"])
         assertions = intent["assertions"]
-        details = [
-            *evaluate_evidence_paths(assertions.get("evidencePaths", [])),
-            *evaluate_required_texts(assertions.get("requiredTexts", [])),
-            *evaluate_forbidden_texts(assertions.get("forbiddenTexts", [])),
-            *evaluate_runtime_statuses(assertions.get("runtimeStackStatuses", {}), runtime_status),
-            *evaluate_compose_active_services(assertions.get("composeActiveServices", []), compose),
-            *evaluate_compose_profile_services(assertions.get("composeProfileServices", {}), compose),
-            *evaluate_nginx_routes(assertions.get("nginxRoutes", []), nginx),
-        ]
+        details = evaluate_assertions(assertions, runtime_status, compose, nginx)
         failed_details = [detail for detail in details if not detail["passed"]]
         rows.append(
             {
@@ -386,6 +396,35 @@ def evaluate_intents() -> list[dict[str, Any]]:
     return rows
 
 
+def evaluate_principles() -> list[dict[str, Any]]:
+    matrix = architecture_intent_gate.load_yaml(PRINCIPLE_MATRIX)
+    runtime_status = architecture_intent_gate.load_yaml(architecture_intent_gate.RUNTIME_STATUS)
+    compose = architecture_intent_gate.load_yaml(architecture_intent_gate.COMPOSE_FILE)
+    nginx = architecture_intent_gate.NGINX_CONFIG.read_text(encoding="utf-8")
+
+    rows: list[dict[str, Any]] = []
+    for principle in matrix["principles"]:
+        assertions = principle.get("assertions", {})
+        details = evaluate_assertions(assertions, runtime_status, compose, nginx)
+        failed_details = [detail for detail in details if not detail["passed"]]
+        rows.append(
+            {
+                "id": principle["id"],
+                "group": principle["group"],
+                "principle": principle["principle"],
+                "expectedProof": principle["expectedProof"],
+                "proofState": principle["proofState"],
+                "severity": principle["severity"],
+                "issue": principle["issue"],
+                "assertions": len(details),
+                "passed": not failed_details,
+                "errors": [detail["observed"] for detail in failed_details],
+                "details": details,
+            }
+        )
+    return rows
+
+
 def check_contract() -> dict[str, Any]:
     commands = build_commands(include_spring=True)
     return {
@@ -393,18 +432,32 @@ def check_contract() -> dict[str, Any]:
         "output": str(DEFAULT_OUTPUT),
         "commands": [command.name for command in commands],
         "intentReport": "per-intent expected-vs-observed evidence tables",
+        "principleReport": "project principles expected-vs-observed proof tables",
     }
 
 
-def render_html(results: list[CommandResult], intent_rows: list[dict[str, Any]]) -> str:
+def render_html(
+    results: list[CommandResult],
+    intent_rows: list[dict[str, Any]],
+    principle_rows: list[dict[str, Any]] | None = None,
+) -> str:
+    principle_rows = principle_rows or []
     generated_at = datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
     passed_commands = sum(1 for result in results if result.passed)
     passed_intents = sum(1 for row in intent_rows if row["passed"])
+    passed_principles = sum(1 for row in principle_rows if row["passed"])
     total_duration = sum(result.duration_seconds for result in results)
-    overall_passed = passed_commands == len(results) and passed_intents == len(intent_rows)
+    overall_passed = (
+        passed_commands == len(results)
+        and passed_intents == len(intent_rows)
+        and passed_principles == len(principle_rows)
+    )
 
     command_cards = "\n".join(render_command_card(result) for result in results)
     intent_cards = "\n".join(render_intent_card(row) for row in intent_rows)
+    principle_cards = "\n".join(render_principle_card(row) for row in principle_rows)
+    manual_principles = sum(1 for row in principle_rows if row["proofState"] == "manual")
+    gap_principles = sum(1 for row in principle_rows if row["proofState"] == "gap")
 
     return f"""<!doctype html>
 <html lang="ko">
@@ -469,7 +522,7 @@ def render_html(results: list[CommandResult], intent_rows: list[dict[str, Any]])
     .badge.bad {{ color: var(--bad); border-color: rgba(255, 92, 120, 0.5); }}
     .summary {{
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 14px;
       margin-bottom: 22px;
     }}
@@ -615,8 +668,15 @@ def render_html(results: list[CommandResult], intent_rows: list[dict[str, Any]])
     <section class="summary">
       <div class="metric"><span class="muted">Test Commands</span><strong>{passed_commands}/{len(results)}</strong></div>
       <div class="metric"><span class="muted">Design Intents</span><strong>{passed_intents}/{len(intent_rows)}</strong></div>
-      <div class="metric"><span class="muted">Assertions</span><strong>{sum(row['assertions'] for row in intent_rows)}</strong></div>
+      <div class="metric"><span class="muted">Principles</span><strong>{passed_principles}/{len(principle_rows)}</strong></div>
+      <div class="metric"><span class="muted">Assertions</span><strong>{sum(row['assertions'] for row in intent_rows) + sum(row['assertions'] for row in principle_rows)}</strong></div>
       <div class="metric"><span class="muted">Duration</span><strong>{total_duration:.1f}s</strong></div>
+    </section>
+
+    <section>
+      <h2>Project Principles Proof</h2>
+      <p class="section-lead">프로젝트 원칙과 코드 설계 원칙을 기대 증거, 실제 관측값, 근거 경로로 대조합니다. 자동 검증이 어려운 운영 항목은 수동 검증 필요로 남겨 거짓 완료를 막습니다. 수동 {manual_principles}개, gap {gap_principles}개.</p>
+      <div class="intent-grid">{principle_cards}</div>
     </section>
 
     <section>
@@ -632,6 +692,54 @@ def render_html(results: list[CommandResult], intent_rows: list[dict[str, Any]])
   </main>
 </body>
 </html>
+"""
+
+
+def render_principle_card(row: dict[str, Any]) -> str:
+    status = "pass" if row["passed"] else "fail"
+    detail_rows = "\n".join(render_intent_detail(detail) for detail in row["details"])
+    failed_count = sum(1 for detail in row["details"] if not detail["passed"])
+    proof_state = {
+        "automated": "자동 증거",
+        "manual": "수동 검증 필요",
+        "gap": "Gap",
+    }.get(row["proofState"], row["proofState"])
+    return f"""
+<article class="card intent-card {status}">
+  <div class="intent-body">
+    <div class="card-head">
+      <div>
+        <h3>{html.escape(row['id'])}</h3>
+        <p>{html.escape(row['principle'])}</p>
+      </div>
+      <span class="badge {('ok' if row['passed'] else 'bad')}">{'증거 일치' if row['passed'] else '증거 불일치'}</span>
+    </div>
+    <p class="intent-note">{html.escape(row['expectedProof'])}</p>
+    <div class="meta">
+      <span class="pill">{html.escape(row['group'])}</span>
+      <span class="pill">{html.escape(row['severity'])}</span>
+      <span class="pill">{html.escape(proof_state)}</span>
+      <span class="pill">#{row['issue']}</span>
+      <span class="pill">{row['assertions']} checks</span>
+      <span class="pill">{failed_count} failed</span>
+    </div>
+  </div>
+  <div class="intent-table-wrap">
+    <table class="intent-detail-table">
+      <thead>
+        <tr>
+          <th>검증 방식</th>
+          <th>대상</th>
+          <th>기대값</th>
+          <th>실제 관측값</th>
+          <th>근거</th>
+          <th>결과</th>
+        </tr>
+      </thead>
+      <tbody>{detail_rows}</tbody>
+    </table>
+  </div>
+</article>
 """
 
 
@@ -748,11 +856,18 @@ def main() -> int:
     commands = build_commands(include_spring=not args.skip_spring)
     results = [run_command(command, args.timeout_seconds) for command in commands]
     intent_rows = evaluate_intents()
-    html_content = render_html(results, intent_rows)
+    principle_rows = evaluate_principles()
+    html_content = render_html(results, intent_rows, principle_rows)
     write_report(args.output, html_content)
 
     print(str(args.output))
-    return 0 if all(result.passed for result in results) and all(row["passed"] for row in intent_rows) else 1
+    return (
+        0
+        if all(result.passed for result in results)
+        and all(row["passed"] for row in intent_rows)
+        and all(row["passed"] for row in principle_rows)
+        else 1
+    )
 
 
 if __name__ == "__main__":
