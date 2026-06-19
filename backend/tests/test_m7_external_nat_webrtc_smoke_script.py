@@ -26,6 +26,8 @@ def test_m7_external_nat_webrtc_smoke_reports_required_metrics() -> None:
 
     assert "TURN primary" in script
     assert "TURN secondary" in script
+    assert "AUTH_BEARER_TOKEN" in script
+    assert "ice server API auth gate: enforced" in script
     assert "RELAY_ONLY" in script
     assert "--require-video-frame" in script
     assert "candidate summary" in script
