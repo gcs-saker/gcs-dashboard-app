@@ -11,6 +11,7 @@ SEED_SMOKE_USER="${SEED_SMOKE_USER:-0}"
 SMOKE_USERNAME="${SMOKE_USERNAME:-m7-smoke-viewer}"
 SMOKE_PASSWORD="${SMOKE_PASSWORD:-m7-smoke-pass}"
 SMOKE_STREAM_ID="${SMOKE_STREAM_ID:-raw.sample.front}"
+INSECURE_TLS="${INSECURE_TLS:-0}"
 
 usage() {
   cat <<'EOF'
@@ -30,6 +31,7 @@ Environment:
   SMOKE_USERNAME     Default: m7-smoke-viewer
   SMOKE_PASSWORD     Default: m7-smoke-pass
   SMOKE_STREAM_ID    Default: raw.sample.front
+  INSECURE_TLS       Set 1 for current self-signed HTTPS staging certificate.
 EOF
 }
 
@@ -63,6 +65,12 @@ require_command() {
   fi
 }
 
+curl_tls_args() {
+  if [[ "$INSECURE_TLS" == "1" ]]; then
+    printf '%s\n' "-k"
+  fi
+}
+
 run_check() {
   bash -n "$0"
   grep -q "data-first-frame-latency-ms" "${REPO_ROOT}/gcs-dashboard/src/features/streaming/components/WebRTCPlayer.tsx"
@@ -71,6 +79,7 @@ run_check() {
   grep -q "Smoke user" "${REPO_ROOT}/scripts/m7_seed_smoke_user.py"
   grep -q "playbackUrls" "$0"
   grep -q "AUTH_BASE_PATH" "$0"
+  grep -q "INSECURE_TLS" "$0"
   echo "M7 dashboard first-frame smoke check passed"
 }
 
@@ -93,7 +102,7 @@ run_live() {
   export SMOKE_USERNAME
   export SMOKE_PASSWORD
   login_payload="$(python3 -c 'import json, os; print(json.dumps({"username": os.environ["SMOKE_USERNAME"], "password": os.environ["SMOKE_PASSWORD"]}))')"
-  login_response="$(curl -fsS \
+  login_response="$(curl $(curl_tls_args) -fsS \
     -H "Content-Type: application/json" \
     -H "Origin: ${EDGE_BASE_URL}" \
     -H "X-GCS-CSRF: same-origin" \
@@ -103,10 +112,10 @@ run_live() {
 
   local access_token
   access_token="$(python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])' <<<"$login_response")"
-  curl -fsS -H "Authorization: Bearer ${access_token}" "${EDGE_BASE_URL}${AUTH_BASE_PATH}/me" >/dev/null
+  curl $(curl_tls_args) -fsS -H "Authorization: Bearer ${access_token}" "${EDGE_BASE_URL}${AUTH_BASE_PATH}/me" >/dev/null
 
   local playback_response
-  playback_response="$(curl -fsS \
+  playback_response="$(curl $(curl_tls_args) -fsS \
     -H "Authorization: Bearer ${access_token}" \
     "${EDGE_BASE_URL}${STREAM_API_BASE_PATH}/streams/${SMOKE_STREAM_ID}/playback")"
   local whep_url
@@ -130,7 +139,7 @@ if not hls_url.startswith(expected_hls_prefix):
 print(whep_url)
 ' <<<"$playback_response")"
 
-  curl -fsS "$smoke_url" >/dev/null
+  curl $(curl_tls_args) -fsS "$smoke_url" >/dev/null
   echo "M7 dashboard first-frame smoke run passed"
   echo "Dashboard smoke URL: ${smoke_url}"
   echo "Smoke user login API: ok (${SMOKE_USERNAME})"
