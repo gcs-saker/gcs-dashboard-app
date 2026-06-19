@@ -5,4 +5,7 @@ object OperationalReadApiRoutes {
     const val TELEMETRY_INGEST = "/telemetry/"
     const val TELEMETRY_HISTORY = "/telemetry/{uuid}/history"
     const val ASSET_BY_GATEWAY = "/asset/{gatewayUuid}"
+    const val SERVER_HEALTH_SNAPSHOTS = "/ops/server-health/snapshots"
+    const val STREAM_SESSIONS = "/ops/stream-sessions"
+    const val STREAM_SESSIONS_STREAM = "/ops/stream-sessions/stream"
 }

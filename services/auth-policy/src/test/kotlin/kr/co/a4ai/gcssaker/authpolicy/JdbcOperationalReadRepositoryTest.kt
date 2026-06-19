@@ -3,6 +3,8 @@ package kr.co.a4ai.gcssaker.authpolicy
 import kr.co.a4ai.gcssaker.authpolicy.domain.AssetReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
+import kr.co.a4ai.gcssaker.authpolicy.domain.ServerHealthSnapshotReadModel
+import kr.co.a4ai.gcssaker.authpolicy.domain.StreamSessionReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalReadRepository
@@ -88,7 +90,13 @@ class JdbcOperationalReadRepositoryTest {
             """
             SELECT INDEX_NAME
             FROM INFORMATION_SCHEMA.INDEXES
-            WHERE TABLE_NAME IN ('TELEMETRY_LATEST', 'TELEMETRY_HISTORY', 'GATEWAY_ASSETS')
+            WHERE TABLE_NAME IN (
+                'TELEMETRY_LATEST',
+                'TELEMETRY_HISTORY',
+                'GATEWAY_ASSETS',
+                'SERVER_HEALTH_SNAPSHOTS',
+                'STREAM_SESSIONS'
+            )
             """.trimIndent(),
             String::class.java,
         ).toSet()
@@ -96,6 +104,82 @@ class JdbcOperationalReadRepositoryTest {
         assertTrue("IX_TELEMETRY_LATEST_GROUP_UUID" in indexes)
         assertTrue("IX_TELEMETRY_HISTORY_UUID_RECORDED" in indexes)
         assertTrue("IX_GATEWAY_ASSETS_GATEWAY_GROUP" in indexes)
+        assertTrue("IX_SERVER_HEALTH_GROUP_CHECKED" in indexes)
+        assertTrue("IX_SERVER_HEALTH_GROUP_SERVICE_CHECKED" in indexes)
+        assertTrue("IX_STREAM_SESSIONS_GROUP_STREAM_HEARTBEAT" in indexes)
+        assertTrue("IX_STREAM_SESSIONS_GROUP_STATUS_HEARTBEAT" in indexes)
+    }
+
+    @Test
+    fun `jdbc operational read repository stores server health snapshots as history`() {
+        val repository = JdbcOperationalReadRepository(h2DataSource(), emptyList(), emptyMap())
+        val principal = AuthenticatedPrincipal("viewer-a", UserRole.VIEWER, GroupId("co-a"))
+
+        repository.recordServerHealthSnapshot(
+            ServerHealthSnapshotReadModel(
+                serviceName = "api",
+                status = "healthy",
+                checkedAt = timestamp,
+                latencyMs = 42,
+                message = "ok",
+                groupId = GroupId("co-a"),
+            ),
+        )
+        repository.recordServerHealthSnapshot(
+            ServerHealthSnapshotReadModel(
+                serviceName = "signaling",
+                status = "degraded",
+                checkedAt = timestamp.plusSeconds(10),
+                latencyMs = 120,
+                message = "slow",
+                groupId = GroupId("co-a"),
+            ),
+        )
+
+        val snapshots = repository.serverHealthSnapshotsFor(principal, limit = 10)
+
+        assertEquals(listOf("signaling", "api"), snapshots.map { it.serviceName })
+        assertEquals("degraded", snapshots.first().status)
+    }
+
+    @Test
+    fun `jdbc operational read repository returns latest stream session state only`() {
+        val repository = JdbcOperationalReadRepository(h2DataSource(), emptyList(), emptyMap())
+        val principal = AuthenticatedPrincipal("viewer-a", UserRole.VIEWER, GroupId("co-a"))
+
+        repository.recordStreamSession(
+            streamSession(
+                streamId = "raw.mobile.front",
+                sessionId = "session-1",
+                status = "online",
+                heartbeatAt = timestamp,
+            ),
+        )
+        repository.recordStreamSession(
+            streamSession(
+                streamId = "raw.mobile.front",
+                sessionId = "session-1",
+                status = "offline",
+                heartbeatAt = timestamp.plusSeconds(30),
+                stoppedAt = timestamp.plusSeconds(30),
+            ),
+        )
+        repository.recordStreamSession(
+            streamSession(
+                streamId = "raw.other.front",
+                sessionId = "session-2",
+                status = "online",
+                heartbeatAt = timestamp.plusSeconds(20),
+                groupId = GroupId("co-b"),
+            ),
+        )
+
+        val sessions = repository.streamSessionsFor(principal)
+
+        assertEquals(1, sessions.size)
+        assertEquals("raw.mobile.front", sessions.single().streamId)
+        assertEquals("offline", sessions.single().status)
+        assertEquals(timestamp.plusSeconds(30), sessions.single().lastHeartbeatAt)
     }
 
     private fun telemetry(
@@ -133,6 +217,25 @@ class JdbcOperationalReadRepositoryTest {
             status = "active",
             createdAt = timestamp,
             updatedAt = timestamp,
+            groupId = groupId,
+        )
+
+    private fun streamSession(
+        streamId: String,
+        sessionId: String,
+        status: String,
+        heartbeatAt: Instant,
+        stoppedAt: Instant? = null,
+        groupId: GroupId = GroupId("co-a"),
+    ): StreamSessionReadModel =
+        StreamSessionReadModel(
+            streamId = streamId,
+            sessionId = sessionId,
+            status = status,
+            source = "media-control",
+            startedAt = timestamp,
+            lastHeartbeatAt = heartbeatAt,
+            stoppedAt = stoppedAt,
             groupId = groupId,
         )
 

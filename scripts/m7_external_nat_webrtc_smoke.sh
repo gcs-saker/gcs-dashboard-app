@@ -19,8 +19,12 @@ RELAY_ONLY="${RELAY_ONLY:-0}"
 INSECURE_TLS="${INSECURE_TLS:-1}"
 PUBLISH_SECONDS="${PUBLISH_SECONDS:-20}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-15}"
+WHEP_RETRY_COUNT="${WHEP_RETRY_COUNT:-5}"
+WHEP_RETRY_DELAY_SECONDS="${WHEP_RETRY_DELAY_SECONDS:-2}"
 REPORT_FILE="${REPORT_FILE:-}"
 PUBLISHER_PID=""
+auth_args=()
+insecure_arg=()
 
 usage() {
   cat <<'EOF'
@@ -46,6 +50,8 @@ Environment:
   RELAY_ONLY            Default: 0. Set 1 to use TURN primary for WHIP/WHEP ICE server.
   INSECURE_TLS          Default: 1 for current self-signed staging certificate.
   REPORT_FILE           Optional path to write the same report output.
+  WHEP_RETRY_COUNT      Default: 5. Retries WHEP while WHIP path becomes visible.
+  WHEP_RETRY_DELAY_SECONDS Default: 2.
 EOF
 }
 
@@ -123,6 +129,42 @@ run_turn_allocation() {
   append_report "${label} allocation latency ms: $((finished - started))"
 }
 
+run_whep_playback_with_retry() {
+  local whep_url="$1"
+  local ice_server_for_media="$2"
+  local attempt=1
+  local output
+  local status
+  while [[ "$attempt" -le "$WHEP_RETRY_COUNT" ]]; do
+    set +e
+    output="$(
+      python3 "${REPO_ROOT}/scripts/webrtc_ice_smoke.py" \
+        --run \
+        --require-connected \
+        --require-video-frame \
+        --whep-url "$whep_url" \
+        --ice-server-url "$ice_server_for_media" \
+        ${auth_args+"${auth_args[@]}"} \
+        "${insecure_arg[@]}" \
+        --timeout-seconds "$TIMEOUT_SECONDS" 2>&1
+    )"
+    status=$?
+    set -e
+    printf '%s\n' "$output"
+    if [[ "$status" -eq 0 ]]; then
+      append_report "WHEP playback attempt ${attempt}: success"
+      return 0
+    fi
+    if [[ "$output" != *"no stream is available"* || "$attempt" -eq "$WHEP_RETRY_COUNT" ]]; then
+      append_report "WHEP playback attempt ${attempt}: failed"
+      return "$status"
+    fi
+    append_report "WHEP playback attempt ${attempt}: waiting for WHIP path visibility"
+    sleep "$WHEP_RETRY_DELAY_SECONDS"
+    attempt=$((attempt + 1))
+  done
+}
+
 run_check() {
   bash -n "$0"
   python3 "${REPO_ROOT}/scripts/turn_relay_smoke.py" --check
@@ -149,8 +191,6 @@ run_live() {
   local media_ready_status
   local ice_status
   local ice_server_for_media="$STUN_URL"
-  local auth_args=()
-  local insecure_arg=()
   local whip_url="${EDGE_BASE_URL}/webrtc/${STREAM_PATH}/whip"
   local whep_url="${EDGE_BASE_URL}/webrtc/${STREAM_PATH}/whep"
 
@@ -221,15 +261,7 @@ run_live() {
   fi
 
   if [[ "$RUN_WHEP_PLAYBACK" == "1" ]]; then
-    python3 "${REPO_ROOT}/scripts/webrtc_ice_smoke.py" \
-      --run \
-      --require-connected \
-      --require-video-frame \
-      --whep-url "$whep_url" \
-      --ice-server-url "$ice_server_for_media" \
-      ${auth_args+"${auth_args[@]}"} \
-      "${insecure_arg[@]}" \
-      --timeout-seconds "$TIMEOUT_SECONDS"
+    run_whep_playback_with_retry "$whep_url" "$ice_server_for_media"
   fi
 
   if [[ -n "$PUBLISHER_PID" ]]; then

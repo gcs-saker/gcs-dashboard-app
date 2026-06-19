@@ -22,6 +22,9 @@ describe("api route contracts", () => {
       operationalEventsStream: "/ops/events/stream",
       operationalEventMetrics: "/ops/events/metrics",
       operationalEventBuckets: "/ops/events/buckets",
+      serverHealthSnapshots: "/ops/server-health/snapshots",
+      streamSessions: "/ops/stream-sessions",
+      streamSessionsStream: "/ops/stream-sessions/stream",
       telemetryHistorySuffix: "/history",
     });
   });

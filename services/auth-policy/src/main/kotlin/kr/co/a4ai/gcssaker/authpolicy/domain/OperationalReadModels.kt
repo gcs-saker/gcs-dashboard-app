@@ -40,11 +40,35 @@ data class AssetReadModel(
     val groupId: GroupId,
 )
 
+data class ServerHealthSnapshotReadModel(
+    val serviceName: String,
+    val status: String,
+    val checkedAt: Instant,
+    val latencyMs: Long?,
+    val message: String?,
+    val groupId: GroupId,
+)
+
+data class StreamSessionReadModel(
+    val streamId: String,
+    val sessionId: String?,
+    val status: String,
+    val source: String,
+    val startedAt: Instant,
+    val lastHeartbeatAt: Instant,
+    val stoppedAt: Instant?,
+    val groupId: GroupId,
+)
+
 interface OperationalReadRepository {
     fun telemetryFor(principal: AuthenticatedPrincipal): List<TelemetryReadModel>
     fun upsertTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel
     fun telemetryHistoryFor(principal: AuthenticatedPrincipal, uuid: String, limit: Int): List<TelemetryHistoryReadModel>
     fun assetsForGateway(principal: AuthenticatedPrincipal, gatewayUuid: String): List<AssetReadModel>
+    fun recordServerHealthSnapshot(snapshot: ServerHealthSnapshotReadModel): ServerHealthSnapshotReadModel
+    fun serverHealthSnapshotsFor(principal: AuthenticatedPrincipal, limit: Int): List<ServerHealthSnapshotReadModel>
+    fun recordStreamSession(session: StreamSessionReadModel): StreamSessionReadModel
+    fun streamSessionsFor(principal: AuthenticatedPrincipal): List<StreamSessionReadModel>
 }
 
 class InMemoryOperationalReadRepository(
@@ -89,4 +113,38 @@ class InMemoryOperationalReadRepository(
         assetsByGateway[gatewayUuid].orEmpty()
             .filter { it.groupId == principal.groupId || principal.role == UserRole.ADMIN }
             .sortedBy { it.uuid }
+
+    private val serverHealthSnapshots = java.util.concurrent.CopyOnWriteArrayList<ServerHealthSnapshotReadModel>()
+    private val streamSessionHistory = java.util.concurrent.CopyOnWriteArrayList<StreamSessionReadModel>()
+
+    override fun recordServerHealthSnapshot(snapshot: ServerHealthSnapshotReadModel): ServerHealthSnapshotReadModel {
+        serverHealthSnapshots.add(snapshot)
+        return snapshot
+    }
+
+    override fun serverHealthSnapshotsFor(
+        principal: AuthenticatedPrincipal,
+        limit: Int,
+    ): List<ServerHealthSnapshotReadModel> =
+        serverHealthSnapshots
+            .asSequence()
+            .filter { it.groupId == principal.groupId || principal.role == UserRole.ADMIN }
+            .sortedByDescending { it.checkedAt }
+            .take(limit.coerceIn(1, 500))
+            .toList()
+
+    override fun recordStreamSession(session: StreamSessionReadModel): StreamSessionReadModel {
+        streamSessionHistory.add(session)
+        return session
+    }
+
+    override fun streamSessionsFor(principal: AuthenticatedPrincipal): List<StreamSessionReadModel> =
+        streamSessionHistory
+            .asSequence()
+            .filter { it.groupId == principal.groupId || principal.role == UserRole.ADMIN }
+            .groupBy { "${it.streamId}|${it.sessionId.orEmpty()}" }
+            .values
+            .map { sessions -> sessions.maxBy { it.lastHeartbeatAt } }
+            .sortedWith(compareBy<StreamSessionReadModel> { it.status }.thenBy { it.streamId })
+            .toList()
 }

@@ -125,9 +125,80 @@ class OperationalReadControllerTest {
     }
 
     @Test
+    fun `server health snapshots are persisted and filtered by authenticated group`() {
+        val token = bearer(accessToken("viewer-a"))
+
+        controller.recordServerHealthSnapshot(
+            token,
+            ServerHealthSnapshotRequest(
+                serviceName = "api",
+                status = "healthy",
+                checkedAt = timestamp,
+                latencyMs = 42,
+                message = "ok",
+            ),
+        )
+
+        val snapshots = controller.serverHealthSnapshots(token, limit = 10)
+
+        assertEquals(1, snapshots.size)
+        assertEquals("api", snapshots.single().serviceName)
+        assertEquals("healthy", snapshots.single().status)
+        assertEquals(42, snapshots.single().latencyMs)
+    }
+
+    @Test
+    fun `stream sessions expose latest heartbeat state for dashboard registry`() {
+        val token = bearer(accessToken("viewer-a"))
+
+        controller.recordStreamSession(
+            token,
+            StreamSessionRequest(
+                streamId = "raw.mobile.front",
+                sessionId = "session-1",
+                status = "online",
+                source = "media-control",
+                startedAt = timestamp,
+                lastHeartbeatAt = timestamp,
+            ),
+        )
+        controller.recordStreamSession(
+            token,
+            StreamSessionRequest(
+                streamId = "raw.mobile.front",
+                sessionId = "session-1",
+                status = "offline",
+                source = "media-control",
+                startedAt = timestamp,
+                lastHeartbeatAt = timestamp.plusSeconds(10),
+                stoppedAt = timestamp.plusSeconds(10),
+            ),
+        )
+
+        val sessions = controller.streamSessions(token)
+
+        assertEquals(1, sessions.size)
+        assertEquals("raw.mobile.front", sessions.single().streamId)
+        assertEquals("offline", sessions.single().status)
+        assertEquals(timestamp.plusSeconds(10), sessions.single().lastHeartbeatAt)
+    }
+
+    @Test
     fun `telemetry ingest rejects blank uuid`() {
         val error = org.junit.jupiter.api.assertThrows<ResponseStatusException> {
             controller.ingestTelemetry(bearer(accessToken("viewer-a")), TelemetryIngestRequest(uuid = " "))
+        }
+
+        assertEquals(HttpStatus.BAD_REQUEST, error.statusCode)
+    }
+
+    @Test
+    fun `stream session ingest rejects missing stream id`() {
+        val error = org.junit.jupiter.api.assertThrows<ResponseStatusException> {
+            controller.recordStreamSession(
+                bearer(accessToken("viewer-a")),
+                StreamSessionRequest(streamId = " ", status = "online"),
+            )
         }
 
         assertEquals(HttpStatus.BAD_REQUEST, error.statusCode)

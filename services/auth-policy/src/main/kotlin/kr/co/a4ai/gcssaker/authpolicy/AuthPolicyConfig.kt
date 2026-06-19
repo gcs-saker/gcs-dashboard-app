@@ -51,6 +51,7 @@ import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuthUserRep
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisOperationalEventRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisOperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisPrincipalCache
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisRefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisCachePolicy
@@ -231,6 +232,8 @@ class AuthPolicyConfig {
     fun operationalReadRepository(
         settings: AuthRuntimeSettings,
         dataSource: ObjectProvider<DataSource>,
+        redisTemplate: ObjectProvider<StringRedisTemplate>,
+        objectMapper: ObjectMapper,
     ): OperationalReadRepository {
         val group = GroupId("co-a")
         val timestamp = Instant.parse("2026-05-29T00:00:00Z")
@@ -268,19 +271,42 @@ class AuthPolicyConfig {
             ),
         )
         val assetsByGateway = mapOf(sampleGateway to listOf(sampleAsset))
-        if (settings.jdbcPersistenceEnabled) {
+        val repository = if (settings.jdbcPersistenceEnabled) {
             dataSource.getIfAvailable()?.let {
-                return JdbcOperationalReadRepository(
+                JdbcOperationalReadRepository(
                     dataSource = it,
                     telemetry = telemetry,
                     assetsByGateway = assetsByGateway,
                 )
-            }
+            } ?: InMemoryOperationalReadRepository(
+                telemetry = telemetry,
+                assetsByGateway = assetsByGateway,
+            )
+        } else {
+            InMemoryOperationalReadRepository(
+                telemetry = telemetry,
+                assetsByGateway = assetsByGateway,
+            )
         }
-        return InMemoryOperationalReadRepository(
-            telemetry = telemetry,
-            assetsByGateway = assetsByGateway,
-        )
+        if (!settings.redisOperationalReadCacheEnabled) {
+            return repository
+        }
+        return redisTemplate.getIfAvailable()
+            ?.let {
+                RedisOperationalReadRepository(
+                    delegate = repository,
+                    store = RedisTemplateStringKeyValueStore(it),
+                    objectMapper = objectMapper,
+                    policy = RedisCachePolicy(
+                        keyPrefix = settings.operationalReadCacheKeyPrefix,
+                        ttl = Duration.ofSeconds(settings.operationalReadCacheTtlSeconds),
+                        staleKeyPrefix = settings.operationalReadStaleCacheKeyPrefix,
+                        staleTtl = Duration.ofSeconds(settings.operationalReadStaleCacheTtlSeconds),
+                        ttlJitterRatio = settings.operationalReadCacheTtlJitterRatio,
+                    ),
+                )
+            }
+            ?: repository
     }
 
     @Bean
@@ -475,6 +501,12 @@ data class AuthRuntimeSettings(
     val operationalEventStaleCacheKeyPrefix: String = "gcs:ops-events:stale:",
     val operationalEventStaleCacheTtlSeconds: Long = 60,
     val operationalEventCacheTtlJitterRatio: Double = 0.2,
+    val redisOperationalReadCacheEnabled: Boolean = true,
+    val operationalReadCacheKeyPrefix: String = "gcs:ops-read:",
+    val operationalReadCacheTtlSeconds: Long = 3,
+    val operationalReadStaleCacheKeyPrefix: String = "gcs:ops-read:stale:",
+    val operationalReadStaleCacheTtlSeconds: Long = 30,
+    val operationalReadCacheTtlJitterRatio: Double = 0.2,
     val authRateLimitEnabled: Boolean = true,
     val authRateLimitPerMinute: Int = 60,
     val asyncPostProcessingEnabled: Boolean = true,
@@ -527,6 +559,14 @@ data class AuthRuntimeSettings(
                     ?: "gcs:ops-events:stale:",
                 operationalEventStaleCacheTtlSeconds = longEnv(env, "AUTH_POLICY_OPERATIONAL_EVENT_STALE_CACHE_TTL_SECONDS", 60),
                 operationalEventCacheTtlJitterRatio = doubleEnv(env, "AUTH_POLICY_OPERATIONAL_EVENT_CACHE_TTL_JITTER_RATIO", 0.2),
+                redisOperationalReadCacheEnabled = boolEnv(env, "AUTH_POLICY_REDIS_OPERATIONAL_READ_CACHE_ENABLED", true),
+                operationalReadCacheKeyPrefix = env.getProperty("AUTH_POLICY_OPERATIONAL_READ_CACHE_KEY_PREFIX")
+                    ?: "gcs:ops-read:",
+                operationalReadCacheTtlSeconds = longEnv(env, "AUTH_POLICY_OPERATIONAL_READ_CACHE_TTL_SECONDS", 3),
+                operationalReadStaleCacheKeyPrefix = env.getProperty("AUTH_POLICY_OPERATIONAL_READ_STALE_CACHE_KEY_PREFIX")
+                    ?: "gcs:ops-read:stale:",
+                operationalReadStaleCacheTtlSeconds = longEnv(env, "AUTH_POLICY_OPERATIONAL_READ_STALE_CACHE_TTL_SECONDS", 30),
+                operationalReadCacheTtlJitterRatio = doubleEnv(env, "AUTH_POLICY_OPERATIONAL_READ_CACHE_TTL_JITTER_RATIO", 0.2),
                 authRateLimitEnabled = boolEnv(env, "AUTH_POLICY_RATE_LIMIT_ENABLED", true),
                 authRateLimitPerMinute = intEnv(env, "AUTH_POLICY_AUTH_RATE_LIMIT_PER_MINUTE", 60),
                 asyncPostProcessingEnabled = boolEnv(env, "AUTH_POLICY_ASYNC_POST_PROCESSING_ENABLED", true),

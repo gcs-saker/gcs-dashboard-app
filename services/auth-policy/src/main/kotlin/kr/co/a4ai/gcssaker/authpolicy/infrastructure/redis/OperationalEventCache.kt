@@ -126,5 +126,11 @@ data class RedisCachePolicy(
             ttl = Duration.ofSeconds(5),
             ttlJitterRatio = 0.2,
         )
+        val OPERATIONAL_READ = RedisCachePolicy(
+            keyPrefix = "gcs:ops-read:",
+            ttl = Duration.ofSeconds(3),
+            staleTtl = Duration.ofSeconds(30),
+            ttlJitterRatio = 0.2,
+        )
     }
 }

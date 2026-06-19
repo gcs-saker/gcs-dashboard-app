@@ -31,6 +31,8 @@ def test_m7_external_nat_webrtc_smoke_reports_required_metrics() -> None:
     assert "RELAY_ONLY" in script
     assert "--require-video-frame" in script
     assert "candidate summary" in script
+    assert "WHEP_RETRY_COUNT" in script
+    assert "waiting for WHIP path visibility" in script
     assert "External NAT smoke wall latency ms" in script
     assert "first-frame latency" in doc
     assert "UDP 제한/relay-only" in doc
