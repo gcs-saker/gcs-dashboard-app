@@ -57,3 +57,43 @@ data class AssetReadResponse(
     @get:JsonProperty(OperationalReadApiFields.UPDATED_AT)
     val updatedAt: Instant,
 )
+
+data class ServerHealthSnapshotRequest(
+    val serviceName: String?,
+    val status: String?,
+    val checkedAt: Instant? = null,
+    val latencyMs: Long? = null,
+    val message: String? = null,
+)
+
+data class ServerHealthSnapshotResponse(
+    val serviceName: String,
+    val status: String,
+    val checkedAt: Instant,
+    val latencyMs: Long?,
+    val message: String?,
+)
+
+data class StreamSessionRequest(
+    val streamId: String?,
+    val sessionId: String? = null,
+    val status: String?,
+    val source: String? = null,
+    val startedAt: Instant? = null,
+    val lastHeartbeatAt: Instant? = null,
+    val stoppedAt: Instant? = null,
+)
+
+data class StreamSessionResponse(
+    val streamId: String,
+    val sessionId: String?,
+    val status: String,
+    val source: String,
+    val startedAt: Instant,
+    val lastHeartbeatAt: Instant,
+    val stoppedAt: Instant?,
+)
+
+data class StreamSessionHeartbeatResponse(
+    val checkedAt: Instant,
+)

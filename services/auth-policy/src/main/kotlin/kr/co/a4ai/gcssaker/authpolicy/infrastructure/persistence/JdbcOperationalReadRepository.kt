@@ -4,6 +4,8 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AssetReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.ServerHealthSnapshotReadModel
+import kr.co.a4ai.gcssaker.authpolicy.domain.StreamSessionReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryHistoryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
@@ -63,6 +65,56 @@ class JdbcOperationalReadRepository(
             OperationalReadSql.selectAssetsByGateway,
             assetRowMapper,
             gatewayUuid,
+            principal.groupId.value,
+            principal.role.name,
+            UserRole.ADMIN.name,
+        )
+
+    override fun recordServerHealthSnapshot(snapshot: ServerHealthSnapshotReadModel): ServerHealthSnapshotReadModel {
+        jdbc.update(
+            OperationalReadSql.insertServerHealthSnapshot,
+            snapshot.serviceName,
+            snapshot.status,
+            Timestamp.from(snapshot.checkedAt),
+            snapshot.latencyMs,
+            snapshot.message,
+            snapshot.groupId.value,
+        )
+        return snapshot
+    }
+
+    override fun serverHealthSnapshotsFor(
+        principal: AuthenticatedPrincipal,
+        limit: Int,
+    ): List<ServerHealthSnapshotReadModel> =
+        jdbc.query(
+            OperationalReadSql.selectServerHealthSnapshots,
+            serverHealthSnapshotRowMapper,
+            principal.groupId.value,
+            principal.role.name,
+            UserRole.ADMIN.name,
+            limit.coerceIn(1, 500),
+        )
+
+    override fun recordStreamSession(session: StreamSessionReadModel): StreamSessionReadModel {
+        jdbc.update(
+            OperationalReadSql.insertStreamSessionEvent,
+            session.streamId,
+            session.sessionId,
+            session.status,
+            session.source,
+            Timestamp.from(session.startedAt),
+            Timestamp.from(session.lastHeartbeatAt),
+            session.stoppedAt?.let(Timestamp::from),
+            session.groupId.value,
+        )
+        return session
+    }
+
+    override fun streamSessionsFor(principal: AuthenticatedPrincipal): List<StreamSessionReadModel> =
+        jdbc.query(
+            OperationalReadSql.selectLatestStreamSessions,
+            streamSessionRowMapper,
             principal.groupId.value,
             principal.role.name,
             UserRole.ADMIN.name,
@@ -201,6 +253,31 @@ class JdbcOperationalReadRepository(
                 telemetry = telemetryRowMapper.mapRow(rs, 0) ?: error("telemetry history row mapping failed"),
             )
         }
+
+        val serverHealthSnapshotRowMapper = RowMapper<ServerHealthSnapshotReadModel> { rs, _ ->
+            val latencyMs = rs.getLong(OperationalReadColumns.latencyMs)
+            ServerHealthSnapshotReadModel(
+                serviceName = rs.getString(OperationalReadColumns.serviceName),
+                status = rs.getString(OperationalReadColumns.status),
+                checkedAt = rs.getTimestamp(OperationalReadColumns.checkedAt).toInstant(),
+                latencyMs = latencyMs.takeUnless { rs.wasNull() },
+                message = rs.getString(OperationalReadColumns.message),
+                groupId = GroupId(rs.getString(OperationalReadColumns.groupId)),
+            )
+        }
+
+        val streamSessionRowMapper = RowMapper<StreamSessionReadModel> { rs, _ ->
+            StreamSessionReadModel(
+                streamId = rs.getString(OperationalReadColumns.streamId),
+                sessionId = rs.getString(OperationalReadColumns.sessionId),
+                status = rs.getString(OperationalReadColumns.status),
+                source = rs.getString(OperationalReadColumns.source),
+                startedAt = rs.getTimestamp(OperationalReadColumns.startedAt).toInstant(),
+                lastHeartbeatAt = rs.getTimestamp(OperationalReadColumns.lastHeartbeatAt).toInstant(),
+                stoppedAt = rs.getTimestamp(OperationalReadColumns.stoppedAt)?.toInstant(),
+                groupId = GroupId(rs.getString(OperationalReadColumns.groupId)),
+            )
+        }
     }
 }
 
@@ -214,6 +291,14 @@ object OperationalReadSchema {
         jdbc.execute(OperationalReadSql.createAssetTable)
         OperationalReadSql.alterAssetTimestampColumns.forEach { statement -> runCatching { jdbc.execute(statement) } }
         jdbc.createIndexIfMissing(OperationalReadSql.assetGatewayGroupIndex)
+        jdbc.execute(OperationalReadSql.createServerHealthSnapshotTable)
+        OperationalReadSql.alterServerHealthSnapshotTimestampColumns.forEach { statement -> runCatching { jdbc.execute(statement) } }
+        jdbc.createIndexIfMissing(OperationalReadSql.serverHealthGroupCheckedIndex)
+        jdbc.createIndexIfMissing(OperationalReadSql.serverHealthGroupServiceCheckedIndex)
+        jdbc.execute(OperationalReadSql.createStreamSessionTable)
+        OperationalReadSql.alterStreamSessionTimestampColumns.forEach { statement -> runCatching { jdbc.execute(statement) } }
+        jdbc.createIndexIfMissing(OperationalReadSql.streamSessionGroupStreamHeartbeatIndex)
+        jdbc.createIndexIfMissing(OperationalReadSql.streamSessionGroupStatusHeartbeatIndex)
     }
 }
 
@@ -244,15 +329,31 @@ private object OperationalReadColumns {
     const val epochTime = "epoch_time"
     const val portDistance = "port_distance"
     const val recordedAt = "recorded_at"
+    const val serviceName = "service_name"
+    const val checkedAt = "checked_at"
+    const val latencyMs = "latency_ms"
+    const val message = "message"
+    const val streamId = "stream_id"
+    const val sessionId = "session_id"
+    const val source = "source"
+    const val startedAt = "started_at"
+    const val lastHeartbeatAt = "last_heartbeat_at"
+    const val stoppedAt = "stopped_at"
 }
 
 private object OperationalReadSql {
     const val telemetryTable = "telemetry_latest"
     const val telemetryHistoryTable = "telemetry_history"
     const val assetTable = "gateway_assets"
+    const val serverHealthSnapshotTable = "server_health_snapshots"
+    const val streamSessionTable = "stream_sessions"
     const val telemetryGroupUuidIndexName = "ix_telemetry_latest_group_uuid"
     const val telemetryHistoryUuidRecordedIndexName = "ix_telemetry_history_uuid_recorded"
     const val assetGatewayGroupIndexName = "ix_gateway_assets_gateway_group"
+    const val serverHealthGroupCheckedIndexName = "ix_server_health_group_checked"
+    const val serverHealthGroupServiceCheckedIndexName = "ix_server_health_group_service_checked"
+    const val streamSessionGroupStreamHeartbeatIndexName = "ix_stream_sessions_group_stream_heartbeat"
+    const val streamSessionGroupStatusHeartbeatIndexName = "ix_stream_sessions_group_status_heartbeat"
     const val createTelemetryTable = """
         CREATE TABLE IF NOT EXISTS telemetry_latest (
             uuid VARCHAR(128) NOT NULL PRIMARY KEY,
@@ -330,6 +431,58 @@ private object OperationalReadSql {
         "ALTER TABLE $assetTable MODIFY ${OperationalReadColumns.createdAt} DATETIME(3) NOT NULL",
         "ALTER TABLE $assetTable MODIFY ${OperationalReadColumns.updatedAt} DATETIME(3) NOT NULL",
     )
+    const val createServerHealthSnapshotTable = """
+        CREATE TABLE IF NOT EXISTS server_health_snapshots (
+            id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            service_name VARCHAR(128) NOT NULL,
+            status VARCHAR(32) NOT NULL,
+            checked_at DATETIME(3) NOT NULL,
+            latency_ms BIGINT,
+            message VARCHAR(512),
+            group_id VARCHAR(64) NOT NULL
+        )
+    """
+    val serverHealthGroupCheckedIndex = JdbcIndexDefinition(
+        name = serverHealthGroupCheckedIndexName,
+        table = serverHealthSnapshotTable,
+        columns = listOf(OperationalReadColumns.groupId, OperationalReadColumns.checkedAt),
+    )
+    val serverHealthGroupServiceCheckedIndex = JdbcIndexDefinition(
+        name = serverHealthGroupServiceCheckedIndexName,
+        table = serverHealthSnapshotTable,
+        columns = listOf(OperationalReadColumns.groupId, OperationalReadColumns.serviceName, OperationalReadColumns.checkedAt),
+    )
+    val alterServerHealthSnapshotTimestampColumns = listOf(
+        "ALTER TABLE $serverHealthSnapshotTable MODIFY ${OperationalReadColumns.checkedAt} DATETIME(3) NOT NULL",
+    )
+    const val createStreamSessionTable = """
+        CREATE TABLE IF NOT EXISTS stream_sessions (
+            id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            stream_id VARCHAR(128) NOT NULL,
+            session_id VARCHAR(128),
+            status VARCHAR(32) NOT NULL,
+            source VARCHAR(64) NOT NULL,
+            started_at DATETIME(3) NOT NULL,
+            last_heartbeat_at DATETIME(3) NOT NULL,
+            stopped_at DATETIME(3),
+            group_id VARCHAR(64) NOT NULL
+        )
+    """
+    val streamSessionGroupStreamHeartbeatIndex = JdbcIndexDefinition(
+        name = streamSessionGroupStreamHeartbeatIndexName,
+        table = streamSessionTable,
+        columns = listOf(OperationalReadColumns.groupId, OperationalReadColumns.streamId, OperationalReadColumns.lastHeartbeatAt),
+    )
+    val streamSessionGroupStatusHeartbeatIndex = JdbcIndexDefinition(
+        name = streamSessionGroupStatusHeartbeatIndexName,
+        table = streamSessionTable,
+        columns = listOf(OperationalReadColumns.groupId, OperationalReadColumns.status, OperationalReadColumns.lastHeartbeatAt),
+    )
+    val alterStreamSessionTimestampColumns = listOf(
+        "ALTER TABLE $streamSessionTable MODIFY ${OperationalReadColumns.startedAt} DATETIME(3) NOT NULL",
+        "ALTER TABLE $streamSessionTable MODIFY ${OperationalReadColumns.lastHeartbeatAt} DATETIME(3) NOT NULL",
+        "ALTER TABLE $streamSessionTable MODIFY ${OperationalReadColumns.stoppedAt} DATETIME(3)",
+    )
     const val selectTelemetry = """
         SELECT uuid, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
                soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id
@@ -351,6 +504,33 @@ private object OperationalReadSql {
         WHERE uuid = ? AND (group_id = ? OR ? = ?)
         ORDER BY recorded_at DESC
         LIMIT ?
+    """
+    const val selectServerHealthSnapshots = """
+        SELECT service_name, status, checked_at, latency_ms, message, group_id
+        FROM server_health_snapshots
+        WHERE (group_id = ? OR ? = ?)
+        ORDER BY checked_at DESC, id DESC
+        LIMIT ?
+    """
+    const val selectLatestStreamSessions = """
+        SELECT stream_id, session_id, status, source, started_at, last_heartbeat_at, stopped_at, group_id
+        FROM stream_sessions current_session
+        WHERE (group_id = ? OR ? = ?)
+          AND NOT EXISTS (
+              SELECT 1
+              FROM stream_sessions newer_session
+              WHERE newer_session.group_id = current_session.group_id
+                AND newer_session.stream_id = current_session.stream_id
+                AND COALESCE(newer_session.session_id, '') = COALESCE(current_session.session_id, '')
+                AND (
+                    newer_session.last_heartbeat_at > current_session.last_heartbeat_at
+                    OR (
+                        newer_session.last_heartbeat_at = current_session.last_heartbeat_at
+                        AND newer_session.id > current_session.id
+                    )
+                )
+          )
+        ORDER BY last_heartbeat_at DESC, stream_id
     """
     const val deleteTelemetryByUuid = "DELETE FROM telemetry_latest WHERE uuid = ?"
     const val existsTelemetry = "SELECT COUNT(1) FROM telemetry_latest WHERE uuid = ?"
@@ -376,5 +556,17 @@ private object OperationalReadSql {
             status, created_at, updated_at, group_id
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """
+    const val insertServerHealthSnapshot = """
+        INSERT INTO server_health_snapshots (
+            service_name, status, checked_at, latency_ms, message, group_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+    """
+    const val insertStreamSessionEvent = """
+        INSERT INTO stream_sessions (
+            stream_id, session_id, status, source, started_at, last_heartbeat_at, stopped_at, group_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """
 }

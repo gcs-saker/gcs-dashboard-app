@@ -44,6 +44,8 @@ export const DASHBOARD_QUERY_KEYS = Object.freeze({
   operationalEvents: ["dashboard", "operational-events"],
   operationalEventMetrics: ["dashboard", "operational-event-metrics"],
   operationalEventBuckets: ["dashboard", "operational-event-buckets"],
+  serverHealthSnapshots: ["dashboard", "server-health-snapshots"],
+  streamSessions: ["dashboard", "stream-sessions"],
   telemetryHistory: ["dashboard", "telemetry-history"],
   timeSyncStatus: ["dashboard", "time-sync-status"],
   streams: ["dashboard", "streams"],

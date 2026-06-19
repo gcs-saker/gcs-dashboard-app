@@ -48,6 +48,8 @@ describe("dashboard state contracts", () => {
     expect(DASHBOARD_QUERY_KEYS.operationalEvents).toEqual(["dashboard", "operational-events"]);
     expect(DASHBOARD_QUERY_KEYS.operationalEventMetrics).toEqual(["dashboard", "operational-event-metrics"]);
     expect(DASHBOARD_QUERY_KEYS.operationalEventBuckets).toEqual(["dashboard", "operational-event-buckets"]);
+    expect(DASHBOARD_QUERY_KEYS.serverHealthSnapshots).toEqual(["dashboard", "server-health-snapshots"]);
+    expect(DASHBOARD_QUERY_KEYS.streamSessions).toEqual(["dashboard", "stream-sessions"]);
     expect(DASHBOARD_QUERY_KEYS.telemetryHistory).toEqual(["dashboard", "telemetry-history"]);
     expect(DASHBOARD_QUERY_KEYS.timeSyncStatus).toEqual(["dashboard", "time-sync-status"]);
     expect(DASHBOARD_QUERY_KEYS.streams).toEqual(["dashboard", "streams"]);
