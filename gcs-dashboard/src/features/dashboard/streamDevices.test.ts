@@ -44,7 +44,7 @@ describe("streamDevices", () => {
       name: "휴대폰 후면 카메라",
       streamPath: "raw.local.webcam",
       sourceUrl: "https://a4ai.tplinkdns.com/webrtc/raw/local/webcam/whep",
-      status: "online",
+      status: "degraded",
     });
   });
 
