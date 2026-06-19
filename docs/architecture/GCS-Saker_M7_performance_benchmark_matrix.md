@@ -94,6 +94,36 @@ scripts/m7_performance_benchmark_matrix.py \
 - `hls_manifest`가 느리면 stream publish readiness, HLS segment generation, edge proxy timeout을 본다.
 - WebRTC first frame은 API latency보다 ICE candidate 품질, TURN relay 여부, browser decoder 상태의 영향을 더 크게 받는다.
 
+## 2026-06-19 운영 profile 실측
+측정 대상은 Server-01 public edge `https://a4ai.tplinkdns.com`의 `m7` profile이다. sample stream은 로컬 synthetic WHIP publisher로 `raw.sample.front`와 `raw.nat.smoke` 경로에 publish했고, 자체서명 인증서 환경이므로 benchmark에는 `--insecure`를 명시했다. 비밀번호와 token은 profile 파일에 넣지 않고 환경 변수로만 주입했다.
+
+### API/HLS latency
+반복 횟수는 warmup 2회, 측정 8회다. 모든 metric은 error 0으로 통과했다.
+
+| metric | samples | errors | p50 ms | p95 ms | max ms |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `auth_login` | 8 | 0 | 80.947 | 103.151 | 103.151 |
+| `auth_refresh` | 8 | 0 | 35.195 | 37.324 | 37.324 |
+| `ops_event_metrics` | 8 | 0 | 39.234 | 48.477 | 48.477 |
+| `ops_event_graphql_page` | 8 | 0 | 36.982 | 39.840 | 39.840 |
+| `stream_list` | 8 | 0 | 32.771 | 37.852 | 37.852 |
+| `stream_playback` | 8 | 0 | 33.584 | 43.374 | 43.374 |
+| `stream_ice_servers` | 8 | 0 | 30.940 | 38.607 | 38.607 |
+| `hls_manifest` | 8 | 0 | 28.485 | 31.095 | 31.095 |
+
+### WebRTC publish/play latency
+같은 public edge에서 STUN direct 후보를 기본으로 사용했다. WHEP playback은 ICE `completed`까지 도달했고 첫 video frame을 수신했다.
+
+| metric | value |
+| --- | ---: |
+| WHIP answer latency | 531.2 ms |
+| WHIP ICE connected latency | 579.7 ms |
+| WHEP answer latency | 276.5 ms |
+| WHEP first video frame latency | 922.2 ms |
+
+### 비교 기준 고정 상태
+`legacy`, `v0.2.0`, `m7` profile label과 metric schema는 `m7-performance-benchmark-v1`로 고정했다. 운영 중인 profile이 바뀌어도 같은 script, 같은 stream id, 같은 metric name으로 재측정하면 이전 baseline과 직접 비교할 수 있다. 현재 live 운영 기준선은 위 `m7` 실측값으로 본다.
+
 ## 완료 기준
 - legacy, v0.2.0, m7 중 실행 가능한 profile이 같은 script로 측정된다.
 - 결과 JSON에 `schemaVersion: m7-performance-benchmark-v1`가 포함된다.
