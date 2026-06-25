@@ -341,7 +341,7 @@ private object OperationalReadColumns {
     const val stoppedAt = "stopped_at"
 }
 
-private object OperationalReadSql {
+internal object OperationalReadSql {
     const val telemetryTable = "telemetry_latest"
     const val telemetryHistoryTable = "telemetry_history"
     const val assetTable = "gateway_assets"
@@ -354,21 +354,21 @@ private object OperationalReadSql {
     const val serverHealthGroupServiceCheckedIndexName = "ix_server_health_group_service_checked"
     const val streamSessionGroupStreamHeartbeatIndexName = "ix_stream_sessions_group_stream_heartbeat"
     const val streamSessionGroupStatusHeartbeatIndexName = "ix_stream_sessions_group_status_heartbeat"
-    const val createTelemetryTable = """
+    val createTelemetryTable = """
         CREATE TABLE IF NOT EXISTS telemetry_latest (
             uuid VARCHAR(128) NOT NULL PRIMARY KEY,
-            latitude DOUBLE NOT NULL,
-            longitude DOUBLE NOT NULL,
-            altitude DOUBLE NOT NULL,
-            magnetic_x DOUBLE NOT NULL,
-            magnetic_y DOUBLE NOT NULL,
-            magnetic_z DOUBLE NOT NULL,
+            latitude ${JdbcSchemaTypes.float64} NOT NULL,
+            longitude ${JdbcSchemaTypes.float64} NOT NULL,
+            altitude ${JdbcSchemaTypes.float64} NOT NULL,
+            magnetic_x ${JdbcSchemaTypes.float64} NOT NULL,
+            magnetic_y ${JdbcSchemaTypes.float64} NOT NULL,
+            magnetic_z ${JdbcSchemaTypes.float64} NOT NULL,
             soc VARCHAR(32) NOT NULL,
-            phone_battery_soc DOUBLE NOT NULL,
-            velocity DOUBLE NOT NULL,
-            total_distance DOUBLE NOT NULL,
+            phone_battery_soc ${JdbcSchemaTypes.float64} NOT NULL,
+            velocity ${JdbcSchemaTypes.float64} NOT NULL,
+            total_distance ${JdbcSchemaTypes.float64} NOT NULL,
             epoch_time VARCHAR(32) NOT NULL,
-            port_distance DOUBLE NOT NULL,
+            port_distance ${JdbcSchemaTypes.float64} NOT NULL,
             group_id VARCHAR(64) NOT NULL
         )
     """
@@ -377,22 +377,22 @@ private object OperationalReadSql {
         table = telemetryTable,
         columns = listOf(OperationalReadColumns.groupId, OperationalReadColumns.uuid),
     )
-    const val createTelemetryHistoryTable = """
+    val createTelemetryHistoryTable = """
         CREATE TABLE IF NOT EXISTS telemetry_history (
             uuid VARCHAR(128) NOT NULL,
             recorded_at TIMESTAMP(3) NOT NULL,
-            latitude DOUBLE NOT NULL,
-            longitude DOUBLE NOT NULL,
-            altitude DOUBLE NOT NULL,
-            magnetic_x DOUBLE NOT NULL,
-            magnetic_y DOUBLE NOT NULL,
-            magnetic_z DOUBLE NOT NULL,
+            latitude ${JdbcSchemaTypes.float64} NOT NULL,
+            longitude ${JdbcSchemaTypes.float64} NOT NULL,
+            altitude ${JdbcSchemaTypes.float64} NOT NULL,
+            magnetic_x ${JdbcSchemaTypes.float64} NOT NULL,
+            magnetic_y ${JdbcSchemaTypes.float64} NOT NULL,
+            magnetic_z ${JdbcSchemaTypes.float64} NOT NULL,
             soc VARCHAR(32) NOT NULL,
-            phone_battery_soc DOUBLE NOT NULL,
-            velocity DOUBLE NOT NULL,
-            total_distance DOUBLE NOT NULL,
+            phone_battery_soc ${JdbcSchemaTypes.float64} NOT NULL,
+            velocity ${JdbcSchemaTypes.float64} NOT NULL,
+            total_distance ${JdbcSchemaTypes.float64} NOT NULL,
             epoch_time VARCHAR(32) NOT NULL,
-            port_distance DOUBLE NOT NULL,
+            port_distance ${JdbcSchemaTypes.float64} NOT NULL,
             group_id VARCHAR(64) NOT NULL
         )
     """
