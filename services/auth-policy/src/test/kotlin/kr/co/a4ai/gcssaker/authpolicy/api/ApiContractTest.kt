@@ -263,14 +263,22 @@ class ApiContractTest {
                 streamId = ApiContractFixtures.STREAM_ID_VALUE,
                 allowed = true,
                 reason = ApiContractFixtures.STREAM_ACCESS_REASON_VALUE,
+                principalId = ApiContractFixtures.USERNAME_VALUE,
                 username = ApiContractFixtures.USERNAME_VALUE,
                 role = ApiContractFixtures.ROLE_VALUE,
                 groupId = ApiContractFixtures.GROUP_ID_VALUE,
+                expiresAt = Instant.parse(ApiContractFixtures.STREAM_ACCESS_EXPIRES_AT_VALUE),
+                policyVersion = ApiContractFixtures.POLICY_VERSION_VALUE,
+                principalVersion = ApiContractFixtures.PRINCIPAL_VERSION_VALUE,
                 permissions = listOf(ApiContractFixtures.PERMISSION_VIEW_STREAM_VALUE),
             ),
         )
 
         assertTrue(responsePayload.contains(quoted(StreamPolicyApiFields.PERMISSIONS)))
+        assertTrue(responsePayload.contains(quoted(StreamPolicyApiFields.PRINCIPAL_ID)))
+        assertTrue(responsePayload.contains(quoted(StreamPolicyApiFields.EXPIRES_AT)))
+        assertTrue(responsePayload.contains(quoted(StreamPolicyApiFields.POLICY_VERSION)))
+        assertTrue(responsePayload.contains(quoted(StreamPolicyApiFields.PRINCIPAL_VERSION)))
         assertTrue(responsePayload.contains(quoted(ApiContractFixtures.PERMISSION_VIEW_STREAM_VALUE)))
     }
 
@@ -316,6 +324,9 @@ private object ApiContractFixtures {
     const val GROUP_ID_VALUE = "co-a"
     const val STREAM_ACCESS_REASON_VALUE = "same group stream"
     const val PERMISSION_VIEW_STREAM_VALUE = "view_stream"
+    const val STREAM_ACCESS_EXPIRES_AT_VALUE = "2026-06-25T00:00:02Z"
+    const val POLICY_VERSION_VALUE = "group-policy-v1"
+    const val PRINCIPAL_VERSION_VALUE = "operator01:co-a:operator"
     const val LATITUDE_VALUE = 35.8714
     const val LONGITUDE_VALUE = 128.6014
     const val ALTITUDE_VALUE = 120.0

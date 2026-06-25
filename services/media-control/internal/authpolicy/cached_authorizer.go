@@ -69,9 +69,15 @@ func (c *CachedAuthorizer) AuthorizeStream(
 		return decision, err
 	}
 
-	c.mu.Lock()
-	c.entries[key] = cachedDecision{decision: decision, expiresAt: now.Add(c.ttl)}
-	c.mu.Unlock()
+	expiresAt := now.Add(c.ttl)
+	if decision.ExpiresAt != nil && decision.ExpiresAt.Before(expiresAt) {
+		expiresAt = *decision.ExpiresAt
+	}
+	if expiresAt.After(now) {
+		c.mu.Lock()
+		c.entries[key] = cachedDecision{decision: decision, expiresAt: expiresAt}
+		c.mu.Unlock()
+	}
 	return decision, err
 }
 

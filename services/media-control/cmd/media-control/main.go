@@ -41,8 +41,16 @@ func main() {
 		{URL: getenv("MEDIA_CONTROL_TURN_PRIMARY_URL", "turn:turn-primary:3478"), Kind: domain.IceServerTURN, Username: turnUsername, Credential: turnPassword, Healthy: true},
 		{URL: getenv("MEDIA_CONTROL_TURN_SECONDARY_URL", "turn:turn-secondary:3478"), Kind: domain.IceServerTURN, Username: turnUsername, Credential: turnPassword, Healthy: true},
 	})
+	baseAuthorizer, err := authpolicy.NewAuthorizer(
+		getenv("MEDIA_CONTROL_AUTH_MODE", authpolicy.AuthModeRequired),
+		getenv("AUTH_POLICY_BASE_URL", ""),
+		&http.Client{Timeout: 2 * time.Second},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 	authorizer := authpolicy.NewCachedAuthorizer(
-		authpolicy.NewClient(getenv("AUTH_POLICY_BASE_URL", ""), &http.Client{Timeout: 2 * time.Second}),
+		baseAuthorizer,
 		getenvDuration("MEDIA_CONTROL_AUTHZ_CACHE_TTL_SECONDS", 2*time.Second),
 	)
 	var streamLister httpapi.StreamLister = mediamtx.NewClient(mediaMTXBaseURL, &http.Client{Timeout: 3 * time.Second})

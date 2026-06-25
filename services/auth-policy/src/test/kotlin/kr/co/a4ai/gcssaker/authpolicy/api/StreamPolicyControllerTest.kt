@@ -75,7 +75,10 @@ class StreamPolicyControllerTest {
 
         assertTrue(response.allowed)
         assertEquals("same group stream", response.reason)
+        assertEquals("viewer-a", response.principalId)
         assertEquals("co-a", response.groupId)
+        assertEquals(StreamPolicyDecisionContract.POLICY_VERSION, response.policyVersion)
+        assertEquals("viewer-a:co-a:viewer", response.principalVersion)
         assertEquals(listOf("view_stream"), response.permissions)
     }
 

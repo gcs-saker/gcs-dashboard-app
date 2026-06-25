@@ -9,7 +9,8 @@ import (
 )
 
 type countingAuthorizer struct {
-	calls int
+	calls     int
+	expiresAt *time.Time
 }
 
 func (a *countingAuthorizer) AuthorizeStream(
@@ -18,7 +19,9 @@ func (a *countingAuthorizer) AuthorizeStream(
 	target domain.StreamAccessTarget,
 ) (domain.StreamAccessDecision, error) {
 	a.calls++
-	return domain.AllowStream(target.StreamID, "same group stream"), nil
+	decision := domain.AllowStream(target.StreamID, "same group stream")
+	decision.ExpiresAt = a.expiresAt
+	return decision, nil
 }
 
 func TestCachedAuthorizerReusesFreshDecision(t *testing.T) {
@@ -58,5 +61,22 @@ func TestCachedAuthorizerSeparatesStreams(t *testing.T) {
 
 	if next.calls != 2 {
 		t.Fatalf("expected cache to keep stream access decisions separate, got %d calls", next.calls)
+	}
+}
+
+func TestCachedAuthorizerHonorsDecisionExpiresAt(t *testing.T) {
+	now := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
+	expiresAt := now.Add(100 * time.Millisecond)
+	next := &countingAuthorizer{expiresAt: &expiresAt}
+	cached := NewCachedAuthorizer(next, time.Minute)
+	cached.now = func() time.Time { return now }
+	target := domain.StreamAccessTarget{StreamID: "raw.sample.front", Path: "raw/sample/front", PublisherGroupID: "co-a"}
+
+	_, _ = cached.AuthorizeStream(context.Background(), "Bearer token", target)
+	cached.now = func() time.Time { return now.Add(150 * time.Millisecond) }
+	_, _ = cached.AuthorizeStream(context.Background(), "Bearer token", target)
+
+	if next.calls != 2 {
+		t.Fatalf("expected decision expiry to invalidate cache, got %d calls", next.calls)
 	}
 }
