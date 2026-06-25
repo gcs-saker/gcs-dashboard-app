@@ -92,7 +92,7 @@ LIMIT 10;
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run PostGIS runtime smoke against docker compose geo profile.")
+    parser = argparse.ArgumentParser(description="Run PostGIS runtime smoke against the default docker compose database.")
     parser.add_argument("--check", action="store_true", help="Print the stable command and SQL contract without executing docker.")
     parser.add_argument("--compose-file", type=Path, default=DEFAULT_COMPOSE_FILE)
     parser.add_argument("--env-file", type=Path, default=DEFAULT_ENV_FILE)

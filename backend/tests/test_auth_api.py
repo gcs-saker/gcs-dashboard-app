@@ -31,7 +31,7 @@ class RecordingMessageSender:
 
 class FailingMessageSender:
     def send(self, envelope: MessageEnvelope) -> None:
-        raise MessageSenderUnavailable("gRPC message sender is not implemented yet")
+        raise MessageSenderUnavailable("gRPC gateway target is not configured")
 
 
 @pytest.fixture
@@ -460,7 +460,7 @@ def test_control_api_returns_503_when_selected_sender_is_unavailable(
         )
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "gRPC message sender is not implemented yet"}
+    assert response.json() == {"detail": "gRPC gateway target is not configured"}
     app.dependency_overrides.pop(get_control_message_publisher, None)
 
 

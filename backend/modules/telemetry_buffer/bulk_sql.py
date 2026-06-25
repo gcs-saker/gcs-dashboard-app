@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import Any, Final
 
 from sqlalchemy import Column, DateTime, Float, MetaData, String, Table
-from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 
 from model.telemetry_model import TelemetryCreate
@@ -15,8 +14,6 @@ from sql.telemetry_sql import Telemetry
 
 
 class TelemetrySqlDialect:
-    MYSQL: Final = "mysql"
-    MARIADB: Final = "mariadb"
     POSTGRESQL: Final = "postgresql"
 
 
@@ -136,17 +133,6 @@ class TelemetryBulkBatch:
         return [payload.to_history_row() for payload in self.payloads]
 
 
-def build_mysql_latest_bulk_upsert(batch: TelemetryBulkBatch) -> Any:
-    rows = batch.latest_rows()
-    statement = mysql_insert(Telemetry).values(rows)
-    update_columns = {
-        column_name: getattr(statement.inserted, column_name)
-        for column_name in LATEST_ROW_COLUMNS
-        if column_name != TelemetryStorageColumns.UUID
-    }
-    return statement.on_duplicate_key_update(**update_columns)
-
-
 def build_postgres_latest_bulk_upsert(batch: TelemetryBulkBatch) -> Any:
     rows = batch.latest_rows()
     statement = postgres_insert(Telemetry).values(rows)
@@ -163,4 +149,3 @@ def build_postgres_latest_bulk_upsert(batch: TelemetryBulkBatch) -> Any:
 
 def build_postgres_history_bulk_insert(batch: TelemetryBulkBatch) -> Any:
     return postgres_insert(telemetry_history_table).values(batch.history_rows())
-

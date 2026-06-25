@@ -110,8 +110,8 @@ def build_commands(include_spring: bool) -> list[TestCommand]:
             cwd=REPO_ROOT,
         ),
         TestCommand(
-            name="Docker Compose Geo Profile",
-            description="PostGIS geo profile이 compose model로 유효한지 확인합니다.",
+            name="Docker Compose PostGIS Runtime",
+            description="PostgreSQL/PostGIS 기본 runtime compose model이 유효한지 확인합니다.",
             command=[
                 "docker",
                 "compose",
@@ -119,8 +119,6 @@ def build_commands(include_spring: bool) -> list[TestCommand]:
                 "deploy/compose/.env.single-node.example",
                 "-f",
                 "deploy/compose/compose.single-node.poc.yml",
-                "--profile",
-                "geo",
                 "config",
                 "--quiet",
             ],

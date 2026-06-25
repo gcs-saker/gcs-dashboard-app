@@ -3,7 +3,10 @@ const authBaseUrl = normalizeLocalDevBaseUrl(
   import.meta.env.VITE_AUTH_API_BASE_URL ?? "/auth-policy/auth",
   "/auth-policy/auth",
 );
-const streamApiBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_STREAM_API_BASE_URL ?? apiBaseUrl, "/api");
+const streamApiBaseUrl = normalizeLocalDevBaseUrl(
+  import.meta.env.VITE_STREAM_API_BASE_URL ?? "/media-control",
+  "/media-control",
+);
 const hlsBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_HLS_BASE_URL ?? "/hls", "/hls");
 const defaultStreamId = import.meta.env.VITE_DEFAULT_STREAM_ID ?? "CID001";
 const defaultStunUrl = import.meta.env.VITE_WEBRTC_STUN_URL ?? "stun:stun.l.google.com:19302";

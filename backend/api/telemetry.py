@@ -1,7 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.dialects.mysql import insert as mysql_insert
+from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.orm import Session
 
 from api.contracts import TelemetryRoutes
@@ -33,9 +33,9 @@ async def receive_telemetry(data: TelemetryCreate, db: Session = Depends(get_db)
 
 
 def upsert_telemetry(data: TelemetryCreate, db: Session) -> Any:
-    if _is_mysql_session(db):
+    if _is_postgres_session(db):
         payload: dict[str, Any] = data.model_dump(exclude_unset=True)
-        _upsert_mysql_telemetry(db, payload)
+        _upsert_postgres_telemetry(db, payload)
         db.commit()
         db_obj = db.query(Telemetry).filter(Telemetry.uuid == data.uuid).first()
         return db_obj
@@ -73,20 +73,23 @@ def format_epoch(epoch_val):
         return str(epoch_val)
 
 
-def _is_mysql_session(db: Session) -> bool:
-    return db.get_bind().dialect.name in {"mysql", "mariadb"}
+def _is_postgres_session(db: Session) -> bool:
+    return db.get_bind().dialect.name == "postgresql"
 
 
-def _upsert_mysql_telemetry(db: Session, payload: dict[str, Any]) -> None:
-    db.execute(_build_mysql_telemetry_upsert(payload))
+def _upsert_postgres_telemetry(db: Session, payload: dict[str, Any]) -> None:
+    db.execute(_build_postgres_telemetry_upsert(payload))
 
 
-def _build_mysql_telemetry_upsert(payload: dict[str, Any]) -> Any:
-    insert_statement = mysql_insert(Telemetry).values(**payload)
+def _build_postgres_telemetry_upsert(payload: dict[str, Any]) -> Any:
+    insert_statement = postgres_insert(Telemetry).values(**payload)
     update_columns = {
-        column_name: getattr(insert_statement.inserted, column_name)
+        column_name: getattr(insert_statement.excluded, column_name)
         for column_name in payload
         if column_name != "uuid"
     }
-    return insert_statement.on_duplicate_key_update(**update_columns)
+    return insert_statement.on_conflict_do_update(
+        index_elements=["uuid"],
+        set_=update_columns,
+    )
 

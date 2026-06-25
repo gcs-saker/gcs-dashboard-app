@@ -13,25 +13,8 @@ x-health-defaults: &health_defaults
   start_period: 10s
 
 services:
-  mysql-legacy:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-gcs_db}
-      MYSQL_USER: ${MYSQL_USER:-gcs_app}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}
-    volumes:
-      - mysql-legacy-data:/var/lib/mysql
-    healthcheck:
-      <<: *health_defaults
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u${MYSQL_USER:-gcs_app} -p$${MYSQL_PASSWORD}"]
-    restart: unless-stopped
-    networks:
-      - control-net
-
   postgres-geo:
     image: postgis/postgis:16-3.4
-    profiles: ["geo"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-gcs_geo}
       POSTGRES_USER: ${POSTGRES_USER:-gcs_geo}
@@ -104,7 +87,7 @@ services:
       WEBRTC_TURN_USERNAME: ${TURN_USERNAME:-gcs-turn}
       WEBRTC_TURN_PASSWORD: ${TURN_PASSWORD:?Set TURN_PASSWORD}
     depends_on:
-      mysql-legacy:
+      postgres-geo:
         condition: service_healthy
       mqtt:
         condition: service_started
@@ -134,9 +117,9 @@ services:
       AUTH_POLICY_SIGNUP_INVITES: ${AUTH_POLICY_SIGNUP_INVITES:-A4AI01:1:co-a}
       AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED: ${AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED:-true}
       AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED: ${AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED:-true}
-      SPRING_DATASOURCE_URL: ${AUTH_POLICY_DATASOURCE_URL:-jdbc:mysql://mysql-legacy:3306/${MYSQL_DATABASE:-gcs_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
-      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-gcs_app}
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}
+      SPRING_DATASOURCE_URL: ${AUTH_POLICY_DATASOURCE_URL:-jdbc:postgresql://postgres-geo:5432/${POSTGRES_DB:-gcs_geo}}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-gcs_geo}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
       TIME_SYNC_MODE: ${TIME_SYNC_MODE:-public}
       TIME_SYNC_SOURCE_HOST: ${TIME_SYNC_SOURCE_HOST:-pool.ntp.org}
       TIME_SYNC_SOURCE_PORT: ${TIME_SYNC_SOURCE_PORT:-123}
@@ -148,7 +131,7 @@ services:
       <<: *health_defaults
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz >/dev/null"]
     depends_on:
-      mysql-legacy:
+      postgres-geo:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -177,6 +160,7 @@ services:
       MEDIA_CONTROL_ICE_SERVER_CACHE_KEY: ${MEDIA_CONTROL_ICE_SERVER_CACHE_KEY:-gcs-saker:media-control:ice-servers}
       MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID: ${MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID:-co-a}
       MEDIA_CONTROL_STREAM_GROUP_MAP: ${MEDIA_CONTROL_STREAM_GROUP_MAP:-raw/sample/front=co-a,raw/local/webcam=co-a}
+      MEDIA_CONTROL_PUBLISH_TOKEN: ${MEDIA_CONTROL_PUBLISH_TOKEN:?Set MEDIA_CONTROL_PUBLISH_TOKEN}
       MEDIA_CONTROL_LISTEN_ADDR: :8081
       GOGC: ${MEDIA_CONTROL_GOGC:-100}
       GOMEMLIMIT: ${MEDIA_CONTROL_GOMEMLIMIT:-512MiB}
@@ -332,6 +316,5 @@ networks:
     driver: bridge
 
 volumes:
-  mysql-legacy-data:
   postgres-geo-data:
   redis-data:

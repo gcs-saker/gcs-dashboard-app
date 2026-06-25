@@ -89,7 +89,7 @@ describe("streamDevices", () => {
 
     const devices = await fetchStreamDeviceOptions(fetcher as unknown as typeof fetch);
 
-    expect(fetcher).toHaveBeenNthCalledWith(1, "/api/v1/streams", {
+    expect(fetcher).toHaveBeenNthCalledWith(1, "/media-control/api/v1/streams", {
       credentials: "include",
       headers: { Accept: "application/json" },
     });

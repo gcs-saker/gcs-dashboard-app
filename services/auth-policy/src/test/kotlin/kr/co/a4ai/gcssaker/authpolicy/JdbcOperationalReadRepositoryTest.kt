@@ -242,7 +242,7 @@ class JdbcOperationalReadRepositoryTest {
     private fun h2DataSource(): DriverManagerDataSource =
         DriverManagerDataSource().apply {
             setDriverClassName("org.h2.Driver")
-            url = "jdbc:h2:mem:${java.util.UUID.randomUUID()};MODE=MySQL;DB_CLOSE_DELAY=-1"
+            url = "jdbc:h2:mem:${java.util.UUID.randomUUID()};MODE=PostgreSQL;DB_CLOSE_DELAY=-1"
             username = "sa"
             password = ""
         }

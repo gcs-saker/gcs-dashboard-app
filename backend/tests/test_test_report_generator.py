@@ -47,7 +47,7 @@ def test_test_report_generator_contract_lists_full_check_commands() -> None:
         "Spring Auth Policy",
         "M7 Regression Gate",
         "Docker Compose Default",
-        "Docker Compose Geo Profile",
+        "Docker Compose PostGIS Runtime",
         "DragonFly Profile Smoke",
         "gRPC Descriptor Smoke",
     } <= set(payload["commands"])

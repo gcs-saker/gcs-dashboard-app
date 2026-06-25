@@ -51,16 +51,19 @@ def main() -> int:
 
     payload = {
         "schemaVersion": SCHEMA_VERSION,
-        "status": "contract",
+        "status": "prototype",
         "descriptorCommand": config.descriptor_command(),
         "requiredBeforeActive": [
-            "Spring/Kotlin or Go gRPC runtime dependency",
             "SakerGatewayService.Exchange server implementation",
-            "client implementation behind MessageSender abstraction",
             "internal compose port and network policy",
             "bidirectional streaming runtime smoke",
         ],
-        "promotionGate": "gRPC remains contract-only until Exchange stream succeeds over a real internal network path.",
+        "implementedPrototype": [
+            "protobuf descriptor contract",
+            "client implementation behind MessageSender abstraction",
+            "CONTROL_GRPC_TARGET and CONTROL_GRPC_METHOD runtime configuration",
+        ],
+        "promotionGate": "gRPC remains prototype until Exchange stream succeeds over a real internal network path.",
     }
 
     if args.check or not args.run:

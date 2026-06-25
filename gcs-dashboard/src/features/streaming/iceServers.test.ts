@@ -25,7 +25,7 @@ describe("loadWebRtcIceServers", () => {
       },
     ]);
     expect(fetcher).toHaveBeenCalledWith(
-      "/api/v1/streams/ice-servers",
+      "/media-control/api/v1/streams/ice-servers",
       expect.objectContaining({
         headers: expect.objectContaining({ Accept: "application/json" }),
       }),

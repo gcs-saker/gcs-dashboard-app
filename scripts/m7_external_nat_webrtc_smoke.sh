@@ -44,6 +44,7 @@ Environment:
   TURN_USERNAME         Defaults to WEBRTC_TURN_USERNAME
   TURN_PASSWORD         Defaults to WEBRTC_TURN_PASSWORD
   AUTH_BEARER_TOKEN     Optional token for auth-protected ICE server API readiness.
+                        Required for WHIP publish authorization when RUN_WHIP_PUBLISH=1.
   RUN_TURN_ALLOCATIONS  Default: 1
   RUN_WHIP_PUBLISH      Default: 1
   RUN_WHEP_PLAYBACK     Default: 1
@@ -111,6 +112,20 @@ curl_status() {
   else
     curl $(tls_args) -s -o /dev/null -w "%{http_code}" "$url"
   fi
+}
+
+resolve_publish_whip_url() {
+  local publish_auth_url="${EDGE_BASE_URL}/media-control/api/v1/streams/${STREAM_ID}/publish"
+  if [[ -z "$AUTH_BEARER_TOKEN" ]]; then
+    echo "AUTH_BEARER_TOKEN is required to request an authorized WHIP publish URL" >&2
+    exit 1
+  fi
+  # shellcheck disable=SC2046
+  curl $(tls_args) -fsS \
+    -H "Authorization: Bearer ${AUTH_BEARER_TOKEN}" \
+    -H "Accept: application/json" \
+    "$publish_auth_url" \
+    | python3 -c 'import json,sys; payload=json.load(sys.stdin); print(payload["whipUrl"])'
 }
 
 run_turn_allocation() {
@@ -247,6 +262,8 @@ run_live() {
   fi
 
   if [[ "$RUN_WHIP_PUBLISH" == "1" ]]; then
+    whip_url="$(resolve_publish_whip_url)"
+    append_report "authorized WHIP publish URL resolved through media-control"
     python3 "${REPO_ROOT}/scripts/webrtc_whip_publish_smoke.py" \
       --run \
       --whip-url "$whip_url" \
@@ -270,6 +287,7 @@ run_live() {
   fi
 
   append_report "External NAT smoke wall latency ms: $(($(now_ms) - started_ms))"
+  append_report "Security gate: WHIP publish URL was issued by media-control authorization"
   append_report "M7 external NAT WebRTC smoke run passed"
 }
 

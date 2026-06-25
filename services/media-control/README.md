@@ -28,7 +28,7 @@ GET /api/v1/streams/{streamId}/playback
 GET /api/v1/streams/{streamId}/status
 ```
 
-Nginx edge에서는 `/media-control/` prefix로 이 서비스를 노출한다. Dashboard는 `VITE_STREAM_API_BASE_URL=/media-control`일 때 Go media-control을 사용하고, 기본 `/api`일 때 기존 Python stream API를 사용한다.
+Nginx edge에서는 `/media-control/` prefix로 이 서비스를 노출한다. Dashboard는 `VITE_STREAM_API_BASE_URL=/media-control`을 기본값으로 사용하며 stream registry, ICE server, playback, publish authorization 요청을 Go media-control로 보낸다.
 
 ## Legacy compatibility endpoint
 

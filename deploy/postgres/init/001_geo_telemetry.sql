@@ -2,6 +2,22 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 
 CREATE SCHEMA IF NOT EXISTS gcs_geo;
 
+CREATE TABLE IF NOT EXISTS telemetry_realtime (
+    uuid VARCHAR(64) PRIMARY KEY,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    altitude DOUBLE PRECISION,
+    "magneticX" DOUBLE PRECISION,
+    "magneticY" DOUBLE PRECISION,
+    "magneticZ" DOUBLE PRECISION,
+    soc DOUBLE PRECISION,
+    "phoneBatterySOC" DOUBLE PRECISION,
+    velocity DOUBLE PRECISION,
+    "totalDistance" DOUBLE PRECISION,
+    "epochTime" DOUBLE PRECISION,
+    "portDistance" DOUBLE PRECISION
+);
+
 CREATE TABLE IF NOT EXISTS gcs_geo.stream_telemetry_points (
     id BIGSERIAL PRIMARY KEY,
     org_id TEXT NOT NULL,

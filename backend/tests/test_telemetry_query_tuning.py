@@ -1,10 +1,10 @@
-from sqlalchemy.dialects import mysql
+from sqlalchemy.dialects import postgresql
 
-from api.telemetry import _build_mysql_telemetry_upsert
+from api.telemetry import _build_postgres_telemetry_upsert
 
 
-def test_mysql_telemetry_upsert_uses_single_atomic_statement() -> None:
-    statement = _build_mysql_telemetry_upsert(
+def test_postgres_telemetry_upsert_uses_single_atomic_statement() -> None:
+    statement = _build_postgres_telemetry_upsert(
         {
             "uuid": "raw.local.webcam",
             "latitude": 35.8714,
@@ -13,8 +13,8 @@ def test_mysql_telemetry_upsert_uses_single_atomic_statement() -> None:
         }
     )
 
-    compiled = str(statement.compile(dialect=mysql.dialect()))
+    compiled = str(statement.compile(dialect=postgresql.dialect()))
 
     assert compiled.startswith("INSERT INTO telemetry_realtime")
-    assert "ON DUPLICATE KEY UPDATE" in compiled
+    assert "ON CONFLICT (uuid) DO UPDATE" in compiled
     assert "SELECT" not in compiled

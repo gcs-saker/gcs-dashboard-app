@@ -181,7 +181,7 @@ describe("WebRTCPlayer", () => {
     });
     expect(fetch).toHaveBeenNthCalledWith(
       1,
-      "/api/v1/streams/ice-servers",
+      "/media-control/api/v1/streams/ice-servers",
       expect.objectContaining({
         headers: expect.objectContaining({ Accept: "application/json" }),
       }),

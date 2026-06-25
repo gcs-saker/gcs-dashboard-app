@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy.dialects import mysql, postgresql
+from sqlalchemy.dialects import postgresql
 
 from model.telemetry_model import TelemetryCreate
 from modules.telemetry_buffer import (
@@ -13,7 +13,6 @@ from modules.telemetry_buffer import (
 )
 from modules.telemetry_buffer.bulk_sql import (
     TelemetryBulkBatch,
-    build_mysql_latest_bulk_upsert,
     build_postgres_history_bulk_insert,
     build_postgres_latest_bulk_upsert,
 )
@@ -196,21 +195,6 @@ def test_telemetry_bulk_batch_rejects_records_without_stream_uuid() -> None:
 
     with pytest.raises(ValueError, match="telemetry uuid is required"):
         TelemetryBulkBatch.from_records([record])
-
-
-def test_mysql_bulk_upsert_compiles_to_single_insert_statement() -> None:
-    records = [
-        TelemetryBufferRecord.create(telemetry("raw.mobile.front", 35.87)),
-        TelemetryBufferRecord.create(telemetry("raw.mobile.rear", 35.88)),
-    ]
-    batch = TelemetryBulkBatch.from_records(records)
-
-    compiled = str(build_mysql_latest_bulk_upsert(batch).compile(dialect=mysql.dialect()))
-
-    assert compiled.startswith("INSERT INTO telemetry_realtime")
-    assert "ON DUPLICATE KEY UPDATE" in compiled
-    assert compiled.count("INSERT INTO") == 1
-    assert "SELECT" not in compiled
 
 
 def test_postgres_bulk_latest_upsert_uses_conflict_contract() -> None:

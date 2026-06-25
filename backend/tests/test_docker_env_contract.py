@@ -67,7 +67,8 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     compose = load_yaml(COMPOSE_FILE)
     services = compose["services"]
 
-    assert {"mysql", "mqtt", "backend", "mediamtx", "turn", "nginx", "edge"} <= set(services)
+    assert {"postgres", "mqtt", "backend", "mediamtx", "media-control", "turn", "nginx", "edge"} <= set(services)
+    assert "mysql" not in services
     assert services["backend"]["environment"]["DATABASE_URL"].startswith("${DATABASE_URL:")
     assert services["backend"]["environment"]["AUTH_JWT_SECRET"].startswith("${AUTH_JWT_SECRET:")
     assert services["backend"]["environment"]["AUTH_REFRESH_TOKEN_EXPIRE_MINUTES"] == (
@@ -96,7 +97,9 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["nginx"]["build"]["args"]["VITE_IDENTITY_API_BASE_URL"] == (
         "${VITE_AUTH_API_BASE_URL:-/auth-policy/auth}"
     )
-    assert services["nginx"]["build"]["args"]["VITE_STREAM_API_BASE_URL"] == "${VITE_STREAM_API_BASE_URL:-/api}"
+    assert services["nginx"]["build"]["args"]["VITE_STREAM_API_BASE_URL"] == (
+        "${VITE_STREAM_API_BASE_URL:-/media-control}"
+    )
     assert services["nginx"]["build"]["args"]["VITE_HLS_BASE_URL"] == "${VITE_HLS_BASE_URL:-/hls}"
     assert services["nginx"]["build"]["args"]["VITE_LOCAL_WEBCAM_WHIP_URL"].startswith(
         "${VITE_LOCAL_WEBCAM_WHIP_URL:"
@@ -332,7 +335,7 @@ def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
     assert "ARG VITE_API_BASE_URL=/api" in dockerfile
     assert "ARG VITE_IDENTITY_API_BASE_URL=/auth-policy/auth" in dockerfile
     assert "RUN VITE_AUTH_API_BASE_URL=$VITE_IDENTITY_API_BASE_URL npm run build" in dockerfile
-    assert "ARG VITE_STREAM_API_BASE_URL=/api" in dockerfile
+    assert "ARG VITE_STREAM_API_BASE_URL=/media-control" in dockerfile
     assert "ARG VITE_HLS_BASE_URL=/hls" in dockerfile
     assert "ARG VITE_LOCAL_WEBCAM_WHIP_URL=https://localhost/webrtc/raw/local/webcam/whip" in dockerfile
     assert "ARG VITE_WEBRTC_STUN_URL=stun:stun.l.google.com:19302" in dockerfile

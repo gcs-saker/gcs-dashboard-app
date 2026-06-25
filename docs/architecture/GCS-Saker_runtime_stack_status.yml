@@ -52,15 +52,17 @@ stacks:
       - deploy/compose/compose.single-node.poc.yml
     nextGate: "Redis 장애 시 auth-policy와 media-control의 degraded behavior를 smoke test로 고정한다."
 
-  mysqlLegacy:
+  postgresPrimaryStore:
     status: active
-    issue: 411
+    issue: 450
     runtime:
-      composeService: mysql-legacy
+      composeService: postgres-geo
     evidence:
       - deploy/compose/compose.single-node.poc.yml
       - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/infrastructure
-    nextGate: "PostgreSQL/PostGIS bounded context가 안정화될 때까지 auth/user/ops 정형 데이터 기본 DB로 유지한다."
+      - deploy/postgres/init/001_geo_telemetry.sql
+      - backend/tests/test_postgis_schema_contract.py
+    nextGate: "MySQL 제거 후 auth/user/ops/telemetry runtime smoke와 백업/복구 절차를 PostgreSQL 기준으로 재검증한다."
 
   mediamtxWebrtcHls:
     status: active
@@ -118,7 +120,7 @@ stacks:
     nextGate: "Kotlin/Go/Python generated DTO 또는 명시 mapper를 고정하고, 수동 wire codec과 schema drift를 줄인다."
 
   grpcInternalStreaming:
-    status: contract
+    status: prototype
     issue: 412
     evidence:
       - contracts/proto/gcs/saker/v1/gateway_service.proto
@@ -126,10 +128,11 @@ stacks:
       - backend/tests/test_message_sender_abstraction.py
       - scripts/grpc_runtime_smoke.py
     missingRuntime:
-      - "Spring/Kotlin gRPC server/client dependency"
-      - "Go or Python gRPC client/server implementation"
       - "compose service port/internal network wiring"
       - "runtime bidi streaming smoke"
+    prototypeRuntime:
+      - "client implementation behind MessageSender abstraction"
+      - "CONTROL_GRPC_TARGET and CONTROL_GRPC_METHOD runtime configuration"
     nextGate: "SakerGatewayService.Exchange를 실제 internal service-to-service smoke로 연결한 뒤에만 active로 승격한다."
 
   dragonflyCacheProfile:
@@ -144,19 +147,6 @@ stacks:
       - scripts/dragonfly_profile_smoke.py
       - docs/architecture/GCS-Saker_M8_dragonfly_compatibility_profile.md
     nextGate: "Redis와 DragonFly 양쪽에서 auth/session/ICE/stream cache smoke를 동일하게 통과시키고 license/image tag를 기록한다."
-
-  postgisGeoProfile:
-    status: profile
-    issue: 414
-    runtime:
-      composeService: postgres-geo
-      profile: geo
-    evidence:
-      - deploy/postgres/init/001_geo_telemetry.sql
-      - backend/tests/test_postgis_schema_contract.py
-      - scripts/postgis_runtime_smoke.py
-      - docs/architecture/GCS-Saker_M8_postgis_bounded_context.md
-    nextGate: "geo profile 컨테이너에서 schema init, latest/history upsert, spatial viewport explain을 실제 실행한다."
 
   graphqlOperationalRead:
     status: contract

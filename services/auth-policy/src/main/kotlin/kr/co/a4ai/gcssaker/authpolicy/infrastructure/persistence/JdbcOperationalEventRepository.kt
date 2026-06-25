@@ -279,7 +279,7 @@ private object OperationalEventSql {
     const val createTable = """
         CREATE TABLE IF NOT EXISTS operational_events (
             id VARCHAR(128) NOT NULL PRIMARY KEY,
-            occurred_at DATETIME(3) NOT NULL,
+            occurred_at TIMESTAMP(3) NOT NULL,
             severity VARCHAR(32) NOT NULL,
             category VARCHAR(64) NOT NULL,
             event_type VARCHAR(64),
@@ -312,7 +312,7 @@ private object OperationalEventSql {
         columns = listOf(OperationalEventColumns.groupId, OperationalEventColumns.streamId, OperationalEventColumns.occurredAt),
     )
     val alterTimestampColumns = listOf(
-        "ALTER TABLE $table MODIFY ${OperationalEventColumns.occurredAt} DATETIME(3) NOT NULL",
+        "ALTER TABLE $table ALTER COLUMN ${OperationalEventColumns.occurredAt} SET DATA TYPE TIMESTAMP(3)",
         "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.eventType} VARCHAR(64)",
         "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.sourceService} VARCHAR(64)",
         "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.streamId} VARCHAR(128)",

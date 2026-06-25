@@ -25,16 +25,17 @@ def run_check(script: Path) -> dict:
     return json.loads(result.stdout)
 
 
-def test_grpc_runtime_smoke_reports_contract_state_and_missing_active_gates() -> None:
+def test_grpc_runtime_smoke_reports_prototype_state_and_missing_active_gates() -> None:
     payload = run_check(GRPC_SMOKE)
 
     assert payload["schemaVersion"] == "grpc-runtime-smoke-v1"
-    assert payload["status"] == "contract"
+    assert payload["status"] == "prototype"
     assert payload["descriptorCommand"][:3] == [
         "protoc",
         f"--proto_path={REPO_ROOT / 'contracts' / 'proto'}",
         f"--descriptor_set_out={REPO_ROOT / 'tmp' / 'gcs-saker-grpc-gateway.pb'}",
     ]
+    assert "client implementation behind MessageSender abstraction" in payload["implementedPrototype"]
     assert "SakerGatewayService.Exchange server implementation" in payload["requiredBeforeActive"]
     assert "real internal network path" in payload["promotionGate"]
 

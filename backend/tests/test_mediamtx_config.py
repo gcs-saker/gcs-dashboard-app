@@ -111,9 +111,24 @@ def test_mediamtx_enables_api_only_inside_docker_network_and_keeps_metrics_priva
     assert not any("9998" in port for port in exposed_ports)
 
 
-def test_mediamtx_allows_backend_container_to_read_control_api_without_public_api_port():
+def test_mediamtx_routes_publish_auth_to_media_control_without_public_api_port():
     config = load_yaml(MEDIAMTX_CONFIG)
     users = config["authInternalUsers"]
+
+    assert config["authMethod"] == "http"
+    assert config["authHTTPAddress"] == "http://media-control:8081/v1/mediamtx/auth"
+    assert {"action": "publish"} not in config["authHTTPExclude"]
+    assert {"action": "read"} in config["authHTTPExclude"]
+    assert {"action": "playback"} in config["authHTTPExclude"]
+
+    public_users = [
+        user
+        for user in users
+        if {"action": "read", "path": None} in user.get("permissions", [])
+        or {"action": "read", "path": ""} in user.get("permissions", [])
+    ]
+    assert public_users
+    assert all({"action": "publish", "path": None} not in user.get("permissions", []) for user in users)
 
     api_users = [
         user
@@ -138,8 +153,8 @@ def test_compose_port_overrides_are_documented_without_management_ports():
     assert "MEDIAMTX_RTSP_PORT=8554" in env_example
     assert "MEDIAMTX_SRT_PORT=8890" in env_example
     assert "MEDIAMTX_RTMP_PORT=1935" in env_example
-    assert "9997" not in env_example
-    assert "9998" not in env_example
+    assert "MEDIAMTX_API_PORT" not in env_example
+    assert "MEDIAMTX_METRICS_PORT" not in env_example
 
 
 def test_mediamtx_declares_public_stun_server_for_connected_network_validation():
@@ -194,7 +209,9 @@ def test_ice_server_documentation_explains_nat_and_webrtc_encryption_boundary():
     assert "TURN credential은 저장소에 들어가지 않는다" in doc
 
 
-def test_mediamtx_accepts_publisher_for_all_stream_paths():
+def test_mediamtx_requires_http_auth_for_publish_on_all_stream_paths():
     config = load_yaml(MEDIAMTX_CONFIG)
 
     assert config["paths"]["all"]["source"] == "publisher"
+    assert config["authMethod"] == "http"
+    assert config["authHTTPAddress"].endswith("/v1/mediamtx/auth")

@@ -7,21 +7,24 @@ x-env-files: &service_env_files
     required: false
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-mysql
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-postgres
     env_file: *service_env_files
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-gcs_db}
-      MYSQL_USER: ${MYSQL_USER:-gcs_app}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-gcs_geo}
+      POSTGRES_USER: ${POSTGRES_USER:-gcs_geo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MYSQL_HOST_PORT:-3308}:3306"
+      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
-      - mysql-data:/var/lib/mysql
+      - postgres-data:/var/lib/postgresql/data
+      - type: bind
+        source: ../deploy/postgres/init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u${MYSQL_USER:-gcs_app} -p$${MYSQL_PASSWORD}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gcs_geo} -d ${POSTGRES_DB:-gcs_geo}"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -70,7 +73,7 @@ services:
     ports:
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${BACKEND_HTTP_PORT:-8001}:8001"
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       mqtt:
         condition: service_started
@@ -100,6 +103,32 @@ services:
         target: /mediamtx.yml
         read_only: true
     command: /mediamtx.yml
+    depends_on:
+      media-control:
+        condition: service_started
+    restart: always
+
+  media-control:
+    image: ${MEDIA_CONTROL_IMAGE:-gcs-saker-media-control:local}
+    build:
+      context: ../services/media-control
+    container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-media-control
+    env_file: *service_env_files
+    environment:
+      MEDIAMTX_API_BASE_URL: ${MEDIAMTX_API_BASE_URL:-http://mediamtx:9997}
+      MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL: ${MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL:-/webrtc}
+      MEDIA_CONTROL_PUBLIC_HLS_BASE_URL: ${MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-/hls}
+      MEDIA_CONTROL_PUBLISH_TOKEN: ${MEDIA_CONTROL_PUBLISH_TOKEN:?Set MEDIA_CONTROL_PUBLISH_TOKEN in .env}
+      MEDIA_CONTROL_STUN_URL: ${MEDIA_CONTROL_STUN_URL:-stun:stun.l.google.com:19302}
+      MEDIA_CONTROL_TURN_PRIMARY_URL: ${MEDIA_CONTROL_TURN_PRIMARY_URL:-turn:turn:3478?transport=udp}
+      MEDIA_CONTROL_TURN_SECONDARY_URL: ${MEDIA_CONTROL_TURN_SECONDARY_URL:-turn:turn:3478?transport=tcp}
+      MEDIA_CONTROL_TURN_MAX_HEALTHY_SERVERS: ${MEDIA_CONTROL_TURN_MAX_HEALTHY_SERVERS:-1}
+      MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID: ${MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID:-co-a}
+      MEDIA_CONTROL_STREAM_GROUP_MAP: ${MEDIA_CONTROL_STREAM_GROUP_MAP:-raw/local/webcam=co-a,raw/local/front=co-a,raw/local/rear=co-a}
+      MEDIA_CONTROL_LISTEN_ADDR: :8081
+      AUTH_POLICY_BASE_URL: ${AUTH_POLICY_BASE_URL:-}
+      TURN_USERNAME: ${WEBRTC_TURN_USERNAME:-gcs-turn}
+      TURN_PASSWORD: ${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}
     restart: always
 
   turn:
@@ -132,7 +161,7 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
         VITE_IDENTITY_API_BASE_URL: ${VITE_AUTH_API_BASE_URL:-/auth-policy/auth}
-        VITE_STREAM_API_BASE_URL: ${VITE_STREAM_API_BASE_URL:-/api}
+        VITE_STREAM_API_BASE_URL: ${VITE_STREAM_API_BASE_URL:-/media-control}
         VITE_HLS_BASE_URL: ${VITE_HLS_BASE_URL:-/hls}
         VITE_DEFAULT_STREAM_ID: ${VITE_DEFAULT_STREAM_ID:-CID001}
         VITE_LOCAL_WEBCAM_WHIP_URL: ${VITE_LOCAL_WEBCAM_WHIP_URL:-https://localhost/webrtc/raw/local/webcam/whip}
@@ -175,4 +204,4 @@ services:
     restart: always
 
 volumes:
-  mysql-data:
+  postgres-data:

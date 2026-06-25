@@ -75,9 +75,9 @@ def test_incomplete_migration_items_are_not_marked_active() -> None:
     status = load_yaml(STATUS_FILE)
     stacks = status["stacks"]
 
-    assert stacks["grpcInternalStreaming"]["status"] == "contract"
+    assert stacks["postgresPrimaryStore"]["status"] == "active"
+    assert stacks["grpcInternalStreaming"]["status"] == "prototype"
     assert stacks["dragonflyCacheProfile"]["status"] == "profile"
-    assert stacks["postgisGeoProfile"]["status"] == "profile"
     assert stacks["webCodecsCanvasPipeline"]["status"] == "prototype"
     assert stacks["http3EdgeProfile"]["status"] == "deferred"
     assert stacks["aiOverlaySidecar"]["status"] == "contract"

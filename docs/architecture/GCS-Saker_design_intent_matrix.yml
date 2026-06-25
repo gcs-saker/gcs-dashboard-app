@@ -18,7 +18,7 @@ intents:
       - springAuthPolicy
       - goMediaControl
       - redisCache
-      - mysqlLegacy
+      - postgresPrimaryStore
       - mediamtxWebrtcHls
       - coturnPair
     rationale: "완료라고 말한 서비스가 선택 profile에 숨어 있으면 실제 배포와 설계 보고가 어긋난다."
@@ -27,14 +27,14 @@ intents:
         springAuthPolicy: active
         goMediaControl: active
         redisCache: active
-        mysqlLegacy: active
+        postgresPrimaryStore: active
         mediamtxWebrtcHls: active
         coturnPair: active
       composeActiveServices:
         - auth-policy
         - media-control
         - redis
-        - mysql-legacy
+        - postgres-geo
         - mediamtx
         - turn-primary
         - turn-secondary
@@ -53,21 +53,17 @@ intents:
     linkedStacks:
       - grpcInternalStreaming
       - dragonflyCacheProfile
-      - postgisGeoProfile
       - webCodecsCanvasPipeline
       - http3EdgeProfile
       - aiOverlaySidecar
     rationale: "기술명이 repo에 있다는 이유만으로 완료 처리하지 않기 위한 정직성 게이트다."
     assertions:
       runtimeStackStatuses:
-        grpcInternalStreaming: contract
+        grpcInternalStreaming: prototype
         dragonflyCacheProfile: profile
-        postgisGeoProfile: profile
         webCodecsCanvasPipeline: prototype
         http3EdgeProfile: deferred
         aiOverlaySidecar: contract
-      composeProfileServices:
-        postgres-geo: geo
       evidencePaths:
         - scripts/grpc_runtime_smoke.py
         - scripts/dragonfly_profile_smoke.py
@@ -128,7 +124,7 @@ intents:
         - path: backend/modules/messaging/sender.py
           text: "MessageSender"
         - path: scripts/grpc_runtime_smoke.py
-          text: "status\": \"contract\""
+          text: "status\": \"prototype\""
       evidencePaths:
         - backend/tests/test_protobuf_contracts.py
         - backend/tests/test_message_sender_abstraction.py

@@ -2,13 +2,13 @@
 
 ## 목적
 
-PostgreSQL/PostGIS는 Supabase 없이 폐쇄망에서도 운용 가능한 geometry/time-series 후보 저장소다. M8에서는 사용자, 인증, 기존 legacy data를 즉시 이전하지 않고 stream telemetry 좌표와 최신 위치 read model부터 분리한다.
+PostgreSQL/PostGIS는 Supabase 없이 폐쇄망에서도 운용 가능한 primary durable store다. M12 전환에서는 MySQL runtime 의존을 제거하고, 사용자/인증/운영 이벤트와 stream telemetry 좌표 read model을 같은 PostgreSQL/PostGIS 계열에서 관리한다.
 
 ## 데이터 분리 기준
 
-- MySQL legacy: 기존 사용자, 인증 호환, legacy dashboard data
+- PostgreSQL/PostGIS primary store: 사용자, 인증, 운영 이벤트, stream telemetry 최신값과 위치 이력
 - Redis 또는 Dragonfly: refresh session, principal cache, ICE list, stream presence
-- PostgreSQL/PostGIS geo profile: GPS point history, latest stream point, bounding box query
+- PostgreSQL/PostGIS spatial context: GPS point history, latest stream point, bounding box query
 
 media frame은 DB에 저장하지 않는다. 영상 녹화가 필요하면 object storage 또는 파일 저장소를 별도 이슈로 분리한다.
 
@@ -77,7 +77,7 @@ latest table에는 stream lookup primary key와 viewport용 GiST index만 둔다
 
 ## 운영 전 확인
 
-- `geo` profile은 선택 사항이다. 기본 single-node 배포는 MySQL + Redis를 유지한다.
-- 기존 데이터 이전은 별도 migration issue에서 수행한다.
+- 기본 single-node 배포는 PostgreSQL/PostGIS + Redis를 사용한다.
+- 기존 MySQL 운영 데이터 이전은 별도 migration runbook에서 백업, 변환, 검증 순서로 수행한다.
 - PostGIS image와 extension version은 release마다 기록한다.
 - 대량 ingest 전에는 `EXPLAIN (ANALYZE, BUFFERS)` 결과와 index hit ratio를 보관한다.

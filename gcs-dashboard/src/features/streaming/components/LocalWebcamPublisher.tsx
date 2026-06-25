@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { apiUrl, LOCAL_WEBCAM_STREAM_ID, LOCAL_WEBCAM_WHIP_URL, WEBRTC_ICE_SERVERS } from "../../../config";
-import { DASHBOARD_API_ROUTES } from "@/features/apiRoutes";
+import { apiUrl, LOCAL_WEBCAM_STREAM_ID, LOCAL_WEBCAM_WHIP_URL, streamApiV1Url, WEBRTC_ICE_SERVERS } from "../../../config";
+import { DASHBOARD_API_ROUTES, STREAM_API_ROUTES } from "@/features/apiRoutes";
 import { authenticatedFetch } from "../../auth/authApi";
 import { loadWebRtcIceServers } from "../iceServers";
 import { TalkbackAudioReceiver } from "./TalkbackAudioReceiver";
@@ -201,7 +201,8 @@ export function LocalWebcamPublisher({
 
       currentStep = "signaling";
       updateStatus("sending-offer");
-      const response = await fetcher(selectedWhipUrl, {
+      const publishWhipUrl = await fetchAuthorizedPublishWhipUrl(selectedStreamTarget.id, fetcher);
+      const response = await fetcher(publishWhipUrl, {
         method: "POST",
         headers: { Accept: "application/sdp", "Content-Type": "application/sdp" },
         body: sdp,
@@ -571,6 +572,22 @@ function audioCaptureConstraints(mode: AudioCaptureMode, selectedDeviceId = DEFA
     constraints.deviceId = { exact: selectedDeviceId };
   }
   return constraints;
+}
+
+async function fetchAuthorizedPublishWhipUrl(streamId: string, fetcher: typeof fetch): Promise<string> {
+  const response = await authenticatedFetch(
+    streamApiV1Url(`${STREAM_API_ROUTES.streams}/${streamId}/publish`),
+    { method: "GET", headers: { Accept: "application/json" } },
+    fetcher,
+  );
+  if (!response.ok) {
+    throw new Error(`Publish authorization failed with ${response.status}`);
+  }
+  const payload = (await response.json()) as { whipUrl?: string };
+  if (!payload.whipUrl) {
+    throw new Error("Publish authorization response did not include a WHIP URL");
+  }
+  return payload.whipUrl;
 }
 
 function ensureStreamTargets(

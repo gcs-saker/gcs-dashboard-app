@@ -11,8 +11,8 @@ def test_database_settings_uses_safe_default_without_env(monkeypatch) -> None:
 
 
 def test_database_settings_reads_database_url_from_env(monkeypatch) -> None:
-    monkeypatch.setenv("DATABASE_URL", "mysql+pymysql://gcs_app:test@mysql:3306/gcs_db")
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg2://gcs_geo:test@postgres:5432/gcs_geo")
 
     settings = DatabaseSettings.from_env()
 
-    assert settings.url == "mysql+pymysql://gcs_app:test@mysql:3306/gcs_db"
+    assert settings.url == "postgresql+psycopg2://gcs_geo:test@postgres:5432/gcs_geo"
