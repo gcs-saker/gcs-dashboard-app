@@ -3,7 +3,7 @@ FROM node:22 AS builder
 WORKDIR /app
 ARG VITE_API_BASE_URL=/api
 ARG VITE_IDENTITY_API_BASE_URL=/auth-policy/auth
-ARG VITE_STREAM_API_BASE_URL=/api
+ARG VITE_STREAM_API_BASE_URL=/media-control
 ARG VITE_HLS_BASE_URL=/hls
 ARG VITE_DEFAULT_STREAM_ID=CID001
 ARG VITE_LOCAL_WEBCAM_WHIP_URL=https://localhost/webrtc/raw/local/webcam/whip

@@ -59,7 +59,7 @@ class JdbcAuthUserRepositoryTest {
 
     private fun h2DataSource(): JdbcDataSource =
         JdbcDataSource().apply {
-            setURL("jdbc:h2:mem:auth_policy_${System.nanoTime()};MODE=MySQL;DB_CLOSE_DELAY=-1")
+            setURL("jdbc:h2:mem:auth_policy_${System.nanoTime()};MODE=PostgreSQL;DB_CLOSE_DELAY=-1")
             user = "sa"
             password = ""
         }

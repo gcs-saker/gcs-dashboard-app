@@ -1,0 +1,467 @@
+schemaVersion: gcs-saker-principle-proof-matrix-v1
+updatedAt: "2026-06-19"
+purpose: "프로젝트 운영 원칙, 코드 설계 원칙, 시스템 경계, stack migration, streaming 저지연 원칙이 실제 repo 증거와 얼마나 연결되는지 검증한다."
+issue: 421
+proofStateLegend:
+  automated: "repo 파일, route, runtime status, compose, 테스트 계약으로 자동 검증한다."
+  manual: "운영 서버, 외부 NAT, 실제 장비, 보안 스캔처럼 실행 환경이 있어야 최종 판정한다."
+  gap: "원칙은 확정됐지만 아직 자동 증거 또는 runtime 연결이 부족하다."
+
+principles:
+  - id: PRJ-ISSUE-001
+    group: project-management
+    principle: "모든 작업은 issue/milestone 기준으로 관리하고 PR에서 검증 항목을 남긴다."
+    expectedProof: "이슈 추적, 마일스톤, PR template, regression gate가 같은 흐름을 바라본다."
+    proofState: automated
+    severity: p1
+    issue: 421
+    assertions:
+      requiredTexts:
+        - path: .github/pull_request_template.md
+          text: "Related Issue"
+        - path: .github/pull_request_template.md
+          text: "Architecture intent gate"
+        - path: .github/milestones.md
+          text: "M5"
+      evidencePaths:
+        - .github/pull_request_template.md
+        - .github/milestones.md
+
+  - id: PRJ-VERIFY-001
+    group: project-management
+    principle: "issue 완료 시 test, build, runtime smoke 가능 상태를 확인한다."
+    expectedProof: "backend/frontend/Go/Spring/compose/runtime smoke가 report generator와 M7 regression gate에 묶인다."
+    proofState: automated
+    severity: p0
+    issue: 421
+    assertions:
+      requiredTexts:
+        - path: scripts/generate_test_report.py
+          text: "Backend Pytest"
+        - path: scripts/generate_test_report.py
+          text: "Frontend Build"
+        - path: scripts/generate_test_report.py
+          text: "Go Media Control"
+        - path: scripts/generate_test_report.py
+          text: "Spring Auth Policy"
+        - path: scripts/m7_regression_gate.sh
+          text: "docker compose"
+      evidencePaths:
+        - scripts/generate_test_report.py
+        - scripts/m7_regression_gate.sh
+
+  - id: PRJ-SECRET-001
+    group: security
+    principle: ".env, secret, private key, 서버 비밀번호는 GitHub/문서/PR에 노출하지 않는다."
+    expectedProof: ".gitignore가 local secret과 runtime data를 제외하고, 예시는 .example만 허용한다."
+    proofState: automated
+    severity: p0
+    issue: 421
+    assertions:
+      requiredTexts:
+        - path: .gitignore
+          text: ".env"
+        - path: .gitignore
+          text: "!.env.*.example"
+        - path: .gitignore
+          text: "deploy/mosquitto/passwords.local"
+      evidencePaths:
+        - .gitignore
+        - deploy/compose/.env.single-node.example
+
+  - id: PRJ-CLOSED-001
+    group: closed-network
+    principle: "폐쇄망에서도 동작 가능한 구조를 우선 고려한다."
+    expectedProof: "closed-network MediaMTX config, local protocol migration plan, offline appliance gate를 둔다."
+    proofState: automated
+    severity: p1
+    issue: 420
+    assertions:
+      requiredTexts:
+        - path: docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md
+          text: "Local Protocol Migration"
+        - path: deploy/mediamtx/mediamtx.closed-network.yml
+          text: "webrtcSTUNGatherTimeout"
+      evidencePaths:
+        - deploy/mediamtx/mediamtx.closed-network.yml
+        - docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md
+
+  - id: CODE-CONTRACT-001
+    group: code-design
+    principle: "endpoint, header, status, DTO field, protocol string은 contract/constants/config로 분리한다."
+    expectedProof: "Kotlin API route/field contract와 frontend route/state contract가 테스트로 고정된다."
+    proofState: automated
+    severity: p0
+    issue: 421
+    assertions:
+      requiredTexts:
+        - path: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/ApiContractTest.kt
+          text: "routes are owned by domain specific route contracts"
+        - path: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/ApiContractTest.kt
+          text: "dto field contract"
+        - path: gcs-dashboard/src/features/apiRoutes.ts
+          text: "Object.freeze"
+        - path: gcs-dashboard/src/features/stateContracts.ts
+          text: "DASHBOARD_QUERY_KEYS"
+      evidencePaths:
+        - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api
+        - gcs-dashboard/src/features/apiRoutes.ts
+        - gcs-dashboard/src/features/stateContracts.ts
+
+  - id: CODE-LAYER-001
+    group: code-design
+    principle: "Controller는 HTTP 연결과 orchestration만 담당하고 domain/application/infrastructure/protocol 계층을 분리한다."
+    expectedProof: "Spring auth-policy와 Go media-control이 api/domain/infrastructure/protocol 패키지로 분리된다."
+    proofState: automated
+    severity: p1
+    issue: 411
+    assertions:
+      evidencePaths:
+        - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api
+        - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain
+        - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/infrastructure
+        - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/protocol
+        - services/media-control/internal/httpapi
+        - services/media-control/internal/domain
+        - services/media-control/internal/mediamtx
+        - services/media-control/internal/protocolv2
+
+  - id: CODE-COLLECTION-001
+    group: code-design
+    principle: "stream list, route policy, ICE server list는 일급 컬렉션으로 감싼다."
+    expectedProof: "Go domain과 Kotlin domain에 StreamList, IceServerList, StreamRoutePolicies가 존재하고 테스트된다."
+    proofState: automated
+    severity: p1
+    issue: 418
+    assertions:
+      requiredTexts:
+        - path: services/media-control/internal/domain/stream.go
+          text: "type StreamList struct"
+        - path: services/media-control/internal/domain/ice.go
+          text: "type IceServerList struct"
+        - path: services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/GroupModels.kt
+          text: "class StreamRoutePolicies"
+      evidencePaths:
+        - services/media-control/internal/domain/stream_test.go
+        - services/media-control/internal/domain/ice_test.go
+        - services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/GroupPolicyServiceTest.kt
+
+  - id: CODE-IMMUTABLE-001
+    group: code-design
+    principle: "불변 객체, 값 객체, factory method를 적극 사용해 타입 오사용을 줄인다."
+    expectedProof: "Kotlin data/value-style domain, Go constructor validation, frontend readonly contract를 사용한다."
+    proofState: automated
+    severity: p1
+    issue: 421
+    assertions:
+      requiredTexts:
+        - path: services/media-control/internal/domain/stream.go
+          text: "func NewStreamPath"
+        - path: services/media-control/internal/domain/ice.go
+          text: "func NewIceServer"
+        - path: gcs-dashboard/src/features/stateContracts.ts
+          text: "as const"
+      evidencePaths:
+        - services/media-control/internal/domain/stream_test.go
+        - services/media-control/internal/domain/ice_test.go
+        - gcs-dashboard/src/features/stateContracts.test.ts
+
+  - id: CODE-INTERFACE-001
+    group: code-design
+    principle: "통신 구현체는 interface 뒤에 두어 MQTT/gRPC/HTTP 교체가 가능해야 한다."
+    expectedProof: "Python MessageSender Protocol과 Go provider/cache interface가 구현체 교체 지점을 만든다."
+    proofState: automated
+    severity: p1
+    issue: 412
+    assertions:
+      requiredTexts:
+        - path: backend/modules/messaging/sender.py
+          text: "class MessageSender(Protocol)"
+        - path: backend/modules/messaging/sender.py
+          text: "GrpcMessageSender"
+        - path: services/media-control/internal/turn/cached_registry.go
+          text: "type IceServerProvider interface"
+        - path: services/media-control/internal/streamcache/cached_lister.go
+          text: "interface"
+      evidencePaths:
+        - backend/tests/test_message_sender_abstraction.py
+        - services/media-control/internal/turn/cached_registry_test.go
+
+  - id: CODE-CONCURRENCY-001
+    group: code-design
+    principle: "refresh token, stream registry, telemetry upsert처럼 동시에 깨질 수 있는 경로는 동시성 테스트와 lock/mutex로 보호한다."
+    expectedProof: "현재 ICE cache는 mutex로 보호되며, refresh/session/telemetry 동시성은 추가 gate가 필요하다."
+    proofState: manual
+    severity: p0
+    issue: 421
+    assertions:
+      requiredTexts:
+        - path: services/media-control/internal/turn/cached_registry.go
+          text: "sync.Mutex"
+        - path: services/media-control/internal/turn/cached_registry_test.go
+          text: "concurrent"
+      evidencePaths:
+        - services/media-control/internal/turn/cached_registry.go
+        - services/media-control/internal/turn/cached_registry_test.go
+
+  - id: SYS-EDGE-001
+    group: system-architecture
+    principle: "단일 public entrypoint는 Nginx/Edge 443으로 두고 route별 backend를 분리한다."
+    expectedProof: "Nginx가 auth-policy, media-control, MediaMTX WHEP/HLS route를 가진다."
+    proofState: automated
+    severity: p0
+    issue: 411
+    assertions:
+      nginxRoutes:
+        - route: /auth-policy/
+          proxyPass: http://gcs_auth_policy
+        - route: /media-control/
+          proxyPass: http://gcs_media_control
+        - route: /webrtc/
+          proxyPass: http://gcs_mediamtx_webrtc
+        - route: /hls/
+          proxyPass: http://gcs_mediamtx_hls
+      evidencePaths:
+        - deploy/nginx/single-node.poc.conf
+
+  - id: SYS-ACTIVE-001
+    group: system-architecture
+    principle: "Spring/Kotlin, Go media-control, MediaMTX, coturn, Redis는 active core이고 Python은 점진 legacy/fallback이다."
+    expectedProof: "runtime stack status가 active/profile/contract/prototype/deferred를 명시한다."
+    proofState: automated
+    severity: p0
+    issue: 411
+    assertions:
+      runtimeStackStatuses:
+        springAuthPolicy: active
+        goMediaControl: active
+        mediamtxWebrtcHls: active
+        coturnPair: active
+        redisCache: active
+      evidencePaths:
+        - docs/architecture/GCS-Saker_runtime_stack_status.yml
+
+  - id: SYS-ROLE-001
+    group: system-architecture
+    principle: "Spring/Kotlin은 인증/인가, 세션, 그룹 정책, 운영 이벤트, telemetry read model을 담당한다."
+    expectedProof: "auth-policy의 API/domain test가 auth, group, operational event, telemetry read를 검증한다."
+    proofState: automated
+    severity: p1
+    issue: 411
+    assertions:
+      requiredTexts:
+        - path: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthControllerTest.kt
+          text: "refresh"
+        - path: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/GroupPolicyServiceTest.kt
+          text: "descendant"
+        - path: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalEventControllerTest.kt
+          text: "ice.relay_fallback"
+        - path: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalReadControllerTest.kt
+          text: "telemetry"
+      evidencePaths:
+        - services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy
+
+  - id: SYS-MEDIA-CONTROL-001
+    group: system-architecture
+    principle: "Go media-control은 stream list, playback URL, ICE server, MediaMTX 연동, stream policy를 담당한다."
+    expectedProof: "media-control domain/httpapi/mediamtx/turn/streamcache tests가 각 경계를 검증한다."
+    proofState: automated
+    severity: p1
+    issue: 418
+    assertions:
+      evidencePaths:
+        - services/media-control/internal/httpapi/server_test.go
+        - services/media-control/internal/mediamtx/client_test.go
+        - services/media-control/internal/turn/registry_test.go
+        - services/media-control/internal/streamcache/cached_lister_test.go
+      requiredTexts:
+        - path: services/media-control/README.md
+          text: "WebRTC/WHEP/HLS는 MediaMTX와 coturn이 담당한다."
+
+  - id: STACK-MIGRATION-001
+    group: stack-migration
+    principle: "gRPC, DragonFly, WebCodecs, HTTP/3, AI sidecar는 완료 범위를 명확히 구분하고 PostgreSQL/PostGIS는 primary store로 승격한다."
+    expectedProof: "runtime stack status가 PostgreSQL/PostGIS를 active로 두고, 아직 runtime 미완료 항목은 contract/profile/prototype/deferred로 둔다."
+    proofState: automated
+    severity: p0
+    issue: 411
+    assertions:
+      runtimeStackStatuses:
+        postgresPrimaryStore: active
+        grpcInternalStreaming: prototype
+        dragonflyCacheProfile: profile
+        webCodecsCanvasPipeline: prototype
+        http3EdgeProfile: deferred
+        aiOverlaySidecar: contract
+      evidencePaths:
+        - docs/architecture/GCS-Saker_runtime_stack_status.yml
+
+  - id: STACK-PROTOBUF-001
+    group: stack-migration
+    principle: "Protobuf는 dashboard 제외 내부/device/native gateway 계약에 도입한다."
+    expectedProof: "proto contract는 존재하되 dashboard src에는 grpc 문자열이 없어야 한다."
+    proofState: automated
+    severity: p1
+    issue: 413
+    assertions:
+      forbiddenTexts:
+        - path: gcs-dashboard/src
+          text: "grpc"
+      requiredTexts:
+        - path: contracts/proto/gcs/saker/v1/gateway_service.proto
+          text: "service SakerGatewayService"
+        - path: backend/tests/test_protobuf_contracts.py
+          text: "stream_control.proto"
+      evidencePaths:
+        - contracts/proto/gcs/saker/v1
+        - backend/tests/test_protobuf_contracts.py
+
+  - id: STACK-MQTT-001
+    group: stack-migration
+    principle: "MQTT broker는 telemetry/control message 흡수 계층으로 두고 media frame은 싣지 않는다."
+    expectedProof: "MQTT hardened profile과 protocol migration plan이 media frame 제외 원칙을 명시한다."
+    proofState: automated
+    severity: p0
+    issue: 416
+    assertions:
+      requiredTexts:
+        - path: docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md
+          text: "media frame은 MQTT에 태우지 않는다."
+        - path: deploy/compose/compose.mqtt-hardened.override.yml
+          text: "mosquitto"
+      evidencePaths:
+        - deploy/compose/compose.mqtt-hardened.override.yml
+        - backend/tests/test_mqtt_consumer_bridge.py
+
+  - id: STACK-GRAPHQL-001
+    group: stack-migration
+    principle: "GraphQL은 media path가 아니라 dashboard read-model BFF 후보로 둔다."
+    expectedProof: "GraphQL schema와 controller는 operational read에 묶이며 runtime status는 contract다."
+    proofState: automated
+    severity: p2
+    issue: 421
+    assertions:
+      runtimeStackStatuses:
+        graphqlOperationalRead: contract
+      requiredTexts:
+        - path: services/auth-policy/src/main/resources/graphql/schema.graphqls
+          text: "operationalEvents"
+      evidencePaths:
+        - services/auth-policy/src/main/resources/graphql/schema.graphqls
+        - services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalEventGraphQlControllerTest.kt
+
+  - id: STREAM-WEBRTC-001
+    group: streaming-low-latency
+    principle: "WebRTC가 기본 수신 경로이고 HLS는 fallback이다."
+    expectedProof: "Nginx route와 dashboard player/hook test가 WebRTC first frame과 HLS fallback을 구분한다."
+    proofState: automated
+    severity: p0
+    issue: 418
+    assertions:
+      nginxRoutes:
+        - route: /webrtc/
+          proxyPass: http://gcs_mediamtx_webrtc
+        - route: /hls/
+          proxyPass: http://gcs_mediamtx_hls
+      requiredTexts:
+        - path: gcs-dashboard/src/features/streaming/components/WebRTCPlayer.tsx
+          text: "data-first-frame-latency-ms"
+        - path: gcs-dashboard/src/features/streaming/components/HLSFallbackPlayer.tsx
+          text: "HLS"
+      evidencePaths:
+        - gcs-dashboard/src/features/streaming/components/WebRTCPlayer.test.tsx
+        - gcs-dashboard/src/features/streaming/components/HLSFallbackPlayer.test.tsx
+
+  - id: STREAM-ICE-001
+    group: streaming-low-latency
+    principle: "STUN 우선, TURN fallback, primary/secondary TURN 이중화와 ICE 서버 cache를 사용한다."
+    expectedProof: "coturn pair, ICE server list, cached registry, ICE smoke script가 존재한다."
+    proofState: automated
+    severity: p0
+    issue: 418
+    assertions:
+      runtimeStackStatuses:
+        coturnPair: active
+      composeActiveServices:
+        - turn-primary
+        - turn-secondary
+      requiredTexts:
+        - path: services/media-control/internal/turn/cached_registry.go
+          text: "CachedIceServerProvider"
+        - path: services/media-control/internal/domain/ice.go
+          text: "HealthyIceServers"
+        - path: scripts/webrtc_ice_smoke.py
+          text: "candidate"
+      evidencePaths:
+        - scripts/webrtc_ice_smoke.py
+        - services/media-control/internal/turn/cached_registry_test.go
+
+  - id: STREAM-OBS-001
+    group: streaming-low-latency
+    principle: "ICE candidate type, relay ratio, RTT, first frame latency, WHEP response time을 관측한다."
+    expectedProof: "dashboard DOM data attributes, operational event metrics, performance matrix가 관측 지표를 고정한다."
+    proofState: automated
+    severity: p1
+    issue: 418
+    assertions:
+      requiredTexts:
+        - path: gcs-dashboard/src/features/streaming/components/WebRTCPlayer.tsx
+          text: "data-first-frame-latency-ms"
+        - path: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalEventControllerTest.kt
+          text: "icePathCounts"
+        - path: docs/architecture/GCS-Saker_M7_performance_benchmark_matrix.md
+          text: "m7-performance-benchmark-v1"
+      evidencePaths:
+        - backend/tests/test_m7_performance_benchmark_matrix.py
+        - gcs-dashboard/src/features/streaming/components/WebRTCPlayer.test.tsx
+
+  - id: STREAM-RECONNECT-001
+    group: streaming-low-latency
+    principle: "stream disconnect/reconnect 상태를 UI에 반영한다."
+    expectedProof: "frontend reconnect policy와 failure smoke scenario가 재연결 상태를 테스트한다."
+    proofState: automated
+    severity: p1
+    issue: 418
+    assertions:
+      requiredTexts:
+        - path: gcs-dashboard/src/features/streaming/streamReconnectPolicy.ts
+          text: "WebRTC connection interrupted"
+        - path: gcs-dashboard/src/features/streaming/failureSmokeScenarios.ts
+          text: "reconnect"
+      evidencePaths:
+        - gcs-dashboard/src/features/streaming/streamReconnectPolicy.test.ts
+        - gcs-dashboard/src/features/streaming/failureSmokeScenarios.test.ts
+
+  - id: OPS-RUNTIME-001
+    group: operations
+    principle: "운영 서버 반영 전 로컬 검증, 반영 후 health/route/stream 검증을 수행한다."
+    expectedProof: "runtime smoke, health/readiness, publish/play smoke script가 존재한다."
+    proofState: manual
+    severity: p0
+    issue: 421
+    assertions:
+      evidencePaths:
+        - scripts/m7_single_node_runtime_smoke.sh
+        - backend/tests/test_health_readiness_check_script.py
+        - scripts/m7_publish_play_smoke.sh
+        - scripts/m7_dashboard_first_frame_smoke.sh
+
+  - id: PERF-SEC-OPS-001
+    group: cross-cutting
+    principle: "성능, 보안, 운영 안정성, 저지연성을 항상 함께 본다."
+    expectedProof: "benchmark matrix, security headers, TURN relay smoke, streaming stability soak가 같은 리포트에 포함된다."
+    proofState: automated
+    severity: p0
+    issue: 421
+    assertions:
+      requiredTexts:
+        - path: backend/tests/test_web_security_headers.py
+          text: "security"
+        - path: scripts/m7_streaming_stability_soak.sh
+          text: "soak"
+        - path: scripts/turn_relay_smoke.py
+          text: "relay"
+      evidencePaths:
+        - docs/architecture/GCS-Saker_M7_performance_benchmark_matrix.md
+        - backend/tests/test_web_security_headers.py
+        - scripts/m7_streaming_stability_soak.sh

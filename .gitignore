@@ -19,6 +19,7 @@ gcs-dashboard/certs/
 
 # JVM / Spring Kotlin
 .gradle/
+.gradle-user-home/
 build/
 out/
 *.class
@@ -27,6 +28,7 @@ out/
 
 # Go
 bin/
+.go-build-cache/
 coverage.out
 *.test
 

@@ -26,10 +26,10 @@ GITIGNORE = REPO_ROOT / ".gitignore"
 REQUIRED_DASHBOARD_KEYS = {
     "COMPOSE_PROJECT_NAME",
     "LOCAL_BIND_ADDR",
-    "MYSQL_ROOT_PASSWORD",
-    "MYSQL_DATABASE",
-    "MYSQL_USER",
-    "MYSQL_PASSWORD",
+    "POSTGRES_DB",
+    "POSTGRES_USER",
+    "POSTGRES_PASSWORD",
+    "POSTGRES_HOST_PORT",
     "DATABASE_URL",
     "AUTH_JWT_SECRET",
     "AUTH_REFRESH_TOKEN_EXPIRE_MINUTES",
@@ -50,6 +50,10 @@ REQUIRED_DASHBOARD_KEYS = {
     "VITE_MAP_STYLE_URL",
     "MEDIAMTX_PUBLIC_WEBRTC_BASE_URL",
     "MEDIAMTX_PUBLIC_HLS_BASE_URL",
+    "MEDIAMTX_API_BASE_URL",
+    "MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL",
+    "MEDIA_CONTROL_PUBLIC_HLS_BASE_URL",
+    "MEDIA_CONTROL_PUBLISH_TOKEN",
     "MEDIAMTX_WEBRTC_SIGNALING_PORT",
     "MEDIAMTX_HLS_PORT",
     "WEBRTC_STUN_URL",
@@ -95,8 +99,9 @@ def load_yaml(path: Path) -> dict:
 
 def require_services(compose: dict) -> None:
     services = compose.get("services", {})
-    for service_name in ("mysql", "mqtt", "backend", "mediamtx", "nginx", "edge"):
+    for service_name in ("postgres", "mqtt", "backend", "mediamtx", "media-control", "nginx", "edge"):
         require(service_name in services, f"missing compose service: {service_name}")
+    require("mysql" not in services, "active compose must not declare mysql service after PostgreSQL migration")
     require("9997" not in str(services["mediamtx"].get("ports", [])), "MediaMTX API port must not be published")
     require("9998" not in str(services["mediamtx"].get("ports", [])), "MediaMTX metrics port must not be published")
     require(
@@ -110,7 +115,7 @@ def require_services(compose: dict) -> None:
 
 def require_env_files(compose: dict) -> None:
     services = compose["services"]
-    for service_name in ("mysql", "backend", "mediamtx", "nginx"):
+    for service_name in ("postgres", "backend", "mediamtx", "media-control", "nginx"):
         env_file = services[service_name].get("env_file")
         require(env_file, f"{service_name} must declare env_file")
         paths = {entry["path"] if isinstance(entry, dict) else entry for entry in env_file}
@@ -130,7 +135,10 @@ def require_env_examples() -> None:
                 re.search(rf"^#?\s*{key}=", content, flags=re.MULTILINE),
                 f"{env_path.name} should document optional TURN key: {key}",
             )
-        require("9997" not in content and "9998" not in content, f"{env_path.name} must not publish management ports")
+        require(
+            "MEDIAMTX_API_PORT" not in content and "MEDIAMTX_METRICS_PORT" not in content,
+            f"{env_path.name} must not declare public management port variables",
+        )
 
     backend_content = BACKEND_ENV_EXAMPLE.read_text(encoding="utf-8")
     for key in (

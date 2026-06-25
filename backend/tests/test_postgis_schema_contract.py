@@ -18,11 +18,11 @@ def load_yaml(path: Path) -> dict:
         return yaml.safe_load(file)
 
 
-def test_geo_profile_mounts_postgis_init_scripts_read_only() -> None:
+def test_default_runtime_mounts_postgis_init_scripts_read_only() -> None:
     compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
     postgres = compose["services"]["postgres-geo"]
 
-    assert postgres["profiles"] == ["geo"]
+    assert "profiles" not in postgres
     assert postgres["image"] == "postgis/postgis:16-3.4"
     assert {
         "type": "bind",
@@ -36,6 +36,7 @@ def test_postgis_schema_separates_history_and_latest_read_model() -> None:
     sql = POSTGIS_INIT_SQL.read_text(encoding="utf-8")
 
     assert "CREATE EXTENSION IF NOT EXISTS postgis" in sql
+    assert "CREATE TABLE IF NOT EXISTS telemetry_realtime" in sql
     assert "CREATE SCHEMA IF NOT EXISTS gcs_geo" in sql
     assert "CREATE TABLE IF NOT EXISTS gcs_geo.stream_telemetry_points" in sql
     assert "CREATE TABLE IF NOT EXISTS gcs_geo.stream_telemetry_latest" in sql
@@ -65,9 +66,9 @@ def test_postgis_schema_documents_index_friendly_query_contracts() -> None:
 def test_postgis_bounded_context_doc_records_query_tuning_reasoning() -> None:
     doc = POSTGIS_DOC.read_text(encoding="utf-8")
 
-    assert "MySQL legacy" in doc
+    assert "PostgreSQL/PostGIS primary store" in doc
     assert "Redis 또는 Dragonfly" in doc
-    assert "PostgreSQL/PostGIS geo profile" in doc
+    assert "기본 single-node 배포는 PostgreSQL/PostGIS + Redis" in doc
     assert "EXPLAIN (ANALYZE, BUFFERS)" in doc
     assert "primary key lookup" in doc
     assert "GiST spatial index" in doc

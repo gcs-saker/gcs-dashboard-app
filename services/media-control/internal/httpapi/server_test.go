@@ -382,6 +382,24 @@ func TestDashboardStreamListRequiresAuthorizationWhenPolicyRequiresIt(t *testing
 	}
 }
 
+func TestDashboardStreamListRequiresAuthorizationBeforeQueryingRegistry(t *testing.T) {
+	server := newTestServerWithAuthorizer(
+		fakeStreams{err: errors.New("registry must not be queried before stream-list authorization")},
+		fakeIce{},
+		fakeAuthorizer{errByStream: map[string]error{
+			"control.stream-list": domain.ErrStreamAuthenticationRequired,
+		}},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 before registry access, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
 func TestDashboardPlaybackDeniesForbiddenStream(t *testing.T) {
 	path, _ := domain.NewStreamPath("raw/company-b/front")
 	server := newTestServerWithAuthorizer(
@@ -487,6 +505,104 @@ func TestDashboardIceServersForwardsAuthorizationHeader(t *testing.T) {
 	}
 }
 
+func TestDashboardPublishUrlRequiresAuthorizationAndAppendsPublisherToken(t *testing.T) {
+	path, _ := domain.NewStreamPath("raw/local/webcam")
+	server := newTestServer(
+		fakeStreams{streams: []domain.StreamDescriptor{{Path: path, Ready: true, Status: domain.StreamStatusOnline}}},
+		fakeIce{},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.local.webcam/publish", nil)
+	request.Header.Set("Authorization", "Bearer publisher-token")
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload["streamId"] != "raw.local.webcam" {
+		t.Fatalf("unexpected streamId %v", payload["streamId"])
+	}
+	if payload["whipUrl"] != "http://edge.local/webrtc/raw/local/webcam/whip?publisherToken=test-publish-token" {
+		t.Fatalf("unexpected publish URL %v", payload["whipUrl"])
+	}
+}
+
+func TestDashboardPublishUrlCanBeIssuedBeforeStreamIsRegistered(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.new-drone.front/publish", nil)
+	request.Header.Set("Authorization", "Bearer publisher-token")
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload["whipUrl"] != "http://edge.local/webrtc/raw/new-drone/front/whip?publisherToken=test-publish-token" {
+		t.Fatalf("unexpected publish URL %v", payload["whipUrl"])
+	}
+}
+
+func TestMediaMTXPublishAuthRejectsMissingPublisherToken(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/mediamtx/auth",
+		strings.NewReader(`{"action":"publish","path":"raw/local/webcam","protocol":"webrtc","query":""}`),
+	)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "test-publish-token") {
+		t.Fatalf("publish auth response leaked token: %s", recorder.Body.String())
+	}
+}
+
+func TestMediaMTXPublishAuthAcceptsValidPublisherToken(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/mediamtx/auth",
+		strings.NewReader(`{"action":"publish","path":"raw/local/webcam","protocol":"webrtc","query":"publisherToken=test-publish-token"}`),
+	)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestMediaMTXAuthAllowsReadAndPlaybackWithoutPublishToken(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/mediamtx/auth",
+		strings.NewReader(`{"action":"playback","path":"raw/local/webcam","protocol":"webrtc"}`),
+	)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
 func newTestServer(streams StreamLister, ice IceServerProvider) Server {
 	return newTestServerWithAuthorizer(streams, ice, fakeAuthorizer{})
 }
@@ -500,7 +616,7 @@ func newTestServerWithAuthorizer(streams StreamLister, ice IceServerProvider, au
 	if err != nil {
 		panic(err)
 	}
-	return NewServer(streams, ice, playback, authorizer, groups)
+	return NewServer(streams, ice, playback, authorizer, groups, "test-publish-token")
 }
 
 func assertReadinessCheck(t *testing.T, payload map[string]any, name string, status string, reason string) {

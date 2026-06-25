@@ -20,10 +20,7 @@ describe("LocalWebcamPublisher", () => {
       getUserMedia: vi.fn(async () => mediaStream),
     } as unknown as MediaDevices;
     const peerConnection = createPeerConnectionMock();
-    const fetcher = vi.fn(async () => ({
-      ok: true,
-      text: async () => "v=0\r\nmock-answer",
-    })) as unknown as typeof fetch;
+    const fetcher = createPublisherFetcher();
 
     render(
       <LocalWebcamPublisher
@@ -52,7 +49,7 @@ describe("LocalWebcamPublisher", () => {
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"));
     expect(peerConnection.addTrack).toHaveBeenCalledWith(track, mediaStream);
     expect(fetcher).toHaveBeenCalledWith(
-      "http://media.example.test/raw/local/webcam/whip",
+      "http://media.example.test/authorized/whip?publisherToken=test-publish-token",
       expect.objectContaining({
         method: "POST",
         headers: { Accept: "application/sdp", "Content-Type": "application/sdp" },
@@ -69,10 +66,7 @@ describe("LocalWebcamPublisher", () => {
       getUserMedia: vi.fn(async () => mediaStream),
     } as unknown as MediaDevices;
     const peerConnection = createPeerConnectionMock();
-    const fetcher = vi.fn(async () => ({
-      ok: true,
-      text: async () => "v=0\r\nmock-answer",
-    })) as unknown as typeof fetch;
+    const fetcher = createPublisherFetcher();
 
     render(
       <LocalWebcamPublisher
@@ -108,7 +102,7 @@ describe("LocalWebcamPublisher", () => {
 
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"));
     expect(fetcher).toHaveBeenCalledWith(
-      "http://media.example.test/webrtc/raw/local/rear/whip",
+      "http://media.example.test/authorized/whip?publisherToken=test-publish-token",
       expect.objectContaining({ method: "POST" }),
     );
   });
@@ -124,10 +118,7 @@ describe("LocalWebcamPublisher", () => {
       getUserMedia: vi.fn(async () => mediaStream),
     } as unknown as MediaDevices;
     const peerConnection = createPeerConnectionMock();
-    const fetcher = vi.fn(async () => ({
-      ok: true,
-      text: async () => "v=0\r\nmock-answer",
-    })) as unknown as typeof fetch;
+    const fetcher = createPublisherFetcher();
 
     render(
       <LocalWebcamPublisher
@@ -222,10 +213,7 @@ describe("LocalWebcamPublisher", () => {
       getUserMedia: vi.fn(async () => mediaStream),
     } as unknown as MediaDevices;
     const peerConnection = createPeerConnectionMock("gathering");
-    const fetcher = vi.fn(async () => ({
-      ok: true,
-      text: async () => "v=0\r\nmock-answer",
-    })) as unknown as typeof fetch;
+    const fetcher = createPublisherFetcher();
 
     render(
       <LocalWebcamPublisher
@@ -265,10 +253,7 @@ describe("LocalWebcamPublisher", () => {
       altitude: 44,
       speed: 1.5,
     });
-    const fetcher = vi.fn(async () => ({
-      ok: true,
-      text: async () => "v=0\r\nmock-answer",
-    })) as unknown as typeof fetch;
+    const fetcher = createPublisherFetcher();
 
     render(
       <LocalWebcamPublisher
@@ -305,10 +290,7 @@ describe("LocalWebcamPublisher", () => {
       getUserMedia: vi.fn(async () => mediaStream),
     } as unknown as MediaDevices;
     const originalPeerConnection = globalThis.RTCPeerConnection;
-    const fetcher = vi.fn(async () => ({
-      ok: true,
-      text: async () => "v=0\r\nmock-answer",
-    })) as unknown as typeof fetch;
+    const fetcher = createPublisherFetcher();
     const peerConnection = createPeerConnectionMock();
     const peerConnectionConstructor = vi.fn(() => peerConnection);
     globalThis.RTCPeerConnection = peerConnectionConstructor as unknown as typeof RTCPeerConnection;
@@ -362,10 +344,7 @@ describe("LocalWebcamPublisher", () => {
     const peerConnectionFactory = vi.fn()
       .mockReturnValueOnce(firstPeerConnection)
       .mockReturnValueOnce(secondPeerConnection);
-    const fetcher = vi.fn(async () => ({
-      ok: true,
-      text: async () => "v=0\r\nmock-answer",
-    })) as unknown as typeof fetch;
+    const fetcher = createPublisherFetcher();
 
     render(
       <LocalWebcamPublisher
@@ -381,6 +360,7 @@ describe("LocalWebcamPublisher", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"));
+    await screen.findByText("WebRTC 미디어 연결이 완료되어 송출 중입니다.");
 
     firstPeerConnection.disconnect();
 
@@ -389,7 +369,10 @@ describe("LocalWebcamPublisher", () => {
 
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"), { timeout: 2_000 });
     expect(peerConnectionFactory).toHaveBeenCalledTimes(2);
-    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://media.example.test/authorized/whip?publisherToken=test-publish-token",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 });
 
@@ -484,6 +467,37 @@ function createGeolocationMock(coords: Partial<GeolocationCoordinates>): Geoloca
     }),
     clearWatch: vi.fn(),
   } as unknown as Geolocation;
+}
+
+function createPublisherFetcher(): typeof fetch {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const requestUrl = String(input);
+    if (requestUrl.includes("/api/v1/streams/ice-servers")) {
+      return {
+        ok: true,
+        json: async () => [{ urls: "stun:stun.l.google.com:19302" }],
+      } as Response;
+    }
+    if (requestUrl.includes("/api/v1/streams/") && requestUrl.endsWith("/publish")) {
+      return {
+        ok: true,
+        json: async () => ({
+          streamId: "raw.local.webcam",
+          whipUrl: "http://media.example.test/authorized/whip?publisherToken=test-publish-token",
+        }),
+      } as Response;
+    }
+    if (requestUrl.includes("/api/telemetry/") || requestUrl.endsWith("/telemetry/")) {
+      return {
+        ok: true,
+        json: async () => ({}),
+      } as Response;
+    }
+    return {
+      ok: true,
+      text: async () => "v=0\r\nmock-answer",
+    } as Response;
+  }) as unknown as typeof fetch;
 }
 
 function createMediaDevice(kind: MediaDeviceKind, deviceId: string, label: string): MediaDeviceInfo {

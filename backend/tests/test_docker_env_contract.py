@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -36,11 +37,38 @@ def test_docker_env_check_script_passes_static_contracts() -> None:
     assert "Docker env contract check passed" in result.stdout
 
 
+def test_single_node_active_runtime_compose_model_is_valid_without_future_profile() -> None:
+    if shutil.which("docker") is None:
+        import pytest
+
+        pytest.skip("docker CLI is not available")
+
+    result = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "--env-file",
+            str(SINGLE_NODE_COMPOSE_FILE.parent / ".env.single-node.example"),
+            "-f",
+            str(SINGLE_NODE_COMPOSE_FILE),
+            "config",
+            "--quiet",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
 def test_compose_declares_env_injection_for_runtime_services() -> None:
     compose = load_yaml(COMPOSE_FILE)
     services = compose["services"]
 
-    assert {"mysql", "mqtt", "backend", "mediamtx", "turn", "nginx", "edge"} <= set(services)
+    assert {"postgres", "mqtt", "backend", "mediamtx", "media-control", "turn", "nginx", "edge"} <= set(services)
+    assert "mysql" not in services
     assert services["backend"]["environment"]["DATABASE_URL"].startswith("${DATABASE_URL:")
     assert services["backend"]["environment"]["AUTH_JWT_SECRET"].startswith("${AUTH_JWT_SECRET:")
     assert services["backend"]["environment"]["AUTH_REFRESH_TOKEN_EXPIRE_MINUTES"] == (
@@ -69,7 +97,9 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["nginx"]["build"]["args"]["VITE_IDENTITY_API_BASE_URL"] == (
         "${VITE_AUTH_API_BASE_URL:-/auth-policy/auth}"
     )
-    assert services["nginx"]["build"]["args"]["VITE_STREAM_API_BASE_URL"] == "${VITE_STREAM_API_BASE_URL:-/api}"
+    assert services["nginx"]["build"]["args"]["VITE_STREAM_API_BASE_URL"] == (
+        "${VITE_STREAM_API_BASE_URL:-/media-control}"
+    )
     assert services["nginx"]["build"]["args"]["VITE_HLS_BASE_URL"] == "${VITE_HLS_BASE_URL:-/hls}"
     assert services["nginx"]["build"]["args"]["VITE_LOCAL_WEBCAM_WHIP_URL"].startswith(
         "${VITE_LOCAL_WEBCAM_WHIP_URL:"
@@ -305,7 +335,7 @@ def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
     assert "ARG VITE_API_BASE_URL=/api" in dockerfile
     assert "ARG VITE_IDENTITY_API_BASE_URL=/auth-policy/auth" in dockerfile
     assert "RUN VITE_AUTH_API_BASE_URL=$VITE_IDENTITY_API_BASE_URL npm run build" in dockerfile
-    assert "ARG VITE_STREAM_API_BASE_URL=/api" in dockerfile
+    assert "ARG VITE_STREAM_API_BASE_URL=/media-control" in dockerfile
     assert "ARG VITE_HLS_BASE_URL=/hls" in dockerfile
     assert "ARG VITE_LOCAL_WEBCAM_WHIP_URL=https://localhost/webrtc/raw/local/webcam/whip" in dockerfile
     assert "ARG VITE_WEBRTC_STUN_URL=stun:stun.l.google.com:19302" in dockerfile

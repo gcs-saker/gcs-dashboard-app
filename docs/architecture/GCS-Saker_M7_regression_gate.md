@@ -34,12 +34,13 @@ Python backend는 `backend/pyproject.toml` 기준 `>=3.12,<3.13`으로 고정한
 
 새 구조는 아래 순서로 확인한다.
 
-1. `docker compose --profile future-services --profile geo ... config --quiet`
-2. Spring/Kotlin auth-policy `./gradlew check`
-3. Go media-control `go test ./... -cover`
-4. `scripts/m7_single_node_runtime_smoke.sh --check`
-5. `scripts/m7_publish_play_smoke.sh --check`
-6. `scripts/m7_dashboard_first_frame_smoke.sh --check`
+1. `scripts/architecture_intent_gate.py --json`
+2. `docker compose --profile geo ... config --quiet`
+3. Spring/Kotlin auth-policy `./gradlew check`
+4. Go media-control `go test ./... -cover`
+5. `scripts/m7_single_node_runtime_smoke.sh --check`
+6. `scripts/m7_publish_play_smoke.sh --check`
+7. `scripts/m7_dashboard_first_frame_smoke.sh --check`
 
 Docker live 검증이 가능한 환경에서는 `--check` 이후 각 smoke의 `--run`을 실행한다. 실제 영상 first frame 측정은 #210, #212, #214의 상세 smoke가 담당한다.
 
@@ -62,7 +63,8 @@ M7의 최소 사용자 경로는 아래 contract를 유지해야 한다.
 | frontend coverage/build | dashboard UI/API contract | `src/features/*` test와 route constants 확인 |
 | Gradle check | auth-policy/JWT/group policy | JUnit/Jacoco report 확인 |
 | Go coverage | media-control/ICE/MediaMTX adapter | package별 coverage와 mock failure 확인 |
-| compose config | env/profile/depends_on | `deploy/compose` profile 확인 |
+| architecture intent gate | 설계 의도와 코드/compose/proxy 일치 | `GCS-Saker_design_intent_matrix.yml`의 route/protocol/security/runtime intent 확인 |
+| compose config | env/profile/depends_on | `deploy/compose` 기본 active runtime과 선택 profile 확인 |
 | runtime smoke | edge/auth/media/TURN 연결 | container health와 edge route 확인 |
 | publish/play smoke | MediaMTX stream path | publisher, HLS manifest, WHEP signaling 확인 |
 | first-frame smoke | browser/player/codec/autoplay | browser console, WebRTC stats 확인 |

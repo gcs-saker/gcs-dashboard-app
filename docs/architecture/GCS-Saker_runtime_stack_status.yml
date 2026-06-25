@@ -1,0 +1,194 @@
+schemaVersion: gcs-saker-runtime-stack-status-v1
+updatedAt: "2026-06-19"
+statusLegend:
+  active: "기본 compose와 edge route에서 실제 런타임 경로로 사용한다."
+  profile: "선택 compose profile 또는 override로 실행 가능해야 하며, 기본 런타임은 아니다."
+  contract: "프로토콜, DTO, 테스트 계약은 있으나 실제 네트워크 런타임 연결은 완료되지 않았다."
+  prototype: "브라우저/서비스 feature detection 또는 후보 구현 단계다."
+  deferred: "설계 후보로 남겨두되 현재 구현 완료 범위에 포함하지 않는다."
+
+stacks:
+  springAuthPolicy:
+    status: active
+    issue: 411
+    runtime:
+      composeService: auth-policy
+      ingressRoutes:
+        - /auth-policy/
+        - /healthz
+        - /readyz
+        - /api/telemetry/
+        - /api/ops/
+    evidence:
+      - services/auth-policy/build.gradle.kts
+      - deploy/compose/compose.single-node.poc.yml
+      - deploy/nginx/single-node.poc.conf
+      - services/auth-policy/src/test/kotlin
+    nextGate: "운영 서버 배포 후 auth-policy health, login, refresh session, GraphQL/REST contract smoke를 재실행한다."
+
+  goMediaControl:
+    status: active
+    issue: 411
+    runtime:
+      composeService: media-control
+      ingressRoutes:
+        - /media-control/
+        - /api/stream/
+    evidence:
+      - services/media-control/internal/httpapi/server.go
+      - services/media-control/internal/domain
+      - services/media-control/internal/streamcache
+      - deploy/compose/compose.single-node.poc.yml
+    nextGate: "stream list, ICE server list, playback URL, unauthorized access contract를 실제 edge 경로로 검증한다."
+
+  redisCache:
+    status: active
+    issue: 411
+    runtime:
+      composeService: redis
+    evidence:
+      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/infrastructure/redis/RedisRefreshSessionStore.kt
+      - services/media-control/internal/streamcache
+      - deploy/compose/compose.single-node.poc.yml
+    nextGate: "Redis 장애 시 auth-policy와 media-control의 degraded behavior를 smoke test로 고정한다."
+
+  postgresPrimaryStore:
+    status: active
+    issue: 450
+    runtime:
+      composeService: postgres-geo
+    evidence:
+      - deploy/compose/compose.single-node.poc.yml
+      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/infrastructure
+      - deploy/postgres/init/001_geo_telemetry.sql
+      - backend/tests/test_postgis_schema_contract.py
+    nextGate: "MySQL 제거 후 auth/user/ops/telemetry runtime smoke와 백업/복구 절차를 PostgreSQL 기준으로 재검증한다."
+
+  mediamtxWebrtcHls:
+    status: active
+    issue: 418
+    runtime:
+      composeService: mediamtx
+      ingressRoutes:
+        - /webrtc/
+        - /hls/
+    evidence:
+      - deploy/mediamtx/mediamtx.closed-network.yml
+      - deploy/nginx/single-node.poc.conf
+      - scripts/m7_publish_play_smoke.sh
+      - scripts/m7_dashboard_first_frame_smoke.sh
+    nextGate: "외부 NAT에서 WHIP publish, WHEP play, first frame, audio stats를 자동 smoke로 재검증한다."
+
+  coturnPair:
+    status: active
+    issue: 418
+    runtime:
+      composeServices:
+        - turn-primary
+        - turn-secondary
+    evidence:
+      - deploy/compose/compose.single-node.poc.yml
+      - scripts/webrtc_ice_smoke.py
+      - services/media-control/internal/turn
+    nextGate: "relay ratio, selected candidate type, TURN allocation failure를 운영 로그와 dashboard 지표에 연결한다."
+
+  mqttTelemetryBridge:
+    status: profile
+    issue: 416
+    runtime:
+      composeService: mqtt
+      overrideFile: deploy/compose/compose.mqtt-hardened.override.yml
+    evidence:
+      - backend/tests/test_mqtt_consumer_bridge.py
+      - deploy/mosquitto/mosquitto.hardened.conf
+      - deploy/mosquitto/acl.hardened
+      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/MqttTelemetryConsumerBridge.kt
+    nextGate: "기본 no-auth command를 운영 불가 상태로 고정하고 hardened override로 publish/deny smoke를 통과시킨다."
+
+  protobufInternalContracts:
+    status: contract
+    issue: 413
+    evidence:
+      - contracts/proto/gcs/saker/v1/common.proto
+      - contracts/proto/gcs/saker/v1/telemetry.proto
+      - contracts/proto/gcs/saker/v1/stream_control.proto
+      - contracts/proto/gcs/saker/v1/ops_event.proto
+      - contracts/proto/gcs/saker/v1/ai_overlay.proto
+      - backend/tests/test_protobuf_contracts.py
+      - services/media-control/internal/protocolv2
+      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/protocol/v2
+    nextGate: "Kotlin/Go/Python generated DTO 또는 명시 mapper를 고정하고, 수동 wire codec과 schema drift를 줄인다."
+
+  grpcInternalStreaming:
+    status: prototype
+    issue: 412
+    evidence:
+      - contracts/proto/gcs/saker/v1/gateway_service.proto
+      - backend/modules/messaging/sender.py
+      - backend/tests/test_message_sender_abstraction.py
+      - scripts/grpc_runtime_smoke.py
+    missingRuntime:
+      - "compose service port/internal network wiring"
+      - "runtime bidi streaming smoke"
+    prototypeRuntime:
+      - "client implementation behind MessageSender abstraction"
+      - "CONTROL_GRPC_TARGET and CONTROL_GRPC_METHOD runtime configuration"
+    nextGate: "SakerGatewayService.Exchange를 실제 internal service-to-service smoke로 연결한 뒤에만 active로 승격한다."
+
+  dragonflyCacheProfile:
+    status: profile
+    issue: 415
+    runtime:
+      overrideFile: deploy/compose/compose.dragonfly.override.yml
+      replacedService: redis
+    evidence:
+      - deploy/compose/compose.dragonfly.override.yml
+      - backend/tests/test_docker_env_contract.py
+      - scripts/dragonfly_profile_smoke.py
+      - docs/architecture/GCS-Saker_M8_dragonfly_compatibility_profile.md
+    nextGate: "Redis와 DragonFly 양쪽에서 auth/session/ICE/stream cache smoke를 동일하게 통과시키고 license/image tag를 기록한다."
+
+  graphqlOperationalRead:
+    status: contract
+    issue: 421
+    runtime:
+      composeService: auth-policy
+    evidence:
+      - services/auth-policy/src/main/resources/graphql/schema.graphqls
+      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalEventGraphQlController.kt
+      - services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalEventGraphQlControllerTest.kt
+    missingRuntime:
+      - "edge /graphql route"
+      - "dashboard GraphQL client integration"
+      - "large read model selection rule"
+    nextGate: "Dashboard 주 통신은 REST/JSON으로 유지하되, 큰 read model만 GraphQL로 넘길지 결정하고 edge route를 추가한 뒤 active로 승격한다."
+
+  webCodecsCanvasPipeline:
+    status: prototype
+    issue: 419
+    evidence:
+      - gcs-dashboard/src/features/streaming/webCodecsSupport.ts
+      - gcs-dashboard/src/features/streaming/webCodecsSupport.test.ts
+      - gcs-dashboard/src/features/streaming/webCodecsPipelinePlan.ts
+      - gcs-dashboard/src/features/streaming/webCodecsPipelinePlan.test.ts
+    missingRuntime:
+      - "worker pipeline"
+      - "HLS fallback frame processing"
+      - "recording writer"
+      - "AI overlay frame synchronization"
+    nextGate: "feature detection에서 끝내지 않고 WebCodecs unavailable fallback, worker init, frame metadata contract를 테스트한다."
+
+  http3EdgeProfile:
+    status: deferred
+    issue: 421
+    evidence:
+      - docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md
+    nextGate: "Nginx/edge 대체 후보와 인증서/폐쇄망 CA 전략이 정해진 뒤 별도 profile로 검증한다."
+
+  aiOverlaySidecar:
+    status: contract
+    issue: 419
+    evidence:
+      - contracts/proto/gcs/saker/v1/ai_overlay.proto
+      - docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md
+    nextGate: "FastAPI sidecar는 media path를 중계하지 않고 overlay metadata만 반환하는 smoke를 추가한다."

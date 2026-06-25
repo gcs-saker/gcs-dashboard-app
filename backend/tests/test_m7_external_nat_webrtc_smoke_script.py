@@ -27,6 +27,9 @@ def test_m7_external_nat_webrtc_smoke_reports_required_metrics() -> None:
     assert "TURN primary" in script
     assert "TURN secondary" in script
     assert "AUTH_BEARER_TOKEN" in script
+    assert "resolve_publish_whip_url" in script
+    assert "authorized WHIP publish URL resolved through media-control" in script
+    assert "Security gate: WHIP publish URL was issued by media-control authorization" in script
     assert "ice server API auth gate: enforced" in script
     assert "RELAY_ONLY" in script
     assert "--require-video-frame" in script

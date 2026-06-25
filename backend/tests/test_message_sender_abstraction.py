@@ -6,7 +6,9 @@ from api.contracts import ControlProtocol
 from model.control_model import ControlCommand
 from modules.messaging.control_publisher import ControlMessagePublisher, get_control_message_publisher
 from modules.messaging.sender import (
+    GrpcMessageSender,
     MessageEnvelope,
+    MessageContentType,
     MessageSenderEnv,
     MessageSenderKind,
     MessageSenderUnavailable,
@@ -24,6 +26,14 @@ class RecordingSender:
 
     def send(self, envelope: MessageEnvelope) -> None:
         self.sent.append(envelope)
+
+
+class RecordingGrpcTransport:
+    def __init__(self) -> None:
+        self.sent: list[bytes] = []
+
+    def send(self, payload: bytes) -> None:
+        self.sent.append(payload)
 
 
 def clear_sender_caches() -> None:
@@ -84,14 +94,42 @@ def test_message_sender_factory_keeps_mqtt_as_default(monkeypatch: pytest.Monkey
 
 def test_message_sender_factory_can_select_grpc_profile(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(MessageSenderEnv.CONTROL_SENDER, MessageSenderKind.GRPC)
+    monkeypatch.delenv(MessageSenderEnv.GRPC_TARGET, raising=False)
     clear_sender_caches()
 
-    sender = get_message_sender()
-
-    with pytest.raises(MessageSenderUnavailable, match="gRPC message sender is not implemented yet"):
-        sender.send(MessageEnvelope(destination="gcs/a4ai/co-a/CID001/command", payload=b"", content_type="x"))
+    with pytest.raises(MessageSenderUnavailable, match="gRPC gateway target is not configured"):
+        get_message_sender()
 
     clear_sender_caches()
+
+
+def test_grpc_message_sender_sends_only_protobuf_payload() -> None:
+    transport = RecordingGrpcTransport()
+    sender = GrpcMessageSender(transport)
+    payload = b"\x0a\x04test"
+
+    sender.send(
+        MessageEnvelope(
+            destination="gcs/a4ai/co-a/CID001/command",
+            payload=payload,
+            content_type=MessageContentType.PROTOBUF,
+        )
+    )
+
+    assert transport.sent == [payload]
+
+
+def test_grpc_message_sender_rejects_text_payload() -> None:
+    sender = GrpcMessageSender(RecordingGrpcTransport())
+
+    with pytest.raises(MessageSenderUnavailable, match="requires protobuf payload"):
+        sender.send(
+            MessageEnvelope(
+                destination="robot/control/CID001",
+                payload="stop",
+                content_type=MessageContentType.TEXT,
+            )
+        )
 
 
 def test_message_sender_factory_rejects_unknown_sender(monkeypatch: pytest.MonkeyPatch) -> None:

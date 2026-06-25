@@ -12,7 +12,7 @@ services:
 
   auth-policy:
     depends_on:
-      mysql-legacy:
+      postgres-geo:
         condition: service_healthy
       redis:
         condition: service_started

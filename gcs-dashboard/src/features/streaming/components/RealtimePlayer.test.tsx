@@ -179,7 +179,7 @@ describe("RealtimePlayer", () => {
     await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
 
     expect(fetcher).toHaveBeenCalledWith(
-      "/api/v1/streams/raw.sample.front/playback",
+      "/media-control/api/v1/streams/raw.sample.front/playback",
       expect.objectContaining({
         method: "GET",
         headers: { Accept: "application/json" },

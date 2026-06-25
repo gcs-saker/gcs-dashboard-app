@@ -44,7 +44,7 @@ describe("streamDevices", () => {
       name: "휴대폰 후면 카메라",
       streamPath: "raw.local.webcam",
       sourceUrl: "https://a4ai.tplinkdns.com/webrtc/raw/local/webcam/whep",
-      status: "online",
+      status: "degraded",
     });
   });
 
@@ -89,7 +89,7 @@ describe("streamDevices", () => {
 
     const devices = await fetchStreamDeviceOptions(fetcher as unknown as typeof fetch);
 
-    expect(fetcher).toHaveBeenNthCalledWith(1, "/api/v1/streams", {
+    expect(fetcher).toHaveBeenNthCalledWith(1, "/media-control/api/v1/streams", {
       credentials: "include",
       headers: { Accept: "application/json" },
     });

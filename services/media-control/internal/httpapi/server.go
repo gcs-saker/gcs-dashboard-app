@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"runtime"
 	"runtime/debug"
 	"strconv"
@@ -17,6 +18,7 @@ const (
 	routeHealthz                     = "/healthz"
 	routeReadyz                      = "/readyz"
 	routeRuntimeMetrics              = "/metrics/runtime"
+	routeMediaMTXAuth                = "/v1/mediamtx/auth"
 	routeStreams                     = "/v1/streams"
 	routeIceServers                  = "/v1/ice-servers"
 	routeLegacyStreamStatus          = "/stream/status"
@@ -24,7 +26,10 @@ const (
 	routeDashboardStreamItemPrefix   = "/api/v1/streams/"
 	routeDashboardStreams            = "/api/v1/streams"
 	routeSuffixPlayback              = "playback"
+	routeSuffixPublish               = "publish"
 	routeSuffixStatus                = "status"
+	mediaMTXActionPublish            = "publish"
+	publisherTokenQueryKey           = "publisherToken"
 	contentTypeHeader                = "Content-Type"
 	jsonContentType                  = "application/json"
 	authorizationHeader              = "Authorization"
@@ -57,6 +62,8 @@ const (
 	errAuthenticationRequiredMessage = "authentication required"
 	errStreamAccessDeniedMessage     = "stream access denied"
 	errStreamNotRegisteredMessage    = "stream is not registered"
+	errPublisherAuthNotConfigured    = "publisher authorization is not configured"
+	errPublisherAuthFailed           = "publisher authorization failed"
 )
 
 type StreamLister interface {
@@ -76,11 +83,12 @@ type StreamAuthorizer interface {
 }
 
 type Server struct {
-	streams    StreamLister
-	ice        IceServerProvider
-	playback   domain.PlaybackURLBuilder
-	authorizer StreamAuthorizer
-	groups     domain.StreamGroupResolver
+	streams      StreamLister
+	ice          IceServerProvider
+	playback     domain.PlaybackURLBuilder
+	authorizer   StreamAuthorizer
+	groups       domain.StreamGroupResolver
+	publishToken string
 }
 
 func NewServer(
@@ -89,8 +97,16 @@ func NewServer(
 	playback domain.PlaybackURLBuilder,
 	authorizer StreamAuthorizer,
 	groups domain.StreamGroupResolver,
+	publishToken string,
 ) Server {
-	return Server{streams: streams, ice: ice, playback: playback, authorizer: authorizer, groups: groups}
+	return Server{
+		streams:      streams,
+		ice:          ice,
+		playback:     playback,
+		authorizer:   authorizer,
+		groups:       groups,
+		publishToken: strings.TrimSpace(publishToken),
+	}
 }
 
 func (s Server) Routes() http.Handler {
@@ -98,6 +114,7 @@ func (s Server) Routes() http.Handler {
 	mux.HandleFunc(routeHealthz, s.healthz)
 	mux.HandleFunc(routeReadyz, s.readyz)
 	mux.HandleFunc(routeRuntimeMetrics, s.runtimeMetrics)
+	mux.HandleFunc(routeMediaMTXAuth, s.mediaMTXAuth)
 	mux.HandleFunc(routeStreams, s.streamList)
 	mux.HandleFunc(routeIceServers, s.iceServers)
 	mux.HandleFunc(routeLegacyStreamStatus, s.legacyStreamStatus)
@@ -208,6 +225,11 @@ func (s Server) iceServers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) dashboardStreamList(w http.ResponseWriter, r *http.Request) {
+	if _, err := s.authorizer.AuthorizeStream(r.Context(), r.Header.Get(authorizationHeader), s.groups.StreamListTarget()); err != nil {
+		s.writeStreamAccessError(w, err)
+		return
+	}
+
 	streams, err := s.streams.ListStreams(r.Context())
 	if err != nil {
 		writeJSON(w, http.StatusBadGateway, errorPayload(err.Error()))
@@ -246,6 +268,21 @@ func (s Server) dashboardStreamItem(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, err := domain.ParseStreamID(streamID); err != nil {
 		writeJSON(w, http.StatusUnprocessableEntity, errorPayload(err.Error()))
+		return
+	}
+
+	if suffix == routeSuffixPublish {
+		parsed, err := domain.ParseStreamID(streamID)
+		if err != nil {
+			writeJSON(w, http.StatusUnprocessableEntity, errorPayload(err.Error()))
+			return
+		}
+		_, err = s.authorizer.AuthorizeStream(r.Context(), r.Header.Get(authorizationHeader), s.groups.TargetFor(parsed))
+		if err != nil {
+			s.writeStreamAccessError(w, err)
+			return
+		}
+		s.writeStreamPublishResponse(w, parsed)
 		return
 	}
 
@@ -293,6 +330,38 @@ func (s Server) dashboardIceServers(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	writeJSON(w, http.StatusOK, payload)
+}
+
+func (s Server) mediaMTXAuth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var payload mediaMTXAuthRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorPayload(errPublisherAuthFailed))
+		return
+	}
+	if payload.Action != mediaMTXActionPublish {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if s.publishToken == "" {
+		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
+	if _, err := domain.ParseStreamPath(payload.Path); err != nil {
+		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
+		return
+	}
+	values, err := url.ParseQuery(strings.TrimPrefix(payload.Query, "?"))
+	if err != nil || values.Get(publisherTokenQueryKey) != s.publishToken {
+		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s Server) findStream(ctx context.Context, streamID string) (domain.StreamDescriptor, bool, error) {
@@ -362,6 +431,19 @@ func (s Server) streamPlaybackResponseFromParsed(
 		Status:       descriptor.Status,
 		PlaybackURLs: descriptor.PlaybackURLs,
 	}
+}
+
+func (s Server) writeStreamPublishResponse(w http.ResponseWriter, parsed domain.ParsedStreamPath) {
+	if s.publishToken == "" {
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
+	playbackURLs := s.playback.Build(parsed)
+	whipURL := strings.TrimSuffix(playbackURLs.WebRTC, "/whep") + "/whip?" + publisherTokenQueryKey + "=" + url.QueryEscape(s.publishToken)
+	writeJSON(w, http.StatusOK, streamPublishResponse{
+		StreamID: parsed.StreamID,
+		WhipURL:  whipURL,
+	})
 }
 
 func (s Server) authorizeDashboardStream(
@@ -440,6 +522,22 @@ type streamPlaybackResponse struct {
 type streamStatusResponse struct {
 	StreamID string              `json:"streamId"`
 	Status   domain.StreamStatus `json:"status"`
+}
+
+type streamPublishResponse struct {
+	StreamID string `json:"streamId"`
+	WhipURL  string `json:"whipUrl"`
+}
+
+type mediaMTXAuthRequest struct {
+	User     string `json:"user"`
+	Password string `json:"password"`
+	IP       string `json:"ip"`
+	Action   string `json:"action"`
+	Path     string `json:"path"`
+	Protocol string `json:"protocol"`
+	ID       string `json:"id"`
+	Query    string `json:"query"`
 }
 
 type iceServerResponse struct {

@@ -13,6 +13,12 @@
 - [ ] Backend tests passed or not applicable
 - [ ] Frontend build passed or not applicable
 - [ ] Manual smoke test completed or not applicable
+- [ ] Architecture intent gate passed or not applicable
+
+## Design Intent
+- Related design intent IDs:
+- Runtime status wording is accurate: active/profile/contract/prototype/deferred
+- If this changes a boundary, explain the route/protocol/security impact:
 
 ## Operational Impact
 - [ ] No runtime/config impact

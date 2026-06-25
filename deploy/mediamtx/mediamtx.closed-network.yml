@@ -5,13 +5,20 @@ apiAddress: :9997
 metrics: true
 metricsAddress: :9998
 
+authMethod: http
+authHTTPAddress: http://media-control:8081/v1/mediamtx/auth
+authHTTPExclude:
+  - action: read
+  - action: playback
+  - action: api
+  - action: metrics
+  - action: pprof
+
 authInternalUsers:
   - user: any
     pass:
     ips: []
     permissions:
-      - action: publish
-        path:
       - action: read
         path:
       - action: playback

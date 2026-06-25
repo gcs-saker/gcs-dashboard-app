@@ -88,6 +88,7 @@ func main() {
 		playback,
 		&authorizer,
 		groupResolver,
+		getenv("MEDIA_CONTROL_PUBLISH_TOKEN", ""),
 	)
 
 	log.Printf("media-control listening on %s", listenAddress)

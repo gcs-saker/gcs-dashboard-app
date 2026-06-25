@@ -64,7 +64,6 @@ run_step() {
 
 compose_config() {
   docker compose \
-    --profile future-services \
     --profile geo \
     --env-file "$COMPOSE_ENV" \
     -f "$COMPOSE_FILE" \
@@ -77,16 +76,28 @@ check_contracts() {
   test -f "${REPO_ROOT}/docs/architecture/GCS-Saker_M7_runtime_smoke_gate.md"
   test -f "${REPO_ROOT}/docs/architecture/GCS-Saker_M7_publish_play_smoke.md"
   test -f "${REPO_ROOT}/docs/architecture/GCS-Saker_M7_performance_benchmark_matrix.md"
+  test -f "${REPO_ROOT}/docs/architecture/GCS-Saker_design_intent_matrix.yml"
+  test -f "${REPO_ROOT}/docs/architecture/GCS-Saker_runtime_stack_status.yml"
+  test -f "${REPO_ROOT}/scripts/architecture_intent_gate.py"
   test -f "${REPO_ROOT}/scripts/m7_single_node_runtime_smoke.sh"
   test -f "${REPO_ROOT}/scripts/m7_publish_play_smoke.sh"
   test -f "${REPO_ROOT}/scripts/m7_dashboard_first_frame_smoke.sh"
   test -f "${REPO_ROOT}/scripts/m7_performance_benchmark_matrix.py"
+  test -f "${REPO_ROOT}/scripts/grpc_runtime_smoke.py"
+  test -f "${REPO_ROOT}/scripts/dragonfly_profile_smoke.py"
+  test -f "${REPO_ROOT}/scripts/postgis_runtime_smoke.py"
   test -f "${REPO_ROOT}/scripts/closed_network_static_check.py"
 
   grep -q "v0.2.0 호환 fallback" "${REPO_ROOT}/docs/architecture/GCS-Saker_M7_migration_completion_gate.md"
   grep -q "Spring/Kotlin" "${REPO_ROOT}/docs/architecture/GCS-Saker_M7_language_migration_parity_matrix.md"
   grep -q "media-control" "${REPO_ROOT}/docs/architecture/GCS-Saker_M7_language_migration_parity_matrix.md"
   grep -q "m7-performance-benchmark-v1" "${REPO_ROOT}/docs/architecture/GCS-Saker_M7_performance_benchmark_matrix.md"
+  grep -q "gcs-saker-design-intent-matrix-v1" "${REPO_ROOT}/docs/architecture/GCS-Saker_design_intent_matrix.yml"
+  grep -q "gcs-saker-runtime-stack-status-v1" "${REPO_ROOT}/docs/architecture/GCS-Saker_runtime_stack_status.yml"
+  "${PYTHON_BIN}" "${REPO_ROOT}/scripts/architecture_intent_gate.py" --json >/dev/null
+  "${PYTHON_BIN}" "${REPO_ROOT}/scripts/grpc_runtime_smoke.py" --check >/dev/null
+  "${PYTHON_BIN}" "${REPO_ROOT}/scripts/dragonfly_profile_smoke.py" --check >/dev/null
+  "${PYTHON_BIN}" "${REPO_ROOT}/scripts/postgis_runtime_smoke.py" --check >/dev/null
   grep -q "backend pytest + coverage" "${REPO_ROOT}/docs/architecture/GCS-Saker_M7_regression_gate.md"
   grep -q "frontend test coverage" "${REPO_ROOT}/docs/architecture/GCS-Saker_M7_regression_gate.md"
   grep -q "smoke: login -> dashboard -> stream list -> playback contract" "${REPO_ROOT}/docs/architecture/GCS-Saker_M7_regression_gate.md"

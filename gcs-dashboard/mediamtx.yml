@@ -6,14 +6,22 @@ apiAddress: :9997
 metrics: false
 metricsAddress: 127.0.0.1:9998
 
-# 기본 송출/재생은 익명 허용을 유지하되, Control API는 localhost와 Docker 내부망에서만 허용한다.
+# Publish는 media-control HTTP auth hook에서 토큰을 확인한다.
+authMethod: http
+authHTTPAddress: http://media-control:8081/v1/mediamtx/auth
+authHTTPExclude:
+  - action: read
+  - action: playback
+  - action: api
+  - action: metrics
+  - action: pprof
+
+# 재생은 media-control에서 인증된 URL을 발급한 뒤 MediaMTX로 전달한다.
 authInternalUsers:
   - user: any
     pass:
     ips: []
     permissions:
-      - action: publish
-        path:
       - action: read
         path:
       - action: playback

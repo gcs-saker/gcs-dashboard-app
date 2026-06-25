@@ -16,11 +16,11 @@ import {
 } from "./config";
 
 describe("config API URL helpers", () => {
-  test("keeps the default /api base compatible with v1 routes", () => {
+  test("keeps the default /api base compatible with backend v1 routes and media-control stream routes", () => {
     expect(apiV1Url("/streams/raw.sample.front/playback")).toBe(
       "/api/v1/streams/raw.sample.front/playback",
     );
-    expect(streamApiV1Url("/streams")).toBe("/api/v1/streams");
+    expect(streamApiV1Url("/streams")).toBe("/media-control/api/v1/streams");
   });
 
   test("adds the /api/v1 prefix when VITE_API_BASE_URL points to the backend origin", () => {
