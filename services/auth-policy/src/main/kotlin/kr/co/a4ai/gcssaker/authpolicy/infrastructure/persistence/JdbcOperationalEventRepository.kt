@@ -271,12 +271,12 @@ private object OperationalEventMetricColumns {
     const val avgThroughputMbps = "avg_throughput_mbps"
 }
 
-private object OperationalEventSql {
+internal object OperationalEventSql {
     const val table = "operational_events"
     const val groupOccurredIndexName = "ix_operational_events_group_occurred"
     const val groupSeverityOccurredIndexName = "ix_operational_events_group_severity_occurred"
     const val groupStreamOccurredIndexName = "ix_operational_events_group_stream_occurred"
-    const val createTable = """
+    val createTable = """
         CREATE TABLE IF NOT EXISTS operational_events (
             id VARCHAR(128) NOT NULL PRIMARY KEY,
             occurred_at TIMESTAMP(3) NOT NULL,
@@ -288,7 +288,7 @@ private object OperationalEventSql {
             message VARCHAR(1024) NOT NULL,
             connections INT NOT NULL,
             latency_ms BIGINT NOT NULL,
-            throughput_mbps DOUBLE NOT NULL,
+            throughput_mbps ${JdbcSchemaTypes.float64} NOT NULL,
             group_id VARCHAR(64) NOT NULL,
             stream_id VARCHAR(128),
             connection_id VARCHAR(128),
