@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
@@ -17,7 +18,7 @@ func TestClientAuthorizesStreamThroughAuthPolicy(t *testing.T) {
 		if r.Header.Get("Authorization") != "Bearer test-token" {
 			t.Fatalf("missing authorization header")
 		}
-		_, _ = w.Write([]byte(`{"streamId":"raw.sample.front","allowed":true,"reason":"same group stream"}`))
+		_, _ = w.Write([]byte(`{"streamId":"raw.sample.front","allowed":true,"reason":"same group stream","principalId":"viewer-a","groupId":"co-a","policyVersion":"group-policy-v1","principalVersion":"viewer-a:co-a:viewer"}`))
 	}))
 	defer server.Close()
 
@@ -32,6 +33,48 @@ func TestClientAuthorizesStreamThroughAuthPolicy(t *testing.T) {
 	}
 	if !decision.Allowed || decision.Reason != "same group stream" {
 		t.Fatalf("unexpected decision %#v", decision)
+	}
+	if decision.PrincipalID != "viewer-a" || decision.GroupID != "co-a" || decision.PolicyVersion == "" || decision.PrincipalVersion == "" {
+		t.Fatalf("expected enriched decision metadata, got %#v", decision)
+	}
+}
+
+func TestNewAuthorizerRequiresAuthPolicyBaseURLByDefault(t *testing.T) {
+	_, err := NewAuthorizer("", "", nil)
+
+	if err == nil || !strings.Contains(err.Error(), "auth-policy base URL is required") {
+		t.Fatalf("expected fail-closed configuration error, got %v", err)
+	}
+}
+
+func TestNewAuthorizerAllowsExplicitDevelopmentBypass(t *testing.T) {
+	authorizer, err := NewAuthorizer(AuthModeAllowAll, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decision, err := authorizer.AuthorizeStream(
+		context.Background(),
+		"",
+		domain.StreamAccessTarget{StreamID: "raw.sample.front", Path: "raw/sample/front", PublisherGroupID: "co-a"},
+	)
+
+	if err != nil || !decision.Allowed {
+		t.Fatalf("expected explicit allow-all bypass, decision=%#v err=%v", decision, err)
+	}
+}
+
+func TestClientFailsClosedWhenAuthPolicyBaseURLIsMissing(t *testing.T) {
+	client := NewClient("", nil)
+
+	decision, err := client.AuthorizeStream(
+		context.Background(),
+		"Bearer test-token",
+		domain.StreamAccessTarget{StreamID: "raw.sample.front", Path: "raw/sample/front", PublisherGroupID: "co-a"},
+	)
+
+	if err == nil || decision.Allowed {
+		t.Fatalf("expected deny when auth-policy URL is missing, decision=%#v err=%v", decision, err)
 	}
 }
 

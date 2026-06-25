@@ -12,9 +12,33 @@ import (
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 )
 
+const (
+	AuthModeRequired = "required"
+	AuthModeAllowAll = "allow-all"
+)
+
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
+}
+
+func NewAuthorizer(mode string, baseURL string, httpClient *http.Client) (Authorizer, error) {
+	mode = strings.TrimSpace(strings.ToLower(mode))
+	if mode == "" {
+		mode = AuthModeRequired
+	}
+	switch mode {
+	case AuthModeRequired:
+		client := NewClient(baseURL, httpClient)
+		if client.baseURL == "" {
+			return nil, fmt.Errorf("auth-policy base URL is required when media-control auth mode is %q", AuthModeRequired)
+		}
+		return client, nil
+	case AuthModeAllowAll:
+		return AllowAllAuthorizer{}, nil
+	default:
+		return nil, fmt.Errorf("unsupported media-control auth mode %q", mode)
+	}
 }
 
 func NewClient(baseURL string, httpClient *http.Client) Client {
@@ -29,7 +53,7 @@ func NewClient(baseURL string, httpClient *http.Client) Client {
 
 func (c Client) AuthorizeStream(ctx context.Context, authorization string, target domain.StreamAccessTarget) (domain.StreamAccessDecision, error) {
 	if c.baseURL == "" {
-		return domain.AllowStream(target.StreamID, "auth-policy disabled"), nil
+		return domain.DenyStream(target.StreamID, "auth-policy unavailable"), fmt.Errorf("auth-policy base URL is not configured")
 	}
 	if strings.TrimSpace(authorization) == "" {
 		return domain.DenyStream(target.StreamID, "authentication required"), domain.ErrStreamAuthenticationRequired
@@ -55,6 +79,9 @@ func (c Client) AuthorizeStream(ctx context.Context, authorization string, targe
 
 	if response.StatusCode == http.StatusUnauthorized {
 		return domain.DenyStream(target.StreamID, "authentication required"), domain.ErrStreamAuthenticationRequired
+	}
+	if response.StatusCode == http.StatusForbidden {
+		return domain.DenyStream(target.StreamID, "stream access denied"), domain.ErrStreamAccessDenied
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return domain.StreamAccessDecision{}, fmt.Errorf("auth-policy stream access returned status %d", response.StatusCode)

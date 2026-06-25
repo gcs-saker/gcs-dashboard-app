@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 var (
@@ -25,9 +26,14 @@ type StreamAccessTarget struct {
 }
 
 type StreamAccessDecision struct {
-	StreamID string `json:"streamId"`
-	Allowed  bool   `json:"allowed"`
-	Reason   string `json:"reason"`
+	StreamID         string     `json:"streamId"`
+	Allowed          bool       `json:"allowed"`
+	Reason           string     `json:"reason"`
+	PrincipalID      string     `json:"principalId,omitempty"`
+	GroupID          string     `json:"groupId,omitempty"`
+	ExpiresAt        *time.Time `json:"expiresAt,omitempty"`
+	PolicyVersion    string     `json:"policyVersion,omitempty"`
+	PrincipalVersion string     `json:"principalVersion,omitempty"`
 }
 
 func AllowStream(streamID string, reason string) StreamAccessDecision {
