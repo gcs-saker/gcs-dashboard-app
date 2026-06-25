@@ -6,6 +6,7 @@ import {
   type DashboardUserPreferences,
   normalizeDashboardUserPreferences,
 } from "./userPreferences";
+import { sanitizeDashboardPreferencesForStorage } from "./userPreferencesStore";
 import { loadDashboardUserPreferences, saveDashboardUserPreferences } from "./userPreferencesStore";
 
 describe("userPreferences", () => {
@@ -92,9 +93,53 @@ describe("userPreferences", () => {
     });
     expect(fakeIndexedDB.closedCount).toBe(2);
   });
+
+  test("sanitizes forbidden auth and secret fields before saving browser preferences", async () => {
+    const fakeIndexedDB = createFakeIndexedDB();
+    vi.stubGlobal("indexedDB", fakeIndexedDB.indexedDB);
+    const unsafePreferences = {
+      ...createDefaultDashboardUserPreferences(),
+      activeView: "settings",
+      accessToken: "must-not-persist",
+      password: "must-not-persist",
+      privateKey: "must-not-persist",
+      refreshToken: "must-not-persist",
+      serverSecret: "must-not-persist",
+    } as unknown as DashboardUserPreferences;
+
+    await saveDashboardUserPreferences("dashboard:operator01", unsafePreferences);
+
+    expect(JSON.stringify(fakeIndexedDB.records.get("dashboard:operator01"))).not.toContain("must-not-persist");
+    expect(fakeIndexedDB.records.get("dashboard:operator01")).toEqual(
+      expect.objectContaining({
+        activeView: "settings",
+        version: 1,
+      }),
+    );
+  });
+
+  test("exposes preference sanitizer for migration and fallback paths", () => {
+    const sanitized = sanitizeDashboardPreferencesForStorage({
+      activeView: "events",
+      cctvLayoutMode: "unknown",
+      streamPreferences: {
+        deviceAliases: {
+          "raw.mobile.front": "전방 단말",
+        },
+      },
+      refreshToken: "must-not-persist",
+    });
+
+    expect(sanitized.activeView).toBe("events");
+    expect(sanitized.cctvLayoutMode).toBe("4x4");
+    expect(JSON.stringify(sanitized)).not.toContain("must-not-persist");
+    expect(sanitized.streamPreferences.deviceAliases).toEqual({
+      "raw.mobile.front": "전방 단말",
+    });
+  });
 });
 
-function createFakeIndexedDB(): { indexedDB: IDBFactory; closedCount: number } {
+function createFakeIndexedDB(): { indexedDB: IDBFactory; closedCount: number; records: Map<string, unknown> } {
   const records = new Map<string, unknown>();
   const state = { closedCount: 0 };
   const database = {
@@ -130,6 +175,7 @@ function createFakeIndexedDB(): { indexedDB: IDBFactory; closedCount: number } {
     get closedCount() {
       return state.closedCount;
     },
+    records,
   };
 }
 
