@@ -1,6 +1,6 @@
 import type { CctvQualityMode } from "./components/CctvChannelCard";
 import { resetDashboardLayout, type DashboardLayoutItem } from "./dashboardLayout";
-import type { StreamPreferencesSnapshot } from "./streamPreferences";
+import { EMPTY_STREAM_PREFERENCES, type StreamPreferencesSnapshot } from "./streamPreferences";
 
 export type DashboardView = "dashboard" | "cctv" | "events" | "status" | "settings";
 export type CctvLayoutMode = "3x3" | "4x4" | "5x5" | "auto";
@@ -18,10 +18,6 @@ export const DASHBOARD_USER_PREFERENCES_VERSION = 1;
 export const DEFAULT_DASHBOARD_VIEW: DashboardView = "dashboard";
 export const DEFAULT_CCTV_LAYOUT_MODE: CctvLayoutMode = "4x4";
 export const DEFAULT_CCTV_QUALITY_MODE: CctvQualityMode = "preview";
-export const EMPTY_STREAM_PREFERENCES: StreamPreferencesSnapshot = Object.freeze({
-  deviceAliases: Object.freeze({}),
-});
-
 const DASHBOARD_VIEWS = new Set<DashboardView>(["dashboard", "cctv", "events", "status", "settings"]);
 const CCTV_LAYOUT_MODES = new Set<CctvLayoutMode>(["3x3", "4x4", "5x5", "auto"]);
 const CCTV_QUALITY_MODES = new Set<CctvQualityMode>(["preview", "high"]);

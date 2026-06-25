@@ -18,7 +18,7 @@ import {
 import { AuthApiError } from "../../auth/authApi";
 import {
   applyStreamDeviceAliases,
-  loadStreamPreferences,
+  EMPTY_STREAM_PREFERENCES,
   type StreamPreferencesSnapshot,
 } from "../streamPreferences";
 
@@ -30,7 +30,7 @@ interface UseDashboardStreamsOptions {
 
 export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
   const { onAuthFailure, onStreamDeviceAliasChange, streamPreferences } = options;
-  const preferences = streamPreferences ?? loadStreamPreferences();
+  const preferences = streamPreferences ?? EMPTY_STREAM_PREFERENCES;
   const [streams, setStreams] = useState(() => DEFAULT_DASHBOARD_STREAMS);
   const [streamDevices, setStreamDevices] = useState<StreamDeviceOption[]>(() =>
     applyStreamDeviceAliases(MOCK_STREAM_DEVICES, preferences.deviceAliases),
