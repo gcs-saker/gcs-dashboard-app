@@ -11,6 +11,7 @@
 # and WebRTC/HLS through the edge proxy.
 
 user gcs_backend_pub
+topic read $SYS/#
 topic read gcs/+/+/+/telemetry
 topic read gcs/+/+/+/status
 topic write gcs/+/+/+/command
