@@ -11,6 +11,7 @@ import (
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/authpolicy"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/grpcgateway"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/httpapi"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/mediamtx"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/observability"
@@ -37,6 +38,7 @@ func main() {
 	turnUsername := getenv("TURN_USERNAME", "gcs-turn")
 	turnPassword := getenv("TURN_PASSWORD", "replace-with-secret")
 	listenAddress := getenv("MEDIA_CONTROL_LISTEN_ADDR", ":8081")
+	grpcListenAddress := getenv("MEDIA_CONTROL_GRPC_LISTEN_ADDR", ":9090")
 	playback, err := domain.NewPlaybackURLBuilder(
 		getenv("MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL", "http://localhost:8080/webrtc"),
 		getenv("MEDIA_CONTROL_PUBLIC_HLS_BASE_URL", "http://localhost:8080/hls"),
@@ -117,6 +119,15 @@ func main() {
 		groupResolver,
 		getenv("MEDIA_CONTROL_PUBLISH_TOKEN", ""),
 		metrics,
+	)
+
+	grpcContext, stopGrpc := context.WithCancel(context.Background())
+	defer stopGrpc()
+	grpcgateway.Start(
+		grpcContext,
+		grpcListenAddress,
+		getenv("MEDIA_CONTROL_GRPC_TOKEN", getenv("MEDIA_CONTROL_PUBLISH_TOKEN", "")),
+		getenvInt("MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES", 64*1024),
 	)
 
 	log.Printf("media-control listening on %s", listenAddress)

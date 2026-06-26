@@ -126,14 +126,17 @@ stacks:
       - contracts/proto/gcs/saker/v1/gateway_service.proto
       - backend/modules/messaging/sender.py
       - backend/tests/test_message_sender_abstraction.py
+      - services/media-control/internal/grpcgateway
       - scripts/grpc_runtime_smoke.py
     missingRuntime:
-      - "compose service port/internal network wiring"
-      - "runtime bidi streaming smoke"
+      - "generated DTO 또는 명시 mapper 기반 native/device gateway client"
+      - "long-lived bidi stream backpressure soak"
     prototypeRuntime:
       - "client implementation behind MessageSender abstraction"
       - "CONTROL_GRPC_TARGET and CONTROL_GRPC_METHOD runtime configuration"
-    nextGate: "SakerGatewayService.Exchange를 실제 internal service-to-service smoke로 연결한 뒤에만 active로 승격한다."
+      - "media-control internal SakerGatewayService.Exchange endpoint"
+      - "metadata authorization, malformed payload, backpressure, reconnect tests"
+    nextGate: "compose internal network smoke와 native/device gateway mapper를 통과한 뒤 active로 승격한다."
 
   dragonflyCacheProfile:
     status: profile

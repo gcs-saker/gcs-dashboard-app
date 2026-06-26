@@ -49,8 +49,10 @@ sequenceDiagram
 
 ## 후속 구현 순서
 
-1. proto codegen 경로를 Kotlin/Go에 고정한다.
-2. Go media-control에 in-memory gRPC server smoke를 붙인다.
-3. Spring/Kotlin auth metadata interceptor를 붙인다.
-4. malformed protobuf, unauthorized metadata, backpressure, reconnect integration test를 추가한다.
-5. 폐쇄망 compose profile에서 gRPC port를 내부 network에만 노출한다.
+1. Go media-control에 internal `SakerGatewayService.Exchange` endpoint를 붙인다. 완료.
+2. Python runtime smoke와 MessageSender metadata path를 붙인다. 완료.
+3. malformed protobuf, unauthorized metadata, backpressure, reconnect integration test를 추가한다. 완료.
+4. 폐쇄망 compose profile에서 gRPC port를 내부 network에만 노출한다. 완료.
+5. proto codegen 또는 명시 mapper 경로를 Kotlin/Go/Python에 고정한다. 남음.
+6. Spring/Kotlin auth metadata interceptor와 native/device gateway client를 붙인다. 남음.
+7. 장시간 bidi stream backpressure/reconnect soak를 통과시킨다. 남음.

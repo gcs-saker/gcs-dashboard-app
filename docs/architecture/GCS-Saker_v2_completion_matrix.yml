@@ -15,16 +15,17 @@ requiredGates:
     issue: 412
     title: "gRPC internal bidirectional streaming runtime wiring"
     expectedStateForV2: active-or-deferred-with-record
-    currentState: contract
+    currentState: runtime-partial
     releaseBlocker: true
     evidence:
       - contracts/proto/gcs/saker/v1/gateway_service.proto
       - scripts/grpc_runtime_smoke.py
       - backend/tests/test_message_sender_abstraction.py
+      - services/media-control/internal/grpcgateway
+      - deploy/compose/compose.single-node.poc.yml
     missing:
-      - "Spring/Kotlin 또는 Go/Python gRPC runtime server/client wiring"
-      - "internal network port와 compose wiring"
-      - "runtime bidirectional streaming smoke"
+      - "generated DTO 또는 명시 mapper 기반 native/device gateway client"
+      - "long-lived bidi stream backpressure soak"
 
   - id: V2-PROTOBUF-001
     issue: 413

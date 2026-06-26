@@ -12,6 +12,8 @@ class MessageSenderEnv:
     CONTROL_SENDER = "CONTROL_MESSAGE_SENDER"
     GRPC_TARGET = "CONTROL_GRPC_TARGET"
     GRPC_METHOD = "CONTROL_GRPC_METHOD"
+    GRPC_AUTH_TOKEN = "CONTROL_GRPC_AUTH_TOKEN"
+    GRPC_TIMEOUT_SECONDS = "CONTROL_GRPC_TIMEOUT_SECONDS"
 
 
 class MessageSenderKind:
@@ -26,6 +28,10 @@ class MessageContentType:
 
 class GrpcContracts:
     DEFAULT_METHOD = "/gcs.saker.v1.SakerGatewayService/Exchange"
+    AUTHORIZATION_METADATA = "authorization"
+    GATEWAY_TOKEN_METADATA = "x-gcs-gateway-token"
+    BEARER_PREFIX = "Bearer "
+    DEFAULT_TIMEOUT_SECONDS = 2.0
 
 
 class MessageSenderError(RuntimeError):
@@ -72,6 +78,8 @@ class GrpcMessageSender:
 class GrpcRawStreamTransport:
     target: str
     method: str
+    auth_token: str
+    timeout_seconds: float
 
     @classmethod
     def from_env(cls) -> "GrpcRawStreamTransport":
@@ -79,7 +87,13 @@ class GrpcRawStreamTransport:
         if not target:
             raise MessageSenderUnavailable("gRPC gateway target is not configured")
         method = os.getenv(MessageSenderEnv.GRPC_METHOD, GrpcContracts.DEFAULT_METHOD).strip()
-        return cls(target=target, method=method or GrpcContracts.DEFAULT_METHOD)
+        timeout_seconds = grpc_timeout_seconds(os.getenv(MessageSenderEnv.GRPC_TIMEOUT_SECONDS, ""))
+        return cls(
+            target=target,
+            method=method or GrpcContracts.DEFAULT_METHOD,
+            auth_token=os.getenv(MessageSenderEnv.GRPC_AUTH_TOKEN, "").strip(),
+            timeout_seconds=timeout_seconds,
+        )
 
     def send(self, payload: bytes) -> None:
         try:
@@ -93,12 +107,35 @@ class GrpcRawStreamTransport:
             request_serializer=identity_bytes,
             response_deserializer=identity_bytes,
         )
-        responses: Iterable[bytes] = stub(iter([payload]))
+        responses: Iterable[bytes] = stub(
+            iter([payload]),
+            metadata=grpc_metadata(self.auth_token),
+            timeout=self.timeout_seconds,
+        )
         next(iter(responses), None)
 
 
 def identity_bytes(payload: bytes) -> bytes:
     return payload
+
+
+def grpc_metadata(auth_token: str) -> tuple[tuple[str, str], ...] | None:
+    if not auth_token:
+        return None
+    return (
+        (GrpcContracts.AUTHORIZATION_METADATA, f"{GrpcContracts.BEARER_PREFIX}{auth_token}"),
+        (GrpcContracts.GATEWAY_TOKEN_METADATA, auth_token),
+    )
+
+
+def grpc_timeout_seconds(raw_value: str) -> float:
+    try:
+        timeout = float(raw_value)
+    except ValueError:
+        return GrpcContracts.DEFAULT_TIMEOUT_SECONDS
+    if timeout <= 0:
+        return GrpcContracts.DEFAULT_TIMEOUT_SECONDS
+    return timeout
 
 
 @lru_cache(maxsize=1)
