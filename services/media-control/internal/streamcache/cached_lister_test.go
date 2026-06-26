@@ -156,6 +156,51 @@ func TestCachedStreamListerCoalescesConcurrentCacheMisses(t *testing.T) {
 	}
 }
 
+func TestCachedStreamListerConcurrentReadersReceiveDefensiveCopies(t *testing.T) {
+	path, _ := domain.NewStreamPath("raw/local/webcam")
+	upstream := &recordingLister{
+		streams: []domain.StreamDescriptor{{
+			Path:        path,
+			Ready:       true,
+			Status:      domain.StreamStatusOnline,
+			ReaderCount: 1,
+		}},
+	}
+	cache := newMemoryStringCache()
+	lister := NewCachedStreamLister(upstream, cache, "streams:list", "presence:", time.Minute, 5*time.Second)
+	if _, err := lister.ListStreams(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	var waitGroup sync.WaitGroup
+	for range 32 {
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			streams, err := lister.ListStreams(context.Background())
+			if err != nil {
+				t.Errorf("unexpected list error: %v", err)
+				return
+			}
+			if len(streams) != 1 {
+				t.Errorf("expected one stream, got %d", len(streams))
+				return
+			}
+			streams[0].Status = domain.StreamStatusOffline
+			streams[0].ReaderCount = 99
+		}()
+	}
+	waitGroup.Wait()
+
+	streams, err := lister.ListStreams(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if streams[0].Status != domain.StreamStatusOnline || streams[0].ReaderCount != 1 {
+		t.Fatalf("cached stream state leaked caller mutation: %+v", streams[0])
+	}
+}
+
 func TestCachedStreamListerTreatsRedisOutageAsDegradedCacheOnly(t *testing.T) {
 	path, _ := domain.NewStreamPath("raw/local/webcam")
 	upstream := &recordingLister{

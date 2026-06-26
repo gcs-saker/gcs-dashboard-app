@@ -102,6 +102,37 @@ func TestCachedIceServerProviderCoalescesConcurrentCacheMisses(t *testing.T) {
 	}
 }
 
+func TestCachedIceServerProviderConcurrentReadersReceiveDefensiveCopies(t *testing.T) {
+	stun, _ := domain.NewIceServer("stun:primary", domain.IceServerSTUN, "", "", true)
+	turnServer, _ := domain.NewIceServer("turn:primary", domain.IceServerTURN, "user", "pass", true)
+	upstream := &recordingIceServerProvider{servers: []domain.IceServer{stun, turnServer}}
+	provider := NewCachedIceServerProvider(upstream, newMemoryStringCache(), "ice:servers", time.Minute)
+	if servers := provider.HealthyIceServers(); len(servers) != 2 {
+		t.Fatalf("expected initial STUN and TURN servers, got %d", len(servers))
+	}
+
+	var waitGroup sync.WaitGroup
+	for range 32 {
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			servers := provider.HealthyIceServers()
+			if len(servers) != 2 {
+				t.Errorf("expected two ICE servers, got %d", len(servers))
+				return
+			}
+			servers[0].Healthy = false
+			servers[0].URL = "stun:mutated"
+		}()
+	}
+	waitGroup.Wait()
+
+	servers := provider.HealthyIceServers()
+	if servers[0].URL != "stun:primary" || !servers[0].Healthy {
+		t.Fatalf("cached ICE server state leaked caller mutation: %+v", servers[0])
+	}
+}
+
 func TestCachedIceServerProviderTreatsRedisOutageAsDegradedCacheOnly(t *testing.T) {
 	turnServer, _ := domain.NewIceServer("turn:primary", domain.IceServerTURN, "user", "pass", true)
 	upstream := &recordingIceServerProvider{servers: []domain.IceServer{turnServer}}

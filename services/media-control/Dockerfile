@@ -1,6 +1,6 @@
 FROM golang:1.26.3-alpine AS build
 WORKDIR /workspace
-COPY go.mod ./
+COPY go.mod go.sum ./
 COPY cmd ./cmd
 COPY internal ./internal
 RUN go test ./...
