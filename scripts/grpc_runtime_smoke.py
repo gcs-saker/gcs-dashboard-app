@@ -47,6 +47,17 @@ class GrpcRuntimeSmokeConfig:
             str(self.gateway_proto.relative_to(self.proto_root)),
         ]
 
+    def grpc_tools_descriptor_command(self) -> list[str]:
+        return [
+            sys.executable,
+            "-m",
+            "grpc_tools.protoc",
+            f"--proto_path={self.proto_root}",
+            f"--descriptor_set_out={self.descriptor_set}",
+            "--include_imports",
+            str(self.gateway_proto.relative_to(self.proto_root)),
+        ]
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Validate the gRPC gateway contract and expose missing runtime gates.")
@@ -76,6 +87,7 @@ def main() -> int:
         "schemaVersion": SCHEMA_VERSION,
         "status": "runtime-integrated",
         "descriptorCommand": config.descriptor_command(),
+        "descriptorFallbackCommand": config.grpc_tools_descriptor_command(),
         "implementedRuntime": [
             "protobuf descriptor contract",
             "client implementation behind MessageSender abstraction",
@@ -100,15 +112,11 @@ def main() -> int:
 
     config.descriptor_set.parent.mkdir(parents=True, exist_ok=True)
     if not args.skip_descriptor:
-        descriptor_result = subprocess.run(
-            config.descriptor_command(),
-            check=False,
-            capture_output=False,
-            text=True,
-            cwd=REPO_ROOT,
-        )
-        if descriptor_result.returncode != 0:
-            return descriptor_result.returncode
+        descriptor_result = compile_descriptor(config)
+        if not descriptor_result["compiled"]:
+            print(json.dumps({**payload, "descriptor": descriptor_result}, ensure_ascii=False))
+            return int(descriptor_result["returnCode"])
+        payload["descriptor"] = descriptor_result
 
     target = args.target.strip()
     auth_token = args.auth_token.strip()
@@ -176,6 +184,55 @@ def run_exchange_smoke(target: str, method: str, auth_token: str, timeout_second
         "requestIds": [item.request_id for item in decoded_responses],
         "statuses": [int(item.status) for item in decoded_responses],
         "reasonCodes": [item.reason_code for item in decoded_responses],
+    }
+
+
+def compile_descriptor(config: GrpcRuntimeSmokeConfig) -> dict[str, Any]:
+    attempts = [
+        ("protoc", config.descriptor_command()),
+        ("grpc_tools.protoc", config.grpc_tools_descriptor_command()),
+    ]
+    errors: list[dict[str, Any]] = []
+    for name, command in attempts:
+        try:
+            result = subprocess.run(
+                command,
+                check=False,
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+            )
+        except FileNotFoundError as exc:
+            errors.append(
+                {
+                    "name": name,
+                    "command": command,
+                    "returnCode": 127,
+                    "stderr": str(exc),
+                }
+            )
+            continue
+        if result.returncode == 0:
+            return {
+                "compiled": True,
+                "compiler": name,
+                "command": command,
+                "returnCode": 0,
+            }
+        errors.append(
+            {
+                "name": name,
+                "command": command,
+                "returnCode": result.returncode,
+                "stderr": result.stderr[:800],
+            }
+        )
+    return {
+        "compiled": False,
+        "compiler": None,
+        "command": [],
+        "returnCode": errors[-1]["returnCode"] if errors else 1,
+        "attempts": errors,
     }
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import importlib.util
 import json
 import subprocess
 import sys
@@ -26,6 +27,16 @@ def run_check(script: Path) -> dict:
     return json.loads(result.stdout)
 
 
+def load_script_module(script: Path, module_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, script)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def test_grpc_runtime_smoke_reports_integrated_runtime_state_and_follow_up_gates() -> None:
     payload = run_check(GRPC_SMOKE)
 
@@ -36,11 +47,74 @@ def test_grpc_runtime_smoke_reports_integrated_runtime_state_and_follow_up_gates
         f"--proto_path={REPO_ROOT / 'contracts' / 'proto'}",
         f"--descriptor_set_out={REPO_ROOT / 'tmp' / 'gcs-saker-grpc-gateway.pb'}",
     ]
+    assert payload["descriptorFallbackCommand"][:3] == [sys.executable, "-m", "grpc_tools.protoc"]
     assert "client implementation behind MessageSender abstraction" in payload["implementedRuntime"]
     assert "SakerGatewayService.Exchange server implementation in media-control" in payload["implementedRuntime"]
     assert "explicit GatewayStreamRequest and GatewayStreamResponse DTO mappers" in payload["implementedRuntime"]
     assert "native/device gateway packaging outside smoke script" in payload["remainingBeforeFullActive"]
     assert "compose internal network" in payload["promotionGate"]
+
+
+def test_grpc_runtime_smoke_falls_back_to_grpc_tools_when_protoc_is_missing(monkeypatch, tmp_path) -> None:
+    module = load_script_module(GRPC_SMOKE, "grpc_runtime_smoke_for_test")
+    config = module.GrpcRuntimeSmokeConfig(
+        proto_root=module.PROTO_ROOT,
+        gateway_proto=module.GATEWAY_PROTO,
+        descriptor_set=tmp_path / "gateway.pb",
+    )
+
+    def fake_run(command, **_kwargs):
+        if command[0] == "protoc":
+            raise FileNotFoundError("protoc")
+
+        class Result:
+            returncode = 0
+            stderr = ""
+
+        return Result()
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    result = module.compile_descriptor(config)
+
+    assert result["compiled"] is True
+    assert result["compiler"] == "grpc_tools.protoc"
+
+
+def test_grpc_runtime_smoke_reports_descriptor_failure_when_all_compilers_fail(monkeypatch, tmp_path) -> None:
+    module = load_script_module(GRPC_SMOKE, "grpc_runtime_smoke_failure_test")
+    config = module.GrpcRuntimeSmokeConfig(
+        proto_root=module.PROTO_ROOT,
+        gateway_proto=module.GATEWAY_PROTO,
+        descriptor_set=tmp_path / "gateway.pb",
+    )
+
+    def fake_run(command, **_kwargs):
+        class Result:
+            returncode = 2
+            stderr = f"{command[0]} failed"
+
+        return Result()
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    result = module.compile_descriptor(config)
+
+    assert result["compiled"] is False
+    assert result["returnCode"] == 2
+    assert [attempt["name"] for attempt in result["attempts"]] == ["protoc", "grpc_tools.protoc"]
+
+
+def test_grpc_runtime_smoke_main_defaults_to_check(monkeypatch, capsys) -> None:
+    module = load_script_module(GRPC_SMOKE, "grpc_runtime_smoke_main_test")
+    monkeypatch.setattr(sys, "argv", ["grpc_runtime_smoke.py"])
+
+    exit_code = module.main()
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["schemaVersion"] == "grpc-runtime-smoke-v1"
+    assert payload["descriptorFallbackCommand"][:3] == [sys.executable, "-m", "grpc_tools.protoc"]
 
 
 def test_dragonfly_profile_smoke_reports_profile_state_and_equivalence_gate() -> None:

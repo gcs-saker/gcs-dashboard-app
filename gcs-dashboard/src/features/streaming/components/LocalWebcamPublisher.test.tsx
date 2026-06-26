@@ -32,7 +32,7 @@ describe("LocalWebcamPublisher", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("미리보기 준비");
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("미리보기 준비"));
     expect(mediaDevices.getUserMedia).toHaveBeenCalledWith({
       video: true,
       audio: {
@@ -131,7 +131,7 @@ describe("LocalWebcamPublisher", () => {
 
     await screen.findByRole("option", { name: "Rear Camera" });
     fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("미리보기 준비");
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("미리보기 준비"));
 
     fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"));
@@ -225,7 +225,7 @@ describe("LocalWebcamPublisher", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("미리보기 준비");
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("미리보기 준비"));
 
     fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
 
@@ -267,7 +267,7 @@ describe("LocalWebcamPublisher", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("미리보기 준비");
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("미리보기 준비"));
 
     fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
 
@@ -305,7 +305,7 @@ describe("LocalWebcamPublisher", () => {
       );
 
       fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
-      expect(await screen.findByRole("status")).toHaveTextContent("미리보기 준비");
+      await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("미리보기 준비"));
 
       fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
 
@@ -356,7 +356,7 @@ describe("LocalWebcamPublisher", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("미리보기 준비");
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("미리보기 준비"));
 
     fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"));
