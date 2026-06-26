@@ -56,6 +56,9 @@ import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisPrincipalCache
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisRefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisCachePolicy
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisTemplateStringKeyValueStore
+import kr.co.a4ai.gcssaker.authpolicy.observability.AuthPolicyObservation
+import io.micrometer.observation.ObservationRegistry
+import io.micrometer.tracing.Tracer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.boot.web.servlet.FilterRegistrationBean
@@ -186,8 +189,12 @@ class AuthPolicyConfig {
     fun graphQlQueryPolicy(): GraphQlQueryPolicy = GraphQlQueryPolicy()
 
     @Bean
-    fun correlationIdFilterRegistration(): FilterRegistrationBean<CorrelationIdFilter> =
-        FilterRegistrationBean(CorrelationIdFilter()).apply {
+    fun authPolicyObservation(registry: ObservationRegistry): AuthPolicyObservation =
+        AuthPolicyObservation(registry)
+
+    @Bean
+    fun correlationIdFilterRegistration(tracer: ObjectProvider<Tracer>): FilterRegistrationBean<CorrelationIdFilter> =
+        FilterRegistrationBean(CorrelationIdFilter(tracer.getIfAvailable())).apply {
             order = 1
             addUrlPatterns("/*")
         }

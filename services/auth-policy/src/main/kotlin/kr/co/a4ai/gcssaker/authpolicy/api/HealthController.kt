@@ -1,6 +1,8 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
 import kr.co.a4ai.gcssaker.authpolicy.AuthRuntimeSettings
+import kr.co.a4ai.gcssaker.authpolicy.observability.AuthPolicyObservation
+import kr.co.a4ai.gcssaker.authpolicy.observability.AuthPolicyObservationNames
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -26,6 +28,7 @@ class HealthController(
     private val settings: AuthRuntimeSettings? = null,
     private val dataSource: DataSource? = null,
     private val redisTemplate: StringRedisTemplate? = null,
+    private val observation: AuthPolicyObservation? = null,
 ) {
     @GetMapping(HealthApiRoutes.HEALTHZ)
     fun healthz(): HealthReportResponse =
@@ -73,25 +76,37 @@ class HealthController(
             .body(report)
     }
 
-    private fun jdbcCheck(): HealthCheckResponse {
+    private fun jdbcCheck(): HealthCheckResponse =
+        observe(AuthPolicyObservationNames.READINESS_JDBC) {
         val required = settings?.jdbcPersistenceEnabled == true
         val source = dataSource
         if (source == null) {
-            return dependencyCheck(HealthContract.CHECK_JDBC, required, !required, HealthContract.REASON_NOT_CONFIGURED)
+            return@observe dependencyCheck(
+                HealthContract.CHECK_JDBC,
+                required,
+                !required,
+                HealthContract.REASON_NOT_CONFIGURED,
+            )
         }
         val isValid = runCatching {
             source.connection.use { connection ->
                 connection.isValid(HealthContract.DEPENDENCY_VALIDATION_TIMEOUT_SECONDS)
             }
         }.getOrDefault(false)
-        return dependencyCheck(HealthContract.CHECK_JDBC, required, isValid, HealthContract.REASON_CONNECTION_INVALID)
+        dependencyCheck(HealthContract.CHECK_JDBC, required, isValid, HealthContract.REASON_CONNECTION_INVALID)
     }
 
-    private fun redisCheck(): HealthCheckResponse {
+    private fun redisCheck(): HealthCheckResponse =
+        observe(AuthPolicyObservationNames.READINESS_REDIS) {
         val required = settings?.let { it.redisPrincipalCacheEnabled || it.redisRefreshSessionEnabled } == true
         val redis = redisTemplate
         if (redis == null) {
-            return dependencyCheck(HealthContract.CHECK_REDIS, required, !required, HealthContract.REASON_NOT_CONFIGURED)
+            return@observe dependencyCheck(
+                HealthContract.CHECK_REDIS,
+                required,
+                !required,
+                HealthContract.REASON_NOT_CONFIGURED,
+            )
         }
         val isValid = runCatching {
             val connection = redis.connectionFactory?.connection ?: return@runCatching false
@@ -101,8 +116,11 @@ class HealthController(
                 connection.close()
             }
         }.getOrDefault(false)
-        return dependencyCheck(HealthContract.CHECK_REDIS, required, isValid, HealthContract.REASON_PING_FAILED)
+        dependencyCheck(HealthContract.CHECK_REDIS, required, isValid, HealthContract.REASON_PING_FAILED)
     }
+
+    private fun observe(name: String, block: () -> HealthCheckResponse): HealthCheckResponse =
+        observation?.observe(name, block) ?: block()
 
     private fun dependencyCheck(
         name: String,

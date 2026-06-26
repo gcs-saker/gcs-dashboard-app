@@ -51,6 +51,10 @@ Spring Actuator, Micrometer, Prometheus registry를 사용해 auth-policy JVM/ru
 
 운영 Nginx는 `/auth-policy/*` API는 프록시하지만 `/auth-policy/actuator/*`는 `404`로 막는다. Prometheus나 임시 점검 스크립트는 Docker 내부 네트워크에서 `http://auth-policy:8080/actuator/prometheus`를 사용해야 한다.
 
+Micrometer Tracing bridge는 W3C `traceparent`를 이어받아 요청별 trace id를 로그 MDC와 `X-GCS-Trace-Id` 응답 헤더에 남긴다. 기본값은 `AUTH_POLICY_TRACING_SAMPLING_PROBABILITY=1.0`이며, collector가 없는 공개망/폐쇄망 개발 환경에서도 서비스는 정상 실행된다. 폐쇄망에서 collector를 붙일 때는 OpenTelemetry collector를 같은 control-net에 두고, 외부 인터넷 exporter가 아닌 내부 OTLP endpoint를 사용한다.
+
+`/readyz`의 JDBC와 Redis dependency check는 observation으로 감싼다. 따라서 tracing handler/collector가 붙은 환경에서는 인증/정책 서버가 DB와 cache 상태 점검을 어느 구간에서 지연시키는지 같은 trace 흐름에서 확인할 수 있다.
+
 ## 테스트
 
 ```bash

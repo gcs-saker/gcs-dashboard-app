@@ -7,6 +7,8 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.filter.OncePerRequestFilter
+import io.micrometer.tracing.Tracer
+import org.slf4j.MDC
 import java.time.Clock
 import java.time.Duration
 import java.util.UUID
@@ -14,8 +16,15 @@ import java.util.concurrent.ConcurrentHashMap
 
 object RequestTraceContract {
     const val CORRELATION_ID_HEADER = "X-GCS-Correlation-Id"
+    const val TRACE_ID_HEADER = "X-GCS-Trace-Id"
+    const val TRACEPARENT_HEADER = "traceparent"
     const val CORRELATION_ID_ATTRIBUTE = "gcs.correlationId"
+    const val TRACE_ID_ATTRIBUTE = "gcs.traceId"
+    const val MDC_CORRELATION_ID = "correlationId"
+    const val MDC_TRACE_ID = "traceId"
     const val MAX_CORRELATION_ID_LENGTH = 128
+    const val TRACE_ID_LENGTH = 32
+    const val TRACEPARENT_PARTS = 4
 }
 
 object RateLimitContract {
@@ -27,7 +36,9 @@ object RateLimitContract {
     const val SIGNUP_PATH = AuthApiRoutes.ROOT + AuthApiRoutes.SIGNUP
 }
 
-class CorrelationIdFilter : OncePerRequestFilter() {
+class CorrelationIdFilter(
+    private val tracer: Tracer? = null,
+) : OncePerRequestFilter() {
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
@@ -39,8 +50,40 @@ class CorrelationIdFilter : OncePerRequestFilter() {
             ?: UUID.randomUUID().toString()
         request.setAttribute(RequestTraceContract.CORRELATION_ID_ATTRIBUTE, correlationId)
         response.setHeader(RequestTraceContract.CORRELATION_ID_HEADER, correlationId)
-        filterChain.doFilter(request, response)
+        val incomingTraceId = request.traceIdFromTraceParent()
+        val initialTraceId = tracer.currentTraceIdOrNull() ?: incomingTraceId
+        initialTraceId?.let { traceId ->
+            request.setAttribute(RequestTraceContract.TRACE_ID_ATTRIBUTE, traceId)
+            response.setHeader(RequestTraceContract.TRACE_ID_HEADER, traceId)
+        }
+
+        MDC.put(RequestTraceContract.MDC_CORRELATION_ID, correlationId)
+        initialTraceId?.let { MDC.put(RequestTraceContract.MDC_TRACE_ID, it) }
+        try {
+            filterChain.doFilter(request, response)
+        } finally {
+            val finalTraceId = tracer.currentTraceIdOrNull() ?: initialTraceId
+            finalTraceId?.let { traceId ->
+                request.setAttribute(RequestTraceContract.TRACE_ID_ATTRIBUTE, traceId)
+                response.setHeader(RequestTraceContract.TRACE_ID_HEADER, traceId)
+            }
+            MDC.remove(RequestTraceContract.MDC_TRACE_ID)
+            MDC.remove(RequestTraceContract.MDC_CORRELATION_ID)
+        }
     }
+
+    private fun HttpServletRequest.traceIdFromTraceParent(): String? {
+        val traceParent = getHeader(RequestTraceContract.TRACEPARENT_HEADER)?.trim() ?: return null
+        val parts = traceParent.split("-")
+        if (parts.size != RequestTraceContract.TRACEPARENT_PARTS) return null
+        return parts[1]
+            .takeIf { it.length == RequestTraceContract.TRACE_ID_LENGTH }
+            ?.takeIf { value -> value.all { it in '0'..'9' || it in 'a'..'f' } }
+            ?.takeIf { value -> value.any { it != '0' } }
+    }
+
+    private fun Tracer?.currentTraceIdOrNull(): String? =
+        this?.currentSpan()?.context()?.traceId()?.takeIf { it.isNotBlank() }
 }
 
 class RateLimitFilter(

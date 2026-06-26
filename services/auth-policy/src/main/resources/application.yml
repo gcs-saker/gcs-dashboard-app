@@ -21,3 +21,10 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: ${AUTH_POLICY_TRACING_SAMPLING_PROBABILITY:1.0}
+
+logging:
+  pattern:
+    level: "%5p [traceId:%X{traceId:-},correlationId:%X{correlationId:-}]"
