@@ -45,7 +45,7 @@ intents:
         - docs/architecture/GCS-Saker_runtime_stack_status.yml
 
   - id: ARCH-RUNTIME-002
-    title: "profile, contract, prototype은 active로 보고하지 않는다"
+    title: "profile, contract, prototype은 active로 보고하지 않고 승격된 runtime은 증거를 남긴다"
     category: runtime
     severity: p0
     cadence: everyPullRequest
@@ -59,7 +59,7 @@ intents:
     rationale: "기술명이 repo에 있다는 이유만으로 완료 처리하지 않기 위한 정직성 게이트다."
     assertions:
       runtimeStackStatuses:
-        grpcInternalStreaming: prototype
+        grpcInternalStreaming: active
         dragonflyCacheProfile: profile
         webCodecsCanvasPipeline: prototype
         http3EdgeProfile: deferred
@@ -124,10 +124,13 @@ intents:
         - path: backend/modules/messaging/sender.py
           text: "MessageSender"
         - path: scripts/grpc_runtime_smoke.py
-          text: "runtime-partial"
+          text: "runtime-integrated"
+        - path: backend/modules/protocol_v2/gateway_service.py
+          text: "GatewayStreamRequest"
       evidencePaths:
         - backend/tests/test_protobuf_contracts.py
         - backend/tests/test_message_sender_abstraction.py
+        - backend/tests/test_protocol_v2_gateway_service.py
 
   - id: ARCH-MEDIA-001
     title: "영상/음성 media frame은 MQTT, Redis, DB가 아니라 MediaMTX/WebRTC 경로를 탄다"

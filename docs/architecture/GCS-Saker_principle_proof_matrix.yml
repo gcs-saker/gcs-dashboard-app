@@ -281,14 +281,14 @@ principles:
   - id: STACK-MIGRATION-001
     group: stack-migration
     principle: "gRPC, DragonFly, WebCodecs, HTTP/3, AI sidecar는 완료 범위를 명확히 구분하고 PostgreSQL/PostGIS는 primary store로 승격한다."
-    expectedProof: "runtime stack status가 PostgreSQL/PostGIS를 active로 두고, 아직 runtime 미완료 항목은 contract/profile/prototype/deferred로 둔다."
+    expectedProof: "runtime stack status가 PostgreSQL/PostGIS와 내부 gRPC streaming을 active로 두고, 아직 runtime 미완료 항목은 contract/profile/prototype/deferred로 둔다."
     proofState: automated
     severity: p0
     issue: 411
     assertions:
       runtimeStackStatuses:
         postgresPrimaryStore: active
-        grpcInternalStreaming: prototype
+        grpcInternalStreaming: active
         dragonflyCacheProfile: profile
         webCodecsCanvasPipeline: prototype
         http3EdgeProfile: deferred

@@ -71,12 +71,12 @@ def test_active_ingress_routes_are_visible_in_nginx_contract() -> None:
             )
 
 
-def test_incomplete_migration_items_are_not_marked_active() -> None:
+def test_runtime_stack_status_tracks_completed_and_incomplete_migration_items() -> None:
     status = load_yaml(STATUS_FILE)
     stacks = status["stacks"]
 
     assert stacks["postgresPrimaryStore"]["status"] == "active"
-    assert stacks["grpcInternalStreaming"]["status"] == "prototype"
+    assert stacks["grpcInternalStreaming"]["status"] == "active"
     assert stacks["dragonflyCacheProfile"]["status"] == "profile"
     assert stacks["webCodecsCanvasPipeline"]["status"] == "prototype"
     assert stacks["http3EdgeProfile"]["status"] == "deferred"

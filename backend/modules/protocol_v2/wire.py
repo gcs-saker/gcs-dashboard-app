@@ -67,10 +67,14 @@ def decode_message(payload: bytes) -> DecodedWireMessage:
         if wire_type == WireTypes.VARINT:
             value, cursor = decode_varint(payload, cursor)
         elif wire_type == WireTypes.FIXED64:
+            if cursor + 8 > len(payload):
+                raise ValueError("fixed64 field exceeds payload size")
             value = struct.unpack("<d", payload[cursor : cursor + 8])[0]
             cursor += 8
         elif wire_type == WireTypes.LENGTH_DELIMITED:
             length, cursor = decode_varint(payload, cursor)
+            if cursor + length > len(payload):
+                raise ValueError("length-delimited field exceeds payload size")
             raw = payload[cursor : cursor + length]
             cursor += length
             value = bytes(raw)
@@ -83,10 +87,11 @@ def decode_message(payload: bytes) -> DecodedWireMessage:
 def decode_varint(payload: bytes, cursor: int) -> tuple[int, int]:
     shift = 0
     result = 0
-    while True:
+    while cursor < len(payload):
         byte = payload[cursor]
         cursor += 1
         result |= (byte & 0x7F) << shift
         if not byte & 0x80:
             return result, cursor
         shift += 7
+    raise ValueError("unterminated varint")
