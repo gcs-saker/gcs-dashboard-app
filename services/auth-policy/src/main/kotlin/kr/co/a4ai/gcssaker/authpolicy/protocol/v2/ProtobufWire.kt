@@ -13,7 +13,7 @@ data class DecodedWireMessage(
     val fields: Map<Int, List<Any>>,
 ) {
     fun singleString(fieldNumber: Int): String =
-        fields[fieldNumber]?.singleOrNull() as? String
+        (fields[fieldNumber]?.singleOrNull() as? ByteArray)?.toString(Charsets.UTF_8)
             ?: throw IllegalArgumentException("field $fieldNumber must contain exactly one string")
 
     fun singleLong(fieldNumber: Int): Long =
@@ -28,7 +28,13 @@ data class DecodedWireMessage(
             ?: throw IllegalArgumentException("field $fieldNumber must contain exactly one double")
 
     fun strings(fieldNumber: Int): List<String> =
-        fields[fieldNumber].orEmpty().filterIsInstance<String>()
+        fields[fieldNumber].orEmpty().filterIsInstance<ByteArray>().map { it.toString(Charsets.UTF_8) }
+
+    fun singleMessage(fieldNumber: Int): DecodedWireMessage {
+        val payload = fields[fieldNumber]?.singleOrNull() as? ByteArray
+            ?: throw IllegalArgumentException("field $fieldNumber must contain exactly one message")
+        return ProtobufWireDecoder.decode(payload)
+    }
 }
 
 object ProtobufWireDecoder {
@@ -57,7 +63,7 @@ object ProtobufWireDecoder {
                     cursor = length.nextCursor
                     val end = cursor + length.value.toInt()
                     require(end <= payload.size) { "length-delimited field exceeds payload size" }
-                    value = payload.copyOfRange(cursor, end).toString(Charsets.UTF_8)
+                    value = payload.copyOfRange(cursor, end)
                     cursor = end
                 }
                 else -> throw IllegalArgumentException("unsupported wire type: $wireType")

@@ -9,16 +9,24 @@ object TelemetryEnvelopeFields {
     const val GROUP_ID = 3
     const val ASSET_ID = 4
     const val ASSET_KIND = 5
-    const val OBSERVED_UNIX_MILLIS = 6
-    const val RECEIVED_UNIX_MILLIS = 7
-    const val LATITUDE = 8
-    const val LONGITUDE = 9
-    const val ALTITUDE_M = 10
-    const val HEADING_DEG = 11
-    const val SPEED_MPS = 12
-    const val BATTERY_PERCENT = 13
-    const val HEALTH = 14
-    const val ACTIVE_STREAM_ID = 15
+    const val TIME = 6
+    const val POSITION = 7
+    const val HEADING_DEG = 8
+    const val SPEED_MPS = 9
+    const val BATTERY_PERCENT = 10
+    const val HEALTH = 11
+    const val ACTIVE_STREAM_ID = 12
+}
+
+object TimestampedFields {
+    const val OBSERVED_UNIX_MILLIS = 1
+    const val RECEIVED_UNIX_MILLIS = 2
+}
+
+object GeoPointFields {
+    const val LATITUDE = 1
+    const val LONGITUDE = 2
+    const val ALTITUDE_M = 3
 }
 
 data class TelemetryEnvelopePayload(
@@ -59,17 +67,19 @@ data class TelemetryEnvelopePayload(
     companion object {
         fun fromWire(payload: ByteArray): TelemetryEnvelopePayload {
             val decoded = ProtobufWireDecoder.decode(payload)
+            val time = decoded.singleMessage(TelemetryEnvelopeFields.TIME)
+            val position = decoded.singleMessage(TelemetryEnvelopeFields.POSITION)
             return TelemetryEnvelopePayload(
                 eventId = decoded.singleString(TelemetryEnvelopeFields.EVENT_ID),
                 orgId = decoded.singleString(TelemetryEnvelopeFields.ORG_ID),
                 groupId = decoded.singleString(TelemetryEnvelopeFields.GROUP_ID),
                 assetId = decoded.singleString(TelemetryEnvelopeFields.ASSET_ID),
                 assetKind = decoded.singleLong(TelemetryEnvelopeFields.ASSET_KIND),
-                observedUnixMillis = decoded.singleLong(TelemetryEnvelopeFields.OBSERVED_UNIX_MILLIS),
-                receivedUnixMillis = decoded.singleLong(TelemetryEnvelopeFields.RECEIVED_UNIX_MILLIS),
-                latitude = decoded.singleDouble(TelemetryEnvelopeFields.LATITUDE),
-                longitude = decoded.singleDouble(TelemetryEnvelopeFields.LONGITUDE),
-                altitudeM = decoded.singleDouble(TelemetryEnvelopeFields.ALTITUDE_M),
+                observedUnixMillis = time.singleLong(TimestampedFields.OBSERVED_UNIX_MILLIS),
+                receivedUnixMillis = time.singleLong(TimestampedFields.RECEIVED_UNIX_MILLIS),
+                latitude = position.singleDouble(GeoPointFields.LATITUDE),
+                longitude = position.singleDouble(GeoPointFields.LONGITUDE),
+                altitudeM = position.singleDouble(GeoPointFields.ALTITUDE_M),
                 headingDeg = decoded.singleDouble(TelemetryEnvelopeFields.HEADING_DEG),
                 speedMps = decoded.singleDouble(TelemetryEnvelopeFields.SPEED_MPS),
                 batteryPercent = decoded.singleDouble(TelemetryEnvelopeFields.BATTERY_PERCENT),

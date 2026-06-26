@@ -36,6 +36,8 @@ requiredGates:
       - contracts/proto/gcs/saker/v1
       - backend/tests/test_protobuf_contracts.py
       - services/media-control/internal/protocolv2
+      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/protocol/v2
+      - services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/MqttTelemetryConsumerBridgeTest.kt
     missing:
       - "Kotlin/Go/Python generated DTO 또는 명시 mapper 정리"
       - "device/native gateway path에서 실제 protobuf payload smoke"
