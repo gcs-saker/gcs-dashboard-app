@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -12,11 +13,26 @@ import (
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/httpapi"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/mediamtx"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/observability"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/streamcache"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/turn"
 )
 
 func main() {
+	traceShutdown, err := observability.InstallTracing(
+		getenv("MEDIA_CONTROL_TRACE_EXPORTER", observability.TraceExporterNone),
+		getenv("MEDIA_CONTROL_OTEL_SERVICE_NAME", "gcs-saker-media-control"),
+		nil,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = traceShutdown(ctx)
+	}()
+
 	mediaMTXBaseURL := getenv("MEDIAMTX_API_BASE_URL", "http://mediamtx:9997")
 	turnUsername := getenv("TURN_USERNAME", "gcs-turn")
 	turnPassword := getenv("TURN_PASSWORD", "replace-with-secret")

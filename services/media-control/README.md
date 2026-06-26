@@ -61,6 +61,29 @@ Metric naming rule:
 - `gcs_media_control_ice_cache_events_total`: ICE server cache hit/miss/degraded count
 - `gcs_media_control_errors_total`: source/reason 기준 low-cardinality error count
 
+## Trace propagation
+
+media-control은 W3C Trace Context를 사용한다.
+
+```text
+traceparent
+tracestate
+```
+
+기본값은 trace exporter를 켜지 않는 `MEDIA_CONTROL_TRACE_EXPORTER=none`이다. 이 상태에서도 inbound request에 들어온 `traceparent`는 auth-policy와 MediaMTX outbound HTTP request로 전파된다. 개발 또는 장애 분석 중 trace payload를 직접 확인해야 할 때는 `MEDIA_CONTROL_TRACE_EXPORTER=stdout`을 사용한다.
+
+```env
+MEDIA_CONTROL_TRACE_EXPORTER=stdout
+MEDIA_CONTROL_OTEL_SERVICE_NAME=gcs-saker-media-control
+```
+
+추적 대상은 control-plane이다.
+
+- 포함: HTTP handler, auth-policy call, MediaMTX control API call, Redis-backed stream/ICE cache access
+- 제외: WebRTC/HLS media frame, token/password/private endpoint 값
+
+response에는 운영 디버깅을 위해 `X-GCS-Trace-Id`가 포함될 수 있다. 이 값은 인증 정보가 아니며, Spring/Python log 또는 OpenTelemetry trace와 같은 요청을 맞추는 데만 사용한다.
+
 ## Auth-policy 연동
 
 `AUTH_POLICY_BASE_URL`이 설정되면 media-control은 stream list/detail/playback/status 요청마다 `Authorization` header를 Spring/Kotlin auth-policy의 `POST /policy/streams/access`로 전달한다.
