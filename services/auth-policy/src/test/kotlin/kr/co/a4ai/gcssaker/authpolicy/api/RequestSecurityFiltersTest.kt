@@ -1,9 +1,12 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
+import jakarta.servlet.FilterChain
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.slf4j.MDC
 import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -32,6 +35,38 @@ class RequestSecurityFiltersTest {
 
         assertNotNull(response.getHeader(RequestTraceContract.CORRELATION_ID_HEADER))
         assertNotNull(request.getAttribute(RequestTraceContract.CORRELATION_ID_ATTRIBUTE))
+    }
+
+    @Test
+    fun `correlation id filter mirrors incoming traceparent trace id`() {
+        val traceId = "4bf92f3577b34da6a3ce929d0e0e4736"
+        val request = MockHttpServletRequest("GET", "/healthz").apply {
+            addHeader(
+                RequestTraceContract.TRACEPARENT_HEADER,
+                "00-$traceId-00f067aa0ba902b7-01",
+            )
+        }
+        val response = MockHttpServletResponse()
+
+        CorrelationIdFilter().doFilter(request, response, MockFilterChain())
+
+        assertEquals(traceId, response.getHeader(RequestTraceContract.TRACE_ID_HEADER))
+        assertEquals(traceId, request.getAttribute(RequestTraceContract.TRACE_ID_ATTRIBUTE))
+    }
+
+    @Test
+    fun `correlation id filter exposes mdc only during request handling`() {
+        val request = MockHttpServletRequest("GET", "/healthz").apply {
+            addHeader(RequestTraceContract.CORRELATION_ID_HEADER, "corr-001")
+        }
+        val response = MockHttpServletResponse()
+        val chain = FilterChain { _, _ ->
+            assertEquals("corr-001", MDC.get(RequestTraceContract.MDC_CORRELATION_ID))
+        }
+
+        CorrelationIdFilter().doFilter(request, response, chain)
+
+        assertNull(MDC.get(RequestTraceContract.MDC_CORRELATION_ID))
     }
 
     @Test
