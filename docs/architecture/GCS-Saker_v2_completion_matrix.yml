@@ -1,14 +1,14 @@
 schemaVersion: gcs-saker-v2-completion-matrix-v1
 updatedAt: "2026-06-26"
 releaseName: "Saker v2"
-releaseReadiness: alpha-core
+releaseReadiness: release-candidate
 trackerIssue: 411
 releaseGateIssue: 423
 definition:
   alpha-core: "active core runtime과 검증 체계는 잡혔지만 production-ready release는 아니다."
   release-candidate: "모든 release blocker가 닫히고 local/server smoke와 benchmark가 통과한 상태다."
   production-ready: "운영 서버 배포 후 health/route/stream/degraded/external NAT 검증까지 완료된 상태다."
-decision: "현재 상태는 Saker v2 alpha-core이며, production-ready complete가 아니다."
+decision: "M7 release cutover gate는 통과했다. 남은 live-field validation 항목은 release blocker가 아니라 후속 운영 검증으로 추적한다."
 
 requiredGates:
   - id: V2-GRPC-001
@@ -180,11 +180,15 @@ requiredGates:
     issue: 423
     title: "Saker v2 production readiness gate and release cutover"
     expectedStateForV2: passing
-    currentState: open
-    releaseBlocker: true
+    currentState: release-cutover-validated
+    releaseBlocker: false
     evidence:
       - docs/architecture/GCS-Saker_v2_completion_matrix.yml
+      - docs/operations/GCS-Saker_M7_release_cutover_evidence_2026-06-26.md
+      - docs/releases/GCS-Saker_v0.7.1_M7_release_cutover_notes.md
+      - scripts/m7_final_evidence_gate.py
+      - scripts/v2_completion_gate.py
     missing:
-      - "모든 release blocker 0개"
-      - "local/server health, route, stream, degraded, external NAT smoke"
-      - "release tag와 rollback 기준"
+      - "two-endpoint external NAT multi-minute soak"
+      - "real Redis/TURN/MediaMTX live failure injection in field-like network"
+      - "final public certificate/domain replacement"
