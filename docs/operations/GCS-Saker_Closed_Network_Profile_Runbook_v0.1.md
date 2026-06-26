@@ -12,20 +12,33 @@ GCS-Saker는 공개망과 폐쇄망 모두에서 동작해야 한다. 폐쇄망�
 - 지도는 `TacticalLeafletMap`의 offline renderer를 사용하며 공개 tile provider를 호출하지 않는다.
 - dashboard container는 build 단계에서 `npm run build`를 끝내고, runtime은 nginx가 `dist`만 서빙한다.
 
+## network profile 구분
+
+| profile | env template | 사용 조건 | 외부 의존 |
+| --- | --- | --- | --- |
+| public | `deploy/compose/.env.public-ice.example` | public DNS와 외부 접속자가 있는 운영망 | public STUN/DNS 가능 |
+| mixed | `deploy/compose/.env.mixed-network.example` | 관제 서버는 공개망 접근 가능, 현장 장비는 내부망 중심 | 지도/시간은 공개망 가능, 장비 ICE는 내부 STUN/TURN 우선 |
+| closed | `deploy/compose/.env.closed-network.example` | 외부 DNS/HTTP/API가 차단된 폐쇄망 | 외부 의존 금지, 내부 STUN/TURN/time/offline map 사용 |
+
+폐쇄망 납품 기준은 `closed` profile이다. `mixed` profile은 공개망과 폐쇄망 사이의 과도기 환경을 분리하기 위한 것이며, 폐쇄망 검증을 대체하지 않는다.
+
 ## 정적 검증
 
 인터넷을 끊은 상태에서도 아래 검사는 실행되어야 한다.
 
 ```bash
 python3 scripts/closed_network_static_check.py
+docker compose --env-file deploy/compose/.env.closed-network.example -f deploy/compose/compose.single-node.poc.yml config --quiet
 ```
 
 확인 항목:
 
 - active config에 `stun:stun.l.google.com:19302` 기본값이 남아있지 않은지
 - closed-network env profile에 STUN/TURN/time server 값이 있는지
+- closed/mixed/public profile이 명시적으로 분리되어 있는지
 - offline map renderer가 public tile provider 문자열을 포함하지 않는지
 - dashboard Dockerfile이 runtime npm install 없이 nginx로 build artifact를 서빙하는지
+- Docker Compose가 폐쇄망 env profile을 해석할 수 있는지
 
 ## 로컬 폐쇄망 모의 절차
 
@@ -34,9 +47,10 @@ python3 scripts/closed_network_static_check.py
 3. TURN/STUN host를 같은 LAN에서 접근 가능한 IP 또는 VIP로 바꾼다.
 4. 외부 인터넷을 끊거나 firewall에서 외부 DNS/HTTP를 막는다.
 5. `python3 scripts/closed_network_static_check.py`를 실행한다.
-6. Docker image가 이미 준비된 상태에서 compose를 실행한다.
-7. dashboard에서 시간 동기화 모드를 `폐쇄망`으로 설정하고 내부 time server를 점검한다.
-8. 송출 단말이 `/webrtc/raw/local/webcam/whip`으로 송출하고 dashboard에서 WHEP playback을 확인한다.
+6. `docker compose --env-file deploy/compose/.env.closed-network.example -f deploy/compose/compose.single-node.poc.yml config --quiet`를 실행한다.
+7. Docker image가 이미 준비된 상태에서 compose를 실행한다.
+8. dashboard에서 시간 동기화 모드를 `폐쇄망`으로 설정하고 내부 time server를 점검한다.
+9. 송출 단말이 `/webrtc/raw/local/webcam/whip`으로 송출하고 dashboard에서 WHEP playback을 확인한다.
 
 ## M7 offline runtime packaging 전략
 
@@ -59,8 +73,10 @@ M7부터 폐쇄망 profile은 단순 문서가 아니라 배포 전 검증 대�
 필수 환경값은 아래 계약을 따른다. 실제 IP는 예시값을 그대로 쓰지 않고 현장 appliance VIP 또는 내부 DNS로 교체한다.
 
 ```env
+SAKER_NETWORK_PROFILE=closed
 VITE_STREAM_API_BASE_URL=/media-control
 VITE_MAP_PROVIDER=offline
+VITE_STATIC_ASSET_DELIVERY_MODE=offline-bundle
 DASHBOARD_MAP_PROVIDER=offline
 WEBRTC_STUN_URL=stun:10.0.0.10:3478
 WEBRTC_TURN_URL=turn:10.0.0.10:3478?transport=udp
@@ -76,7 +92,7 @@ MEDIA_CONTROL_TURN_MAX_HEALTHY_SERVERS=1
 
 ```bash
 python3 scripts/closed_network_static_check.py
-docker compose --env-file deploy/compose/.env.single-node.example -f deploy/compose/compose.single-node.poc.yml config --quiet
+docker compose --env-file deploy/compose/.env.closed-network.example -f deploy/compose/compose.single-node.poc.yml config --quiet
 ```
 
 첫 번째 명령은 공개 STUN/지도 tile/runtime npm install 의존을 찾는 정적 검사다. 두 번째 명령은 compose 구문과 환경값 주입 계약을 확인한다. 실제 현장 `.env`는 `.env.single-node.example` 또는 `.env.closed-network.example`를 복사해 secret만 별도 보안 채널로 주입한다.
