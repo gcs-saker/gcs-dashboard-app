@@ -17,6 +17,7 @@ GCS-Saker는 milestone 종료 시점마다 tag와 release note를 남긴다. 각
 | `v1.0.0` | M5 | TURN, stability, final delivery |
 | `v0.6.0` | M6 | Mobile/closed-network planning |
 | `v0.7.0` | M7 | Spring/Kotlin auth-policy, Go media-control, single-node active runtime path |
+| `v0.7.1` | M7 | M7 release cutover evidence gate and server verification patch |
 
 Patch version은 같은 milestone 안에서 보안 패치, 장애 수정, 문서 보강, hotfix가 있을 때 사용한다.
 
@@ -114,3 +115,7 @@ M7 release note는 아래 문서에 둔다.
 - `docs/releases/GCS-Saker_v0.7.0_M7_release_notes.md`
 
 M7의 완료 기준은 Python backend 삭제가 아니라 active runtime path가 Spring/Kotlin auth-policy, Go media-control, MediaMTX, coturn, Redis, React/TypeScript dashboard로 통과하는지이다.
+
+M7 release cutover patch note는 아래 문서에 둔다.
+
+- `docs/releases/GCS-Saker_v0.7.1_M7_release_cutover_notes.md`
