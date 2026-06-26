@@ -130,14 +130,16 @@ requiredGates:
     issue: 419
     title: "AI overlay sidecar contract runtime path and WebCodecs scope"
     expectedStateForV2: contract-or-deferred-with-record
-    currentState: contract-prototype
+    currentState: runtime-smoke-contract
     releaseBlocker: false
     evidence:
       - contracts/proto/gcs/saker/v1/ai_overlay.proto
+      - backend/modules/protocol_v2/ai_overlay.py
+      - scripts/ai_overlay_sidecar_smoke.py
       - gcs-dashboard/src/features/streaming/webCodecsPipelinePlan.ts
       - docs/architecture/GCS-Saker_M8_ai_sidecar_overlay_contract.md
     missing:
-      - "AI overlay sidecar runtime smoke"
+      - "separate FastAPI AI sidecar process"
       - "WebCodecs worker/recording pipeline"
     deferReason: "AI overlay와 WebCodecs는 Saker v2 core streaming release의 필수 media path가 아니다."
 
