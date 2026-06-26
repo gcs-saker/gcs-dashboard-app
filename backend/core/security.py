@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 from typing import Annotated, Literal
 
@@ -89,7 +89,7 @@ def create_access_token(
     expires_delta: timedelta | None = None,
 ) -> str:
     auth_settings = settings or AuthSettings.from_env()
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     expire = now + (expires_delta or timedelta(minutes=auth_settings.access_token_expire_minutes))
     payload = {
         "sub": subject,
@@ -109,7 +109,7 @@ def create_refresh_token(
     expires_delta: timedelta | None = None,
 ) -> str:
     auth_settings = settings or AuthSettings.from_env()
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     expire = now + (expires_delta or timedelta(minutes=auth_settings.refresh_token_expire_minutes))
     payload = {
         "sub": subject,
