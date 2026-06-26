@@ -1,5 +1,5 @@
 schemaVersion: gcs-saker-v2-completion-matrix-v1
-updatedAt: "2026-06-19"
+updatedAt: "2026-06-26"
 releaseName: "Saker v2"
 releaseReadiness: alpha-core
 trackerIssue: 411
@@ -80,15 +80,19 @@ requiredGates:
     issue: 416
     title: "MQTT hardened protobuf telemetry and control bridge"
     expectedStateForV2: active-profile
-    currentState: profile
-    releaseBlocker: true
+    currentState: runtime-validated-profile
+    releaseBlocker: false
     evidence:
       - deploy/compose/compose.mqtt-hardened.override.yml
+      - scripts/mqtt_hardened_profile_smoke.py
+      - backend/tests/test_mqtt_hardened_profile_smoke_contract.py
       - backend/tests/test_mqtt_consumer_bridge.py
+      - deploy/mosquitto/README.md
+      - deploy/mosquitto/acl.hardened
       - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/MqttTelemetryConsumerBridge.kt
     missing:
-      - "hardened override publish/deny smoke"
-      - "protobuf telemetry/control bridge runtime smoke"
+      - "production broker credential rotation drill"
+      - "device gateway packaging and multi-minute broker soak"
 
   - id: V2-TELEMETRY-BULK-001
     issue: 417

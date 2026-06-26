@@ -10,6 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 GRPC_SMOKE = REPO_ROOT / "scripts" / "grpc_runtime_smoke.py"
 DRAGONFLY_SMOKE = REPO_ROOT / "scripts" / "dragonfly_profile_smoke.py"
 POSTGIS_SMOKE = REPO_ROOT / "scripts" / "postgis_runtime_smoke.py"
+MQTT_SMOKE = REPO_ROOT / "scripts" / "mqtt_hardened_profile_smoke.py"
 
 
 def run_check(script: Path) -> dict:
@@ -65,3 +66,14 @@ def test_postgis_profile_smoke_reports_runtime_query_contract() -> None:
     assert payload["schemaVersion"] == "postgis-runtime-smoke-v1"
     assert "postgres-geo" in payload["command"]
     assert "EXPLAIN (ANALYZE, BUFFERS)" in payload["sql"]
+
+
+def test_mqtt_hardened_profile_smoke_reports_acl_and_protobuf_runtime_contract() -> None:
+    payload = run_check(MQTT_SMOKE)
+
+    assert payload["schemaVersion"] == "mqtt-hardened-profile-smoke-v1"
+    assert payload["status"] == "hardened-profile-runtime-contract"
+    assert "device telemetry publish reaches backend subscriber" in payload["runtimeChecks"]
+    assert payload["protobufBoundary"]["telemetry"].startswith("protobuf TelemetryEnvelope")
+    assert "dashboard never receives MQTT credentials" in "\n".join(payload["allowedFlows"])
+    assert "Promote hardened MQTT profile only after runtime smoke" in payload["promotionGate"]
