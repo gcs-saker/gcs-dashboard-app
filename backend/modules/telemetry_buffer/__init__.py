@@ -7,6 +7,7 @@ from modules.telemetry_buffer.buffer import (
 from modules.telemetry_buffer.bulk_sql import (
     TelemetryBulkBatch,
     TelemetryBulkPayload,
+    TelemetryBulkWritePlan,
 )
 from modules.telemetry_buffer.sink import (
     BufferedTelemetrySink,
@@ -23,6 +24,7 @@ __all__ = [
     "BufferedTelemetrySink",
     "TelemetryBulkBatch",
     "TelemetryBulkPayload",
+    "TelemetryBulkWritePlan",
     "InMemoryTelemetryWriteBuffer",
     "TelemetryBufferRecord",
     "TelemetryBufferStats",

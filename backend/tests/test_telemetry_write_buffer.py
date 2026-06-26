@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import mysql, postgresql
 
 from model.telemetry_model import TelemetryCreate
 from modules.telemetry_buffer import (
@@ -13,8 +13,11 @@ from modules.telemetry_buffer import (
 )
 from modules.telemetry_buffer.bulk_sql import (
     TelemetryBulkBatch,
+    build_mysql_latest_bulk_upsert,
     build_postgres_history_bulk_insert,
     build_postgres_latest_bulk_upsert,
+    plan_mysql_latest_bulk_write,
+    plan_postgres_bulk_write,
 )
 
 
@@ -211,6 +214,21 @@ def test_postgres_bulk_latest_upsert_uses_conflict_contract() -> None:
     assert compiled.count("INSERT INTO") == 1
 
 
+def test_mysql_bulk_latest_upsert_uses_single_duplicate_key_statement() -> None:
+    records = [
+        TelemetryBufferRecord.create(telemetry("raw.mobile.front", 35.87)),
+        TelemetryBufferRecord.create(telemetry("raw.mobile.rear", 35.88)),
+    ]
+    batch = TelemetryBulkBatch.from_records(records)
+
+    compiled = str(build_mysql_latest_bulk_upsert(batch).compile(dialect=mysql.dialect()))
+
+    assert compiled.startswith("INSERT INTO telemetry_realtime")
+    assert "ON DUPLICATE KEY UPDATE" in compiled
+    assert compiled.count("INSERT INTO") == 1
+    assert "SELECT" not in compiled
+
+
 def test_postgres_history_bulk_insert_keeps_append_only_contract() -> None:
     records = [
         TelemetryBufferRecord.create(telemetry("raw.mobile.front", 35.87)),
@@ -224,3 +242,23 @@ def test_postgres_history_bulk_insert_keeps_append_only_contract() -> None:
     assert "stream_uuid" in compiled
     assert "received_at" in compiled
     assert "ON CONFLICT" not in compiled
+
+
+def test_bulk_write_plan_records_statement_reduction_for_postgres_and_mysql() -> None:
+    records = [
+        TelemetryBufferRecord.create(telemetry("raw.mobile.front", 35.87)),
+        TelemetryBufferRecord.create(telemetry("raw.mobile.rear", 35.88)),
+        TelemetryBufferRecord.create(telemetry("raw.mobile.side", 35.89)),
+    ]
+    batch = TelemetryBulkBatch.from_records(records)
+
+    postgres_plan = plan_postgres_bulk_write(batch)
+    mysql_plan = plan_mysql_latest_bulk_write(batch)
+
+    assert postgres_plan.record_count == 3
+    assert postgres_plan.latest_statement_count == 1
+    assert postgres_plan.history_statement_count == 1
+    assert postgres_plan.total_statement_count == 2
+    assert postgres_plan.avoided_statement_count == 1
+    assert mysql_plan.total_statement_count == 1
+    assert mysql_plan.avoided_statement_count == 2

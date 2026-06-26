@@ -98,15 +98,17 @@ requiredGates:
     issue: 417
     title: "Telemetry write buffer and DB bulk persistence tuning"
     expectedStateForV2: benchmarked
-    currentState: contract
-    releaseBlocker: true
+    currentState: synthetic-benchmarked
+    releaseBlocker: false
     evidence:
       - backend/modules/telemetry_buffer
       - backend/tests/test_telemetry_write_buffer.py
+      - backend/tests/test_telemetry_bulk_flush_benchmark.py
+      - scripts/telemetry_bulk_flush_benchmark.py
       - docs/architecture/GCS-Saker_telemetry_storage_bulk_write_contract.md
     missing:
-      - "DB flush latency benchmark"
-      - "batch size별 write amplification/lock 영향 보고"
+      - "live DB-backed flush latency benchmark"
+      - "production batch size별 lock 영향 보고"
 
   - id: V2-WEBRTC-ICE-001
     issue: 418

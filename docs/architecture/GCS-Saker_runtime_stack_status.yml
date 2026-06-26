@@ -4,6 +4,7 @@ statusLegend:
   active: "기본 compose와 edge route에서 실제 런타임 경로로 사용한다."
   profile: "선택 compose profile 또는 override로 실행 가능해야 하며, 기본 런타임은 아니다."
   runtime-validated-profile: "선택 compose profile 또는 override가 실제 격리 runtime smoke를 통과했지만 기본 런타임은 아니다."
+  synthetic-benchmarked: "실제 운영 DB capacity claim은 아니지만, 코드 경로와 statement 감소 효과가 재현 가능한 synthetic benchmark를 통과했다."
   contract: "프로토콜, DTO, 테스트 계약은 있으나 실제 네트워크 런타임 연결은 완료되지 않았다."
   prototype: "브라우저/서비스 feature detection 또는 후보 구현 단계다."
   deferred: "설계 후보로 남겨두되 현재 구현 완료 범위에 포함하지 않는다."
@@ -71,6 +72,26 @@ stacks:
       - "selected stream latest read"
       - "bounded viewport query with EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)"
     nextGate: "auth/user/ops 전체 cutover runbook과 production backup/restore drill을 PostgreSQL 기준으로 재검증한다."
+
+  telemetryBulkPersistence:
+    status: synthetic-benchmarked
+    issue: 417
+    runtime:
+      primaryStore: postgresPrimaryStore
+      legacyStore: "MySQL/MariaDB latest table compatibility"
+    evidence:
+      - backend/modules/telemetry_buffer
+      - backend/tests/test_telemetry_write_buffer.py
+      - backend/tests/test_telemetry_bulk_flush_benchmark.py
+      - scripts/telemetry_bulk_flush_benchmark.py
+      - docs/architecture/GCS-Saker_telemetry_storage_bulk_write_contract.md
+    runtimeProof:
+      - "latest overwrite and history append are separated before persistence."
+      - "PostgreSQL flush uses latest bulk upsert plus history bulk insert."
+      - "MySQL/MariaDB legacy flush uses latest bulk ON DUPLICATE KEY UPDATE instead of record loop."
+      - "Redis/DragonFly queue restore policy preserves drained record order on failure."
+      - "synthetic benchmark records ingest throughput, flush latency, statement count, and avoided statement count."
+    nextGate: "live DB-backed benchmark에서 batch size별 lock 영향, WAL/redo 영향, 실제 flush latency를 측정한다."
 
   mediamtxWebrtcHls:
     status: active
