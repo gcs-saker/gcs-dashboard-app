@@ -89,6 +89,18 @@ def test_dragonfly_smoke_allows_server_env_without_explicit_dragonfly_image(tmp_
         )
         == module.DEFAULT_DRAGONFLY_IMAGE
     )
+    with module.filtered_env_file(server_like_env) as smoke_env_file:
+        smoke_env = smoke_env_file.read_text(encoding="utf-8")
+    assert "COMPOSE_PROJECT_NAME" not in smoke_env
+    config = module.DragonflyProfileSmokeConfig(
+        compose_file=REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml",
+        override_file=REPO_ROOT / "deploy" / "compose" / "compose.dragonfly.override.yml",
+        env_file=server_like_env,
+        project_prefix="gcs-saker-cache-profile-test",
+    )
+    assert "-v" not in config.down_command("redis", include_override=False)
+    env = module.compose_environment(module.DEFAULT_DRAGONFLY_IMAGE, "gcs-saker-cache-profile-test-redis")
+    assert env["COMPOSE_PROJECT_NAME"] == "gcs-saker-cache-profile-test-redis"
 
 
 def test_dragonfly_completion_matrix_no_longer_blocks_release_but_keeps_profile_not_default() -> None:
