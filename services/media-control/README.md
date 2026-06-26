@@ -42,9 +42,24 @@ M7 runtime smoke와 예전 운영 체크 호환을 위해 `/stream/status`는 `{
 
 ```text
 GET /metrics/runtime
+GET /metrics
 ```
 
 Go 런타임 튜닝(`GOGC`, `GOMEMLIMIT`)이 실제 운영에서 어떤 영향을 주는지 보기 위해 goroutine, heap, GC pause, memory limit 지표를 JSON으로 제공한다. 이 endpoint는 운영망에서는 Nginx 또는 방화벽으로 내부 관리자 접근만 허용한다.
+
+`/metrics`는 Prometheus text format endpoint다. 이 endpoint는 컨테이너 내부 scrape 전용이며 public Nginx entrypoint에서는 `/media-control/metrics`를 404로 차단한다. metric label에는 stream id, device id, token 같은 cardinality/secret 위험 값을 넣지 않는다.
+
+Metric naming rule:
+
+- `gcs_media_control_http_requests_total`: stable route/method/status 기준 HTTP request count
+- `gcs_media_control_http_request_duration_seconds`: stable route/method/status 기준 HTTP latency histogram
+- `gcs_media_control_stream_registry_requests_total`: MediaMTX stream registry 조회 result count
+- `gcs_media_control_stream_registry_duration_seconds`: MediaMTX stream registry 조회 latency histogram
+- `gcs_media_control_ice_server_requests_total`: ICE server list response result count
+- `gcs_media_control_ice_servers_returned`: request당 반환된 healthy ICE server 수
+- `gcs_media_control_stream_cache_events_total`: stream list cache hit/miss/degraded count
+- `gcs_media_control_ice_cache_events_total`: ICE server cache hit/miss/degraded count
+- `gcs_media_control_errors_total`: source/reason 기준 low-cardinality error count
 
 ## Auth-policy 연동
 

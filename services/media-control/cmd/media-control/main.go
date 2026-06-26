@@ -53,11 +53,12 @@ func main() {
 		baseAuthorizer,
 		getenvDuration("MEDIA_CONTROL_AUTHZ_CACHE_TTL_SECONDS", 2*time.Second),
 	)
+	metrics := httpapi.NewMetrics()
 	var streamLister httpapi.StreamLister = mediamtx.NewClient(mediaMTXBaseURL, &http.Client{Timeout: 3 * time.Second})
 	streamCacheTTL := getenvDuration("MEDIA_CONTROL_STREAM_CACHE_TTL_SECONDS", time.Second)
 	redisAddress := getenv("MEDIA_CONTROL_REDIS_ADDR", "")
 	if redisAddress != "" && streamCacheTTL > 0 {
-		streamLister = streamcache.NewCachedStreamLister(
+		streamLister = streamcache.NewCachedStreamListerWithObserver(
 			streamLister,
 			streamcache.NewRedisStringCache(
 				redisAddress,
@@ -68,6 +69,7 @@ func main() {
 			getenv("MEDIA_CONTROL_STREAM_PRESENCE_PREFIX", "gcs-saker:media-control:presence:"),
 			streamCacheTTL,
 			getenvDuration("MEDIA_CONTROL_STREAM_PRESENCE_TTL_SECONDS", 6*time.Second),
+			metrics,
 		)
 	}
 
@@ -78,7 +80,7 @@ func main() {
 	)
 	iceServerCacheTTL := getenvDuration("MEDIA_CONTROL_ICE_SERVER_CACHE_TTL_SECONDS", 10*time.Second)
 	if redisAddress != "" && iceServerCacheTTL > 0 {
-		iceServerProvider = turn.NewCachedIceServerProvider(
+		iceServerProvider = turn.NewCachedIceServerProviderWithObserver(
 			iceServerProvider,
 			streamcache.NewRedisStringCache(
 				redisAddress,
@@ -87,16 +89,18 @@ func main() {
 			),
 			getenv("MEDIA_CONTROL_ICE_SERVER_CACHE_KEY", "gcs-saker:media-control:ice-servers"),
 			iceServerCacheTTL,
+			metrics,
 		)
 	}
 
-	server := httpapi.NewServer(
+	server := httpapi.NewServerWithMetrics(
 		streamLister,
 		iceServerProvider,
 		playback,
 		&authorizer,
 		groupResolver,
 		getenv("MEDIA_CONTROL_PUBLISH_TOKEN", ""),
+		metrics,
 	)
 
 	log.Printf("media-control listening on %s", listenAddress)

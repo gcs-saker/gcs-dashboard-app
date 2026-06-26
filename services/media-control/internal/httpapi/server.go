@@ -10,6 +10,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 )
@@ -17,6 +18,7 @@ import (
 const (
 	routeHealthz                     = "/healthz"
 	routeReadyz                      = "/readyz"
+	routeMetrics                     = "/metrics"
 	routeRuntimeMetrics              = "/metrics/runtime"
 	routeMediaMTXAuth                = "/v1/mediamtx/auth"
 	routeStreams                     = "/v1/streams"
@@ -24,6 +26,7 @@ const (
 	routeLegacyStreamStatus          = "/stream/status"
 	routeDashboardIceServers         = "/api/v1/streams/ice-servers"
 	routeDashboardStreamItemPrefix   = "/api/v1/streams/"
+	routeDashboardStreamItemMetric   = "/api/v1/streams/{streamId}"
 	routeDashboardStreams            = "/api/v1/streams"
 	routeSuffixPlayback              = "playback"
 	routeSuffixPublish               = "publish"
@@ -89,6 +92,7 @@ type Server struct {
 	authorizer   StreamAuthorizer
 	groups       domain.StreamGroupResolver
 	publishToken string
+	metrics      *Metrics
 }
 
 func NewServer(
@@ -99,6 +103,21 @@ func NewServer(
 	groups domain.StreamGroupResolver,
 	publishToken string,
 ) Server {
+	return NewServerWithMetrics(streams, ice, playback, authorizer, groups, publishToken, NewMetrics())
+}
+
+func NewServerWithMetrics(
+	streams StreamLister,
+	ice IceServerProvider,
+	playback domain.PlaybackURLBuilder,
+	authorizer StreamAuthorizer,
+	groups domain.StreamGroupResolver,
+	publishToken string,
+	metrics *Metrics,
+) Server {
+	if metrics == nil {
+		metrics = NewMetrics()
+	}
 	return Server{
 		streams:      streams,
 		ice:          ice,
@@ -106,22 +125,33 @@ func NewServer(
 		authorizer:   authorizer,
 		groups:       groups,
 		publishToken: strings.TrimSpace(publishToken),
+		metrics:      metrics,
 	}
 }
 
 func (s Server) Routes() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc(routeHealthz, s.healthz)
-	mux.HandleFunc(routeReadyz, s.readyz)
-	mux.HandleFunc(routeRuntimeMetrics, s.runtimeMetrics)
-	mux.HandleFunc(routeMediaMTXAuth, s.mediaMTXAuth)
-	mux.HandleFunc(routeStreams, s.streamList)
-	mux.HandleFunc(routeIceServers, s.iceServers)
-	mux.HandleFunc(routeLegacyStreamStatus, s.legacyStreamStatus)
-	mux.HandleFunc(routeDashboardIceServers, s.dashboardIceServers)
-	mux.HandleFunc(routeDashboardStreamItemPrefix, s.dashboardStreamItem)
-	mux.HandleFunc(routeDashboardStreams, s.dashboardStreamList)
+	mux.Handle(routeMetrics, s.metrics.Handler())
+	mux.HandleFunc(routeHealthz, s.instrument(routeHealthz, s.healthz))
+	mux.HandleFunc(routeReadyz, s.instrument(routeReadyz, s.readyz))
+	mux.HandleFunc(routeRuntimeMetrics, s.instrument(routeRuntimeMetrics, s.runtimeMetrics))
+	mux.HandleFunc(routeMediaMTXAuth, s.instrument(routeMediaMTXAuth, s.mediaMTXAuth))
+	mux.HandleFunc(routeStreams, s.instrument(routeStreams, s.streamList))
+	mux.HandleFunc(routeIceServers, s.instrument(routeIceServers, s.iceServers))
+	mux.HandleFunc(routeLegacyStreamStatus, s.instrument(routeLegacyStreamStatus, s.legacyStreamStatus))
+	mux.HandleFunc(routeDashboardIceServers, s.instrument(routeDashboardIceServers, s.dashboardIceServers))
+	mux.HandleFunc(routeDashboardStreamItemPrefix, s.instrument(routeDashboardStreamItemMetric, s.dashboardStreamItem))
+	mux.HandleFunc(routeDashboardStreams, s.instrument(routeDashboardStreams, s.dashboardStreamList))
 	return mux
+}
+
+func (s Server) instrument(route string, handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		recorder := &statusRecordingWriter{ResponseWriter: w, status: http.StatusOK}
+		started := time.Now()
+		handler(recorder, r)
+		s.metrics.ObserveHTTP(route, r.Method, recorder.status, time.Since(started))
+	}
 }
 
 func (s Server) healthz(w http.ResponseWriter, _ *http.Request) {
@@ -170,7 +200,7 @@ func (s Server) runtimeMetrics(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s Server) streamRegistryReadiness(ctx context.Context) readinessCheck {
-	if _, err := s.streams.ListStreams(ctx); err != nil {
+	if _, err := s.listStreams(ctx); err != nil {
 		return readinessCheck{
 			Name:     readyCheckStreamRegistry,
 			Status:   healthStatusError,
@@ -182,7 +212,7 @@ func (s Server) streamRegistryReadiness(ctx context.Context) readinessCheck {
 }
 
 func (s Server) iceServerReadiness() readinessCheck {
-	if len(s.ice.HealthyIceServers()) == 0 {
+	if len(s.healthyIceServers()) == 0 {
 		return readinessCheck{
 			Name:     readyCheckIceServers,
 			Status:   healthStatusError,
@@ -194,7 +224,7 @@ func (s Server) iceServerReadiness() readinessCheck {
 }
 
 func (s Server) streamList(w http.ResponseWriter, r *http.Request) {
-	streams, err := s.streams.ListStreams(r.Context())
+	streams, err := s.listStreams(r.Context())
 	if err != nil {
 		writeJSON(w, http.StatusBadGateway, errorPayload(err.Error()))
 		return
@@ -221,7 +251,7 @@ func (s Server) iceServers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{jsonKeyIceServers: s.ice.HealthyIceServers()})
+	writeJSON(w, http.StatusOK, map[string]any{jsonKeyIceServers: s.healthyIceServers()})
 }
 
 func (s Server) dashboardStreamList(w http.ResponseWriter, r *http.Request) {
@@ -230,7 +260,7 @@ func (s Server) dashboardStreamList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	streams, err := s.streams.ListStreams(r.Context())
+	streams, err := s.listStreams(r.Context())
 	if err != nil {
 		writeJSON(w, http.StatusBadGateway, errorPayload(err.Error()))
 		return
@@ -320,7 +350,7 @@ func (s Server) dashboardIceServers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	servers := s.ice.HealthyIceServers()
+	servers := s.healthyIceServers()
 	payload := make([]iceServerResponse, 0, len(servers))
 	for _, server := range servers {
 		payload = append(payload, iceServerResponse{
@@ -370,7 +400,7 @@ func (s Server) findStream(ctx context.Context, streamID string) (domain.StreamD
 		return domain.StreamDescriptor{}, false, err
 	}
 
-	streams, err := s.streams.ListStreams(ctx)
+	streams, err := s.listStreams(ctx)
 	if err != nil {
 		return domain.StreamDescriptor{}, false, err
 	}
@@ -462,12 +492,28 @@ func (s Server) authorizeDashboardStream(
 func (s Server) writeStreamAccessError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, domain.ErrStreamAuthenticationRequired):
+		s.metrics.ObserveError(metricSourceHTTP, "authentication_required")
 		writeJSON(w, http.StatusUnauthorized, errorPayload(errAuthenticationRequiredMessage))
 	case errors.Is(err, domain.ErrStreamAccessDenied):
+		s.metrics.ObserveError(metricSourceHTTP, "access_denied")
 		writeJSON(w, http.StatusForbidden, errorPayload(errStreamAccessDeniedMessage))
 	default:
+		s.metrics.ObserveError(metricSourceHTTP, metricResultError)
 		writeJSON(w, http.StatusBadGateway, errorPayload(err.Error()))
 	}
+}
+
+func (s Server) listStreams(ctx context.Context) ([]domain.StreamDescriptor, error) {
+	started := time.Now()
+	streams, err := s.streams.ListStreams(ctx)
+	s.metrics.ObserveStreamRegistry(err, time.Since(started))
+	return streams, err
+}
+
+func (s Server) healthyIceServers() []domain.IceServer {
+	servers := s.ice.HealthyIceServers()
+	s.metrics.ObserveIceServers(len(servers))
+	return servers
 }
 
 func streamIDAndSuffix(path string) (string, string, bool) {
@@ -561,6 +607,16 @@ type runtimeMetricsResponse struct {
 	PauseTotalNs     uint64 `json:"pauseTotalNs"`
 	LastGCUnixNano   uint64 `json:"lastGcUnixNano"`
 	MemoryLimitBytes int64  `json:"memoryLimitBytes"`
+}
+
+type statusRecordingWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *statusRecordingWriter) WriteHeader(status int) {
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

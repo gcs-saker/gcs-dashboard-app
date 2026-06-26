@@ -18,12 +18,23 @@ type StringCache interface {
 	Set(ctx context.Context, key string, value string, ttl time.Duration) error
 }
 
+type CacheObserver interface {
+	ObserveIceCache(result string)
+}
+
+const (
+	CacheResultHit      = "hit"
+	CacheResultMiss     = "miss"
+	CacheResultDegraded = "degraded"
+)
+
 type CachedIceServerProvider struct {
 	upstream  IceServerProvider
 	cache     StringCache
 	key       string
 	ttl       time.Duration
 	refreshMu *sync.Mutex
+	observer  CacheObserver
 }
 
 func NewCachedIceServerProvider(
@@ -32,12 +43,23 @@ func NewCachedIceServerProvider(
 	key string,
 	ttl time.Duration,
 ) CachedIceServerProvider {
+	return NewCachedIceServerProviderWithObserver(upstream, cache, key, ttl, nil)
+}
+
+func NewCachedIceServerProviderWithObserver(
+	upstream IceServerProvider,
+	cache StringCache,
+	key string,
+	ttl time.Duration,
+	observer CacheObserver,
+) CachedIceServerProvider {
 	return CachedIceServerProvider{
 		upstream:  upstream,
 		cache:     cache,
 		key:       key,
 		ttl:       ttl,
 		refreshMu: &sync.Mutex{},
+		observer:  observer,
 	}
 }
 
@@ -62,12 +84,19 @@ func (p CachedIceServerProvider) loadCached(ctx context.Context) ([]domain.IceSe
 	}
 	cached, ok, err := p.cache.Get(ctx, p.key)
 	if err != nil || !ok {
+		if err != nil {
+			p.observe(CacheResultDegraded)
+		} else {
+			p.observe(CacheResultMiss)
+		}
 		return nil, false
 	}
 	var servers []domain.IceServer
 	if json.Unmarshal([]byte(cached), &servers) != nil {
+		p.observe(CacheResultDegraded)
 		return nil, false
 	}
+	p.observe(CacheResultHit)
 	return domain.NewIceServerList(servers).Healthy().Values(), true
 }
 
@@ -80,4 +109,10 @@ func (p CachedIceServerProvider) store(ctx context.Context, servers []domain.Ice
 		return
 	}
 	_ = p.cache.Set(ctx, p.key, string(payload), p.ttl)
+}
+
+func (p CachedIceServerProvider) observe(result string) {
+	if p.observer != nil {
+		p.observer.ObserveIceCache(result)
+	}
 }
