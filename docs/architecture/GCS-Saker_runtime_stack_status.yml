@@ -117,7 +117,7 @@ stacks:
       - backend/tests/test_protobuf_contracts.py
       - services/media-control/internal/protocolv2
       - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/protocol/v2
-    nextGate: "Kotlin/Go/Python generated DTO 또는 명시 mapper를 고정하고, 수동 wire codec과 schema drift를 줄인다."
+    nextGate: "descriptor-encoded payload smoke는 추가되었다. 다음은 generated DTO 또는 명시 mapper를 고정하고 device/native gateway runtime smoke를 통과시키는 것이다."
 
   grpcInternalStreaming:
     status: prototype

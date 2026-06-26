@@ -7,6 +7,8 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import kr.co.a4ai.gcssaker.authpolicy.protocol.v2.TelemetryEnvelopeFields
+import kr.co.a4ai.gcssaker.authpolicy.protocol.v2.GeoPointFields
+import kr.co.a4ai.gcssaker.authpolicy.protocol.v2.TimestampedFields
 import kr.co.a4ai.gcssaker.authpolicy.protocol.v2.TelemetryEnvelopePayload
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -91,11 +93,15 @@ class MqttTelemetryConsumerBridgeTest {
         writer.string(TelemetryEnvelopeFields.GROUP_ID, "co-a")
         writer.string(TelemetryEnvelopeFields.ASSET_ID, assetId)
         writer.varint(TelemetryEnvelopeFields.ASSET_KIND, 4)
-        writer.varint(TelemetryEnvelopeFields.OBSERVED_UNIX_MILLIS, 1_781_712_000_000)
-        writer.varint(TelemetryEnvelopeFields.RECEIVED_UNIX_MILLIS, 1_781_712_000_042)
-        writer.double(TelemetryEnvelopeFields.LATITUDE, 35.871435)
-        writer.double(TelemetryEnvelopeFields.LONGITUDE, 128.601445)
-        writer.double(TelemetryEnvelopeFields.ALTITUDE_M, 84.5)
+        writer.message(TelemetryEnvelopeFields.TIME) {
+            varint(TimestampedFields.OBSERVED_UNIX_MILLIS, 1_781_712_000_000)
+            varint(TimestampedFields.RECEIVED_UNIX_MILLIS, 1_781_712_000_042)
+        }
+        writer.message(TelemetryEnvelopeFields.POSITION) {
+            double(GeoPointFields.LATITUDE, 35.871435)
+            double(GeoPointFields.LONGITUDE, 128.601445)
+            double(GeoPointFields.ALTITUDE_M, 84.5)
+        }
         writer.double(TelemetryEnvelopeFields.HEADING_DEG, 7.2)
         writer.double(TelemetryEnvelopeFields.SPEED_MPS, 3.5)
         writer.double(TelemetryEnvelopeFields.BATTERY_PERCENT, 78.0)
@@ -123,6 +129,13 @@ private class ProtoWriter {
     fun double(fieldNumber: Int, value: Double) {
         writeVarint(((fieldNumber shl 3) or 1).toLong())
         ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN).putDouble(value).array().forEach { bytes.add(it) }
+    }
+
+    fun message(fieldNumber: Int, build: ProtoWriter.() -> Unit) {
+        val nested = ProtoWriter().apply(build).toByteArray()
+        writeVarint(((fieldNumber shl 3) or 2).toLong())
+        writeVarint(nested.size.toLong())
+        nested.forEach { bytes.add(it) }
     }
 
     fun toByteArray(): ByteArray = bytes.toByteArray()

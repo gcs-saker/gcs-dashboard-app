@@ -52,7 +52,7 @@ func DecodeWireMessage(payload []byte) (WireMessage, error) {
 			if end > len(payload) {
 				return WireMessage{}, fmt.Errorf("length-delimited field exceeds payload size")
 			}
-			value = string(payload[cursor:end])
+			value = append([]byte(nil), payload[cursor:end]...)
 			cursor = end
 		default:
 			return WireMessage{}, fmt.Errorf("unsupported wire type: %d", wireType)
@@ -68,10 +68,14 @@ func (m WireMessage) SingleString(fieldNumber int) (string, error) {
 		return "", fmt.Errorf("field %d must contain exactly one string", fieldNumber)
 	}
 	value, ok := values[0].(string)
+	if ok {
+		return value, nil
+	}
+	raw, ok := values[0].([]byte)
 	if !ok {
 		return "", fmt.Errorf("field %d must contain a string", fieldNumber)
 	}
-	return value, nil
+	return string(raw), nil
 }
 
 func (m WireMessage) SingleUint64(fieldNumber int) (uint64, error) {

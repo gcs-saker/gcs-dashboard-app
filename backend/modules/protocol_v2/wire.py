@@ -16,7 +16,14 @@ class DecodedWireMessage:
     fields: dict[int, list[Any]]
 
     def strings(self, field_number: int) -> list[str]:
-        return [value for value in self.fields.get(field_number, []) if isinstance(value, str)]
+        values: list[str] = []
+        for value in self.fields.get(field_number, []):
+            if isinstance(value, bytes):
+                values.append(value.decode("utf-8"))
+        return values
+
+    def bytes_values(self, field_number: int) -> list[bytes]:
+        return [value for value in self.fields.get(field_number, []) if isinstance(value, bytes)]
 
 
 def encode_string(payload: bytearray, field_number: int, value: str) -> None:
@@ -66,7 +73,7 @@ def decode_message(payload: bytes) -> DecodedWireMessage:
             length, cursor = decode_varint(payload, cursor)
             raw = payload[cursor : cursor + length]
             cursor += length
-            value = raw.decode("utf-8")
+            value = bytes(raw)
         else:
             raise ValueError(f"unsupported wire type: {wire_type}")
         decoded.setdefault(field_number, []).append(value)

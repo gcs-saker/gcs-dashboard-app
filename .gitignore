@@ -40,6 +40,7 @@ coverage.out
 docs/operations/server-baseline-results/
 
 # Local runtime data
+tmp/
 docker-data/
 volumes/
 mysql-data/

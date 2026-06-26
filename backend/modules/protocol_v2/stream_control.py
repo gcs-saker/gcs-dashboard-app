@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from time import time
 from uuid import uuid4
 
-from modules.protocol_v2.wire import DecodedWireMessage, decode_message, encode_string, encode_varint_field
+from modules.protocol_v2.wire import DecodedWireMessage, decode_message, encode_bytes, encode_string, encode_varint_field
 
 
 class StreamCommandFields:
@@ -12,7 +12,13 @@ class StreamCommandFields:
     STREAM_ID = 2
     TARGET_ASSET_ID = 3
     COMMAND_TYPE = 4
-    OBSERVED_UNIX_MILLIS = 6
+    PAYLOAD = 5
+    TIME = 6
+
+
+class TimestampedFields:
+    OBSERVED_UNIX_MILLIS = 1
+    RECEIVED_UNIX_MILLIS = 2
 
 
 @dataclass(frozen=True)
@@ -22,6 +28,7 @@ class StreamCommandPayload:
     target_asset_id: str
     command_type: str
     observed_unix_millis: int
+    payload: bytes = b""
 
     @classmethod
     def create(
@@ -46,18 +53,22 @@ class StreamCommandPayload:
         encode_string(payload, StreamCommandFields.STREAM_ID, self.stream_id)
         encode_string(payload, StreamCommandFields.TARGET_ASSET_ID, self.target_asset_id)
         encode_string(payload, StreamCommandFields.COMMAND_TYPE, self.command_type)
-        encode_varint_field(payload, StreamCommandFields.OBSERVED_UNIX_MILLIS, self.observed_unix_millis)
+        if self.payload:
+            encode_bytes(payload, StreamCommandFields.PAYLOAD, self.payload)
+        encode_bytes(payload, StreamCommandFields.TIME, timestamped_wire(self.observed_unix_millis, self.observed_unix_millis))
         return bytes(payload)
 
     @classmethod
     def from_protobuf_wire(cls, payload: bytes) -> "StreamCommandPayload":
         decoded = decode_message(payload)
+        time_message = single_message(decoded, StreamCommandFields.TIME)
         return cls(
             command_id=single_string(decoded, StreamCommandFields.COMMAND_ID),
             stream_id=single_string(decoded, StreamCommandFields.STREAM_ID),
             target_asset_id=single_string(decoded, StreamCommandFields.TARGET_ASSET_ID),
             command_type=single_string(decoded, StreamCommandFields.COMMAND_TYPE),
-            observed_unix_millis=single_int(decoded, StreamCommandFields.OBSERVED_UNIX_MILLIS),
+            observed_unix_millis=single_int(time_message, TimestampedFields.OBSERVED_UNIX_MILLIS),
+            payload=single_optional_bytes(decoded, StreamCommandFields.PAYLOAD),
         )
 
 
@@ -73,3 +84,26 @@ def single_int(decoded: DecodedWireMessage, field_number: int) -> int:
     if len(values) != 1 or not isinstance(values[0], int):
         raise ValueError(f"field {field_number} must contain exactly one integer")
     return values[0]
+
+
+def single_message(decoded: DecodedWireMessage, field_number: int) -> DecodedWireMessage:
+    values = decoded.bytes_values(field_number)
+    if len(values) != 1:
+        raise ValueError(f"field {field_number} must contain exactly one message")
+    return decode_message(values[0])
+
+
+def single_optional_bytes(decoded: DecodedWireMessage, field_number: int) -> bytes:
+    values = decoded.bytes_values(field_number)
+    if not values:
+        return b""
+    if len(values) != 1:
+        raise ValueError(f"field {field_number} must contain at most one bytes value")
+    return values[0]
+
+
+def timestamped_wire(observed_unix_millis: int, received_unix_millis: int) -> bytes:
+    payload = bytearray()
+    encode_varint_field(payload, TimestampedFields.OBSERVED_UNIX_MILLIS, observed_unix_millis)
+    encode_varint_field(payload, TimestampedFields.RECEIVED_UNIX_MILLIS, received_unix_millis)
+    return bytes(payload)
