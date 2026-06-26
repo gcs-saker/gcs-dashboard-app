@@ -146,3 +146,13 @@ scripts/m7_performance_benchmark_matrix.py \
 - API/HLS metric은 p50/p95/max/errors를 가진다.
 - WebRTC media 수치는 `m7_publish_play_smoke.sh --run` 또는 browser first-frame smoke 결과와 함께 보고한다.
 - Docker daemon, 포트, 권한 문제로 live run이 실패하면 실패 지점과 재실행 조건을 남긴다.
+
+## M7 final evidence gate
+
+#421의 단일 재현 명령은 아래와 같다.
+
+```bash
+python3 scripts/m7_final_evidence_gate.py --run --timeout-seconds 120
+```
+
+이 명령은 benchmark schema, telemetry bulk synthetic benchmark, WebRTC ICE static contract, gRPC descriptor smoke, AI overlay metadata smoke, MQTT hardened profile check, closed-network static check, 기본/폐쇄망 compose config를 같은 JSON 결과로 묶는다.
