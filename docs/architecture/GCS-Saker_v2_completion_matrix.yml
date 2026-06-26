@@ -51,16 +51,15 @@ requiredGates:
     issue: 414
     title: "PostgreSQL PostGIS geo profile runtime integration"
     expectedStateForV2: profile-validated-or-deferred-with-record
-    currentState: profile
-    releaseBlocker: true
+    currentState: runtime-validated
+    releaseBlocker: false
     evidence:
       - deploy/postgres/init/001_geo_telemetry.sql
       - scripts/postgis_runtime_smoke.py
       - backend/tests/test_postgis_schema_contract.py
     missing:
-      - "geo profile container runtime smoke"
-      - "latest/history upsert"
-      - "spatial viewport explain 결과"
+      - "auth/user/ops full PostgreSQL migration cutover runbook"
+      - "production backup/restore drill"
 
   - id: V2-DRAGONFLY-001
     issue: 415
