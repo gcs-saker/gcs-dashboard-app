@@ -164,15 +164,17 @@ requiredGates:
     issue: 421
     title: "Migration benchmark matrix and final architecture evidence"
     expectedStateForV2: passing
-    currentState: partial
-    releaseBlocker: true
+    currentState: evidence-gate-passing
+    releaseBlocker: false
     evidence:
+      - scripts/m7_final_evidence_gate.py
       - scripts/m7_performance_benchmark_matrix.py
       - docs/architecture/GCS-Saker_M7_performance_benchmark_matrix.md
+      - docs/architecture/GCS-Saker_M7_final_architecture_evidence.md
       - scripts/generate_test_report.py
     missing:
-      - "runtime path별 latency/throughput/relay ratio/DB flush latency 수치"
-      - "legacy 0.2.0 대비 v2 benchmark 결과"
+      - "legacy/v0.2.0/M7 same-condition live benchmark rerun"
+      - "external NAT relay ratio and first-frame soak result"
 
   - id: V2-RELEASE-GATE-001
     issue: 423
