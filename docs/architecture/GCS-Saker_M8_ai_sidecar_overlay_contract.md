@@ -44,7 +44,25 @@ sequenceDiagram
 
 ## 후속 구현
 
+## M7 mock runtime smoke
+
+M7에서는 실제 AI model server를 띄우지 않고, mock sidecar path가 media path와 분리되어 있는지만 검증한다.
+
+```bash
+python3 scripts/ai_overlay_sidecar_smoke.py --run
+```
+
+이 smoke는 다음을 확인한다.
+
+- mock AI detection response가 dashboard JSON DTO 형태를 유지한다.
+- dashboard detection이 내부 `AiOverlayEvent` protobuf metadata event로 변환된다.
+- `AiOverlayEvent` protobuf가 다시 dashboard JSON DTO로 복원된다.
+- AI sidecar path는 media frame, video chunk, audio bytes를 운반하지 않는다.
+- stream id가 다른 overlay event는 dashboard response로 섞이지 않는다.
+
+## 후속 구현
+
 1. FastAPI sidecar를 backend process에서 분리한다.
-2. overlay event를 `AiOverlayEvent` protobuf로 내부 broker에 publish하는 adapter를 추가한다.
+2. `AiOverlayEvent` protobuf를 내부 broker에 publish하는 adapter를 추가한다.
 3. dashboard Canvas overlay에서 detection DTO와 `AiOverlayEvent` 변환 결과를 같은 renderer로 그린다.
 4. AI sidecar down integration test와 overlay fallback UI를 추가한다.

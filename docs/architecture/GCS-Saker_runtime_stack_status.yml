@@ -251,5 +251,15 @@ stacks:
     issue: 419
     evidence:
       - contracts/proto/gcs/saker/v1/ai_overlay.proto
+      - backend/modules/protocol_v2/ai_overlay.py
+      - backend/tests/test_ai_overlay_protocol.py
+      - backend/tests/test_ai_overlay_sidecar_smoke.py
+      - scripts/ai_overlay_sidecar_smoke.py
       - docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md
-    nextGate: "FastAPI sidecar는 media path를 중계하지 않고 overlay metadata만 반환하는 smoke를 추가한다."
+      - docs/architecture/GCS-Saker_M8_ai_sidecar_overlay_contract.md
+    runtimeProof:
+      - "mock AI detection response가 AiOverlayEvent protobuf metadata로 변환된다."
+      - "AiOverlayEvent protobuf metadata가 dashboard JSON DTO로 복원된다."
+      - "AI sidecar path는 media frame, video chunk, audio bytes를 운반하지 않는다."
+      - "stream id가 다른 overlay event는 dashboard delivery에서 거부된다."
+    nextGate: "FastAPI sidecar process 분리, broker publish adapter, dashboard Canvas overlay renderer를 추가한다."
