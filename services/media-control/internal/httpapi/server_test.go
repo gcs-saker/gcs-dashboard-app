@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 type fakeStreams struct {
@@ -57,6 +59,24 @@ func TestHealthz(t *testing.T) {
 
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", recorder.Code)
+	}
+}
+
+func TestHTTPHandlerExtractsTraceParentAndReturnsTraceID(t *testing.T) {
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	traceID := "4bf92f3577b34da6a3ce929d0e0e4736"
+	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	request.Header.Set("traceparent", "00-"+traceID+"-00f067aa0ba902b7-01")
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", recorder.Code)
+	}
+	if recorder.Header().Get("X-GCS-Trace-Id") != traceID {
+		t.Fatalf("expected response trace id %s, got %q", traceID, recorder.Header().Get("X-GCS-Trace-Id"))
 	}
 }
 

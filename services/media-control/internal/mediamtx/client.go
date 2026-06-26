@@ -9,7 +9,10 @@ import (
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/observability"
 )
+
+const traceOperationListStreams = "media-control.mediamtx.list-streams"
 
 type Client struct {
 	baseURL    string
@@ -22,7 +25,7 @@ func NewClient(baseURL string, httpClient *http.Client) Client {
 	}
 	return Client{
 		baseURL:    strings.TrimRight(baseURL, "/"),
-		httpClient: httpClient,
+		httpClient: observability.InstrumentHTTPClient(httpClient, traceOperationListStreams),
 	}
 }
 

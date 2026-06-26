@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/observability"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 const (
@@ -36,6 +38,7 @@ const (
 	contentTypeHeader                = "Content-Type"
 	jsonContentType                  = "application/json"
 	authorizationHeader              = "Authorization"
+	traceIDHeader                    = "X-GCS-Trace-Id"
 	deprecationHeader                = "Deprecation"
 	jsonKeyDetail                    = "detail"
 	jsonKeyDeprecated                = "deprecated"
@@ -132,22 +135,39 @@ func NewServerWithMetrics(
 func (s Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle(routeMetrics, s.metrics.Handler())
-	mux.HandleFunc(routeHealthz, s.instrument(routeHealthz, s.healthz))
-	mux.HandleFunc(routeReadyz, s.instrument(routeReadyz, s.readyz))
-	mux.HandleFunc(routeRuntimeMetrics, s.instrument(routeRuntimeMetrics, s.runtimeMetrics))
-	mux.HandleFunc(routeMediaMTXAuth, s.instrument(routeMediaMTXAuth, s.mediaMTXAuth))
-	mux.HandleFunc(routeStreams, s.instrument(routeStreams, s.streamList))
-	mux.HandleFunc(routeIceServers, s.instrument(routeIceServers, s.iceServers))
-	mux.HandleFunc(routeLegacyStreamStatus, s.instrument(routeLegacyStreamStatus, s.legacyStreamStatus))
-	mux.HandleFunc(routeDashboardIceServers, s.instrument(routeDashboardIceServers, s.dashboardIceServers))
-	mux.HandleFunc(routeDashboardStreamItemPrefix, s.instrument(routeDashboardStreamItemMetric, s.dashboardStreamItem))
-	mux.HandleFunc(routeDashboardStreams, s.instrument(routeDashboardStreams, s.dashboardStreamList))
+	s.handle(mux, routeHealthz, s.healthz)
+	s.handle(mux, routeReadyz, s.readyz)
+	s.handle(mux, routeRuntimeMetrics, s.runtimeMetrics)
+	s.handle(mux, routeMediaMTXAuth, s.mediaMTXAuth)
+	s.handle(mux, routeStreams, s.streamList)
+	s.handle(mux, routeIceServers, s.iceServers)
+	s.handle(mux, routeLegacyStreamStatus, s.legacyStreamStatus)
+	s.handle(mux, routeDashboardIceServers, s.dashboardIceServers)
+	s.handle(mux, routeDashboardStreamItemPrefix, s.dashboardStreamItem)
+	s.handle(mux, routeDashboardStreams, s.dashboardStreamList)
 	return mux
+}
+
+func (s Server) handle(mux *http.ServeMux, route string, handler http.HandlerFunc) {
+	metricRoute := route
+	if route == routeDashboardStreamItemPrefix {
+		metricRoute = routeDashboardStreamItemMetric
+	}
+	mux.Handle(
+		route,
+		otelhttp.NewHandler(
+			http.HandlerFunc(s.instrument(metricRoute, handler)),
+			metricRoute,
+		),
+	)
 }
 
 func (s Server) instrument(route string, handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		recorder := &statusRecordingWriter{ResponseWriter: w, status: http.StatusOK}
+		if traceID := observability.TraceIDFromContext(r.Context()); traceID != "" {
+			recorder.Header().Set(traceIDHeader, traceID)
+		}
 		started := time.Now()
 		handler(recorder, r)
 		s.metrics.ObserveHTTP(route, r.Method, recorder.status, time.Since(started))

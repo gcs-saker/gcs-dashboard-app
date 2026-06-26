@@ -10,11 +10,13 @@ import (
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/observability"
 )
 
 const (
-	AuthModeRequired = "required"
-	AuthModeAllowAll = "allow-all"
+	AuthModeRequired              = "required"
+	AuthModeAllowAll              = "allow-all"
+	traceOperationAuthorizeStream = "media-control.auth-policy.authorize-stream"
 )
 
 type Client struct {
@@ -47,7 +49,7 @@ func NewClient(baseURL string, httpClient *http.Client) Client {
 	}
 	return Client{
 		baseURL:    strings.TrimRight(strings.TrimSpace(baseURL), "/"),
-		httpClient: httpClient,
+		httpClient: observability.InstrumentHTTPClient(httpClient, traceOperationAuthorizeStream),
 	}
 }
 

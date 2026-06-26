@@ -4,7 +4,13 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func TestListStreamsMapsMediaMTXPaths(t *testing.T) {
@@ -39,5 +45,34 @@ func TestListStreamsReturnsStatusError(t *testing.T) {
 	_, err := client.ListStreams(context.Background())
 	if err == nil {
 		t.Fatal("expected mediamtx status error")
+	}
+}
+
+func TestListStreamsPropagatesTraceParentToMediaMTX(t *testing.T) {
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+	t.Cleanup(func() {
+		_ = tp.Shutdown(context.Background())
+		otel.SetTracerProvider(noop.NewTracerProvider())
+	})
+
+	var observedTraceParent string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		observedTraceParent = r.Header.Get("traceparent")
+		_, _ = w.Write([]byte(`{"items":[]}`))
+	}))
+	defer server.Close()
+
+	ctx, span := otel.Tracer("test").Start(context.Background(), "incoming-request")
+	defer span.End()
+	client := NewClient(server.URL, server.Client())
+	if _, err := client.ListStreams(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	traceID := span.SpanContext().TraceID().String()
+	if observedTraceParent == "" || !strings.Contains(observedTraceParent, traceID) {
+		t.Fatalf("expected outbound traceparent to contain trace id %s, got %q", traceID, observedTraceParent)
 	}
 }

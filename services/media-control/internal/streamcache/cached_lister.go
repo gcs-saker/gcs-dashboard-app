@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type StreamLister interface {
@@ -26,7 +29,10 @@ const (
 	CacheResultHit      = "hit"
 	CacheResultMiss     = "miss"
 	CacheResultDegraded = "degraded"
+	traceCacheName      = "stream_list"
 )
+
+var tracer = otel.Tracer("gcs-saker/media-control/streamcache")
 
 type CachedStreamLister struct {
 	upstream       StreamLister
@@ -92,20 +98,29 @@ func (l CachedStreamLister) ListStreams(ctx context.Context) ([]domain.StreamDes
 
 func (l CachedStreamLister) loadCached(ctx context.Context) ([]domain.StreamDescriptor, bool) {
 	if l.cache != nil && l.listTTL > 0 && l.listKey != "" {
+		ctx, span := tracer.Start(ctx, "streamcache.get")
+		defer span.End()
+		span.SetAttributes(attribute.String("cache.name", traceCacheName))
 		cached, ok, err := l.cache.Get(ctx, l.listKey)
 		if err != nil {
+			span.SetStatus(codes.Error, "cache degraded")
+			span.SetAttributes(attribute.String("cache.result", CacheResultDegraded))
 			l.observe(CacheResultDegraded)
 			return nil, false
 		}
 		if ok {
 			var streams []domain.StreamDescriptor
 			if json.Unmarshal([]byte(cached), &streams) == nil {
+				span.SetAttributes(attribute.String("cache.result", CacheResultHit))
 				l.observe(CacheResultHit)
 				return domain.NewStreamList(streams).Values(), true
 			}
+			span.SetStatus(codes.Error, "cache payload decode failed")
+			span.SetAttributes(attribute.String("cache.result", CacheResultDegraded))
 			l.observe(CacheResultDegraded)
 			return nil, false
 		}
+		span.SetAttributes(attribute.String("cache.result", CacheResultMiss))
 		l.observe(CacheResultMiss)
 	}
 	return nil, false
@@ -116,9 +131,16 @@ func (l CachedStreamLister) store(ctx context.Context, streams domain.StreamList
 		return
 	}
 	if l.listTTL > 0 && l.listKey != "" {
+		ctx, span := tracer.Start(ctx, "streamcache.set")
+		span.SetAttributes(attribute.String("cache.name", traceCacheName))
 		if payload, err := json.Marshal(streams.Values()); err == nil {
-			_ = l.cache.Set(ctx, l.listKey, string(payload), l.listTTL)
+			if err := l.cache.Set(ctx, l.listKey, string(payload), l.listTTL); err != nil {
+				span.SetStatus(codes.Error, "cache set failed")
+			}
+		} else {
+			span.SetStatus(codes.Error, "cache payload encode failed")
 		}
+		span.End()
 	}
 	if l.presenceTTL <= 0 || l.presencePrefix == "" {
 		return
