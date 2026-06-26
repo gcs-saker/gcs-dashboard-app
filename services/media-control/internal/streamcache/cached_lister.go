@@ -18,6 +18,16 @@ type StringCache interface {
 	Set(ctx context.Context, key string, value string, ttl time.Duration) error
 }
 
+type Observer interface {
+	ObserveStreamCache(result string)
+}
+
+const (
+	CacheResultHit      = "hit"
+	CacheResultMiss     = "miss"
+	CacheResultDegraded = "degraded"
+)
+
 type CachedStreamLister struct {
 	upstream       StreamLister
 	cache          StringCache
@@ -26,6 +36,7 @@ type CachedStreamLister struct {
 	listTTL        time.Duration
 	presenceTTL    time.Duration
 	refreshMu      *sync.Mutex
+	observer       Observer
 }
 
 func NewCachedStreamLister(
@@ -36,6 +47,18 @@ func NewCachedStreamLister(
 	listTTL time.Duration,
 	presenceTTL time.Duration,
 ) CachedStreamLister {
+	return NewCachedStreamListerWithObserver(upstream, cache, listKey, presencePrefix, listTTL, presenceTTL, nil)
+}
+
+func NewCachedStreamListerWithObserver(
+	upstream StreamLister,
+	cache StringCache,
+	listKey string,
+	presencePrefix string,
+	listTTL time.Duration,
+	presenceTTL time.Duration,
+	observer Observer,
+) CachedStreamLister {
 	return CachedStreamLister{
 		upstream:       upstream,
 		cache:          cache,
@@ -44,6 +67,7 @@ func NewCachedStreamLister(
 		listTTL:        listTTL,
 		presenceTTL:    presenceTTL,
 		refreshMu:      &sync.Mutex{},
+		observer:       observer,
 	}
 }
 
@@ -68,12 +92,21 @@ func (l CachedStreamLister) ListStreams(ctx context.Context) ([]domain.StreamDes
 
 func (l CachedStreamLister) loadCached(ctx context.Context) ([]domain.StreamDescriptor, bool) {
 	if l.cache != nil && l.listTTL > 0 && l.listKey != "" {
-		if cached, ok, err := l.cache.Get(ctx, l.listKey); err == nil && ok {
+		cached, ok, err := l.cache.Get(ctx, l.listKey)
+		if err != nil {
+			l.observe(CacheResultDegraded)
+			return nil, false
+		}
+		if ok {
 			var streams []domain.StreamDescriptor
 			if json.Unmarshal([]byte(cached), &streams) == nil {
+				l.observe(CacheResultHit)
 				return domain.NewStreamList(streams).Values(), true
 			}
+			l.observe(CacheResultDegraded)
+			return nil, false
 		}
+		l.observe(CacheResultMiss)
 	}
 	return nil, false
 }
@@ -96,4 +129,10 @@ func (l CachedStreamLister) store(ctx context.Context, streams domain.StreamList
 		}
 		_ = l.cache.Set(ctx, l.presencePrefix+string(stream.Path), string(stream.Status), l.presenceTTL)
 	})
+}
+
+func (l CachedStreamLister) observe(result string) {
+	if l.observer != nil {
+		l.observer.ObserveStreamCache(result)
+	}
 }
