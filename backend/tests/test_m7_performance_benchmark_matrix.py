@@ -1,4 +1,5 @@
 import json
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
@@ -7,6 +8,16 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "m7_performance_benchmark_matrix.py"
 DOC = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_M7_performance_benchmark_matrix.md"
+
+
+def load_benchmark_module():
+    spec = importlib.util.spec_from_file_location("m7_performance_benchmark_matrix", SCRIPT)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_m7_performance_benchmark_check_prints_stable_schema() -> None:
@@ -38,6 +49,33 @@ def test_m7_performance_benchmark_check_prints_stable_schema() -> None:
         "first_video_frame_latency_ms",
     ]:
         assert metric in payload["mediaSmokeMetrics"]
+    for metric in [
+        "selected_local_candidate_type",
+        "selected_remote_candidate_type",
+        "selected_ice_protocol",
+        "ice_rtt_ms",
+        "direct_ratio",
+        "relay_ratio",
+        "relay_fallback_reason",
+    ]:
+        assert metric in payload["icePathMetrics"]
+
+
+def test_m7_performance_benchmark_build_check_report_exposes_ice_path_contract() -> None:
+    module = load_benchmark_module()
+
+    payload = module.build_check_report()
+
+    assert payload["schemaVersion"] == "m7-performance-benchmark-v1"
+    assert payload["icePathMetrics"] == [
+        "selected_local_candidate_type",
+        "selected_remote_candidate_type",
+        "selected_ice_protocol",
+        "ice_rtt_ms",
+        "direct_ratio",
+        "relay_ratio",
+        "relay_fallback_reason",
+    ]
 
 
 def test_m7_performance_benchmark_document_explains_comparison_contract() -> None:
@@ -51,6 +89,8 @@ def test_m7_performance_benchmark_document_explains_comparison_contract() -> Non
         "p95",
         "whep_answer_latency_ms",
         "first_video_frame_latency_ms",
+        "selected_local_candidate_type",
+        "relay_fallback_reason",
         "stun-direct",
         "turn-relay",
         "ops_event_metrics",

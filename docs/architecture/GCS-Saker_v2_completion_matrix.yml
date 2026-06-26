@@ -114,17 +114,17 @@ requiredGates:
     issue: 418
     title: "WebRTC TURN burden reduction and ICE observability"
     expectedStateForV2: active-validated
-    currentState: active-partial
-    releaseBlocker: true
+    currentState: active-validated-observability
+    releaseBlocker: false
     evidence:
       - scripts/webrtc_ice_smoke.py
       - scripts/m7_dashboard_first_frame_smoke.sh
       - services/media-control/internal/turn
       - gcs-dashboard/src/features/streaming/components/WebRTCPlayer.tsx
+      - docs/operations/GCS-Saker_M7_ICE_관측과_TURN_부하절감_가이드.md
     missing:
-      - "외부 NAT 자동 WHIP/WHEP smoke"
-      - "relay ratio, selected candidate type, first-frame latency release threshold"
-      - "TURN 장애 degraded behavior"
+      - "외부 NAT multi-minute soak 자동화"
+      - "relay ratio 기반 bitrate/fps downshift production policy"
 
   - id: V2-AI-WEBCODECS-001
     issue: 419

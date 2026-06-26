@@ -31,6 +31,9 @@ def test_webrtc_ice_smoke_script_check_mode_passes_without_aiortc() -> None:
     assert "WebRTC ICE smoke check passed" in result.stdout
     assert "stun:stun.l.google.com:19302" in result.stdout
     assert "Sample candidate summary:" in result.stdout
+    assert "Selected ICE pair:" in result.stdout
+    assert "ICE path summary contract:" in result.stdout
+    assert "direct_ratio=0.5000" in result.stdout
 
 
 def test_webrtc_ice_smoke_parser_requires_answer_ice_data() -> None:
@@ -85,6 +88,91 @@ def test_webrtc_ice_smoke_candidate_summary_counts_public_and_private_candidates
     assert summary.public_or_dns == 3
 
 
+def test_webrtc_ice_smoke_extracts_direct_selected_pair_from_stats() -> None:
+    module = load_smoke_module()
+    stats = {
+        "transport": {
+            "id": "transport",
+            "type": "transport",
+            "selectedCandidatePairId": "pair-1",
+        },
+        "pair-1": {
+            "id": "pair-1",
+            "type": "candidate-pair",
+            "localCandidateId": "local-1",
+            "remoteCandidateId": "remote-1",
+            "currentRoundTripTime": 0.0123,
+            "state": "succeeded",
+        },
+        "local-1": {
+            "id": "local-1",
+            "type": "local-candidate",
+            "candidateType": "srflx",
+            "protocol": "udp",
+        },
+        "remote-1": {
+            "id": "remote-1",
+            "type": "remote-candidate",
+            "candidateType": "host",
+            "protocol": "udp",
+        },
+    }
+
+    selected_pair = module.extract_selected_ice_pair(stats)
+
+    assert selected_pair is not None
+    assert selected_pair.local_candidate_type == "srflx"
+    assert selected_pair.remote_candidate_type == "host"
+    assert selected_pair.protocol == "udp"
+    assert selected_pair.rtt_ms == 12.3
+    assert selected_pair.path == "direct"
+    assert selected_pair.relay_fallback_reason is None
+
+
+def test_webrtc_ice_smoke_classifies_relay_and_fallback_reason() -> None:
+    module = load_smoke_module()
+    local_offer = module.inspect_sdp(
+        "\r\n".join(
+            [
+                "a=ice-ufrag:offer",
+                "a=ice-pwd:offer-pwd",
+                "a=fingerprint:sha-256 AA",
+                "m=video 9 UDP/TLS/RTP/SAVPF 96",
+                "a=candidate:1 1 udp 2130706431 10.0.0.2 8189 typ host",
+            ]
+        )
+    )
+    answer = module.inspect_sdp(
+        "\r\n".join(
+            [
+                "a=ice-ufrag:answer",
+                "a=ice-pwd:answer-pwd",
+                "a=fingerprint:sha-256 BB",
+                "m=video 9 UDP/TLS/RTP/SAVPF 96",
+                "a=candidate:2 1 udp 16777215 121.159.26.245 49180 typ relay raddr 0.0.0.0 rport 0",
+            ]
+        )
+    )
+    selected_pair = module.SelectedIcePair(
+        local_candidate_type="host",
+        remote_candidate_type="relay",
+        protocol="udp",
+        rtt_ms=42.0,
+        path=module.classify_ice_path("host", "relay"),
+        relay_fallback_reason=None,
+    )
+
+    reason = module.infer_relay_fallback_reason(selected_pair, local_offer, answer)
+    summary = module.summarize_ice_paths([selected_pair])
+
+    assert selected_pair.path == "relay"
+    assert reason == "remote_selected_relay_candidate"
+    assert summary.total == 1
+    assert summary.direct == 0
+    assert summary.relay == 1
+    assert summary.relay_ratio == 1.0
+
+
 def test_webrtc_ice_smoke_script_documents_live_whep_ice_run() -> None:
     script = SCRIPT.read_text(encoding="utf-8")
     doc = DOC.read_text(encoding="utf-8")
@@ -93,6 +181,8 @@ def test_webrtc_ice_smoke_script_documents_live_whep_ice_run() -> None:
     assert "RTCIceServer" in script
     assert "wait_for_ice_gathering_complete" in script
     assert "candidate summary" in script
+    assert "Selected ICE pair" in script
+    assert "relay_fallback_reason" in script
     assert "--require-connected" in script
     assert "WHEP offer/answer" in doc
     assert "ICE candidate" in doc

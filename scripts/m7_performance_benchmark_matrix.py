@@ -35,6 +35,15 @@ MEDIA_SMOKE_METRICS = (
     "hls_master_latency_ms",
     "hls_variant_latency_ms",
 )
+ICE_PATH_METRICS = (
+    "selected_local_candidate_type",
+    "selected_remote_candidate_type",
+    "selected_ice_protocol",
+    "ice_rtt_ms",
+    "direct_ratio",
+    "relay_ratio",
+    "relay_fallback_reason",
+)
 ICE_PROFILE_LABELS = (
     "stun-direct",
     "turn-relay",
@@ -285,6 +294,7 @@ def build_check_report() -> dict[str, Any]:
         "schemaVersion": SCHEMA_VERSION,
         "requiredMetrics": list(REQUIRED_METRICS),
         "mediaSmokeMetrics": list(MEDIA_SMOKE_METRICS),
+        "icePathMetrics": list(ICE_PATH_METRICS),
         "iceProfileLabels": list(ICE_PROFILE_LABELS),
         "profileLabels": ["legacy", "v0.2.0", "m7"],
     }
