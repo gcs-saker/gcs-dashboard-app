@@ -62,6 +62,18 @@ describe("DashboardMvp", () => {
     expect(screen.queryByRole("heading", { name: "AI 결과" })).not.toBeInTheDocument();
   });
 
+  test("applies motion kill switch from operations settings", async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    await user.click(screen.getByRole("button", { name: "운영설정" }));
+    await user.click(await screen.findByRole("button", { name: "화면 효과" }));
+    await user.click(screen.getByRole("radio", { name: /효과 끄기/ }));
+
+    expect(screen.getByRole("main", { name: "Field Ops Dashboard MVP" })).toHaveAttribute("data-motion", "off");
+    expect(document.documentElement).toHaveAttribute("data-motion", "off");
+  });
+
   test("marks dashboard regions with widget ids for custom layout editing", async () => {
     const user = userEvent.setup();
     const { container } = renderDashboard();

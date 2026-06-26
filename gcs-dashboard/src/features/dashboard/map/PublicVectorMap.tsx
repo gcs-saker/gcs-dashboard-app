@@ -16,6 +16,7 @@ import { StreamMapPopup } from "./StreamMapPopup";
 interface PublicVectorMapProps {
   activeStreamId: string | null;
   autoFocusEnabled: boolean;
+  isMotionEnabled?: boolean;
   mapConfig: DashboardMapConfig;
   onAutoFocusChange: (enabled: boolean) => void;
   onStreamMarkerSelect: (streamId: string) => void;
@@ -43,6 +44,7 @@ interface StreamMarkerPosition {
 export function PublicVectorMap({
   activeStreamId,
   autoFocusEnabled,
+  isMotionEnabled = true,
   mapConfig,
   onAutoFocusChange,
   onStreamMarkerSelect,
@@ -87,8 +89,8 @@ export function PublicVectorMap({
 
   useEffect(() => {
     if (!autoFocusEnabled) return;
-    focusSelectedStream(mapRef.current, selectedGeometry);
-  }, [autoFocusEnabled, selectedGeometry.lat, selectedGeometry.lng]);
+    focusSelectedStream(mapRef.current, selectedGeometry, isMotionEnabled);
+  }, [autoFocusEnabled, isMotionEnabled, selectedGeometry.lat, selectedGeometry.lng]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -117,12 +119,12 @@ export function PublicVectorMap({
 
   const handleAutoFocusClick = () => {
     onAutoFocusChange(true);
-    focusSelectedStream(mapRef.current, selectedGeometry);
+    focusSelectedStream(mapRef.current, selectedGeometry, isMotionEnabled);
   };
 
   const handleManualFocusClick = () => {
     onAutoFocusChange(false);
-    focusSelectedStream(mapRef.current, selectedGeometry);
+    focusSelectedStream(mapRef.current, selectedGeometry, isMotionEnabled);
   };
 
   const handleZoomInClick = () => {
@@ -188,10 +190,10 @@ export function PublicVectorMap({
   );
 }
 
-function focusSelectedStream(map: L.LeafletMap | null, geometry: MapFocusGeometry): void {
+function focusSelectedStream(map: L.LeafletMap | null, geometry: MapFocusGeometry, isMotionEnabled: boolean): void {
   map?.panTo([geometry.lat, geometry.lng], {
-    animate: true,
-    duration: 0.28,
+    animate: isMotionEnabled,
+    duration: isMotionEnabled ? 0.28 : 0,
   });
 }
 

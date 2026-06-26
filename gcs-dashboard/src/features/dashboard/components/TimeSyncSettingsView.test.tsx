@@ -92,6 +92,22 @@ describe("TimeSyncSettingsView", () => {
       ),
     );
   });
+
+  test("changes global motion mode from the operations settings screen", async () => {
+    const user = userEvent.setup();
+    const onMotionModeChange = vi.fn();
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(publicStatus)));
+
+    render(<TimeSyncSettingsView motionMode="reduced" onMotionModeChange={onMotionModeChange} />);
+    await screen.findByText("pool.ntp.org:123 기준으로 시간 소스가 설정되었습니다.");
+
+    await user.click(screen.getByRole("button", { name: "화면 효과" }));
+
+    expect(screen.getByRole("radio", { name: /효과 줄임/ })).toHaveAttribute("aria-checked", "true");
+    await user.click(screen.getByRole("radio", { name: /효과 끄기/ }));
+
+    expect(onMotionModeChange).toHaveBeenCalledWith("off");
+  });
 });
 
 function jsonResponse(payload: unknown, status = 200): Response {

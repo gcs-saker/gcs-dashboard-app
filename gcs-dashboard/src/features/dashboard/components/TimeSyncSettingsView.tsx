@@ -1,5 +1,11 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
+import {
+  MOTION_MODE_DESCRIPTIONS,
+  MOTION_MODE_LABELS,
+  MOTION_MODES,
+  type MotionMode,
+} from "../motionPreference";
 import { useTimeSyncStatus } from "../hooks/useTimeSyncStatus";
 import {
   calculateBrowserOffsetMs,
@@ -16,17 +22,23 @@ const defaultForm: TimeSyncConfigInput = {
   driftWarnMs: 1_000,
 };
 
-type SettingsTab = "time" | "streaming" | "security" | "map" | "account";
+type SettingsTab = "time" | "streaming" | "security" | "motion" | "map" | "account";
 
 const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
   { id: "time", label: "시간 동기화" },
   { id: "streaming", label: "스트리밍" },
   { id: "security", label: "보안" },
+  { id: "motion", label: "화면 효과" },
   { id: "map", label: "지도" },
   { id: "account", label: "계정/권한" },
 ];
 
-export function TimeSyncSettingsView() {
+interface TimeSyncSettingsViewProps {
+  motionMode?: MotionMode;
+  onMotionModeChange?: (mode: MotionMode) => void;
+}
+
+export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }: TimeSyncSettingsViewProps = {}) {
   const { errorMessage, isLoading, isSaving, lastUpdatedAt, refresh, runCheck, save, status } = useTimeSyncStatus();
   const [form, setForm] = useState<TimeSyncConfigInput>(defaultForm);
   const [activeTab, setActiveTab] = useState<SettingsTab>("time");
@@ -170,8 +182,10 @@ export function TimeSyncSettingsView() {
             </div>
           </form>
         </>
+      ) : activeTab === "motion" ? (
+        <MotionPolicyPanel motionMode={motionMode} onMotionModeChange={onMotionModeChange} />
       ) : (
-        <SettingsPolicyPanel tab={activeTab as Exclude<SettingsTab, "time">} />
+        <SettingsPolicyPanel tab={activeTab as Exclude<SettingsTab, "time" | "motion">} />
       )}
 
       {errorMessage ? <p className="time-sync-view__error" role="alert">{errorMessage}</p> : null}
@@ -179,7 +193,43 @@ export function TimeSyncSettingsView() {
   );
 }
 
-function SettingsPolicyPanel({ tab }: { tab: Exclude<SettingsTab, "time"> }) {
+function MotionPolicyPanel({
+  motionMode,
+  onMotionModeChange,
+}: {
+  motionMode: MotionMode;
+  onMotionModeChange?: (mode: MotionMode) => void;
+}) {
+  return (
+    <section className="time-sync-view__policy motion-settings" aria-label="화면 효과 정책">
+      <header className="time-sync-view__policy-header">
+        <div>
+          <span>전역 Motion Policy</span>
+          <strong>{MOTION_MODE_LABELS[motionMode]}</strong>
+        </div>
+        <em>즉시 반영</em>
+      </header>
+      <div className="motion-settings__choices" role="radiogroup" aria-label="화면 효과 모드">
+        {MOTION_MODES.map((mode) => (
+          <button
+            aria-checked={motionMode === mode}
+            className={motionMode === mode ? "is-active" : ""}
+            key={mode}
+            onClick={() => onMotionModeChange?.(mode)}
+            role="radio"
+            type="button"
+          >
+            <span>{MOTION_MODE_LABELS[mode]}</span>
+            <strong>{mode}</strong>
+            <em>{MOTION_MODE_DESCRIPTIONS[mode]}</em>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SettingsPolicyPanel({ tab }: { tab: Exclude<SettingsTab, "time" | "motion"> }) {
   const policies = {
     streaming: [
       ["CCTV 기본", "4x4 / 저화질 preview"],
@@ -205,7 +255,7 @@ function SettingsPolicyPanel({ tab }: { tab: Exclude<SettingsTab, "time"> }) {
       ["송출 계정", "장비별 최소 권한"],
       ["감사", "계정 변경 이력"],
     ],
-  } satisfies Record<Exclude<SettingsTab, "time">, Array<[string, string]>>;
+  } satisfies Record<Exclude<SettingsTab, "time" | "motion">, Array<[string, string]>>;
 
   return (
     <section className="time-sync-view__policy" aria-label="운영 정책">
@@ -227,7 +277,7 @@ function SettingsPolicyPanel({ tab }: { tab: Exclude<SettingsTab, "time"> }) {
   );
 }
 
-function settingsTabTitle(tab: Exclude<SettingsTab, "time">): string {
+function settingsTabTitle(tab: Exclude<SettingsTab, "time" | "motion">): string {
   if (tab === "streaming") return "스트리밍 수신/송출 정책";
   if (tab === "security") return "인증/인가 및 감사 정책";
   if (tab === "map") return "지도 소스 및 마커 정책";

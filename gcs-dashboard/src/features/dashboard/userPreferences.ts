@@ -1,5 +1,6 @@
 import type { CctvQualityMode } from "./components/CctvChannelCard";
 import { resetDashboardLayout, type DashboardLayoutItem } from "./dashboardLayout";
+import { detectPreferredMotionMode, normalizeMotionMode, type MotionMode } from "./motionPreference";
 import { EMPTY_STREAM_PREFERENCES, type StreamPreferencesSnapshot } from "./streamPreferences";
 
 export type DashboardView = "dashboard" | "cctv" | "events" | "status" | "settings";
@@ -10,6 +11,7 @@ export interface DashboardUserPreferences {
   readonly cctvLayoutMode: CctvLayoutMode;
   readonly cctvQualityMode: CctvQualityMode;
   readonly layout: DashboardLayoutItem[];
+  readonly motionMode: MotionMode;
   readonly streamPreferences: StreamPreferencesSnapshot;
   readonly version: number;
 }
@@ -30,6 +32,7 @@ export function createDefaultDashboardUserPreferences(): DashboardUserPreference
     cctvLayoutMode: DEFAULT_CCTV_LAYOUT_MODE,
     cctvQualityMode: DEFAULT_CCTV_QUALITY_MODE,
     layout: resetDashboardLayout(),
+    motionMode: detectPreferredMotionMode(),
     streamPreferences: EMPTY_STREAM_PREFERENCES,
     version: DASHBOARD_USER_PREFERENCES_VERSION,
   };
@@ -50,6 +53,7 @@ export function normalizeDashboardUserPreferences(value: unknown): DashboardUser
     cctvLayoutMode: isCctvLayoutMode(candidate.cctvLayoutMode) ? candidate.cctvLayoutMode : defaults.cctvLayoutMode,
     cctvQualityMode: isCctvQualityMode(candidate.cctvQualityMode) ? candidate.cctvQualityMode : defaults.cctvQualityMode,
     layout: normalizeLayout(candidate.layout, defaults.layout),
+    motionMode: normalizeMotionMode(candidate.motionMode, defaults.motionMode),
     streamPreferences: normalizeStreamPreferences(candidate.streamPreferences),
     version: DASHBOARD_USER_PREFERENCES_VERSION,
   };
