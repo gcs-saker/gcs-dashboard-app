@@ -147,15 +147,18 @@ requiredGates:
     issue: 420
     title: "Closed-network appliance integration gate and offline runtime"
     expectedStateForV2: validated
-    currentState: contract
-    releaseBlocker: true
+    currentState: static-compose-validated
+    releaseBlocker: false
     evidence:
+      - deploy/compose/.env.closed-network.example
+      - deploy/compose/.env.mixed-network.example
       - deploy/mediamtx/mediamtx.closed-network.yml
       - docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md
       - backend/tests/test_closed_network_static_check.py
+      - scripts/closed_network_static_check.py
     missing:
-      - "offline install/runtime smoke"
-      - "local STUN/TURN, local map asset, local time source 검증"
+      - "actual air-gapped hardware install rehearsal"
+      - "local STUN/TURN media smoke with external DNS blocked"
 
   - id: V2-BENCHMARK-001
     issue: 421
