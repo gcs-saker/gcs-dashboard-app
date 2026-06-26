@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import subprocess
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -201,7 +202,6 @@ class DragonflyProfileSmokeConfig:
             *self.compose_command(profile, include_override=include_override),
             "down",
             "--remove-orphans",
-            "-v",
         ]
 
     def client_command(self, profile: str, password: str) -> list[str]:
@@ -316,27 +316,37 @@ def run_profiles(config: DragonflyProfileSmokeConfig) -> dict[str, Any]:
         ("dragonfly", True, dragonfly_image),
     ]
     results = []
-    try:
-        for name, include_override, image in profiles:
-            results.append(run_profile(config, name, include_override=include_override, image=image, password=password))
-        equivalent = all(profile["passed"] for profile in results) and equivalent_check_names(results)
-        return {
-            "schemaVersion": SCHEMA_VERSION,
-            "status": "runtime-validated" if equivalent else "failed",
-            "passed": equivalent,
-            "profiles": results,
-            "equivalentCommandSubset": equivalent,
-            "promotionGate": "Keep Redis as default until benchmark and operational risk review approve DragonFly promotion.",
-        }
-    finally:
-        for name, include_override, _ in profiles:
-            subprocess.run(
-                config.down_command(name, include_override=include_override),
-                check=False,
-                capture_output=True,
-                text=True,
-                cwd=REPO_ROOT,
-            )
+    with filtered_env_file(config.env_file) as smoke_env_file:
+        smoke_config = DragonflyProfileSmokeConfig(
+            compose_file=config.compose_file,
+            override_file=config.override_file,
+            env_file=smoke_env_file,
+            project_prefix=config.project_prefix,
+        )
+        try:
+            for name, include_override, image in profiles:
+                results.append(
+                    run_profile(smoke_config, name, include_override=include_override, image=image, password=password)
+                )
+            equivalent = all(profile["passed"] for profile in results) and equivalent_check_names(results)
+            return {
+                "schemaVersion": SCHEMA_VERSION,
+                "status": "runtime-validated" if equivalent else "failed",
+                "passed": equivalent,
+                "profiles": results,
+                "equivalentCommandSubset": equivalent,
+                "promotionGate": "Keep Redis as default until benchmark and operational risk review approve DragonFly promotion.",
+            }
+        finally:
+            for name, include_override, image in profiles:
+                subprocess.run(
+                    smoke_config.down_command(name, include_override=include_override),
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    cwd=REPO_ROOT,
+                    env=compose_environment(image, f"{config.project_prefix}-{name}"),
+                )
 
 
 def run_profile(
@@ -358,7 +368,7 @@ def run_profile(
             capture_output=True,
             text=True,
             cwd=REPO_ROOT,
-            env=compose_environment(image),
+            env=compose_environment(image, f"{config.project_prefix}-{profile}"),
         )
         if completed.returncode != 0:
             return {
@@ -400,10 +410,32 @@ def equivalent_check_names(results: list[dict[str, Any]]) -> bool:
     return all([check["name"] for check in result.get("checks", [])] == baseline for result in results)
 
 
-def compose_environment(dragonfly_image: str) -> dict[str, str]:
+def compose_environment(dragonfly_image: str, project_name: str) -> dict[str, str]:
     env = os.environ.copy()
+    env["COMPOSE_PROJECT_NAME"] = project_name
     env.setdefault("DRAGONFLY_IMAGE", dragonfly_image)
     return env
+
+
+class filtered_env_file:
+    def __init__(self, source: Path) -> None:
+        self.source = source
+        self._temporary_path: Path | None = None
+
+    def __enter__(self) -> Path:
+        temporary = tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False)
+        for line in self.source.read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith("COMPOSE_PROJECT_NAME="):
+                continue
+            temporary.write(line + "\n")
+        temporary.flush()
+        temporary.close()
+        self._temporary_path = Path(temporary.name)
+        return self._temporary_path
+
+    def __exit__(self, *_: object) -> None:
+        if self._temporary_path is not None:
+            self._temporary_path.unlink(missing_ok=True)
 
 
 def read_env_value(path: Path, key: str, *, default: str | None = None) -> str:
