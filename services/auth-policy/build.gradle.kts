@@ -18,6 +18,7 @@ java {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-graphql")
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -31,6 +32,7 @@ dependencies {
     testImplementation("org.springframework.graphql:spring-graphql-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("com.h2database:h2")
+    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
     runtimeOnly("org.postgresql:postgresql")
 }
 

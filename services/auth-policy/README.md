@@ -41,10 +41,20 @@ Spring Boot + Kotlin 기반 인증/인가 및 group policy control-plane PoC 서
 
 환경 변수 기본값은 `TIME_SYNC_MODE=public`, `TIME_SYNC_SOURCE_HOST=pool.ntp.org`, `TIME_SYNC_SOURCE_PORT=123`, `TIME_SYNC_DRIFT_WARN_MS=1000`이다. 폐쇄망 납품에서는 `TIME_SYNC_MODE=closed_network`와 내부 NTP 서버 IP 또는 도메인을 주입한다. 앱은 host clock을 직접 변경하지 않고, 실제 chrony/systemd-timesyncd 적용은 운영 계층에서 분리한다.
 
+## Observability
+
+Spring Actuator, Micrometer, Prometheus registry를 사용해 auth-policy JVM/runtime/API 지표를 노출한다.
+
+- 내부 scrape endpoint: `GET /actuator/prometheus`
+- 기존 liveness/readiness contract: `GET /healthz`, `GET /readyz`
+- public edge 차단 경로: `/auth-policy/actuator/*`
+
+운영 Nginx는 `/auth-policy/*` API는 프록시하지만 `/auth-policy/actuator/*`는 `404`로 막는다. Prometheus나 임시 점검 스크립트는 Docker 내부 네트워크에서 `http://auth-policy:8080/actuator/prometheus`를 사용해야 한다.
+
 ## 테스트
 
 ```bash
-./gradlew test jacocoTestReport
+./gradlew test jacocoTestReport jacocoTestCoverageVerification
 ```
 
 Gradle wrapper는 `8.14.3`으로 고정한다. 폐쇄망 납품 전에는 Gradle distribution, Maven dependency cache, Docker image tarball을 함께 패키징해야 한다.

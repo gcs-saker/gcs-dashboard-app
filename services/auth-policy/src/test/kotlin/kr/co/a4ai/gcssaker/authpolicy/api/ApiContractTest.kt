@@ -21,6 +21,7 @@ class ApiContractTest {
         assertEquals(ApiContractFixtures.AUTH_ROOT, AuthApiRoutes.ROOT)
         assertEquals(ApiContractFixtures.AUTH_LOGIN, AuthApiRoutes.LOGIN)
         assertEquals(ApiContractFixtures.HEALTHZ, HealthApiRoutes.HEALTHZ)
+        assertEquals(ApiContractFixtures.ACTUATOR_PROMETHEUS, ObservabilityApiRoutes.PROMETHEUS)
         assertEquals(ApiContractFixtures.TIME_SYNC_STATUS, TimeSyncApiRoutes.STATUS)
         assertEquals(ApiContractFixtures.OPERATIONAL_EVENTS, OperationalEventApiRoutes.EVENTS)
         assertEquals(ApiContractFixtures.OPERATIONAL_EVENTS_PAGE, OperationalEventApiRoutes.EVENTS_PAGE)
@@ -83,6 +84,7 @@ class ApiContractTest {
             AuthApiRoutes.ROOT + AuthApiRoutes.LOGOUT,
             HealthApiRoutes.HEALTHZ,
             HealthApiRoutes.READYZ,
+            ObservabilityApiRoutes.PROMETHEUS,
             TimeSyncApiRoutes.STATUS,
             TimeSyncApiRoutes.CHECK,
             TimeSyncApiRoutes.CONFIG,
@@ -289,6 +291,7 @@ private object ApiContractFixtures {
     const val AUTH_ROOT = "/auth"
     const val AUTH_LOGIN = "/login"
     const val HEALTHZ = "/healthz"
+    const val ACTUATOR_PROMETHEUS = "/actuator/prometheus"
     const val TIME_SYNC_STATUS = "/ops/time/status"
     const val OPERATIONAL_EVENTS = "/ops/events"
     const val OPERATIONAL_EVENTS_PAGE = "/ops/events/page"
