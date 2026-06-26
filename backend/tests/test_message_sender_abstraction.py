@@ -12,6 +12,8 @@ from modules.messaging.sender import (
     MessageSenderEnv,
     MessageSenderKind,
     MessageSenderUnavailable,
+    grpc_metadata,
+    grpc_timeout_seconds,
     get_message_sender,
 )
 
@@ -130,6 +132,26 @@ def test_grpc_message_sender_rejects_text_payload() -> None:
                 content_type=MessageContentType.TEXT,
             )
         )
+
+
+def test_grpc_metadata_keeps_auth_out_of_payload() -> None:
+    metadata = grpc_metadata("gateway-token")
+
+    assert metadata == (
+        ("authorization", "Bearer gateway-token"),
+        ("x-gcs-gateway-token", "gateway-token"),
+    )
+
+
+def test_grpc_metadata_is_empty_when_token_is_not_configured() -> None:
+    assert grpc_metadata("") is None
+
+
+def test_grpc_timeout_uses_safe_default_for_invalid_values() -> None:
+    assert grpc_timeout_seconds("") == 2.0
+    assert grpc_timeout_seconds("-1") == 2.0
+    assert grpc_timeout_seconds("0") == 2.0
+    assert grpc_timeout_seconds("3.5") == 3.5
 
 
 def test_message_sender_factory_rejects_unknown_sender(monkeypatch: pytest.MonkeyPatch) -> None:

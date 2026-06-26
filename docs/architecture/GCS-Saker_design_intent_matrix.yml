@@ -124,7 +124,7 @@ intents:
         - path: backend/modules/messaging/sender.py
           text: "MessageSender"
         - path: scripts/grpc_runtime_smoke.py
-          text: "status\": \"prototype\""
+          text: "runtime-partial"
       evidencePaths:
         - backend/tests/test_protobuf_contracts.py
         - backend/tests/test_message_sender_abstraction.py
