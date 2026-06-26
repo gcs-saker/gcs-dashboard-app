@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CctvQualityMode } from "../components/CctvChannelCard";
 import type { DashboardLayoutItem, DashboardWidgetId } from "../dashboardLayout";
+import type { MotionMode } from "../motionPreference";
 import { setStreamDeviceAlias } from "../streamPreferences";
 import {
   createDashboardUserPreferenceKey,
@@ -60,6 +61,11 @@ export function useDashboardUserPreferences(username: string | null | undefined)
     [updatePreferences],
   );
 
+  const setMotionMode = useCallback(
+    (motionMode: MotionMode): void => updatePreferences((current) => ({ ...current, motionMode })),
+    [updatePreferences],
+  );
+
   const setLayout = useCallback(
     (layoutOrUpdater: LayoutUpdater): void =>
       updatePreferences((current) => {
@@ -105,6 +111,7 @@ export function useDashboardUserPreferences(username: string | null | undefined)
     setCctvLayoutMode,
     setCctvQualityMode,
     setLayout,
+    setMotionMode,
     setStreamAlias,
   };
 }

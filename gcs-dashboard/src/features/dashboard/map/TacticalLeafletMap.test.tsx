@@ -140,6 +140,17 @@ describe("TacticalLeafletMap", () => {
     expect(leafletMock().instances[0].panTo).toHaveBeenCalled();
   });
 
+  test("disables public map pan animation when motion is off", () => {
+    render(<TacticalLeafletMap isMotionEnabled={false} selectedStream={stream} streams={[stream]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "지도 중심 초기화" }));
+
+    expect(leafletMock().instances[0].panTo).toHaveBeenLastCalledWith([35.871435, 128.601445], {
+      animate: false,
+      duration: 0,
+    });
+  });
+
   test("disables auto focus on direct map interaction and restores selected stream focus from the auto button", () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
 

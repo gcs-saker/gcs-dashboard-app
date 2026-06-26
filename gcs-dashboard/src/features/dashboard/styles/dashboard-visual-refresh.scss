@@ -500,6 +500,74 @@
   font-weight: 900;
 }
 
+.motion-settings__choices {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.motion-settings__choices button {
+  background: rgba(5, 18, 28, 0.84);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 7px;
+  min-height: 116px;
+  padding: 12px;
+  text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+}
+
+.motion-settings__choices button:hover,
+.motion-settings__choices button:focus-visible {
+  border-color: rgba(61, 184, 255, 0.74);
+  box-shadow: 0 0 0 1px rgba(61, 184, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.motion-settings__choices button.is-active {
+  border-color: rgba(86, 211, 124, 0.76);
+  box-shadow: inset 0 0 0 1px rgba(86, 211, 124, 0.18);
+}
+
+.motion-settings__choices span {
+  color: var(--heading);
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.motion-settings__choices strong {
+  color: var(--blue);
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.motion-settings__choices em {
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+[data-motion="reduced"] .ops-dashboard *,
+[data-motion="reduced"] .ops-dashboard *::before,
+[data-motion="reduced"] .ops-dashboard *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 80ms !important;
+}
+
+[data-motion="off"] .ops-dashboard *,
+[data-motion="off"] .ops-dashboard *::before,
+[data-motion="off"] .ops-dashboard *::after {
+  animation: none !important;
+  scroll-behavior: auto !important;
+  transition: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ops-dashboard *,
   .ops-dashboard *::before,

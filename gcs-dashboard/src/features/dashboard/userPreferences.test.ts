@@ -26,6 +26,7 @@ describe("userPreferences", () => {
       activeView: "cctv",
       cctvLayoutMode: "5x5",
       cctvQualityMode: "high",
+      motionMode: "off",
       layout: [
         {
           ...defaultLayout[0],
@@ -46,6 +47,7 @@ describe("userPreferences", () => {
     expect(preferences.activeView).toBe("cctv");
     expect(preferences.cctvLayoutMode).toBe("5x5");
     expect(preferences.cctvQualityMode).toBe("high");
+    expect(preferences.motionMode).toBe("off");
     expect(preferences.layout).toHaveLength(defaultLayout.length);
     expect(preferences.layout[0]).toEqual(
       expect.objectContaining({
@@ -122,6 +124,7 @@ describe("userPreferences", () => {
     const sanitized = sanitizeDashboardPreferencesForStorage({
       activeView: "events",
       cctvLayoutMode: "unknown",
+      motionMode: "reduced",
       streamPreferences: {
         deviceAliases: {
           "raw.mobile.front": "전방 단말",
@@ -132,6 +135,7 @@ describe("userPreferences", () => {
 
     expect(sanitized.activeView).toBe("events");
     expect(sanitized.cctvLayoutMode).toBe("4x4");
+    expect(sanitized.motionMode).toBe("reduced");
     expect(JSON.stringify(sanitized)).not.toContain("must-not-persist");
     expect(sanitized.streamPreferences.deviceAliases).toEqual({
       "raw.mobile.front": "전방 단말",

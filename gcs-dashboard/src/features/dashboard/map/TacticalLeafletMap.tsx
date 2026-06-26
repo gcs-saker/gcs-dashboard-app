@@ -15,6 +15,7 @@ import {
 import { StreamMapPopup } from "./StreamMapPopup";
 
 interface TacticalLeafletMapProps {
+  isMotionEnabled?: boolean;
   onSelectStream?: (streamId: string) => void;
   selectedStream: DashboardStreamSlot;
   streams: DashboardStreamSlot[];
@@ -23,7 +24,12 @@ interface TacticalLeafletMapProps {
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
 
-export function TacticalLeafletMap({ onSelectStream, selectedStream, streams }: TacticalLeafletMapProps) {
+export function TacticalLeafletMap({
+  isMotionEnabled = true,
+  onSelectStream,
+  selectedStream,
+  streams,
+}: TacticalLeafletMapProps) {
   const [activeStreamId, setActiveStreamId] = useState<string | null>(null);
   const [autoFocusEnabled, setAutoFocusEnabled] = useState(true);
   const [mapConfig, setMapConfig] = useState<DashboardMapConfig>(FALLBACK_MAP_CONFIG);
@@ -57,6 +63,7 @@ export function TacticalLeafletMap({ onSelectStream, selectedStream, streams }: 
       <PublicVectorMap
         activeStreamId={activeStreamId}
         autoFocusEnabled={autoFocusEnabled}
+        isMotionEnabled={isMotionEnabled}
         mapConfig={mapConfig}
         onAutoFocusChange={setAutoFocusEnabled}
         onStreamMarkerSelect={handleStreamMarkerSelect}
@@ -70,6 +77,7 @@ export function TacticalLeafletMap({ onSelectStream, selectedStream, streams }: 
 
   return (
     <OfflineTacticalMap
+      isMotionEnabled={isMotionEnabled}
       autoFocusEnabled={autoFocusEnabled}
       onAutoFocusChange={setAutoFocusEnabled}
       activeStreamId={activeStreamId}

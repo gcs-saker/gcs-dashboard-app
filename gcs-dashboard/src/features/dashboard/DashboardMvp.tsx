@@ -37,6 +37,7 @@ import { useDashboardUserPreferences } from "./hooks/useDashboardUserPreferences
 import { telemetryRowsForStream, type AudioAnalysisSnapshot } from "./dashboardPresentation";
 import { DASHBOARD_STREAM_STATUS } from "../stateContracts";
 import type { CctvLayoutMode } from "./userPreferences";
+import { isMotionEnabled } from "./motionPreference";
 
 const loadTacticalLeafletMap = () => import("./map/TacticalLeafletMap");
 const loadEventLogView = () => import("./components/EventLogView");
@@ -86,6 +87,7 @@ export function DashboardMvp() {
     setCctvLayoutMode,
     setCctvQualityMode,
     setLayout,
+    setMotionMode,
     setStreamAlias,
   } = useDashboardUserPreferences(currentUser?.username);
   const [isWidgetDialogOpen, setIsWidgetDialogOpen] = useState(false);
@@ -119,7 +121,8 @@ export function DashboardMvp() {
     onStreamDeviceAliasChange: setStreamAlias,
     streamPreferences: preferences.streamPreferences,
   });
-  const { activeView, cctvLayoutMode, cctvQualityMode, layout } = preferences;
+  const { activeView, cctvLayoutMode, cctvQualityMode, layout, motionMode } = preferences;
+  const motionEnabled = isMotionEnabled(motionMode);
   const mapFocus = useMemo(() => getMapFocusForStream(selectedStream), [selectedStream]);
   const telemetryRows = useMemo(() => telemetryRowsForStream(selectedStream), [selectedStream]);
   const assetTreeRoot = useMemo(() => mergeAssetTreeWithStreams(DEFAULT_ASSET_TREE, streams), [streams]);
@@ -172,6 +175,13 @@ export function DashboardMvp() {
     const timeoutId = globalThis.setTimeout(preloadDashboardChunks, 1600);
     return () => globalThis.clearTimeout(timeoutId);
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.motion = motionMode;
+    return () => {
+      delete document.documentElement.dataset.motion;
+    };
+  }, [motionMode]);
 
   const panelClass = useCallback(
     (baseClass: string, widgetId: DashboardWidgetId): string => `${baseClass} ${isWidgetPinned(widgetId) ? "is-pinned" : ""}`,
@@ -321,7 +331,7 @@ export function DashboardMvp() {
   );
 
   return (
-    <main className="ops-dashboard" aria-label="Field Ops Dashboard MVP">
+    <main className="ops-dashboard" data-motion={motionMode} aria-label="Field Ops Dashboard MVP">
       <header className="ops-dashboard__tabs" aria-label="주요 탭">
         <nav className="ops-dashboard__tab-list">
           <button
@@ -413,7 +423,7 @@ export function DashboardMvp() {
       ) : null}
       {activeView === "settings" ? (
         <Suspense fallback={<section className="time-sync-view" role="status">운영설정 준비 중</section>}>
-          <TimeSyncSettingsView />
+          <TimeSyncSettingsView motionMode={motionMode} onMotionModeChange={setMotionMode} />
         </Suspense>
       ) : null}
       {activeView === "status" ? (
@@ -491,7 +501,12 @@ export function DashboardMvp() {
               </div>
             }
           >
-            <TacticalLeafletMap onSelectStream={selectMapStream} selectedStream={selectedStream} streams={streams} />
+            <TacticalLeafletMap
+              isMotionEnabled={motionEnabled}
+              onSelectStream={selectMapStream}
+              selectedStream={selectedStream}
+              streams={streams}
+            />
           </Suspense>
           <span className="map-focus__label" data-testid="map-focus-label">
             {mapFocus.label}
@@ -533,7 +548,7 @@ export function DashboardMvp() {
           widget={telemetryWidget}
         /> : null}
 
-        <AudioWaveformPanel analysis={audioAnalysis} selectedStream={selectedStream} />
+        <AudioWaveformPanel analysis={audioAnalysis} isMotionEnabled={motionEnabled} selectedStream={selectedStream} />
 
         {isWidgetVisible("ai-results") ? <section
           aria-labelledby="ai-title"

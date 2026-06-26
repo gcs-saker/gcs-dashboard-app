@@ -12,16 +12,21 @@ import { useRafNumber } from "../hooks/useRafNumber";
 
 interface AudioWaveformPanelProps {
   analysis: AudioAnalysisSnapshot | null;
+  isMotionEnabled?: boolean;
   selectedStream: DashboardStreamSlot;
 }
 
-export const AudioWaveformPanel = memo(function AudioWaveformPanel({ analysis, selectedStream }: AudioWaveformPanelProps) {
+export const AudioWaveformPanel = memo(function AudioWaveformPanel({
+  analysis,
+  isMotionEnabled = true,
+  selectedStream,
+}: AudioWaveformPanelProps) {
   const isSelectedAnalysis = analysis?.streamId === selectedStream.id;
   const isActive = Boolean(analysis?.isAudioActive);
   const hasTrack = Boolean(analysis?.hasAudioTrack);
   const audioLevel = analysis?.audioLevel ?? null;
   const displayLevel = audioLevel ?? (isActive ? 0.18 : null);
-  const rafAudioLevel = useRafNumber(audioLevel ?? 0, isActive);
+  const rafAudioLevel = useRafNumber(audioLevel ?? 0, isActive && isMotionEnabled);
   const bars = useMemo(
     () => buildAudioWaveformBars(displayLevel === null ? null : audioLevel === null ? displayLevel : rafAudioLevel, isActive || hasTrack),
     [audioLevel, displayLevel, hasTrack, isActive, rafAudioLevel],
