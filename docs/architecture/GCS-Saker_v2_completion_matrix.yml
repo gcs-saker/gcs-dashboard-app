@@ -65,15 +65,16 @@ requiredGates:
     issue: 415
     title: "DragonFly cache profile validation and Redis fallback contract"
     expectedStateForV2: profile-validated-or-deferred-with-record
-    currentState: profile
-    releaseBlocker: true
+    currentState: runtime-validated-profile
+    releaseBlocker: false
     evidence:
       - deploy/compose/compose.dragonfly.override.yml
       - scripts/dragonfly_profile_smoke.py
       - docs/architecture/GCS-Saker_M8_dragonfly_compatibility_profile.md
+      - backend/tests/test_dragonfly_cache_profile_contract.py
     missing:
-      - "Redis/DragonFly 양쪽 auth/session/ICE/stream cache smoke 비교"
-      - "license/image tag/release note 기록"
+      - "production benchmark before default runtime promotion"
+      - "operational risk approval before replacing Redis default"
 
   - id: V2-MQTT-001
     issue: 416

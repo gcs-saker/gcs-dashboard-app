@@ -46,10 +46,16 @@ def test_dragonfly_profile_smoke_reports_profile_state_and_equivalence_gate() ->
     payload = run_check(DRAGONFLY_SMOKE)
 
     assert payload["schemaVersion"] == "dragonfly-profile-smoke-v1"
-    assert payload["status"] == "profile"
-    assert "-f" in payload["configCommand"]
-    assert str(REPO_ROOT / "deploy" / "compose" / "compose.dragonfly.override.yml") in payload["configCommand"]
-    assert "media-control starts with DragonFly-compatible Redis protocol" in payload["checks"]
+    assert payload["status"] == "profile-runtime-contract"
+    profile_names = {profile["name"] for profile in payload["profiles"]}
+    assert profile_names == {"redis", "dragonfly"}
+    dragonfly = next(profile for profile in payload["profiles"] if profile["name"] == "dragonfly")
+    assert "-f" in dragonfly["configCommand"]
+    assert str(REPO_ROOT / "deploy" / "compose" / "compose.dragonfly.override.yml") in dragonfly["configCommand"]
+    assert "GETDEL" in payload["redisCommandSubset"]
+    assert "auth-policy refresh session uses SETEX/GETDEL" in "\n".join(payload["cacheKeyContracts"])
+    assert "media-control cache miss or cache error falls back" in "\n".join(payload["degradedBehavior"])
+    assert payload["license"]["dragonfly"] == "BSL 1.1"
     assert "Redis and DragonFly runtime smoke results are equivalent" in payload["promotionGate"]
 
 
