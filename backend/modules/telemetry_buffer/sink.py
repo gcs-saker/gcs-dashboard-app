@@ -15,6 +15,8 @@ from modules.telemetry_buffer.buffer import (
 from modules.telemetry_buffer.bulk_sql import (
     TelemetryBulkBatch,
     TelemetrySqlDialect,
+    build_mysql_latest_bulk_upsert,
+    build_postgres_history_bulk_insert,
     build_postgres_latest_bulk_upsert,
 )
 
@@ -42,6 +44,11 @@ class LegacyDbTelemetryBulkSink:
             dialect = db.get_bind().dialect.name
             if dialect == TelemetrySqlDialect.POSTGRESQL:
                 db.execute(build_postgres_latest_bulk_upsert(batch))
+                db.execute(build_postgres_history_bulk_insert(batch))
+                db.commit()
+                return len(batch)
+            if dialect in {TelemetrySqlDialect.MYSQL, TelemetrySqlDialect.MARIADB}:
+                db.execute(build_mysql_latest_bulk_upsert(batch))
                 db.commit()
                 return len(batch)
             for record in records:

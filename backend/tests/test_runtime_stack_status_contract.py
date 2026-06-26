@@ -10,7 +10,15 @@ STATUS_FILE = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_runtime_stack_sta
 COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
 NGINX_CONFIG = REPO_ROOT / "deploy" / "nginx" / "single-node.poc.conf"
 
-ALLOWED_STATUSES = {"active", "profile", "runtime-validated-profile", "contract", "prototype", "deferred"}
+ALLOWED_STATUSES = {
+    "active",
+    "profile",
+    "runtime-validated-profile",
+    "synthetic-benchmarked",
+    "contract",
+    "prototype",
+    "deferred",
+}
 
 
 def load_yaml(path: Path) -> dict:
@@ -76,6 +84,7 @@ def test_runtime_stack_status_tracks_completed_and_incomplete_migration_items() 
     stacks = status["stacks"]
 
     assert stacks["postgresPrimaryStore"]["status"] == "active"
+    assert stacks["telemetryBulkPersistence"]["status"] == "synthetic-benchmarked"
     assert stacks["grpcInternalStreaming"]["status"] == "active"
     assert stacks["dragonflyCacheProfile"]["status"] == "profile"
     assert stacks["mqttTelemetryBridge"]["status"] == "runtime-validated-profile"
@@ -92,7 +101,13 @@ def test_non_active_items_record_missing_runtime_or_profile_gate() -> None:
             continue
         has_missing_runtime = bool(entry.get("missingRuntime"))
         has_profile_runtime = bool(entry.get("runtime", {}).get("profile") or entry.get("runtime", {}).get("overrideFile"))
-        has_contract_evidence = entry["status"] in {"runtime-validated-profile", "contract", "prototype", "deferred"} and bool(entry.get("evidence"))
+        has_contract_evidence = entry["status"] in {
+            "runtime-validated-profile",
+            "synthetic-benchmarked",
+            "contract",
+            "prototype",
+            "deferred",
+        } and bool(entry.get("evidence"))
 
         assert has_missing_runtime or has_profile_runtime or has_contract_evidence, (
             f"{name} must explain why it is not active yet"

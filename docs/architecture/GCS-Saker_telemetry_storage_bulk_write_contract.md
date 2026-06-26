@@ -83,6 +83,57 @@ VALUES (...), (...), (...)
 
 즉, DB 네트워크 round trip과 SQL parse 횟수는 record 수에 비례하던 구조에서 batch 수에 비례하는 구조로 바뀐다.
 
+## 현재 구현 계약
+
+### PostgreSQL/PostGIS profile
+
+`BufferedTelemetrySink.flush_once()`는 history queue에서 batch를 drain한 뒤 `LegacyDbTelemetryBulkSink`를 통해 두 statement를 실행한다.
+
+1. `telemetry_realtime` latest bulk upsert
+2. `telemetry_history` append-only bulk insert
+
+따라서 batch 100개 기준으로 이전 loop는 100회 statement를 만들었지만, 현재 PostgreSQL profile은 latest 1회와 history 1회, 총 2회 statement로 줄어든다. history가 append-only라서 최신 위치 조회와 경로/통계 분석의 저장 목적이 섞이지 않는다.
+
+### MySQL/MariaDB legacy profile
+
+MySQL/MariaDB는 현재 legacy/latest table 호환을 유지한다. history table 계약이 아직 없으므로 먼저 `telemetry_realtime`에 대한 bulk `ON DUPLICATE KEY UPDATE`를 적용한다.
+
+1. `telemetry_realtime` latest bulk upsert
+
+batch 100개 기준으로 이전 loop는 100회 upsert였지만, 현재 MySQL/MariaDB profile은 1회 statement로 줄어든다. history persistence는 PostgreSQL/PostGIS profile을 primary로 승격하는 과정에서 완성한다.
+
+## Redis 장애/DB 장애 정책
+
+- Redis/DragonFly buffer 장애: telemetry 수신 path는 Redis-backed buffer를 사용할 때 latest/history enqueue 실패를 즉시 오류로 보고해야 한다. 인증/인가처럼 반드시 필요한 경로에는 silent fallback을 두지 않는다.
+- DB bulk flush 장애: `BufferedTelemetrySink.flush_once()`가 drain한 batch 전체를 queue 앞쪽에 복원한다. 이 때문에 flush 중 DB 예외가 나도 history sample 순서는 유지된다.
+- 부분 flush: bulk sink가 일부만 성공했다고 반환하면 성공하지 못한 tail만 queue 앞쪽에 복원한다.
+- latest state: latest overwrite와 history append를 분리하므로 flush 실패가 dashboard의 최신 위치 read model을 즉시 지우지 않는다.
+
+## Synthetic benchmark
+
+실제 DB capacity claim은 운영 DB에서 별도 측정해야 한다. 다만 `scripts/telemetry_bulk_flush_benchmark.py`는 DB 없이 buffer와 SQL statement construction 비용을 재현 가능하게 측정한다.
+
+2026-06-26 로컬 Python 3.12 synthetic run:
+
+```bash
+PYTHONPATH=backend python3 scripts/telemetry_bulk_flush_benchmark.py --records 1000 --batch-size 100
+```
+
+| metric | value |
+| --- | ---: |
+| records | 1000 |
+| batch size | 100 |
+| ingest latency | 3.185 ms |
+| ingest throughput | 313,975 records/sec |
+| flush latency | 122.238 ms |
+| flush throughput | 8,180 records/sec |
+| PostgreSQL statements | 20 |
+| PostgreSQL avoided statements | 980 |
+| MySQL statements | 10 |
+| MySQL avoided statements | 990 |
+
+이 수치는 DB network I/O가 없는 synthetic baseline이다. 운영 수치로 주장하지 않고, 코드가 단건 loop가 아닌 bulk statement construction path를 타는지 확인하는 기준선으로 사용한다.
+
 ## PostgreSQL/PostGIS 확장 전략
 
 ### latest table
@@ -116,10 +167,10 @@ VALUES (...), (...), (...)
 - Python value object: `backend/modules/telemetry_buffer/bulk_sql.py`
 - flush adapter: `backend/modules/telemetry_buffer/sink.py`
 - contract test: `backend/tests/test_telemetry_write_buffer.py`
+- benchmark: `scripts/telemetry_bulk_flush_benchmark.py`
 
 ## 다음 개선 후보
 
-- Dragonfly queue-backed write buffer 구현
 - PostgreSQL COPY protocol 또는 psycopg3 copy path 검증
 - PostGIS spatial index 실행 계획 테스트
 - materialized view refresh 전략 테스트

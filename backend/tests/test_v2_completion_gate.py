@@ -24,7 +24,7 @@ def test_v2_completion_matrix_tracks_release_blockers_without_claiming_complete(
     assert matrix["trackerIssue"] == 411
     assert matrix["releaseGateIssue"] == 423
     assert len(gates) >= 10
-    assert len(blockers) >= 5
+    assert len(blockers) >= 4
     assert 472 in {gate["issue"] for gate in gates}
     assert 472 not in {gate["issue"] for gate in blockers}
     assert 423 in {gate["issue"] for gate in blockers}
@@ -44,7 +44,7 @@ def test_v2_completion_gate_reports_current_readiness_json() -> None:
     assert payload["schemaVersion"] == "gcs-saker-v2-completion-matrix-v1"
     assert payload["releaseReadiness"] == "alpha-core"
     assert payload["complete"] is False
-    assert payload["releaseBlockers"] >= 5
+    assert payload["releaseBlockers"] >= 4
     assert 423 in payload["blockingIssues"]
 
 

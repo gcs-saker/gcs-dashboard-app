@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Any, Final
 
 from sqlalchemy import Column, DateTime, Float, MetaData, String, Table
+from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 
 from model.telemetry_model import TelemetryCreate
@@ -14,6 +15,8 @@ from sql.telemetry_sql import Telemetry
 
 
 class TelemetrySqlDialect:
+    MYSQL: Final = "mysql"
+    MARIADB: Final = "mariadb"
     POSTGRESQL: Final = "postgresql"
 
 
@@ -133,6 +136,42 @@ class TelemetryBulkBatch:
         return [payload.to_history_row() for payload in self.payloads]
 
 
+@dataclass(frozen=True)
+class TelemetryBulkWritePlan:
+    record_count: int
+    latest_statement_count: int
+    history_statement_count: int
+    previous_row_loop_statement_count: int
+
+    @property
+    def total_statement_count(self) -> int:
+        return self.latest_statement_count + self.history_statement_count
+
+    @property
+    def avoided_statement_count(self) -> int:
+        return max(self.previous_row_loop_statement_count - self.total_statement_count, 0)
+
+
+def plan_postgres_bulk_write(batch: TelemetryBulkBatch) -> TelemetryBulkWritePlan:
+    record_count = len(batch)
+    return TelemetryBulkWritePlan(
+        record_count=record_count,
+        latest_statement_count=1 if record_count else 0,
+        history_statement_count=1 if record_count else 0,
+        previous_row_loop_statement_count=record_count,
+    )
+
+
+def plan_mysql_latest_bulk_write(batch: TelemetryBulkBatch) -> TelemetryBulkWritePlan:
+    record_count = len(batch)
+    return TelemetryBulkWritePlan(
+        record_count=record_count,
+        latest_statement_count=1 if record_count else 0,
+        history_statement_count=0,
+        previous_row_loop_statement_count=record_count,
+    )
+
+
 def build_postgres_latest_bulk_upsert(batch: TelemetryBulkBatch) -> Any:
     rows = batch.latest_rows()
     statement = postgres_insert(Telemetry).values(rows)
@@ -149,3 +188,14 @@ def build_postgres_latest_bulk_upsert(batch: TelemetryBulkBatch) -> Any:
 
 def build_postgres_history_bulk_insert(batch: TelemetryBulkBatch) -> Any:
     return postgres_insert(telemetry_history_table).values(batch.history_rows())
+
+
+def build_mysql_latest_bulk_upsert(batch: TelemetryBulkBatch) -> Any:
+    rows = batch.latest_rows()
+    statement = mysql_insert(Telemetry).values(rows)
+    update_columns = {
+        column_name: getattr(statement.inserted, column_name)
+        for column_name in LATEST_ROW_COLUMNS
+        if column_name != TelemetryStorageColumns.UUID
+    }
+    return statement.on_duplicate_key_update(**update_columns)
