@@ -54,15 +54,22 @@ stacks:
 
   postgresPrimaryStore:
     status: active
-    issue: 450
+    issue: 414
     runtime:
       composeService: postgres-geo
+      protocol: "PostgreSQL wire protocol with PostGIS geometry extension"
     evidence:
       - deploy/compose/compose.single-node.poc.yml
       - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/infrastructure
       - deploy/postgres/init/001_geo_telemetry.sql
       - backend/tests/test_postgis_schema_contract.py
-    nextGate: "MySQL 제거 후 auth/user/ops/telemetry runtime smoke와 백업/복구 절차를 PostgreSQL 기준으로 재검증한다."
+      - scripts/postgis_runtime_smoke.py
+    activeRuntime:
+      - "stream telemetry history append"
+      - "stream telemetry latest upsert"
+      - "selected stream latest read"
+      - "bounded viewport query with EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)"
+    nextGate: "auth/user/ops 전체 cutover runbook과 production backup/restore drill을 PostgreSQL 기준으로 재검증한다."
 
   mediamtxWebrtcHls:
     status: active
