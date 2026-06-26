@@ -22,7 +22,7 @@ func TestExchangeAcceptsAuthorizedGatewayRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("exchange failed: %v", err)
 	}
-	assertResponse(t, response, "req-001", ackAccepted, reasonAccepted)
+	assertResponse(t, response, "req-001", GatewayAckStatusAccepted, reasonAccepted)
 }
 
 func TestExchangeRejectsUnauthorizedMetadata(t *testing.T) {
@@ -39,7 +39,7 @@ func TestExchangeReturnsMalformedStatusForInvalidPayload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("exchange failed: %v", err)
 	}
-	assertResponse(t, response, "", ackRejected, reasonMalformed)
+	assertResponse(t, response, "", GatewayAckStatusRejected, reasonMalformed)
 }
 
 func TestExchangeReturnsBackpressureForOversizedPayload(t *testing.T) {
@@ -51,7 +51,7 @@ func TestExchangeReturnsBackpressureForOversizedPayload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("exchange failed: %v", err)
 	}
-	assertResponse(t, response, "", ackBackpressure, reasonBackpressure)
+	assertResponse(t, response, "", GatewayAckStatusBackpressure, reasonBackpressure)
 }
 
 func TestExchangeCanAskGatewayToReconnect(t *testing.T) {
@@ -62,7 +62,21 @@ func TestExchangeCanAskGatewayToReconnect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("exchange failed: %v", err)
 	}
-	assertResponse(t, response, "req-reconnect", ackReconnect, reasonReconnect)
+	assertResponse(t, response, "req-reconnect", GatewayAckStatusReconnect, reasonReconnect)
+}
+
+func TestExchangeKeepsOneBidiStreamForMultipleGatewayMessages(t *testing.T) {
+	responses, err := exchangeMany(t, []string{"req-001", "req-002", "req-003"}, testGatewayToken)
+
+	if err != nil {
+		t.Fatalf("exchange failed: %v", err)
+	}
+	if len(responses) != 3 {
+		t.Fatalf("response count mismatch: got %d", len(responses))
+	}
+	for index, response := range responses {
+		assertResponse(t, response, []string{"req-001", "req-002", "req-003"}[index], GatewayAckStatusAccepted, reasonAccepted)
+	}
 }
 
 func exchangeOnce(
@@ -125,28 +139,80 @@ func exchangeOnce(
 
 func gatewayRequest(requestID string, includePayload bool) []byte {
 	payload := make([]byte, 0, 96)
-	payload = encodeString(payload, gatewayFieldRequestID, requestID)
-	payload = encodeString(payload, gatewayFieldOrgID, "a4ai")
-	payload = encodeString(payload, gatewayFieldGroupID, "co-a")
-	payload = encodeString(payload, gatewayFieldAssetID, "raw.mobile.front")
+	payload = encodeString(payload, requestFieldRequestID, requestID)
+	payload = encodeString(payload, requestFieldOrgID, "a4ai")
+	payload = encodeString(payload, requestFieldGroupID, "co-a")
+	payload = encodeString(payload, requestFieldAssetID, "raw.mobile.front")
 	if includePayload {
-		payload = encodeString(payload, gatewayFieldTelemetry, "telemetry-bytes")
+		payload = encodeString(payload, requestFieldTelemetry, "telemetry-bytes")
 	}
 	return payload
 }
 
-func assertResponse(t *testing.T, payload []byte, requestID string, expectedStatus uint64, reasonCode string) {
+func assertResponse(t *testing.T, payload []byte, requestID string, expectedStatus GatewayAckStatus, reasonCode string) {
 	t.Helper()
 	fields := decodeResponse(t, payload)
 	if requestID != "" && string(fields.strings[responseFieldRequestID]) != requestID {
 		t.Fatalf("request id mismatch: %q", fields.strings[responseFieldRequestID])
 	}
-	if fields.varints[responseFieldStatus] != expectedStatus {
+	if GatewayAckStatus(fields.varints[responseFieldStatus]) != expectedStatus {
 		t.Fatalf("status mismatch: got %d want %d", fields.varints[responseFieldStatus], expectedStatus)
 	}
 	if string(fields.strings[responseFieldReasonCode]) != reasonCode {
 		t.Fatalf("reason mismatch: got %q want %q", fields.strings[responseFieldReasonCode], reasonCode)
 	}
+}
+
+func exchangeMany(t *testing.T, requestIDs []string, token string) ([][]byte, error) {
+	t.Helper()
+	listener := bufconn.Listen(1024 * 1024)
+	grpcServer := grpc.NewServer()
+	NewServer(testGatewayToken, defaultMaxPayloadBytes).Register(grpcServer)
+	go func() {
+		_ = grpcServer.Serve(listener)
+	}()
+	defer grpcServer.Stop()
+
+	ctx := metadata.NewOutgoingContext(
+		context.Background(),
+		metadata.Pairs(metadataGatewayToken, token),
+	)
+	conn, err := grpc.DialContext(
+		ctx,
+		"bufnet",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+			return listener.Dial()
+		}),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(rawBytesCodec{})),
+	)
+	if err != nil {
+		t.Fatalf("dial failed: %v", err)
+	}
+	defer conn.Close()
+
+	stream, err := conn.NewStream(ctx, &grpc.StreamDesc{ServerStreams: true, ClientStreams: true}, fullMethodExchange)
+	if err != nil {
+		return nil, err
+	}
+	for _, requestID := range requestIDs {
+		if err := stream.SendMsg(gatewayRequest(requestID, true)); err != nil {
+			return nil, err
+		}
+	}
+	if err := stream.CloseSend(); err != nil {
+		return nil, err
+	}
+
+	responses := make([][]byte, 0, len(requestIDs))
+	for range requestIDs {
+		var response []byte
+		if err := stream.RecvMsg(&response); err != nil {
+			return nil, err
+		}
+		responses = append(responses, response)
+	}
+	return responses, nil
 }
 
 type decodedResponse struct {

@@ -11,9 +11,13 @@ const (
 )
 
 func encodeString(payload []byte, fieldNumber int, value string) []byte {
+	return encodeBytes(payload, fieldNumber, []byte(value))
+}
+
+func encodeBytes(payload []byte, fieldNumber int, value []byte) []byte {
 	payload = encodeKey(payload, fieldNumber, wireTypeLengthDelimited)
 	payload = encodeVarint(payload, uint64(len(value)))
-	return append(payload, []byte(value)...)
+	return append(payload, value...)
 }
 
 func encodeVarintField(payload []byte, fieldNumber int, value uint64) []byte {

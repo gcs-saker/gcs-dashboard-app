@@ -25,7 +25,8 @@ def test_v2_completion_matrix_tracks_release_blockers_without_claiming_complete(
     assert matrix["releaseGateIssue"] == 423
     assert len(gates) >= 10
     assert len(blockers) >= 8
-    assert 412 in {gate["issue"] for gate in blockers}
+    assert 472 in {gate["issue"] for gate in gates}
+    assert 472 not in {gate["issue"] for gate in blockers}
     assert 423 in {gate["issue"] for gate in blockers}
 
 

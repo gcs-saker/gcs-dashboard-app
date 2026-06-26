@@ -5,12 +5,24 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+BACKEND_ROOT = REPO_ROOT / "backend"
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+from modules.protocol_v2.gateway_service import (  # noqa: E402
+    GatewayAckStatus,
+    GatewayStreamRequest,
+    GatewayStreamRequestPayload,
+    GatewayStreamResponse,
+)
+
 PROTO_ROOT = REPO_ROOT / "contracts" / "proto"
 GATEWAY_PROTO = PROTO_ROOT / "gcs" / "saker" / "v1" / "gateway_service.proto"
 DESCRIPTOR_SET = REPO_ROOT / "tmp" / "gcs-saker-grpc-gateway.pb"
@@ -18,10 +30,6 @@ SCHEMA_VERSION = "grpc-runtime-smoke-v1"
 DEFAULT_METHOD = "/gcs.saker.v1.SakerGatewayService/Exchange"
 GATEWAY_TOKEN_METADATA = "x-gcs-gateway-token"
 AUTHORIZATION_METADATA = "authorization"
-ACCEPTED_STATUS = 1
-RESPONSE_FIELD_REQUEST_ID = 2
-RESPONSE_FIELD_STATUS = 3
-RESPONSE_FIELD_REASON_CODE = 4
 
 
 @dataclass(frozen=True)
@@ -52,6 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--auth-token", default=os.getenv("CONTROL_GRPC_AUTH_TOKEN", ""))
     parser.add_argument("--method", default=os.getenv("CONTROL_GRPC_METHOD", DEFAULT_METHOD))
     parser.add_argument("--timeout-seconds", type=float, default=2.0)
+    parser.add_argument("--messages", type=int, default=1, help="Number of GatewayStreamRequest messages to send on one bidi stream.")
     return parser
 
 
@@ -65,7 +74,7 @@ def main() -> int:
 
     payload: dict[str, Any] = {
         "schemaVersion": SCHEMA_VERSION,
-        "status": "runtime-partial",
+        "status": "runtime-integrated",
         "descriptorCommand": config.descriptor_command(),
         "implementedRuntime": [
             "protobuf descriptor contract",
@@ -73,14 +82,16 @@ def main() -> int:
             "CONTROL_GRPC_TARGET and CONTROL_GRPC_METHOD runtime configuration",
             "SakerGatewayService.Exchange server implementation in media-control",
             "metadata based gateway authorization",
+            "explicit GatewayStreamRequest and GatewayStreamResponse DTO mappers",
+            "multi-message bidi stream smoke",
             "malformed protobuf, backpressure, reconnect unit tests",
         ],
         "remainingBeforeFullActive": [
-            "generated DTO or explicit mapper adoption across Kotlin Go Python",
-            "native/device gateway runtime client",
-            "long-lived bidi stream backpressure soak",
+            "generated DTO adoption can replace explicit mappers when protoc plugins are pinned",
+            "native/device gateway packaging outside smoke script",
+            "long-lived multi-minute soak in staging network",
         ],
-        "promotionGate": "gRPC becomes active when Exchange succeeds over the compose internal network and the native/device gateway path uses generated or explicit DTO mappers.",
+        "promotionGate": "Today scope is complete when Exchange succeeds over the compose internal network with explicit DTO mappers and multi-message bidi smoke.",
     }
 
     if args.check or not args.run:
@@ -114,13 +125,14 @@ def main() -> int:
         method=args.method.strip() or DEFAULT_METHOD,
         auth_token=auth_token,
         timeout_seconds=args.timeout_seconds,
+        messages=max(args.messages, 1),
     )
     payload["runtime"] = runtime
     print(json.dumps(payload, ensure_ascii=False))
     return 0 if runtime["accepted"] else 1
 
 
-def run_exchange_smoke(target: str, method: str, auth_token: str, timeout_seconds: float) -> dict[str, Any]:
+def run_exchange_smoke(target: str, method: str, auth_token: str, timeout_seconds: float, messages: int) -> dict[str, Any]:
     try:
         import grpc
     except ImportError as exc:
@@ -130,7 +142,6 @@ def run_exchange_smoke(target: str, method: str, auth_token: str, timeout_second
             "reason": f"grpcio is not installed: {exc}",
         }
 
-    request_id = "grpc-smoke-001"
     channel = grpc.insecure_channel(target)
     stub = channel.stream_stream(
         method,
@@ -142,85 +153,40 @@ def run_exchange_smoke(target: str, method: str, auth_token: str, timeout_second
         (GATEWAY_TOKEN_METADATA, auth_token),
     )
     responses = stub(
-        iter([gateway_request(request_id)]),
+        iter(gateway_request(index) for index in range(1, messages + 1)),
         metadata=metadata,
         timeout=timeout_seconds,
     )
+    decoded_responses: list[GatewayStreamResponse] = []
     try:
-        response = next(iter(responses))
+        for response in responses:
+            decoded_responses.append(GatewayStreamResponse.from_protobuf_wire(response))
     except Exception as exc:  # pragma: no cover - exact grpc exception varies by runtime
         return {
             "executed": True,
             "accepted": False,
             "reason": str(exc),
         }
-    decoded = decode_response(response)
+    accepted = bool(decoded_responses) and all(item.status == GatewayAckStatus.ACCEPTED for item in decoded_responses)
     return {
         "executed": True,
-        "accepted": decoded.get(RESPONSE_FIELD_STATUS) == ACCEPTED_STATUS,
-        "requestId": decoded.get(RESPONSE_FIELD_REQUEST_ID),
-        "status": decoded.get(RESPONSE_FIELD_STATUS),
-        "reasonCode": decoded.get(RESPONSE_FIELD_REASON_CODE),
+        "accepted": accepted,
+        "messageCount": messages,
+        "responseCount": len(decoded_responses),
+        "requestIds": [item.request_id for item in decoded_responses],
+        "statuses": [int(item.status) for item in decoded_responses],
+        "reasonCodes": [item.reason_code for item in decoded_responses],
     }
 
 
-def gateway_request(request_id: str) -> bytes:
-    payload = bytearray()
-    encode_string(payload, 1, request_id)
-    encode_string(payload, 2, "a4ai")
-    encode_string(payload, 3, "co-a")
-    encode_string(payload, 4, "raw.grpc.smoke")
-    encode_bytes(payload, 10, b"telemetry-smoke")
-    return bytes(payload)
-
-
-def decode_response(payload: bytes) -> dict[int, Any]:
-    cursor = 0
-    decoded: dict[int, Any] = {}
-    while cursor < len(payload):
-        key, cursor = decode_varint(payload, cursor)
-        field_number = key >> 3
-        wire_type = key & 0b111
-        if wire_type == 0:
-            decoded[field_number], cursor = decode_varint(payload, cursor)
-        elif wire_type == 2:
-            length, cursor = decode_varint(payload, cursor)
-            raw = payload[cursor : cursor + length]
-            decoded[field_number] = raw.decode("utf-8")
-            cursor += length
-        else:
-            raise ValueError(f"unsupported response wire type: {wire_type}")
-    return decoded
-
-
-def encode_string(payload: bytearray, field_number: int, value: str) -> None:
-    encode_bytes(payload, field_number, value.encode("utf-8"))
-
-
-def encode_bytes(payload: bytearray, field_number: int, value: bytes) -> None:
-    encode_varint(payload, (field_number << 3) | 2)
-    encode_varint(payload, len(value))
-    payload.extend(value)
-
-
-def encode_varint(payload: bytearray, value: int) -> None:
-    while value > 0x7F:
-        payload.append((value & 0x7F) | 0x80)
-        value >>= 7
-    payload.append(value)
-
-
-def decode_varint(payload: bytes, cursor: int) -> tuple[int, int]:
-    shift = 0
-    result = 0
-    while cursor < len(payload):
-        current = payload[cursor]
-        cursor += 1
-        result |= (current & 0x7F) << shift
-        if current & 0x80 == 0:
-            return result, cursor
-        shift += 7
-    raise ValueError("unterminated varint")
+def gateway_request(index: int) -> bytes:
+    return GatewayStreamRequest(
+        request_id=f"grpc-smoke-{index:03d}",
+        org_id="a4ai",
+        group_id="co-a",
+        asset_id="raw.grpc.smoke",
+        payload=GatewayStreamRequestPayload.telemetry(b"telemetry-smoke"),
+    ).to_protobuf_wire()
 
 
 def identity_bytes(payload: bytes) -> bytes:

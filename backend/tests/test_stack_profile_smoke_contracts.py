@@ -25,11 +25,11 @@ def run_check(script: Path) -> dict:
     return json.loads(result.stdout)
 
 
-def test_grpc_runtime_smoke_reports_prototype_state_and_missing_active_gates() -> None:
+def test_grpc_runtime_smoke_reports_integrated_runtime_state_and_follow_up_gates() -> None:
     payload = run_check(GRPC_SMOKE)
 
     assert payload["schemaVersion"] == "grpc-runtime-smoke-v1"
-    assert payload["status"] == "runtime-partial"
+    assert payload["status"] == "runtime-integrated"
     assert payload["descriptorCommand"][:3] == [
         "protoc",
         f"--proto_path={REPO_ROOT / 'contracts' / 'proto'}",
@@ -37,7 +37,8 @@ def test_grpc_runtime_smoke_reports_prototype_state_and_missing_active_gates() -
     ]
     assert "client implementation behind MessageSender abstraction" in payload["implementedRuntime"]
     assert "SakerGatewayService.Exchange server implementation in media-control" in payload["implementedRuntime"]
-    assert "native/device gateway runtime client" in payload["remainingBeforeFullActive"]
+    assert "explicit GatewayStreamRequest and GatewayStreamResponse DTO mappers" in payload["implementedRuntime"]
+    assert "native/device gateway packaging outside smoke script" in payload["remainingBeforeFullActive"]
     assert "compose internal network" in payload["promotionGate"]
 
 

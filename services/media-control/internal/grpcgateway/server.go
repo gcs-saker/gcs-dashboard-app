@@ -3,7 +3,6 @@ package grpcgateway
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -16,34 +15,19 @@ import (
 )
 
 const (
-	serviceName                    = "gcs.saker.v1.SakerGatewayService"
-	methodExchange                 = "Exchange"
-	fullMethodExchange             = "/gcs.saker.v1.SakerGatewayService/Exchange"
-	metadataAuthorization          = "authorization"
-	metadataGatewayToken           = "x-gcs-gateway-token"
-	metadataReconnect              = "x-gcs-gateway-reconnect"
-	bearerPrefix                   = "bearer "
-	defaultMaxPayloadBytes         = 64 * 1024
-	gatewayFieldRequestID          = 1
-	gatewayFieldOrgID              = 2
-	gatewayFieldGroupID            = 3
-	gatewayFieldAssetID            = 4
-	gatewayFieldTelemetry          = 10
-	gatewayFieldStreamEvent        = 11
-	gatewayFieldCommandAck         = 12
-	responseFieldResponseID        = 1
-	responseFieldRequestID         = 2
-	responseFieldStatus            = 3
-	responseFieldReasonCode        = 4
-	ackAccepted             uint64 = 1
-	ackRejected             uint64 = 2
-	ackBackpressure         uint64 = 3
-	ackReconnect            uint64 = 4
-	reasonAccepted                 = "accepted"
-	reasonMalformed                = "malformed_protobuf"
-	reasonUnauthorized             = "unauthorized_gateway_metadata"
-	reasonBackpressure             = "payload_too_large"
-	reasonReconnect                = "reconnect_requested"
+	serviceName            = "gcs.saker.v1.SakerGatewayService"
+	methodExchange         = "Exchange"
+	fullMethodExchange     = "/gcs.saker.v1.SakerGatewayService/Exchange"
+	metadataAuthorization  = "authorization"
+	metadataGatewayToken   = "x-gcs-gateway-token"
+	metadataReconnect      = "x-gcs-gateway-reconnect"
+	bearerPrefix           = "bearer "
+	defaultMaxPayloadBytes = 64 * 1024
+	reasonAccepted         = "accepted"
+	reasonMalformed        = "malformed_protobuf"
+	reasonUnauthorized     = "unauthorized_gateway_metadata"
+	reasonBackpressure     = "payload_too_large"
+	reasonReconnect        = "reconnect_requested"
 )
 
 type Server struct {
@@ -121,32 +105,16 @@ func (s Server) exchangeHandler(_ any, stream grpc.ServerStream) error {
 
 func (s Server) handleRequest(request []byte, reconnectRequested bool) []byte {
 	if len(request) > s.maxPayloadBytes {
-		return gatewayResponse("", ackBackpressure, reasonBackpressure)
+		return GatewayResponse("", GatewayAckStatusBackpressure, reasonBackpressure)
 	}
-	fields, err := decodeLengthDelimitedFields(request)
+	gatewayRequest, err := DecodeGatewayStreamRequest(request)
 	if err != nil {
-		return gatewayResponse("", ackRejected, reasonMalformed)
-	}
-	requestID, err := readString(fields, gatewayFieldRequestID)
-	if err != nil {
-		return gatewayResponse("", ackRejected, reasonMalformed)
-	}
-	if _, err := readString(fields, gatewayFieldOrgID); err != nil {
-		return gatewayResponse(requestID, ackRejected, reasonMalformed)
-	}
-	if _, err := readString(fields, gatewayFieldGroupID); err != nil {
-		return gatewayResponse(requestID, ackRejected, reasonMalformed)
-	}
-	if _, err := readString(fields, gatewayFieldAssetID); err != nil {
-		return gatewayResponse(requestID, ackRejected, reasonMalformed)
-	}
-	if !hasAnyField(fields, gatewayFieldTelemetry, gatewayFieldStreamEvent, gatewayFieldCommandAck) {
-		return gatewayResponse(requestID, ackRejected, reasonMalformed)
+		return GatewayResponse("", GatewayAckStatusRejected, reasonMalformed)
 	}
 	if reconnectRequested {
-		return gatewayResponse(requestID, ackReconnect, reasonReconnect)
+		return GatewayResponse(gatewayRequest.RequestID, GatewayAckStatusReconnect, reasonReconnect)
 	}
-	return gatewayResponse(requestID, ackAccepted, reasonAccepted)
+	return GatewayResponse(gatewayRequest.RequestID, GatewayAckStatusAccepted, reasonAccepted)
 }
 
 func (s Server) authorized(ctx context.Context) bool {
@@ -162,17 +130,6 @@ func (s Server) authorized(ctx context.Context) bool {
 		}
 	}
 	return false
-}
-
-func gatewayResponse(requestID string, status uint64, reasonCode string) []byte {
-	response := make([]byte, 0, 64)
-	response = encodeString(response, responseFieldResponseID, fmt.Sprintf("grpc-%s", reasonCode))
-	if requestID != "" {
-		response = encodeString(response, responseFieldRequestID, requestID)
-	}
-	response = encodeVarintField(response, responseFieldStatus, status)
-	response = encodeString(response, responseFieldReasonCode, reasonCode)
-	return response
 }
 
 func metadataContains(ctx context.Context, key string, expected string) bool {

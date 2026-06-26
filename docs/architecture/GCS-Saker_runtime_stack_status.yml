@@ -115,28 +115,34 @@ stacks:
       - contracts/proto/gcs/saker/v1/ops_event.proto
       - contracts/proto/gcs/saker/v1/ai_overlay.proto
       - backend/tests/test_protobuf_contracts.py
+      - backend/modules/protocol_v2/gateway_service.py
       - services/media-control/internal/protocolv2
       - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/protocol/v2
-    nextGate: "descriptor-encoded payload smoke는 추가되었다. 다음은 generated DTO 또는 명시 mapper를 고정하고 device/native gateway runtime smoke를 통과시키는 것이다."
+    nextGate: "명시 mapper와 runtime smoke는 추가되었다. 다음은 generated DTO plugin pinning과 장시간 staging soak를 별도 hardening으로 진행한다."
 
   grpcInternalStreaming:
-    status: prototype
-    issue: 412
+    status: active
+    issue: 472
+    runtime:
+      composeService: media-control
+      internalPort: 9090
+      protocol: "gRPC bidirectional streaming over protobuf payload"
     evidence:
       - contracts/proto/gcs/saker/v1/gateway_service.proto
       - backend/modules/messaging/sender.py
+      - backend/modules/protocol_v2/gateway_service.py
       - backend/tests/test_message_sender_abstraction.py
+      - backend/tests/test_protocol_v2_gateway_service.py
       - services/media-control/internal/grpcgateway
       - scripts/grpc_runtime_smoke.py
-    missingRuntime:
-      - "generated DTO 또는 명시 mapper 기반 native/device gateway client"
-      - "long-lived bidi stream backpressure soak"
-    prototypeRuntime:
+    activeRuntime:
       - "client implementation behind MessageSender abstraction"
       - "CONTROL_GRPC_TARGET and CONTROL_GRPC_METHOD runtime configuration"
       - "media-control internal SakerGatewayService.Exchange endpoint"
+      - "explicit GatewayStreamRequest/GatewayStreamResponse mappers in Python and Go"
+      - "compose internal Exchange smoke with multi-message bidi stream"
       - "metadata authorization, malformed payload, backpressure, reconnect tests"
-    nextGate: "compose internal network smoke와 native/device gateway mapper를 통과한 뒤 active로 승격한다."
+    nextGate: "generated DTO plugin을 버전 고정해 explicit mapper를 대체하고, 장시간 staging soak와 native gateway packaging을 진행한다."
 
   dragonflyCacheProfile:
     status: profile

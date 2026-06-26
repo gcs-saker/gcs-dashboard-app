@@ -12,36 +12,40 @@ decision: "현재 상태는 Saker v2 alpha-core이며, production-ready complete
 
 requiredGates:
   - id: V2-GRPC-001
-    issue: 412
+    issue: 472
     title: "gRPC internal bidirectional streaming runtime wiring"
     expectedStateForV2: active-or-deferred-with-record
-    currentState: runtime-partial
-    releaseBlocker: true
+    currentState: runtime-integrated
+    releaseBlocker: false
     evidence:
       - contracts/proto/gcs/saker/v1/gateway_service.proto
       - scripts/grpc_runtime_smoke.py
       - backend/tests/test_message_sender_abstraction.py
+      - backend/tests/test_protocol_v2_gateway_service.py
+      - backend/modules/protocol_v2/gateway_service.py
       - services/media-control/internal/grpcgateway
       - deploy/compose/compose.single-node.poc.yml
     missing:
-      - "generated DTO 또는 명시 mapper 기반 native/device gateway client"
-      - "long-lived bidi stream backpressure soak"
+      - "generated DTO plugin pinning"
+      - "multi-minute staging soak"
 
   - id: V2-PROTOBUF-001
     issue: 413
     title: "Protobuf event/control pipeline integration across Python Go Kotlin"
     expectedStateForV2: active-contract
-    currentState: contract
-    releaseBlocker: true
+    currentState: active-contract
+    releaseBlocker: false
     evidence:
       - contracts/proto/gcs/saker/v1
       - backend/tests/test_protobuf_contracts.py
+      - backend/tests/test_protocol_v2_gateway_service.py
+      - backend/modules/protocol_v2/gateway_service.py
       - services/media-control/internal/protocolv2
       - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/protocol/v2
       - services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/MqttTelemetryConsumerBridgeTest.kt
     missing:
-      - "Kotlin/Go/Python generated DTO 또는 명시 mapper 정리"
-      - "device/native gateway path에서 실제 protobuf payload smoke"
+      - "generated DTO plugin pinning"
+      - "native gateway packaging"
 
   - id: V2-POSTGIS-001
     issue: 414
