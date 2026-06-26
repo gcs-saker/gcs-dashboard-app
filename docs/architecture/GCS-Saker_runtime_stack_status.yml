@@ -106,6 +106,7 @@ stacks:
       - deploy/nginx/single-node.poc.conf
       - scripts/m7_publish_play_smoke.sh
       - scripts/m7_dashboard_first_frame_smoke.sh
+      - scripts/webrtc_ice_smoke.py
     nextGate: "외부 NAT에서 WHIP publish, WHEP play, first frame, audio stats를 자동 smoke로 재검증한다."
 
   coturnPair:
@@ -119,7 +120,13 @@ stacks:
       - deploy/compose/compose.single-node.poc.yml
       - scripts/webrtc_ice_smoke.py
       - services/media-control/internal/turn
-    nextGate: "relay ratio, selected candidate type, TURN allocation failure를 운영 로그와 dashboard 지표에 연결한다."
+      - docs/operations/GCS-Saker_M7_ICE_관측과_TURN_부하절감_가이드.md
+    runtimeProof:
+      - "selected ICE pair에서 local/remote candidate type, protocol, RTT, direct/relay path를 추출한다."
+      - "benchmark schema가 selected candidate type, ICE RTT, direct ratio, relay ratio, relay fallback reason을 고정한다."
+      - "media-control은 STUN 후보를 유지하고 건강한 TURN 후보를 기본 1개로 제한한다."
+      - "primary TURN이 unhealthy면 secondary TURN이 fallback으로 반환되는 테스트가 있다."
+    nextGate: "relay ratio가 높은 stream에 bitrate/fps downshift와 TURN capacity alert를 연결한다."
 
   mqttTelemetryBridge:
     status: runtime-validated-profile

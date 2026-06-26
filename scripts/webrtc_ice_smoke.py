@@ -5,12 +5,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 import ipaddress
 import ssl
 import sys
 import time
-from typing import Iterable, Sequence
+from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -20,6 +21,10 @@ DEFAULT_STUN_URL = "stun:stun.l.google.com:19302"
 REQUIRED_SDP_MARKERS = ("ice-ufrag", "ice-pwd", "fingerprint")
 CONNECTED_ICE_STATES = {"connected", "completed"}
 FAILED_ICE_STATES = {"failed", "closed", "disconnected"}
+DIRECT_ICE_PATH = "direct"
+RELAY_ICE_PATH = "relay"
+UNKNOWN_ICE_PATH = "unknown"
+DIRECT_CANDIDATE_TYPES = {"host", "srflx", "prflx"}
 
 
 @dataclass(frozen=True)
@@ -30,6 +35,26 @@ class CandidateSummary:
     relay: int
     private_or_loopback: int
     public_or_dns: int
+
+
+@dataclass(frozen=True)
+class SelectedIcePair:
+    local_candidate_type: str
+    remote_candidate_type: str
+    protocol: str
+    rtt_ms: float | None
+    path: str
+    relay_fallback_reason: str | None
+
+
+@dataclass(frozen=True)
+class IcePathSummary:
+    total: int
+    direct: int
+    relay: int
+    unknown: int
+    direct_ratio: float
+    relay_ratio: float
 
 
 @dataclass(frozen=True)
@@ -132,6 +157,146 @@ def require_webrtc_sdp(sdp: str, label: str) -> SdpInspection:
         raise RuntimeError(f"{label} SDP is missing WebRTC ICE data: {', '.join(missing)}")
 
     return inspection
+
+
+def classify_ice_path(local_candidate_type: str, remote_candidate_type: str) -> str:
+    candidate_types = {local_candidate_type.lower(), remote_candidate_type.lower()}
+    if "relay" in candidate_types:
+        return RELAY_ICE_PATH
+    if candidate_types and candidate_types <= DIRECT_CANDIDATE_TYPES:
+        return DIRECT_ICE_PATH
+    return UNKNOWN_ICE_PATH
+
+
+def summarize_ice_paths(selected_pairs: Iterable[SelectedIcePair]) -> IcePathSummary:
+    pairs = list(selected_pairs)
+    total = len(pairs)
+    direct = sum(1 for pair in pairs if pair.path == DIRECT_ICE_PATH)
+    relay = sum(1 for pair in pairs if pair.path == RELAY_ICE_PATH)
+    unknown = total - direct - relay
+    if total == 0:
+        return IcePathSummary(total=0, direct=0, relay=0, unknown=0, direct_ratio=0.0, relay_ratio=0.0)
+    return IcePathSummary(
+        total=total,
+        direct=direct,
+        relay=relay,
+        unknown=unknown,
+        direct_ratio=round(direct / total, 4),
+        relay_ratio=round(relay / total, 4),
+    )
+
+
+def infer_relay_fallback_reason(
+    selected_pair: SelectedIcePair | None,
+    local_offer: SdpInspection,
+    whep_answer: SdpInspection,
+) -> str | None:
+    if selected_pair is None:
+        return "selected_pair_unavailable"
+    if selected_pair.path != RELAY_ICE_PATH:
+        return None
+    if selected_pair.local_candidate_type == "relay" and selected_pair.remote_candidate_type == "relay":
+        return "both_sides_selected_relay_candidate"
+    if selected_pair.local_candidate_type == "relay":
+        return "local_selected_relay_candidate"
+    if selected_pair.remote_candidate_type == "relay":
+        return "remote_selected_relay_candidate"
+    if local_offer.candidates.srflx == 0 and whep_answer.candidates.srflx == 0:
+        return "server_reflexive_candidate_unavailable"
+    return "direct_candidate_failed_relay_selected"
+
+
+async def collect_selected_ice_pair(peer_connection: object) -> SelectedIcePair | None:
+    get_stats = getattr(peer_connection, "getStats", None)
+    if get_stats is None:
+        return None
+    stats_report = await get_stats()
+    return extract_selected_ice_pair(stats_report)
+
+
+def extract_selected_ice_pair(stats_report: object) -> SelectedIcePair | None:
+    stats = _stats_values(stats_report)
+    stats_by_id = {
+        str(stat_id): stat
+        for stat in stats
+        if (stat_id := _stat_value(stat, "id")) is not None
+    }
+
+    selected_pair = _selected_pair_from_transport(stats, stats_by_id) or _selected_pair_from_candidates(stats)
+    if selected_pair is None:
+        return None
+
+    local_candidate = stats_by_id.get(str(_stat_value(selected_pair, "localCandidateId", "local_candidate_id", default="")))
+    remote_candidate = stats_by_id.get(str(_stat_value(selected_pair, "remoteCandidateId", "remote_candidate_id", default="")))
+    local_type = str(_stat_value(local_candidate, "candidateType", "candidate_type", default="unknown"))
+    remote_type = str(_stat_value(remote_candidate, "candidateType", "candidate_type", default="unknown"))
+    protocol = str(
+        _stat_value(
+            selected_pair,
+            "protocol",
+            default=_stat_value(local_candidate, "protocol", default=_stat_value(remote_candidate, "protocol", default="unknown")),
+        )
+    )
+    rtt_seconds = _stat_value(selected_pair, "currentRoundTripTime", "current_round_trip_time", default=None)
+    rtt_ms = round(float(rtt_seconds) * 1000, 3) if rtt_seconds is not None else None
+    path = classify_ice_path(local_type, remote_type)
+    return SelectedIcePair(
+        local_candidate_type=local_type,
+        remote_candidate_type=remote_type,
+        protocol=protocol,
+        rtt_ms=rtt_ms,
+        path=path,
+        relay_fallback_reason="selected_pair_contains_relay_candidate" if path == RELAY_ICE_PATH else None,
+    )
+
+
+def _stats_values(stats_report: object) -> list[object]:
+    if isinstance(stats_report, Mapping):
+        return list(stats_report.values())
+    values = getattr(stats_report, "values", None)
+    if callable(values):
+        return list(values())
+    if isinstance(stats_report, Iterable):
+        return list(stats_report)
+    return []
+
+
+def _selected_pair_from_transport(stats: Sequence[object], stats_by_id: Mapping[str, object]) -> object | None:
+    for stat in stats:
+        if _stat_value(stat, "type") != "transport":
+            continue
+        selected_pair_id = _stat_value(stat, "selectedCandidatePairId", "selected_candidate_pair_id")
+        if selected_pair_id is not None and str(selected_pair_id) in stats_by_id:
+            return stats_by_id[str(selected_pair_id)]
+    return None
+
+
+def _selected_pair_from_candidates(stats: Sequence[object]) -> object | None:
+    candidate_pairs = [stat for stat in stats if _stat_value(stat, "type") == "candidate-pair"]
+    for stat in candidate_pairs:
+        if _stat_value(stat, "selected", default=False) is True:
+            return stat
+    for stat in candidate_pairs:
+        if _stat_value(stat, "nominated", default=False) is True and _stat_value(stat, "state") == "succeeded":
+            return stat
+    for stat in candidate_pairs:
+        if _stat_value(stat, "state") == "succeeded":
+            return stat
+    return None
+
+
+def _stat_value(stat: object, *names: str, default: Any = None) -> Any:
+    if stat is None:
+        return default
+    if isinstance(stat, Mapping):
+        for name in names:
+            if name in stat:
+                return stat[name]
+        return default
+    for name in names:
+        if hasattr(stat, name):
+            return getattr(stat, name)
+    return default
 
 
 def post_whep_offer(whep_url: str, offer_sdp: str, insecure: bool) -> str:
@@ -269,6 +434,17 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
         else:
             await asyncio.sleep(0.2)
 
+        selected_pair = await collect_selected_ice_pair(peer_connection)
+        if selected_pair is not None:
+            selected_pair = SelectedIcePair(
+                local_candidate_type=selected_pair.local_candidate_type,
+                remote_candidate_type=selected_pair.remote_candidate_type,
+                protocol=selected_pair.protocol,
+                rtt_ms=selected_pair.rtt_ms,
+                path=selected_pair.path,
+                relay_fallback_reason=infer_relay_fallback_reason(selected_pair, local_inspection, answer_inspection),
+            )
+
         frame = None
         first_frame_elapsed_ms = None
         if args.require_video_frame:
@@ -286,6 +462,7 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
         print(f"WHEP answer latency ms: {answer_elapsed_ms:.1f}")
         print(f"ICE gathering state: {peer_connection.iceGatheringState}")
         print(f"ICE connection state: {peer_connection.iceConnectionState}")
+        print_selected_ice_pair(selected_pair)
         if frame is not None and first_frame_elapsed_ms is not None:
             print(f"First video frame latency ms: {first_frame_elapsed_ms:.1f}")
             print(f"First video frame size: {frame.width}x{frame.height}")  # type: ignore[attr-defined]
@@ -300,6 +477,24 @@ def print_candidate_summary(label: str, summary: CandidateSummary) -> None:
         f"host={summary.host}, srflx={summary.srflx}, relay={summary.relay}, "
         f"private_or_loopback={summary.private_or_loopback}, public_or_dns={summary.public_or_dns}"
     )
+
+
+def print_selected_ice_pair(selected_pair: SelectedIcePair | None) -> None:
+    if selected_pair is None:
+        print("Selected ICE pair: unavailable")
+        print("ICE path: unknown")
+        print("Relay fallback reason: selected_pair_unavailable")
+        return
+    rtt_ms = "unknown" if selected_pair.rtt_ms is None else f"{selected_pair.rtt_ms:.1f}"
+    print(
+        "Selected ICE pair: "
+        f"local={selected_pair.local_candidate_type}, "
+        f"remote={selected_pair.remote_candidate_type}, "
+        f"protocol={selected_pair.protocol}, "
+        f"rtt_ms={rtt_ms}"
+    )
+    print(f"ICE path: {selected_pair.path}")
+    print(f"Relay fallback reason: {selected_pair.relay_fallback_reason or 'none'}")
 
 
 def run_static_check() -> int:
@@ -319,10 +514,37 @@ def run_static_check() -> int:
     inspection = require_webrtc_sdp(sample_sdp, "sample")
     if not inspection.has_video_media:
         raise RuntimeError("sample SDP should include a video media section")
+    sample_pair = SelectedIcePair(
+        local_candidate_type="srflx",
+        remote_candidate_type="host",
+        protocol="udp",
+        rtt_ms=12.5,
+        path=classify_ice_path("srflx", "host"),
+        relay_fallback_reason=None,
+    )
+    path_summary = summarize_ice_paths(
+        [
+            sample_pair,
+            SelectedIcePair(
+                local_candidate_type="relay",
+                remote_candidate_type="host",
+                protocol="udp",
+                rtt_ms=31.0,
+                path=classify_ice_path("relay", "host"),
+                relay_fallback_reason="local_selected_relay_candidate",
+            ),
+        ]
+    )
 
     print("WebRTC ICE smoke check passed")
     print(f"Required SDP markers: {', '.join(REQUIRED_SDP_MARKERS)}, candidate")
     print_candidate_summary("Sample", inspection.candidates)
+    print_selected_ice_pair(sample_pair)
+    print(
+        "ICE path summary contract: "
+        f"total={path_summary.total}, direct={path_summary.direct}, relay={path_summary.relay}, "
+        f"direct_ratio={path_summary.direct_ratio:.4f}, relay_ratio={path_summary.relay_ratio:.4f}"
+    )
     print(f"Default WHEP URL: {DEFAULT_WHEP_URL}")
     print(f"Default ICE server URL: {DEFAULT_STUN_URL}")
     return 0

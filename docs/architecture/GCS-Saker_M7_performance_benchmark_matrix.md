@@ -29,6 +29,18 @@ WebRTC media 계측은 같은 report에 별도 smoke 수치로 함께 기록한�
 - `hls_master_latency_ms`
 - `hls_variant_latency_ms`
 
+ICE path 계측은 `scripts/webrtc_ice_smoke.py --run`의 selected pair 통계를 기준으로 기록한다.
+
+| metric | 의미 | 병목 판단 |
+| --- | --- | --- |
+| `selected_local_candidate_type` | browser/local 쪽 selected ICE candidate type | `relay`면 TURN allocation과 relay 대역폭을 소비한다. |
+| `selected_remote_candidate_type` | MediaMTX/remote 쪽 selected ICE candidate type | remote가 `relay`면 서버 public candidate, UDP, NAT mapping을 먼저 본다. |
+| `selected_ice_protocol` | selected pair transport protocol | `tcp` fallback이면 UDP 차단 또는 방화벽 정책 가능성이 높다. |
+| `ice_rtt_ms` | selected pair RTT | media first frame과 audio delay 원인 분리에 사용한다. |
+| `direct_ratio` | 측정 session 중 host/srflx/prflx direct 비율 | 값이 높을수록 TURN 부하가 줄어든다. |
+| `relay_ratio` | 측정 session 중 relay 비율 | TURN capacity, relay port range, credential quota 산정에 사용한다. |
+| `relay_fallback_reason` | relay 선택 원인 분류 | 후보 미노출, UDP 차단, symmetric NAT, selected pair 미수집을 구분한다. |
+
 ICE 경로는 최소 두 profile을 같은 stream id로 비교한다.
 
 | profile | 의미 | 판단 기준 |
@@ -93,6 +105,8 @@ scripts/m7_performance_benchmark_matrix.py \
 - `stream_list`가 느리면 MediaMTX API polling, stream cache TTL, 권한 필터를 본다.
 - `hls_manifest`가 느리면 stream publish readiness, HLS segment generation, edge proxy timeout을 본다.
 - WebRTC first frame은 API latency보다 ICE candidate 품질, TURN relay 여부, browser decoder 상태의 영향을 더 크게 받는다.
+- `relay_ratio`가 높으면 TURN 서버 자체 교체보다 먼저 MediaMTX public candidate, 8189/UDP, coturn realm/credential, NAT 종류를 확인한다.
+- `selected_ice_protocol=tcp`가 반복되면 실시간성 저하 가능성이 크므로 UDP path와 방화벽 정책을 우선 점검한다.
 
 ## 2026-06-19 운영 profile 실측
 측정 대상은 Server-01 public edge `https://a4ai.tplinkdns.com`의 `m7` profile이다. sample stream은 로컬 synthetic WHIP publisher로 `raw.sample.front`와 `raw.nat.smoke` 경로에 publish했고, 자체서명 인증서 환경이므로 benchmark에는 `--insecure`를 명시했다. 비밀번호와 token은 profile 파일에 넣지 않고 환경 변수로만 주입했다.
@@ -128,6 +142,7 @@ scripts/m7_performance_benchmark_matrix.py \
 - legacy, v0.2.0, m7 중 실행 가능한 profile이 같은 script로 측정된다.
 - 결과 JSON에 `schemaVersion: m7-performance-benchmark-v1`가 포함된다.
 - 결과 JSON 또는 check output에 `iceProfileLabels: ["stun-direct", "turn-relay"]`가 포함된다.
+- 결과 JSON 또는 check output에 `icePathMetrics`와 selected candidate type, ICE RTT, direct/relay ratio 계약이 포함된다.
 - API/HLS metric은 p50/p95/max/errors를 가진다.
 - WebRTC media 수치는 `m7_publish_play_smoke.sh --run` 또는 browser first-frame smoke 결과와 함께 보고한다.
 - Docker daemon, 포트, 권한 문제로 live run이 실패하면 실패 지점과 재실행 조건을 남긴다.
