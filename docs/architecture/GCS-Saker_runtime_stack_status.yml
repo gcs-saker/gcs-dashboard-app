@@ -157,12 +157,20 @@ stacks:
     runtime:
       overrideFile: deploy/compose/compose.dragonfly.override.yml
       replacedService: redis
+      protocol: "Redis RESP-compatible cache protocol"
+      defaultRuntime: false
     evidence:
       - deploy/compose/compose.dragonfly.override.yml
       - backend/tests/test_docker_env_contract.py
+      - backend/tests/test_dragonfly_cache_profile_contract.py
       - scripts/dragonfly_profile_smoke.py
       - docs/architecture/GCS-Saker_M8_dragonfly_compatibility_profile.md
-    nextGate: "Redis와 DragonFly 양쪽에서 auth/session/ICE/stream cache smoke를 동일하게 통과시키고 license/image tag를 기록한다."
+    activeProfile:
+      - "Redis 기본 profile과 DragonFly override profile이 같은 AUTH/PING/SETEX/GET/GETDEL/TTL/DEL command subset을 통과한다."
+      - "auth-policy principal cache, refresh session, media-control ICE cache, stream list, stream presence key 계약을 검증한다."
+      - "DragonFly license는 BSL 1.1로 기록하고, managed in-memory data-store service로 제공하지 않는 self-hosted production 조건을 운영 리스크로 남긴다."
+      - "profile remains optional until benchmark and operational risk review approve DragonFly promotion."
+    nextGate: "Redis 기본 runtime을 DragonFly로 교체하기 전 production benchmark, 장애 drill, 운영 리스크 승인을 별도 gate로 진행한다."
 
   graphqlOperationalRead:
     status: contract
