@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,6 +17,7 @@ ENV_FILE = REPO_ROOT / "deploy" / "compose" / ".env.single-node.example"
 SCHEMA_VERSION = "dragonfly-profile-smoke-v1"
 DEFAULT_PROJECT_PREFIX = "gcs-saker-cache-profile"
 CLIENT_IMAGE = "python:3.12-alpine"
+DEFAULT_DRAGONFLY_IMAGE = "docker.dragonflydb.io/dragonflydb/dragonfly"
 
 
 CACHE_CONTRACT_CLIENT = r"""
@@ -308,7 +310,7 @@ def main() -> int:
 
 def run_profiles(config: DragonflyProfileSmokeConfig) -> dict[str, Any]:
     password = read_env_value(config.env_file, "REDIS_PASSWORD")
-    dragonfly_image = read_env_value(config.env_file, "DRAGONFLY_IMAGE")
+    dragonfly_image = read_env_value(config.env_file, "DRAGONFLY_IMAGE", default=DEFAULT_DRAGONFLY_IMAGE)
     profiles = [
         ("redis", False, "redis:7.4-alpine"),
         ("dragonfly", True, dragonfly_image),
@@ -356,6 +358,7 @@ def run_profile(
             capture_output=True,
             text=True,
             cwd=REPO_ROOT,
+            env=compose_environment(image),
         )
         if completed.returncode != 0:
             return {
@@ -397,7 +400,13 @@ def equivalent_check_names(results: list[dict[str, Any]]) -> bool:
     return all([check["name"] for check in result.get("checks", [])] == baseline for result in results)
 
 
-def read_env_value(path: Path, key: str) -> str:
+def compose_environment(dragonfly_image: str) -> dict[str, str]:
+    env = os.environ.copy()
+    env.setdefault("DRAGONFLY_IMAGE", dragonfly_image)
+    return env
+
+
+def read_env_value(path: Path, key: str, *, default: str | None = None) -> str:
     for line in path.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith("#") or "=" not in stripped:
@@ -405,6 +414,8 @@ def read_env_value(path: Path, key: str) -> str:
         name, value = stripped.split("=", 1)
         if name == key:
             return value.strip().strip('"').strip("'")
+    if default is not None:
+        return default
     raise RuntimeError(f"{key} is missing from {path}")
 
 

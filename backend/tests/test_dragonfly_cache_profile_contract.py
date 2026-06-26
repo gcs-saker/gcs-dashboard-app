@@ -4,6 +4,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+import importlib.util
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -48,6 +49,46 @@ def test_dragonfly_profile_records_license_and_non_default_promotion_gate() -> N
     assert "not offered as a managed" in payload["license"]["productionUseNote"]
     assert "profile remains optional" in "\n".join(payload["runtimeChecks"])
     assert "Promote to active only after Redis and DragonFly runtime smoke results are equivalent" in payload["promotionGate"]
+
+
+def test_dragonfly_smoke_allows_server_env_without_explicit_dragonfly_image(tmp_path: Path) -> None:
+    server_like_env = tmp_path / ".env.single-node"
+    server_like_env.write_text(
+        "\n".join(
+            [
+                "COMPOSE_PROJECT_NAME=gcs-saker-test",
+                "REDIS_PASSWORD=change-me-redis",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), "--check", "--env-file", str(server_like_env)],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["schemaVersion"] == "dragonfly-profile-smoke-v1"
+    assert any(profile["name"] == "dragonfly" for profile in payload["profiles"])
+    spec = importlib.util.spec_from_file_location("dragonfly_profile_smoke", SCRIPT)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    assert (
+        module.read_env_value(
+            server_like_env,
+            "DRAGONFLY_IMAGE",
+            default=module.DEFAULT_DRAGONFLY_IMAGE,
+        )
+        == module.DEFAULT_DRAGONFLY_IMAGE
+    )
 
 
 def test_dragonfly_completion_matrix_no_longer_blocks_release_but_keeps_profile_not_default() -> None:
