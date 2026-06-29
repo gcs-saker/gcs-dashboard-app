@@ -338,10 +338,17 @@ func (s Server) mediaMTXAuth(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, errorPayload(errPublisherAuthFailed))
 		return
 	}
-	if payload.Action != mediaMTXActionPublish {
+	switch payload.Action {
+	case mediaMTXActionPublish:
+		s.authorizeMediaMTXPublish(w, payload)
+	case mediaMTXActionRead, mediaMTXActionPlayback:
+		s.authorizeMediaMTXPlayback(w, payload)
+	default:
 		w.WriteHeader(http.StatusNoContent)
-		return
 	}
+}
+
+func (s Server) authorizeMediaMTXPublish(w http.ResponseWriter, payload mediaMTXAuthRequest) {
 	if s.publishToken == "" {
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthNotConfigured))
 		return
@@ -353,6 +360,24 @@ func (s Server) mediaMTXAuth(w http.ResponseWriter, r *http.Request) {
 	values, err := url.ParseQuery(strings.TrimPrefix(payload.Query, "?"))
 	if err != nil || values.Get(publisherTokenQueryKey) != s.publishToken {
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s Server) authorizeMediaMTXPlayback(w http.ResponseWriter, payload mediaMTXAuthRequest) {
+	if s.publishToken == "" {
+		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
+	if _, err := domain.ParseStreamPath(payload.Path); err != nil {
+		writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
+		return
+	}
+	values, err := url.ParseQuery(strings.TrimPrefix(payload.Query, "?"))
+	if err != nil || values.Get(playbackTokenQueryKey) != s.publishToken {
+		writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
 		return
 	}
 
@@ -394,6 +419,7 @@ func (s Server) streamDescriptorResponseFromParsed(
 	parsed domain.ParsedStreamPath,
 ) streamDescriptorResponse {
 	playbackURLs := s.playback.Build(parsed)
+	playbackURLs = s.withPlaybackToken(playbackURLs)
 	return streamDescriptorResponse{
 		StreamID:     parsed.StreamID,
 		Path:         parsed.Path,
@@ -439,6 +465,30 @@ func (s Server) writeStreamPublishResponse(w http.ResponseWriter, parsed domain.
 		StreamID: parsed.StreamID,
 		WhipURL:  whipURL,
 	})
+}
+
+func (s Server) withPlaybackToken(playbackURLs domain.PlaybackURLs) domain.PlaybackURLs {
+	if s.publishToken == "" {
+		return playbackURLs
+	}
+	return domain.PlaybackURLs{
+		WebRTC: appendQueryToken(playbackURLs.WebRTC, playbackTokenQueryKey, s.publishToken),
+		HLS:    appendQueryToken(playbackURLs.HLS, playbackTokenQueryKey, s.publishToken),
+	}
+}
+
+func appendQueryToken(rawURL string, key string, token string) string {
+	if rawURL == "" || token == "" {
+		return rawURL
+	}
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+	values := parsed.Query()
+	values.Set(key, token)
+	parsed.RawQuery = values.Encode()
+	return parsed.String()
 }
 
 func (s Server) authorizeDashboardStream(

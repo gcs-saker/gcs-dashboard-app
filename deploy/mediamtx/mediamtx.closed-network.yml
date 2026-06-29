@@ -8,21 +8,11 @@ metricsAddress: :9998
 authMethod: http
 authHTTPAddress: http://media-control:8081/v1/mediamtx/auth
 authHTTPExclude:
-  - action: read
-  - action: playback
   - action: api
   - action: metrics
   - action: pprof
 
 authInternalUsers:
-  - user: any
-    pass:
-    ips: []
-    permissions:
-      - action: read
-        path:
-      - action: playback
-        path:
   - user: any
     pass:
     ips: ['127.0.0.1', '::1', '172.16.0.0/12']

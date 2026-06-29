@@ -56,12 +56,15 @@ def test_backend_runtime_is_pinned_to_python_312():
     assert python_version == "3.12"
 
 
-def test_mediamtx_readiness_keeps_management_private_and_playback_public():
+def test_mediamtx_readiness_keeps_management_private_and_playback_auth_hooked():
     config = MEDIAMTX_CONFIG.read_text(encoding="utf-8")
 
     assert "api: true" in config
     assert "apiAddress: :9997" in config
     assert "authInternalUsers:" in config
+    assert "authHTTPAddress: http://media-control:8081/v1/mediamtx/auth" in config
+    assert "- action: read" not in config
+    assert "- action: playback" not in config
     assert "172.16.0.0/12" in config
     assert "metrics: false" in config
     assert "metricsAddress: 127.0.0.1:9998" in config

@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { appendHlsPlaybackQuery } from "../hooks/useHlsFallbackPlayback";
 import { HLSFallbackPlayer } from "./HLSFallbackPlayer";
 
 const hlsMock = vi.hoisted(() => {
@@ -67,6 +68,7 @@ describe("HLSFallbackPlayer", () => {
       maxLiveSyncPlaybackRate: 1.5,
       capLevelToPlayerSize: true,
     });
+    expect(hlsMock.instances[0].config.xhrSetup).toEqual(expect.any(Function));
     expect(hlsMock.instances[0].loadSource).toHaveBeenCalledWith(hlsUrl);
     expect(hlsMock.instances[0].attachMedia).toHaveBeenCalledWith(screen.getByLabelText("HLS fallback stream"));
     expect(screen.getByLabelText("HLS fallback stream")).toHaveAttribute("preload", "none");
@@ -115,6 +117,20 @@ describe("HLSFallbackPlayer", () => {
       capLevelToPlayerSize: true,
     });
     expect(screen.getByText("안정 HLS")).toBeInTheDocument();
+  });
+
+  test("preserves playback token on hls.js playlist and segment requests", () => {
+    const source = "https://media.example.test/hls/raw/sample/front/index.m3u8?playbackToken=issued-token";
+
+    expect(appendHlsPlaybackQuery("segment-1.ts", source)).toBe(
+      "https://media.example.test/hls/raw/sample/front/segment-1.ts?playbackToken=issued-token",
+    );
+    expect(appendHlsPlaybackQuery("https://media.example.test/hls/raw/sample/front/segment-2.ts?playbackToken=existing", source)).toBe(
+      "https://media.example.test/hls/raw/sample/front/segment-2.ts?playbackToken=existing",
+    );
+    expect(appendHlsPlaybackQuery("segment-3.ts", "https://media.example.test/hls/raw/sample/front/index.m3u8")).toBe(
+      "segment-3.ts",
+    );
   });
 
   test("renders a clear fallback reason after WebRTC failure", () => {
