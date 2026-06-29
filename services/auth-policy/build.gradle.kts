@@ -7,6 +7,8 @@ plugins {
     jacoco
 }
 
+extra["springModulithVersion"] = "1.4.11"
+
 group = "kr.co.a4ai.gcssaker"
 version = "0.1.0-poc"
 
@@ -31,6 +33,7 @@ dependencies {
     implementation("io.github.resilience4j:resilience4j-circuitbreaker:2.3.0")
     implementation("io.micrometer:micrometer-tracing-bridge-otel")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+    compileOnly("org.springframework.modulith:spring-modulith-api")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
@@ -38,10 +41,17 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.testcontainers:junit-jupiter:1.21.3")
     testImplementation("org.testcontainers:postgresql:1.21.3")
+    testImplementation("org.springframework.modulith:spring-modulith-starter-test")
     testImplementation("com.h2database:h2")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
     runtimeOnly("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
+}
+
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.modulith:spring-modulith-bom:${property("springModulithVersion")}")
+    }
 }
 
 kotlin {
