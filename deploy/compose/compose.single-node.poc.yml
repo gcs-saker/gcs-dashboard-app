@@ -244,6 +244,7 @@ services:
   turn-primary:
     image: coturn/coturn:4.6.3
     env_file: *service_env_files
+    entrypoint: ["turnserver"]
     command:
       - -n
       - --log-file=stdout
@@ -270,6 +271,7 @@ services:
   turn-secondary:
     image: coturn/coturn:4.6.3
     env_file: *service_env_files
+    entrypoint: ["turnserver"]
     command:
       - -n
       - --log-file=stdout
