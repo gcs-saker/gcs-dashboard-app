@@ -1,8 +1,8 @@
 # GCS-Saker Mosquitto Hardened Profile
 
-This directory contains the local hardened MQTT broker configuration for M8 protocol migration.
+This directory contains the default hardened MQTT broker configuration for the single-node runtime.
 
-Do not commit a real Mosquitto password file. Generate it locally and point `MQTT_PASSWORD_FILE` at that file from `deploy/compose/.env.single-node`.
+Do not commit a real Mosquitto password file. Generate it locally and point `MQTT_PASSWORD_FILE` at that file from `deploy/compose/.env.single-node`. The broker is no longer promoted through a separate override file; `deploy/compose/compose.single-node.poc.yml` mounts this hardened config by default.
 
 Example:
 
@@ -37,4 +37,4 @@ Run the isolated profile smoke from the repository root:
 python3 scripts/mqtt_hardened_profile_smoke.py --run
 ```
 
-The smoke creates a temporary password file outside the repository, starts only the hardened MQTT service in an isolated compose project, verifies anonymous rejection, publishes protobuf telemetry from `gcs_device_gateway`, subscribes as `gcs_backend_pub`, then verifies command delivery in the reverse direction. Cleanup uses `docker compose down --remove-orphans` for the isolated project and never removes volumes.
+The smoke creates a temporary password file outside the repository, starts only the default hardened MQTT service in an isolated compose project, verifies anonymous rejection, publishes protobuf telemetry from `gcs_device_gateway`, subscribes as `gcs_backend_pub`, then verifies command delivery in the reverse direction. Cleanup uses `docker compose down --remove-orphans` for the isolated project and never removes volumes.

@@ -87,7 +87,7 @@ def test_runtime_stack_status_tracks_completed_and_incomplete_migration_items() 
     assert stacks["telemetryBulkPersistence"]["status"] == "synthetic-benchmarked"
     assert stacks["grpcInternalStreaming"]["status"] == "active"
     assert stacks["dragonflyCacheProfile"]["status"] == "profile"
-    assert stacks["mqttTelemetryBridge"]["status"] == "runtime-validated-profile"
+    assert stacks["mqttTelemetryBridge"]["status"] == "active"
     assert stacks["webCodecsCanvasPipeline"]["status"] == "prototype"
     assert stacks["http3EdgeProfile"]["status"] == "deferred"
     assert stacks["aiOverlaySidecar"]["status"] == "contract"

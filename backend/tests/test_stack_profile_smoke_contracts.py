@@ -147,7 +147,9 @@ def test_mqtt_hardened_profile_smoke_reports_acl_and_protobuf_runtime_contract()
 
     assert payload["schemaVersion"] == "mqtt-hardened-profile-smoke-v1"
     assert payload["status"] == "hardened-profile-runtime-contract"
+    assert payload["profile"]["composeMode"] == "default-hardened"
+    assert payload["profile"]["overrideFile"] is None
     assert "device telemetry publish reaches backend subscriber" in payload["runtimeChecks"]
     assert payload["protobufBoundary"]["telemetry"].startswith("protobuf TelemetryEnvelope")
     assert "dashboard never receives MQTT credentials" in "\n".join(payload["allowedFlows"])
-    assert "Promote hardened MQTT profile only after runtime smoke" in payload["promotionGate"]
+    assert "default hardened MQTT active" in payload["promotionGate"]

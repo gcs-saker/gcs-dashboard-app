@@ -129,11 +129,11 @@ stacks:
     nextGate: "relay ratio가 높은 stream에 bitrate/fps downshift와 TURN capacity alert를 연결한다."
 
   mqttTelemetryBridge:
-    status: runtime-validated-profile
+    status: active
     issue: 416
     runtime:
       composeService: mqtt
-      overrideFile: deploy/compose/compose.mqtt-hardened.override.yml
+      composeFile: deploy/compose/compose.single-node.poc.yml
     evidence:
       - scripts/mqtt_hardened_profile_smoke.py
       - backend/tests/test_mqtt_hardened_profile_smoke_contract.py
@@ -142,7 +142,7 @@ stacks:
       - deploy/mosquitto/acl.hardened
       - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/MqttTelemetryConsumerBridge.kt
     runtimeProof:
-      - "hardened override compose config is validated in an isolated project."
+      - "default single-node compose config is validated with the hardened MQTT service in an isolated project."
       - "anonymous MQTT access is rejected."
       - "device gateway protobuf telemetry publish reaches backend subscriber."
       - "backend command publish reaches device gateway subscriber."

@@ -113,12 +113,39 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     )
 
 
-def test_single_node_mqtt_healthcheck_uses_container_available_probe() -> None:
+def test_single_node_mqtt_is_hardened_by_default_and_healthcheck_authenticates() -> None:
     compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
-    mqtt_healthcheck = compose["services"]["mqtt"]["healthcheck"]["test"]
+    mqtt = compose["services"]["mqtt"]
+    mqtt_healthcheck = mqtt["healthcheck"]["test"]
+    healthcheck_command = " ".join(mqtt_healthcheck)
 
-    assert mqtt_healthcheck == ["CMD-SHELL", "nc -z 127.0.0.1 1883"]
+    assert mqtt["command"] == ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
+    assert {
+        "type": "bind",
+        "source": "../mosquitto/mosquitto.hardened.conf",
+        "target": "/mosquitto/config/mosquitto.conf",
+        "read_only": True,
+    } in mqtt["volumes"]
+    assert {
+        "type": "bind",
+        "source": "../mosquitto/acl.hardened",
+        "target": "/mosquitto/config/acl",
+        "read_only": True,
+    } in mqtt["volumes"]
+    assert {
+        "type": "bind",
+        "source": "${MQTT_PASSWORD_FILE:?Set MQTT_PASSWORD_FILE}",
+        "target": "/mosquitto/config/passwords",
+        "read_only": True,
+    } in mqtt["volumes"]
+    assert mqtt["environment"]["MQTT_HEALTH_USERNAME"] == "${MQTT_HEALTH_USERNAME:?Set MQTT_HEALTH_USERNAME}"
+    assert mqtt["environment"]["MQTT_HEALTH_PASSWORD"] == "${MQTT_HEALTH_PASSWORD:?Set MQTT_HEALTH_PASSWORD}"
+    assert "mosquitto_sub" in healthcheck_command
+    assert "$$SYS/broker/version" in healthcheck_command
+    assert "$${MQTT_HEALTH_USERNAME}" in healthcheck_command
+    assert "$${MQTT_HEALTH_PASSWORD}" in healthcheck_command
     assert "/dev/tcp" not in " ".join(mqtt_healthcheck)
+    assert "nc -z" not in healthcheck_command
 
 
 def test_single_node_keeps_redis_as_default_cache_runtime() -> None:

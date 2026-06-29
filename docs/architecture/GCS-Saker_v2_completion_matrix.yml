@@ -65,7 +65,7 @@ requiredGates:
     issue: 415
     title: "DragonFly cache profile validation and Redis fallback contract"
     expectedStateForV2: profile-validated-or-deferred-with-record
-    currentState: runtime-validated-profile
+    currentState: active
     releaseBlocker: false
     evidence:
       - deploy/compose/compose.dragonfly.override.yml
@@ -83,7 +83,7 @@ requiredGates:
     currentState: runtime-validated-profile
     releaseBlocker: false
     evidence:
-      - deploy/compose/compose.mqtt-hardened.override.yml
+      - deploy/compose/compose.single-node.poc.yml
       - scripts/mqtt_hardened_profile_smoke.py
       - backend/tests/test_mqtt_hardened_profile_smoke_contract.py
       - backend/tests/test_mqtt_consumer_bridge.py

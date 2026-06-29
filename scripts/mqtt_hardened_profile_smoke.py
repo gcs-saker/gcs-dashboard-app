@@ -17,7 +17,6 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BACKEND_DIR = REPO_ROOT / "backend"
 COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
-MQTT_OVERRIDE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.mqtt-hardened.override.yml"
 ENV_FILE = REPO_ROOT / "deploy" / "compose" / ".env.single-node.example"
 SCHEMA_VERSION = "mqtt-hardened-profile-smoke-v1"
 DEFAULT_PROJECT_NAME = "gcs-saker-mqtt-profile-smoke"
@@ -39,7 +38,7 @@ TELEMETRY_SUBSCRIPTION = "gcs/+/+/+/telemetry"
 @dataclass(frozen=True)
 class MqttHardenedProfileConfig:
     compose_file: Path
-    override_file: Path
+    override_file: Path | None
     env_file: Path
     project_name: str
 
@@ -53,9 +52,9 @@ class MqttHardenedProfileConfig:
             str(env_file or self.env_file),
             "-f",
             str(self.compose_file),
-            "-f",
-            str(self.override_file),
         ]
+        if self.override_file is not None:
+            command.extend(["-f", str(self.override_file)])
         return command
 
     def config_command(self, env_file: Path | None = None) -> list[str]:
@@ -76,7 +75,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--check", action="store_true", help="Print the stable smoke contract without executing docker.")
     parser.add_argument("--run", action="store_true", help="Run the hardened Mosquitto publish/subscribe smoke with docker.")
     parser.add_argument("--compose-file", type=Path, default=COMPOSE_FILE)
-    parser.add_argument("--override-file", type=Path, default=MQTT_OVERRIDE_FILE)
+    parser.add_argument("--override-file", type=Path, default=None, help="Optional legacy compose override for compatibility checks.")
     parser.add_argument("--env-file", type=Path, default=ENV_FILE)
     parser.add_argument("--project-name", default=DEFAULT_PROJECT_NAME)
     return parser
@@ -87,9 +86,11 @@ def smoke_contract(config: MqttHardenedProfileConfig) -> dict[str, Any]:
         "schemaVersion": SCHEMA_VERSION,
         "status": "hardened-profile-runtime-contract",
         "profile": {
+            "composeMode": "default-hardened",
             "composeCommand": config.compose_command(),
             "configCommand": config.config_command(),
             "readinessCommand": config.up_command(),
+            "overrideFile": str(config.override_file) if config.override_file is not None else None,
             "runtime": CLIENT_IMAGE,
         },
         "topicNamespace": {
@@ -117,7 +118,7 @@ def smoke_contract(config: MqttHardenedProfileConfig) -> dict[str, Any]:
             "transitional": "status, command_ack, and ops event may remain JSON/text until dedicated proto contracts are promoted",
         },
         "runtimeChecks": [
-            "docker compose config --quiet with hardened override",
+            "docker compose config --quiet with default hardened MQTT service",
             "Mosquitto password file generated outside the repository",
             "anonymous subscribe denied",
             "device telemetry publish reaches backend subscriber",
@@ -130,7 +131,7 @@ def smoke_contract(config: MqttHardenedProfileConfig) -> dict[str, Any]:
             "cleanup never uses down -v",
             "real broker passwords are not written to the repository",
         ],
-        "promotionGate": "Promote hardened MQTT profile only after runtime smoke and broker credential rotation drill pass.",
+        "promotionGate": "Keep default hardened MQTT active only when runtime smoke and broker credential rotation drill pass.",
     }
 
 
