@@ -47,6 +47,8 @@ def test_m7_performance_benchmark_check_prints_stable_schema() -> None:
     for metric in [
         "whep_answer_latency_ms",
         "first_video_frame_latency_ms",
+        "first_audio_frame_latency_ms",
+        "audio_video_sync_offset_ms",
     ]:
         assert metric in payload["mediaSmokeMetrics"]
     for metric in [
@@ -89,6 +91,8 @@ def test_m7_performance_benchmark_document_explains_comparison_contract() -> Non
         "p95",
         "whep_answer_latency_ms",
         "first_video_frame_latency_ms",
+        "first_audio_frame_latency_ms",
+        "audio_video_sync_offset_ms",
         "selected_local_candidate_type",
         "relay_fallback_reason",
         "stun-direct",

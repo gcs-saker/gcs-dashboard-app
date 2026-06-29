@@ -191,7 +191,7 @@ FROM (
 """
 
 POSTGIS_VIEWPORT_EXPLAIN_SQL = """
-EXPLAIN (ANALYZE, BUFFERS)
+EXPLAIN (ANALYZE, BUFFERS, WAL)
 SELECT stream_id, asset_id, ST_X(position) AS longitude, ST_Y(position) AS latitude
 FROM gcs_geo.stream_telemetry_latest
 WHERE org_id = 'co-a'
@@ -202,8 +202,8 @@ LIMIT 10;
 """
 
 POSTGIS_VIEWPORT_EXPLAIN_JSON_SQL = POSTGIS_VIEWPORT_EXPLAIN_SQL.replace(
-    "EXPLAIN (ANALYZE, BUFFERS)",
-    "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)",
+    "EXPLAIN (ANALYZE, BUFFERS, WAL)",
+    "EXPLAIN (ANALYZE, BUFFERS, WAL, FORMAT JSON)",
 )
 
 POSTGIS_RUNTIME_SQL = "\n".join(
@@ -250,7 +250,7 @@ def main() -> int:
                         "latest_upsert_conflict",
                         "latest_selected_stream_read",
                         "bounded_map_query_json",
-                        "bounded_map_query_explain_analyze_buffers",
+                        "bounded_map_query_explain_analyze_buffers_wal",
                     ],
                     "sql": POSTGIS_RUNTIME_SQL.strip(),
                 },
@@ -333,6 +333,10 @@ def summarize_plan(explain: list[dict[str, Any]]) -> dict[str, Any]:
         "usesSpatialCondition": "st_makeenvelope" in filters.lower() or "&&" in filters,
         "sharedHitBlocks": sum(int(node.get("Shared Hit Blocks", 0)) for node in nodes),
         "sharedReadBlocks": sum(int(node.get("Shared Read Blocks", 0)) for node in nodes),
+        "sharedDirtiedBlocks": sum(int(node.get("Shared Dirtied Blocks", 0)) for node in nodes),
+        "sharedWrittenBlocks": sum(int(node.get("Shared Written Blocks", 0)) for node in nodes),
+        "walRecords": sum(int(node.get("WAL Records", 0)) for node in nodes),
+        "walBytes": sum(int(node.get("WAL Bytes", 0)) for node in nodes),
         "executionTimeMs": explain[0].get("Execution Time"),
     }
 

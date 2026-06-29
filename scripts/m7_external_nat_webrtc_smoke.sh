@@ -157,6 +157,7 @@ run_whep_playback_with_retry() {
         --run \
         --require-connected \
         --require-video-frame \
+        --measure-audio-video-sync \
         --whep-url "$whep_url" \
         --ice-server-url "$ice_server_for_media" \
         ${auth_args+"${auth_args[@]}"} \

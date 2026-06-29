@@ -139,7 +139,7 @@ def test_postgis_profile_smoke_reports_runtime_query_contract() -> None:
 
     assert payload["schemaVersion"] == "postgis-runtime-smoke-v1"
     assert "postgres-geo" in payload["command"]
-    assert "EXPLAIN (ANALYZE, BUFFERS)" in payload["sql"]
+    assert "EXPLAIN (ANALYZE, BUFFERS, WAL)" in payload["sql"]
 
 
 def test_mqtt_hardened_profile_smoke_reports_acl_and_protobuf_runtime_contract() -> None:

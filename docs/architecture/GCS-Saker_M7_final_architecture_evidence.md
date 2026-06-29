@@ -42,6 +42,7 @@ flowchart LR
 | performance-contract | `m7_performance_benchmark_matrix --check` | API/HLS/WebRTC/ICE benchmark metric 이름이 고정되어 있다. |
 | db-throughput | `telemetry_bulk_flush_benchmark` | telemetry bulk write path의 statement 감소와 synthetic throughput을 재현한다. |
 | streaming-low-latency | `webrtc_ice_smoke --check` | selected ICE pair, direct/relay ratio, fallback reason 계약이 있다. |
+| runtime-observability | `m10_runtime_evidence_gate --check` | 외부 NAT WebRTC soak와 PostGIS BUFFERS/WAL runtime evidence schema가 고정되어 있다. |
 | protocol-runtime | `grpc_runtime_smoke --run` | gRPC gateway proto descriptor와 internal bidi streaming 계약이 검증된다. |
 | ai-overlay | `ai_overlay_sidecar_smoke --run` | AI overlay는 media frame이 아니라 metadata event path로 분리된다. |
 | mqtt-control-plane | `mqtt_hardened_profile_smoke --check` | MQTT는 telemetry/control metadata용이며 media frame을 운반하지 않는다. |
@@ -71,7 +72,7 @@ flowchart LR
 주의:
 
 - telemetry 수치는 실제 DB capacity claim이 아니라 synthetic compile-only benchmark다.
-- ICE ratio는 static contract sample이다. 실제 relay ratio는 외부 NAT 또는 폐쇄망 장비 smoke에서 별도로 측정한다.
+- ICE ratio는 static contract sample이다. 실제 relay ratio, first-frame, audio/video sync offset은 외부 NAT 또는 폐쇄망 장비 smoke에서 별도로 측정한다.
 - Docker compose config는 local Docker CLI가 있는 환경에서 통과했다.
 
 ## 남은 최적화와 위험

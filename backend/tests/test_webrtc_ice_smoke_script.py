@@ -33,6 +33,7 @@ def test_webrtc_ice_smoke_script_check_mode_passes_without_aiortc() -> None:
     assert "Sample candidate summary:" in result.stdout
     assert "Selected ICE pair:" in result.stdout
     assert "ICE path summary contract:" in result.stdout
+    assert "Audio/video sync contract:" in result.stdout
     assert "direct_ratio=0.5000" in result.stdout
 
 
@@ -184,6 +185,8 @@ def test_webrtc_ice_smoke_script_documents_live_whep_ice_run() -> None:
     assert "Selected ICE pair" in script
     assert "relay_fallback_reason" in script
     assert "--require-connected" in script
+    assert "--measure-audio-video-sync" in script
+    assert "Audio/video sync offset ms" in script
     assert "WHEP offer/answer" in doc
     assert "ICE candidate" in doc
     assert "stun:stun.l.google.com:19302" in doc

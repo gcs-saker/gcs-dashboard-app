@@ -12,7 +12,7 @@
 - TURN secondary allocation: `turn:<host>:3479?transport=udp`
 - WHIP publish: `https://<host>/webrtc/<stream>/whip`
 - WHEP playback: `https://<host>/webrtc/<stream>/whep`
-- first-frame latency, WHEP answer latency, ICE gathering/connection state
+- first-frame latency, first-audio latency, audio/video sync offset, WHEP answer latency, ICE gathering/connection state
 - WHEP/WHIP SDP candidate summary: host/srflx/relay, private-or-loopback/public-or-DNS count
 - UDP 제한/relay-only 모드: `RELAY_ONLY=1`로 TURN primary URL만 ICE server로 사용한다.
 
@@ -54,6 +54,7 @@ scripts/m7_external_nat_webrtc_smoke.sh --run
 | WHEP answer latency | 수신 signaling round trip | stream publish 상태, MediaMTX WHEP |
 | Candidate summary | SDP 후보가 public/relay 중심인지 | `MEDIAMTX_WEBRTC_IPS_FROM_INTERFACES`, `MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS` |
 | First video frame latency | publish-to-play 체감 지연 | ICE path, codec, encoder, 네트워크 RTT |
+| Audio/video sync offset | 첫 audio frame과 첫 video frame 도착 시각 차이 | jitter buffer, browser decoder, relay 경로, audio packet loss |
 | Relay-only result | 직접 후보가 막힌 환경의 복구성 | TURN relay range, UDP 정책 |
 
 ## 제한

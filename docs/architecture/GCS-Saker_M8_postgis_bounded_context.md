@@ -32,7 +32,7 @@ media frame은 DB에 저장하지 않는다. 영상 녹화가 필요하면 objec
 ### 선택 stream 최신 위치
 
 ```sql
-EXPLAIN (ANALYZE, BUFFERS)
+EXPLAIN (ANALYZE, BUFFERS, WAL)
 SELECT stream_id, asset_id, observed_at, ST_X(position) AS longitude, ST_Y(position) AS latitude
 FROM gcs_geo.stream_telemetry_latest
 WHERE org_id = $1 AND group_id = $2 AND stream_id = $3;
@@ -47,7 +47,7 @@ WHERE org_id = $1 AND group_id = $2 AND stream_id = $3;
 ### 지도 viewport bounding box
 
 ```sql
-EXPLAIN (ANALYZE, BUFFERS)
+EXPLAIN (ANALYZE, BUFFERS, WAL)
 SELECT stream_id, asset_id, observed_at, ST_X(position) AS longitude, ST_Y(position) AS latitude
 FROM gcs_geo.stream_telemetry_latest
 WHERE org_id = $1
@@ -80,4 +80,4 @@ latest table에는 stream lookup primary key와 viewport용 GiST index만 둔다
 - 기본 single-node 배포는 PostgreSQL/PostGIS + Redis를 사용한다.
 - 기존 MySQL 운영 데이터 이전은 별도 migration runbook에서 백업, 변환, 검증 순서로 수행한다.
 - PostGIS image와 extension version은 release마다 기록한다.
-- 대량 ingest 전에는 `EXPLAIN (ANALYZE, BUFFERS)` 결과와 index hit ratio를 보관한다.
+- 대량 ingest 전에는 `EXPLAIN (ANALYZE, BUFFERS, WAL)` 결과, index hit ratio, WAL records/bytes, lock wait 징후를 보관한다.

@@ -107,6 +107,12 @@ def build_commands() -> list[EvidenceCommand]:
             command=["python3", "scripts/mqtt_hardened_profile_smoke.py", "--check"],
         ),
         EvidenceCommand(
+            name="m10_runtime_evidence_contract",
+            category="runtime-observability",
+            description="외부 NAT WebRTC와 PostGIS runtime benchmark evidence schema를 확인한다.",
+            command=["python3", "scripts/m10_runtime_evidence_gate.py", "--check"],
+        ),
+        EvidenceCommand(
             name="closed_network_static",
             category="closed-network",
             description="폐쇄망 profile, offline map, internal STUN/TURN/time source, offline artifact runbook을 확인한다.",

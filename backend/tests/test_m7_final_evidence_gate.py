@@ -37,9 +37,11 @@ def test_m7_final_evidence_gate_check_prints_stable_command_contract() -> None:
     assert "performance-contract" in categories
     assert "streaming-low-latency" in categories
     assert "compose-integration" in categories
+    assert "runtime-observability" in categories
     command_names = {command["name"] for command in payload["commands"]}
     assert "telemetry_bulk_benchmark" in command_names
     assert "webrtc_ice_contract" in command_names
+    assert "m10_runtime_evidence_contract" in command_names
     assert "closed_network_static" in command_names
 
 
@@ -53,6 +55,7 @@ def test_m7_final_evidence_gate_module_lists_required_evidence_commands() -> Non
     assert commands["default_compose_config"]["needsDocker"] is True
     assert commands["closed_network_compose_config"]["needsDocker"] is True
     assert commands["mqtt_hardened_contract"]["category"] == "mqtt-control-plane"
+    assert commands["m10_runtime_evidence_contract"]["category"] == "runtime-observability"
     assert commands["grpc_contract"]["category"] == "protocol-runtime"
 
 
