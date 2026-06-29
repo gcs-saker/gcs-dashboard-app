@@ -205,7 +205,7 @@ run_check() {
   bash -n "$0"
   grep -q "func ParseStreamID" "${REPO_ROOT}/services/media-control/internal/domain/stream.go"
   grep -q "func NewPlaybackURLBuilder" "${REPO_ROOT}/services/media-control/internal/domain/playback.go"
-  grep -q "/api/v1/streams/ice-servers" "${REPO_ROOT}/services/media-control/internal/httpapi/server.go"
+  grep -q "/api/v1/streams/ice-servers" "${REPO_ROOT}/services/media-control/internal/httpapi/contracts.go"
   grep -q "AUTH_POLICY_BASE_URL" "${REPO_ROOT}/services/media-control/cmd/media-control/main.go"
   grep -q "Authorization: Bearer" "$0"
   grep -q "wait_for_hls_playlist" "$0"

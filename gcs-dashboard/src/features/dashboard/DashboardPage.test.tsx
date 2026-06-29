@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { AuthProvider } from "../auth/AuthProvider";
 import { clearAuthSession, storeAuthSession } from "../auth/authStorage";
 import { createDashboardQueryClient } from "../queryClient";
-import { DashboardMvp } from "./DashboardMvp";
+import { DashboardPage } from "./DashboardPage";
 
 function renderDashboard() {
   const queryClient = createDashboardQueryClient();
@@ -15,14 +15,14 @@ function renderDashboard() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <DashboardMvp />
+          <DashboardPage />
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>,
   );
 }
 
-describe("DashboardMvp", () => {
+describe("DashboardPage", () => {
   beforeEach(() => {
     storeAuthSession({
       accessToken: "test-access-token",
@@ -37,10 +37,10 @@ describe("DashboardMvp", () => {
     window.history.pushState({}, "", "/");
   });
 
-  test("renders the field operations dashboard regions from the M2 MVP", async () => {
+  test("renders the field operations dashboard regions from the M2 dashboard", async () => {
     renderDashboard();
 
-    expect(screen.getByRole("main", { name: "Field Ops Dashboard MVP" })).toBeInTheDocument();
+    expect(screen.getByRole("main", { name: "Field Ops Dashboard" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "대시보드" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "서버상태" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "운영설정" })).toBeInTheDocument();
@@ -70,7 +70,7 @@ describe("DashboardMvp", () => {
     await user.click(await screen.findByRole("button", { name: "화면 효과" }));
     await user.click(screen.getByRole("radio", { name: /효과 끄기/ }));
 
-    expect(screen.getByRole("main", { name: "Field Ops Dashboard MVP" })).toHaveAttribute("data-motion", "off");
+    expect(screen.getByRole("main", { name: "Field Ops Dashboard" })).toHaveAttribute("data-motion", "off");
     expect(document.documentElement).toHaveAttribute("data-motion", "off");
   });
 
@@ -146,7 +146,7 @@ describe("DashboardMvp", () => {
     expect(screen.queryByRole("dialog", { name: "자산트리 팝아웃" })).not.toBeInTheDocument();
   });
 
-  test("shows all MVP stream slots and changes the selected stream", async () => {
+  test("shows all dashboard stream slots and changes the selected stream", async () => {
     const user = userEvent.setup();
     renderDashboard();
 

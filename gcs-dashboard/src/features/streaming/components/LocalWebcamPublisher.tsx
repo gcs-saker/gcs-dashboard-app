@@ -1,52 +1,37 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { apiUrl, LOCAL_WEBCAM_STREAM_ID, LOCAL_WEBCAM_WHIP_URL, streamApiV1Url, WEBRTC_ICE_SERVERS } from "../../../config";
-import { DASHBOARD_API_ROUTES, STREAM_API_ROUTES } from "@/features/apiRoutes";
+import { apiUrl, LOCAL_WEBCAM_STREAM_ID, LOCAL_WEBCAM_WHIP_URL, WEBRTC_ICE_SERVERS } from "../../../config";
+import { DASHBOARD_API_ROUTES } from "@/features/apiRoutes";
 import { authenticatedFetch } from "../../auth/authApi";
 import { loadWebRtcIceServers } from "../iceServers";
 import { TalkbackAudioReceiver } from "./TalkbackAudioReceiver";
+import { fetchAuthorizedPublishWhipUrl } from "./publisherApi";
+import {
+  DEFAULT_CAMERA_DEVICE_ID,
+  DEFAULT_MICROPHONE_DEVICE_ID,
+  FRONT_CAMERA_DEVICE_ID,
+  NO_MICROPHONE_DEVICE_ID,
+  RECONNECT_DELAYS_MS,
+  REAR_CAMERA_DEVICE_ID,
+  type AudioCaptureMode,
+  type PublisherDeviceStatus,
+  type PublisherGpsStatus,
+  type PublisherStepId,
+  type WebcamPublisherStatus,
+} from "./publisherContracts";
+import { audioCaptureConstraints, videoCaptureConstraints } from "./publisherMediaConstraints";
+import {
+  getAudioModeDetail,
+  getDeviceStatusDetail,
+  getGpsStatusLabel,
+  getPublisherSteps,
+  getStatusDetail,
+  getStatusLabel,
+  isBusy,
+} from "./publisherStatusPresentation";
+import { buildWhipUrl, DEFAULT_STREAM_TARGETS, ensureStreamTargets } from "./publisherTargets";
+import { waitForIceGatheringComplete, waitForPeerConnectionReady } from "./publisherWebRtc";
 import "./LocalWebcamPublisher.css";
-
-type WebcamPublisherStatus =
-  | "idle"
-  | "requesting-camera"
-  | "previewing"
-  | "creating-offer"
-  | "gathering-ice"
-  | "sending-offer"
-  | "signaling-complete"
-  | "connecting-media"
-  | "published"
-  | "reconnecting"
-  | "error"
-  | "unsupported";
-
-type PublisherStepId = "camera" | "ice" | "signaling" | "media";
-type PublisherStepState = "pending" | "active" | "complete" | "error";
-type PublisherGpsStatus = "idle" | "requesting" | "active" | "unavailable" | "error";
-type PublisherDeviceStatus = "idle" | "loading" | "loaded" | "unavailable" | "error";
-type AudioCaptureMode = "low-latency" | "quality";
-
-const ICE_GATHERING_TIMEOUT_MS = 5_000;
-const MEDIA_CONNECTION_TIMEOUT_MS = 8_000;
-const RECONNECT_DELAYS_MS = [1_000, 2_000, 5_000] as const;
-const DEFAULT_CAMERA_DEVICE_ID = "__default_camera__";
-const FRONT_CAMERA_DEVICE_ID = "__front_camera__";
-const REAR_CAMERA_DEVICE_ID = "__rear_camera__";
-const DEFAULT_MICROPHONE_DEVICE_ID = "__default_microphone__";
-const NO_MICROPHONE_DEVICE_ID = "__no_microphone__";
-
-interface PublisherStreamTarget {
-  id: string;
-  label: string;
-  whipPath: string;
-}
-
-const DEFAULT_STREAM_TARGETS: readonly PublisherStreamTarget[] = [
-  { id: LOCAL_WEBCAM_STREAM_ID, label: "기본 웹캠", whipPath: "raw/local/webcam" },
-  { id: "raw.local.front", label: "휴대폰 전면", whipPath: "raw/local/front" },
-  { id: "raw.local.rear", label: "휴대폰 후면", whipPath: "raw/local/rear" },
-] as const;
 
 interface LocalWebcamPublisherProps {
   streamId?: string;
@@ -531,339 +516,4 @@ export function LocalWebcamPublisher({
   );
 }
 
-function getGpsStatusLabel(status: PublisherGpsStatus): string {
-  const labels: Record<PublisherGpsStatus, string> = {
-    idle: "대기",
-    requesting: "권한 요청",
-    active: "수신 중",
-    unavailable: "미지원",
-    error: "오류",
-  };
-  return labels[status];
-}
-
 export default LocalWebcamPublisher;
-
-function videoCaptureConstraints(selectedDeviceId: string): boolean | MediaTrackConstraints {
-  if (selectedDeviceId === FRONT_CAMERA_DEVICE_ID) {
-    return { facingMode: { ideal: "user" } };
-  }
-  if (selectedDeviceId === REAR_CAMERA_DEVICE_ID) {
-    return { facingMode: { ideal: "environment" } };
-  }
-  if (selectedDeviceId !== DEFAULT_CAMERA_DEVICE_ID) {
-    return { deviceId: { exact: selectedDeviceId } };
-  }
-  return true;
-}
-
-function audioCaptureConstraints(mode: AudioCaptureMode, selectedDeviceId = DEFAULT_MICROPHONE_DEVICE_ID): boolean | MediaTrackConstraints {
-  if (selectedDeviceId === NO_MICROPHONE_DEVICE_ID) {
-    return false;
-  }
-  const constraints: MediaTrackConstraints = {
-    echoCancellation: mode === "quality",
-    noiseSuppression: mode === "quality",
-    autoGainControl: mode === "quality",
-    channelCount: 1,
-    sampleRate: 48_000,
-  };
-  if (selectedDeviceId !== DEFAULT_MICROPHONE_DEVICE_ID) {
-    constraints.deviceId = { exact: selectedDeviceId };
-  }
-  return constraints;
-}
-
-async function fetchAuthorizedPublishWhipUrl(streamId: string, fetcher: typeof fetch): Promise<string> {
-  const response = await authenticatedFetch(
-    streamApiV1Url(`${STREAM_API_ROUTES.streams}/${streamId}/publish`),
-    { method: "GET", headers: { Accept: "application/json" } },
-    fetcher,
-  );
-  if (!response.ok) {
-    throw new Error(`Publish authorization failed with ${response.status}`);
-  }
-  const payload = (await response.json()) as { whipUrl?: string };
-  if (!payload.whipUrl) {
-    throw new Error("Publish authorization response did not include a WHIP URL");
-  }
-  return payload.whipUrl;
-}
-
-function ensureStreamTargets(
-  defaultTargets: readonly PublisherStreamTarget[],
-  streamId: string,
-  whipUrl: string,
-): PublisherStreamTarget[] {
-  const explicitTarget: PublisherStreamTarget = {
-    id: streamId,
-    label: "현재 설정",
-    whipPath: inferWhipPath(whipUrl) ?? streamIdToWhipPath(streamId),
-  };
-  if (defaultTargets.some((target) => target.id === explicitTarget.id)) {
-    return [...defaultTargets];
-  }
-  return [explicitTarget, ...defaultTargets];
-}
-
-function streamIdToWhipPath(streamId: string): string {
-  return streamId.split(".").join("/");
-}
-
-function inferWhipPath(whipUrl: string): string | null {
-  const suffix = "/whip";
-  const suffixIndex = whipUrl.indexOf(suffix);
-  if (suffixIndex === -1) {
-    return null;
-  }
-  const marker = "/webrtc/";
-  const markerIndex = whipUrl.lastIndexOf(marker, suffixIndex);
-  if (markerIndex !== -1) {
-    return whipUrl.slice(markerIndex + marker.length, suffixIndex);
-  }
-  const pathStartIndex = whipUrl.lastIndexOf("/", Math.max(0, suffixIndex - 1));
-  const schemeIndex = whipUrl.indexOf("://");
-  const originEndIndex = schemeIndex === -1 ? -1 : whipUrl.indexOf("/", schemeIndex + 3);
-  const fallbackStartIndex = originEndIndex === -1 ? 0 : originEndIndex + 1;
-  const inferredPath = whipUrl.slice(fallbackStartIndex, suffixIndex).replace(/^\/+/, "");
-  if (pathStartIndex === -1 || !inferredPath) {
-    return null;
-  }
-  return inferredPath;
-}
-
-function buildWhipUrl(baseWhipUrl: string, whipPath: string): string {
-  const suffix = "/whip";
-  const suffixIndex = baseWhipUrl.indexOf(suffix);
-  if (suffixIndex === -1) {
-    return `/webrtc/${whipPath}/whip`;
-  }
-  const marker = "/webrtc/";
-  const markerIndex = baseWhipUrl.lastIndexOf(marker, suffixIndex);
-  if (markerIndex !== -1) {
-    return `${baseWhipUrl.slice(0, markerIndex)}${marker}${whipPath}${baseWhipUrl.slice(suffixIndex)}`;
-  }
-  const inferredPath = inferWhipPath(baseWhipUrl);
-  if (inferredPath) {
-    return baseWhipUrl.replace(`/${inferredPath}${suffix}`, `/${whipPath}${suffix}`);
-  }
-  return `/webrtc/${whipPath}/whip`;
-}
-
-function getDeviceStatusDetail(status: PublisherDeviceStatus, videoCount: number, audioCount: number): string {
-  if (status === "loading") {
-    return "장치 목록 확인 중";
-  }
-  if (status === "loaded") {
-    return `카메라 ${videoCount}개 / 마이크 ${audioCount}개 감지`;
-  }
-  if (status === "unavailable") {
-    return "브라우저 장치 목록 API를 사용할 수 없습니다.";
-  }
-  if (status === "error") {
-    return "장치 목록을 읽지 못했습니다.";
-  }
-  return "장치 목록 대기";
-}
-
-function getAudioModeDetail(mode: AudioCaptureMode): string {
-  if (mode === "quality") {
-    return "잡음/에코 처리를 켜지만 지연이 늘 수 있습니다.";
-  }
-  return "브라우저 음성 후처리를 줄여 지연을 우선합니다.";
-}
-
-function waitForIceGatheringComplete(
-  peerConnection: RTCPeerConnection,
-  timeoutMs = ICE_GATHERING_TIMEOUT_MS,
-): Promise<void> {
-  if (peerConnection.iceGatheringState === "complete") {
-    return Promise.resolve();
-  }
-
-  return new Promise((resolve) => {
-    let isResolved = false;
-    const previousHandler = peerConnection.onicegatheringstatechange;
-    const timeoutId = window.setTimeout(resolveOnce, timeoutMs);
-
-    function resolveOnce(): void {
-      if (isResolved) return;
-      isResolved = true;
-      window.clearTimeout(timeoutId);
-      peerConnection.onicegatheringstatechange = previousHandler;
-      resolve();
-    }
-
-    peerConnection.onicegatheringstatechange = function handleIceGatheringStateChange(event) {
-      previousHandler?.call(peerConnection, event);
-      if (peerConnection.iceGatheringState === "complete") {
-        resolveOnce();
-      }
-    };
-  });
-}
-
-function waitForPeerConnectionReady(
-  peerConnection: RTCPeerConnection,
-  timeoutMs = MEDIA_CONNECTION_TIMEOUT_MS,
-): Promise<void> {
-  if (isPeerConnectionReady(peerConnection)) {
-    return Promise.resolve();
-  }
-
-  return new Promise((resolve, reject) => {
-    let isResolved = false;
-    const previousConnectionHandler = peerConnection.onconnectionstatechange;
-    const previousIceHandler = peerConnection.oniceconnectionstatechange;
-    const timeoutId = window.setTimeout(() => {
-      rejectOnce(new Error("시그널링은 완료됐지만 WebRTC 미디어 연결이 시간 안에 완료되지 않았습니다."));
-    }, timeoutMs);
-
-    function resolveOnce(): void {
-      if (isResolved) return;
-      isResolved = true;
-      cleanup();
-      resolve();
-    }
-
-    function rejectOnce(error: Error): void {
-      if (isResolved) return;
-      isResolved = true;
-      cleanup();
-      reject(error);
-    }
-
-    function cleanup(): void {
-      window.clearTimeout(timeoutId);
-      peerConnection.onconnectionstatechange = previousConnectionHandler;
-      peerConnection.oniceconnectionstatechange = previousIceHandler;
-    }
-
-    function checkReady(): void {
-      if (isPeerConnectionReady(peerConnection)) {
-        resolveOnce();
-        return;
-      }
-      if (peerConnection.connectionState === "failed" || peerConnection.iceConnectionState === "failed") {
-        rejectOnce(new Error("WebRTC ICE 미디어 연결이 실패했습니다."));
-      }
-    }
-
-    peerConnection.onconnectionstatechange = function handleConnectionStateChange(event) {
-      previousConnectionHandler?.call(peerConnection, event);
-      checkReady();
-    };
-    peerConnection.oniceconnectionstatechange = function handleIceConnectionStateChange(event) {
-      previousIceHandler?.call(peerConnection, event);
-      checkReady();
-    };
-
-    checkReady();
-  });
-}
-
-function isPeerConnectionReady(peerConnection: RTCPeerConnection): boolean {
-  return peerConnection.connectionState === "connected" || ["connected", "completed"].includes(peerConnection.iceConnectionState);
-}
-
-function isBusy(status: WebcamPublisherStatus): boolean {
-  return [
-    "requesting-camera",
-    "creating-offer",
-    "gathering-ice",
-    "sending-offer",
-    "signaling-complete",
-    "connecting-media",
-    "reconnecting",
-  ].includes(status);
-}
-
-function getStatusLabel(status: WebcamPublisherStatus): string {
-  const labels: Record<WebcamPublisherStatus, string> = {
-    idle: "대기",
-    "requesting-camera": "카메라 권한 요청",
-    previewing: "미리보기 준비",
-    "creating-offer": "Offer 생성",
-    "gathering-ice": "ICE 후보 수집",
-    "sending-offer": "WHIP 전송",
-    "signaling-complete": "시그널링 완료",
-    "connecting-media": "미디어 연결",
-    published: "송출 중",
-    reconnecting: "재연결 중",
-    error: "오류",
-    unsupported: "지원 안 됨",
-  };
-  return labels[status];
-}
-
-function getStatusDetail(status: WebcamPublisherStatus): string {
-  const details: Record<WebcamPublisherStatus, string> = {
-    idle: "카메라를 준비하면 WebRTC 송출 단계를 시작할 수 있습니다.",
-    "requesting-camera": "브라우저 카메라와 마이크 권한을 요청하고 있습니다.",
-    previewing: "카메라 미리보기가 준비됐습니다. 시그널링을 시작할 수 있습니다.",
-    "creating-offer": "브라우저에서 WebRTC offer를 생성하고 있습니다.",
-    "gathering-ice": "STUN/TURN ICE 서버를 이용해 후보를 수집하고 있습니다.",
-    "sending-offer": "WHIP 엔드포인트로 offer SDP를 전송하고 있습니다.",
-    "signaling-complete": "WHIP answer를 받았습니다. 미디어 연결을 확정합니다.",
-    "connecting-media": "ICE 미디어 경로가 실제로 연결되는지 확인하고 있습니다.",
-    published: "WebRTC 미디어 연결이 완료되어 송출 중입니다.",
-    reconnecting: "송출 미디어 경로가 끊겨 재연결을 시도하고 있습니다.",
-    error: "오류 내용을 확인한 뒤 다시 시도할 수 있습니다.",
-    unsupported: "현재 브라우저 환경에서는 로컬 카메라 WebRTC 송출을 지원하지 않습니다.",
-  };
-  return details[status];
-}
-
-function getPublisherSteps(status: WebcamPublisherStatus, failedStep: PublisherStepId | null): Array<{
-  id: PublisherStepId;
-  index: number;
-  label: string;
-  state: PublisherStepState;
-}> {
-  const activeStepByStatus: Partial<Record<WebcamPublisherStatus, PublisherStepId>> = {
-    "requesting-camera": "camera",
-    previewing: "camera",
-    "creating-offer": "ice",
-    "gathering-ice": "ice",
-    "sending-offer": "signaling",
-    "signaling-complete": "signaling",
-    "connecting-media": "media",
-    published: "media",
-    reconnecting: "media",
-  };
-  const order: PublisherStepId[] = ["camera", "ice", "signaling", "media"];
-  const labels: Record<PublisherStepId, string> = {
-    camera: "카메라 준비",
-    ice: "ICE 후보 수집",
-    signaling: "WHIP 시그널링",
-    media: "미디어 연결",
-  };
-  const activeStep = status === "error" ? failedStep : activeStepByStatus[status];
-  const activeIndex = activeStep ? order.indexOf(activeStep) : -1;
-
-  return order.map((id, index) => ({
-    id,
-    index: index + 1,
-    label: labels[id],
-    state: getPublisherStepState(status, index, activeIndex),
-  }));
-}
-
-function getPublisherStepState(status: WebcamPublisherStatus, index: number, activeIndex: number): PublisherStepState {
-  if (status === "error") {
-    return index === Math.max(activeIndex, 0) ? "error" : index < Math.max(activeIndex, 0) ? "complete" : "pending";
-  }
-  if (status === "published") {
-    return "complete";
-  }
-  if (activeIndex === -1) {
-    return "pending";
-  }
-  if (index < activeIndex) {
-    return "complete";
-  }
-  if (index === activeIndex) {
-    return status === "previewing" || status === "signaling-complete" ? "complete" : "active";
-  }
-  return "pending";
-}
