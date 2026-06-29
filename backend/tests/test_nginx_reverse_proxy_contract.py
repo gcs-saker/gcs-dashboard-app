@@ -4,11 +4,16 @@ import re
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 NGINX_PROXY_CONFIG = REPO_ROOT / "deploy" / "nginx" / "gcs-saker.reverse-proxy.example.conf"
+SINGLE_NODE_NGINX_CONFIG = REPO_ROOT / "deploy" / "nginx" / "single-node.poc.conf"
 NGINX_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_Nginx_HTTPS_WSS_reverse_proxy_v0.1.md"
 
 
 def read_config() -> str:
     return NGINX_PROXY_CONFIG.read_text(encoding="utf-8")
+
+
+def read_single_node_config() -> str:
+    return SINGLE_NODE_NGINX_CONFIG.read_text(encoding="utf-8")
 
 
 def test_reverse_proxy_config_draft_exists() -> None:
@@ -30,10 +35,10 @@ def test_reverse_proxy_preserves_websocket_upgrade_headers() -> None:
     config = read_config()
 
     assert "map $http_upgrade $connection_upgrade" in config
-    ws_location = extract_location(config, "/ws/")
-    assert "proxy_set_header Upgrade $http_upgrade;" in ws_location
-    assert "proxy_set_header Connection $connection_upgrade;" in ws_location
-    assert "proxy_read_timeout 3600s;" in ws_location
+    webrtc_location = extract_location(config, "/webrtc/")
+    assert "proxy_set_header Upgrade $http_upgrade;" in webrtc_location
+    assert "proxy_set_header Connection $connection_upgrade;" in webrtc_location
+    assert "proxy_read_timeout 3600s;" in webrtc_location
 
 
 def test_reverse_proxy_sets_browser_security_headers() -> None:
@@ -60,6 +65,7 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "upstream gcs_mediamtx_webrtc" in config
     assert "resolver 127.0.0.11 valid=10s ipv6=off;" in config
     assert "location /api/auth/" in config
+    assert "location = /api/v1/map/config" in config
     assert "location /auth-policy/" in config
     assert "location /media-control/" in config
     assert "location /api/control/" in config
@@ -71,6 +77,7 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "location /api/stream/" in config
     assert "location /stream/" in config
     assert "location /api/" in config
+    assert "location /ws/" in config
     assert "location /hls/" in config
     assert "location /webrtc/" in config
     assert "proxy_pass http://gcs_dashboard;" in extract_locations(config, "/")[-1]
@@ -137,6 +144,16 @@ def test_auth_proxy_rewrites_dashboard_api_auth_prefix_to_backend_auth_router() 
     assert "proxy_read_timeout 60s;" in auth_location
 
 
+def test_exact_legacy_map_config_route_is_allowlisted_until_cutover() -> None:
+    config = read_config()
+    map_config_location = extract_exact_location(config, "/api/v1/map/config")
+
+    assert "Legacy allowlist" in map_config_location
+    assert "proxy_pass http://gcs_backend/api/v1/map/config;" in map_config_location
+    assert 'add_header Deprecation "true" always;' in map_config_location
+    assert 'add_header X-GCS-Replacement-Route "/auth-policy/map/config" always;' in map_config_location
+
+
 def test_auth_policy_cutover_prefix_rewrites_to_spring_auth_policy() -> None:
     config = read_config()
     auth_policy_location = extract_location(config, "/auth-policy/")
@@ -155,24 +172,14 @@ def test_media_control_cutover_prefix_rewrites_to_go_media_control() -> None:
     assert "proxy_read_timeout 60s;" in media_control_location
 
 
-def test_legacy_api_prefixes_are_rewritten_to_backend_routers() -> None:
-    config = read_config()
-
-    expected_rewrites = {
-        "/api/control/": "rewrite ^/api/control/(.*)$ /control/$1 break;",
-    }
-    for public_prefix, rewrite in expected_rewrites.items():
-        location = extract_location(config, public_prefix)
-        assert rewrite in location
-        assert "proxy_pass http://gcs_backend;" in location
-
-
-def test_legacy_control_prefix_is_marked_as_future_command_fallback() -> None:
+def test_legacy_api_prefixes_do_not_rewrite_broadly_to_backend_routers() -> None:
     config = read_config()
     control_location = extract_location(config, "/api/control/")
 
-    assert "Future/legacy command fallback" in control_location
-    assert "proxy_pass http://gcs_backend;" in control_location
+    assert "rewrite ^/api/control/" not in control_location
+    assert "proxy_pass http://gcs_backend;" not in control_location
+    assert "return 410;" in control_location
+    assert 'add_header X-GCS-Legacy-Fallback "disabled" always;' in control_location
 
 
 def test_read_only_asset_telemetry_and_ops_paths_are_cut_over_to_auth_policy() -> None:
@@ -211,12 +218,28 @@ def test_legacy_stream_prefix_keeps_short_runtime_timeout() -> None:
     assert "proxy_read_timeout 60s;" in location
 
 
-def test_versioned_api_prefix_stays_on_backend_api_namespace() -> None:
+def test_unknown_legacy_api_and_ws_prefixes_are_not_broad_backend_fallbacks() -> None:
     config = read_config()
     api_location = extract_location(config, "/api/")
+    ws_location = extract_location(config, "/ws/")
 
-    assert "rewrite ^/api/v1/" not in api_location
-    assert "proxy_pass http://gcs_backend;" in api_location
+    for location in (api_location, ws_location):
+        assert "proxy_pass http://gcs_backend;" not in location
+        assert "return 410;" in location
+        assert 'add_header X-GCS-Legacy-Fallback "disabled" always;' in location
+
+
+def test_single_node_nginx_also_disables_unknown_legacy_fallbacks() -> None:
+    config = read_single_node_config()
+    api_location = extract_location(config, "/api/")
+    ws_location = extract_location(config, "/ws/")
+    map_config_location = extract_exact_location(config, "/api/v1/map/config")
+
+    assert "proxy_pass http://gcs_backend/api/v1/map/config;" in map_config_location
+    for location in (api_location, ws_location):
+        assert "proxy_pass http://gcs_backend;" not in location
+        assert "return 410;" in location
+        assert 'add_header X-GCS-Legacy-Fallback "disabled" always;' in location
 
 
 def test_reverse_proxy_policy_doc_covers_required_endpoint_decisions() -> None:
@@ -225,11 +248,13 @@ def test_reverse_proxy_policy_doc_covers_required_endpoint_decisions() -> None:
     for term in [
         "HTTPS redirect",
         "WSS",
-        "`https://<host>/api/`",
+        "`https://<host>/api/v1/map/config`",
+        "`https://<host>/api/*`",
         "`https://<host>/api/asset/*`",
         "`https://<host>/api/telemetry/all`",
         "`https://<host>/hls/<stream>/index.m3u8`",
         "`https://<host>/webrtc/<stream>/whep`",
+        "`410 Gone`",
         "STUN/TURN 서버는 Nginx가 proxy하지 않는다",
         "MediaMTX API `9997`과 metrics `9998`은 외부 공개 경로를 만들지 않는다",
     ]:

@@ -22,8 +22,9 @@ M2 Server-02 staging 배포 전에 Nginx reverse proxy의 HTTPS, WSS, API, dashb
 | `https://<host>/api/telemetry/all` | `auth-policy:8080` | Telemetry read-model | Dashboard map/geometry 조회용 read-only 호환 응답 제공 |
 | `https://<host>/api/telemetry/` | `auth-policy:8080` | Telemetry ingest/read-model | 인증된 telemetry ingest를 Spring/Kotlin read-model로 전달 |
 | `https://<host>/api/ops/*` | `auth-policy:8080` | 운영 이벤트/상태 API | Dashboard 운영 패널 조회용 API |
-| `https://<host>/api/` | `backend:8001` | Legacy/Future backend fallback | `/api/v1/*`, control, AI mock 등 아직 제품화 전 경로의 fallback |
-| `wss://<host>/ws/` | `backend:8001` | Backend WebSocket | `Upgrade`, `Connection` header를 반드시 전달 |
+| `https://<host>/api/v1/map/config` | `backend:8001` | Legacy map config allowlist | 지도 설정이 auth-policy read-model로 이동하기 전까지 exact route만 임시 허용 |
+| `https://<host>/api/*` | Nginx | Disabled legacy fallback | 명시되지 않은 legacy/future API는 `410 Gone` 반환 |
+| `wss://<host>/ws/*` | Nginx | Disabled WebSocket fallback | WebSocket contract가 확정될 때까지 `410 Gone` 반환 |
 | `https://<host>/hls/<stream>/index.m3u8` | `mediamtx:8888` | HLS fallback playback | `/hls/` prefix 제거 후 MediaMTX로 전달, buffering/cache off |
 | `https://<host>/webrtc/<stream>/whep` | `mediamtx:8889` | WebRTC/WHEP playback | `/webrtc/` prefix 제거 후 MediaMTX로 전달, long read timeout |
 
@@ -38,7 +39,8 @@ M2 Server-02 staging 배포 전에 Nginx reverse proxy의 HTTPS, WSS, API, dashb
 ## 보안 정책
 
 - HTTP는 HTTPS로 redirect한다.
-- WSS는 `/ws/` 경로에서 WebSocket upgrade header를 전달한다.
+- WSS/WebRTC signaling은 `/webrtc/` 경로에서 필요한 upgrade header를 전달한다.
+- `/ws/`는 WebSocket contract가 확정되기 전까지 broad backend fallback으로 열지 않는다.
 - 관리 포트와 metrics 포트는 Nginx location과 Docker publish 정책 양쪽에서 외부 노출하지 않는다.
 - TLS 인증서 경로는 예시값이며 실제 서버에서는 Certbot 또는 운영 인증서 경로로 교체한다.
 - 서버 적용 전 `nginx -t`, `docker compose config`, backend test, frontend build를 모두 통과시킨다.
@@ -53,8 +55,10 @@ M2 Server-02 staging 배포 전에 Nginx reverse proxy의 HTTPS, WSS, API, dashb
 - `/healthz`, `/readyz` root auth-policy health location 존재
 - `/api/healthz`, `/api/readyz` backend API namespace health location 존재
 - `/api/asset/`, `/api/telemetry/`, `/api/ops/` active read-model location 존재
-- `/api/`, `/ws/`, `/hls/`, `/webrtc/` fallback/media location 존재
-- WebSocket upgrade header 존재
+- `/api/v1/map/config` exact legacy allowlist 존재
+- 알 수 없는 `/api/*`, `/ws/*`는 `410 Gone`으로 닫힘
+- `/hls/`, `/webrtc/` media location 존재
+- WebRTC upgrade header 존재
 - `9997`, `9998` 관리 포트 미노출
 
 ## 후속 작업
