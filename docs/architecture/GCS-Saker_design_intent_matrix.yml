@@ -195,7 +195,7 @@ intents:
       requiredTexts:
         - path: gcs-dashboard/src/features/streaming/hooks/useWhepPlayback.ts
           text: "first-frame"
-        - path: gcs-dashboard/src/features/streaming/hooks/useWhepPlayback.ts
+        - path: gcs-dashboard/src/features/streaming/hooks/whepPlaybackAudio.ts
           text: "selectedPair"
         - path: gcs-dashboard/src/features/streaming/components/WebRTCPlayer.tsx
           text: "data-first-frame-latency-ms"
