@@ -100,7 +100,7 @@ describe("LoginPage auth flow", () => {
     render(<App />);
 
     await waitFor(() => expect(window.location.pathname).toBe("/"));
-    expect(await screen.findByRole("main", { name: "Field Ops Dashboard MVP" }, { timeout: 10000 })).toBeInTheDocument();
+    expect(await screen.findByRole("main", { name: "Field Ops Dashboard" }, { timeout: 10000 })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "대시보드 로그인" })).not.toBeInTheDocument();
   });
 

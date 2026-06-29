@@ -8,7 +8,7 @@ import {
 } from "./dashboardLayout";
 
 describe("dashboardLayout", () => {
-  test("keeps the M2 dashboard MVP as the default layout preset", () => {
+  test("keeps the M2 dashboard page as the default layout preset", () => {
     const layout = resetDashboardLayout();
 
     expect(layout.map((item) => item.id)).toEqual([

@@ -23,7 +23,7 @@ import {
   type DashboardWidgetDefinition,
   type DashboardWidgetId,
 } from "./dashboardLayout";
-import "./DashboardMvp.scss";
+import "./DashboardPage.scss";
 import { getMapFocusForStream } from "./mapFocus";
 import { type StreamDeviceOption } from "./streamDevices";
 import {
@@ -70,7 +70,7 @@ function formatBearingDelta(headingDeg: number, mapBearingDeg: number): string {
   return formatSignedDegree(delta);
 }
 
-export function DashboardMvp() {
+export function DashboardPage() {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
   const assetTreeWidget = getDashboardWidgetDefinition("asset-tree");
@@ -331,7 +331,7 @@ export function DashboardMvp() {
   );
 
   return (
-    <main className="ops-dashboard" data-motion={motionMode} aria-label="Field Ops Dashboard MVP">
+    <main className="ops-dashboard" data-motion={motionMode} aria-label="Field Ops Dashboard">
       <header className="ops-dashboard__tabs" aria-label="주요 탭">
         <nav className="ops-dashboard__tab-list">
           <button

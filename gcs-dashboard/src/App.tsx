@@ -9,7 +9,7 @@ import { createDashboardQueryClient } from "./features/queryClient";
 
 const dashboardQueryClient = createDashboardQueryClient();
 
-const DashboardMvp = lazy(() => import("./features/dashboard/DashboardMvp").then((module) => ({ default: module.DashboardMvp })));
+const DashboardPage = lazy(() => import("./features/dashboard/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const LocalWebcamPublisher = lazy(() =>
   import("./features/streaming/components/LocalWebcamPublisher").then((module) => ({ default: module.LocalWebcamPublisher })),
 );
@@ -35,7 +35,7 @@ function App() {
       ? <StreamingSmokeDashboard />
       : query.get("webcamPublisher") === "1"
         ? <LocalWebcamPublisher />
-        : <DashboardMvp />;
+        : <DashboardPage />;
 
   return (
     <QueryClientProvider client={dashboardQueryClient}>

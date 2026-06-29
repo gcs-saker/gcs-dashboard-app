@@ -12,6 +12,7 @@ interface OperationalEventsState {
 }
 
 const OPERATIONAL_EVENT_HISTORY_LIMIT = 500;
+const OPERATIONAL_EVENT_FILTER_HISTORY_LIMIT = 20;
 const operationalEventHistoryByFilter = new Map<string, OperationalEvent[]>();
 
 export function useOperationalEvents(
@@ -19,10 +20,10 @@ export function useOperationalEvents(
   fetcher: typeof fetch = fetch,
   pollIntervalMs = 10_000,
 ): OperationalEventsState {
-  const queryFilters = useMemo(() => ({ ...filters }), [filters]);
-  const filterKey = useMemo(() => JSON.stringify(queryFilters), [queryFilters]);
+  const filterKey = useMemo(() => JSON.stringify(filters), [filters]);
+  const queryFilters = useMemo(() => ({ ...filters }), [filterKey]);
   const [events, setEvents] = useState<OperationalEvent[]>(
-    () => operationalEventHistoryByFilter.get(filterKey) ?? [],
+    () => readOperationalEventHistory(filterKey),
   );
   const query = useQuery<OperationalEvent[]>({
     queryKey: [...DASHBOARD_QUERY_KEYS.operationalEvents, queryFilters],
@@ -31,19 +32,19 @@ export function useOperationalEvents(
         queryFilters,
         ((input, init) => fetcher(input, { ...init, signal })) as typeof fetch,
       ).then((page) => page.events),
-    placeholderData: operationalEventHistoryByFilter.get(filterKey) ?? [],
+    placeholderData: readOperationalEventHistory(filterKey),
     refetchInterval: pollIntervalMs > 0 ? pollIntervalMs : false,
   });
 
   useEffect(() => {
-    setEvents(operationalEventHistoryByFilter.get(filterKey) ?? []);
+    setEvents(readOperationalEventHistory(filterKey));
   }, [filterKey]);
 
   useEffect(() => {
     if (!query.data) return;
     setEvents((current) => {
       const merged = mergeOperationalEvents(current, query.data ?? []);
-      operationalEventHistoryByFilter.set(filterKey, merged);
+      rememberOperationalEventHistory(filterKey, merged);
       return merged;
     });
   }, [filterKey, query.data]);
@@ -57,7 +58,7 @@ export function useOperationalEvents(
         onEvent: (event) => {
           setEvents((current) => {
             const merged = mergeOperationalEvents(current, [event]);
-            operationalEventHistoryByFilter.set(filterKey, merged);
+            rememberOperationalEventHistory(filterKey, merged);
             return merged;
           });
         },
@@ -80,6 +81,26 @@ export function useOperationalEvents(
     isLoading: query.isLoading || query.isFetching,
     lastUpdatedAt: query.dataUpdatedAt > 0 ? query.dataUpdatedAt : null,
   };
+}
+
+function readOperationalEventHistory(filterKey: string): OperationalEvent[] {
+  const cached = operationalEventHistoryByFilter.get(filterKey);
+  if (!cached) return [];
+  operationalEventHistoryByFilter.delete(filterKey);
+  operationalEventHistoryByFilter.set(filterKey, cached);
+  return cached;
+}
+
+function rememberOperationalEventHistory(filterKey: string, events: OperationalEvent[]): void {
+  if (operationalEventHistoryByFilter.has(filterKey)) {
+    operationalEventHistoryByFilter.delete(filterKey);
+  }
+  operationalEventHistoryByFilter.set(filterKey, events);
+  while (operationalEventHistoryByFilter.size > OPERATIONAL_EVENT_FILTER_HISTORY_LIMIT) {
+    const oldestKey = operationalEventHistoryByFilter.keys().next().value;
+    if (typeof oldestKey !== "string") break;
+    operationalEventHistoryByFilter.delete(oldestKey);
+  }
 }
 
 function mergeOperationalEvents(
