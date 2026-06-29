@@ -75,6 +75,8 @@ class AuthPolicyConfigTest {
                     "AUTH_REFRESH_COOKIE_NAME" to "backend_refresh",
                     "AUTH_REFRESH_COOKIE_SAMESITE" to "lax",
                     "BACKEND_CORS_ALLOW_ORIGINS" to "http://localhost:5173",
+                    "AUTH_POLICY_OPERATOR_PASSWORD" to "operator-password",
+                    "AUTH_POLICY_SMOKE_PASSWORD" to "viewer-password",
                 ),
             ),
         )
@@ -89,9 +91,31 @@ class AuthPolicyConfigTest {
     }
 
     @Test
+    fun `production profile fails closed when required auth secrets are missing`() {
+        val env = StandardEnvironment()
+        env.setActiveProfiles("prod")
+
+        val error = assertFailsWith<IllegalStateException> {
+            AuthRuntimeSettings.fromEnvironment(env)
+        }
+
+        assertTrue(error.message.orEmpty().contains("AUTH_POLICY_JWT_SECRET"))
+        assertFalse(error.message.orEmpty().contains("local-auth-policy-secret"))
+    }
+
+    @Test
+    fun `local profile can use development auth defaults explicitly`() {
+        val settings = AuthRuntimeSettings.fromEnvironment(localEnvironment())
+
+        assertEquals("local-auth-policy-secret-at-least-32-characters", settings.jwtSecret)
+        assertEquals("correct-password", settings.operatorPassword)
+        assertEquals("m7-smoke-pass", settings.smokePassword)
+    }
+
+    @Test
     fun `configuration wires repository and session service`() {
         val config = AuthPolicyConfig()
-        val settings = AuthRuntimeSettings.fromEnvironment(StandardEnvironment())
+        val settings = AuthRuntimeSettings.fromEnvironment(localEnvironment())
         val passwordHasher = config.passwordHasher()
         val repository = config.authUserRepository(settings, passwordHasher, EmptyObjectProvider())
         val tokenService = config.jwtTokenService(settings)
@@ -111,7 +135,7 @@ class AuthPolicyConfigTest {
     @Test
     fun `configuration seeds operational event repository for dashboard log integration`() {
         val repository = AuthPolicyConfig().operationalEventRepository(
-            AuthRuntimeSettings.fromEnvironment(StandardEnvironment()),
+            AuthRuntimeSettings.fromEnvironment(localEnvironment()),
             EmptyObjectProvider(),
             EmptyObjectProvider<StringRedisTemplate>(),
             jacksonObjectMapper().findAndRegisterModules(),
@@ -167,6 +191,11 @@ class AuthPolicyConfigTest {
         }
     }
 }
+
+private fun localEnvironment(): StandardEnvironment =
+    StandardEnvironment().apply {
+        setActiveProfiles("local")
+    }
 
 private class EmptyObjectProvider<T> : ObjectProvider<T> {
     override fun getIfAvailable(): T? = null
