@@ -303,7 +303,7 @@ func TestDashboardStreamListContract(t *testing.T) {
 		t.Fatalf("unexpected status %v", payload[0]["status"])
 	}
 	playback := payload[0]["playbackUrls"].(map[string]any)
-	if playback["webrtc"] != "http://edge.local/webrtc/raw/local/webcam/whep" {
+	if playback["webrtc"] != "http://edge.local/webrtc/raw/local/webcam/whep?playbackToken=test-publish-token" {
 		t.Fatalf("unexpected webrtc URL %v", playback["webrtc"])
 	}
 }
@@ -607,12 +607,31 @@ func TestMediaMTXPublishAuthAcceptsValidPublisherToken(t *testing.T) {
 	}
 }
 
-func TestMediaMTXAuthAllowsReadAndPlaybackWithoutPublishToken(t *testing.T) {
+func TestMediaMTXPlaybackAuthRejectsMissingPlaybackToken(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/v1/mediamtx/auth",
 		strings.NewReader(`{"action":"playback","path":"raw/local/webcam","protocol":"webrtc"}`),
+	)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "test-publish-token") {
+		t.Fatalf("playback auth response leaked token: %s", recorder.Body.String())
+	}
+}
+
+func TestMediaMTXPlaybackAuthAcceptsIssuedPlaybackToken(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/mediamtx/auth",
+		strings.NewReader(`{"action":"read","path":"raw/local/webcam","protocol":"webrtc","query":"playbackToken=test-publish-token"}`),
 	)
 	recorder := httptest.NewRecorder()
 

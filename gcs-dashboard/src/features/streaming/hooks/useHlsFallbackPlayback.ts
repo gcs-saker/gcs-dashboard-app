@@ -21,6 +21,7 @@ const initialHlsState: HLSFallbackSnapshot = {
   latencyMode: "stable",
   errorMessage: null,
 };
+const PLAYBACK_TOKEN_QUERY_KEY = "playbackToken";
 
 export function useHlsFallbackPlayback({
   hlsUrl,
@@ -81,7 +82,7 @@ export function useHlsFallbackPlayback({
           return;
         }
 
-        const hls = new Hls(hlsConfigForLatencyMode(latencyMode));
+        const hls = new Hls(hlsConfigForLatencyMode(latencyMode, hlsUrl));
 
         dispatch({ type: "loading", mode: "hlsjs", latencyMode });
         hls.loadSource(hlsUrl);
@@ -144,7 +145,16 @@ function hlsReducer(
   return state;
 }
 
-function hlsConfigForLatencyMode(latencyMode: HLSLatencyMode): Record<string, unknown> {
+function hlsConfigForLatencyMode(latencyMode: HLSLatencyMode, hlsUrl: string): Record<string, unknown> {
+  const authenticatedRequestConfig = {
+    xhrSetup: (xhr: XMLHttpRequest, url: string) => {
+      const authenticatedUrl = appendHlsPlaybackQuery(url, hlsUrl);
+      if (authenticatedUrl !== url) {
+        xhr.open("GET", authenticatedUrl, true);
+      }
+    },
+  };
+
   if (latencyMode === "low-latency") {
     return {
       lowLatencyMode: true,
@@ -152,6 +162,7 @@ function hlsConfigForLatencyMode(latencyMode: HLSLatencyMode): Record<string, un
       liveSyncDurationCount: 2,
       maxLiveSyncPlaybackRate: 1.5,
       capLevelToPlayerSize: true,
+      ...authenticatedRequestConfig,
     };
   }
 
@@ -161,7 +172,27 @@ function hlsConfigForLatencyMode(latencyMode: HLSLatencyMode): Record<string, un
     liveSyncDurationCount: 4,
     maxLiveSyncPlaybackRate: 1.2,
     capLevelToPlayerSize: true,
+    ...authenticatedRequestConfig,
   };
+}
+
+export function appendHlsPlaybackQuery(requestUrl: string, hlsUrl: string): string {
+  try {
+    const source = new URL(hlsUrl, window.location.href);
+    const token = source.searchParams.get(PLAYBACK_TOKEN_QUERY_KEY);
+    if (!token) {
+      return requestUrl;
+    }
+
+    const request = new URL(requestUrl, source.href);
+    if (request.searchParams.has(PLAYBACK_TOKEN_QUERY_KEY)) {
+      return requestUrl;
+    }
+    request.searchParams.set(PLAYBACK_TOKEN_QUERY_KEY, token);
+    return request.toString();
+  } catch {
+    return requestUrl;
+  }
 }
 
 async function loadHlsConstructor(): Promise<HlsConstructor> {

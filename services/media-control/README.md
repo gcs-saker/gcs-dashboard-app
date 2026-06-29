@@ -95,6 +95,8 @@ response에는 운영 디버깅을 위해 `X-GCS-Trace-Id`가 포함될 수 있�
 
 stream의 발행 group은 `MEDIA_CONTROL_STREAM_GROUP_MAP`의 `path=group` 매핑을 우선 사용하고, 매핑이 없으면 `MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID`를 사용한다.
 
+MediaMTX `read`/`playback` action은 `authHTTPExclude`에서 제외하지 않는다. Dashboard는 먼저 media-control playback API에서 권한을 확인한 뒤 `playbackToken`이 붙은 WHEP/HLS URL을 받는다. MediaMTX HTTP auth hook은 이 token이 없는 직접 WHEP/HLS 접근을 거부한다. 현재 token은 기존 publish token을 재사용하는 우회 차단 단계이며, stream scoped short-lived token 전환은 #490에서 처리한다.
+
 ## ICE URL
 
 외부 브라우저에 전달하는 ICE 후보 URL은 `MEDIA_CONTROL_STUN_URL`, `MEDIA_CONTROL_TURN_PRIMARY_URL`, `MEDIA_CONTROL_TURN_SECONDARY_URL`로 주입한다. 서버 운영 환경에서는 Docker 내부 hostname이 아니라 public DNS 또는 폐쇄망 VIP를 사용해야 한다.

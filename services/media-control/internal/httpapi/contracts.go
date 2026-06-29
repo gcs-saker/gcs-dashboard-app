@@ -17,7 +17,10 @@ const (
 	routeSuffixPublish             = "publish"
 	routeSuffixStatus              = "status"
 
+	mediaMTXActionPlayback = "playback"
 	mediaMTXActionPublish  = "publish"
+	mediaMTXActionRead     = "read"
+	playbackTokenQueryKey  = "playbackToken"
 	publisherTokenQueryKey = "publisherToken"
 
 	contentTypeHeader      = "Content-Type"
@@ -58,4 +61,5 @@ const (
 	errStreamNotRegisteredMessage    = "stream is not registered"
 	errPublisherAuthNotConfigured    = "publisher authorization is not configured"
 	errPublisherAuthFailed           = "publisher authorization failed"
+	errPlaybackAuthFailed            = "playback authorization failed"
 )

@@ -6,6 +6,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MEDIAMTX_CONFIG = REPO_ROOT / "gcs-dashboard" / "mediamtx.yml"
+MEDIAMTX_CLOSED_NETWORK_CONFIG = REPO_ROOT / "deploy" / "mediamtx" / "mediamtx.closed-network.yml"
 DOCKER_COMPOSE = REPO_ROOT / "gcs-dashboard" / "docker-compose.yml"
 DOCKER_ICE_COMPOSE = REPO_ROOT / "gcs-dashboard" / "docker-compose.ice.example.yml"
 DOCKER_ENV_EXAMPLE = REPO_ROOT / "gcs-dashboard" / ".env.example"
@@ -118,8 +119,8 @@ def test_mediamtx_routes_publish_auth_to_media_control_without_public_api_port()
     assert config["authMethod"] == "http"
     assert config["authHTTPAddress"] == "http://media-control:8081/v1/mediamtx/auth"
     assert {"action": "publish"} not in config["authHTTPExclude"]
-    assert {"action": "read"} in config["authHTTPExclude"]
-    assert {"action": "playback"} in config["authHTTPExclude"]
+    assert {"action": "read"} not in config["authHTTPExclude"]
+    assert {"action": "playback"} not in config["authHTTPExclude"]
 
     public_users = [
         user
@@ -127,8 +128,9 @@ def test_mediamtx_routes_publish_auth_to_media_control_without_public_api_port()
         if {"action": "read", "path": None} in user.get("permissions", [])
         or {"action": "read", "path": ""} in user.get("permissions", [])
     ]
-    assert public_users
+    assert not public_users
     assert all({"action": "publish", "path": None} not in user.get("permissions", []) for user in users)
+    assert all({"action": "playback", "path": None} not in user.get("permissions", []) for user in users)
 
     api_users = [
         user
@@ -215,3 +217,14 @@ def test_mediamtx_requires_http_auth_for_publish_on_all_stream_paths():
     assert config["paths"]["all"]["source"] == "publisher"
     assert config["authMethod"] == "http"
     assert config["authHTTPAddress"].endswith("/v1/mediamtx/auth")
+
+
+def test_closed_network_mediamtx_does_not_exclude_read_or_playback_auth():
+    config = load_yaml(MEDIAMTX_CLOSED_NETWORK_CONFIG)
+
+    assert config["authMethod"] == "http"
+    assert {"action": "publish"} not in config["authHTTPExclude"]
+    assert {"action": "read"} not in config["authHTTPExclude"]
+    assert {"action": "playback"} not in config["authHTTPExclude"]
+    assert all({"action": "read", "path": None} not in user.get("permissions", []) for user in config["authInternalUsers"])
+    assert all({"action": "playback", "path": None} not in user.get("permissions", []) for user in config["authInternalUsers"])
