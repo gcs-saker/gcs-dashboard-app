@@ -22,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
@@ -52,18 +53,10 @@ class AuthSecurityConfig {
             }
             .authorizeHttpRequests { requests ->
                 AuthSecurityRouteContract.PUBLIC_MATCHERS.forEach { matcher ->
-                    if (matcher.method == null) {
-                        requests.requestMatchers(matcher.pattern).permitAll()
-                    } else {
-                        requests.requestMatchers(matcher.method, matcher.pattern).permitAll()
-                    }
+                    requests.requestMatchers(matcher.toAntPathRequestMatcher()).permitAll()
                 }
                 AuthSecurityRouteContract.PROTECTED_MATCHERS.forEach { matcher ->
-                    if (matcher.method == null) {
-                        requests.requestMatchers(matcher.pattern).authenticated()
-                    } else {
-                        requests.requestMatchers(matcher.method, matcher.pattern).authenticated()
-                    }
+                    requests.requestMatchers(matcher.toAntPathRequestMatcher()).authenticated()
                 }
                 requests.anyRequest().authenticated()
             }
@@ -192,4 +185,11 @@ object AuthSecurityRouteContract {
 data class RouteMatcher(
     val method: HttpMethod?,
     val pattern: String,
-)
+) {
+    fun toAntPathRequestMatcher(): AntPathRequestMatcher =
+        if (method == null) {
+            AntPathRequestMatcher.antMatcher(pattern)
+        } else {
+            AntPathRequestMatcher.antMatcher(method, pattern)
+        }
+}
