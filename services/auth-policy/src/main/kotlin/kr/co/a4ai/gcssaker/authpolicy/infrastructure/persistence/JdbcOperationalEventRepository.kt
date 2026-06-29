@@ -26,7 +26,7 @@ class JdbcOperationalEventRepository(
     private val jdbc = JdbcTemplate(dataSource)
 
     init {
-        OperationalEventSchema.ensure(jdbc)
+        OperationalEventSchema.ensure(dataSource)
         seedEvents(initialEvents)
     }
 
@@ -234,12 +234,8 @@ class JdbcOperationalEventRepository(
 }
 
 object OperationalEventSchema {
-    fun ensure(jdbc: JdbcTemplate) {
-        jdbc.execute(OperationalEventSql.createTable)
-        OperationalEventSql.alterTimestampColumns.forEach { statement -> runCatching { jdbc.execute(statement) } }
-        jdbc.createIndexIfMissing(OperationalEventSql.groupOccurredIndex)
-        jdbc.createIndexIfMissing(OperationalEventSql.groupSeverityOccurredIndex)
-        jdbc.createIndexIfMissing(OperationalEventSql.groupStreamOccurredIndex)
+    fun ensure(dataSource: DataSource) {
+        AuthPolicyJdbcMigrations.ensure(dataSource)
     }
 }
 
@@ -272,54 +268,6 @@ private object OperationalEventMetricColumns {
 }
 
 internal object OperationalEventSql {
-    const val table = "operational_events"
-    const val groupOccurredIndexName = "ix_operational_events_group_occurred"
-    const val groupSeverityOccurredIndexName = "ix_operational_events_group_severity_occurred"
-    const val groupStreamOccurredIndexName = "ix_operational_events_group_stream_occurred"
-    val createTable = """
-        CREATE TABLE IF NOT EXISTS operational_events (
-            id VARCHAR(128) NOT NULL PRIMARY KEY,
-            occurred_at TIMESTAMP(3) NOT NULL,
-            severity VARCHAR(32) NOT NULL,
-            category VARCHAR(64) NOT NULL,
-            event_type VARCHAR(64),
-            source_service VARCHAR(64),
-            source VARCHAR(128) NOT NULL,
-            message VARCHAR(1024) NOT NULL,
-            connections INT NOT NULL,
-            latency_ms BIGINT NOT NULL,
-            throughput_mbps ${JdbcSchemaTypes.float64} NOT NULL,
-            group_id VARCHAR(64) NOT NULL,
-            stream_id VARCHAR(128),
-            connection_id VARCHAR(128),
-            ice_path VARCHAR(32),
-            relay_fallback_reason VARCHAR(255)
-        )
-    """
-    val groupOccurredIndex = JdbcIndexDefinition(
-        name = groupOccurredIndexName,
-        table = table,
-        columns = listOf(OperationalEventColumns.groupId, OperationalEventColumns.occurredAt),
-    )
-    val groupSeverityOccurredIndex = JdbcIndexDefinition(
-        name = groupSeverityOccurredIndexName,
-        table = table,
-        columns = listOf(OperationalEventColumns.groupId, OperationalEventColumns.severity, OperationalEventColumns.occurredAt),
-    )
-    val groupStreamOccurredIndex = JdbcIndexDefinition(
-        name = groupStreamOccurredIndexName,
-        table = table,
-        columns = listOf(OperationalEventColumns.groupId, OperationalEventColumns.streamId, OperationalEventColumns.occurredAt),
-    )
-    val alterTimestampColumns = listOf(
-        "ALTER TABLE $table ALTER COLUMN ${OperationalEventColumns.occurredAt} SET DATA TYPE TIMESTAMP(3)",
-        "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.eventType} VARCHAR(64)",
-        "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.sourceService} VARCHAR(64)",
-        "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.streamId} VARCHAR(128)",
-        "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.connectionId} VARCHAR(128)",
-        "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.icePath} VARCHAR(32)",
-        "ALTER TABLE $table ADD COLUMN ${OperationalEventColumns.relayFallbackReason} VARCHAR(255)",
-    )
     const val selectBase = """
         SELECT id, occurred_at, severity, category, event_type, source_service, source, message,
                connections, latency_ms, throughput_mbps, group_id,

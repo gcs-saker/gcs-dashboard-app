@@ -55,6 +55,16 @@ Micrometer Tracing bridge는 W3C `traceparent`를 이어받아 요청별 trace i
 
 `/readyz`의 JDBC와 Redis dependency check는 observation으로 감싼다. 따라서 tracing handler/collector가 붙은 환경에서는 인증/정책 서버가 DB와 cache 상태 점검을 어느 구간에서 지연시키는지 같은 trace 흐름에서 확인할 수 있다.
 
+## Schema migration
+
+Auth-policy의 JDBC schema는 Flyway versioned migration으로 관리한다.
+
+- migration 위치: `src/main/resources/db/migration`
+- 현재 core schema: `V1__auth_policy_core_schema.sql`
+- 대상 테이블: `auth_users`, `operational_events`, `telemetry_latest`, `telemetry_history`, `gateway_assets`, `server_health_snapshots`, `stream_sessions`
+
+repository는 테이블 DDL을 직접 소유하지 않고 같은 migration gate를 통과한 뒤 seed/read/write만 수행한다. 빈 DB volume에서는 Spring Boot Flyway auto migration이 먼저 실행되고, Spring context 없이 repository를 직접 생성하는 테스트도 동일 migration 파일을 프로그램 방식으로 실행한다. 기존 운영 DB처럼 이미 테이블이 있는 schema는 `baseline-version=0`으로 baseline 후 `V1`을 적용해 migration history를 남긴다.
+
 ## 테스트
 
 ```bash
