@@ -123,12 +123,13 @@ func main() {
 
 	grpcContext, stopGrpc := context.WithCancel(context.Background())
 	defer stopGrpc()
-	grpcgateway.Start(
+	grpcReadiness := grpcgateway.StartWithReadiness(
 		grpcContext,
 		grpcListenAddress,
 		getenv("MEDIA_CONTROL_GRPC_TOKEN", getenv("MEDIA_CONTROL_PUBLISH_TOKEN", "")),
 		getenvInt("MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES", 64*1024),
 	)
+	server = server.WithGatewayReadiness(grpcReadiness)
 
 	log.Printf("media-control listening on %s", listenAddress)
 	if err := http.ListenAndServe(listenAddress, server.Routes()); err != nil {

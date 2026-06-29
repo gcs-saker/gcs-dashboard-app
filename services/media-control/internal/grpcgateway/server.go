@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -35,6 +36,13 @@ type Server struct {
 	maxPayloadBytes int
 }
 
+type Readiness struct {
+	mu      sync.RWMutex
+	enabled bool
+	ready   bool
+	reason  string
+}
+
 func NewServer(token string, maxPayloadBytes int) Server {
 	if maxPayloadBytes <= 0 {
 		maxPayloadBytes = defaultMaxPayloadBytes
@@ -46,6 +54,10 @@ func NewServer(token string, maxPayloadBytes int) Server {
 }
 
 func (s Server) Serve(ctx context.Context, listenAddress string) error {
+	return s.serve(ctx, listenAddress, nil)
+}
+
+func (s Server) serve(ctx context.Context, listenAddress string, onReady func()) error {
 	if strings.TrimSpace(listenAddress) == "" {
 		return nil
 	}
@@ -59,6 +71,9 @@ func (s Server) Serve(ctx context.Context, listenAddress string) error {
 		<-ctx.Done()
 		server.GracefulStop()
 	}()
+	if onReady != nil {
+		onReady()
+	}
 	err = server.Serve(listener)
 	if errors.Is(err, grpc.ErrServerStopped) {
 		return nil
@@ -154,10 +169,56 @@ type gatewayExchangeServer interface{}
 type gatewayExchangeService struct{}
 
 func Start(ctx context.Context, listenAddress string, token string, maxPayloadBytes int) {
+	state := StartWithReadiness(ctx, listenAddress, token, maxPayloadBytes)
+	_ = state
+}
+
+func StartWithReadiness(ctx context.Context, listenAddress string, token string, maxPayloadBytes int) *Readiness {
+	state := &Readiness{
+		enabled: strings.TrimSpace(listenAddress) != "",
+		reason:  "starting",
+	}
 	server := NewServer(token, maxPayloadBytes)
 	go func() {
-		if err := server.Serve(ctx, listenAddress); err != nil {
+		if !state.enabled {
+			state.markReady()
+			return
+		}
+		if err := server.serve(ctx, listenAddress, state.markReady); err != nil {
+			state.markFailed(grpcFailureReason(err))
 			log.Printf("gRPC gateway stopped: %v", err)
 		}
 	}()
+	return state
+}
+
+func grpcFailureReason(err error) string {
+	var netError *net.OpError
+	if errors.As(err, &netError) && netError.Op == "listen" {
+		return "listen_failed"
+	}
+	return "serve_failed"
+}
+
+func (r *Readiness) Ready() (bool, string) {
+	if r == nil {
+		return true, ""
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.ready, r.reason
+}
+
+func (r *Readiness) markReady() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.ready = true
+	r.reason = ""
+}
+
+func (r *Readiness) markFailed(reason string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.ready = false
+	r.reason = reason
 }

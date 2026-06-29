@@ -33,6 +33,15 @@ func (f fakeIce) HealthyIceServers() []domain.IceServer {
 	return f.servers
 }
 
+type fakeGatewayReadiness struct {
+	ready  bool
+	reason string
+}
+
+func (f fakeGatewayReadiness) Ready() (bool, string) {
+	return f.ready, f.reason
+}
+
 type fakeAuthorizer struct {
 	errByStream  map[string]error
 	observedAuth *string
@@ -103,6 +112,67 @@ func TestReadyzReturnsOKWhenMediaMTXAndIceServersAreReady(t *testing.T) {
 	}
 	if payload["status"] != "ok" {
 		t.Fatalf("expected ok readiness, got %#v", payload)
+	}
+}
+
+func TestReadyzIncludesGrpcGatewayReadinessWhenConfigured(t *testing.T) {
+	path, _ := domain.NewStreamPath("raw/local/webcam")
+	ice, _ := domain.NewIceServer("turn:turn-primary:3478", domain.IceServerTURN, "gcs-turn", "secret", true)
+	server := newTestServer(
+		fakeStreams{streams: []domain.StreamDescriptor{{Path: path, Ready: true, Status: domain.StreamStatusOnline}}},
+		fakeIce{servers: []domain.IceServer{ice}},
+	).WithGatewayReadiness(fakeGatewayReadiness{ready: true})
+	request := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	assertReadinessCheck(t, payload, "grpc_gateway", "ok", "")
+}
+
+func TestReadyzReturnsDegradedWhenGrpcGatewayFails(t *testing.T) {
+	path, _ := domain.NewStreamPath("raw/local/webcam")
+	ice, _ := domain.NewIceServer("turn:turn-primary:3478", domain.IceServerTURN, "gcs-turn", "secret", true)
+	server := newTestServer(
+		fakeStreams{streams: []domain.StreamDescriptor{{Path: path, Ready: true, Status: domain.StreamStatusOnline}}},
+		fakeIce{servers: []domain.IceServer{ice}},
+	).WithGatewayReadiness(fakeGatewayReadiness{ready: false, reason: "serve_failed"})
+	request := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	assertReadinessCheck(t, payload, "grpc_gateway", "error", "serve_failed")
+}
+
+func TestReadyzDoesNotLeakRawGrpcGatewayErrorDetails(t *testing.T) {
+	path, _ := domain.NewStreamPath("raw/local/webcam")
+	ice, _ := domain.NewIceServer("turn:turn-primary:3478", domain.IceServerTURN, "gcs-turn", "secret", true)
+	server := newTestServer(
+		fakeStreams{streams: []domain.StreamDescriptor{{Path: path, Ready: true, Status: domain.StreamStatusOnline}}},
+		fakeIce{servers: []domain.IceServer{ice}},
+	).WithGatewayReadiness(fakeGatewayReadiness{ready: false, reason: "listen_failed"})
+	request := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if strings.Contains(recorder.Body.String(), "bind") || strings.Contains(recorder.Body.String(), "address already in use") {
+		t.Fatalf("readiness response leaked raw grpc bind detail: %s", recorder.Body.String())
 	}
 }
 
@@ -720,6 +790,12 @@ func assertReadinessCheck(t *testing.T, payload map[string]any, name string, sta
 		if check["name"] == name {
 			if check["status"] != status {
 				t.Fatalf("expected %s status %s, got %#v", name, status, check)
+			}
+			if reason == "" {
+				if _, ok := check["reason"]; ok {
+					t.Fatalf("expected %s reason to be omitted, got %#v", name, check)
+				}
+				return
 			}
 			if check["reason"] != reason {
 				t.Fatalf("expected %s reason %q, got %#v", name, reason, check)

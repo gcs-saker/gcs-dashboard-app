@@ -71,6 +71,9 @@ class ApiContractDocumentationTest {
             "/webrtc/{streamPath}/whep",
             "/hls/{streamPath}/index.m3u8",
             "gcs/{orgId}/{groupId}/{assetId}/telemetry",
+            "/gcs.saker.v1.SakerGatewayService/Exchange",
+            "x-gcs-gateway-token",
+            "CONTROL_GRPC_TARGET",
         )
 
         requiredFragments.forEach { fragment ->

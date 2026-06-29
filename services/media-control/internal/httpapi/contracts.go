@@ -54,8 +54,10 @@ const (
 
 	readyCheckStreamRegistry         = "stream_registry"
 	readyCheckIceServers             = "ice_servers"
+	readyCheckGrpcGateway            = "grpc_gateway"
 	errStreamRegistryQueryFailed     = "stream registry query failed"
 	errNoHealthyIceServers           = "no healthy ICE servers available"
+	errGrpcGatewayUnavailable        = "grpc gateway unavailable"
 	errAuthenticationRequiredMessage = "authentication required"
 	errStreamAccessDeniedMessage     = "stream access denied"
 	errStreamNotRegisteredMessage    = "stream is not registered"

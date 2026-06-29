@@ -25,6 +25,10 @@ type IceServerProvider interface {
 	HealthyIceServers() []domain.IceServer
 }
 
+type GatewayReadiness interface {
+	Ready() (bool, string)
+}
+
 type StreamAuthorizer interface {
 	AuthorizeStream(
 		ctx context.Context,
@@ -41,6 +45,7 @@ type Server struct {
 	groups       domain.StreamGroupResolver
 	publishToken string
 	metrics      *Metrics
+	gateway      GatewayReadiness
 }
 
 func NewServer(
@@ -75,6 +80,11 @@ func NewServerWithMetrics(
 		publishToken: strings.TrimSpace(publishToken),
 		metrics:      metrics,
 	}
+}
+
+func (s Server) WithGatewayReadiness(gateway GatewayReadiness) Server {
+	s.gateway = gateway
+	return s
 }
 
 func (s Server) Routes() http.Handler {
@@ -131,6 +141,9 @@ func (s Server) readyz(w http.ResponseWriter, r *http.Request) {
 		s.streamRegistryReadiness(r.Context()),
 		s.iceServerReadiness(),
 	}
+	if check, ok := s.grpcGatewayReadiness(); ok {
+		checks = append(checks, check)
+	}
 	status := healthStatusOK
 	httpStatus := http.StatusOK
 	for _, check := range checks {
@@ -186,6 +199,25 @@ func (s Server) iceServerReadiness() readinessCheck {
 		}
 	}
 	return readinessCheck{Name: readyCheckIceServers, Status: healthStatusOK, Required: true}
+}
+
+func (s Server) grpcGatewayReadiness() (readinessCheck, bool) {
+	if s.gateway == nil {
+		return readinessCheck{}, false
+	}
+	ready, reason := s.gateway.Ready()
+	if !ready {
+		if reason == "" {
+			reason = errGrpcGatewayUnavailable
+		}
+		return readinessCheck{
+			Name:     readyCheckGrpcGateway,
+			Status:   healthStatusError,
+			Required: true,
+			Reason:   reason,
+		}, true
+	}
+	return readinessCheck{Name: readyCheckGrpcGateway, Status: healthStatusOK, Required: true}, true
 }
 
 func (s Server) streamList(w http.ResponseWriter, r *http.Request) {

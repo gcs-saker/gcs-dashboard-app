@@ -5,6 +5,7 @@ import (
 	"net"
 	"strings"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -77,6 +78,35 @@ func TestExchangeKeepsOneBidiStreamForMultipleGatewayMessages(t *testing.T) {
 	for index, response := range responses {
 		assertResponse(t, response, []string{"req-001", "req-002", "req-003"}[index], GatewayAckStatusAccepted, reasonAccepted)
 	}
+}
+
+func TestStartWithReadinessReportsListeningState(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("reserve port: %v", err)
+	}
+	address := listener.Addr().String()
+	_ = listener.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	readiness := StartWithReadiness(ctx, address, testGatewayToken, defaultMaxPayloadBytes)
+
+	assertReadinessEventually(t, readiness, true, "")
+}
+
+func TestStartWithReadinessReportsServeFailure(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("reserve port: %v", err)
+	}
+	defer listener.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	readiness := StartWithReadiness(ctx, listener.Addr().String(), testGatewayToken, defaultMaxPayloadBytes)
+
+	assertReadinessEventually(t, readiness, false, "listen_failed")
 }
 
 func exchangeOnce(
@@ -218,6 +248,20 @@ func exchangeMany(t *testing.T, requestIDs []string, token string) ([][]byte, er
 type decodedResponse struct {
 	strings map[int][]byte
 	varints map[int]uint64
+}
+
+func assertReadinessEventually(t *testing.T, readiness *Readiness, expectedReady bool, expectedReason string) {
+	t.Helper()
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		ready, reason := readiness.Ready()
+		if ready == expectedReady && reason == expectedReason {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	ready, reason := readiness.Ready()
+	t.Fatalf("readiness mismatch: ready=%v reason=%q", ready, reason)
 }
 
 func decodeResponse(t *testing.T, payload []byte) decodedResponse {
