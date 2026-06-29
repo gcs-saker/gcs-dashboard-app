@@ -141,6 +141,7 @@ object AuthSecurityRouteContract {
     private const val ACTUATOR_INFO = "/actuator/info"
     private const val ACTUATOR_PROMETHEUS = "/actuator/prometheus"
     private const val GRAPHQL = GraphQlApiRoutes.GRAPHQL
+    private const val AUTH_PREFIX = "/auth/**"
     private const val OPS_PREFIX = "/ops/**"
     private const val TELEMETRY_PREFIX = "/telemetry/**"
     private const val ASSET_PREFIX = "/asset/**"
@@ -165,6 +166,7 @@ object AuthSecurityRouteContract {
         RouteMatcher(HttpMethod.GET, ACTUATOR_INFO),
         RouteMatcher(HttpMethod.GET, ACTUATOR_PROMETHEUS),
         RouteMatcher(HttpMethod.OPTIONS, ALL_PATHS),
+        RouteMatcher(null, AUTH_PREFIX),
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.SIGNUP),
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.LOGIN),
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.REFRESH),
