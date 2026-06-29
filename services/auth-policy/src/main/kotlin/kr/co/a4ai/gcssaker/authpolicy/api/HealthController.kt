@@ -1,6 +1,6 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
-import kr.co.a4ai.gcssaker.authpolicy.AuthRuntimeSettings
+import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
 import kr.co.a4ai.gcssaker.authpolicy.observability.AuthPolicyObservation
 import kr.co.a4ai.gcssaker.authpolicy.observability.AuthPolicyObservationNames
 import org.springframework.data.redis.core.StringRedisTemplate

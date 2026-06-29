@@ -3,7 +3,7 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 import com.auth0.jwt.exceptions.JWTVerificationException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
-import kr.co.a4ai.gcssaker.authpolicy.AuthRuntimeSettings
+import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
 import kr.co.a4ai.gcssaker.authpolicy.application.NoopSecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthRegistrationService

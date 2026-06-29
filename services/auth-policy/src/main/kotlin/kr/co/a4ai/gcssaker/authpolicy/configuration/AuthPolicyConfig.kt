@@ -1,4 +1,4 @@
-package kr.co.a4ai.gcssaker.authpolicy
+package kr.co.a4ai.gcssaker.authpolicy.configuration
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
@@ -32,12 +32,6 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryTimeSyncConfigRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import kr.co.a4ai.gcssaker.authpolicy.domain.parseTimeSyncMode
 import kr.co.a4ai.gcssaker.authpolicy.domain.normalizedSourceHost
-import kr.co.a4ai.gcssaker.authpolicy.api.BearerPrincipalResolver
-import kr.co.a4ai.gcssaker.authpolicy.api.AuthApiRoutes
-import kr.co.a4ai.gcssaker.authpolicy.api.CorrelationIdFilter
-import kr.co.a4ai.gcssaker.authpolicy.api.FixedWindowRateLimiter
-import kr.co.a4ai.gcssaker.authpolicy.api.GraphQlQueryPolicy
-import kr.co.a4ai.gcssaker.authpolicy.api.RateLimitFilter
 import kr.co.a4ai.gcssaker.authpolicy.application.AsyncOperationalAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.InMemoryOperationalAuditSink
 import kr.co.a4ai.gcssaker.authpolicy.application.NoopOperationalAuditPublisher
@@ -62,10 +56,8 @@ import kr.co.a4ai.gcssaker.authpolicy.infrastructure.resilience.ResilientPrincip
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.resilience.ResilientRefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.observability.AuthPolicyObservation
 import io.micrometer.observation.ObservationRegistry
-import io.micrometer.tracing.Tracer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.core.env.Environment
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.data.redis.core.StringRedisTemplate
@@ -198,39 +190,8 @@ class AuthPolicyConfig {
         OperationalFailureLogger(operationalEventRepository)
 
     @Bean
-    fun bearerPrincipalResolver(sessions: AuthSessionService): BearerPrincipalResolver =
-        BearerPrincipalResolver(sessions)
-
-    @Bean
-    fun graphQlQueryPolicy(): GraphQlQueryPolicy = GraphQlQueryPolicy()
-
-    @Bean
     fun authPolicyObservation(registry: ObservationRegistry): AuthPolicyObservation =
         AuthPolicyObservation(registry)
-
-    @Bean
-    fun correlationIdFilterRegistration(tracer: ObjectProvider<Tracer>): FilterRegistrationBean<CorrelationIdFilter> =
-        FilterRegistrationBean(CorrelationIdFilter(tracer.getIfAvailable())).apply {
-            order = 1
-            addUrlPatterns("/*")
-        }
-
-    @Bean
-    fun authRateLimiter(settings: AuthRuntimeSettings): FixedWindowRateLimiter =
-        FixedWindowRateLimiter(
-            maxRequests = settings.authRateLimitPerMinute,
-            window = Duration.ofMinutes(1),
-        )
-
-    @Bean
-    fun rateLimitFilterRegistration(
-        settings: AuthRuntimeSettings,
-        authRateLimiter: FixedWindowRateLimiter,
-    ): FilterRegistrationBean<RateLimitFilter> =
-        FilterRegistrationBean(RateLimitFilter(authRateLimiter, settings.authRateLimitEnabled)).apply {
-            order = 2
-            addUrlPatterns("${AuthApiRoutes.ROOT}/*")
-        }
 
     @Bean
     fun authRegistrationService(
