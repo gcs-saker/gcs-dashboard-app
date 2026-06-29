@@ -95,7 +95,7 @@ response에는 운영 디버깅을 위해 `X-GCS-Trace-Id`가 포함될 수 있�
 
 stream의 발행 group은 `MEDIA_CONTROL_STREAM_GROUP_MAP`의 `path=group` 매핑을 우선 사용하고, 매핑이 없으면 `MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID`를 사용한다.
 
-MediaMTX `read`/`playback` action은 `authHTTPExclude`에서 제외하지 않는다. Dashboard는 먼저 media-control playback API에서 권한을 확인한 뒤 `playbackToken`이 붙은 WHEP/HLS URL을 받는다. MediaMTX HTTP auth hook은 이 token이 없는 직접 WHEP/HLS 접근을 거부한다. 현재 token은 기존 publish token을 재사용하는 우회 차단 단계이며, stream scoped short-lived token 전환은 #490에서 처리한다.
+MediaMTX `publish`/`read`/`playback` action은 `authHTTPExclude`에서 제외하지 않는다. Dashboard와 publisher는 먼저 media-control API에서 권한을 확인한 뒤 stream path, action, 만료 시간을 HMAC으로 서명한 short-lived media token을 받는다. MediaMTX HTTP auth hook은 이 token이 없거나 stream/action/만료 조건이 맞지 않는 직접 WHIP/WHEP/HLS 접근을 거부한다. `MEDIA_CONTROL_PUBLISH_TOKEN`은 URL에 그대로 노출하지 않고 media token 서명 비밀키로만 사용한다.
 
 ## ICE URL
 

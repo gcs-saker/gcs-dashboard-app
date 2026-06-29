@@ -358,7 +358,7 @@ func (s Server) authorizeMediaMTXPublish(w http.ResponseWriter, payload mediaMTX
 		return
 	}
 	values, err := url.ParseQuery(strings.TrimPrefix(payload.Query, "?"))
-	if err != nil || values.Get(publisherTokenQueryKey) != s.publishToken {
+	if err != nil || validateMediaToken(s.publishToken, values.Get(publisherTokenQueryKey), mediaMTXActionPublish, payload.Path, time.Now()) != nil {
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
 		return
 	}
@@ -376,7 +376,7 @@ func (s Server) authorizeMediaMTXPlayback(w http.ResponseWriter, payload mediaMT
 		return
 	}
 	values, err := url.ParseQuery(strings.TrimPrefix(payload.Query, "?"))
-	if err != nil || values.Get(playbackTokenQueryKey) != s.publishToken {
+	if err != nil || validateMediaToken(s.publishToken, values.Get(playbackTokenQueryKey), mediaMTXActionPlayback, payload.Path, time.Now()) != nil {
 		writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
 		return
 	}
@@ -419,7 +419,7 @@ func (s Server) streamDescriptorResponseFromParsed(
 	parsed domain.ParsedStreamPath,
 ) streamDescriptorResponse {
 	playbackURLs := s.playback.Build(parsed)
-	playbackURLs = s.withPlaybackToken(playbackURLs)
+	playbackURLs = s.withPlaybackToken(playbackURLs, parsed)
 	return streamDescriptorResponse{
 		StreamID:     parsed.StreamID,
 		Path:         parsed.Path,
@@ -460,20 +460,29 @@ func (s Server) writeStreamPublishResponse(w http.ResponseWriter, parsed domain.
 		return
 	}
 	playbackURLs := s.playback.Build(parsed)
-	whipURL := strings.TrimSuffix(playbackURLs.WebRTC, "/whep") + "/whip?" + publisherTokenQueryKey + "=" + url.QueryEscape(s.publishToken)
+	token, err := issueMediaToken(s.publishToken, mediaMTXActionPublish, parsed.Path, time.Now())
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
+	whipURL := strings.TrimSuffix(playbackURLs.WebRTC, "/whep") + "/whip?" + publisherTokenQueryKey + "=" + url.QueryEscape(token)
 	writeJSON(w, http.StatusOK, streamPublishResponse{
 		StreamID: parsed.StreamID,
 		WhipURL:  whipURL,
 	})
 }
 
-func (s Server) withPlaybackToken(playbackURLs domain.PlaybackURLs) domain.PlaybackURLs {
+func (s Server) withPlaybackToken(playbackURLs domain.PlaybackURLs, parsed domain.ParsedStreamPath) domain.PlaybackURLs {
 	if s.publishToken == "" {
 		return playbackURLs
 	}
+	token, err := issueMediaToken(s.publishToken, mediaMTXActionPlayback, parsed.Path, time.Now())
+	if err != nil {
+		return playbackURLs
+	}
 	return domain.PlaybackURLs{
-		WebRTC: appendQueryToken(playbackURLs.WebRTC, playbackTokenQueryKey, s.publishToken),
-		HLS:    appendQueryToken(playbackURLs.HLS, playbackTokenQueryKey, s.publishToken),
+		WebRTC: appendQueryToken(playbackURLs.WebRTC, playbackTokenQueryKey, token),
+		HLS:    appendQueryToken(playbackURLs.HLS, playbackTokenQueryKey, token),
 	}
 }
 
