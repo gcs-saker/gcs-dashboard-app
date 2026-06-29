@@ -100,7 +100,8 @@ describe("LocalWebcamPublisher", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
 
-    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"));
+    await waitFor(() => expect(fetcher).toHaveBeenCalled(), { timeout: 2_500 });
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"), { timeout: 2_500 });
     expect(fetcher).toHaveBeenCalledWith(
       "http://media.example.test/authorized/whip?publisherToken=test-publish-token",
       expect.objectContaining({ method: "POST" }),
