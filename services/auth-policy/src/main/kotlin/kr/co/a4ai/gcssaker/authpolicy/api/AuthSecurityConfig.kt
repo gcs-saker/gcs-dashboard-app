@@ -38,7 +38,7 @@ class AuthSecurityConfig {
         settings: AuthRuntimeSettings,
     ): SecurityFilterChain {
         http
-            .securityMatcher(AuthSecurityRouteContract.AUTH_PREFIX)
+            .securityMatcher(AntPathRequestMatcher.antMatcher(AuthSecurityRouteContract.AUTH_PREFIX))
             .csrf { csrf -> csrf.disable() }
             .cors { cors -> cors.configurationSource(corsConfigurationSource(settings)) }
             .sessionManagement { sessionsConfig ->
