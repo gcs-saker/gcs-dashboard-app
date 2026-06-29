@@ -46,8 +46,8 @@ class OperationalEventGraphQlControllerTest @Autowired constructor(
             content = operationalEventsQuery()
         }
             .andExpect {
-                status { isOk() }
-                jsonPath("$.errors").isArray
+                status { isUnauthorized() }
+                jsonPath("$.detail").value(AuthApiErrors.AUTHENTICATION_REQUIRED)
             }
     }
 

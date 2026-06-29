@@ -18,9 +18,7 @@ class RedisPrincipalCache(
     ) : this(RedisTemplateStringKeyValueStore(redis), keyPrefix)
 
     override fun getAccessPrincipal(accessToken: String): AuthenticatedPrincipal? =
-        runCatching {
-            store.get(cacheKey(accessToken))?.let(::decode)
-        }.getOrNull()
+        store.get(cacheKey(accessToken))?.let(::decode)
 
     override fun putAccessPrincipal(
         accessToken: String,
@@ -30,9 +28,7 @@ class RedisPrincipalCache(
         if (ttl.isZero || ttl.isNegative) {
             return
         }
-        runCatching {
-            store.set(cacheKey(accessToken), encode(principal), ttl)
-        }
+        store.set(cacheKey(accessToken), encode(principal), ttl)
     }
 
     private fun cacheKey(accessToken: String): String =

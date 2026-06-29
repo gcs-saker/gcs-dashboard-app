@@ -43,6 +43,8 @@ import kr.co.a4ai.gcssaker.authpolicy.application.InMemoryOperationalAuditSink
 import kr.co.a4ai.gcssaker.authpolicy.application.NoopOperationalAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.OperationalAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.OperationalAuditPublisherMetrics
+import kr.co.a4ai.gcssaker.authpolicy.application.OperationalFailureLogger
+import kr.co.a4ai.gcssaker.authpolicy.application.OperationalFailureLoggerFacade
 import kr.co.a4ai.gcssaker.authpolicy.application.RepositorySecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.RepositorySettingsAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
@@ -56,6 +58,8 @@ import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisPrincipalCache
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisRefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisCachePolicy
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisTemplateStringKeyValueStore
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.resilience.ResilientPrincipalCache
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.resilience.ResilientRefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.observability.AuthPolicyObservation
 import io.micrometer.observation.ObservationRegistry
 import io.micrometer.tracing.Tracer
@@ -121,22 +125,28 @@ class AuthPolicyConfig {
     fun principalCache(
         settings: AuthRuntimeSettings,
         redisTemplate: ObjectProvider<StringRedisTemplate>,
+        failureLogger: OperationalFailureLoggerFacade,
     ): PrincipalCache {
         if (!settings.redisPrincipalCacheEnabled) {
             return NoopPrincipalCache
         }
-        return redisTemplate.getIfAvailable()?.let { RedisPrincipalCache(it) } ?: NoopPrincipalCache
+        return redisTemplate.getIfAvailable()
+            ?.let { ResilientPrincipalCache(RedisPrincipalCache(it), failureLogger) }
+            ?: NoopPrincipalCache
     }
 
     @Bean
     fun refreshSessionStore(
         settings: AuthRuntimeSettings,
         redisTemplate: ObjectProvider<StringRedisTemplate>,
+        failureLogger: OperationalFailureLoggerFacade,
     ): RefreshSessionStore {
         if (!settings.redisRefreshSessionEnabled) {
             return StatelessRefreshSessionStore
         }
-        return redisTemplate.getIfAvailable()?.let { RedisRefreshSessionStore(it) } ?: StatelessRefreshSessionStore
+        return redisTemplate.getIfAvailable()
+            ?.let { ResilientRefreshSessionStore(RedisRefreshSessionStore(it), failureLogger) }
+            ?: StatelessRefreshSessionStore
     }
 
     @Bean
@@ -180,6 +190,12 @@ class AuthPolicyConfig {
         operationalEventRepository: OperationalEventRepository,
     ): SecurityAuditPublisher =
         RepositorySecurityAuditPublisher(operationalEventRepository)
+
+    @Bean
+    fun operationalFailureLogger(
+        operationalEventRepository: OperationalEventRepository,
+    ): OperationalFailureLoggerFacade =
+        OperationalFailureLogger(operationalEventRepository)
 
     @Bean
     fun bearerPrincipalResolver(sessions: AuthSessionService): BearerPrincipalResolver =

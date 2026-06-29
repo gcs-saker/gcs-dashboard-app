@@ -25,6 +25,7 @@ object RequestTraceContract {
     const val MAX_CORRELATION_ID_LENGTH = 128
     const val TRACE_ID_LENGTH = 32
     const val TRACEPARENT_PARTS = 4
+    val EXPOSED_HEADERS = listOf(CORRELATION_ID_HEADER, TRACE_ID_HEADER)
 }
 
 object RateLimitContract {
