@@ -9,6 +9,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.annotation.Order
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
@@ -31,6 +32,29 @@ import org.springframework.web.filter.OncePerRequestFilter
 @Configuration
 class AuthSecurityConfig {
     @Bean
+    @Order(0)
+    fun authEndpointSecurityFilterChain(
+        http: HttpSecurity,
+        settings: AuthRuntimeSettings,
+    ): SecurityFilterChain {
+        http
+            .securityMatcher(AuthSecurityRouteContract.AUTH_PREFIX)
+            .csrf { csrf -> csrf.disable() }
+            .cors { cors -> cors.configurationSource(corsConfigurationSource(settings)) }
+            .sessionManagement { sessionsConfig ->
+                sessionsConfig.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            }
+            .formLogin { form -> form.disable() }
+            .httpBasic { basic -> basic.disable() }
+            .logout { logout -> logout.disable() }
+            .authorizeHttpRequests { requests ->
+                requests.anyRequest().permitAll()
+            }
+        return http.build()
+    }
+
+    @Bean
+    @Order(1)
     fun authPolicySecurityFilterChain(
         http: HttpSecurity,
         settings: AuthRuntimeSettings,
@@ -141,7 +165,7 @@ object AuthSecurityRouteContract {
     private const val ACTUATOR_INFO = "/actuator/info"
     private const val ACTUATOR_PROMETHEUS = "/actuator/prometheus"
     private const val GRAPHQL = GraphQlApiRoutes.GRAPHQL
-    private const val AUTH_PREFIX = "/auth/**"
+    const val AUTH_PREFIX = "/auth/**"
     private const val OPS_PREFIX = "/ops/**"
     private const val TELEMETRY_PREFIX = "/telemetry/**"
     private const val ASSET_PREFIX = "/asset/**"
