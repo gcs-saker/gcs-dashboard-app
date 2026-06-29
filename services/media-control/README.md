@@ -107,7 +107,7 @@ x-gcs-gateway-token: <token>
 authorization: bearer <token>
 ```
 
-용도는 telemetry batch, stream event, command ack 같은 control/data plane이다. WebRTC/HLS media frame은 gRPC로 보내지 않는다. Browser dashboard도 gRPC에 직접 연결하지 않고, HTTPS/JSON/SSE/WHEP/HLS를 사용한다.
+용도는 telemetry, stream event, command ack 같은 control/data plane이다. `GatewayStreamRequest`는 세 request payload를 모두 handler 경계로 넘기며, 이후 구현체가 telemetry 저장, stream registry 갱신, command ack 후처리를 담당한다. WebRTC/HLS media frame은 gRPC로 보내지 않는다. Browser dashboard도 gRPC에 직접 연결하지 않고, HTTPS/JSON/SSE/WHEP/HLS를 사용한다.
 
 `/readyz`는 gRPC listener가 설정된 경우 `grpc_gateway` readiness check를 포함한다. listener bind 또는 serve 실패는 readiness에서 degraded로 노출하되, raw bind error detail은 응답에 포함하지 않는다.
 

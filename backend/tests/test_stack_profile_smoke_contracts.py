@@ -51,8 +51,10 @@ def test_grpc_runtime_smoke_reports_integrated_runtime_state_and_follow_up_gates
     assert "client implementation behind MessageSender abstraction" in payload["implementedRuntime"]
     assert "SakerGatewayService.Exchange server implementation in media-control" in payload["implementedRuntime"]
     assert "explicit GatewayStreamRequest and GatewayStreamResponse DTO mappers" in payload["implementedRuntime"]
+    assert "planned telemetry, stream_event, command_ack payloads over one bidi stream" in payload["implementedRuntime"]
+    assert payload["requestPayloads"] == ["telemetry", "stream_event", "command_ack"]
     assert "native/device gateway packaging outside smoke script" in payload["remainingBeforeFullActive"]
-    assert "compose internal network" in payload["promotionGate"]
+    assert "telemetry, stream_event, and command_ack" in payload["promotionGate"]
 
 
 def test_grpc_runtime_smoke_falls_back_to_grpc_tools_when_protoc_is_missing(monkeypatch, tmp_path) -> None:

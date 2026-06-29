@@ -210,7 +210,8 @@ Payload:
 용도:
 
 - 장비 gateway/native client
-- telemetry batch
+- telemetry
+- stream event
 - command ack
 - backpressure/reconnect response
 
@@ -221,6 +222,9 @@ Payload:
 - gateway 인증 metadata는 `x-gcs-gateway-token` 또는 `authorization: bearer <token>`이다.
 - method는 `/gcs.saker.v1.SakerGatewayService/Exchange` bidirectional streaming이다.
 - payload는 `contracts/proto/gcs/saker/v1/gateway_service.proto`와 호환되는 binary envelope를 사용한다.
+- request payload는 `GatewayStreamRequest`의 `telemetry`, `stream_event`, `command_ack` 세 oneof를 계획된 전환 대상으로 고정한다.
+- response payload의 `command`, `telemetry_batch`는 서버가 gateway로 내려보내는 제어 응답 후보이며 media frame 전송 경로가 아니다.
+- 기존 REST telemetry ingest는 dashboard/legacy 호환과 빠른 현장 연동 fallback으로 유지한다. 신규 장비 gateway와 service-to-service control/data plane은 gRPC/MQTT protobuf 경로를 우선한다.
 
 환경 변수:
 

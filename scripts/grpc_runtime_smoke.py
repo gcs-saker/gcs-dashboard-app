@@ -18,6 +18,7 @@ if str(BACKEND_ROOT) not in sys.path:
 
 from modules.protocol_v2.gateway_service import (  # noqa: E402
     GatewayAckStatus,
+    GatewayPayloadKind,
     GatewayStreamRequest,
     GatewayStreamRequestPayload,
     GatewayStreamResponse,
@@ -71,7 +72,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--auth-token", default=os.getenv("CONTROL_GRPC_AUTH_TOKEN", ""))
     parser.add_argument("--method", default=os.getenv("CONTROL_GRPC_METHOD", DEFAULT_METHOD))
     parser.add_argument("--timeout-seconds", type=float, default=2.0)
-    parser.add_argument("--messages", type=int, default=1, help="Number of GatewayStreamRequest messages to send on one bidi stream.")
+    parser.add_argument("--messages", type=int, default=3, help="Number of GatewayStreamRequest messages to send on one bidi stream.")
     return parser
 
 
@@ -95,15 +96,21 @@ def main() -> int:
             "SakerGatewayService.Exchange server implementation in media-control",
             "metadata based gateway authorization",
             "explicit GatewayStreamRequest and GatewayStreamResponse DTO mappers",
+            "planned telemetry, stream_event, command_ack payloads over one bidi stream",
             "multi-message bidi stream smoke",
             "malformed protobuf, backpressure, reconnect unit tests",
+        ],
+        "requestPayloads": [
+            GatewayPayloadKind.TELEMETRY,
+            GatewayPayloadKind.STREAM_EVENT,
+            GatewayPayloadKind.COMMAND_ACK,
         ],
         "remainingBeforeFullActive": [
             "generated DTO adoption can replace explicit mappers when protoc plugins are pinned",
             "native/device gateway packaging outside smoke script",
             "long-lived multi-minute soak in staging network",
         ],
-        "promotionGate": "Today scope is complete when Exchange succeeds over the compose internal network with explicit DTO mappers and multi-message bidi smoke.",
+        "promotionGate": "Today scope is complete when Exchange succeeds over the compose internal network with telemetry, stream_event, and command_ack request payloads.",
     }
 
     if args.check or not args.run:
@@ -181,6 +188,7 @@ def run_exchange_smoke(target: str, method: str, auth_token: str, timeout_second
         "accepted": accepted,
         "messageCount": messages,
         "responseCount": len(decoded_responses),
+        "payloadKinds": gateway_payload_kinds(messages),
         "requestIds": [item.request_id for item in decoded_responses],
         "statuses": [int(item.status) for item in decoded_responses],
         "reasonCodes": [item.reason_code for item in decoded_responses],
@@ -237,13 +245,33 @@ def compile_descriptor(config: GrpcRuntimeSmokeConfig) -> dict[str, Any]:
 
 
 def gateway_request(index: int) -> bytes:
+    payload_kind = gateway_payload_kinds(index)[-1]
     return GatewayStreamRequest(
         request_id=f"grpc-smoke-{index:03d}",
         org_id="a4ai",
         group_id="co-a",
         asset_id="raw.grpc.smoke",
-        payload=GatewayStreamRequestPayload.telemetry(b"telemetry-smoke"),
+        payload=gateway_request_payload(payload_kind),
     ).to_protobuf_wire()
+
+
+def gateway_payload_kinds(messages: int) -> list[str]:
+    planned_payloads = [
+        GatewayPayloadKind.TELEMETRY,
+        GatewayPayloadKind.STREAM_EVENT,
+        GatewayPayloadKind.COMMAND_ACK,
+    ]
+    return [planned_payloads[index % len(planned_payloads)] for index in range(messages)]
+
+
+def gateway_request_payload(kind: str) -> GatewayStreamRequestPayload:
+    if kind == GatewayPayloadKind.TELEMETRY:
+        return GatewayStreamRequestPayload.telemetry(b"telemetry-smoke")
+    if kind == GatewayPayloadKind.STREAM_EVENT:
+        return GatewayStreamRequestPayload.stream_event(b"stream-event-smoke")
+    if kind == GatewayPayloadKind.COMMAND_ACK:
+        return GatewayStreamRequestPayload.command_ack(b"command-ack-smoke")
+    raise ValueError(f"unsupported gateway smoke payload kind: {kind}")
 
 
 def identity_bytes(payload: bytes) -> bytes:

@@ -80,6 +80,57 @@ func TestExchangeKeepsOneBidiStreamForMultipleGatewayMessages(t *testing.T) {
 	}
 }
 
+func TestExchangeRoutesPlannedGatewayPayloadsToHandler(t *testing.T) {
+	payloadKinds := []GatewayPayloadKind{
+		GatewayPayloadTelemetry,
+		GatewayPayloadStream,
+		GatewayPayloadCommandAck,
+	}
+	for _, payloadKind := range payloadKinds {
+		t.Run(string(payloadKind), func(t *testing.T) {
+			handler := &recordingGatewayHandler{}
+
+			response, err := exchangeOnce(t, gatewayRequestOfKind("req-"+string(payloadKind), payloadKind), testGatewayToken, func(server Server) Server {
+				server.handler = handler
+				return server
+			})
+
+			if err != nil {
+				t.Fatalf("exchange failed: %v", err)
+			}
+			assertResponse(t, response, "req-"+string(payloadKind), GatewayAckStatusAccepted, reasonAccepted)
+			if len(handler.requests) != 1 {
+				t.Fatalf("handler request count mismatch: got %d", len(handler.requests))
+			}
+			if handler.requests[0].Payload.Kind != payloadKind {
+				t.Fatalf("handler payload kind mismatch: got %q want %q", handler.requests[0].Payload.Kind, payloadKind)
+			}
+			if string(handler.requests[0].Payload.Value) != string(payloadKind)+"-bytes" {
+				t.Fatalf("handler payload value mismatch: got %q", handler.requests[0].Payload.Value)
+			}
+		})
+	}
+}
+
+func TestExchangeReturnsGatewayHandlerDecision(t *testing.T) {
+	handler := &recordingGatewayHandler{
+		decision: GatewayRequestDecision{
+			Status:     GatewayAckStatusRejected,
+			ReasonCode: "policy_rejected",
+		},
+	}
+
+	response, err := exchangeOnce(t, gatewayRequest("req-rejected", true), testGatewayToken, func(server Server) Server {
+		server.handler = handler
+		return server
+	})
+
+	if err != nil {
+		t.Fatalf("exchange failed: %v", err)
+	}
+	assertResponse(t, response, "req-rejected", GatewayAckStatusRejected, "policy_rejected")
+}
+
 func TestStartWithReadinessReportsListeningState(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -168,15 +219,38 @@ func exchangeOnce(
 }
 
 func gatewayRequest(requestID string, includePayload bool) []byte {
+	if includePayload {
+		return gatewayRequestOfKind(requestID, GatewayPayloadTelemetry)
+	}
 	payload := make([]byte, 0, 96)
 	payload = encodeString(payload, requestFieldRequestID, requestID)
 	payload = encodeString(payload, requestFieldOrgID, "a4ai")
 	payload = encodeString(payload, requestFieldGroupID, "co-a")
 	payload = encodeString(payload, requestFieldAssetID, "raw.mobile.front")
-	if includePayload {
-		payload = encodeString(payload, requestFieldTelemetry, "telemetry-bytes")
-	}
 	return payload
+}
+
+func gatewayRequestOfKind(requestID string, payloadKind GatewayPayloadKind) []byte {
+	payload := make([]byte, 0, 96)
+	payload = encodeString(payload, requestFieldRequestID, requestID)
+	payload = encodeString(payload, requestFieldOrgID, "a4ai")
+	payload = encodeString(payload, requestFieldGroupID, "co-a")
+	payload = encodeString(payload, requestFieldAssetID, "raw.mobile.front")
+	payload = encodeString(payload, requestPayloadField(payloadKind), string(payloadKind)+"-bytes")
+	return payload
+}
+
+func requestPayloadField(kind GatewayPayloadKind) int {
+	switch kind {
+	case GatewayPayloadTelemetry:
+		return requestFieldTelemetry
+	case GatewayPayloadStream:
+		return requestFieldStreamEvent
+	case GatewayPayloadCommandAck:
+		return requestFieldCommandAck
+	default:
+		panic("unsupported test gateway request payload kind")
+	}
 }
 
 func assertResponse(t *testing.T, payload []byte, requestID string, expectedStatus GatewayAckStatus, reasonCode string) {
@@ -243,6 +317,22 @@ func exchangeMany(t *testing.T, requestIDs []string, token string) ([][]byte, er
 		responses = append(responses, response)
 	}
 	return responses, nil
+}
+
+type recordingGatewayHandler struct {
+	requests []GatewayStreamRequest
+	decision GatewayRequestDecision
+}
+
+func (h *recordingGatewayHandler) HandleGatewayRequest(_ context.Context, request GatewayStreamRequest) GatewayRequestDecision {
+	h.requests = append(h.requests, request)
+	if h.decision.Status != 0 {
+		return h.decision
+	}
+	return GatewayRequestDecision{
+		Status:     GatewayAckStatusAccepted,
+		ReasonCode: reasonAccepted,
+	}
 }
 
 type decodedResponse struct {

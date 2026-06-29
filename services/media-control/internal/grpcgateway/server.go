@@ -3,6 +3,7 @@ package grpcgateway
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -34,6 +35,7 @@ const (
 type Server struct {
 	token           string
 	maxPayloadBytes int
+	handler         GatewayRequestHandler
 }
 
 type Readiness struct {
@@ -43,13 +45,37 @@ type Readiness struct {
 	reason  string
 }
 
+type GatewayRequestDecision struct {
+	Status     GatewayAckStatus
+	ReasonCode string
+	Payload    *GatewayStreamRequestPayload
+}
+
+type GatewayRequestHandler interface {
+	HandleGatewayRequest(context.Context, GatewayStreamRequest) GatewayRequestDecision
+}
+
+type GatewayRequestHandlerFunc func(context.Context, GatewayStreamRequest) GatewayRequestDecision
+
+func (f GatewayRequestHandlerFunc) HandleGatewayRequest(ctx context.Context, request GatewayStreamRequest) GatewayRequestDecision {
+	return f(ctx, request)
+}
+
 func NewServer(token string, maxPayloadBytes int) Server {
+	return NewServerWithHandler(token, maxPayloadBytes, nil)
+}
+
+func NewServerWithHandler(token string, maxPayloadBytes int, handler GatewayRequestHandler) Server {
 	if maxPayloadBytes <= 0 {
 		maxPayloadBytes = defaultMaxPayloadBytes
+	}
+	if handler == nil {
+		handler = GatewayRequestHandlerFunc(acceptGatewayRequest)
 	}
 	return Server{
 		token:           strings.TrimSpace(token),
 		maxPayloadBytes: maxPayloadBytes,
+		handler:         handler,
 	}
 }
 
@@ -111,14 +137,14 @@ func (s Server) exchangeHandler(_ any, stream grpc.ServerStream) error {
 		if err != nil {
 			return err
 		}
-		response := s.handleRequest(request, reconnectRequested)
+		response := s.handleRequest(stream.Context(), request, reconnectRequested)
 		if err := stream.SendMsg(response); err != nil {
 			return err
 		}
 	}
 }
 
-func (s Server) handleRequest(request []byte, reconnectRequested bool) []byte {
+func (s Server) handleRequest(ctx context.Context, request []byte, reconnectRequested bool) []byte {
 	if len(request) > s.maxPayloadBytes {
 		return GatewayResponse("", GatewayAckStatusBackpressure, reasonBackpressure)
 	}
@@ -129,7 +155,27 @@ func (s Server) handleRequest(request []byte, reconnectRequested bool) []byte {
 	if reconnectRequested {
 		return GatewayResponse(gatewayRequest.RequestID, GatewayAckStatusReconnect, reasonReconnect)
 	}
-	return GatewayResponse(gatewayRequest.RequestID, GatewayAckStatusAccepted, reasonAccepted)
+	decision := s.handler.HandleGatewayRequest(ctx, gatewayRequest)
+	if decision.Status == 0 {
+		decision.Status = GatewayAckStatusAccepted
+	}
+	if decision.ReasonCode == "" {
+		decision.ReasonCode = reasonAccepted
+	}
+	return GatewayStreamResponse{
+		ResponseID: fmt.Sprintf("grpc-%s", decision.ReasonCode),
+		RequestID:  gatewayRequest.RequestID,
+		Status:     decision.Status,
+		ReasonCode: decision.ReasonCode,
+		Payload:    decision.Payload,
+	}.ToWire()
+}
+
+func acceptGatewayRequest(context.Context, GatewayStreamRequest) GatewayRequestDecision {
+	return GatewayRequestDecision{
+		Status:     GatewayAckStatusAccepted,
+		ReasonCode: reasonAccepted,
+	}
 }
 
 func (s Server) authorized(ctx context.Context) bool {
