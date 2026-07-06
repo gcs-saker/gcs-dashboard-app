@@ -4,11 +4,11 @@ import java.time.Clock
 import java.time.Instant
 
 class GroupPolicyService(
-    private val groups: Collection<OrganizationUnit>,
+    groups: Collection<OrganizationUnit>,
     private val routePolicies: StreamRoutePolicies = StreamRoutePolicies.empty(),
     private val clock: Clock = Clock.systemUTC(),
 ) {
-    private val groupsById = groups.associateBy { it.id }
+    private val hierarchy = OrganizationHierarchy.of(groups)
 
     fun canViewStream(
         principal: AuthenticatedPrincipal,
@@ -23,7 +23,7 @@ class GroupPolicyService(
         routePolicyDecision(principal, stream, Instant.now(clock))?.let {
             return it
         }
-        if (principal.role == UserRole.OPERATOR && isAncestor(principal.groupId, stream.publisherGroupId)) {
+        if (principal.role == UserRole.OPERATOR && hierarchy.isAncestor(principal.groupId, stream.publisherGroupId)) {
             return StreamAccessDecision.allow("operator can view descendant group stream")
         }
         return StreamAccessDecision.deny("stream is outside principal group scope")
@@ -50,9 +50,9 @@ class GroupPolicyService(
                         StreamAccessDecision.allow("explicit same-group route policy")
                     } else {
                         null
-                    }
+                }
                 StreamRouteScope.DESCENDANT_GROUPS ->
-                    if (policy.publisherGroupId == stream.publisherGroupId || isAncestor(policy.publisherGroupId, stream.publisherGroupId)) {
+                    if (policy.publisherGroupId == stream.publisherGroupId || hierarchy.isAncestor(policy.publisherGroupId, stream.publisherGroupId)) {
                         StreamAccessDecision.allow("explicit descendant route policy")
                     } else {
                         null
@@ -65,16 +65,5 @@ class GroupPolicyService(
                     }
             }
         }
-    }
-
-    private fun isAncestor(candidateAncestorId: GroupId, childId: GroupId): Boolean {
-        var current = groupsById[childId]?.parentId
-        while (current != null) {
-            if (current == candidateAncestorId) {
-                return true
-            }
-            current = groupsById[current]?.parentId
-        }
-        return false
     }
 }

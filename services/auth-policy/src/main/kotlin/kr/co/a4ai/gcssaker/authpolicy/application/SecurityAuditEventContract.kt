@@ -34,6 +34,20 @@ object SecurityAuditEventContract {
     fun maskStreamId(streamId: String): String =
         streamId.take(96)
 
+    fun maskGroupId(groupId: GroupId): String =
+        groupId.value.take(64)
+
     fun safeReason(reason: String): String =
         reason.take(160)
+
+    fun streamAccessMessage(
+        allowed: Boolean,
+        streamId: String,
+        viewerGroupId: GroupId,
+        publisherGroupId: GroupId,
+        reason: String,
+    ): String =
+        "스트림 접근 ${if (allowed) "허용" else "거부"}: ${maskStreamId(streamId)} " +
+            "[viewerGroup=${maskGroupId(viewerGroupId)}, publisherGroup=${maskGroupId(publisherGroupId)}] " +
+            "(${safeReason(reason)})"
 }

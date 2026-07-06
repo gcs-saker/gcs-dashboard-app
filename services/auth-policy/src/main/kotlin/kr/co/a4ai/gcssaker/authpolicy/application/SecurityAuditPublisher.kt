@@ -1,6 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy.application
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicLong
@@ -13,6 +14,7 @@ interface SecurityAuditPublisher {
     fun publishStreamAccess(
         principal: AuthenticatedPrincipal,
         streamId: String,
+        publisherGroupId: GroupId,
         allowed: Boolean,
         reason: String,
     )
@@ -26,6 +28,7 @@ object NoopSecurityAuditPublisher : SecurityAuditPublisher {
     override fun publishStreamAccess(
         principal: AuthenticatedPrincipal,
         streamId: String,
+        publisherGroupId: GroupId,
         allowed: Boolean,
         reason: String,
     ) = Unit
@@ -57,6 +60,7 @@ class RepositorySecurityAuditPublisher(
     override fun publishStreamAccess(
         principal: AuthenticatedPrincipal,
         streamId: String,
+        publisherGroupId: GroupId,
         allowed: Boolean,
         reason: String,
     ) {
@@ -64,6 +68,7 @@ class RepositorySecurityAuditPublisher(
             events.streamAccess(
                 principal = principal,
                 streamId = streamId,
+                publisherGroupId = publisherGroupId,
                 allowed = allowed,
                 reason = reason,
                 occurredAt = now(),

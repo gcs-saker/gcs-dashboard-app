@@ -40,6 +40,9 @@ class AuthPolicyConfigTest {
                     "AUTH_POLICY_REFRESH_COOKIE_SECURE" to "true",
                     "AUTH_POLICY_REFRESH_COOKIE_SAMESITE" to "strict",
                     "AUTH_POLICY_ALLOWED_ORIGINS" to "http://localhost:18080, https://gcs.example.test ",
+                    "AUTH_POLICY_ADMIN_USERNAME" to "admin",
+                    "AUTH_POLICY_ADMIN_PASSWORD" to "admin-password",
+                    "AUTH_POLICY_ADMIN_GROUP_ID" to "bn-1",
                     "AUTH_POLICY_OPERATOR_USERNAME" to "op",
                     "AUTH_POLICY_OPERATOR_PASSWORD" to "op-password",
                     "AUTH_POLICY_OPERATOR_GROUP_ID" to "bn-1",
@@ -61,6 +64,7 @@ class AuthPolicyConfigTest {
         assertTrue(settings.refreshCookieSecure)
         assertEquals("strict", settings.refreshCookieSameSite)
         assertEquals(setOf("http://localhost:18080", "https://gcs.example.test"), settings.allowedOrigins.toSet())
+        assertEquals("admin", settings.adminUsername)
         assertEquals("op", settings.operatorUsername)
         assertEquals("viewer", settings.smokeUsername)
         assertTrue(settings.redisPrincipalCacheEnabled)
@@ -79,6 +83,7 @@ class AuthPolicyConfigTest {
                     "AUTH_REFRESH_COOKIE_NAME" to "backend_refresh",
                     "AUTH_REFRESH_COOKIE_SAMESITE" to "lax",
                     "BACKEND_CORS_ALLOW_ORIGINS" to "http://localhost:5173",
+                    "AUTH_POLICY_ADMIN_PASSWORD" to "admin-password",
                     "AUTH_POLICY_OPERATOR_PASSWORD" to "operator-password",
                     "AUTH_POLICY_SMOKE_PASSWORD" to "viewer-password",
                 ),
@@ -131,8 +136,10 @@ class AuthPolicyConfigTest {
             StatelessRefreshSessionStore,
         )
 
+        assertNotNull(repository.findByUsername("admin01"))
         assertNotNull(repository.findByUsername("operator01"))
         assertNotNull(repository.findByUsername("m7-smoke-viewer"))
+        assertNotNull(sessionService.login("admin01", "admin-password"))
         assertNotNull(sessionService.login("operator01", "correct-password"))
     }
 
