@@ -34,6 +34,8 @@ class ApiContractTest {
         assertEquals(ApiContractFixtures.TELEMETRY_HISTORY, OperationalReadApiRoutes.TELEMETRY_HISTORY)
         assertEquals(ApiContractFixtures.ASSET_BY_GATEWAY, OperationalReadApiRoutes.ASSET_BY_GATEWAY)
         assertEquals(ApiContractFixtures.STREAM_POLICY_ROOT, StreamPolicyApiRoutes.ROOT)
+        assertEquals(ApiContractFixtures.DEVICE_POLICY_ROOT, DevicePolicyApiRoutes.ROOT)
+        assertEquals(ApiContractFixtures.DEVICE_POLICY_PUBLISH, DevicePolicyApiRoutes.PUBLISH)
     }
 
     @Test
@@ -98,6 +100,7 @@ class ApiContractTest {
             OperationalReadApiRoutes.TELEMETRY_HISTORY,
             OperationalReadApiRoutes.ASSET_BY_GATEWAY,
             StreamPolicyApiRoutes.ROOT + StreamPolicyApiRoutes.ACCESS,
+            DevicePolicyApiRoutes.ROOT + DevicePolicyApiRoutes.PUBLISH,
         )
 
         assertEquals(routes.size, routes.toSet().size)
@@ -284,6 +287,37 @@ class ApiContractTest {
         assertTrue(responsePayload.contains(quoted(ApiContractFixtures.PERMISSION_VIEW_STREAM_VALUE)))
     }
 
+    @Test
+    fun `device publish authorization request does not accept group id`() {
+        val requestPayload = objectMapper.writeValueAsString(
+            DevicePublishAuthorizationRequest(
+                deviceUuid = ApiContractFixtures.DEVICE_UUID_VALUE,
+                credential = ApiContractFixtures.DEVICE_CREDENTIAL_VALUE,
+                streamId = ApiContractFixtures.STREAM_ID_VALUE,
+                path = ApiContractFixtures.STREAM_PATH_VALUE,
+            ),
+        )
+        val responsePayload = objectMapper.writeValueAsString(
+            DevicePublishAuthorizationResponse(
+                deviceUuid = ApiContractFixtures.DEVICE_UUID_VALUE,
+                streamId = ApiContractFixtures.STREAM_ID_VALUE,
+                path = ApiContractFixtures.STREAM_PATH_VALUE,
+                publisherGroupId = ApiContractFixtures.GROUP_ID_VALUE,
+                reason = ApiContractFixtures.DEVICE_AUTH_REASON_VALUE,
+                policyVersion = ApiContractFixtures.DEVICE_POLICY_VERSION_VALUE,
+            ),
+        )
+
+        assertTrue(requestPayload.contains(quoted(DevicePolicyApiFields.DEVICE_UUID)))
+        assertTrue(requestPayload.contains(quoted(DevicePolicyApiFields.CREDENTIAL)))
+        assertTrue(requestPayload.contains(quoted(DevicePolicyApiFields.STREAM_ID)))
+        assertTrue(requestPayload.contains(quoted(DevicePolicyApiFields.PATH)))
+        assertFalse(requestPayload.contains(quoted(DevicePolicyApiFields.PUBLISHER_GROUP_ID)))
+        assertFalse(requestPayload.contains(quoted(StreamPolicyApiFields.GROUP_ID)))
+        assertTrue(responsePayload.contains(quoted(DevicePolicyApiFields.PUBLISHER_GROUP_ID)))
+        assertTrue(responsePayload.contains(quoted(DevicePolicyApiFields.POLICY_VERSION)))
+    }
+
     private fun quoted(value: String): String = "\"$value\""
 }
 
@@ -308,6 +342,8 @@ private object ApiContractFixtures {
     const val TELEMETRY_HISTORY = "/telemetry/{uuid}/history"
     const val ASSET_BY_GATEWAY = "/asset/{gatewayUuid}"
     const val STREAM_POLICY_ROOT = "/policy/streams"
+    const val DEVICE_POLICY_ROOT = "/policy/devices"
+    const val DEVICE_POLICY_PUBLISH = "/publish"
     const val ACCESS_TOKEN_VALUE = "access-token"
     const val EXPIRES_IN_MINUTES_VALUE = 30L
     const val USERNAME_VALUE = "operator01"
@@ -361,5 +397,9 @@ private object ApiContractFixtures {
     const val ICE_PATH_VALUE = "relay"
     const val ICE_PATH_COUNT_VALUE = 1L
     const val RELAY_FALLBACK_REASON_VALUE = "srflx candidate failed"
+    const val DEVICE_UUID_VALUE = "device-front-001"
+    const val DEVICE_CREDENTIAL_VALUE = "device-secret"
+    const val DEVICE_AUTH_REASON_VALUE = "device group authorized"
+    const val DEVICE_POLICY_VERSION_VALUE = "device-policy-v1"
     val INSTANT_VALUE: Instant = Instant.parse("2026-06-01T00:00:00Z")
 }

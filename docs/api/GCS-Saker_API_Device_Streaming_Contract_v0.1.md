@@ -81,6 +81,38 @@
 
 이 API는 보통 media-control이 내부적으로 호출한다. 외부 dashboard/device가 직접 호출하는 것을 기본 흐름으로 두지 않는다.
 
+## Device Publish Policy API
+
+| Method | Public URL | 내부 auth-policy route | 인증 | 용도 |
+| --- | --- | --- | --- | --- |
+| POST | `<EDGE>/auth-policy/policy/devices/publish` | `/policy/devices/publish` | device credential | 로봇/드론 송출 group 결정 |
+
+요청 body:
+
+```json
+{
+  "deviceUuid": "device-front-001",
+  "credential": "<device-secret>",
+  "streamId": "raw.drone01.front",
+  "path": "raw/drone01/front"
+}
+```
+
+응답 body:
+
+```json
+{
+  "deviceUuid": "device-front-001",
+  "streamId": "raw.drone01.front",
+  "path": "raw/drone01/front",
+  "publisherGroupId": "co-a",
+  "reason": "device group authorized",
+  "policyVersion": "device-policy-v1"
+}
+```
+
+요청에는 `groupId`를 넣지 않는다. 서버가 `registered_devices.group_id`를 원장으로 삼아 `publisherGroupId`를 결정한다.
+
 ## GraphQL API
 
 | Method | Public URL | 내부 auth-policy route | 인증 | 용도 |

@@ -101,6 +101,16 @@ Go media-control은 Spring auth-policy의 `POST /policy/streams/access`로 strea
 
 `publish` 응답의 `whipUrl`에는 HMAC signed short-lived `publisherToken`이 포함된다. MediaMTX auth hook은 `streamId`, `path`, `groupId`, `action`, `exp`, signature를 모두 검증한다.
 
+## 6-1. Device Publish Policy API
+
+외부 로봇/드론은 URL이나 stream id에 `groupId`를 섞지 않는다. auth-policy가 등록 장비의 `deviceUuid`와 credential을 검증한 뒤 DB의 장비 소속 group을 `publisherGroupId`로 결정한다.
+
+| Method | 외부 URL | 필요한 데이터 | 응답 핵심 필드 | 용도 |
+| --- | --- | --- | --- | --- |
+| `POST` | `/auth-policy/policy/devices/publish` | `deviceUuid`, `credential`, `streamId`, `path` | `deviceUuid`, `streamId`, `path`, `publisherGroupId`, `policyVersion` | robot/drone publish group 결정 |
+
+이 API 요청 body에는 `groupId`를 받지 않는다. 장비 group은 `registered_devices.group_id`가 원장이다.
+
 ## 7. WebRTC, HLS, MediaMTX
 
 | 경로 | 프로토콜 | 누가 사용하나 | 설명 |
@@ -160,7 +170,7 @@ Python backend는 active core가 아니라 legacy/fallback으로 낮춘다.
 | 연결 대상 | 필요한 데이터 | 보내는 곳 |
 | --- | --- | --- |
 | browser/mobile camera publisher | login account, stream id/path, camera permission, microphone permission | `GET /media-control/api/v1/streams/{streamId}/publish` 후 반환된 `whipUrl` |
-| external camera/robot gateway | gateway token, `orgId`, `groupId`, `assetId`, stream path, telemetry schema | gRPC `SakerGatewayService.Exchange` 또는 MQTT topic |
+| external camera/robot gateway | `deviceUuid`, device credential, stream id/path, telemetry schema | `POST /auth-policy/policy/devices/publish`, 이후 gRPC/MQTT/WHIP |
 | dashboard receiver | operator account, `Authorization`, stream id, ICE servers | `GET /media-control/api/v1/streams`, `/ice-servers`, `/playback` |
 | telemetry ingest | `uuid`/`assetId`, GPS, altitude, heading, speed, battery, timestamp | 현재 `/api/telemetry/`, 목표 gRPC/MQTT |
 | command ack | `requestId`/`commandId`, `assetId`, status, observed timestamp | gRPC/MQTT command ack |

@@ -8,7 +8,7 @@
 | --- | --- | --- | --- |
 | Browser/mobile camera publisher | `GET /media-control/api/v1/streams/{streamId}/publish` 후 반환된 `whipUrl` | operator/publisher bearer token, short-lived `publisherToken` | WebRTC WHIP 송출 |
 | Dashboard receiver | `GET /media-control/api/v1/streams/{streamId}/playback` 후 반환된 `playbackUrls.webrtc` | operator bearer token, short-lived `playbackToken` | WebRTC WHEP 수신 |
-| Robot/drone gateway | gRPC `SakerGatewayService.Exchange` | gateway token, bearer token 후보 | telemetry, stream event, command ack |
+| Robot/drone gateway | `POST /auth-policy/policy/devices/publish` 후 gateway-managed WHIP | device UUID, device credential | 송출 group 결정, telemetry, stream event, command ack |
 | MQTT device | `gcs/{orgId}/{groupId}/{assetId}/telemetry` | broker credential, device policy | 대량 telemetry ingest |
 
 브라우저는 gRPC/MQTT에 직접 연결하지 않는다. 브라우저는 HTTPS JSON, SSE, WHIP, WHEP, HLS만 사용한다.
@@ -69,10 +69,29 @@ MEDIA_CONTROL_STREAM_GROUP_MAP=raw/company-b/front=co-b
 
 | Step | 연결 | 필요한 값 | 결과 |
 | --- | --- | --- | --- |
-| 1 | gateway 등록 | `orgId`, `groupId`, `assetId`, gateway credential | 장비 식별 기준 확보 |
-| 2 | gRPC 또는 MQTT 연결 | gateway token 또는 broker credential | telemetry/control channel 생성 |
-| 3 | stream 송출 | publish API로 받은 WHIP URL 또는 gateway-managed WHIP URL | MediaMTX publish |
-| 4 | telemetry/ack 송신 | Protobuf payload | dashboard read model 반영 |
+| 1 | device 등록 | `deviceUuid`, optional `macHash`, `groupId`, credential hash | 장비 식별 기준 확보 |
+| 2 | publish group 인가 | `deviceUuid`, device credential, `streamId`, `path` | 서버가 `publisherGroupId` 결정 |
+| 3 | gRPC 또는 MQTT 연결 | gateway token 또는 broker credential | telemetry/control channel 생성 |
+| 4 | stream 송출 | device policy를 통과한 gateway-managed WHIP URL | MediaMTX publish |
+| 5 | telemetry/ack 송신 | Protobuf payload | dashboard read model 반영 |
+
+장비 publish group 인가 요청:
+
+```http
+POST /auth-policy/policy/devices/publish
+Content-Type: application/json
+```
+
+```json
+{
+  "deviceUuid": "device-front-001",
+  "credential": "<device-secret>",
+  "streamId": "raw.drone01.front",
+  "path": "raw/drone01/front"
+}
+```
+
+요청에는 `groupId`를 넣지 않는다. 서버는 `registered_devices.group_id`를 기준으로 응답의 `publisherGroupId`를 결정한다.
 
 장비의 long-lived credential은 장비 secure storage 또는 gateway secret store에 보관한다. 브라우저 bundle이나 문서에 넣지 않는다.
 

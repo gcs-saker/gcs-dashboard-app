@@ -38,9 +38,19 @@ class JdbcPostgresSchemaContractTest {
         assertFalse("stream_id VARCHAR(128) NOT NULL, group_id" in migration)
     }
 
+    @Test
+    fun `device credential migration stores only credential hash contract`() {
+        val migration = Files.readString(deviceCredentialMigration)
+
+        assertTrue("ADD COLUMN IF NOT EXISTS credential_hash" in migration)
+        assertTrue("CREATE INDEX IF NOT EXISTS ix_registered_devices_uuid_status" in migration)
+        assertFalse("credential VARCHAR" in migration)
+    }
+
     private companion object {
         val coreSchemaMigration: Path = Path.of("src/main/resources/db/migration/V1__auth_policy_core_schema.sql")
         val groupHierarchyMigration: Path = Path.of("src/main/resources/db/migration/V2__group_hierarchy_and_device_identity.sql")
+        val deviceCredentialMigration: Path = Path.of("src/main/resources/db/migration/V3__registered_device_credential_hash.sql")
         val postgresInvalidDoubleType = Regex("\\bDOUBLE\\s+NOT\\s+NULL\\b", RegexOption.IGNORE_CASE)
     }
 }

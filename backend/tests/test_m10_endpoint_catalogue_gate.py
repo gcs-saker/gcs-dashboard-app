@@ -36,6 +36,7 @@ def test_endpoint_catalogue_covers_public_entrypoint_and_routes() -> None:
         "/media-control/api/v1/streams/ice-servers",
         "/media-control/api/v1/streams/{streamId}/playback",
         "/media-control/api/v1/streams/{streamId}/publish",
+        "/auth-policy/policy/devices/publish",
         "/webrtc/{streamPath}/whip",
         "/webrtc/{streamPath}/whep",
         "/hls/{streamPath}/index.m3u8",
@@ -64,6 +65,8 @@ def test_endpoint_catalogue_documents_required_data_and_headers() -> None:
         "playbackUrls.webrtc",
         "playbackUrls.hls",
         "whipUrl",
+        "deviceUuid",
+        "publisherGroupId",
     ]
 
     for contract in required_contracts:

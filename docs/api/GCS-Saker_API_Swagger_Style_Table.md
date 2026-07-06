@@ -104,6 +104,12 @@ media frame은 WebRTC/HLS media plane으로만 보낸다. JSON, MQTT, gRPC, Grap
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | POST | `/auth-policy/policy/streams/access` | bearer | `Authorization`, `Content-Type: application/json` | none | `streamId`, `path`, `publisherGroupId`, optional `startedAt` | `allowed`, `reason`, `principalId`, `groupId`, `expiresAt`, `permissions[]` | 일반 외부 호출보다 media-control 내부 권한 질의가 기본 |
 
+## Device Publish Policy
+
+| Method | Path | Auth | Headers | Params | Body | Response | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| POST | `/auth-policy/policy/devices/publish` | device credential | `Content-Type: application/json` | none | `deviceUuid`, `credential`, `streamId`, `path` | `deviceUuid`, `streamId`, `path`, `publisherGroupId`, `policyVersion` | 요청 body에 `groupId`를 넣지 않는다. 서버가 등록 장비 group을 결정한다. |
+
 ## Legacy / Fallback
 
 | Method | Path | Auth | Headers | Params | Body | Response | Notes |
