@@ -40,6 +40,7 @@ def test_swagger_style_table_covers_core_public_endpoints() -> None:
         "/media-control/api/v1/streams/ice-servers",
         "/media-control/api/v1/streams/{streamId}/playback",
         "/media-control/api/v1/streams/{streamId}/publish",
+        "/auth-policy/policy/devices/publish",
         "/webrtc/{streamPath}/whip",
         "/webrtc/{streamPath}/whep",
         "/hls/{streamPath}/index.m3u8",
@@ -59,6 +60,7 @@ def test_swagger_style_table_documents_non_http_device_boundaries() -> None:
         "gcs/{orgId}/{groupId}/{assetId}/command_ack",
         "browser 직접 연결 금지",
         "media frame은 WebRTC/HLS media plane으로만 보낸다",
+        "deviceUuid",
     ]
 
     for boundary in required_boundaries:

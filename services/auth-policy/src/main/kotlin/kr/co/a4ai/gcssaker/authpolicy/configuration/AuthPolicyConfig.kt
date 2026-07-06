@@ -4,18 +4,22 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthRegistrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.CachedAuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.DevicePublishAuthorizationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOrganizationHierarchyRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryRegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.PrincipalCache
+import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.RefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfigRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncStatusService
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOrganizationHierarchyRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcRegisteredDeviceRepository
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -92,6 +96,25 @@ class AuthPolicyConfig {
     @Bean
     fun groupPolicyService(hierarchyRepository: OrganizationHierarchyRepository): GroupPolicyService =
         GroupPolicyService(hierarchyRepository.current().units())
+
+    @Bean
+    fun registeredDeviceRepository(
+        settings: AuthRuntimeSettings,
+        dataSource: ObjectProvider<DataSource>,
+    ): RegisteredDeviceRepository =
+        if (settings.jdbcPersistenceEnabled) {
+            dataSource.getIfAvailable()?.let { JdbcRegisteredDeviceRepository(it) }
+                ?: InMemoryRegisteredDeviceRepository()
+        } else {
+            InMemoryRegisteredDeviceRepository()
+        }
+
+    @Bean
+    fun devicePublishAuthorizationService(
+        devices: RegisteredDeviceRepository,
+        passwordHasher: PasswordHasher,
+    ): DevicePublishAuthorizationService =
+        DevicePublishAuthorizationService(devices, passwordHasher)
 
     @Bean
     fun timeSyncConfigRepository(env: Environment): TimeSyncConfigRepository =

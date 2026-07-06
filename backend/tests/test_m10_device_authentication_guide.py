@@ -17,6 +17,8 @@ def test_device_authentication_guide_explains_publisher_flow_and_claims() -> Non
         "POST /auth-policy/auth/login",
         "GET /media-control/api/v1/streams/{streamId}/publish",
         "POST /webrtc/{streamPath}/whip?publisherToken=...",
+        "POST /auth-policy/policy/devices/publish",
+        "`deviceUuid`",
         "`streamId`",
         "`path`",
         "`groupId`",
@@ -37,6 +39,8 @@ def test_device_authentication_guide_documents_group_mapping_and_rejection() -> 
     assert "MEDIA_CONTROL_STREAM_GROUP_MAP" in guide
     assert "raw/company-b/front=co-b" in guide
     assert "co-a token으로 publish하면 MediaMTX auth hook이 거부" in guide
+    assert "요청에는 `groupId`를 넣지 않는다" in guide
+    assert "registered_devices.group_id" in guide
 
 
 def test_endpoint_tables_reference_stream_scoped_publish_token() -> None:

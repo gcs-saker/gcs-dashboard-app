@@ -78,6 +78,17 @@ class AuthSecurityConfigTest @Autowired constructor(
             }
     }
 
+    @Test
+    fun `device publish policy route uses device credential instead of bearer session`() {
+        mockMvc.post(DevicePolicyApiRoutes.ROOT + DevicePolicyApiRoutes.PUBLISH) {
+            contentType = org.springframework.http.MediaType.APPLICATION_JSON
+            content = AuthSecurityConfigTestContract.DEVICE_PUBLISH_PAYLOAD
+        }
+            .andExpect {
+                status { isForbidden() }
+            }
+    }
+
     private fun bearerAccessToken(): String {
         val token = sessions.login(
             AuthSecurityConfigTestContract.OPERATOR_USERNAME,
@@ -94,4 +105,6 @@ private object AuthSecurityConfigTestContract {
     const val OPERATOR_ROLE = "operator"
     const val LOGIN_SETUP_FAILED = "test login failed"
     const val LOGIN_PAYLOAD = """{"username":"operator01","password":"correct-password"}"""
+    const val DEVICE_PUBLISH_PAYLOAD =
+        """{"deviceUuid":"unknown-device","credential":"wrong","streamId":"raw.front.drone-1","path":"raw/front/drone-1"}"""
 }
