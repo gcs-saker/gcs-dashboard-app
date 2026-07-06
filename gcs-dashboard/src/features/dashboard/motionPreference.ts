@@ -27,6 +27,38 @@ export function isMotionEnabled(mode: MotionMode): boolean {
   return mode !== "off";
 }
 
+export interface MotionPolicy {
+  animationDurationMs: number;
+  dataMotion: MotionMode;
+  isAnimationEnabled: boolean;
+  isTransitionEnabled: boolean;
+}
+
+export function motionPolicyForMode(mode: MotionMode): MotionPolicy {
+  if (mode === "off") {
+    return {
+      animationDurationMs: 0,
+      dataMotion: mode,
+      isAnimationEnabled: false,
+      isTransitionEnabled: false,
+    };
+  }
+  if (mode === "reduced") {
+    return {
+      animationDurationMs: 80,
+      dataMotion: mode,
+      isAnimationEnabled: false,
+      isTransitionEnabled: true,
+    };
+  }
+  return {
+    animationDurationMs: 180,
+    dataMotion: mode,
+    isAnimationEnabled: true,
+    isTransitionEnabled: true,
+  };
+}
+
 function isMotionMode(value: string): value is MotionMode {
   return MOTION_MODES.includes(value as MotionMode);
 }

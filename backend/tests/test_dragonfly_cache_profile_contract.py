@@ -8,7 +8,7 @@ import importlib.util
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "dragonfly_profile_smoke.py"
+SCRIPT = REPO_ROOT / "scripts" / "smoke" / "dragonfly_profile_smoke.py"
 MATRIX = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_v2_completion_matrix.yml"
 STATUS = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_runtime_stack_status.yml"
 

@@ -3,7 +3,7 @@ import subprocess
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "server_baseline_check.sh"
+SCRIPT = REPO_ROOT / "scripts" / "ops" / "server_baseline_check.sh"
 CHECKLIST = REPO_ROOT / "docs" / "operations" / "GCS-Saker_서버기준선_점검표_v0.1.md"
 TEMPLATE = REPO_ROOT / "docs" / "operations" / "GCS-Saker_서버기준선_점검결과_TEMPLATE.md"
 

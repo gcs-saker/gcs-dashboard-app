@@ -46,7 +46,7 @@ GitHub 이슈 제목 기준으로 확인한 M1 필수 이슈는 #24를 제외하
 
 ## Sample Stream Smoke 결과
 
-자동화된 계약 검증은 `scripts/streaming_e2e_smoke.sh --check`로 수행한다. 이 검증은 다음 경로를 확인한다.
+자동화된 계약 검증은 `scripts/smoke/streaming_e2e_smoke.sh --check`로 수행한다. 이 검증은 다음 경로를 확인한다.
 
 - sample publish path: `raw/sample/front`
 - stream id: `raw.sample.front`
@@ -59,12 +59,12 @@ GitHub 이슈 제목 기준으로 확인한 M1 필수 이슈는 #24를 제외하
 
 ## 성능 체크
 
-`scripts/streaming_core_perf_check.py`는 FastAPI `TestClient`로 Streaming Core 핵심 API를 반복 호출해 로컬 지연 시간을 측정한다. 실제 네트워크, MediaMTX, 브라우저 디코딩 지연은 포함하지 않으며, API 계약과 Python app 경로의 기본 오버헤드를 확인하는 목적이다.
+`scripts/benchmarks/streaming_core_perf_check.py`는 FastAPI `TestClient`로 Streaming Core 핵심 API를 반복 호출해 로컬 지연 시간을 측정한다. 실제 네트워크, MediaMTX, 브라우저 디코딩 지연은 포함하지 않으며, API 계약과 Python app 경로의 기본 오버헤드를 확인하는 목적이다.
 
 실행 명령:
 
 ```bash
-../.venv/bin/python ../scripts/streaming_core_perf_check.py --iterations 100 --warmup 10 --json
+../.venv/bin/python ../scripts/benchmarks/streaming_core_perf_check.py --iterations 100 --warmup 10 --json
 ```
 
 2026-05-26 KST 로컬 결과:
@@ -95,7 +95,7 @@ GitHub 이슈 제목 기준으로 확인한 M1 필수 이슈는 #24를 제외하
 
 ## M2 진입 조건
 
-- Docker daemon, `ffmpeg`, MediaMTX가 준비된 환경에서 `scripts/streaming_e2e_smoke.sh --run`을 실제 수행한다.
+- Docker daemon, `ffmpeg`, MediaMTX가 준비된 환경에서 `scripts/smoke/streaming_e2e_smoke.sh --run`을 실제 수행한다.
 - dashboard 기본 화면에 `RealtimePlayer` 기반 스트리밍 슬롯을 점진적으로 연결한다.
 - mock stream 또는 테스트 미디어를 이용해 브라우저 레벨 재생 상태를 E2E로 확인한다.
 - 지도 API와 asset/device registry가 들어오면 stream registry seed를 실제 registry 연동 구조로 교체한다.

@@ -16,6 +16,15 @@ object AuthResponseHeaders {
     const val PRAGMA_NO_CACHE = "no-cache"
 }
 
+object AuthCookieContract {
+    const val PATH = "/"
+    const val EMPTY_VALUE = ""
+}
+
+object AuthRoleDefaults {
+    const val SIGNUP_ROLE = "viewer"
+}
+
 object AuthApiErrors {
     const val INVALID_CREDENTIALS = "Invalid credentials"
     const val REFRESH_TOKEN_REQUIRED = "refresh token required"

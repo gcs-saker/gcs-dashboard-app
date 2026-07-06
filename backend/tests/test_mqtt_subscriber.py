@@ -31,6 +31,8 @@ class FakeSubscriberClient:
         self.connected: tuple[str, int, int] | None = None
         self.subscriptions: list[tuple[str, int]] = []
         self.loop_started = False
+        self.reconnect_delays: tuple[int, int] | None = None
+        self.max_inflight: int | None = None
 
     def username_pw_set(self, username: str, password: str | None = None) -> None:
         self.credentials = (username, password)
@@ -44,6 +46,12 @@ class FakeSubscriberClient:
 
     def loop_start(self) -> None:
         self.loop_started = True
+
+    def reconnect_delay_set(self, min_delay: int, max_delay: int) -> None:
+        self.reconnect_delays = (min_delay, max_delay)
+
+    def max_inflight_messages_set(self, inflight: int) -> None:
+        self.max_inflight = inflight
 
 
 def test_build_telemetry_subscriber_connects_and_subscribes_to_v2_topic() -> None:
@@ -66,6 +74,8 @@ def test_build_telemetry_subscriber_connects_and_subscribes_to_v2_topic() -> Non
     assert runtime.topic == telemetry_subscription_topic()
     assert fake_client.credentials == ("consumer", "secret")
     assert fake_client.connected == ("mqtt.internal", 1884, 30)
+    assert fake_client.reconnect_delays == (1, 30)
+    assert fake_client.max_inflight == 20
     assert fake_client.loop_started is True
 
     assert fake_client.on_connect is not None

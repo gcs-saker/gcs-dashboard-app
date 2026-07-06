@@ -3,8 +3,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { createDashboardQueryClient } from "../../queryClient";
-import { DEFAULT_OPERATIONAL_EVENT_FILTERS, useEventLogStore } from "../stores/useEventLogStore";
+import { createDashboardQueryClient } from "@features/queryClient";
+import { DEFAULT_OPERATIONAL_EVENT_FILTERS, useEventLogStore } from "@dashboard/stores/useEventLogStore";
 import { EventLogView } from "./EventLogView";
 
 const events = [

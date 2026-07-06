@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SMOKE_SCRIPT = REPO_ROOT / "scripts" / "mqtt_hardened_profile_smoke.py"
+SMOKE_SCRIPT = REPO_ROOT / "scripts" / "smoke" / "mqtt_hardened_profile_smoke.py"
 ACL = REPO_ROOT / "deploy" / "mosquitto" / "acl.hardened"
 README = REPO_ROOT / "deploy" / "mosquitto" / "README.md"
 
@@ -63,7 +63,7 @@ def test_mqtt_acl_and_guide_keep_dashboard_outside_broker_and_health_readable() 
     assert "topic write gcs/+/+/+/telemetry" in acl
     assert "The dashboard must never receive MQTT credentials" in readme
     assert "Media frames must not be carried by MQTT" in readme
-    assert "python3 scripts/mqtt_hardened_profile_smoke.py --run" in readme
+    assert "python3 scripts/smoke/mqtt_hardened_profile_smoke.py --run" in readme
 
 
 def test_single_node_compose_uses_hardened_mqtt_by_default() -> None:

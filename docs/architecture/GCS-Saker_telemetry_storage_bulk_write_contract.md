@@ -111,12 +111,12 @@ batch 100개 기준으로 이전 loop는 100회 upsert였지만, 현재 MySQL/Ma
 
 ## Synthetic benchmark
 
-실제 DB capacity claim은 운영 DB에서 별도 측정해야 한다. 다만 `scripts/telemetry_bulk_flush_benchmark.py`는 DB 없이 buffer와 SQL statement construction 비용을 재현 가능하게 측정한다.
+실제 DB capacity claim은 운영 DB에서 별도 측정해야 한다. 다만 `scripts/benchmarks/telemetry_bulk_flush_benchmark.py`는 DB 없이 buffer와 SQL statement construction 비용을 재현 가능하게 측정한다.
 
 2026-06-26 로컬 Python 3.12 synthetic run:
 
 ```bash
-PYTHONPATH=backend python3 scripts/telemetry_bulk_flush_benchmark.py --records 1000 --batch-size 100
+PYTHONPATH=backend python3 scripts/benchmarks/telemetry_bulk_flush_benchmark.py --records 1000 --batch-size 100
 ```
 
 | metric | value |
@@ -167,7 +167,7 @@ PYTHONPATH=backend python3 scripts/telemetry_bulk_flush_benchmark.py --records 1
 - Python value object: `backend/modules/telemetry_buffer/bulk_sql.py`
 - flush adapter: `backend/modules/telemetry_buffer/sink.py`
 - contract test: `backend/tests/test_telemetry_write_buffer.py`
-- benchmark: `scripts/telemetry_bulk_flush_benchmark.py`
+- benchmark: `scripts/benchmarks/telemetry_bulk_flush_benchmark.py`
 
 ## 다음 개선 후보
 

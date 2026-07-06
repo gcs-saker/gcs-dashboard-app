@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, test } from "vitest";
 import {
   LEGACY_AUTH_STORAGE_KEYS,
+  clearAccessToken,
   clearAuthSession,
   getStoredAccessToken,
   getStoredUser,
+  storeAccessToken,
   storeAuthSession,
 } from "./authStorage";
 
@@ -36,5 +38,26 @@ describe("authStorage", () => {
     expect(window.localStorage.getItem(LEGACY_AUTH_STORAGE_KEYS.session)).toBeNull();
     expect(window.localStorage.getItem(LEGACY_AUTH_STORAGE_KEYS.accessToken)).toBeNull();
     expect(window.localStorage.getItem(LEGACY_AUTH_STORAGE_KEYS.user)).toBeNull();
+  });
+
+  test("drops expired in-memory token instead of returning stale credentials", () => {
+    storeAuthSession({
+      accessToken: "expired-token",
+      expiresAt: new Date(Date.now() - 1_000).toISOString(),
+      user: { username: "operator01" },
+    });
+
+    expect(getStoredAccessToken()).toBeNull();
+    expect(window.localStorage.getItem(LEGACY_AUTH_STORAGE_KEYS.accessToken)).toBeNull();
+  });
+
+  test("stores short-lived access token in memory and clears it explicitly", () => {
+    storeAccessToken("short-token");
+
+    expect(getStoredAccessToken()).toBe("short-token");
+
+    clearAccessToken();
+
+    expect(getStoredAccessToken()).toBeNull();
   });
 });

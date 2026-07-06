@@ -10,7 +10,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 INTENT_MATRIX = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_design_intent_matrix.yml"
-SCRIPT = REPO_ROOT / "scripts" / "architecture_intent_gate.py"
+SCRIPT = REPO_ROOT / "scripts" / "gates" / "architecture_intent_gate.py"
 PR_TEMPLATE = REPO_ROOT / ".github" / "pull_request_template.md"
 
 

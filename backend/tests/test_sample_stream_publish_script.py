@@ -4,7 +4,7 @@ import subprocess
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "publish_sample_stream.sh"
+SCRIPT = REPO_ROOT / "scripts" / "smoke" / "publish_sample_stream.sh"
 DOC = REPO_ROOT / "docs" / "m1" / "sample-stream-publish.md"
 
 
@@ -55,7 +55,7 @@ def test_sample_stream_dry_run_uses_port_override_without_changing_path():
 def test_sample_stream_documentation_matches_script_contract():
     doc = DOC.read_text(encoding="utf-8")
 
-    assert "scripts/publish_sample_stream.sh" in doc
+    assert "scripts/smoke/publish_sample_stream.sh" in doc
     assert "raw/sample/front" in doc
     assert "raw.sample.front" in doc
     assert "rtsp://127.0.0.1:8554/raw/sample/front" in doc

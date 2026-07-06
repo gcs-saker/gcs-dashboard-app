@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "m7_streaming_stability_soak.sh"
+SCRIPT = REPO_ROOT / "scripts" / "smoke" / "m7_streaming_stability_soak.sh"
 DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_M7_streaming_stability_soak.md"
 
 

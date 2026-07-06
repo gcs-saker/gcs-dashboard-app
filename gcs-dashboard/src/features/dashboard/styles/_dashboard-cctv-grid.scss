@@ -1,0 +1,75 @@
+.ops-dashboard__placeholder-view .stream-grid {
+  grid-column: auto;
+  grid-row: auto;
+}
+
+.stream-grid--cctv,
+.stream-grid--cctv.is-4x4 {
+  gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-height: 0;
+}
+
+.stream-grid--cctv.is-3x3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stream-grid--cctv.is-5x5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.stream-grid--cctv .stream-card {
+  min-height: 0;
+}
+
+.stream-grid--cctv .stream-card__select {
+  grid-template-rows: 30px minmax(72px, 1fr) 26px;
+}
+
+.stream-grid--cctv .stream-card__topline {
+  min-height: 30px;
+  padding: 0 8px;
+}
+
+.stream-grid--cctv .stream-card__topline strong {
+  font-size: 0.78rem;
+}
+
+.stream-grid--cctv .stream-card__topline .ops-badge {
+  font-size: 0.64rem;
+  min-height: 18px;
+  padding: 0 6px;
+}
+
+.stream-grid--cctv .stream-card__visual {
+  min-height: 72px;
+}
+
+.stream-grid--cctv.is-3x3 .stream-card__visual {
+  min-height: 130px;
+}
+
+.stream-grid--cctv.is-4x4 .stream-card__visual {
+  min-height: 98px;
+}
+
+.stream-grid--cctv.is-5x5 .stream-card__visual {
+  min-height: 72px;
+}
+
+.stream-grid--cctv.is-preview .stream-card__visual {
+  filter: saturate(0.82) contrast(0.95);
+}
+
+.stream-grid--cctv .stream-card__detail {
+  font-size: 0.68rem;
+  padding: 0 8px;
+}
+
+.stream-grid--cctv .stream-card__talkback {
+  display: none;
+}
+
+.stream-grid--cctv .stream-card__connect {
+  min-height: 30px;
+}

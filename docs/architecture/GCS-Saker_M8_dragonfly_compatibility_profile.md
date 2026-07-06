@@ -36,7 +36,7 @@ override는 `redis` 서비스 이름을 유지한다. 따라서 Spring과 Go 서
 
 ## 검증된 cache command subset
 
-`scripts/dragonfly_profile_smoke.py --run`은 기본 Redis profile과 DragonFly override profile을 각각 격리된 compose project로 띄운 뒤 같은 Redis RESP command subset을 실행한다.
+`scripts/smoke/dragonfly_profile_smoke.py --run`은 기본 Redis profile과 DragonFly override profile을 각각 격리된 compose project로 띄운 뒤 같은 Redis RESP command subset을 실행한다.
 
 - `AUTH`: 내부 cache runtime 인증
 - `PING`: cache runtime 기본 응답성

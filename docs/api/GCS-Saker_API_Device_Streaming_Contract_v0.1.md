@@ -205,16 +205,39 @@ Payload:
 - MQTT broker port는 기본적으로 내부망/폐쇄망 장비 대역에만 허용한다.
 - 공개 인터넷에서는 443/Nginx API를 우선 사용하고, MQTT 직접 공개는 hardened profile 확정 후에만 허용한다.
 
-### gRPC bidirectional streaming 후보 방식
+### gRPC bidirectional streaming 내부/device gateway 방식
 
 용도:
 
 - 장비 gateway/native client
-- telemetry batch
+- telemetry
+- stream event
 - command ack
 - backpressure/reconnect response
 
-현재 browser dashboard와의 통신에는 gRPC를 직접 쓰지 않는다. Browser는 HTTPS/JSON/SSE/WHEP/HLS를 사용한다.
+상태:
+
+- media-control은 내부 gRPC gateway listener를 `MEDIA_CONTROL_GRPC_LISTEN_ADDR`로 실행한다.
+- 기본 compose target은 `media-control:9090`이다.
+- gateway 인증 metadata는 `x-gcs-gateway-token` 또는 `authorization: bearer <token>`이다.
+- method는 `/gcs.saker.v1.SakerGatewayService/Exchange` bidirectional streaming이다.
+- payload는 `contracts/proto/gcs/saker/v1/gateway_service.proto`와 호환되는 binary envelope를 사용한다.
+- request payload는 `GatewayStreamRequest`의 `telemetry`, `stream_event`, `command_ack` 세 oneof를 계획된 전환 대상으로 고정한다.
+- response payload의 `command`, `telemetry_batch`는 서버가 gateway로 내려보내는 제어 응답 후보이며 media frame 전송 경로가 아니다.
+- 기존 REST telemetry ingest는 dashboard/legacy 호환과 빠른 현장 연동 fallback으로 유지한다. 신규 장비 gateway와 service-to-service control/data plane은 gRPC/MQTT protobuf 경로를 우선한다.
+
+환경 변수:
+
+```env
+CONTROL_GRPC_TARGET=media-control:9090
+CONTROL_GRPC_AUTH_TOKEN=<secret>
+CONTROL_GRPC_TIMEOUT_SECONDS=2
+MEDIA_CONTROL_GRPC_LISTEN_ADDR=:9090
+MEDIA_CONTROL_GRPC_TOKEN=<secret>
+MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES=65536
+```
+
+현재 browser dashboard와의 통신에는 gRPC를 직접 쓰지 않는다. Browser는 HTTPS/JSON/SSE/WHEP/HLS를 사용한다. gRPC는 장비 gateway/native client와 service-to-service control/data plane에만 사용한다.
 
 ## Nginx Routing Summary
 

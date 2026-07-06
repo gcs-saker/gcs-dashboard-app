@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
-from typing import Any
+from collections.abc import Mapping
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -20,6 +20,18 @@ class MediaMTXPath:
     ready: bool
     source_type: str | None = None
     reader_count: int = 0
+
+    @classmethod
+    def from_api_item(cls, item: Mapping[str, object]) -> "MediaMTXPath | None":
+        name = item.get("name")
+        if not isinstance(name, str) or not name:
+            return None
+        return cls(
+            name=name,
+            ready=bool(item.get("ready")),
+            source_type=_source_type(item.get("source")),
+            reader_count=_reader_count(item.get("readers")),
+        )
 
 
 class MediaMTXClient:
@@ -48,7 +60,7 @@ class MediaMTXClient:
                     paths.append(path)
         return paths
 
-    def _get_json(self, path: str, query: dict[str, str] | None = None) -> dict[str, Any]:
+    def _get_json(self, path: str, query: dict[str, str] | None = None) -> dict[str, object]:
         query_string = f"?{urlencode(query)}" if query else ""
         request = Request(f"{self.base_url}{path}{query_string}", headers={"Accept": "application/json"})
         try:
@@ -64,22 +76,19 @@ class MediaMTXClient:
 
         if not isinstance(payload, dict):
             raise MediaMTXClientError("MediaMTX API returned a non-object payload")
-        return payload
+        return dict(payload)
 
 
-def _parse_path_item(item: dict[str, Any]) -> MediaMTXPath | None:
-    name = item.get("name")
-    if not isinstance(name, str) or not name:
+def _parse_path_item(item: Mapping[str, object]) -> MediaMTXPath | None:
+    return MediaMTXPath.from_api_item(item)
+
+
+def _source_type(source: object) -> str | None:
+    if not isinstance(source, Mapping):
         return None
+    value = source.get("type")
+    return value if isinstance(value, str) else None
 
-    source = item.get("source")
-    source_type = source.get("type") if isinstance(source, dict) and isinstance(source.get("type"), str) else None
-    readers = item.get("readers")
-    reader_count = len(readers) if isinstance(readers, list) else 0
 
-    return MediaMTXPath(
-        name=name,
-        ready=bool(item.get("ready")),
-        source_type=source_type,
-        reader_count=reader_count,
-    )
+def _reader_count(readers: object) -> int:
+    return len(readers) if isinstance(readers, list) else 0

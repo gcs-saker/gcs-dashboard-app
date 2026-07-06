@@ -9,7 +9,7 @@ from types import ModuleType
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "telemetry_bulk_flush_benchmark.py"
+SCRIPT = REPO_ROOT / "scripts" / "benchmarks" / "telemetry_bulk_flush_benchmark.py"
 DOC = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_telemetry_storage_bulk_write_contract.md"
 
 

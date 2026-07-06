@@ -1,0 +1,139 @@
+.ops-summary {
+  grid-column: 1;
+  grid-row: 2 / 4;
+}
+
+.ops-summary__body,
+.telemetry-panel__body {
+  display: grid;
+  gap: 10px;
+  height: calc(100% - 46px);
+  padding: 12px;
+}
+
+.ops-summary__selected,
+.telemetry-panel__identity {
+  background: rgba(4, 14, 21, 0.44);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+  min-height: 72px;
+  padding: 10px;
+  position: relative;
+}
+
+.ops-summary__mission {
+  background:
+    linear-gradient(90deg, rgba(86, 211, 124, 0.12), rgba(61, 184, 255, 0.08)),
+    rgba(4, 14, 21, 0.56);
+  border: 1px solid rgba(86, 211, 124, 0.32);
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+  min-height: 70px;
+  padding: 10px;
+  position: relative;
+}
+
+.ops-summary__mission.is-warning {
+  background:
+    linear-gradient(90deg, rgba(243, 200, 77, 0.12), rgba(61, 184, 255, 0.06)),
+    rgba(4, 14, 21, 0.56);
+  border-color: rgba(243, 200, 77, 0.34);
+}
+
+.ops-summary__mission.is-danger {
+  background:
+    linear-gradient(90deg, rgba(228, 93, 83, 0.12), rgba(61, 184, 255, 0.05)),
+    rgba(4, 14, 21, 0.56);
+  border-color: rgba(228, 93, 83, 0.36);
+}
+
+.ops-summary__mission span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.ops-summary__mission strong {
+  color: var(--heading);
+  font-size: 1.06rem;
+  font-weight: 900;
+}
+
+.ops-summary__mission em {
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--green);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 900;
+  padding: 3px 8px;
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
+.ops-summary__mission.is-warning em {
+  color: var(--amber);
+}
+
+.ops-summary__mission.is-danger em {
+  color: var(--red);
+}
+
+.ops-summary__selected span,
+.telemetry-panel__identity span,
+.ops-summary__notes span,
+.ops-summary__events span,
+.telemetry-compass__legend span,
+.ops-summary__tiles dt,
+.telemetry-panel__metrics dt,
+.telemetry-panel__details dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.ops-summary__selected strong,
+.telemetry-panel__identity strong {
+  color: #e9f4fb;
+  font-size: 1.02rem;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ops-summary__state {
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 900;
+  padding: 3px 8px;
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
+.ops-summary__state.is-online {
+  border-color: rgba(86, 211, 124, 0.68);
+  color: var(--green);
+}
+
+.ops-summary__state.is-fallback,
+.ops-summary__state.is-reconnecting,
+.ops-summary__state.is-degraded {
+  border-color: rgba(243, 200, 77, 0.68);
+  color: var(--amber);
+}
+
+.ops-summary__state.is-offline,
+.ops-summary__state.is-error {
+  border-color: rgba(228, 93, 83, 0.62);
+  color: var(--red);
+}
+

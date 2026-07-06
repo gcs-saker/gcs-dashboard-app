@@ -3,7 +3,7 @@ import subprocess
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "turnutils_relay_smoke.sh"
+SCRIPT = REPO_ROOT / "scripts" / "smoke" / "turnutils_relay_smoke.sh"
 
 
 def test_turnutils_relay_smoke_script_has_valid_bash_syntax() -> None:

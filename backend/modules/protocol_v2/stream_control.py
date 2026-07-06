@@ -4,7 +4,15 @@ from dataclasses import dataclass
 from time import time
 from uuid import uuid4
 
-from modules.protocol_v2.wire import DecodedWireMessage, decode_message, encode_bytes, encode_string, encode_varint_field
+from modules.protocol_v2.wire import decode_message, encode_bytes, encode_string
+from modules.protocol_v2.wire_helpers import (
+    TimestampedFields,
+    single_int,
+    single_message,
+    single_optional_bytes,
+    single_string,
+    timestamped_wire,
+)
 
 
 class StreamCommandFields:
@@ -14,11 +22,6 @@ class StreamCommandFields:
     COMMAND_TYPE = 4
     PAYLOAD = 5
     TIME = 6
-
-
-class TimestampedFields:
-    OBSERVED_UNIX_MILLIS = 1
-    RECEIVED_UNIX_MILLIS = 2
 
 
 @dataclass(frozen=True)
@@ -70,40 +73,3 @@ class StreamCommandPayload:
             observed_unix_millis=single_int(time_message, TimestampedFields.OBSERVED_UNIX_MILLIS),
             payload=single_optional_bytes(decoded, StreamCommandFields.PAYLOAD),
         )
-
-
-def single_string(decoded: DecodedWireMessage, field_number: int) -> str:
-    values = decoded.strings(field_number)
-    if len(values) != 1:
-        raise ValueError(f"field {field_number} must contain exactly one string")
-    return values[0]
-
-
-def single_int(decoded: DecodedWireMessage, field_number: int) -> int:
-    values = decoded.fields.get(field_number, [])
-    if len(values) != 1 or not isinstance(values[0], int):
-        raise ValueError(f"field {field_number} must contain exactly one integer")
-    return values[0]
-
-
-def single_message(decoded: DecodedWireMessage, field_number: int) -> DecodedWireMessage:
-    values = decoded.bytes_values(field_number)
-    if len(values) != 1:
-        raise ValueError(f"field {field_number} must contain exactly one message")
-    return decode_message(values[0])
-
-
-def single_optional_bytes(decoded: DecodedWireMessage, field_number: int) -> bytes:
-    values = decoded.bytes_values(field_number)
-    if not values:
-        return b""
-    if len(values) != 1:
-        raise ValueError(f"field {field_number} must contain at most one bytes value")
-    return values[0]
-
-
-def timestamped_wire(observed_unix_millis: int, received_unix_millis: int) -> bytes:
-    payload = bytearray()
-    encode_varint_field(payload, TimestampedFields.OBSERVED_UNIX_MILLIS, observed_unix_millis)
-    encode_varint_field(payload, TimestampedFields.RECEIVED_UNIX_MILLIS, received_unix_millis)
-    return bytes(payload)

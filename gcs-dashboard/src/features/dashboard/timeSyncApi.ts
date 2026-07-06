@@ -1,31 +1,28 @@
-import { apiUrl } from "../../config";
+import { apiUrl } from "@/config";
 import { DASHBOARD_API_ROUTES } from "@/features/apiRoutes";
-import { authenticatedFetch } from "../auth/authApi";
+import { fetchValidatedJson } from "@features/apiClient";
 import type { TimeSyncConfigInput, TimeSyncHealth, TimeSyncMode, TimeSyncStatus } from "./timeSync";
 
+const TIME_SYNC_REQUEST_DESCRIPTION = "Time sync request";
+const TIME_SYNC_RESPONSE_DESCRIPTION = "Time sync response";
+
 export async function fetchTimeSyncStatus(fetcher: typeof fetch = fetch): Promise<TimeSyncStatus> {
-  const response = await authenticatedFetch(apiUrl(DASHBOARD_API_ROUTES.timeSyncStatus), {
-    headers: { Accept: "application/json" },
-  }, fetcher);
-  return parseTimeSyncResponse(response);
+  return fetchTimeSyncJson(apiUrl(DASHBOARD_API_ROUTES.timeSyncStatus), fetcher);
 }
 
 export async function checkTimeSync(fetcher: typeof fetch = fetch): Promise<TimeSyncStatus> {
-  const response = await authenticatedFetch(apiUrl(DASHBOARD_API_ROUTES.timeSyncCheck), {
+  return fetchTimeSyncJson(apiUrl(DASHBOARD_API_ROUTES.timeSyncCheck), fetcher, {
     method: "POST",
-    headers: { Accept: "application/json" },
-  }, fetcher);
-  return parseTimeSyncResponse(response);
+  });
 }
 
 export async function updateTimeSyncConfig(
   config: TimeSyncConfigInput,
   fetcher: typeof fetch = fetch,
 ): Promise<TimeSyncStatus> {
-  const response = await authenticatedFetch(apiUrl(DASHBOARD_API_ROUTES.timeSyncConfig), {
+  return fetchTimeSyncJson(apiUrl(DASHBOARD_API_ROUTES.timeSyncConfig), fetcher, {
     method: "PUT",
     headers: {
-      Accept: "application/json",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -34,19 +31,22 @@ export async function updateTimeSyncConfig(
       sourcePort: config.sourcePort,
       driftWarnMs: config.driftWarnMs,
     }),
-  }, fetcher);
-  return parseTimeSyncResponse(response);
+  });
 }
 
-async function parseTimeSyncResponse(response: Response): Promise<TimeSyncStatus> {
-  if (!response.ok) {
-    throw new Error(`Time sync request failed with ${response.status}`);
-  }
-  const payload = await response.json();
-  if (!isTimeSyncStatus(payload)) {
-    throw new Error("Time sync response is invalid");
-  }
-  return payload;
+function fetchTimeSyncJson(
+  url: string,
+  fetcher: typeof fetch,
+  init?: RequestInit,
+): Promise<TimeSyncStatus> {
+  return fetchValidatedJson({
+    url,
+    fetcher,
+    init,
+    isPayload: isTimeSyncStatus,
+    requestDescription: TIME_SYNC_REQUEST_DESCRIPTION,
+    invalidPayloadDescription: TIME_SYNC_RESPONSE_DESCRIPTION,
+  });
 }
 
 function isTimeSyncStatus(payload: unknown): payload is TimeSyncStatus {

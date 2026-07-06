@@ -84,6 +84,33 @@ MEDIA_CONTROL_OTEL_SERVICE_NAME=gcs-saker-media-control
 
 response에는 운영 디버깅을 위해 `X-GCS-Trace-Id`가 포함될 수 있다. 이 값은 인증 정보가 아니며, Spring/Python log 또는 OpenTelemetry trace와 같은 요청을 맞추는 데만 사용한다.
 
+## gRPC device gateway
+
+media-control은 HTTP control API와 별도로 내부/device gateway용 gRPC bidirectional streaming listener를 실행한다.
+
+```env
+MEDIA_CONTROL_GRPC_LISTEN_ADDR=:9090
+MEDIA_CONTROL_GRPC_TOKEN=replace-with-secret
+MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES=65536
+```
+
+기본 method:
+
+```text
+/gcs.saker.v1.SakerGatewayService/Exchange
+```
+
+인증 metadata:
+
+```text
+x-gcs-gateway-token: <token>
+authorization: bearer <token>
+```
+
+용도는 telemetry, stream event, command ack 같은 control/data plane이다. `GatewayStreamRequest`는 세 request payload를 모두 handler 경계로 넘기며, 이후 구현체가 telemetry 저장, stream registry 갱신, command ack 후처리를 담당한다. WebRTC/HLS media frame은 gRPC로 보내지 않는다. Browser dashboard도 gRPC에 직접 연결하지 않고, HTTPS/JSON/SSE/WHEP/HLS를 사용한다.
+
+`/readyz`는 gRPC listener가 설정된 경우 `grpc_gateway` readiness check를 포함한다. listener bind 또는 serve 실패는 readiness에서 degraded로 노출하되, raw bind error detail은 응답에 포함하지 않는다.
+
 ## Auth-policy 연동
 
 `AUTH_POLICY_BASE_URL`이 설정되면 media-control은 stream list/detail/playback/status 요청마다 `Authorization` header를 Spring/Kotlin auth-policy의 `POST /policy/streams/access`로 전달한다.
@@ -116,7 +143,7 @@ go test ./... -cover
 
 ```bash
 go test -race ./...
-../../scripts/m10_media_control_concurrency_gate.sh
+../../scripts/gates/m10_media_control_concurrency_gate.sh
 ```
 
 `streamcache.CachedStreamLister`와 `turn.CachedIceServerProvider`는 cache miss 순간에 여러 HTTP 요청이 동시에 들어와도 upstream(MediaMTX/ICE registry)을 한 번만 조회하도록 mutex로 refresh 구간을 보호한다. 이 잠금은 media frame 경로가 아니라 control-plane cache refresh에만 걸리므로 WebRTC media latency에 직접 개입하지 않는다.
@@ -127,4 +154,4 @@ M10 concurrency gate는 다음을 고정한다.
 - `go test -race ./...`: stream registry/cache update, ICE server cache refresh, HTTP handler 테스트를 race detector로 실행한다.
 - defensive copy test: caller가 반환 slice를 수정해도 cached stream/ICE 상태가 오염되지 않는지 확인한다.
 
-일반 unit test보다 `-race`는 느리므로 로컬 빠른 피드백은 `go test ./...`를 사용하고, PR/배포 전에는 `../../scripts/m10_media_control_concurrency_gate.sh`를 실행한다.
+일반 unit test보다 `-race`는 느리므로 로컬 빠른 피드백은 `go test ./...`를 사용하고, PR/배포 전에는 `../../scripts/gates/m10_media_control_concurrency_gate.sh`를 실행한다.

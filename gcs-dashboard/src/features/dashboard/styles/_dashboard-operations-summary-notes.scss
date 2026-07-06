@@ -1,0 +1,72 @@
+.ops-summary__notes,
+.ops-summary__events {
+  background: rgba(4, 14, 21, 0.34);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.ops-summary__notes {
+  min-height: 96px;
+}
+
+.ops-summary__events {
+  min-height: 86px;
+}
+
+.ops-summary__notes ul,
+.ops-summary__events ul {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ops-summary__notes li,
+.ops-summary__events li {
+  align-items: center;
+  color: #dce8f2;
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 800;
+  gap: 7px;
+  min-width: 0;
+}
+
+.ops-summary__notes li::before,
+.ops-summary__events li::before {
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(86, 211, 124, 0.42);
+  content: "";
+  flex: 0 0 7px;
+  height: 7px;
+  width: 7px;
+}
+
+.ops-summary__notes li.is-muted::before,
+.ops-summary__events li.is-muted::before {
+  background: #7f8a93;
+  box-shadow: none;
+}
+
+.ops-summary__notes li.is-warning::before,
+.ops-summary__events li.is-warning::before {
+  background: var(--amber);
+  box-shadow: 0 0 10px rgba(243, 200, 77, 0.34);
+}
+
+.ops-summary__notes li.is-danger::before,
+.ops-summary__events li.is-danger::before {
+  background: var(--red);
+  box-shadow: 0 0 10px rgba(228, 93, 83, 0.34);
+}
+
+.ops-summary__notes li.is-info::before,
+.ops-summary__events li.is-info::before {
+  background: var(--cyan);
+  box-shadow: 0 0 10px rgba(61, 184, 255, 0.32);
+}

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import type { AssetTreeNode } from "../assetTree";
-import { getAssetTreeStatusText } from "../assetTree";
+import type { AssetTreeNode } from "@dashboard/assetTree";
+import { getAssetTreeStatusText } from "@dashboard/assetTree";
 
 interface AssetTreePanelProps {
   controls?: ReactNode;

@@ -57,13 +57,18 @@ class SecurityHeaderNames:
     REFERRER_POLICY: Final = "Referrer-Policy"
     PERMISSIONS_POLICY: Final = "Permissions-Policy"
     CONTENT_SECURITY_POLICY: Final = "Content-Security-Policy"
+    DEPRECATION: Final = "Deprecation"
+    X_GCS_LEGACY_FALLBACK: Final = "X-GCS-Legacy-Fallback"
+    X_GCS_REPLACEMENT_ROUTE: Final = "X-GCS-Replacement-Route"
 
 
 class SecurityHeaderValues:
+    TRUE: Final = "true"
     NOSNIFF: Final = "nosniff"
     DENY: Final = "DENY"
     NO_REFERRER: Final = "no-referrer"
     SELF_DEVICE_PERMISSIONS: Final = "camera=(self), microphone=(self), geolocation=(self)"
+    LEGACY_FALLBACK_DIRECT: Final = "direct-backend-legacy"
 
 
 class AssetRoutes:
@@ -80,6 +85,7 @@ class TelemetryRoutes:
 
 
 class StreamRoutes:
+    MODULE_PREFIX: Final = "/module"
     STATUS: Final = "/status"
     PATH_FROM_ID: Final = "/paths/from-id/{stream_id}"
     PATH_FROM_PATH: Final = "/paths/from-path/{stream_path:path}"
@@ -94,8 +100,34 @@ class MapRoutes:
     CONFIG: Final = "/map/config"
 
 
+class LegacyRouteContract:
+    MARKED_PREFIXES: Final = (
+        RouterPrefixes.AUTH,
+        RouterPrefixes.CONTROL,
+        RouterPrefixes.STREAM_LEGACY,
+        f"{RouterPrefixes.API_V1}/ai",
+    )
+    MARKED_EXACT_ROUTES: Final = (
+        f"{RouterPrefixes.API_V1}{MapRoutes.CONFIG}",
+        RootRoutes.METRICS,
+    )
+    REPLACEMENTS: Final = {
+        RouterPrefixes.AUTH: "/auth-policy/auth",
+        RouterPrefixes.CONTROL: "disabled-until-control-policy-is-final",
+        RouterPrefixes.STREAM_LEGACY: "/media-control/api/v1/streams",
+        f"{RouterPrefixes.API_V1}/ai": "edge-ai-sidecar",
+        f"{RouterPrefixes.API_V1}{MapRoutes.CONFIG}": "/auth-policy/map/config",
+        RootRoutes.METRICS: "service-local-metrics-only",
+    }
+
+
 class StreamErrorDetails:
     STREAM_NOT_REGISTERED: Final = "stream is not registered"
+
+
+class StreamStatusProtocol:
+    FIELD_STREAM: Final = "stream"
+    READY: Final = "ready"
 
 
 class ControlRoutes:

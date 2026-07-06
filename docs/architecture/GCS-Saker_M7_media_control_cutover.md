@@ -37,8 +37,8 @@ M7 single-node PoC는 stream API를 Go `media-control`로 바라보도록 기본
 ## 런타임 검증
 
 ```bash
-scripts/m7_media_control_cutover_smoke.sh --check
-scripts/m7_media_control_cutover_smoke.sh --run
+scripts/smoke/m7_media_control_cutover_smoke.sh --check
+scripts/smoke/m7_media_control_cutover_smoke.sh --run
 ```
 
 `--run`은 sample stream을 RTSP로 MediaMTX에 publish한 뒤 edge의 `/media-control` 경유로 stream list, detail, playback, status, ICE server 계약을 확인한다.

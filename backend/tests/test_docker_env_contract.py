@@ -7,7 +7,7 @@ import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "docker_env_check.py"
+SCRIPT = REPO_ROOT / "scripts" / "gates" / "docker_env_check.py"
 COMPOSE_FILE = REPO_ROOT / "gcs-dashboard" / "docker-compose.yml"
 SINGLE_NODE_COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
 EDGE_HTTPS_OVERRIDE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.edge-https.override.yml"

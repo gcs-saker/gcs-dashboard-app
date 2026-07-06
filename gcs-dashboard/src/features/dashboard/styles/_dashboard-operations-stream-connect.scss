@@ -1,0 +1,56 @@
+.stream-connect-dialog__device {
+  cursor: pointer;
+}
+
+.stream-connect-dialog__manual {
+  background: rgba(5, 13, 17, 0.68);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.stream-connect-dialog__section-title {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 0.76rem;
+  font-weight: 900;
+  justify-content: space-between;
+  padding: 4px 2px 0;
+}
+
+.stream-connect-dialog__section-title strong {
+  color: var(--text);
+}
+
+.stream-connect-dialog__name-field {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+}
+
+.stream-connect-dialog__name-field span,
+.event-log-view__filters span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.stream-connect-dialog__name-field input,
+.event-log-view__filters input,
+.event-log-view__filters select {
+  background: rgba(5, 13, 17, 0.86);
+  border: 1px solid var(--line);
+  color: var(--text);
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.stream-connect-dialog__error {
+  color: #ffb5aa;
+  font-size: 0.78rem;
+  font-weight: 800;
+  margin: 0;
+}

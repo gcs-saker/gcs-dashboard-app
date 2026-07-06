@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import App from "../../App";
+import App from "@/App";
 import { AUTH_JSON_HEADERS } from "./authApi";
 import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 

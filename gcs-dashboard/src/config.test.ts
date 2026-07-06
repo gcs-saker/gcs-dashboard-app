@@ -13,7 +13,7 @@ import {
   SHOULD_USE_EXTERNAL_ASSET_OPTIMIZATION,
   STATIC_ASSET_DELIVERY_MODE,
   WEBRTC_ICE_SERVERS,
-} from "./config";
+} from "@/config";
 
 describe("config API URL helpers", () => {
   test("keeps the default /api base compatible with backend v1 routes and media-control stream routes", () => {

@@ -8,7 +8,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "closed_network_static_check.py"
+SCRIPT = REPO_ROOT / "scripts" / "gates" / "closed_network_static_check.py"
 DEPLOY_CLOSED_ENV = REPO_ROOT / "deploy" / "compose" / ".env.closed-network.example"
 DEPLOY_MIXED_ENV = REPO_ROOT / "deploy" / "compose" / ".env.mixed-network.example"
 COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"

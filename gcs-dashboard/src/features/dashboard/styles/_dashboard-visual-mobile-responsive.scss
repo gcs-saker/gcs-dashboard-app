@@ -1,0 +1,55 @@
+@media (max-width: 1320px) {
+  .ops-dashboard__grid {
+    grid-template-columns: minmax(240px, 0.68fr) minmax(440px, 1.32fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .ops-dashboard {
+    overflow: auto;
+  }
+
+  .ops-dashboard__tabs {
+    gap: 8px;
+    min-height: 64px;
+    overflow-x: auto;
+    padding: 10px;
+    width: 100%;
+  }
+
+  .ops-tab {
+    min-width: 108px;
+  }
+
+  .ops-dashboard__grid {
+    grid-template-columns: 1fr;
+    padding: 6px;
+  }
+
+  .stream-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .telemetry-panel__body {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-panel ul {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-panel li {
+    border-bottom: 1px solid var(--line-soft);
+    border-right: 0;
+  }
+
+  .time-sync-view__header,
+  .time-sync-view__commands {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .time-sync-view__form {
+    grid-template-columns: 1fr;
+  }
+}

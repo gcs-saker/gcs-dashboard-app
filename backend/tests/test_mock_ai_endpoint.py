@@ -5,8 +5,21 @@ from fastapi.testclient import TestClient
 
 from api.stream import get_v1_streaming_service
 from main import app
-from modules.ai_contract import AI_CONTRACT_SCHEMA_VERSION
+from modules.ai_contract import (
+    AI_CONTRACT_SCHEMA_VERSION,
+    AI_MOCK_UNAVAILABLE_STATUS_CODE,
+    MOCK_AI_DETECTION_BBOX,
+    MOCK_AI_ERROR_CODE,
+    MOCK_AI_ERROR_MESSAGE,
+    MOCK_AI_REPORT_TEXT,
+    MOCK_AI_RISK_SCORE,
+)
 from modules.streaming import PlaybackUrlBuilder, PlaybackUrlBuilderConfig, StreamingService
+from tests.fixtures.ai_contract_payloads import (
+    AI_SAMPLE_FRAME_ID,
+    AI_SAMPLE_STREAM_ID,
+    valid_ai_request_payload,
+)
 
 
 @pytest.fixture
@@ -26,47 +39,28 @@ def client() -> Generator[TestClient, None, None]:
     app.dependency_overrides.clear()
 
 
-def valid_ai_request() -> dict[str, object]:
-    return {
-        "schemaVersion": AI_CONTRACT_SCHEMA_VERSION,
-        "streamId": "raw.sample.front",
-        "frame": {
-            "streamId": "raw.sample.front",
-            "frameId": "frame-0001",
-            "capturedAt": "2026-05-22T08:00:00Z",
-            "ptsMs": 1200,
-        },
-        "imageUrl": "https://media.example.test/raw/sample/front/frame-0001.jpg",
-    }
-
-
 def test_mock_ai_endpoint_returns_contract_shaped_detection_response(client: TestClient, auth_headers):
     response = client.post(
         "/api/v1/ai/mock/detections",
-        json=valid_ai_request(),
+        json=valid_ai_request_payload(),
         headers=auth_headers("operator01", "operator"),
     )
 
     assert response.status_code == 200
     payload = response.json()
     assert payload["schemaVersion"] == AI_CONTRACT_SCHEMA_VERSION
-    assert payload["streamId"] == "raw.sample.front"
-    assert payload["frame"]["frameId"] == "frame-0001"
+    assert payload["streamId"] == AI_SAMPLE_STREAM_ID
+    assert payload["frame"]["frameId"] == AI_SAMPLE_FRAME_ID
     assert payload["generatedAt"].endswith("Z")
-    assert payload["riskScore"] == 0.72
-    assert payload["reportText"] == "Mock AI detected a person near the sample stream."
-    assert payload["detections"][0]["bbox"] == {
-        "x": 0.18,
-        "y": 0.22,
-        "width": 0.24,
-        "height": 0.34,
-    }
+    assert payload["riskScore"] == MOCK_AI_RISK_SCORE
+    assert payload["reportText"] == MOCK_AI_REPORT_TEXT
+    assert payload["detections"][0]["bbox"] == MOCK_AI_DETECTION_BBOX
 
 
 def test_mock_ai_endpoint_supports_latency_simulation_option(client: TestClient, auth_headers):
     response = client.post(
         "/api/v1/ai/mock/detections?latencyMs=1",
-        json=valid_ai_request(),
+        json=valid_ai_request_payload(),
         headers=auth_headers("operator01", "operator"),
     )
 
@@ -77,22 +71,22 @@ def test_mock_ai_endpoint_supports_latency_simulation_option(client: TestClient,
 def test_mock_ai_endpoint_supports_error_simulation_option(client: TestClient, auth_headers):
     response = client.post(
         "/api/v1/ai/mock/detections?simulateError=true",
-        json=valid_ai_request(),
+        json=valid_ai_request_payload(),
         headers=auth_headers("operator01", "operator"),
     )
 
-    assert response.status_code == 503
+    assert response.status_code == AI_MOCK_UNAVAILABLE_STATUS_CODE
     payload = response.json()
     assert payload["schemaVersion"] == AI_CONTRACT_SCHEMA_VERSION
     assert payload["error"] == {
-        "code": "AI_SIMULATED_ERROR",
-        "message": "Mock AI endpoint simulated an error.",
+        "code": MOCK_AI_ERROR_CODE,
+        "message": MOCK_AI_ERROR_MESSAGE,
         "retryable": True,
     }
 
 
 def test_mock_ai_endpoint_validates_contract_payload(client: TestClient, auth_headers):
-    payload = valid_ai_request()
+    payload = valid_ai_request_payload()
     payload["schemaVersion"] = "ai.detection.v2"
 
     response = client.post(
@@ -108,11 +102,11 @@ def test_mock_ai_error_does_not_block_streaming_playback_api(client: TestClient,
     headers = auth_headers("operator01", "operator")
     ai_response = client.post(
         "/api/v1/ai/mock/detections?simulateError=true",
-        json=valid_ai_request(),
+        json=valid_ai_request_payload(),
         headers=headers,
     )
     playback_response = client.get("/api/v1/streams/raw.sample.front/playback", headers=headers)
 
-    assert ai_response.status_code == 503
+    assert ai_response.status_code == AI_MOCK_UNAVAILABLE_STATUS_CODE
     assert playback_response.status_code == 200
     assert playback_response.json()["playbackUrls"]["webrtc"].endswith("/raw/sample/front/whep")

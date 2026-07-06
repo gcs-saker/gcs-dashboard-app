@@ -3,8 +3,8 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "m7_external_nat_webrtc_smoke.sh"
-PUBLISHER_SCRIPT = REPO_ROOT / "scripts" / "webrtc_whip_publish_smoke.py"
+SCRIPT = REPO_ROOT / "scripts" / "smoke" / "m7_external_nat_webrtc_smoke.sh"
+PUBLISHER_SCRIPT = REPO_ROOT / "scripts" / "smoke" / "webrtc_whip_publish_smoke.py"
 DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_M7_external_nat_webrtc_validation.md"
 
 

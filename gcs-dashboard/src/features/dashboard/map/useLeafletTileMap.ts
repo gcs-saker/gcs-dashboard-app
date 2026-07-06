@@ -1,0 +1,87 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import * as L from "leaflet";
+
+interface MapFocusGeometry {
+  lat: number;
+  lng: number;
+}
+
+interface LeafletTileConfig {
+  attribution: string;
+  urlTemplate: string;
+}
+
+interface UseLeafletTileMapOptions {
+  initialCenter: MapFocusGeometry;
+  onTileError: () => void;
+  onUserInteraction: () => void;
+  tileConfig: LeafletTileConfig;
+}
+
+const INITIAL_PUBLIC_MAP_ZOOM = 14;
+const USER_INTERACTION_EVENTS = ["dragstart", "zoomstart", "rotatestart", "pitchstart"] as const;
+
+export function useLeafletTileMap({
+  initialCenter,
+  onTileError,
+  onUserInteraction,
+  tileConfig,
+}: UseLeafletTileMapOptions) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const initialCenterRef = useRef(initialCenter);
+  const mapRef = useRef<L.LeafletMap | null>(null);
+  const [mapInstance, setMapInstance] = useState<L.LeafletMap | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const center = initialCenterRef.current;
+    const map = L.map(container, {
+      attributionControl: false,
+      zoomControl: false,
+    }).setView([center.lat, center.lng], INITIAL_PUBLIC_MAP_ZOOM, { animate: false });
+    const tileLayer = L.tileLayer(tileConfig.urlTemplate, {
+      attribution: tileConfig.attribution,
+      maxZoom: 19,
+      tileSize: 256,
+    }).addTo(map);
+
+    map.addControl(new L.Control.Attribution({ position: "bottomright", prefix: false }));
+    tileLayer.on("tileerror", onTileError);
+    USER_INTERACTION_EVENTS.forEach((eventName) => map.on(eventName, onUserInteraction));
+    mapRef.current = map;
+    setMapInstance(map);
+
+    return () => {
+      USER_INTERACTION_EVENTS.forEach((eventName) => map.off?.(eventName, onUserInteraction));
+      tileLayer.off("tileerror", onTileError);
+      mapRef.current = null;
+      setMapInstance(null);
+      map.remove();
+    };
+  }, [onTileError, onUserInteraction, tileConfig.attribution, tileConfig.urlTemplate]);
+
+  const focus = useCallback((geometry: MapFocusGeometry, isMotionEnabled: boolean): void => {
+    mapRef.current?.panTo([geometry.lat, geometry.lng], {
+      animate: isMotionEnabled,
+      duration: isMotionEnabled ? 0.28 : 0,
+    });
+  }, []);
+
+  const zoomIn = useCallback((): void => {
+    mapRef.current?.zoomIn();
+  }, []);
+
+  const zoomOut = useCallback((): void => {
+    mapRef.current?.zoomOut();
+  }, []);
+
+  return {
+    containerRef,
+    focus,
+    mapInstance,
+    zoomIn,
+    zoomOut,
+  } as const;
+}

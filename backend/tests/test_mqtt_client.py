@@ -8,6 +8,9 @@ class FakeMqttClient:
         self.connected: tuple[str, int, int] | None = None
         self.loop_started = False
         self.credentials: tuple[str, str | None] | None = None
+        self.reconnect_delays: tuple[int, int] | None = None
+        self.max_inflight: int | None = None
+        self.publish_rc = 0
 
     def connect(self, host: str, port: int, keepalive: int) -> None:
         self.connected = (host, port, keepalive)
@@ -20,6 +23,13 @@ class FakeMqttClient:
 
     def publish(self, topic: str, payload: str | bytes) -> None:
         self.published.append((topic, payload))
+        return type("PublishResult", (), {"rc": self.publish_rc})()
+
+    def reconnect_delay_set(self, min_delay: int, max_delay: int) -> None:
+        self.reconnect_delays = (min_delay, max_delay)
+
+    def max_inflight_messages_set(self, inflight: int) -> None:
+        self.max_inflight = inflight
 
 
 def test_mqtt_settings_from_env(monkeypatch) -> None:
@@ -29,6 +39,9 @@ def test_mqtt_settings_from_env(monkeypatch) -> None:
     monkeypatch.setenv("MQTT_KEEPALIVE", "30")
     monkeypatch.setenv("MQTT_USERNAME", "gcs-ingest")
     monkeypatch.setenv("MQTT_PASSWORD", "secret")
+    monkeypatch.setenv("MQTT_RECONNECT_MIN_DELAY_SECONDS", "2")
+    monkeypatch.setenv("MQTT_RECONNECT_MAX_DELAY_SECONDS", "45")
+    monkeypatch.setenv("MQTT_MAX_INFLIGHT_MESSAGES", "10")
 
     settings = MqttSettings.from_env()
 
@@ -39,6 +52,9 @@ def test_mqtt_settings_from_env(monkeypatch) -> None:
         keepalive=30,
         username="gcs-ingest",
         password="secret",
+        reconnect_min_delay_seconds=2,
+        reconnect_max_delay_seconds=45,
+        max_inflight_messages=10,
     )
 
 
@@ -52,12 +68,40 @@ def test_mqtt_settings_treats_blank_credentials_as_unset(monkeypatch) -> None:
     assert settings.password is None
 
 
+def test_mqtt_settings_falls_back_from_invalid_numeric_env(monkeypatch) -> None:
+    monkeypatch.setenv("MQTT_PORT", "not-a-port")
+    monkeypatch.setenv("MQTT_KEEPALIVE", "-1")
+    monkeypatch.setenv("MQTT_RECONNECT_MIN_DELAY_SECONDS", "40")
+    monkeypatch.setenv("MQTT_RECONNECT_MAX_DELAY_SECONDS", "2")
+    monkeypatch.setenv("MQTT_MAX_INFLIGHT_MESSAGES", "0")
+
+    settings = MqttSettings.from_env()
+
+    assert settings.port == 1883
+    assert settings.keepalive == 60
+    assert settings.reconnect_min_delay_seconds == 40
+    assert settings.reconnect_max_delay_seconds == 40
+    assert settings.max_inflight_messages == 20
+
+
 def test_publish_control_command_uses_injected_client() -> None:
     client = FakeMqttClient()
 
     publish_control_command("robot/control/CID001", "forward", client=client)
 
     assert client.published == [("robot/control/CID001", "forward")]
+
+
+def test_publish_control_command_raises_on_publish_backpressure() -> None:
+    client = FakeMqttClient()
+    client.publish_rc = 4
+
+    try:
+        publish_control_command("robot/control/CID001", "forward", client=client)
+    except RuntimeError as error:
+        assert "MQTT publish failed" in str(error)
+    else:
+        raise AssertionError("expected MQTT publish failure")
 
 
 def test_get_mqtt_client_connects_lazily(monkeypatch) -> None:
@@ -75,5 +119,7 @@ def test_get_mqtt_client_connects_lazily(monkeypatch) -> None:
     assert client is fake_client
     assert fake_client.credentials == ("gcs-ingest", "secret")
     assert fake_client.connected == ("mqtt.internal", 1884, 30)
+    assert fake_client.reconnect_delays == (1, 30)
+    assert fake_client.max_inflight == 20
     assert fake_client.loop_started is True
     get_mqtt_client.cache_clear()

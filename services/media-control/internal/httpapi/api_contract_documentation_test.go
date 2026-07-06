@@ -1,3 +1,5 @@
+//go:build contractdocs
+
 package httpapi
 
 import (
