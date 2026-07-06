@@ -45,8 +45,7 @@ internal class RuntimeEnvReader(private val env: Environment) {
     }
 
     private fun allowsLocalDefaults(): Boolean =
-        bool(AuthRuntimeEnvKeys.AUTH_POLICY_ALLOW_LOCAL_DEFAULTS, false) ||
-            env.activeProfiles.any { it in LOCAL_DEFAULT_PROFILES }
+        env.activeProfiles.any { it in LOCAL_DEFAULT_PROFILES }
 
     private fun csv(name: String): Set<String> =
         env.getProperty(name)?.split(",")?.map(String::trim)?.filter(String::isNotEmpty)?.toSet() ?: emptySet()

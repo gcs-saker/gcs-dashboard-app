@@ -43,7 +43,7 @@ docker compose --env-file deploy/compose/.env.closed-network.example -f deploy/c
 ## 로컬 폐쇄망 모의 절차
 
 1. private `.env`에 `gcs-dashboard/.env.closed-network.example` 값을 복사한다.
-2. `WEBRTC_TURN_PASSWORD`, `MYSQL_PASSWORD`, `AUTH_JWT_SECRET`를 실제 secret으로 바꾼다.
+2. `WEBRTC_TURN_PASSWORD`, `MYSQL_PASSWORD`, `AUTH_JWT_SECRET`, `AUTH_POLICY_ADMIN_PASSWORD`, `AUTH_POLICY_OPERATOR_PASSWORD`, `AUTH_POLICY_SMOKE_PASSWORD`를 실제 secret으로 바꾼다.
 3. TURN/STUN host를 같은 LAN에서 접근 가능한 IP 또는 VIP로 바꾼다.
 4. 외부 인터넷을 끊거나 firewall에서 외부 DNS/HTTP를 막는다.
 5. `python3 scripts/gates/closed_network_static_check.py`를 실행한다.

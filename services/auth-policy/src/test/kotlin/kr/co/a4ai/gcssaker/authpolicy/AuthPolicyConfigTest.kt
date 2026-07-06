@@ -113,10 +113,76 @@ class AuthPolicyConfigTest {
     }
 
     @Test
+    fun `production profile fails closed when admin password is missing`() {
+        val error = assertFailsWith<IllegalStateException> {
+            AuthRuntimeSettings.fromEnvironment(
+                productionEnvironment(
+                    "AUTH_POLICY_JWT_SECRET" to "prod-secret-at-least-32-characters",
+                    "AUTH_POLICY_OPERATOR_PASSWORD" to "operator-password",
+                    "AUTH_POLICY_SMOKE_PASSWORD" to "viewer-password",
+                ),
+            )
+        }
+
+        assertTrue(error.message.orEmpty().contains("AUTH_POLICY_ADMIN_PASSWORD"))
+        assertFalse(error.message.orEmpty().contains("admin-password"))
+    }
+
+    @Test
+    fun `production profile fails closed when operator password is missing`() {
+        val error = assertFailsWith<IllegalStateException> {
+            AuthRuntimeSettings.fromEnvironment(
+                productionEnvironment(
+                    "AUTH_POLICY_JWT_SECRET" to "prod-secret-at-least-32-characters",
+                    "AUTH_POLICY_ADMIN_PASSWORD" to "admin-password",
+                    "AUTH_POLICY_SMOKE_PASSWORD" to "viewer-password",
+                ),
+            )
+        }
+
+        assertTrue(error.message.orEmpty().contains("AUTH_POLICY_OPERATOR_PASSWORD"))
+        assertFalse(error.message.orEmpty().contains("correct-password"))
+    }
+
+    @Test
+    fun `production profile fails closed when smoke password is missing`() {
+        val error = assertFailsWith<IllegalStateException> {
+            AuthRuntimeSettings.fromEnvironment(
+                productionEnvironment(
+                    "AUTH_POLICY_JWT_SECRET" to "prod-secret-at-least-32-characters",
+                    "AUTH_POLICY_ADMIN_PASSWORD" to "admin-password",
+                    "AUTH_POLICY_OPERATOR_PASSWORD" to "operator-password",
+                ),
+            )
+        }
+
+        assertTrue(error.message.orEmpty().contains("AUTH_POLICY_SMOKE_PASSWORD"))
+        assertFalse(error.message.orEmpty().contains("m7-smoke-pass"))
+    }
+
+    @Test
+    fun `local defaults are rejected without explicit local test or dev profile`() {
+        val env = StandardEnvironment()
+        env.propertySources.addFirst(
+            MapPropertySource(
+                "test",
+                mapOf("AUTH_POLICY_ALLOW_LOCAL_DEFAULTS" to "true"),
+            ),
+        )
+
+        val error = assertFailsWith<IllegalStateException> {
+            AuthRuntimeSettings.fromEnvironment(env)
+        }
+
+        assertTrue(error.message.orEmpty().contains("AUTH_POLICY_JWT_SECRET"))
+    }
+
+    @Test
     fun `local profile can use development auth defaults explicitly`() {
         val settings = AuthRuntimeSettings.fromEnvironment(localEnvironment())
 
         assertEquals("local-auth-policy-secret-at-least-32-characters", settings.jwtSecret)
+        assertEquals("admin-password", settings.adminPassword)
         assertEquals("correct-password", settings.operatorPassword)
         assertEquals("m7-smoke-pass", settings.smokePassword)
     }
@@ -206,6 +272,12 @@ class AuthPolicyConfigTest {
 private fun localEnvironment(): StandardEnvironment =
     StandardEnvironment().apply {
         setActiveProfiles("local")
+    }
+
+private fun productionEnvironment(vararg values: Pair<String, String>): StandardEnvironment =
+    StandardEnvironment().apply {
+        setActiveProfiles("prod")
+        propertySources.addFirst(MapPropertySource("test", mapOf(*values)))
     }
 
 private class EmptyObjectProvider<T> : ObjectProvider<T> {
