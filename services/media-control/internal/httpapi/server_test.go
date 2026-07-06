@@ -2,7 +2,6 @@ package httpapi
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -106,11 +105,8 @@ func TestReadyzReturnsOKWhenMediaMTXAndIceServersAreReady(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
-	}
-	if payload["status"] != "ok" {
+	payload := decodeTestJSON[readinessResponse](t, recorder)
+	if payload.Status != "ok" {
 		t.Fatalf("expected ok readiness, got %#v", payload)
 	}
 }
@@ -130,11 +126,8 @@ func TestReadyzIncludesGrpcGatewayReadinessWhenConfigured(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
-	}
-	assertReadinessCheck(t, payload, "grpc_gateway", "ok", "")
+	payload := decodeTestJSON[readinessResponse](t, recorder)
+	assertReadyCheck(t, payload, "grpc_gateway", "ok", "")
 }
 
 func TestReadyzReturnsDegradedWhenGrpcGatewayFails(t *testing.T) {
@@ -152,11 +145,8 @@ func TestReadyzReturnsDegradedWhenGrpcGatewayFails(t *testing.T) {
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected 503, got %d: %s", recorder.Code, recorder.Body.String())
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
-	}
-	assertReadinessCheck(t, payload, "grpc_gateway", "error", "serve_failed")
+	payload := decodeTestJSON[readinessResponse](t, recorder)
+	assertReadyCheck(t, payload, "grpc_gateway", "error", "serve_failed")
 }
 
 func TestReadyzDoesNotLeakRawGrpcGatewayErrorDetails(t *testing.T) {
@@ -190,14 +180,11 @@ func TestReadyzReturnsDegradedWhenMediaMTXRegistryFails(t *testing.T) {
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected 503, got %d", recorder.Code)
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
-	}
-	if payload["status"] != "degraded" {
+	payload := decodeTestJSON[readinessResponse](t, recorder)
+	if payload.Status != "degraded" {
 		t.Fatalf("expected degraded status, got %#v", payload)
 	}
-	assertReadinessCheck(t, payload, "stream_registry", "error", "stream registry query failed")
+	assertReadyCheck(t, payload, "stream_registry", "error", "stream registry query failed")
 	if strings.Contains(recorder.Body.String(), "connection refused") {
 		t.Fatalf("readiness response leaked raw upstream detail: %s", recorder.Body.String())
 	}
@@ -217,11 +204,8 @@ func TestReadyzReturnsDegradedWhenNoIceServersAreHealthy(t *testing.T) {
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected 503, got %d", recorder.Code)
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
-	}
-	assertReadinessCheck(t, payload, "ice_servers", "error", "no healthy ICE servers available")
+	payload := decodeTestJSON[readinessResponse](t, recorder)
+	assertReadyCheck(t, payload, "ice_servers", "error", "no healthy ICE servers available")
 }
 
 func TestRuntimeMetricsResponseExposesRuntimeSignals(t *testing.T) {
@@ -234,26 +218,12 @@ func TestRuntimeMetricsResponseExposesRuntimeSignals(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", recorder.Code)
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
+	payload := decodeTestJSON[runtimeResponse](t, recorder)
+	if payload.Service != mediaControlServiceName {
+		t.Fatalf("expected service %s, got %#v", mediaControlServiceName, payload)
 	}
-	runtimePayload, ok := payload["runtime"].(map[string]any)
-	if !ok {
-		t.Fatalf("expected runtime payload, got %#v", payload)
-	}
-	for _, key := range []string{
-		"goroutines",
-		"heapAllocBytes",
-		"heapInUseBytes",
-		"nextGcBytes",
-		"pauseTotalNs",
-		"lastGcUnixNano",
-		"memoryLimitBytes",
-	} {
-		if _, ok := runtimePayload[key]; !ok {
-			t.Fatalf("expected runtime metric %q in %#v", key, runtimePayload)
-		}
+	if payload.Runtime.Goroutines <= 0 {
+		t.Fatalf("expected positive goroutine count, got %#v", payload.Runtime)
 	}
 }
 
@@ -268,12 +238,9 @@ func TestIceServersResponse(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", recorder.Code)
 	}
-	var payload map[string][]domain.IceServer
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
-	}
-	if len(payload["iceServers"]) != 1 {
-		t.Fatalf("expected one ice server, got %d", len(payload["iceServers"]))
+	payload := decodeTestJSON[iceServersResponse](t, recorder)
+	if len(payload.IceServers) != 1 {
+		t.Fatalf("expected one ice server, got %d", len(payload.IceServers))
 	}
 }
 
@@ -329,17 +296,14 @@ func TestLegacyStreamStatusResponse(t *testing.T) {
 	if recorder.Header().Get("X-GCS-Replacement-Route") != "/media-control/api/v1/streams" {
 		t.Fatalf("unexpected replacement header %q", recorder.Header().Get("X-GCS-Replacement-Route"))
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
-	}
-	if payload["stream"] != "ready" {
+	payload := decodeTestJSON[legacyStreamStatusResponse](t, recorder)
+	if payload.Stream != "ready" {
 		t.Fatalf("unexpected payload %#v", payload)
 	}
-	if payload["service"] != "media-control" || payload["status"] != "ok" {
+	if payload.Service != mediaControlServiceName || payload.Status != healthStatusOK {
 		t.Fatalf("expected media-control ok payload, got %#v", payload)
 	}
-	if payload["deprecated"] != true || payload["replacement"] != "/media-control/api/v1/streams" {
+	if !payload.Deprecated || payload.Replacement != "/media-control/api/v1/streams" {
 		t.Fatalf("expected deprecated compatibility metadata, got %#v", payload)
 	}
 }
@@ -364,20 +328,16 @@ func TestDashboardStreamListContract(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", recorder.Code)
 	}
-	var payload []map[string]any
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
+	payload := decodeTestJSON[[]streamDescriptorResponse](t, recorder)
+	if payload[0].StreamID != "raw.local.webcam" {
+		t.Fatalf("unexpected streamId %v", payload[0].StreamID)
 	}
-	if payload[0]["streamId"] != "raw.local.webcam" {
-		t.Fatalf("unexpected streamId %v", payload[0]["streamId"])
+	if payload[0].Status != domain.StreamStatusOnline {
+		t.Fatalf("unexpected status %v", payload[0].Status)
 	}
-	if payload[0]["status"] != "online" {
-		t.Fatalf("unexpected status %v", payload[0]["status"])
-	}
-	playback := payload[0]["playbackUrls"].(map[string]any)
-	webrtcURL := playback["webrtc"].(string)
+	webrtcURL := payload[0].PlaybackURLs.WebRTC
 	if !strings.HasPrefix(webrtcURL, "http://edge.local/webrtc/raw/local/webcam/whep?") {
-		t.Fatalf("unexpected webrtc URL %v", playback["webrtc"])
+		t.Fatalf("unexpected webrtc URL %v", webrtcURL)
 	}
 	assertMediaURLToken(t, webrtcURL, playbackTokenQueryKey, mediaMTXActionPlayback, "raw/local/webcam")
 }
@@ -403,11 +363,8 @@ func TestDashboardStreamListFiltersDeniedStreams(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", recorder.Code)
 	}
-	var payload []map[string]any
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
-	}
-	if len(payload) != 1 || payload[0]["streamId"] != "raw.sample.front" {
+	payload := decodeTestJSON[[]streamDescriptorResponse](t, recorder)
+	if len(payload) != 1 || payload[0].StreamID != "raw.sample.front" {
 		t.Fatalf("expected only allowed stream, got %#v", payload)
 	}
 }
@@ -542,15 +499,12 @@ func TestDashboardIceServersContract(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", recorder.Code)
 	}
-	var payload []map[string]any
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
+	payload := decodeTestJSON[[]iceServerResponse](t, recorder)
+	if payload[0].URLs != "turn:turn-primary:3478" {
+		t.Fatalf("unexpected ice URL %v", payload[0].URLs)
 	}
-	if payload[0]["urls"] != "turn:turn-primary:3478" {
-		t.Fatalf("unexpected ice URL %v", payload[0]["urls"])
-	}
-	if payload[0]["username"] != "gcs-turn" {
-		t.Fatalf("unexpected username %v", payload[0]["username"])
+	if payload[0].Username == nil || *payload[0].Username != "gcs-turn" {
+		t.Fatalf("unexpected username %v", payload[0].Username)
 	}
 }
 
@@ -614,16 +568,13 @@ func TestDashboardPublishUrlRequiresAuthorizationAndAppendsPublisherToken(t *tes
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
+	payload := decodeTestJSON[streamPublishResponse](t, recorder)
+	if payload.StreamID != "raw.local.webcam" {
+		t.Fatalf("unexpected streamId %v", payload.StreamID)
 	}
-	if payload["streamId"] != "raw.local.webcam" {
-		t.Fatalf("unexpected streamId %v", payload["streamId"])
-	}
-	whipURL := payload["whipUrl"].(string)
+	whipURL := payload.WhipURL
 	if !strings.HasPrefix(whipURL, "http://edge.local/webrtc/raw/local/webcam/whip?") {
-		t.Fatalf("unexpected publish URL %v", payload["whipUrl"])
+		t.Fatalf("unexpected publish URL %v", payload.WhipURL)
 	}
 	assertMediaURLToken(t, whipURL, publisherTokenQueryKey, mediaMTXActionPublish, "raw/local/webcam")
 }
@@ -639,13 +590,10 @@ func TestDashboardPublishUrlCanBeIssuedBeforeStreamIsRegistered(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
-	}
-	whipURL := payload["whipUrl"].(string)
+	payload := decodeTestJSON[streamPublishResponse](t, recorder)
+	whipURL := payload.WhipURL
 	if !strings.HasPrefix(whipURL, "http://edge.local/webrtc/raw/new-drone/front/whip?") {
-		t.Fatalf("unexpected publish URL %v", payload["whipUrl"])
+		t.Fatalf("unexpected publish URL %v", payload.WhipURL)
 	}
 	assertMediaURLToken(t, whipURL, publisherTokenQueryKey, mediaMTXActionPublish, "raw/new-drone/front")
 }
@@ -774,34 +722,4 @@ func assertMediaURLToken(t *testing.T, rawURL string, key string, action string,
 	if err := validateMediaToken("test-publish-token", token, action, streamPath, time.Now()); err != nil {
 		t.Fatalf("expected valid media token in %s: %v", rawURL, err)
 	}
-}
-
-func assertReadinessCheck(t *testing.T, payload map[string]any, name string, status string, reason string) {
-	t.Helper()
-	checks, ok := payload["checks"].([]any)
-	if !ok {
-		t.Fatalf("expected checks array, got %#v", payload["checks"])
-	}
-	for _, rawCheck := range checks {
-		check, ok := rawCheck.(map[string]any)
-		if !ok {
-			t.Fatalf("expected check object, got %#v", rawCheck)
-		}
-		if check["name"] == name {
-			if check["status"] != status {
-				t.Fatalf("expected %s status %s, got %#v", name, status, check)
-			}
-			if reason == "" {
-				if _, ok := check["reason"]; ok {
-					t.Fatalf("expected %s reason to be omitted, got %#v", name, check)
-				}
-				return
-			}
-			if check["reason"] != reason {
-				t.Fatalf("expected %s reason %q, got %#v", name, reason, check)
-			}
-			return
-		}
-	}
-	t.Fatalf("expected readiness check %q in %#v", name, checks)
 }

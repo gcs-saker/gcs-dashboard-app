@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SINGLE_NODE_COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
 POSTGIS_INIT_SQL = REPO_ROOT / "deploy" / "postgres" / "init" / "001_geo_telemetry.sql"
 POSTGIS_DOC = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_M8_postgis_bounded_context.md"
-POSTGIS_RUNTIME_SMOKE = REPO_ROOT / "scripts" / "postgis_runtime_smoke.py"
+POSTGIS_RUNTIME_SMOKE = REPO_ROOT / "scripts" / "smoke" / "postgis_runtime_smoke.py"
 
 
 def load_yaml(path: Path) -> dict:

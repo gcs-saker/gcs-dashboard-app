@@ -181,6 +181,27 @@ def test_service_ignores_mediamtx_paths_that_do_not_match_stream_contract():
     assert service.list_registered_streams() == []
 
 
+def test_mediamtx_path_factory_rejects_items_without_a_path_name():
+    assert MediaMTXPath.from_api_item({"ready": True}) is None
+    assert MediaMTXPath.from_api_item({"name": "", "ready": True}) is None
+
+
+def test_mediamtx_path_factory_extracts_runtime_source_and_reader_count():
+    path = MediaMTXPath.from_api_item({
+        "name": "raw/drone-07/front",
+        "ready": True,
+        "source": {"type": "webRTCSession"},
+        "readers": [{"id": "reader-001"}, {"id": "reader-002"}],
+    })
+
+    assert path == MediaMTXPath(
+        name="raw/drone-07/front",
+        ready=True,
+        source_type="webRTCSession",
+        reader_count=2,
+    )
+
+
 def test_repository_can_be_seeded_for_future_stream_registry():
     descriptor = StreamDescriptor.from_path("ai/drone-01/front/detector-v1")
     repository = InMemoryStreamRepository([descriptor])

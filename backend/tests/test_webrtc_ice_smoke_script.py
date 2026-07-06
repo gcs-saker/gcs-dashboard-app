@@ -5,7 +5,7 @@ import sys
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "webrtc_ice_smoke.py"
+SCRIPT = REPO_ROOT / "scripts" / "smoke" / "webrtc_ice_smoke.py"
 DOC = REPO_ROOT / "docs" / "m1" / "streaming-e2e-smoke-test.md"
 
 

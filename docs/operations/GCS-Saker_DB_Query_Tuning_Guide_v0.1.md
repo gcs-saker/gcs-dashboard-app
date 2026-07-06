@@ -33,8 +33,8 @@ SHOW INDEX FROM unmanned_assets;
 M7 전환 경로의 핵심 쿼리는 먼저 아래 contract script로 확인한다.
 
 ```bash
-scripts/m7_db_query_plan_contract.py --check
-scripts/m7_db_query_plan_contract.py
+scripts/benchmarks/m7_db_query_plan_contract.py --check
+scripts/benchmarks/m7_db_query_plan_contract.py
 ```
 
 첫 번째 명령은 JSON schema와 대상 쿼리 목록을 출력한다. 두 번째 명령은 운영 DB 또는 staging DB에서 실행할 `EXPLAIN ANALYZE` SQL을 출력한다. 실제 운영 DB 실행 전에는 backup/staging에서 먼저 검증한다.

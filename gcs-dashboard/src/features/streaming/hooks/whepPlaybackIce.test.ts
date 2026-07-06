@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { WebRTCIceCandidateStats } from "../types";
+import type { WebRTCIceCandidateStats } from "@streaming/types";
 import { incrementIceCandidateStats } from "./whepPlaybackIce";
 
 const emptyStats: WebRTCIceCandidateStats = {

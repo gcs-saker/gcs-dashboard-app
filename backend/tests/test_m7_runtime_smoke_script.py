@@ -7,7 +7,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 def test_m7_runtime_smoke_contract_check_passes():
     result = subprocess.run(
-        ["bash", str(REPO_ROOT / "scripts" / "m7_single_node_runtime_smoke.sh"), "--check"],
+        ["bash", str(REPO_ROOT / "scripts" / "smoke" / "m7_single_node_runtime_smoke.sh"), "--check"],
         cwd=REPO_ROOT,
         check=True,
         text=True,
@@ -18,7 +18,7 @@ def test_m7_runtime_smoke_contract_check_passes():
 
 
 def test_m7_runtime_smoke_ports_override_public_playback_urls():
-    script = (REPO_ROOT / "scripts" / "m7_single_node_runtime_smoke.sh").read_text(encoding="utf-8")
+    script = (REPO_ROOT / "scripts" / "smoke" / "m7_single_node_runtime_smoke.sh").read_text(encoding="utf-8")
 
     assert "MEDIAMTX_PUBLIC_WEBRTC_BASE_URL" in script
     assert "MEDIAMTX_PUBLIC_HLS_BASE_URL" in script
@@ -43,7 +43,7 @@ def test_m7_runtime_smoke_ports_override_public_playback_urls():
 
 
 def test_m7_runtime_smoke_requires_backend_stream_status_payload_and_read_model_probe():
-    script = (REPO_ROOT / "scripts" / "m7_single_node_runtime_smoke.sh").read_text(encoding="utf-8")
+    script = (REPO_ROOT / "scripts" / "smoke" / "m7_single_node_runtime_smoke.sh").read_text(encoding="utf-8")
 
     assert "wait_for_stream_status" in script
     assert '"stream":"ready"' in script

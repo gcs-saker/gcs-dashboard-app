@@ -1,6 +1,7 @@
 import { memo, useMemo, type ReactNode } from "react";
-import type { DashboardStreamSlot } from "../streamTypes";
-import { STREAM_GRID_WIDGET } from "../streamTypes";
+import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
+import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import { STREAM_GRID_WIDGET } from "@dashboard/streamTypes";
 import { StreamCard } from "./StreamCard";
 import { StreamPanelErrorBoundary } from "./StreamPanelErrorBoundary";
 
@@ -25,6 +26,7 @@ export const StreamGrid = memo(function StreamGrid({
   onToggleTalkbackTarget,
   renderCard,
 }: StreamGridProps) {
+  useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.streamGrid);
   const talkbackTargetPaths = useMemo(() => new Set(talkbackTargetStreamIds), [talkbackTargetStreamIds]);
 
   return (

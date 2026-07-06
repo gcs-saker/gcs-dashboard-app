@@ -8,23 +8,17 @@ import kr.co.a4ai.gcssaker.authpolicy.application.NoopSecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthRegistrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
-import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
-import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupCommand
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupRejectedException
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
-import org.springframework.http.ResponseCookie
 import org.springframework.http.ResponseEntity
-import org.springframework.http.CacheControl
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import java.net.URI
-import java.time.Duration
 
 @RestController
 @RequestMapping(AuthApiRoutes.ROOT)
@@ -34,6 +28,9 @@ class AuthController(
     private val settings: AuthRuntimeSettings,
     private val securityAuditPublisher: SecurityAuditPublisher = NoopSecurityAuditPublisher,
 ) {
+    private val responses = AuthResponseFactory(settings)
+    private val requestGuard = AuthRequestGuard(sessions, settings)
+
     @PostMapping(AuthApiRoutes.SIGNUP)
     fun signup(
         @Valid
@@ -42,8 +39,7 @@ class AuthController(
         @RequestHeader(HttpHeaders.REFERER, required = false) referer: String?,
         @RequestHeader(AuthSecurityHeaders.CSRF_HEADER_NAME, required = false) csrfHeader: String?,
     ): ResponseEntity<UserResponse> {
-        assertTrustedOrigin(origin, referer)
-        assertCsrfHeader(csrfHeader)
+        requestGuard.assertBrowserWrite(origin, referer, csrfHeader)
         val user = try {
             registration.signup(
                 SignupCommand(
@@ -59,7 +55,7 @@ class AuthController(
         } catch (exc: IllegalArgumentException) {
             throw BadRequestApiError(exc.message ?: AuthApiErrors.INVALID_SIGNUP_REQUEST)
         }
-        return ResponseEntity.status(HttpStatus.CREATED).body(userResponse(user))
+        return ResponseEntity.status(HttpStatus.CREATED).body(responses.userResponse(user))
     }
 
     @PostMapping(AuthApiRoutes.LOGIN)
@@ -69,15 +65,14 @@ class AuthController(
         @RequestHeader(HttpHeaders.REFERER, required = false) referer: String?,
         @RequestHeader(AuthSecurityHeaders.CSRF_HEADER_NAME, required = false) csrfHeader: String?,
     ): ResponseEntity<TokenResponse> {
-        assertTrustedOrigin(origin, referer)
-        assertCsrfHeader(csrfHeader)
+        requestGuard.assertBrowserWrite(origin, referer, csrfHeader)
         val tokens = sessions.login(request.username, request.password)
         if (tokens == null) {
             securityAuditPublisher.publishLoginFailed(request.username)
             throw UnauthorizedApiError(AuthApiErrors.INVALID_CREDENTIALS)
         }
         securityAuditPublisher.publishLoginSucceeded(tokens.principal)
-        return tokenResponse(tokens.principal, tokens.accessToken, tokens.refreshToken, tokens.expiresInMinutes)
+        return responses.tokenResponse(tokens.principal, tokens.accessToken, tokens.refreshToken, tokens.expiresInMinutes)
     }
 
     @PostMapping(AuthApiRoutes.REFRESH)
@@ -87,14 +82,12 @@ class AuthController(
         @RequestHeader(HttpHeaders.REFERER, required = false) referer: String?,
         @RequestHeader(AuthSecurityHeaders.CSRF_HEADER_NAME, required = false) csrfHeader: String?,
     ): ResponseEntity<TokenResponse> {
-        assertTrustedOrigin(origin, referer)
-        assertCsrfHeader(csrfHeader)
-        val refreshToken = servletRequest.cookies
-            ?.firstOrNull { it.name == settings.refreshCookieName }
-            ?.value
-        if (refreshToken.isNullOrBlank()) {
+        requestGuard.assertBrowserWrite(origin, referer, csrfHeader)
+        val refreshToken = try {
+            requestGuard.requireRefreshToken(servletRequest)
+        } catch (error: UnauthorizedApiError) {
             securityAuditPublisher.publishRefreshFailed(AuthApiErrors.REFRESH_TOKEN_REQUIRED)
-            throw UnauthorizedApiError(AuthApiErrors.REFRESH_TOKEN_REQUIRED)
+            throw error
         }
         val tokens = try {
             sessions.refresh(refreshToken)
@@ -104,14 +97,9 @@ class AuthController(
         }
         if (tokens == null) {
             securityAuditPublisher.publishRefreshFailed(AuthApiErrors.INVALID_TOKEN)
-            @Suppress("UNCHECKED_CAST")
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
-                .cacheControl(CacheControl.noStore())
-                .header(AuthResponseHeaders.PRAGMA_HEADER_NAME, AuthResponseHeaders.PRAGMA_NO_CACHE)
-                .build<TokenResponse>()
+            return responses.unauthorizedWithClearedRefreshCookie()
         }
-        return tokenResponse(tokens.principal, tokens.accessToken, tokens.refreshToken, tokens.expiresInMinutes)
+        return responses.tokenResponse(tokens.principal, tokens.accessToken, tokens.refreshToken, tokens.expiresInMinutes)
     }
 
     @GetMapping(AuthApiRoutes.ME)
@@ -119,13 +107,7 @@ class AuthController(
     fun me(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
     ): CurrentUserResponse {
-        val token = authorization?.removePrefix(AuthTokenContract.BEARER_PREFIX)?.takeIf { it != authorization }
-            ?: throw UnauthorizedApiError(AuthApiErrors.AUTHENTICATION_REQUIRED)
-        val principal = try {
-            sessions.verifyAccessToken(token)
-        } catch (_: JWTVerificationException) {
-            throw UnauthorizedApiError(AuthApiErrors.INVALID_TOKEN)
-        }
+        val principal = requestGuard.requireCurrentPrincipal(authorization)
         return CurrentUserResponse(username = principal.username, role = principal.role.name.lowercase())
     }
 
@@ -137,84 +119,10 @@ class AuthController(
         @RequestHeader(HttpHeaders.REFERER, required = false) referer: String?,
         @RequestHeader(AuthSecurityHeaders.CSRF_HEADER_NAME, required = false) csrfHeader: String?,
     ): ResponseEntity<Void> {
-        assertTrustedOrigin(origin, referer)
-        assertCsrfHeader(csrfHeader)
-        servletRequest.cookies
-            ?.firstOrNull { it.name == settings.refreshCookieName }
-            ?.value
-            ?.takeIf { it.isNotBlank() }
+        requestGuard.assertBrowserWrite(origin, referer, csrfHeader)
+        refreshTokenFromCookie(servletRequest.cookies, settings.refreshCookieName)
             ?.let(sessions::revokeRefreshToken)
         securityAuditPublisher.publishLogout(BearerPrincipalResolver(sessions).principalOrNull(authorization))
-        return ResponseEntity.noContent()
-            .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
-            .build()
-    }
-
-    private fun tokenResponse(
-        principal: AuthenticatedPrincipal,
-        accessToken: String,
-        refreshToken: String,
-        expiresInMinutes: Long,
-    ): ResponseEntity<TokenResponse> =
-        ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, refreshCookie(refreshToken).toString())
-            .cacheControl(CacheControl.noStore())
-            .header(AuthResponseHeaders.PRAGMA_HEADER_NAME, AuthResponseHeaders.PRAGMA_NO_CACHE)
-            .body(
-                TokenResponse(
-                    accessToken = accessToken,
-                    expiresInMinutes = expiresInMinutes,
-                    username = principal.username,
-                    role = principal.role.name.lowercase(),
-                ),
-            )
-
-    private fun userResponse(user: AuthUser): UserResponse =
-        UserResponse(
-            id = user.id,
-            username = user.username,
-            email = user.email,
-            companyId = user.companyId,
-            role = user.role.name.lowercase(),
-        )
-
-    private fun refreshCookie(refreshToken: String): ResponseCookie =
-        ResponseCookie.from(settings.refreshCookieName, refreshToken)
-            .httpOnly(true)
-            .secure(settings.refreshCookieSecure)
-            .sameSite(settings.refreshCookieSameSite)
-            .path("/")
-            .maxAge(Duration.ofMinutes(settings.refreshTokenExpireMinutes))
-            .build()
-
-    private fun clearRefreshCookie(): ResponseCookie =
-        ResponseCookie.from(settings.refreshCookieName, "")
-            .httpOnly(true)
-            .secure(settings.refreshCookieSecure)
-            .sameSite(settings.refreshCookieSameSite)
-            .path("/")
-            .maxAge(Duration.ZERO)
-            .build()
-
-    private fun assertTrustedOrigin(origin: String?, referer: String?) {
-        val requestOrigin = origin ?: referer?.let {
-            runCatching {
-                URI.create(it).let { uri -> "${uri.scheme}://${uri.authority}" }
-            }.getOrElse {
-                throw ForbiddenApiError(AuthApiErrors.UNTRUSTED_REQUEST_ORIGIN)
-            }
-        }
-        if (requestOrigin == null || settings.allowedOrigins.isEmpty()) {
-            return
-        }
-        if (requestOrigin !in settings.allowedOrigins) {
-            throw ForbiddenApiError(AuthApiErrors.UNTRUSTED_REQUEST_ORIGIN)
-        }
-    }
-
-    private fun assertCsrfHeader(value: String?) {
-        if (value != AuthSecurityHeaders.CSRF_HEADER_VALUE) {
-            throw ForbiddenApiError(AuthApiErrors.CSRF_HEADER_REQUIRED)
-        }
+        return responses.logoutResponse()
     }
 }

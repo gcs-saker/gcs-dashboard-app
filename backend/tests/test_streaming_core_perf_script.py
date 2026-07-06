@@ -5,7 +5,7 @@ import sys
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "streaming_core_perf_check.py"
+SCRIPT = REPO_ROOT / "scripts" / "benchmarks" / "streaming_core_perf_check.py"
 
 
 def test_streaming_core_perf_script_reports_core_endpoint_latency():

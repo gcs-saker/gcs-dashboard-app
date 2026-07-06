@@ -1,7 +1,11 @@
 import type { CctvQualityMode } from "./components/CctvChannelCard";
 import { resetDashboardLayout, type DashboardLayoutItem } from "./dashboardLayout";
 import { detectPreferredMotionMode, normalizeMotionMode, type MotionMode } from "./motionPreference";
-import { EMPTY_STREAM_PREFERENCES, type StreamPreferencesSnapshot } from "./streamPreferences";
+import {
+  EMPTY_STREAM_PREFERENCES,
+  normalizeStreamPreferencesSnapshot,
+  type StreamPreferencesSnapshot,
+} from "./streamPreferences";
 
 export type DashboardView = "dashboard" | "cctv" | "events" | "status" | "settings";
 export type CctvLayoutMode = "3x3" | "4x4" | "5x5" | "auto";
@@ -20,9 +24,11 @@ export const DASHBOARD_USER_PREFERENCES_VERSION = 1;
 export const DEFAULT_DASHBOARD_VIEW: DashboardView = "dashboard";
 export const DEFAULT_CCTV_LAYOUT_MODE: CctvLayoutMode = "4x4";
 export const DEFAULT_CCTV_QUALITY_MODE: CctvQualityMode = "preview";
+export const CCTV_LAYOUT_MODE_OPTIONS: readonly CctvLayoutMode[] = ["3x3", "4x4", "5x5", "auto"] as const;
+export const CCTV_QUALITY_MODE_OPTIONS: readonly CctvQualityMode[] = ["preview", "high"] as const;
 const DASHBOARD_VIEWS = new Set<DashboardView>(["dashboard", "cctv", "events", "status", "settings"]);
-const CCTV_LAYOUT_MODES = new Set<CctvLayoutMode>(["3x3", "4x4", "5x5", "auto"]);
-const CCTV_QUALITY_MODES = new Set<CctvQualityMode>(["preview", "high"]);
+const CCTV_LAYOUT_MODES = new Set<CctvLayoutMode>(CCTV_LAYOUT_MODE_OPTIONS);
+const CCTV_QUALITY_MODES = new Set<CctvQualityMode>(CCTV_QUALITY_MODE_OPTIONS);
 const ANONYMOUS_PREFERENCE_SCOPE = "preview";
 const USER_KEY_SAFE_PATTERN = /[^a-zA-Z0-9._-]/g;
 
@@ -97,13 +103,7 @@ function normalizeLayout(
 }
 
 function normalizeStreamPreferences(value: unknown): StreamPreferencesSnapshot {
-  if (!value || typeof value !== "object") return EMPTY_STREAM_PREFERENCES;
-  const aliases = (value as Partial<StreamPreferencesSnapshot>).deviceAliases;
-  if (!aliases || typeof aliases !== "object" || Array.isArray(aliases)) return EMPTY_STREAM_PREFERENCES;
-  const deviceAliases = Object.fromEntries(
-    Object.entries(aliases).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
-  );
-  return { deviceAliases };
+  return normalizeStreamPreferencesSnapshot(value);
 }
 
 function positiveInteger(value: unknown, fallback: number): number {

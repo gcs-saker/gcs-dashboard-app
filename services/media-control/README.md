@@ -143,7 +143,7 @@ go test ./... -cover
 
 ```bash
 go test -race ./...
-../../scripts/m10_media_control_concurrency_gate.sh
+../../scripts/gates/m10_media_control_concurrency_gate.sh
 ```
 
 `streamcache.CachedStreamLister`와 `turn.CachedIceServerProvider`는 cache miss 순간에 여러 HTTP 요청이 동시에 들어와도 upstream(MediaMTX/ICE registry)을 한 번만 조회하도록 mutex로 refresh 구간을 보호한다. 이 잠금은 media frame 경로가 아니라 control-plane cache refresh에만 걸리므로 WebRTC media latency에 직접 개입하지 않는다.
@@ -154,4 +154,4 @@ M10 concurrency gate는 다음을 고정한다.
 - `go test -race ./...`: stream registry/cache update, ICE server cache refresh, HTTP handler 테스트를 race detector로 실행한다.
 - defensive copy test: caller가 반환 slice를 수정해도 cached stream/ICE 상태가 오염되지 않는지 확인한다.
 
-일반 unit test보다 `-race`는 느리므로 로컬 빠른 피드백은 `go test ./...`를 사용하고, PR/배포 전에는 `../../scripts/m10_media_control_concurrency_gate.sh`를 실행한다.
+일반 unit test보다 `-race`는 느리므로 로컬 빠른 피드백은 `go test ./...`를 사용하고, PR/배포 전에는 `../../scripts/gates/m10_media_control_concurrency_gate.sh`를 실행한다.

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 
-import { useWhepPlayback } from "../hooks/useWhepPlayback";
-import { talkbackWhepUrl } from "../talkbackRoutes";
+import { useWhepPlayback } from "@streaming/hooks/useWhepPlayback";
+import { talkbackWhepUrl } from "@streaming/talkbackRoutes";
 
 interface TalkbackAudioReceiverProps {
   streamId: string;

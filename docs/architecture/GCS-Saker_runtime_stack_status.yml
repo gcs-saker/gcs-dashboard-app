@@ -65,7 +65,7 @@ stacks:
       - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/infrastructure
       - deploy/postgres/init/001_geo_telemetry.sql
       - backend/tests/test_postgis_schema_contract.py
-      - scripts/postgis_runtime_smoke.py
+      - scripts/smoke/postgis_runtime_smoke.py
     activeRuntime:
       - "stream telemetry history append"
       - "stream telemetry latest upsert"
@@ -83,7 +83,7 @@ stacks:
       - backend/modules/telemetry_buffer
       - backend/tests/test_telemetry_write_buffer.py
       - backend/tests/test_telemetry_bulk_flush_benchmark.py
-      - scripts/telemetry_bulk_flush_benchmark.py
+      - scripts/benchmarks/telemetry_bulk_flush_benchmark.py
       - docs/architecture/GCS-Saker_telemetry_storage_bulk_write_contract.md
     runtimeProof:
       - "latest overwrite and history append are separated before persistence."
@@ -104,9 +104,9 @@ stacks:
     evidence:
       - deploy/mediamtx/mediamtx.closed-network.yml
       - deploy/nginx/single-node.poc.conf
-      - scripts/m7_publish_play_smoke.sh
-      - scripts/m7_dashboard_first_frame_smoke.sh
-      - scripts/webrtc_ice_smoke.py
+      - scripts/smoke/m7_publish_play_smoke.sh
+      - scripts/smoke/m7_dashboard_first_frame_smoke.sh
+      - scripts/smoke/webrtc_ice_smoke.py
     nextGate: "외부 NAT에서 WHIP publish, WHEP play, first frame, audio stats를 자동 smoke로 재검증한다."
 
   coturnPair:
@@ -118,7 +118,7 @@ stacks:
         - turn-secondary
     evidence:
       - deploy/compose/compose.single-node.poc.yml
-      - scripts/webrtc_ice_smoke.py
+      - scripts/smoke/webrtc_ice_smoke.py
       - services/media-control/internal/turn
       - docs/operations/GCS-Saker_M7_ICE_관측과_TURN_부하절감_가이드.md
     runtimeProof:
@@ -135,7 +135,7 @@ stacks:
       composeService: mqtt
       composeFile: deploy/compose/compose.single-node.poc.yml
     evidence:
-      - scripts/mqtt_hardened_profile_smoke.py
+      - scripts/smoke/mqtt_hardened_profile_smoke.py
       - backend/tests/test_mqtt_hardened_profile_smoke_contract.py
       - backend/tests/test_mqtt_consumer_bridge.py
       - deploy/mosquitto/mosquitto.hardened.conf
@@ -178,7 +178,7 @@ stacks:
       - backend/tests/test_message_sender_abstraction.py
       - backend/tests/test_protocol_v2_gateway_service.py
       - services/media-control/internal/grpcgateway
-      - scripts/grpc_runtime_smoke.py
+      - scripts/smoke/grpc_runtime_smoke.py
     activeRuntime:
       - "client implementation behind MessageSender abstraction"
       - "CONTROL_GRPC_TARGET and CONTROL_GRPC_METHOD runtime configuration"
@@ -200,7 +200,7 @@ stacks:
       - deploy/compose/compose.dragonfly.override.yml
       - backend/tests/test_docker_env_contract.py
       - backend/tests/test_dragonfly_cache_profile_contract.py
-      - scripts/dragonfly_profile_smoke.py
+      - scripts/smoke/dragonfly_profile_smoke.py
       - docs/architecture/GCS-Saker_M8_dragonfly_compatibility_profile.md
     activeProfile:
       - "Redis 기본 profile과 DragonFly override profile이 같은 AUTH/PING/SETEX/GET/GETDEL/TTL/DEL command subset을 통과한다."
@@ -217,7 +217,7 @@ stacks:
       - deploy/compose/.env.mixed-network.example
       - deploy/compose/.env.public-ice.example
       - deploy/compose/compose.single-node.poc.yml
-      - scripts/closed_network_static_check.py
+      - scripts/gates/closed_network_static_check.py
       - backend/tests/test_closed_network_static_check.py
       - docs/operations/GCS-Saker_Closed_Network_Profile_Runbook_v0.1.md
     runtimeProof:
@@ -275,7 +275,7 @@ stacks:
       - backend/modules/protocol_v2/ai_overlay.py
       - backend/tests/test_ai_overlay_protocol.py
       - backend/tests/test_ai_overlay_sidecar_smoke.py
-      - scripts/ai_overlay_sidecar_smoke.py
+      - scripts/smoke/ai_overlay_sidecar_smoke.py
       - docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md
       - docs/architecture/GCS-Saker_M8_ai_sidecar_overlay_contract.md
     runtimeProof:

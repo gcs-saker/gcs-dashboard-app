@@ -1,23 +1,41 @@
-import type { WebRTCAudioStats, WebRTCIceCandidateStats, WebRTCSignalingTimings } from "../types";
+import type { WebRTCAudioStats, WebRTCIceCandidateStats, WebRTCSignalingTimings } from "@streaming/types";
+import type { WHEP_PLAYBACK_ACTION } from "./whepPlaybackStateContract";
 
 export type PeerConnectionFactory = () => RTCPeerConnection;
 export type SignalingTimingKey = keyof WebRTCSignalingTimings;
 export type SignalingTimingRecorder = (stage: SignalingTimingKey) => void;
 
 export type PlaybackAction =
-  | { type: "loading"; connectionState: RTCPeerConnectionState; iceConnectionState: RTCIceConnectionState }
-  | { type: "playing"; connectionState: RTCPeerConnectionState; iceConnectionState: RTCIceConnectionState }
-  | { type: "offline" }
-  | { type: "unsupported"; message: string }
-  | { type: "error"; message: string; connectionState?: RTCPeerConnectionState; iceConnectionState?: RTCIceConnectionState }
-  | { type: "connection"; connectionState: RTCPeerConnectionState; iceConnectionState: RTCIceConnectionState }
-  | { type: "first-frame"; latencyMs: number }
-  | { type: "audio-state"; hasAudioTrack: boolean; isAudioActive: boolean }
-  | { type: "audio-playback"; blocked: boolean }
-  | { type: "audio-level"; audioLevel: number | null }
-  | { type: "audio-stats"; stats: WebRTCAudioStats }
-  | { type: "ice-candidate"; candidate: RTCIceCandidate }
-  | { type: "signaling-timing"; stage: SignalingTimingKey; latencyMs: number };
+  | {
+      type: typeof WHEP_PLAYBACK_ACTION.loading;
+      connectionState: RTCPeerConnectionState;
+      iceConnectionState: RTCIceConnectionState;
+    }
+  | {
+      type: typeof WHEP_PLAYBACK_ACTION.playing;
+      connectionState: RTCPeerConnectionState;
+      iceConnectionState: RTCIceConnectionState;
+    }
+  | { type: typeof WHEP_PLAYBACK_ACTION.offline }
+  | { type: typeof WHEP_PLAYBACK_ACTION.unsupported; message: string }
+  | {
+      type: typeof WHEP_PLAYBACK_ACTION.error;
+      message: string;
+      connectionState?: RTCPeerConnectionState;
+      iceConnectionState?: RTCIceConnectionState;
+    }
+  | {
+      type: typeof WHEP_PLAYBACK_ACTION.connection;
+      connectionState: RTCPeerConnectionState;
+      iceConnectionState: RTCIceConnectionState;
+    }
+  | { type: typeof WHEP_PLAYBACK_ACTION.firstFrame; latencyMs: number }
+  | { type: typeof WHEP_PLAYBACK_ACTION.audioState; hasAudioTrack: boolean; isAudioActive: boolean }
+  | { type: typeof WHEP_PLAYBACK_ACTION.audioPlayback; blocked: boolean }
+  | { type: typeof WHEP_PLAYBACK_ACTION.audioLevel; audioLevel: number | null }
+  | { type: typeof WHEP_PLAYBACK_ACTION.audioStats; stats: WebRTCAudioStats }
+  | { type: typeof WHEP_PLAYBACK_ACTION.iceCandidate; candidate: RTCIceCandidate }
+  | { type: typeof WHEP_PLAYBACK_ACTION.signalingTiming; stage: SignalingTimingKey; latencyMs: number };
 
 export const EMPTY_SIGNALING_TIMINGS: WebRTCSignalingTimings = {
   iceServersLoadedMs: null,

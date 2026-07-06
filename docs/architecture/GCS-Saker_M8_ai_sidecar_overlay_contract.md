@@ -49,7 +49,7 @@ sequenceDiagram
 M7에서는 실제 AI model server를 띄우지 않고, mock sidecar path가 media path와 분리되어 있는지만 검증한다.
 
 ```bash
-python3 scripts/ai_overlay_sidecar_smoke.py --run
+python3 scripts/smoke/ai_overlay_sidecar_smoke.py --run
 ```
 
 이 smoke는 다음을 확인한다.

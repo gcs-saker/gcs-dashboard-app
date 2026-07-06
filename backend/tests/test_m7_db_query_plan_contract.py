@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "m7_db_query_plan_contract.py"
+SCRIPT = REPO_ROOT / "scripts" / "benchmarks" / "m7_db_query_plan_contract.py"
 GUIDE = REPO_ROOT / "docs" / "operations" / "GCS-Saker_DB_Query_Tuning_Guide_v0.1.md"
 
 
@@ -33,6 +33,6 @@ def test_m7_db_query_plan_contract_prints_stable_targets() -> None:
 def test_db_query_tuning_guide_references_query_plan_contract_script() -> None:
     content = GUIDE.read_text(encoding="utf-8")
 
-    assert "scripts/m7_db_query_plan_contract.py --check" in content
+    assert "scripts/benchmarks/m7_db_query_plan_contract.py --check" in content
     assert "operational_events" in content
     assert "telemetry_latest" in content

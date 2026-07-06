@@ -7,7 +7,7 @@ from typing import Any, Callable, Protocol
 from fastapi import FastAPI
 import paho.mqtt.client as mqtt
 
-from mqtt.client import MqttSettings
+from mqtt.client import MqttSettings, configure_mqtt_resilience
 from mqtt.consumer_bridge import MqttConsumerBridge
 from modules.telemetry_buffer import build_buffered_telemetry_sink
 from mqtt.topics import telemetry_subscription_topic
@@ -18,6 +18,12 @@ class SubscribableMqttClient(Protocol):
     on_message: Callable[[Any, Any, Any], None] | None
 
     def username_pw_set(self, username: str, password: str | None = None) -> None:
+        ...
+
+    def reconnect_delay_set(self, min_delay: int, max_delay: int) -> None:
+        ...
+
+    def max_inflight_messages_set(self, inflight: int) -> None:
         ...
 
     def connect(self, host: str, port: int, keepalive: int) -> None:
@@ -56,6 +62,7 @@ def build_telemetry_subscriber(
     resolved_bridge = bridge or MqttConsumerBridge(build_buffered_telemetry_sink())
     factory = client_factory or mqtt.Client
     client = factory(resolved_settings.client_id)
+    configure_mqtt_resilience(client, resolved_settings)
     if resolved_settings.username is not None:
         client.username_pw_set(resolved_settings.username, resolved_settings.password)
 

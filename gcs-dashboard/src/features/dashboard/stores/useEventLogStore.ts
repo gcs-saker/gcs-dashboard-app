@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import type { OperationalEventCategory, OperationalEventFilters } from "../operationalEvents";
+import { useShallow } from "zustand/react/shallow";
+import type { OperationalEventCategory, OperationalEventFilters } from "@dashboard/operationalEvents";
 
 export const DEFAULT_OPERATIONAL_EVENT_FILTERS: OperationalEventFilters = Object.freeze({
   query: "",
@@ -10,8 +11,9 @@ export const DEFAULT_OPERATIONAL_EVENT_FILTERS: OperationalEventFilters = Object
 
 type EventLogFilterPatch = Partial<OperationalEventFilters>;
 type EventLogCategoryFilter = "all" | OperationalEventCategory;
+const EVENT_LOG_FILTER_ALL = "all";
 
-interface EventLogStoreState {
+export interface EventLogStoreState {
   filters: OperationalEventFilters;
   categoryFilter: EventLogCategoryFilter;
   sourceFilter: string;
@@ -25,8 +27,8 @@ interface EventLogStoreState {
 
 export const useEventLogStore = create<EventLogStoreState>((set) => ({
   filters: DEFAULT_OPERATIONAL_EVENT_FILTERS,
-  categoryFilter: "all",
-  sourceFilter: "all",
+  categoryFilter: EVENT_LOG_FILTER_ALL,
+  sourceFilter: EVENT_LOG_FILTER_ALL,
   selectedEventId: null,
   patchFilters: (patch) =>
     set((state) => ({
@@ -41,7 +43,26 @@ export const useEventLogStore = create<EventLogStoreState>((set) => ({
   resetFilters: () =>
     set({
       filters: DEFAULT_OPERATIONAL_EVENT_FILTERS,
-      categoryFilter: "all",
-      sourceFilter: "all",
+      categoryFilter: EVENT_LOG_FILTER_ALL,
+      sourceFilter: EVENT_LOG_FILTER_ALL,
     }),
 }));
+
+export function useEventLogFilterState() {
+  return useEventLogStore(useShallow((state) => ({
+    categoryFilter: state.categoryFilter,
+    filters: state.filters,
+    selectedEventId: state.selectedEventId,
+    sourceFilter: state.sourceFilter,
+  })));
+}
+
+export function useEventLogActions() {
+  return useEventLogStore(useShallow((state) => ({
+    patchFilters: state.patchFilters,
+    resetFilters: state.resetFilters,
+    setCategoryFilter: state.setCategoryFilter,
+    setSelectedEventId: state.setSelectedEventId,
+    setSourceFilter: state.setSourceFilter,
+  })));
+}

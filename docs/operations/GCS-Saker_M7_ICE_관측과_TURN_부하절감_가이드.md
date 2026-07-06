@@ -28,13 +28,13 @@ M7의 기준은 다음과 같다.
 정적 계약 확인:
 
 ```bash
-python3 scripts/webrtc_ice_smoke.py --check
+python3 scripts/smoke/webrtc_ice_smoke.py --check
 ```
 
 live WHEP 확인:
 
 ```bash
-python3 scripts/webrtc_ice_smoke.py \
+python3 scripts/smoke/webrtc_ice_smoke.py \
   --run \
   --whep-url https://a4ai.tplinkdns.com/webrtc/raw/sample/front/whep \
   --ice-server-url stun:stun.l.google.com:19302 \
@@ -58,7 +58,7 @@ python3 scripts/webrtc_ice_smoke.py \
 
 ## TURN 부담 절감 순서
 
-1. `scripts/webrtc_ice_smoke.py --run`으로 selected pair와 RTT를 확인한다.
+1. `scripts/smoke/webrtc_ice_smoke.py --run`으로 selected pair와 RTT를 확인한다.
 2. `relay_ratio`가 높으면 TURN 서버 증설보다 candidate 품질을 먼저 확인한다.
 3. remote candidate가 relay로 잡히면 MediaMTX public candidate와 8189/UDP 경로를 확인한다.
 4. protocol이 `tcp`로 잡히면 UDP 차단 여부를 먼저 확인한다.

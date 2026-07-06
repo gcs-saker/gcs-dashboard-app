@@ -2,9 +2,9 @@ from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
+from modules.ai_contract.constants import AI_CONTRACT_SCHEMA_VERSION
 
 SchemaVersion = Literal["ai.detection.v1alpha1"]
-AI_CONTRACT_SCHEMA_VERSION: SchemaVersion = "ai.detection.v1alpha1"
 
 
 class ContractBaseModel(BaseModel):

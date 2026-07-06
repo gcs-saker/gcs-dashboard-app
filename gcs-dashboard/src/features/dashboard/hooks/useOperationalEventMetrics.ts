@@ -1,8 +1,13 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DASHBOARD_QUERY_KEYS } from "../../stateContracts";
-import { fetchOperationalEventMetrics } from "../operationalEventsApi";
-import type { OperationalEventFilters, OperationalEventMetrics } from "../operationalEvents";
+import { DASHBOARD_QUERY_KEY_FACTORY } from "@features/stateContracts";
+import {
+  dashboardRefetchInterval,
+  DASHBOARD_QUERY_POLICY,
+  withAbortSignal,
+} from "@features/queryClient";
+import { fetchOperationalEventMetrics } from "@dashboard/operationalEventsApi";
+import type { OperationalEventFilters, OperationalEventMetrics } from "@dashboard/operationalEvents";
 
 interface OperationalEventMetricsState {
   metrics: OperationalEventMetrics | null;
@@ -14,17 +19,18 @@ interface OperationalEventMetricsState {
 export function useOperationalEventMetrics(
   filters: OperationalEventFilters,
   fetcher: typeof fetch = fetch,
-  pollIntervalMs = 10_000,
+  pollIntervalMs = DASHBOARD_QUERY_POLICY.operationsRefetchMs,
 ): OperationalEventMetricsState {
   const queryFilters = useMemo(() => ({ ...filters }), [filters]);
   const query = useQuery({
-    queryKey: [...DASHBOARD_QUERY_KEYS.operationalEventMetrics, queryFilters],
+    queryKey: DASHBOARD_QUERY_KEY_FACTORY.operationalEventMetrics(queryFilters),
     queryFn: ({ signal }) =>
       fetchOperationalEventMetrics(
         queryFilters,
-        ((input, init) => fetcher(input, { ...init, signal })) as typeof fetch,
+        withAbortSignal(fetcher, signal),
       ),
-    refetchInterval: pollIntervalMs > 0 ? pollIntervalMs : false,
+    refetchInterval: dashboardRefetchInterval(pollIntervalMs),
+    staleTime: DASHBOARD_QUERY_POLICY.operationsStaleTimeMs,
   });
 
   return {

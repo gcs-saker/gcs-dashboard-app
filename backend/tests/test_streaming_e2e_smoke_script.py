@@ -3,7 +3,7 @@ import subprocess
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "streaming_e2e_smoke.sh"
+SCRIPT = REPO_ROOT / "scripts" / "smoke" / "streaming_e2e_smoke.sh"
 DOC = REPO_ROOT / "docs" / "m1" / "streaming-e2e-smoke-test.md"
 
 

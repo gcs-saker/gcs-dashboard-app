@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   detectPreferredMotionMode,
   isMotionEnabled,
+  motionPolicyForMode,
   normalizeMotionMode,
 } from "./motionPreference";
 
@@ -28,5 +29,23 @@ describe("motionPreference", () => {
     expect(isMotionEnabled("full")).toBe(true);
     expect(isMotionEnabled("reduced")).toBe(true);
     expect(isMotionEnabled("off")).toBe(false);
+  });
+
+  test("centralizes motion duration and transition policy", () => {
+    expect(motionPolicyForMode("full")).toMatchObject({
+      animationDurationMs: 180,
+      isAnimationEnabled: true,
+      isTransitionEnabled: true,
+    });
+    expect(motionPolicyForMode("reduced")).toMatchObject({
+      animationDurationMs: 80,
+      isAnimationEnabled: false,
+      isTransitionEnabled: true,
+    });
+    expect(motionPolicyForMode("off")).toMatchObject({
+      animationDurationMs: 0,
+      isAnimationEnabled: false,
+      isTransitionEnabled: false,
+    });
   });
 });

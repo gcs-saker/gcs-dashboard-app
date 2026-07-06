@@ -48,7 +48,7 @@ Python backend는 M7 완료 이후에도 단일 노드 compose에 남을 수 있
 
 ## 검증 게이트
 
-1. `scripts/m7_single_node_runtime_smoke.sh --run`이 active runtime path를 모두 확인한다.
+1. `scripts/smoke/m7_single_node_runtime_smoke.sh --run`이 active runtime path를 모두 확인한다.
 2. Nginx contract test가 active cutover, exact legacy allowlist, disabled legacy fallback 경로를 구분한다.
 3. Compose contract test가 edge가 active cutover 서비스에 의존하도록 보장한다.
 4. performance benchmark는 M7 active runtime path 기준으로 수행한다.

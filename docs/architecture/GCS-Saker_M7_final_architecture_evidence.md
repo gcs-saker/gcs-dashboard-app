@@ -7,7 +7,7 @@ M7은 단순 기능 추가가 아니라 Python 중심 legacy runtime에서 Sprin
 이 문서는 #421의 단일 재현 기준이다. 운영자가 아래 명령을 실행하면 현재 repo에서 확인 가능한 architecture evidence와 benchmark contract를 한 번에 볼 수 있다.
 
 ```bash
-python3 scripts/m7_final_evidence_gate.py --run --timeout-seconds 120
+python3 scripts/gates/m7_final_evidence_gate.py --run --timeout-seconds 120
 ```
 
 ## 최종 구조 요약
@@ -51,7 +51,7 @@ flowchart LR
 
 ## 2026-06-26 local evidence run
 
-`scripts/m7_final_evidence_gate.py --run --timeout-seconds 120` 결과는 전체 required command가 통과했다.
+`scripts/gates/m7_final_evidence_gate.py --run --timeout-seconds 120` 결과는 전체 required command가 통과했다.
 
 주요 수치:
 

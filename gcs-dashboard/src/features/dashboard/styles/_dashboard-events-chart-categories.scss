@@ -1,0 +1,74 @@
+.event-log-view__chart {
+  align-items: end;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(24px, 1fr));
+  min-width: 0;
+  overflow: hidden;
+  padding: 12px;
+}
+
+.event-log-view__bar {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: inherit;
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+  grid-template-rows: 16px minmax(70px, 1fr) 16px;
+  height: 100%;
+  justify-items: center;
+  min-width: 0;
+  padding: 0;
+}
+
+.event-log-view__bar i {
+  align-self: end;
+  background: linear-gradient(180deg, rgba(86, 211, 124, 0.9), rgba(61, 184, 255, 0.58));
+  display: block;
+  width: min(24px, 68%);
+}
+
+.event-log-view__bar.is-warn i {
+  background: linear-gradient(180deg, rgba(243, 200, 77, 0.92), rgba(61, 184, 255, 0.42));
+}
+
+.event-log-view__bar.is-error i {
+  background: linear-gradient(180deg, rgba(228, 93, 83, 0.94), rgba(243, 200, 77, 0.42));
+}
+
+.event-log-view__bar.is-selected {
+  border-color: rgba(61, 184, 255, 0.42);
+}
+
+.event-log-view__bar span,
+.event-log-view__bar small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.event-log-view__categories {
+  border-top: 1px solid var(--line-soft);
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 10px;
+}
+
+.event-log-view__categories button {
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: rgba(5, 13, 17, 0.42);
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+  min-height: 52px;
+  padding: 8px;
+  text-align: left;
+}
+
+.event-log-view__categories strong {
+  color: #dce8f2;
+}

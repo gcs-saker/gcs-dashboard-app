@@ -1,4 +1,4 @@
-import type { WebRTCIceCandidateStats } from "../types";
+import type { WebRTCIceCandidateStats } from "@streaming/types";
 
 export function incrementIceCandidateStats(
   current: WebRTCIceCandidateStats,

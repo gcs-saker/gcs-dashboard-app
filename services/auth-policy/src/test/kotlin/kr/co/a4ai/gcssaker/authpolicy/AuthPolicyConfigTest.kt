@@ -8,6 +8,7 @@ import org.springframework.data.redis.core.StringRedisTemplate
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AllowedOrigins
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthPolicyConfig
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
+import kr.co.a4ai.gcssaker.authpolicy.configuration.OperationalPolicyConfig
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.NoopPrincipalCache
@@ -137,7 +138,7 @@ class AuthPolicyConfigTest {
 
     @Test
     fun `configuration seeds operational event repository for dashboard log integration`() {
-        val repository = AuthPolicyConfig().operationalEventRepository(
+        val repository = OperationalPolicyConfig().operationalEventRepository(
             AuthRuntimeSettings.fromEnvironment(localEnvironment()),
             EmptyObjectProvider(),
             EmptyObjectProvider<StringRedisTemplate>(),

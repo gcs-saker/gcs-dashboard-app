@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
-import { RealtimePlayer } from "../../streaming/components/RealtimePlayer";
-import type { RealtimePlayerSnapshot } from "../../streaming/types";
-import type { DashboardStreamSlot } from "../streamTypes";
+import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
+import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
+import type { RealtimePlayerSnapshot } from "@streaming/types";
+import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 import {
   getDashboardStreamStatusClass,
   getDashboardStreamStatusText,
   getDashboardStreamDisplayName,
   SELECTED_STREAM_WIDGET,
-} from "../streamTypes";
+} from "@dashboard/streamTypes";
 
 interface SelectedStreamPanelProps {
   stream: DashboardStreamSlot;
@@ -26,6 +27,7 @@ export function SelectedStreamPanel({
   onPlaybackStatusChange,
   onToggleAiMode,
 }: SelectedStreamPanelProps) {
+  useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.selectedStreamPanel);
   return (
     <section
       aria-labelledby="selected-stream-title"

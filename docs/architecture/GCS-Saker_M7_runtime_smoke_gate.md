@@ -22,25 +22,25 @@ M7의 구조 이전은 코드 골격만 통과하면 안 된다. 인증/인가, 
 
 ## 명령어
 ```bash
-scripts/m7_single_node_runtime_smoke.sh --check
+scripts/smoke/m7_single_node_runtime_smoke.sh --check
 ```
 
 Docker 런타임까지 확인할 때:
 
 ```bash
-scripts/m7_single_node_runtime_smoke.sh --run
+scripts/smoke/m7_single_node_runtime_smoke.sh --run
 ```
 
 기본적으로 `--run`은 로컬에 이미 떠 있는 운영/실험 컨테이너와 충돌하지 않도록 smoke 전용 포트를 사용한다. 실제 `.env.single-node`의 포트를 그대로 쓰고 싶으면:
 
 ```bash
-USE_SMOKE_PORTS=0 scripts/m7_single_node_runtime_smoke.sh --run
+USE_SMOKE_PORTS=0 scripts/smoke/m7_single_node_runtime_smoke.sh --run
 ```
 
 검증 후 stack을 내리고 싶으면:
 
 ```bash
-STOP_STACK=1 scripts/m7_single_node_runtime_smoke.sh --run
+STOP_STACK=1 scripts/smoke/m7_single_node_runtime_smoke.sh --run
 ```
 
 ## 실제 스트림 데이터 확인 시점

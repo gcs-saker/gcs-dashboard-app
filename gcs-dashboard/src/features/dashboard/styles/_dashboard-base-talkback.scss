@@ -1,0 +1,79 @@
+.talkback-panel {
+  align-items: center;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 34px;
+  padding: 4px 6px;
+}
+
+.talkback-panel__targets,
+.talkback-panel__result,
+.talkback-panel__error {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.talkback-panel__mic {
+  align-items: center;
+  background: rgba(3, 8, 13, 0.58);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 6px;
+  height: 24px;
+  min-width: 92px;
+  overflow: hidden;
+  padding: 0 8px;
+  position: relative;
+}
+
+.talkback-panel__mic::before {
+  background: rgba(141, 160, 174, 0.16);
+  border-radius: 999px;
+  content: "";
+  height: 5px;
+  inset: auto 8px 4px;
+  position: absolute;
+}
+
+.talkback-panel__mic i {
+  background: linear-gradient(90deg, rgba(86, 211, 124, 0.95), rgba(61, 184, 255, 0.72));
+  border-radius: 999px;
+  bottom: 4px;
+  display: block;
+  height: 5px;
+  left: 8px;
+  max-width: calc(100% - 16px);
+  min-width: 0;
+  position: absolute;
+  transition: width 160ms ease;
+}
+
+.talkback-panel__mic em {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.talkback-panel__mic.has-track em {
+  color: var(--green);
+}
+
+.talkback-panel__status--active,
+.talkback-panel__status--publishing {
+  color: var(--green);
+}
+
+.talkback-panel__status--error,
+.talkback-panel__error {
+  color: var(--red);
+}

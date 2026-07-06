@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { AuthApiError } from "../auth/authApi";
+import { AuthApiError } from "@auth/authApi";
 import { DEFAULT_DASHBOARD_STREAMS } from "./streamTypes";
 import {
   connectDeviceToStreamSlot,
@@ -170,6 +170,16 @@ describe("streamDevices", () => {
       status: 401,
       name: "AuthApiError",
     } satisfies Partial<AuthApiError>);
+  });
+
+  test("rejects malformed stream registry payload before it reaches dashboard state", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(Response.json([{ streamId: "raw.bad.front", status: "debug" }]))
+      .mockResolvedValueOnce(Response.json([]));
+
+    await expect(fetchStreamDeviceOptions(fetcher as unknown as typeof fetch)).rejects.toThrow(
+      "stream registry response is invalid",
+    );
   });
 
   test("keeps default and mock stream coordinates in the Daegu operating area", () => {

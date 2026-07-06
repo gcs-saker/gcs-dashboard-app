@@ -6,6 +6,8 @@ export const BROWSER_STORAGE_RESPONSIBILITIES = Object.freeze({
     "cctv-grid-preference",
     "motion-mode",
     "map-preference",
+    "server-health-history",
+    "rtt-snapshot-cache",
   ]),
   memoryOnly: Object.freeze([
     "access-token",

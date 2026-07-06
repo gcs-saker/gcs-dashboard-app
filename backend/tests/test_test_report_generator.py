@@ -8,9 +8,10 @@ import sys
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-REPORT_SCRIPT = REPO_ROOT / "scripts" / "generate_test_report.py"
+REPORT_SCRIPT = REPO_ROOT / "scripts" / "reports" / "generate_test_report.py"
 PRINCIPLE_MATRIX = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_principle_proof_matrix.yml"
-sys.path.insert(0, str(REPO_ROOT / "scripts"))
+sys.path.insert(0, str(REPO_ROOT / "scripts" / "reports"))
+sys.path.insert(0, str(REPO_ROOT / "scripts" / "gates"))
 
 
 def load_report_generator():

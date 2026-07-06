@@ -20,7 +20,7 @@ docker compose up mediamtx
 저장소 루트에서 다음 명령을 실행한다.
 
 ```bash
-scripts/publish_sample_stream.sh
+scripts/smoke/publish_sample_stream.sh
 ```
 
 기본 publish 대상은 다음과 같다.
@@ -40,7 +40,7 @@ raw.sample.front
 실제 publish 없이 ffmpeg 명령만 확인하려면 `--dry-run`을 사용한다.
 
 ```bash
-scripts/publish_sample_stream.sh --dry-run
+scripts/smoke/publish_sample_stream.sh --dry-run
 ```
 
 ## 로컬 영상 파일 사용
@@ -48,13 +48,13 @@ scripts/publish_sample_stream.sh --dry-run
 테스트 패턴 대신 로컬 파일을 반복 publish할 수 있다.
 
 ```bash
-scripts/publish_sample_stream.sh --file ./sample.mp4
+scripts/smoke/publish_sample_stream.sh --file ./sample.mp4
 ```
 
 짧은 smoke test에서는 duration을 줄 수 있다.
 
 ```bash
-scripts/publish_sample_stream.sh --duration 10
+scripts/smoke/publish_sample_stream.sh --duration 10
 ```
 
 ## 포트와 경로 변경
@@ -62,13 +62,13 @@ scripts/publish_sample_stream.sh --duration 10
 MediaMTX RTSP 포트만 바꾸려면 `MEDIAMTX_RTSP_PORT`를 사용한다.
 
 ```bash
-MEDIAMTX_RTSP_PORT=18554 scripts/publish_sample_stream.sh
+MEDIAMTX_RTSP_PORT=18554 scripts/smoke/publish_sample_stream.sh
 ```
 
 전체 RTSP URL을 직접 지정할 수도 있다.
 
 ```bash
-scripts/publish_sample_stream.sh --url rtsp://127.0.0.1:8554/raw/sample/front
+scripts/smoke/publish_sample_stream.sh --url rtsp://127.0.0.1:8554/raw/sample/front
 ```
 
 ## 확인 절차

@@ -3,7 +3,7 @@ from typing import Annotated, Generic, TypeAlias, TypeVar
 
 from fastapi import APIRouter, Depends
 
-from api.contracts import StreamErrorDetails, StreamRoutes
+from api.contracts import StreamErrorDetails, StreamRoutes, StreamStatusProtocol
 from api.errors import NotFoundApiError, UnprocessableEntityApiError
 from config import WebRtcIceSettings
 from model.stream_model import StreamPathError, validate_stream_id, validate_stream_path
@@ -20,7 +20,7 @@ from modules.streaming.service import StreamingService
 StreamResponseT = TypeVar("StreamResponseT")
 
 router = APIRouter()
-router.include_router(streaming_module_router, prefix="/module")
+router.include_router(streaming_module_router, prefix=StreamRoutes.MODULE_PREFIX)
 v1_router = APIRouter()
 v1_streaming_service = StreamingService()
 
@@ -116,7 +116,7 @@ async def get_stream(
 
 @router.get(StreamRoutes.STATUS)
 async def stream_status():
-    return {"stream": "ready"}
+    return {StreamStatusProtocol.FIELD_STREAM: StreamStatusProtocol.READY}
 
 
 @router.get(StreamRoutes.PATH_FROM_ID)

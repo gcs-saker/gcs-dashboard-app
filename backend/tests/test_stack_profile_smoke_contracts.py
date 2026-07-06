@@ -8,10 +8,10 @@ import sys
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-GRPC_SMOKE = REPO_ROOT / "scripts" / "grpc_runtime_smoke.py"
-DRAGONFLY_SMOKE = REPO_ROOT / "scripts" / "dragonfly_profile_smoke.py"
-POSTGIS_SMOKE = REPO_ROOT / "scripts" / "postgis_runtime_smoke.py"
-MQTT_SMOKE = REPO_ROOT / "scripts" / "mqtt_hardened_profile_smoke.py"
+GRPC_SMOKE = REPO_ROOT / "scripts" / "smoke" / "grpc_runtime_smoke.py"
+DRAGONFLY_SMOKE = REPO_ROOT / "scripts" / "smoke" / "dragonfly_profile_smoke.py"
+POSTGIS_SMOKE = REPO_ROOT / "scripts" / "smoke" / "postgis_runtime_smoke.py"
+MQTT_SMOKE = REPO_ROOT / "scripts" / "smoke" / "mqtt_hardened_profile_smoke.py"
 
 
 def run_check(script: Path) -> dict:

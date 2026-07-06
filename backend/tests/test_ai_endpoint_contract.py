@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 import asyncio
 import inspect
 
@@ -12,42 +11,27 @@ from modules.ai_contract import (
     AIEndpointResponse,
     MockAIService,
 )
-
-
-CAPTURED_AT = "2026-05-22T08:00:00Z"
-GENERATED_AT = datetime(2026, 5, 22, 8, 0, 1, tzinfo=timezone.utc)
-
-
-def valid_frame() -> dict[str, object]:
-    return {
-        "streamId": "raw.sample.front",
-        "frameId": "frame-0001",
-        "capturedAt": CAPTURED_AT,
-        "ptsMs": 1200,
-    }
-
-
-def valid_request_payload() -> dict[str, object]:
-    return {
-        "schemaVersion": AI_CONTRACT_SCHEMA_VERSION,
-        "streamId": "raw.sample.front",
-        "frame": valid_frame(),
-        "imageUrl": "https://media.example.test/raw/sample/front/frame-0001.jpg",
-    }
+from tests.fixtures.ai_contract_payloads import (
+    AI_SAMPLE_GENERATED_AT,
+    AI_SAMPLE_REAR_STREAM_ID,
+    AI_SAMPLE_STREAM_ID,
+    valid_ai_frame_payload,
+    valid_ai_request_payload,
+)
 
 
 def test_ai_endpoint_request_accepts_versioned_stream_frame_reference():
-    request = AIEndpointRequest.model_validate(valid_request_payload())
+    request = AIEndpointRequest.model_validate(valid_ai_request_payload())
 
     assert request.schema_version == AI_CONTRACT_SCHEMA_VERSION
-    assert request.stream_id == "raw.sample.front"
-    assert request.frame.stream_id == "raw.sample.front"
+    assert request.stream_id == AI_SAMPLE_STREAM_ID
+    assert request.frame.stream_id == AI_SAMPLE_STREAM_ID
     assert request.frame.captured_at.tzinfo is not None
     assert request.model_dump(by_alias=True)["schemaVersion"] == AI_CONTRACT_SCHEMA_VERSION
 
 
 def test_ai_endpoint_request_rejects_unknown_schema_version():
-    payload = valid_request_payload()
+    payload = valid_ai_request_payload()
     payload["schemaVersion"] = "ai.detection.v2"
 
     with pytest.raises(ValidationError):
@@ -55,9 +39,8 @@ def test_ai_endpoint_request_rejects_unknown_schema_version():
 
 
 def test_ai_endpoint_request_rejects_naive_timestamps():
-    payload = valid_request_payload()
-    frame = dict(valid_frame())
-    frame["capturedAt"] = "2026-05-22T08:00:00"
+    payload = valid_ai_request_payload()
+    frame = valid_ai_frame_payload(captured_at="2026-05-22T08:00:00")
     payload["frame"] = frame
 
     with pytest.raises(ValidationError):
@@ -65,9 +48,8 @@ def test_ai_endpoint_request_rejects_naive_timestamps():
 
 
 def test_ai_endpoint_request_rejects_mismatched_frame_stream():
-    payload = valid_request_payload()
-    frame = dict(valid_frame())
-    frame["streamId"] = "raw.sample.rear"
+    payload = valid_ai_request_payload()
+    frame = valid_ai_frame_payload(stream_id=AI_SAMPLE_REAR_STREAM_ID)
     payload["frame"] = frame
 
     with pytest.raises(ValidationError, match="frame.streamId must match streamId"):
@@ -75,7 +57,7 @@ def test_ai_endpoint_request_rejects_mismatched_frame_stream():
 
 
 def test_ai_endpoint_request_requires_frame_data_or_image_url():
-    payload = valid_request_payload()
+    payload = valid_ai_request_payload()
     payload.pop("imageUrl")
 
     with pytest.raises(ValidationError, match="imageUrl or frameDataBase64 is required"):
@@ -86,9 +68,9 @@ def test_ai_endpoint_response_serializes_dashboard_display_fields():
     response = AIEndpointResponse.model_validate(
         {
             "schemaVersion": AI_CONTRACT_SCHEMA_VERSION,
-            "streamId": "raw.sample.front",
-            "frame": valid_frame(),
-            "generatedAt": GENERATED_AT,
+            "streamId": AI_SAMPLE_STREAM_ID,
+            "frame": valid_ai_frame_payload(),
+            "generatedAt": AI_SAMPLE_GENERATED_AT,
             "riskScore": 0.82,
             "reportText": "작업자 접근 위험 감지",
             "detections": [
@@ -124,9 +106,9 @@ def test_ai_endpoint_response_rejects_invalid_bbox(bbox: dict[str, float]):
         AIEndpointResponse.model_validate(
             {
                 "schemaVersion": AI_CONTRACT_SCHEMA_VERSION,
-                "streamId": "raw.sample.front",
-                "frame": valid_frame(),
-                "generatedAt": GENERATED_AT,
+                "streamId": AI_SAMPLE_STREAM_ID,
+                "frame": valid_ai_frame_payload(),
+                "generatedAt": AI_SAMPLE_GENERATED_AT,
                 "riskScore": 0.82,
                 "reportText": "작업자 접근 위험 감지",
                 "detections": [
@@ -144,9 +126,9 @@ def test_ai_endpoint_response_rejects_invalid_bbox(bbox: dict[str, float]):
 def test_ai_endpoint_response_rejects_raw_media_payload_fields():
     payload = {
         "schemaVersion": AI_CONTRACT_SCHEMA_VERSION,
-        "streamId": "raw.sample.front",
-        "frame": valid_frame(),
-        "generatedAt": GENERATED_AT,
+        "streamId": AI_SAMPLE_STREAM_ID,
+        "frame": valid_ai_frame_payload(),
+        "generatedAt": AI_SAMPLE_GENERATED_AT,
         "riskScore": 0.82,
         "reportText": "작업자 접근 위험 감지",
         "detections": [],
@@ -161,9 +143,9 @@ def test_ai_endpoint_error_response_uses_versioned_error_schema():
     response = AIEndpointErrorResponse.model_validate(
         {
             "schemaVersion": AI_CONTRACT_SCHEMA_VERSION,
-            "streamId": "raw.sample.front",
-            "frame": valid_frame(),
-            "generatedAt": GENERATED_AT,
+            "streamId": AI_SAMPLE_STREAM_ID,
+            "frame": valid_ai_frame_payload(),
+            "generatedAt": AI_SAMPLE_GENERATED_AT,
             "error": {
                 "code": "AI_TIMEOUT",
                 "message": "AI endpoint timed out",
@@ -183,7 +165,7 @@ def test_ai_endpoint_error_response_uses_versioned_error_schema():
 
 
 def test_ai_endpoint_contract_rejects_unknown_payload_fields():
-    payload = valid_request_payload()
+    payload = valid_ai_request_payload()
     payload["unexpectedField"] = True
 
     with pytest.raises(ValidationError):
@@ -191,8 +173,8 @@ def test_ai_endpoint_contract_rejects_unknown_payload_fields():
 
 
 def test_mock_ai_service_uses_async_provider_boundary():
-    service = MockAIService(generated_at=GENERATED_AT)
-    request = AIEndpointRequest.model_validate(valid_request_payload())
+    service = MockAIService(generated_at=AI_SAMPLE_GENERATED_AT)
+    request = AIEndpointRequest.model_validate(valid_ai_request_payload())
 
     assert inspect.iscoroutinefunction(service.detect)
     assert inspect.iscoroutinefunction(service.build_error)
@@ -200,5 +182,5 @@ def test_mock_ai_service_uses_async_provider_boundary():
     response = asyncio.run(service.detect(request))
     error = asyncio.run(service.build_error(request))
 
-    assert response.generated_at == GENERATED_AT
-    assert error.generated_at == GENERATED_AT
+    assert response.generated_at == AI_SAMPLE_GENERATED_AT
+    assert error.generated_at == AI_SAMPLE_GENERATED_AT

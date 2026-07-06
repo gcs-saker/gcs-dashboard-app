@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "m10_runtime_evidence_gate.py"
+SCRIPT = REPO_ROOT / "scripts" / "gates" / "m10_runtime_evidence_gate.py"
 
 
 def load_gate_module():

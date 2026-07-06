@@ -127,11 +127,9 @@ def test_media_proxy_rewrites_public_prefixes_to_mediamtx_paths() -> None:
     webrtc_location = extract_location(config, "/webrtc/")
 
     assert "rewrite ^/hls/(.*)$ /$1 break;" in hls_location
-    assert 'set $gcs_mediamtx_hls "mediamtx:8888";' in hls_location
-    assert "proxy_pass http://$gcs_mediamtx_hls;" in hls_location
+    assert "proxy_pass http://gcs_mediamtx_hls;" in hls_location
     assert "rewrite ^/webrtc/(.*)$ /$1 break;" in webrtc_location
-    assert 'set $gcs_mediamtx_webrtc "mediamtx:8889";' in webrtc_location
-    assert "proxy_pass http://$gcs_mediamtx_webrtc;" in webrtc_location
+    assert "proxy_pass http://gcs_mediamtx_webrtc;" in webrtc_location
 
 
 def test_auth_proxy_rewrites_dashboard_api_auth_prefix_to_backend_auth_router() -> None:

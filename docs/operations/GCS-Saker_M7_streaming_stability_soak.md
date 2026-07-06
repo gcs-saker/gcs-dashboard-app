@@ -24,7 +24,7 @@ RELAY_ONLY=1 \
 SOAK_DURATION_SECONDS=1800 \
 SOAK_SAMPLE_INTERVAL_SECONDS=60 \
 REPORT_FILE=/tmp/gcs-saker-m7-soak-report.txt \
-scripts/m7_streaming_stability_soak.sh --run
+scripts/smoke/m7_streaming_stability_soak.sh --run
 ```
 
 서버 리소스까지 함께 기록하려면 SSH key 기반 접속을 준비한 뒤 다음 값을 추가한다.
@@ -33,7 +33,7 @@ scripts/m7_streaming_stability_soak.sh --run
 SERVER_SSH_TARGET=user@a4ai.tplinkdns.com \
 SERVER_SSH_PORT=55121 \
 SERVER_DOCKER_COMMAND="sudo docker" \
-scripts/m7_streaming_stability_soak.sh --run
+scripts/smoke/m7_streaming_stability_soak.sh --run
 ```
 
 ## 기록 항목

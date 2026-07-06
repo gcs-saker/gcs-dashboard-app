@@ -1,37 +1,21 @@
-import type { FormEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
-import {
-  MOTION_MODE_DESCRIPTIONS,
-  MOTION_MODE_LABELS,
-  MOTION_MODES,
-  type MotionMode,
-} from "../motionPreference";
-import { useTimeSyncStatus } from "../hooks/useTimeSyncStatus";
-import {
-  calculateBrowserOffsetMs,
-  timeSyncHealthLabel,
-  timeSyncModeLabel,
-  type TimeSyncConfigInput,
-  type TimeSyncMode,
-} from "../timeSync";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTimeSyncStatus } from "@dashboard/hooks/useTimeSyncStatus";
+import { calculateBrowserOffsetMs, type TimeSyncConfigInput } from "@dashboard/timeSync";
+import type { MotionMode } from "@dashboard/motionPreference";
+import type { PolicySettingsTab, SettingsTab } from "@dashboard/timeSyncSettingsContracts";
+import { MotionPolicyPanel } from "./settings/MotionPolicyPanel";
+import { SettingsPolicyPanel } from "./settings/SettingsPolicyPanel";
+import { SettingsTabs } from "./settings/SettingsTabs";
+import { TimeSyncForm } from "./settings/TimeSyncForm";
+import { TimeSyncHeader } from "./settings/TimeSyncHeader";
+import { TimeSyncMetrics } from "./settings/TimeSyncMetrics";
 
-const defaultForm: TimeSyncConfigInput = {
+const DEFAULT_TIME_SYNC_FORM: TimeSyncConfigInput = {
   mode: "public",
   sourceHost: "pool.ntp.org",
   sourcePort: 123,
   driftWarnMs: 1_000,
 };
-
-type SettingsTab = "time" | "streaming" | "security" | "motion" | "map" | "account";
-
-const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
-  { id: "time", label: "시간 동기화" },
-  { id: "streaming", label: "스트리밍" },
-  { id: "security", label: "보안" },
-  { id: "motion", label: "화면 효과" },
-  { id: "map", label: "지도" },
-  { id: "account", label: "계정/권한" },
-];
 
 interface TimeSyncSettingsViewProps {
   motionMode?: MotionMode;
@@ -40,7 +24,7 @@ interface TimeSyncSettingsViewProps {
 
 export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }: TimeSyncSettingsViewProps = {}) {
   const { errorMessage, isLoading, isSaving, lastUpdatedAt, refresh, runCheck, save, status } = useTimeSyncStatus();
-  const [form, setForm] = useState<TimeSyncConfigInput>(defaultForm);
+  const [form, setForm] = useState<TimeSyncConfigInput>(DEFAULT_TIME_SYNC_FORM);
   const [activeTab, setActiveTab] = useState<SettingsTab>("time");
 
   useEffect(() => {
@@ -54,232 +38,39 @@ export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }
   }, [status]);
 
   const browserOffsetMs = useMemo(() => (status ? calculateBrowserOffsetMs(status) : 0), [status]);
-  const isManual = form.mode === "manual";
-
-  const updateMode = (mode: TimeSyncMode): void => {
-    setForm((current) => ({
-      ...current,
-      mode,
-      sourceHost: mode === "public" && !current.sourceHost ? "pool.ntp.org" : mode === "manual" ? "" : current.sourceHost,
-    }));
-  };
-
-  const submit = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
+  const saveCurrentForm = useCallback((): void => {
     void save(form);
-  };
+  }, [form, save]);
+  const refreshStatus = useCallback((): void => {
+    void refresh();
+  }, [refresh]);
+  const runSyncCheck = useCallback((): void => {
+    void runCheck();
+  }, [runCheck]);
 
   return (
     <section className="time-sync-view" aria-label="시간 동기화 설정">
-      <div className="time-sync-view__header">
-        <div>
-          <h2>운영설정</h2>
-          {status ? <p>{status.message}</p> : <p>시간 상태 확인 중</p>}
-        </div>
-        <span className={`time-sync-view__health is-${status?.health ?? "warn"}`} role="status">
-          {status ? timeSyncHealthLabel(status.health) : "확인 중"}
-        </span>
-      </div>
-
-      <nav className="time-sync-view__tabs" aria-label="운영설정 탭">
-        {settingsTabs.map((tab) => (
-          <button
-            aria-pressed={activeTab === tab.id}
-            className={activeTab === tab.id ? "is-active" : ""}
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            type="button"
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-
+      <TimeSyncHeader status={status} />
+      <SettingsTabs activeTab={activeTab} onChangeTab={setActiveTab} />
       {activeTab === "time" ? (
         <>
-          <div className="time-sync-view__metrics" aria-label="시간 상태">
-            <span>
-              <strong>서버시각</strong>
-              {status ? new Date(status.serverTime).toLocaleString("ko-KR") : "-"}
-            </span>
-            <span>
-              <strong>브라우저차이</strong>
-              {status ? `${Math.round(browserOffsetMs)} ms` : "-"}
-            </span>
-            <span>
-              <strong>시간소스</strong>
-              {status?.sourceHost ? `${status.sourceHost}:${status.sourcePort}` : "없음"}
-            </span>
-            <span>
-              <strong>기준</strong>
-              {status ? `${status.timezone} / ${status.monotonicMs} ms` : "-"}
-            </span>
-            <span>
-              <strong>갱신</strong>
-              {lastUpdatedAt ? new Date(lastUpdatedAt).toLocaleTimeString("ko-KR") : "-"}
-            </span>
-          </div>
-
-          <form className="time-sync-view__form" onSubmit={submit}>
-            <fieldset>
-              <legend>망 유형</legend>
-              {(["public", "closed_network", "manual"] as TimeSyncMode[]).map((mode) => (
-                <button
-                  aria-pressed={form.mode === mode}
-                  className={form.mode === mode ? "is-active" : ""}
-                  key={mode}
-                  onClick={() => updateMode(mode)}
-                  type="button"
-                >
-                  {timeSyncModeLabel(mode)}
-                </button>
-              ))}
-            </fieldset>
-
-            <label>
-              <span>시간 서버</span>
-              <input
-                disabled={isManual}
-                onChange={(event) => setForm((current) => ({ ...current, sourceHost: event.target.value }))}
-                placeholder={form.mode === "closed_network" ? "10.0.0.10 또는 ntp.local" : "pool.ntp.org"}
-                value={form.sourceHost}
-              />
-            </label>
-
-            <label>
-              <span>포트</span>
-              <input
-                disabled={isManual}
-                min={1}
-                max={65535}
-                onChange={(event) => setForm((current) => ({ ...current, sourcePort: Number(event.target.value) }))}
-                type="number"
-                value={form.sourcePort}
-              />
-            </label>
-
-            <label>
-              <span>Drift 경고</span>
-              <input
-                min={1}
-                max={600000}
-                onChange={(event) => setForm((current) => ({ ...current, driftWarnMs: Number(event.target.value) }))}
-                type="number"
-                value={form.driftWarnMs}
-              />
-            </label>
-
-            <div className="time-sync-view__commands">
-              <button disabled={isSaving || isLoading} type="submit">
-                설정 저장
-              </button>
-              <button disabled={isSaving || isLoading} onClick={() => void runCheck()} type="button">
-                동기화 점검
-              </button>
-              <button disabled={isSaving || isLoading} onClick={() => void refresh()} type="button">
-                새로고침
-              </button>
-            </div>
-          </form>
+          <TimeSyncMetrics browserOffsetMs={browserOffsetMs} lastUpdatedAt={lastUpdatedAt} status={status} />
+          <TimeSyncForm
+            form={form}
+            isLoading={isLoading}
+            isSaving={isSaving}
+            onChangeForm={setForm}
+            onRefresh={refreshStatus}
+            onRunCheck={runSyncCheck}
+            onSubmit={saveCurrentForm}
+          />
         </>
       ) : activeTab === "motion" ? (
         <MotionPolicyPanel motionMode={motionMode} onMotionModeChange={onMotionModeChange} />
       ) : (
-        <SettingsPolicyPanel tab={activeTab as Exclude<SettingsTab, "time" | "motion">} />
+        <SettingsPolicyPanel tab={activeTab as PolicySettingsTab} />
       )}
-
       {errorMessage ? <p className="time-sync-view__error" role="alert">{errorMessage}</p> : null}
     </section>
   );
-}
-
-function MotionPolicyPanel({
-  motionMode,
-  onMotionModeChange,
-}: {
-  motionMode: MotionMode;
-  onMotionModeChange?: (mode: MotionMode) => void;
-}) {
-  return (
-    <section className="time-sync-view__policy motion-settings" aria-label="화면 효과 정책">
-      <header className="time-sync-view__policy-header">
-        <div>
-          <span>전역 Motion Policy</span>
-          <strong>{MOTION_MODE_LABELS[motionMode]}</strong>
-        </div>
-        <em>즉시 반영</em>
-      </header>
-      <div className="motion-settings__choices" role="radiogroup" aria-label="화면 효과 모드">
-        {MOTION_MODES.map((mode) => (
-          <button
-            aria-checked={motionMode === mode}
-            className={motionMode === mode ? "is-active" : ""}
-            key={mode}
-            onClick={() => onMotionModeChange?.(mode)}
-            role="radio"
-            type="button"
-          >
-            <span>{MOTION_MODE_LABELS[mode]}</span>
-            <strong>{mode}</strong>
-            <em>{MOTION_MODE_DESCRIPTIONS[mode]}</em>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function SettingsPolicyPanel({ tab }: { tab: Exclude<SettingsTab, "time" | "motion"> }) {
-  const policies = {
-    streaming: [
-      ["CCTV 기본", "4x4 / 저화질 preview"],
-      ["선택 확대", "고화질 main stream"],
-      ["Fallback", "WebRTC 실패 시 HLS 확인"],
-      ["ICE", "자체 STUN/TURN 우선"],
-    ],
-    security: [
-      ["세션", "HttpOnly refresh token"],
-      ["접근", "허용 대역/권한 그룹"],
-      ["감사", "인증/스트림 이벤트 기록"],
-      ["보호", "CSRF / XSS 기본 정책"],
-    ],
-    map: [
-      ["지도 소스", "공개망 위성 / 오프라인 타일"],
-      ["기본 중심", "선택 스트림 GPS"],
-      ["마커", "스트림/사용자 지정 핀"],
-      ["축척", "500 m 기본"],
-    ],
-    account: [
-      ["사용자", "닉네임 / 역할"],
-      ["그룹", "상위/하위 조직 권한"],
-      ["송출 계정", "장비별 최소 권한"],
-      ["감사", "계정 변경 이력"],
-    ],
-  } satisfies Record<Exclude<SettingsTab, "time" | "motion">, Array<[string, string]>>;
-
-  return (
-    <section className="time-sync-view__policy" aria-label="운영 정책">
-      <header className="time-sync-view__policy-header">
-        <div>
-          <span>설정 묶음</span>
-          <strong>{settingsTabTitle(tab)}</strong>
-        </div>
-        <button type="button">변경 요청</button>
-      </header>
-      {policies[tab].map(([label, value]) => (
-        <article key={label}>
-          <span>{label}</span>
-          <strong>{value}</strong>
-          <em>현재 정책</em>
-        </article>
-      ))}
-    </section>
-  );
-}
-
-function settingsTabTitle(tab: Exclude<SettingsTab, "time" | "motion">): string {
-  if (tab === "streaming") return "스트리밍 수신/송출 정책";
-  if (tab === "security") return "인증/인가 및 감사 정책";
-  if (tab === "map") return "지도 소스 및 마커 정책";
-  return "계정/조직 권한 정책";
 }

@@ -1,0 +1,119 @@
+.map-route {
+  border-bottom: 3px dashed var(--cyan);
+  border-radius: 50%;
+  bottom: 18%;
+  height: 42%;
+  left: 31%;
+  opacity: 0.82;
+  position: absolute;
+  transform: rotate(24deg);
+  width: 50%;
+}
+
+.map-marker {
+  align-items: center;
+  background: rgba(5, 13, 17, 0.74);
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  color: var(--green);
+  cursor: pointer;
+  display: flex;
+  font-weight: 800;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  position: absolute;
+}
+
+.map-marker.is-warning {
+  color: var(--amber);
+}
+
+.map-marker.is-offline {
+  color: #9aa6ad;
+}
+
+.map-focus {
+  align-items: center;
+  color: var(--cyan);
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+}
+
+.map-focus::before {
+  background: currentColor;
+  border-radius: 50%;
+  box-shadow: 0 0 18px currentColor;
+  content: "";
+  height: 12px;
+  width: 12px;
+}
+
+.map-focus__cone {
+  border-left: 34px solid transparent;
+  border-right: 34px solid transparent;
+  border-top: 96px solid rgba(61, 184, 255, 0.22);
+  height: 0;
+  position: absolute;
+  transform-origin: 50% 0;
+  width: 0;
+  z-index: -1;
+}
+
+.map-focus__label {
+  background: rgba(5, 13, 17, 0.78);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  bottom: 14px;
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  position: absolute;
+  right: 14px;
+  white-space: nowrap;
+  z-index: 5;
+}
+
+.marker-1 {
+  left: 32%;
+  top: 36%;
+}
+
+.marker-2 {
+  left: 42%;
+  top: 16%;
+}
+
+.marker-3 {
+  bottom: 24%;
+  left: 15%;
+}
+
+.marker-4 {
+  right: 18%;
+  top: 52%;
+}
+
+.marker-5 {
+  bottom: 20%;
+  left: 48%;
+}
+
+.map-compass {
+  align-items: center;
+  border: 1px solid rgba(220, 232, 242, 0.7);
+  border-radius: 50%;
+  bottom: 18px;
+  display: flex;
+  font-weight: 900;
+  height: 54px;
+  justify-content: center;
+  position: absolute;
+  right: 20px;
+  width: 54px;
+}

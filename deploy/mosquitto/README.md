@@ -34,7 +34,7 @@ Media frames must not be carried by MQTT. WebRTC/HLS media continues to use Medi
 Run the isolated profile smoke from the repository root:
 
 ```bash
-python3 scripts/mqtt_hardened_profile_smoke.py --run
+python3 scripts/smoke/mqtt_hardened_profile_smoke.py --run
 ```
 
 The smoke creates a temporary password file outside the repository, starts only the default hardened MQTT service in an isolated compose project, verifies anonymous rejection, publishes protobuf telemetry from `gcs_device_gateway`, subscribes as `gcs_backend_pub`, then verifies command delivery in the reverse direction. Cleanup uses `docker compose down --remove-orphans` for the isolated project and never removes volumes.

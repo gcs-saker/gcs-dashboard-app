@@ -10,7 +10,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MATRIX = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_v2_completion_matrix.yml"
-SCRIPT = REPO_ROOT / "scripts" / "v2_completion_gate.py"
+SCRIPT = REPO_ROOT / "scripts" / "gates" / "v2_completion_gate.py"
 
 
 def test_v2_completion_matrix_tracks_release_cutover_without_blockers() -> None:
