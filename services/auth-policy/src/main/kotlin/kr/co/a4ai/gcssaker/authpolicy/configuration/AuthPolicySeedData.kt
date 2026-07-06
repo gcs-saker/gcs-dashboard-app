@@ -13,6 +13,15 @@ internal fun seedAuthUsers(
 ): List<AuthUser> =
     listOf(
         AuthUser(
+            id = 100,
+            username = settings.adminUsername,
+            email = "${settings.adminUsername}@example.test",
+            passwordHash = passwordHasher.hash(settings.adminPassword),
+            companyId = settings.adminCompanyId,
+            role = UserRole.ADMIN,
+            groupId = GroupId(settings.adminGroupId),
+        ),
+        AuthUser(
             id = 1,
             username = settings.operatorUsername,
             email = "${settings.operatorUsername}@example.test",

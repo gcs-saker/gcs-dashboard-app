@@ -30,17 +30,19 @@ class StreamPolicyController(
         @RequestBody request: StreamAccessRequest,
     ): StreamAccessResponse {
         val principal = principalResolver.requirePrincipal(authorization)
+        val publisherGroupId = GroupId(request.publisherGroupId)
         val decision = groupPolicy.canViewStream(
             principal,
             StreamSessionDescriptor(
                 path = StreamPath(request.path),
-                publisherGroupId = GroupId(request.publisherGroupId),
+                publisherGroupId = publisherGroupId,
                 startedAt = request.startedAt ?: Instant.EPOCH,
             ),
         )
         securityAuditPublisher.publishStreamAccess(
             principal = principal,
             streamId = request.streamId,
+            publisherGroupId = publisherGroupId,
             allowed = decision.allowed,
             reason = decision.reason,
         )

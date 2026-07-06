@@ -88,8 +88,38 @@ class RequestSecurityFiltersTest {
         assertTrue(second.contentAsString.contains(RateLimitContract.RATE_LIMIT_EXCEEDED))
     }
 
+    @Test
+    fun `api access log filter records request path status and correlation id`() {
+        val sink = RecordingApiAccessLogSink()
+        val request = MockHttpServletRequest("GET", "/auth-policy/healthz").apply {
+            remoteAddr = "203.0.113.20"
+            setAttribute(RequestTraceContract.CORRELATION_ID_ATTRIBUTE, "corr-002")
+        }
+        val response = MockHttpServletResponse()
+        val chain = FilterChain { _, servletResponse ->
+            (servletResponse as MockHttpServletResponse).status = 204
+        }
+
+        ApiAccessLogFilter(sink).doFilter(request, response, chain)
+
+        assertEquals(1, sink.records.size)
+        assertEquals("GET", sink.records.single().method)
+        assertEquals("/auth-policy/healthz", sink.records.single().path)
+        assertEquals(204, sink.records.single().status)
+        assertEquals("corr-002", sink.records.single().correlationId)
+        assertEquals("203.0.113.20", sink.records.single().remoteAddress)
+    }
+
     private fun authRequest(): MockHttpServletRequest =
         MockHttpServletRequest("POST", RateLimitContract.LOGIN_PATH).apply {
             remoteAddr = "203.0.113.10"
         }
+
+    private class RecordingApiAccessLogSink : ApiAccessLogSink {
+        val records = mutableListOf<ApiAccessRecord>()
+
+        override fun append(record: ApiAccessRecord) {
+            records.add(record)
+        }
+    }
 }

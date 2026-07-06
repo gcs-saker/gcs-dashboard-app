@@ -1,6 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy.application
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventReadModel
 import java.time.Instant
 
@@ -49,6 +50,7 @@ class SecurityAuditEventFactory(
     fun streamAccess(
         principal: AuthenticatedPrincipal,
         streamId: String,
+        publisherGroupId: GroupId,
         allowed: Boolean,
         reason: String,
         occurredAt: Instant,
@@ -61,7 +63,13 @@ class SecurityAuditEventFactory(
             } else {
                 SecurityAuditEventContract.EVENT_TYPE_STREAM_ACCESS_DENIED
             },
-            message = "스트림 접근 ${if (allowed) "허용" else "거부"}: ${SecurityAuditEventContract.maskStreamId(streamId)} (${SecurityAuditEventContract.safeReason(reason)})",
+            message = SecurityAuditEventContract.streamAccessMessage(
+                allowed = allowed,
+                streamId = streamId,
+                viewerGroupId = principal.groupId,
+                publisherGroupId = publisherGroupId,
+                reason = reason,
+            ),
             severity = if (allowed) SecurityAuditEventContract.SEVERITY_INFO else SecurityAuditEventContract.SEVERITY_WARN,
             streamId = streamId,
         )

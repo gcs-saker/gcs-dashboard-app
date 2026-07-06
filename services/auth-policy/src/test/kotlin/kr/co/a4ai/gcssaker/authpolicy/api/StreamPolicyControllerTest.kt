@@ -166,7 +166,10 @@ class StreamPolicyControllerTest {
         )
 
         assertEquals(
-            listOf("raw.sample.front:true:same group stream", "raw.company-b.front:false:stream is outside principal group scope"),
+            listOf(
+                "raw.sample.front:co-a:true:same group stream",
+                "raw.company-b.front:co-b:false:stream is outside principal group scope",
+            ),
             audit.events,
         )
     }
@@ -191,10 +194,11 @@ class StreamPolicyControllerTest {
         override fun publishStreamAccess(
             principal: AuthenticatedPrincipal,
             streamId: String,
+            publisherGroupId: GroupId,
             allowed: Boolean,
             reason: String,
         ) {
-            events.add("$streamId:$allowed:$reason")
+            events.add("$streamId:${publisherGroupId.value}:$allowed:$reason")
         }
     }
 }

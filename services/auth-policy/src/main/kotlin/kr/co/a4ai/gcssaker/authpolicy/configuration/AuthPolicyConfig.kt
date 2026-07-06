@@ -6,13 +6,16 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.CachedAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
+import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.PrincipalCache
 import kr.co.a4ai.gcssaker.authpolicy.domain.RefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfigRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncStatusService
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOrganizationHierarchyRepository
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -73,8 +76,22 @@ class AuthPolicyConfig {
         AuthRegistrationService(users, passwordHasher, settings.signupInvites)
 
     @Bean
-    fun groupPolicyService(): GroupPolicyService =
-        GroupPolicyService(seedOrganizationUnits())
+    fun organizationHierarchyRepository(
+        settings: AuthRuntimeSettings,
+        dataSource: ObjectProvider<DataSource>,
+    ): OrganizationHierarchyRepository {
+        val seedUnits = seedOrganizationUnits()
+        return if (settings.jdbcPersistenceEnabled) {
+            dataSource.getIfAvailable()?.let { JdbcOrganizationHierarchyRepository(it, seedUnits) }
+                ?: InMemoryOrganizationHierarchyRepository(seedUnits)
+        } else {
+            InMemoryOrganizationHierarchyRepository(seedUnits)
+        }
+    }
+
+    @Bean
+    fun groupPolicyService(hierarchyRepository: OrganizationHierarchyRepository): GroupPolicyService =
+        GroupPolicyService(hierarchyRepository.current().units())
 
     @Bean
     fun timeSyncConfigRepository(env: Environment): TimeSyncConfigRepository =

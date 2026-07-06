@@ -14,6 +14,10 @@ object AuthRuntimeEnvKeys {
     const val AUTH_REFRESH_COOKIE_SAMESITE = "AUTH_REFRESH_COOKIE_SAMESITE"
     const val AUTH_POLICY_ALLOWED_ORIGINS = "AUTH_POLICY_ALLOWED_ORIGINS"
     const val BACKEND_CORS_ALLOW_ORIGINS = "BACKEND_CORS_ALLOW_ORIGINS"
+    const val AUTH_POLICY_ADMIN_USERNAME = "AUTH_POLICY_ADMIN_USERNAME"
+    const val AUTH_POLICY_ADMIN_PASSWORD = "AUTH_POLICY_ADMIN_PASSWORD"
+    const val AUTH_POLICY_ADMIN_COMPANY_ID = "AUTH_POLICY_ADMIN_COMPANY_ID"
+    const val AUTH_POLICY_ADMIN_GROUP_ID = "AUTH_POLICY_ADMIN_GROUP_ID"
     const val AUTH_POLICY_OPERATOR_USERNAME = "AUTH_POLICY_OPERATOR_USERNAME"
     const val AUTH_POLICY_OPERATOR_PASSWORD = "AUTH_POLICY_OPERATOR_PASSWORD"
     const val AUTH_POLICY_OPERATOR_COMPANY_ID = "AUTH_POLICY_OPERATOR_COMPANY_ID"
@@ -56,6 +60,7 @@ object AuthRuntimeEnvKeys {
 
 object AuthRuntimeDefaults {
     const val LOCAL_JWT_SECRET = "local-auth-policy-secret-at-least-32-characters"
+    const val LOCAL_ADMIN_PASSWORD = "admin-password"
     const val LOCAL_OPERATOR_PASSWORD = "correct-password"
     const val LOCAL_SMOKE_PASSWORD = "m7-smoke-pass"
     const val JWT_ISSUER = "gcs-saker"
@@ -63,6 +68,7 @@ object AuthRuntimeDefaults {
     const val REFRESH_TOKEN_EXPIRE_MINUTES = 10_080L
     const val REFRESH_COOKIE_NAME = "gcs_saker_refresh"
     const val REFRESH_COOKIE_SAME_SITE = "lax"
+    const val ADMIN_USERNAME = "admin01"
     const val OPERATOR_USERNAME = "operator01"
     const val SMOKE_USERNAME = "m7-smoke-viewer"
     const val COMPANY_ID = 1

@@ -6,6 +6,8 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.web.filter.OncePerRequestFilter
 import io.micrometer.tracing.Tracer
 import org.slf4j.MDC
+import org.slf4j.LoggerFactory
+import java.util.concurrent.TimeUnit
 import java.util.UUID
 
 object RequestTraceContract {
@@ -70,4 +72,75 @@ class CorrelationIdFilter(
 
     private fun Tracer?.currentTraceIdOrNull(): String? =
         this?.currentSpan()?.context()?.traceId()?.takeIf { it.isNotBlank() }
+}
+
+object ApiAccessLogContract {
+    const val LOG_NAME = "gcs.api.access"
+    const val UNKNOWN_VALUE = "-"
+}
+
+data class ApiAccessRecord(
+    val method: String,
+    val path: String,
+    val status: Int,
+    val durationMs: Long,
+    val correlationId: String,
+    val traceId: String,
+    val remoteAddress: String,
+)
+
+interface ApiAccessLogSink {
+    fun append(record: ApiAccessRecord)
+}
+
+class Slf4jApiAccessLogSink : ApiAccessLogSink {
+    private val logger = LoggerFactory.getLogger(ApiAccessLogContract.LOG_NAME)
+
+    override fun append(record: ApiAccessRecord) {
+        logger.info(
+            "api_access method={} path={} status={} durationMs={} correlationId={} traceId={} remote={}",
+            record.method,
+            record.path,
+            record.status,
+            record.durationMs,
+            record.correlationId,
+            record.traceId,
+            record.remoteAddress,
+        )
+    }
+}
+
+class ApiAccessLogFilter(
+    private val sink: ApiAccessLogSink,
+) : OncePerRequestFilter() {
+    override fun doFilterInternal(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        filterChain: FilterChain,
+    ) {
+        val startedAt = System.nanoTime()
+        try {
+            filterChain.doFilter(request, response)
+        } finally {
+            sink.append(request.toAccessRecord(response, startedAt))
+        }
+    }
+
+    private fun HttpServletRequest.toAccessRecord(
+        response: HttpServletResponse,
+        startedAt: Long,
+    ): ApiAccessRecord =
+        ApiAccessRecord(
+            method = method,
+            path = requestURI,
+            status = response.status,
+            durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt),
+            correlationId = attributeOrUnknown(RequestTraceContract.CORRELATION_ID_ATTRIBUTE),
+            traceId = attributeOrUnknown(RequestTraceContract.TRACE_ID_ATTRIBUTE),
+            remoteAddress = remoteAddr ?: ApiAccessLogContract.UNKNOWN_VALUE,
+        )
+
+    private fun HttpServletRequest.attributeOrUnknown(name: String): String =
+        getAttribute(name)?.toString()?.takeIf { it.isNotBlank() }
+            ?: ApiAccessLogContract.UNKNOWN_VALUE
 }

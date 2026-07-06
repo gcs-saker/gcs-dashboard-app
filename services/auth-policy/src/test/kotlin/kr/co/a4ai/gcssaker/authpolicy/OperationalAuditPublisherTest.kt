@@ -101,6 +101,31 @@ class OperationalAuditPublisherTest {
         assertEquals(false, event.message.contains("token"))
     }
 
+    @Test
+    fun `security audit records viewer and publisher group for stream access`() {
+        val repository = InMemoryOperationalEventRepository(emptyList())
+        val publisher = RepositorySecurityAuditPublisher(
+            repository = repository,
+            now = { Instant.parse("2026-06-01T00:00:00Z") },
+        )
+
+        publisher.publishStreamAccess(
+            principal = OperationalAuditFixtures.principal,
+            streamId = "raw.company-b.front",
+            publisherGroupId = GroupId("co-b"),
+            allowed = true,
+            reason = "operator can view descendant group stream",
+        )
+
+        val event = repository.eventsFor(
+            OperationalAuditFixtures.principal,
+            OperationalEventQuery(query = SecurityAuditEventContract.EVENT_TYPE_STREAM_ACCESS_ALLOWED),
+        ).single()
+        assertEquals(SecurityAuditEventContract.EVENT_TYPE_STREAM_ACCESS_ALLOWED, event.eventType)
+        assertEquals(true, event.message.contains("viewerGroup=co-a"))
+        assertEquals(true, event.message.contains("publisherGroup=co-b"))
+    }
+
     private object OperationalAuditFixtures {
         val principal = AuthenticatedPrincipal("operator01", UserRole.OPERATOR, GroupId("co-a"))
         val query = OperationalEventQuery(severity = "warn")

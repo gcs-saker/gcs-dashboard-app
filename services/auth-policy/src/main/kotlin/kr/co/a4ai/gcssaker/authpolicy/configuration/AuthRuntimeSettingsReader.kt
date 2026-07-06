@@ -27,6 +27,16 @@ object AuthRuntimeSettingsReader {
                 AuthRuntimeEnvKeys.AUTH_REFRESH_COOKIE_SAMESITE,
             ) ?: AuthRuntimeDefaults.REFRESH_COOKIE_SAME_SITE,
             allowedOrigins = reader.allowedOrigins(),
+            adminUsername = reader.string(
+                AuthRuntimeEnvKeys.AUTH_POLICY_ADMIN_USERNAME,
+                AuthRuntimeDefaults.ADMIN_USERNAME,
+            ),
+            adminPassword = reader.requiredSecret(
+                listOf(AuthRuntimeEnvKeys.AUTH_POLICY_ADMIN_PASSWORD),
+                AuthRuntimeDefaults.LOCAL_ADMIN_PASSWORD,
+            ),
+            adminCompanyId = reader.int(AuthRuntimeEnvKeys.AUTH_POLICY_ADMIN_COMPANY_ID, AuthRuntimeDefaults.COMPANY_ID),
+            adminGroupId = reader.string(AuthRuntimeEnvKeys.AUTH_POLICY_ADMIN_GROUP_ID, AuthRuntimeDefaults.GROUP_ID),
             operatorUsername = reader.string(
                 AuthRuntimeEnvKeys.AUTH_POLICY_OPERATOR_USERNAME,
                 AuthRuntimeDefaults.OPERATOR_USERNAME,

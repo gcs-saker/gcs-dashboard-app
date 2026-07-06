@@ -5,6 +5,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -155,5 +156,32 @@ class GroupPolicyServiceTest {
         assertEquals(1, policies.activeFor(companyA.id, now).size)
         assertEquals(emptyList(), policies.activeFor(companyA.id, now.plusSeconds(301)))
         assertEquals(1, policies.toList().size)
+    }
+
+    @Test
+    fun `group hierarchy rejects missing parent before policy calculation`() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            GroupPolicyService(
+                listOf(
+                    OrganizationUnit(GroupId("co-a"), "A Company", GroupType.COMPANY, GroupId("missing")),
+                ),
+            )
+        }
+
+        assertEquals("parent group must exist", error.message)
+    }
+
+    @Test
+    fun `group hierarchy rejects cycle before policy calculation`() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            GroupPolicyService(
+                listOf(
+                    OrganizationUnit(GroupId("bn-1"), "1 Battalion", GroupType.BATTALION, GroupId("co-a")),
+                    OrganizationUnit(GroupId("co-a"), "A Company", GroupType.COMPANY, GroupId("bn-1")),
+                ),
+            )
+        }
+
+        assertEquals("group hierarchy must not contain a cycle", error.message)
     }
 }
