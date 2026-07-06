@@ -36,12 +36,22 @@ func (s Server) authorizeMediaMTXPublish(w http.ResponseWriter, payload mediaMTX
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthNotConfigured))
 		return
 	}
-	if _, err := domain.ParseStreamPath(payload.Path); err != nil {
+	parsed, err := domain.ParseStreamPath(payload.Path)
+	if err != nil {
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
 		return
 	}
+	target := s.groups.TargetFor(parsed)
 	values, err := url.ParseQuery(strings.TrimPrefix(payload.Query, "?"))
-	if err != nil || validateMediaToken(s.publishToken, values.Get(publisherTokenQueryKey), mediaMTXActionPublish, payload.Path, time.Now()) != nil {
+	if err != nil || validateMediaToken(
+		s.publishToken,
+		values.Get(publisherTokenQueryKey),
+		mediaMTXActionPublish,
+		parsed.StreamID,
+		payload.Path,
+		target.PublisherGroupID,
+		time.Now(),
+	) != nil {
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
 		return
 	}
@@ -54,12 +64,22 @@ func (s Server) authorizeMediaMTXPlayback(w http.ResponseWriter, payload mediaMT
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthNotConfigured))
 		return
 	}
-	if _, err := domain.ParseStreamPath(payload.Path); err != nil {
+	parsed, err := domain.ParseStreamPath(payload.Path)
+	if err != nil {
 		writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
 		return
 	}
+	target := s.groups.TargetFor(parsed)
 	values, err := url.ParseQuery(strings.TrimPrefix(payload.Query, "?"))
-	if err != nil || validateMediaToken(s.publishToken, values.Get(playbackTokenQueryKey), mediaMTXActionPlayback, payload.Path, time.Now()) != nil {
+	if err != nil || validateMediaToken(
+		s.publishToken,
+		values.Get(playbackTokenQueryKey),
+		mediaMTXActionPlayback,
+		parsed.StreamID,
+		payload.Path,
+		target.PublisherGroupID,
+		time.Now(),
+	) != nil {
 		writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
 		return
 	}

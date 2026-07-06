@@ -131,6 +131,8 @@ Authorization: Bearer <accessToken>
 }
 ```
 
+`publisherToken`은 stream-scoped short-lived token이다. MediaMTX auth hook은 token의 `streamId`, `path`, `groupId`, `action=publish`, `exp`, HMAC signature를 검증한다. 따라서 token이 노출되어도 다른 stream, 다른 group, 다른 action으로 재사용할 수 없고 만료 시간이 지나면 거부된다.
+
 5. WebRTC publisher가 `whipUrl`로 SDP offer를 POST한다.
 6. 송출 중 GPS가 있으면 telemetry ingest API 또는 MQTT/Protobuf telemetry channel로 함께 보낸다.
 
