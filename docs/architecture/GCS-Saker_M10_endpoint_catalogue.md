@@ -99,6 +99,8 @@ Refresh token은 httpOnly cookie로 취급한다. password, refresh token, media
 
 Go media-control은 Spring auth-policy의 `POST /policy/streams/access`로 stream 접근 정책을 질의한다. 권한 없는 stream은 목록에서 제외하거나 단건 요청에 `403`을 반환한다.
 
+`publish` 응답의 `whipUrl`에는 HMAC signed short-lived `publisherToken`이 포함된다. MediaMTX auth hook은 `streamId`, `path`, `groupId`, `action`, `exp`, signature를 모두 검증한다.
+
 ## 7. WebRTC, HLS, MediaMTX
 
 | 경로 | 프로토콜 | 누가 사용하나 | 설명 |

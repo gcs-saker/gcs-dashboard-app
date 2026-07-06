@@ -40,6 +40,9 @@ func readGatewayProto(t *testing.T) string {
 	path := filepath.Join("..", "..", "..", "..", "contracts", "proto", "gcs", "saker", "v1", "gateway_service.proto")
 	payload, err := os.ReadFile(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			t.Skipf("gateway proto contract is outside the media-control Docker build context: %s", path)
+		}
 		t.Fatalf("read gateway proto contract: %v", err)
 	}
 	return string(payload)

@@ -86,6 +86,8 @@
 
 `streamId`는 API에서는 `raw.local.webcam` 같은 dot 형식, MediaMTX path에서는 `raw/local/webcam` 같은 slash 형식을 사용한다.
 
+`publish` 응답의 `whipUrl`에는 short-lived `publisherToken`이 포함된다. 이 token은 `streamId`, `path`, `groupId`, `action=publish`, `exp`, HMAC signature에 묶인다.
+
 ## WebRTC / HLS Media Plane
 
 | Method | Path | Auth | Headers | Params | Body | Response | Notes |

@@ -64,7 +64,15 @@ func (s Server) writeStreamPublishResponse(w http.ResponseWriter, parsed domain.
 		return
 	}
 	playbackURLs := s.playback.Build(parsed)
-	token, err := issueMediaToken(s.publishToken, mediaMTXActionPublish, parsed.Path, time.Now())
+	target := s.groups.TargetFor(parsed)
+	token, err := issueMediaToken(
+		s.publishToken,
+		mediaMTXActionPublish,
+		parsed.StreamID,
+		parsed.Path,
+		target.PublisherGroupID,
+		time.Now(),
+	)
 	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
 		return
@@ -80,7 +88,15 @@ func (s Server) withPlaybackToken(playbackURLs domain.PlaybackURLs, parsed domai
 	if s.publishToken == "" {
 		return playbackURLs
 	}
-	token, err := issueMediaToken(s.publishToken, mediaMTXActionPlayback, parsed.Path, time.Now())
+	target := s.groups.TargetFor(parsed)
+	token, err := issueMediaToken(
+		s.publishToken,
+		mediaMTXActionPlayback,
+		parsed.StreamID,
+		parsed.Path,
+		target.PublisherGroupID,
+		time.Now(),
+	)
 	if err != nil {
 		return playbackURLs
 	}
