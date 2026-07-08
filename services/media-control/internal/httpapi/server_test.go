@@ -60,6 +60,38 @@ func (f fakeAuthorizer) AuthorizeStream(
 	return domain.AllowStream(target.StreamID, "test allow"), nil
 }
 
+type fakeDevicePublisher struct {
+	authorization domain.DevicePublishAuthorization
+	err           error
+	observed      *domain.DevicePublishCommand
+}
+
+func (f fakeDevicePublisher) AuthorizeDevicePublish(
+	_ context.Context,
+	command domain.DevicePublishCommand,
+) (domain.DevicePublishAuthorization, error) {
+	if f.observed != nil {
+		*f.observed = command
+	}
+	if f.err != nil {
+		return domain.DevicePublishAuthorization{}, f.err
+	}
+	authorization := f.authorization
+	if authorization.PublisherGroupID == "" {
+		authorization.PublisherGroupID = "co-device"
+	}
+	if authorization.StreamID == "" {
+		authorization.StreamID = command.StreamID
+	}
+	if authorization.Path == "" {
+		authorization.Path = command.Path
+	}
+	if authorization.DeviceUUID == "" {
+		authorization.DeviceUUID = command.DeviceUUID
+	}
+	return authorization, nil
+}
+
 func TestHealthz(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
 	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
@@ -598,6 +630,64 @@ func TestDashboardPublishUrlCanBeIssuedBeforeStreamIsRegistered(t *testing.T) {
 	assertMediaURLToken(t, whipURL, publisherTokenQueryKey, mediaMTXActionPublish, "raw/new-drone/front")
 }
 
+func TestDashboardPublishUrlUsesDevicePolicyWithoutGroupID(t *testing.T) {
+	var observed domain.DevicePublishCommand
+	server := newTestServerWithDevicePublisher(
+		fakeStreams{},
+		fakeIce{},
+		fakeDevicePublisher{observed: &observed},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.drone-01.front/publish", nil)
+	request.Header.Set(deviceUUIDHeader, "device-uuid-001")
+	request.Header.Set(deviceCredentialHeader, "device-secret")
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if observed.DeviceUUID != "device-uuid-001" || observed.Credential != "device-secret" {
+		t.Fatalf("expected device credential to be forwarded, got %#v", observed)
+	}
+	if observed.StreamID != "raw.drone-01.front" || observed.Path != "raw/drone-01/front" {
+		t.Fatalf("unexpected device publish command %#v", observed)
+	}
+	payload := decodeTestJSON[streamPublishResponse](t, recorder)
+	assertMediaURLTokenForGroup(t, payload.WhipURL, publisherTokenQueryKey, mediaMTXActionPublish, "raw/drone-01/front", "co-device")
+}
+
+func TestDashboardPublishUrlRejectsInvalidDeviceCredential(t *testing.T) {
+	server := newTestServerWithDevicePublisher(
+		fakeStreams{},
+		fakeIce{},
+		fakeDevicePublisher{err: domain.ErrDevicePublishAccessDenied},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.drone-01.front/publish", nil)
+	request.Header.Set(deviceUUIDHeader, "device-uuid-001")
+	request.Header.Set(deviceCredentialHeader, "wrong-secret")
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestDashboardPublishUrlRejectsPartialDeviceCredential(t *testing.T) {
+	server := newTestServerWithDevicePublisher(fakeStreams{}, fakeIce{}, fakeDevicePublisher{})
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.drone-01.front/publish", nil)
+	request.Header.Set(deviceUUIDHeader, "device-uuid-001")
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
 func TestMediaMTXPublishAuthRejectsMissingPublisherToken(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
 	request := httptest.NewRequest(
@@ -693,9 +783,9 @@ func TestMediaTokenRejectsWrongStreamAndExpiredToken(t *testing.T) {
 	}
 }
 
-func TestMediaMTXPublishAuthRejectsTokenIssuedForDifferentGroup(t *testing.T) {
+func TestMediaMTXPublishAuthRejectsTokenIssuedForDifferentPath(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
-	token, err := issueMediaToken("test-publish-token", mediaMTXActionPublish, "raw.company-b.front", "raw/company-b/front", "co-a", time.Now())
+	token, err := issueMediaToken("test-publish-token", mediaMTXActionPublish, "raw.company-c.front", "raw/company-c/front", "co-device", time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -710,6 +800,26 @@ func TestMediaMTXPublishAuthRejectsTokenIssuedForDifferentGroup(t *testing.T) {
 
 	if recorder.Code != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestMediaMTXPublishAuthAcceptsSignedDeviceGroupClaim(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	token, err := issueMediaToken("test-publish-token", mediaMTXActionPublish, "raw.company-b.front", "raw/company-b/front", "co-device", time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/mediamtx/auth",
+		strings.NewReader(`{"action":"publish","path":"raw/company-b/front","protocol":"webrtc","query":"publisherToken=`+token+`"}`),
+	)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", recorder.Code, recorder.Body.String())
 	}
 }
 
@@ -729,7 +839,26 @@ func newTestServerWithAuthorizer(streams StreamLister, ice IceServerProvider, au
 	return NewServer(streams, ice, playback, authorizer, groups, "test-publish-token")
 }
 
+func newTestServerWithDevicePublisher(
+	streams StreamLister,
+	ice IceServerProvider,
+	devicePublisher DevicePublishAuthorizer,
+) Server {
+	return newTestServer(streams, ice).WithDevicePublishAuthorizer(devicePublisher)
+}
+
 func assertMediaURLToken(t *testing.T, rawURL string, key string, action string, streamPath string) {
+	assertMediaURLTokenForGroup(t, rawURL, key, action, streamPath, "co-a")
+}
+
+func assertMediaURLTokenForGroup(
+	t *testing.T,
+	rawURL string,
+	key string,
+	action string,
+	streamPath string,
+	groupID string,
+) {
 	t.Helper()
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
@@ -746,7 +875,7 @@ func assertMediaURLToken(t *testing.T, rawURL string, key string, action string,
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := validateMediaToken("test-publish-token", token, action, streamPathParts.StreamID, streamPath, "co-a", time.Now()); err != nil {
+	if err := validateMediaToken("test-publish-token", token, action, streamPathParts.StreamID, streamPath, groupID, time.Now()); err != nil {
 		t.Fatalf("expected valid media token in %s: %v", rawURL, err)
 	}
 }

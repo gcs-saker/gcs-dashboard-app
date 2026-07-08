@@ -41,17 +41,19 @@ func (s Server) authorizeMediaMTXPublish(w http.ResponseWriter, payload mediaMTX
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
 		return
 	}
-	target := s.groups.TargetFor(parsed)
 	values, err := url.ParseQuery(strings.TrimPrefix(payload.Query, "?"))
-	if err != nil || validateMediaToken(
+	if err != nil {
+		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
+		return
+	}
+	if _, err := validateMediaTokenForRoute(
 		s.publishToken,
 		values.Get(publisherTokenQueryKey),
 		mediaMTXActionPublish,
 		parsed.StreamID,
 		payload.Path,
-		target.PublisherGroupID,
 		time.Now(),
-	) != nil {
+	); err != nil {
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
 		return
 	}
