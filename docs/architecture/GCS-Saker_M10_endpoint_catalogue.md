@@ -93,13 +93,13 @@ Refresh token은 httpOnly cookie로 취급한다. password, refresh token, media
 | `GET` | `/media-control/api/v1/streams/ice-servers` | `Authorization` | `iceServers[]` | STUN 우선, TURN fallback 후보 |
 | `GET` | `/media-control/api/v1/streams/{streamId}` | `Authorization` | stream descriptor | stream detail |
 | `GET` | `/media-control/api/v1/streams/{streamId}/playback` | `Authorization` | `playbackUrls.webrtc`, `playbackUrls.hls` | dashboard 수신 |
-| `GET` | `/media-control/api/v1/streams/{streamId}/publish` | `Authorization` | `streamId`, `whipUrl` | browser/mobile publisher |
+| `GET` | `/media-control/api/v1/streams/{streamId}/publish` | `Authorization` 또는 `X-GCS-Device-UUID`, `X-GCS-Device-Credential` | `streamId`, `whipUrl` | browser/mobile publisher, robot/drone gateway |
 | `GET` | `/media-control/api/v1/streams/{streamId}/status` | `Authorization` | `streamId`, `status` | 연결 상태 |
 | `GET` | `/stream/status` | 없음 | deprecated status | legacy smoke only |
 
 Go media-control은 Spring auth-policy의 `POST /policy/streams/access`로 stream 접근 정책을 질의한다. 권한 없는 stream은 목록에서 제외하거나 단건 요청에 `403`을 반환한다.
 
-`publish` 응답의 `whipUrl`에는 HMAC signed short-lived `publisherToken`이 포함된다. MediaMTX auth hook은 `streamId`, `path`, `groupId`, `action`, `exp`, signature를 모두 검증한다.
+`publish` 응답의 `whipUrl`에는 HMAC signed short-lived `publisherToken`이 포함된다. MediaMTX auth hook은 `streamId`, `path`, signed `groupId` claim, `action`, `exp`, signature를 검증한다. 장비 송출의 group은 URL이 아니라 auth-policy의 `registered_devices.group_id`에서 결정되어 token claim으로 서명된다.
 
 ## 6-1. Device Publish Policy API
 
@@ -170,7 +170,7 @@ Python backend는 active core가 아니라 legacy/fallback으로 낮춘다.
 | 연결 대상 | 필요한 데이터 | 보내는 곳 |
 | --- | --- | --- |
 | browser/mobile camera publisher | login account, stream id/path, camera permission, microphone permission | `GET /media-control/api/v1/streams/{streamId}/publish` 후 반환된 `whipUrl` |
-| external camera/robot gateway | `deviceUuid`, device credential, stream id/path, telemetry schema | `POST /auth-policy/policy/devices/publish`, 이후 gRPC/MQTT/WHIP |
+| external camera/robot gateway | `deviceUuid`, device credential, stream id/path, telemetry schema | `GET /media-control/api/v1/streams/{streamId}/publish`, 이후 gRPC/MQTT/WHIP |
 | dashboard receiver | operator account, `Authorization`, stream id, ICE servers | `GET /media-control/api/v1/streams`, `/ice-servers`, `/playback` |
 | telemetry ingest | `uuid`/`assetId`, GPS, altitude, heading, speed, battery, timestamp | 현재 `/api/telemetry/`, 목표 gRPC/MQTT |
 | command ack | `requestId`/`commandId`, `assetId`, status, observed timestamp | gRPC/MQTT command ack |

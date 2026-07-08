@@ -38,8 +38,9 @@ def test_device_authentication_guide_documents_group_mapping_and_rejection() -> 
     assert "MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID" in guide
     assert "MEDIA_CONTROL_STREAM_GROUP_MAP" in guide
     assert "raw/company-b/front=co-b" in guide
-    assert "co-a token으로 publish하면 MediaMTX auth hook이 거부" in guide
-    assert "요청에는 `groupId`를 넣지 않는다" in guide
+    assert "signed `publisherToken`" in guide
+    assert "group claim 존재" in guide
+    assert "`groupId`를 넣지 않는다" in guide
     assert "registered_devices.group_id" in guide
 
 

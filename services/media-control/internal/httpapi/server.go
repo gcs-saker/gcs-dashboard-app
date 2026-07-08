@@ -31,15 +31,23 @@ type StreamAuthorizer interface {
 	) (domain.StreamAccessDecision, error)
 }
 
+type DevicePublishAuthorizer interface {
+	AuthorizeDevicePublish(
+		ctx context.Context,
+		command domain.DevicePublishCommand,
+	) (domain.DevicePublishAuthorization, error)
+}
+
 type Server struct {
-	streams      StreamLister
-	ice          IceServerProvider
-	playback     domain.PlaybackURLBuilder
-	authorizer   StreamAuthorizer
-	groups       domain.StreamGroupResolver
-	publishToken string
-	metrics      *Metrics
-	gateway      GatewayReadiness
+	streams         StreamLister
+	ice             IceServerProvider
+	playback        domain.PlaybackURLBuilder
+	authorizer      StreamAuthorizer
+	devicePublisher DevicePublishAuthorizer
+	groups          domain.StreamGroupResolver
+	publishToken    string
+	metrics         *Metrics
+	gateway         GatewayReadiness
 }
 
 func NewServer(
@@ -74,6 +82,11 @@ func NewServerWithMetrics(
 		publishToken: strings.TrimSpace(publishToken),
 		metrics:      metrics,
 	}
+}
+
+func (s Server) WithDevicePublishAuthorizer(authorizer DevicePublishAuthorizer) Server {
+	s.devicePublisher = authorizer
+	return s
 }
 
 func (s Server) WithGatewayReadiness(gateway GatewayReadiness) Server {

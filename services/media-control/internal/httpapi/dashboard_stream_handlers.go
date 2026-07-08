@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 )
@@ -25,11 +26,43 @@ func (s Server) writeDashboardStreamPublish(w http.ResponseWriter, r *http.Reque
 		writeJSON(w, http.StatusUnprocessableEntity, errorPayload(err.Error()))
 		return
 	}
+	if requestHasDeviceCredential(r) {
+		s.writeDeviceStreamPublish(w, r, parsed)
+		return
+	}
 	if err := s.requireStreamAccess(r.Context(), r.Header.Get(authorizationHeader), parsed); err != nil {
 		s.writeStreamAccessError(w, err)
 		return
 	}
 	s.writeStreamPublishResponse(w, parsed)
+}
+
+func (s Server) writeDeviceStreamPublish(w http.ResponseWriter, r *http.Request, parsed domain.ParsedStreamPath) {
+	if s.devicePublisher == nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
+	command := domain.DevicePublishCommand{
+		DeviceUUID: strings.TrimSpace(r.Header.Get(deviceUUIDHeader)),
+		Credential: strings.TrimSpace(r.Header.Get(deviceCredentialHeader)),
+		StreamID:   parsed.StreamID,
+		Path:       parsed.Path,
+	}
+	if command.DeviceUUID == "" || command.Credential == "" {
+		writeJSON(w, http.StatusUnauthorized, errorPayload(errDevicePublisherAuthRequired))
+		return
+	}
+	authorization, err := s.devicePublisher.AuthorizeDevicePublish(r.Context(), command)
+	if err != nil {
+		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
+		return
+	}
+	s.writeStreamPublishResponseForGroup(w, parsed, authorization.PublisherGroupID)
+}
+
+func requestHasDeviceCredential(r *http.Request) bool {
+	return strings.TrimSpace(r.Header.Get(deviceUUIDHeader)) != "" ||
+		strings.TrimSpace(r.Header.Get(deviceCredentialHeader)) != ""
 }
 
 func (s Server) writeDashboardStreamRead(w http.ResponseWriter, r *http.Request, streamID string, suffix string) {

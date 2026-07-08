@@ -8,7 +8,7 @@
 | --- | --- | --- | --- |
 | Browser/mobile camera publisher | `GET /media-control/api/v1/streams/{streamId}/publish` 후 반환된 `whipUrl` | operator/publisher bearer token, short-lived `publisherToken` | WebRTC WHIP 송출 |
 | Dashboard receiver | `GET /media-control/api/v1/streams/{streamId}/playback` 후 반환된 `playbackUrls.webrtc` | operator bearer token, short-lived `playbackToken` | WebRTC WHEP 수신 |
-| Robot/drone gateway | `POST /auth-policy/policy/devices/publish` 후 gateway-managed WHIP | device UUID, device credential | 송출 group 결정, telemetry, stream event, command ack |
+| Robot/drone gateway | `GET /media-control/api/v1/streams/{streamId}/publish` 후 반환된 `whipUrl` | device UUID, device credential, short-lived `publisherToken` | 송출 group 결정, telemetry, stream event, command ack |
 | MQTT device | `gcs/{orgId}/{groupId}/{assetId}/telemetry` | broker credential, device policy | 대량 telemetry ingest |
 
 브라우저는 gRPC/MQTT에 직접 연결하지 않는다. 브라우저는 HTTPS JSON, SSE, WHIP, WHEP, HLS만 사용한다.
@@ -32,7 +32,7 @@ media-control이 발급하는 `publisherToken`은 HMAC 서명된 short-lived tok
 | --- | --- | --- |
 | `streamId` | API stream id, 예: `raw.local.webcam` | MediaMTX auth hook |
 | `path` | MediaMTX stream path, 예: `raw/local/webcam` | MediaMTX auth hook |
-| `groupId` | stream publish group, 예: `co-a` | MediaMTX auth hook |
+| `groupId` | media-control이 서명한 stream publish group claim, 예: `co-a` | MediaMTX auth hook |
 | `action` | `publish` | MediaMTX auth hook |
 | `exp` | 만료 Unix timestamp | MediaMTX auth hook |
 | signature | signing secret 기반 HMAC-SHA256 | MediaMTX auth hook |
@@ -43,13 +43,13 @@ media-control이 발급하는 `publisherToken`은 HMAC 서명된 short-lived tok
 - token 변조
 - `streamId` 불일치
 - `path` 불일치
-- `groupId` 불일치
+- `groupId` claim 누락 또는 token 변조
 - `action` 불일치
 - 만료 시간 초과
 
 ## 4. Group Authorization
 
-stream group은 media-control의 `StreamGroupResolver`가 계산한다.
+browser/mobile publisher의 stream group은 media-control의 `StreamGroupResolver`가 계산한다.
 
 | 설정 | 의미 |
 | --- | --- |
@@ -63,35 +63,27 @@ MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID=co-a
 MEDIA_CONTROL_STREAM_GROUP_MAP=raw/company-b/front=co-b
 ```
 
-위 설정에서 `raw/company-b/front`에 대해 co-a token으로 publish하면 MediaMTX auth hook이 거부한다.
+robot/drone gateway는 `StreamGroupResolver`에 group을 직접 싣지 않는다. media-control이 auth-policy device publish policy를 호출하고, auth-policy는 `registered_devices.group_id`를 기준으로 `publisherGroupId`를 결정한다. MediaMTX auth hook은 media-control이 발급한 signed `publisherToken`의 `streamId`, `path`, `action`, `exp`, signature와 group claim 존재를 검증한다.
 
 ## 5. Robot / Drone Gateway 절차
 
 | Step | 연결 | 필요한 값 | 결과 |
 | --- | --- | --- | --- |
 | 1 | device 등록 | `deviceUuid`, optional `macHash`, `groupId`, credential hash | 장비 식별 기준 확보 |
-| 2 | publish group 인가 | `deviceUuid`, device credential, `streamId`, `path` | 서버가 `publisherGroupId` 결정 |
+| 2 | publish URL 발급 | `deviceUuid`, device credential, `streamId` | 서버가 `publisherGroupId` 결정 후 WHIP URL 발급 |
 | 3 | gRPC 또는 MQTT 연결 | gateway token 또는 broker credential | telemetry/control channel 생성 |
 | 4 | stream 송출 | device policy를 통과한 gateway-managed WHIP URL | MediaMTX publish |
 | 5 | telemetry/ack 송신 | Protobuf payload | dashboard read model 반영 |
 
-장비 publish group 인가 요청:
+장비 publish URL 발급 요청:
 
 ```http
-POST /auth-policy/policy/devices/publish
-Content-Type: application/json
+GET /media-control/api/v1/streams/raw.drone01.front/publish
+X-GCS-Device-UUID: device-front-001
+X-GCS-Device-Credential: <device-secret>
 ```
 
-```json
-{
-  "deviceUuid": "device-front-001",
-  "credential": "<device-secret>",
-  "streamId": "raw.drone01.front",
-  "path": "raw/drone01/front"
-}
-```
-
-요청에는 `groupId`를 넣지 않는다. 서버는 `registered_devices.group_id`를 기준으로 응답의 `publisherGroupId`를 결정한다.
+media-control은 내부에서 `POST /auth-policy/policy/devices/publish`를 호출한다. 이 내부 요청에는 `deviceUuid`, `credential`, `streamId`, `path`만 포함하며 `groupId`를 넣지 않는다. 서버는 `registered_devices.group_id`를 기준으로 응답의 `publisherGroupId`를 결정한다.
 
 장비의 long-lived credential은 장비 secure storage 또는 gateway secret store에 보관한다. 브라우저 bundle이나 문서에 넣지 않는다.
 

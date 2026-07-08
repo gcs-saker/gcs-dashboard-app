@@ -128,7 +128,7 @@ GraphQL은 media path가 아니다. Dashboard 복합 조회가 REST 조합으로
 | GET | `<EDGE>/media-control/api/v1/streams` | `/api/v1/streams` | bearer | 접근 가능한 stream 목록 |
 | GET | `<EDGE>/media-control/api/v1/streams/{streamId}` | `/api/v1/streams/{streamId}` | bearer | stream 단건 정보 |
 | GET | `<EDGE>/media-control/api/v1/streams/{streamId}/playback` | `/api/v1/streams/{streamId}/playback` | bearer | short-lived WHEP/HLS 수신 URL 발급 |
-| GET | `<EDGE>/media-control/api/v1/streams/{streamId}/publish` | `/api/v1/streams/{streamId}/publish` | bearer/publisher | short-lived WHIP 송출 URL 발급 |
+| GET | `<EDGE>/media-control/api/v1/streams/{streamId}/publish` | `/api/v1/streams/{streamId}/publish` | bearer 또는 device credential | short-lived WHIP 송출 URL 발급 |
 | GET | `<EDGE>/media-control/api/v1/streams/{streamId}/status` | `/api/v1/streams/{streamId}/status` | bearer | stream 상태 조회 |
 | GET | `<EDGE>/media-control/api/v1/streams/ice-servers` | `/api/v1/streams/ice-servers` | bearer | STUN/TURN ICE server 목록 조회 |
 
@@ -163,7 +163,7 @@ Authorization: Bearer <accessToken>
 }
 ```
 
-`publisherToken`은 stream-scoped short-lived token이다. MediaMTX auth hook은 token의 `streamId`, `path`, `groupId`, `action=publish`, `exp`, HMAC signature를 검증한다. 따라서 token이 노출되어도 다른 stream, 다른 group, 다른 action으로 재사용할 수 없고 만료 시간이 지나면 거부된다.
+`publisherToken`은 stream-scoped short-lived token이다. MediaMTX auth hook은 token의 `streamId`, `path`, signed `groupId` claim, `action=publish`, `exp`, HMAC signature를 검증한다. 장비 송출의 경우 group은 URL이나 stream id에서 받지 않고 auth-policy가 `registered_devices.group_id`로 결정한 값을 media-control이 token claim으로 서명한다. 따라서 token이 노출되어도 다른 stream, 다른 action으로 재사용할 수 없고 만료 시간이 지나면 거부된다.
 
 5. WebRTC publisher가 `whipUrl`로 SDP offer를 POST한다.
 6. 송출 중 GPS가 있으면 telemetry ingest API 또는 MQTT/Protobuf telemetry channel로 함께 보낸다.
@@ -201,6 +201,24 @@ Authorization: Bearer <accessToken>
 - `<EDGE>/hls/raw/local/webcam/index.m3u8?playbackToken=<short-lived-token>`
 
 ## 외부 로봇 / 드론 telemetry 연결 방식
+
+## 외부 로봇 / 드론 WebRTC 송출 흐름
+
+1. 장비 또는 gateway에 `deviceUuid`와 device credential을 안전하게 보관한다.
+2. stream id를 정한다.
+   - 예: `raw.drone01.front`
+   - Media path: `raw/drone01/front`
+3. media-control에 WHIP URL을 요청한다.
+
+```http
+GET <EDGE>/media-control/api/v1/streams/raw.drone01.front/publish
+X-GCS-Device-UUID: device-front-001
+X-GCS-Device-Credential: <device-secret>
+```
+
+4. media-control은 내부에서 `<EDGE>/auth-policy/policy/devices/publish`에 `deviceUuid`, `credential`, `streamId`, `path`만 전달한다.
+5. auth-policy는 `registered_devices.group_id` 기준으로 `publisherGroupId`를 결정한다. 요청에는 `groupId`를 넣지 않는다.
+6. 응답의 `whipUrl`로 WHIP SDP offer를 보낸다.
 
 ### 현재 즉시 사용 가능한 REST 방식
 

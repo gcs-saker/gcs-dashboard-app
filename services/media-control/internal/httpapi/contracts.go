@@ -26,6 +26,8 @@ const (
 	contentTypeHeader      = "Content-Type"
 	jsonContentType        = "application/json"
 	authorizationHeader    = "Authorization"
+	deviceCredentialHeader = "X-GCS-Device-Credential"
+	deviceUUIDHeader       = "X-GCS-Device-UUID"
 	traceIDHeader          = "X-GCS-Trace-Id"
 	deprecationHeader      = "Deprecation"
 	replacementRouteHeader = "X-GCS-Replacement-Route"
@@ -62,6 +64,7 @@ const (
 	errStreamAccessDeniedMessage     = "stream access denied"
 	errStreamNotRegisteredMessage    = "stream is not registered"
 	errPublisherAuthNotConfigured    = "publisher authorization is not configured"
+	errDevicePublisherAuthRequired   = "device publisher authorization is required"
 	errPublisherAuthFailed           = "publisher authorization failed"
 	errPlaybackAuthFailed            = "playback authorization failed"
 )

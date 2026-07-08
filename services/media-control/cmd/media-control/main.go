@@ -44,7 +44,7 @@ func main() {
 		config.groupResolver,
 		config.publishToken,
 		metrics,
-	)
+	).WithDevicePublishAuthorizer(&authorizer)
 
 	grpcContext, stopGrpc := context.WithCancel(context.Background())
 	defer stopGrpc()

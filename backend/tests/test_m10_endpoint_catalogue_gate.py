@@ -66,6 +66,8 @@ def test_endpoint_catalogue_documents_required_data_and_headers() -> None:
         "playbackUrls.hls",
         "whipUrl",
         "deviceUuid",
+        "X-GCS-Device-UUID",
+        "X-GCS-Device-Credential",
         "publisherGroupId",
     ]
 

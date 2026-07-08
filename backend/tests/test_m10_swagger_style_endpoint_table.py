@@ -61,6 +61,8 @@ def test_swagger_style_table_documents_non_http_device_boundaries() -> None:
         "browser 직접 연결 금지",
         "media frame은 WebRTC/HLS media plane으로만 보낸다",
         "deviceUuid",
+        "X-GCS-Device-UUID",
+        "X-GCS-Device-Credential",
     ]
 
     for boundary in required_boundaries:
