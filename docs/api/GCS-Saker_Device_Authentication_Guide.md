@@ -67,9 +67,26 @@ robot/drone gateway는 `StreamGroupResolver`에 group을 직접 싣지 않는다
 
 ## 5. Robot / Drone Gateway 절차
 
+운영자가 먼저 장비 UUID와 credential을 발급한다. 이 단계는 장비가 직접 호출하지 않고 관리자 권한으로 수행한다.
+
+```http
+POST /auth-policy/admin/devices
+Authorization: Bearer <adminAccessToken>
+Content-Type: application/json
+```
+
+```json
+{
+  "groupId": "co-a",
+  "displayName": "Daegu Drone 01"
+}
+```
+
+응답의 `deviceUuid`와 `credential`은 장비 또는 gateway secure storage에 저장한다. 서버 DB에는 credential 원문이 아니라 hash만 저장한다.
+
 | Step | 연결 | 필요한 값 | 결과 |
 | --- | --- | --- | --- |
-| 1 | device 등록 | `deviceUuid`, optional `macHash`, `groupId`, credential hash | 장비 식별 기준 확보 |
+| 1 | admin device 등록 | `groupId`, `displayName` | `deviceUuid`, 최초 credential 발급 |
 | 2 | publish URL 발급 | `deviceUuid`, device credential, `streamId` | 서버가 `publisherGroupId` 결정 후 WHIP URL 발급 |
 | 3 | gRPC 또는 MQTT 연결 | gateway token 또는 broker credential | telemetry/control channel 생성 |
 | 4 | stream 송출 | device policy를 통과한 gateway-managed WHIP URL | MediaMTX publish |

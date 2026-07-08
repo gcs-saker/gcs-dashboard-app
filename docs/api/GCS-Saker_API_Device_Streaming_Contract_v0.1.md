@@ -113,6 +113,28 @@
 
 요청에는 `groupId`를 넣지 않는다. 서버가 `registered_devices.group_id`를 원장으로 삼아 `publisherGroupId`를 결정한다.
 
+## Admin Device Lifecycle API
+
+이 API는 장비가 직접 호출하는 운용 API가 아니다. 운영자/관리자가 장비를 등록하고 장비에 주입할 UUID와 credential을 발급하기 위한 관리 API다.
+
+| Method | Public URL | 내부 auth-policy route | 인증 | 용도 |
+| --- | --- | --- | --- | --- |
+| POST | `<EDGE>/auth-policy/admin/devices` | `/admin/devices` | admin bearer | 장비 UUID와 최초 credential 발급 |
+| POST | `<EDGE>/auth-policy/admin/devices/{deviceUuid}/activate` | `/admin/devices/{deviceUuid}/activate` | admin bearer | 장비 송출 활성화 |
+| POST | `<EDGE>/auth-policy/admin/devices/{deviceUuid}/disable` | `/admin/devices/{deviceUuid}/disable` | admin bearer | 분실/폐기/차단 장비 비활성화 |
+| POST | `<EDGE>/auth-policy/admin/devices/{deviceUuid}/credential` | `/admin/devices/{deviceUuid}/credential` | admin bearer | 장비 credential 재발급 |
+
+등록 요청 body:
+
+```json
+{
+  "groupId": "co-a",
+  "displayName": "Daegu Drone 01"
+}
+```
+
+등록/재발급 응답의 `credential`은 최초 1회만 운영자에게 보여주고, 서버 DB에는 hash만 저장한다.
+
 ## GraphQL API
 
 | Method | Public URL | 내부 auth-policy route | 인증 | 용도 |

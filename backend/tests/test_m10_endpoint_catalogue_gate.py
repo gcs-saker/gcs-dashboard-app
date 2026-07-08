@@ -37,6 +37,8 @@ def test_endpoint_catalogue_covers_public_entrypoint_and_routes() -> None:
         "/media-control/api/v1/streams/{streamId}/playback",
         "/media-control/api/v1/streams/{streamId}/publish",
         "/auth-policy/policy/devices/publish",
+        "/auth-policy/admin/devices",
+        "/auth-policy/admin/devices/{deviceUuid}/credential",
         "/webrtc/{streamPath}/whip",
         "/webrtc/{streamPath}/whep",
         "/hls/{streamPath}/index.m3u8",
@@ -69,6 +71,7 @@ def test_endpoint_catalogue_documents_required_data_and_headers() -> None:
         "X-GCS-Device-UUID",
         "X-GCS-Device-Credential",
         "publisherGroupId",
+        "credential 원문은 최초 발급/재발급 응답에만 노출",
     ]
 
     for contract in required_contracts:
