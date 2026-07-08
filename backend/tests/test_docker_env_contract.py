@@ -93,6 +93,13 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
         "${DASHBOARD_MAP_REQUIRES_API_KEY:-false}"
     )
     assert services["backend"]["environment"]["WEBRTC_TURN_URL"] == "${WEBRTC_TURN_URL:-}"
+    assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_LISTEN_ADDR"] == ":9090"
+    assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_TOKEN"] == (
+        "${MEDIA_CONTROL_GRPC_TOKEN:-${MEDIA_CONTROL_PUBLISH_TOKEN:?Set MEDIA_CONTROL_PUBLISH_TOKEN in .env}}"
+    )
+    assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES"] == (
+        "${MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES:-65536}"
+    )
     assert services["nginx"]["build"]["args"]["VITE_API_BASE_URL"] == "${VITE_API_BASE_URL:-/api}"
     assert services["nginx"]["build"]["args"]["VITE_IDENTITY_API_BASE_URL"] == (
         "${VITE_AUTH_API_BASE_URL:-/auth-policy/auth}"
@@ -219,6 +226,13 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
     )
     assert services["media-control"]["environment"]["MEDIA_CONTROL_PUBLIC_HLS_BASE_URL"] == (
         "${MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://localhost:8080/hls}"
+    )
+    assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_LISTEN_ADDR"] == ":9090"
+    assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_TOKEN"] == (
+        "${MEDIA_CONTROL_GRPC_TOKEN:-${MEDIA_CONTROL_PUBLISH_TOKEN:?Set MEDIA_CONTROL_PUBLISH_TOKEN}}"
+    )
+    assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES"] == (
+        "${MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES:-65536}"
     )
     assert services["media-control"]["environment"]["MEDIA_CONTROL_STUN_URL"] == (
         "${MEDIA_CONTROL_STUN_URL:-stun:stun.l.google.com:19302}"

@@ -94,6 +94,8 @@ MEDIA_CONTROL_GRPC_TOKEN=replace-with-secret
 MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES=65536
 ```
 
+로컬 `gcs-dashboard/docker-compose.yml`과 단일 노드 `deploy/compose/compose.single-node.poc.yml` 모두 media-control 컨테이너 내부에서 `:9090` listener를 연다. 이 포트는 기본 public ingress로 공개하지 않고, 같은 Docker network의 device gateway, Python fallback, Spring/Go service-to-service 경로에서만 사용한다.
+
 기본 method:
 
 ```text

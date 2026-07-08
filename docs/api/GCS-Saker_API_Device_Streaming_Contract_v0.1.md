@@ -218,6 +218,8 @@ Payload:
 상태:
 
 - media-control은 내부 gRPC gateway listener를 `MEDIA_CONTROL_GRPC_LISTEN_ADDR`로 실행한다.
+- 로컬 compose와 단일 노드 compose는 media-control 내부 listener를 `:9090`으로 연다.
+- `9090/tcp`는 기본 public ingress가 아니며, 외부 브라우저/장비가 직접 호출하는 공개 포트로 열지 않는다.
 - 기본 compose target은 `media-control:9090`이다.
 - gateway 인증 metadata는 `x-gcs-gateway-token` 또는 `authorization: bearer <token>`이다.
 - method는 `/gcs.saker.v1.SakerGatewayService/Exchange` bidirectional streaming이다.
