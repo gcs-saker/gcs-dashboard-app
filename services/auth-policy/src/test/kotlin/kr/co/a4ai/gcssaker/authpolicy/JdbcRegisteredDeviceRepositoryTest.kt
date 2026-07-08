@@ -38,6 +38,40 @@ class JdbcRegisteredDeviceRepositoryTest {
         assertEquals(RegisteredDeviceStatus.ACTIVE, saved?.status)
     }
 
+    @Test
+    fun `jdbc repository updates registered device lifecycle fields`() {
+        val dataSource = h2DataSource()
+        JdbcOrganizationHierarchyRepository(
+            dataSource,
+            listOf(OrganizationUnit(GroupId("co-a"), "A Company", GroupType.COMPANY)),
+        )
+        val repository = JdbcRegisteredDeviceRepository(dataSource)
+
+        repository.save(
+            RegisteredDevice(
+                deviceUuid = DeviceRepositoryFixtures.DEVICE_UUID,
+                groupId = GroupId("co-a"),
+                displayName = "Front Drone",
+                credentialHash = DeviceRepositoryFixtures.CREDENTIAL_HASH,
+                status = RegisteredDeviceStatus.PENDING,
+            ),
+        )
+        repository.save(
+            RegisteredDevice(
+                deviceUuid = DeviceRepositoryFixtures.DEVICE_UUID,
+                groupId = GroupId("co-a"),
+                displayName = "Front Drone Updated",
+                credentialHash = DeviceRepositoryFixtures.ROTATED_CREDENTIAL_HASH,
+                status = RegisteredDeviceStatus.DISABLED,
+            ),
+        )
+
+        val saved = repository.findByDeviceUuid(DeviceRepositoryFixtures.DEVICE_UUID)
+        assertEquals("Front Drone Updated", saved?.displayName)
+        assertEquals(DeviceRepositoryFixtures.ROTATED_CREDENTIAL_HASH, saved?.credentialHash)
+        assertEquals(RegisteredDeviceStatus.DISABLED, saved?.status)
+    }
+
     private fun h2DataSource(): JdbcDataSource =
         JdbcDataSource().apply {
             setURL("jdbc:h2:mem:registered_device_${System.nanoTime()};MODE=PostgreSQL;DB_CLOSE_DELAY=-1")
@@ -49,4 +83,5 @@ class JdbcRegisteredDeviceRepositoryTest {
 private object DeviceRepositoryFixtures {
     const val DEVICE_UUID = "device-front-001"
     const val CREDENTIAL_HASH = "credential-hash"
+    const val ROTATED_CREDENTIAL_HASH = "rotated-credential-hash"
 }

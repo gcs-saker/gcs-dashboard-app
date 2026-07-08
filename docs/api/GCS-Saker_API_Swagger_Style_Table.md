@@ -110,6 +110,15 @@ media frame은 WebRTC/HLS media plane으로만 보낸다. JSON, MQTT, gRPC, Grap
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | POST | `/auth-policy/policy/devices/publish` | device credential | `Content-Type: application/json` | none | `deviceUuid`, `credential`, `streamId`, `path` | `deviceUuid`, `streamId`, `path`, `publisherGroupId`, `policyVersion` | 요청 body에 `groupId`를 넣지 않는다. 서버가 등록 장비 group을 결정한다. |
 
+## Admin Device Lifecycle
+
+| Method | Path | Auth | Headers | Params | Body | Response | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| POST | `/auth-policy/admin/devices` | admin bearer | `Authorization`, `Content-Type: application/json` | none | `groupId`, `displayName` | `deviceUuid`, `credential`, `groupId`, `displayName`, `status` | credential 원문은 최초 1회 응답에만 표시하고 DB에는 hash만 저장 |
+| POST | `/auth-policy/admin/devices/{deviceUuid}/activate` | admin bearer | `Authorization` | path `deviceUuid` | none | `deviceUuid`, `groupId`, `displayName`, `status` | PENDING/DISABLED 장비를 ACTIVE로 전환 |
+| POST | `/auth-policy/admin/devices/{deviceUuid}/disable` | admin bearer | `Authorization` | path `deviceUuid` | none | `deviceUuid`, `groupId`, `displayName`, `status` | 분실/폐기/침해 의심 장비 차단 |
+| POST | `/auth-policy/admin/devices/{deviceUuid}/credential` | admin bearer | `Authorization` | path `deviceUuid` | none | `deviceUuid`, `credential`, `groupId`, `displayName`, `status` | 기존 credential을 폐기하고 새 credential 발급 |
+
 ## Legacy / Fallback
 
 | Method | Path | Auth | Headers | Params | Body | Response | Notes |

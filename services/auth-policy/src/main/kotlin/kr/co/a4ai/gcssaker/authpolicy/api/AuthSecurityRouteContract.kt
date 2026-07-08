@@ -14,6 +14,7 @@ object AuthSecurityRouteContract {
     private const val OPS_PREFIX = "/ops/**"
     private const val TELEMETRY_PREFIX = "/telemetry/**"
     private const val ASSET_PREFIX = "/asset/**"
+    private const val ADMIN_PREFIX = "/admin/**"
     private const val ROLE_PREFIX = "ROLE_"
 
     val CORS_METHODS = listOf(HttpMethod.GET.name(), HttpMethod.POST.name(), HttpMethod.OPTIONS.name())
@@ -44,6 +45,7 @@ object AuthSecurityRouteContract {
         RouteMatcher(null, OPS_PREFIX),
         RouteMatcher(null, TELEMETRY_PREFIX),
         RouteMatcher(null, ASSET_PREFIX),
+        RouteMatcher(null, ADMIN_PREFIX),
         RouteMatcher(null, GraphQlApiRoutes.GRAPHQL),
     )
 

@@ -111,6 +111,19 @@ Go media-control은 Spring auth-policy의 `POST /policy/streams/access`로 strea
 
 이 API 요청 body에는 `groupId`를 받지 않는다. 장비 group은 `registered_devices.group_id`가 원장이다.
 
+## 6-2. Admin Device Lifecycle API
+
+운영자/관리자가 장비를 등록하고 현장 장비에 주입할 `deviceUuid`와 credential을 발급하는 관리 API다. 장비 운용 중 telemetry/control data plane으로 사용하지 않는다.
+
+| Method | 외부 URL | 필요한 데이터 | 응답 핵심 필드 | 용도 |
+| --- | --- | --- | --- | --- |
+| `POST` | `/auth-policy/admin/devices` | admin bearer, `groupId`, `displayName` | `deviceUuid`, `credential`, `groupId`, `status` | 장비 등록 및 최초 secret 발급 |
+| `POST` | `/auth-policy/admin/devices/{deviceUuid}/activate` | admin bearer, `deviceUuid` | `deviceUuid`, `status` | 송출 허용 상태 전환 |
+| `POST` | `/auth-policy/admin/devices/{deviceUuid}/disable` | admin bearer, `deviceUuid` | `deviceUuid`, `status` | 분실/폐기/침해 의심 장비 차단 |
+| `POST` | `/auth-policy/admin/devices/{deviceUuid}/credential` | admin bearer, `deviceUuid` | `deviceUuid`, 새 `credential`, `status` | 장비 credential 회전 |
+
+credential 원문은 최초 발급/재발급 응답에만 노출한다. DB에는 hash만 저장한다.
+
 ## 7. WebRTC, HLS, MediaMTX
 
 | 경로 | 프로토콜 | 누가 사용하나 | 설명 |

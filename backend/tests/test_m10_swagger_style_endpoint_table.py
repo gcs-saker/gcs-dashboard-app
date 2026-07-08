@@ -41,6 +41,10 @@ def test_swagger_style_table_covers_core_public_endpoints() -> None:
         "/media-control/api/v1/streams/{streamId}/playback",
         "/media-control/api/v1/streams/{streamId}/publish",
         "/auth-policy/policy/devices/publish",
+        "/auth-policy/admin/devices",
+        "/auth-policy/admin/devices/{deviceUuid}/activate",
+        "/auth-policy/admin/devices/{deviceUuid}/disable",
+        "/auth-policy/admin/devices/{deviceUuid}/credential",
         "/webrtc/{streamPath}/whip",
         "/webrtc/{streamPath}/whep",
         "/hls/{streamPath}/index.m3u8",
@@ -63,6 +67,7 @@ def test_swagger_style_table_documents_non_http_device_boundaries() -> None:
         "deviceUuid",
         "X-GCS-Device-UUID",
         "X-GCS-Device-Credential",
+        "credential 원문은 최초 1회 응답에만 표시",
     ]
 
     for boundary in required_boundaries:

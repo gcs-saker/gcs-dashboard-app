@@ -18,6 +18,7 @@ def test_device_authentication_guide_explains_publisher_flow_and_claims() -> Non
         "GET /media-control/api/v1/streams/{streamId}/publish",
         "POST /webrtc/{streamPath}/whip?publisherToken=...",
         "POST /auth-policy/policy/devices/publish",
+        "POST /auth-policy/admin/devices",
         "`deviceUuid`",
         "`streamId`",
         "`path`",
@@ -42,6 +43,7 @@ def test_device_authentication_guide_documents_group_mapping_and_rejection() -> 
     assert "group claim 존재" in guide
     assert "`groupId`를 넣지 않는다" in guide
     assert "registered_devices.group_id" in guide
+    assert "서버 DB에는 credential 원문이 아니라 hash만 저장" in guide
 
 
 def test_endpoint_tables_reference_stream_scoped_publish_token() -> None:
