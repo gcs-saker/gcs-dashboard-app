@@ -34,6 +34,14 @@ func TestExchangeRejectsUnauthorizedMetadata(t *testing.T) {
 	}
 }
 
+func TestExchangeRejectsMissingGatewayMetadata(t *testing.T) {
+	_, err := exchangeOnceWithMetadata(t, gatewayRequest("req-missing-auth", true), metadata.MD{}, nil)
+
+	if status.Code(err) != codes.Unauthenticated {
+		t.Fatalf("expected unauthenticated error, got %v", err)
+	}
+}
+
 func TestExchangeReturnsMalformedStatusForInvalidPayload(t *testing.T) {
 	response, err := exchangeOnce(t, []byte{0xff}, testGatewayToken, nil)
 
@@ -168,6 +176,20 @@ func exchangeOnce(
 	extraMetadata ...metadata.MD,
 ) ([]byte, error) {
 	t.Helper()
+	gatewayMetadata := metadata.Pairs(metadataGatewayToken, token)
+	for _, item := range extraMetadata {
+		gatewayMetadata = metadata.Join(gatewayMetadata, item)
+	}
+	return exchangeOnceWithMetadata(t, request, gatewayMetadata, mutate)
+}
+
+func exchangeOnceWithMetadata(
+	t *testing.T,
+	request []byte,
+	gatewayMetadata metadata.MD,
+	mutate func(Server) Server,
+) ([]byte, error) {
+	t.Helper()
 	listener := bufconn.Listen(1024 * 1024)
 	grpcServer := grpc.NewServer()
 	server := NewServer(testGatewayToken, defaultMaxPayloadBytes)
@@ -182,11 +204,8 @@ func exchangeOnce(
 
 	ctx := metadata.NewOutgoingContext(
 		context.Background(),
-		metadata.Pairs(metadataGatewayToken, token),
+		gatewayMetadata,
 	)
-	for _, item := range extraMetadata {
-		ctx = metadata.NewOutgoingContext(ctx, metadata.Join(metadata.Pairs(metadataGatewayToken, token), item))
-	}
 	conn, err := grpc.DialContext(
 		ctx,
 		"bufnet",

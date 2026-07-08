@@ -50,10 +50,11 @@ def test_grpc_runtime_smoke_reports_integrated_runtime_state_and_follow_up_gates
     assert payload["descriptorFallbackCommand"][:3] == [sys.executable, "-m", "grpc_tools.protoc"]
     assert "client implementation behind MessageSender abstraction" in payload["implementedRuntime"]
     assert "SakerGatewayService.Exchange server implementation in media-control" in payload["implementedRuntime"]
+    assert "MEDIA_CONTROL_GRPC_LISTEN_ADDR compose wiring for local and single-node runtime" in payload["implementedRuntime"]
     assert "explicit GatewayStreamRequest and GatewayStreamResponse DTO mappers" in payload["implementedRuntime"]
     assert "planned telemetry, stream_event, command_ack payloads over one bidi stream" in payload["implementedRuntime"]
     assert payload["requestPayloads"] == ["telemetry", "stream_event", "command_ack"]
-    assert "native/device gateway packaging outside smoke script" in payload["remainingBeforeFullActive"]
+    assert "long-lived multi-minute soak in staging network" in payload["remainingBeforeFullActive"]
     assert "telemetry, stream_event, and command_ack" in payload["promotionGate"]
 
 

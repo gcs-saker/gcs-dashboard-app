@@ -94,6 +94,7 @@ def main() -> int:
             "client implementation behind MessageSender abstraction",
             "CONTROL_GRPC_TARGET and CONTROL_GRPC_METHOD runtime configuration",
             "SakerGatewayService.Exchange server implementation in media-control",
+            "MEDIA_CONTROL_GRPC_LISTEN_ADDR compose wiring for local and single-node runtime",
             "metadata based gateway authorization",
             "explicit GatewayStreamRequest and GatewayStreamResponse DTO mappers",
             "planned telemetry, stream_event, command_ack payloads over one bidi stream",
@@ -107,7 +108,6 @@ def main() -> int:
         ],
         "remainingBeforeFullActive": [
             "generated DTO adoption can replace explicit mappers when protoc plugins are pinned",
-            "native/device gateway packaging outside smoke script",
             "long-lived multi-minute soak in staging network",
         ],
         "promotionGate": "Today scope is complete when Exchange succeeds over the compose internal network with telemetry, stream_event, and command_ack request payloads.",
