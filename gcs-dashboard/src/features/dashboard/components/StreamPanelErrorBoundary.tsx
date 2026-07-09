@@ -1,41 +1,21 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
 
 interface StreamPanelErrorBoundaryProps {
   children: ReactNode;
   fallbackLabel: string;
 }
 
-interface StreamPanelErrorBoundaryState {
-  hasError: boolean;
-}
-
-export class StreamPanelErrorBoundary extends Component<
-  StreamPanelErrorBoundaryProps,
-  StreamPanelErrorBoundaryState
-> {
-  state: StreamPanelErrorBoundaryState = { hasError: false };
-
-  static getDerivedStateFromError(): StreamPanelErrorBoundaryState {
-    return { hasError: true };
-  }
-
-  componentDidCatch(_error: Error, _errorInfo: ErrorInfo): void {
-    // The UI boundary is intentionally local; central logging can be wired later.
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="stream-card stream-card--failed" role="status">
-          <span className="stream-card__topline">
-            <strong>{this.props.fallbackLabel}</strong>
-            <span className="ops-badge is-error">오류</span>
-          </span>
-          <span className="stream-card__failure">이 스트림 패널만 격리되었습니다.</span>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
+export function StreamPanelErrorBoundary({ children, fallbackLabel }: StreamPanelErrorBoundaryProps) {
+  return (
+    <DashboardErrorBoundary
+      boundaryId={`stream-card:${fallbackLabel}`}
+      description="이 스트림 패널만 격리되었습니다. 다른 스트림과 지도, 이벤트 로그는 계속 사용할 수 있습니다."
+      retryLabel="스트림 패널 다시 시도"
+      scope="stream"
+      title={fallbackLabel}
+    >
+      {children}
+    </DashboardErrorBoundary>
+  );
 }

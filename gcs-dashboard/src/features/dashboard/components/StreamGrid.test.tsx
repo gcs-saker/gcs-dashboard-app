@@ -57,7 +57,7 @@ describe("StreamGrid", () => {
       />,
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent("이 스트림 패널만 격리되었습니다.");
+    expect(screen.getByRole("alert", { name: "스트리밍 2 복구" })).toHaveTextContent("이 스트림 패널만 격리되었습니다.");
     expect(screen.getByRole("button", { name: "스트리밍 1" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "스트리밍 3" })).toBeInTheDocument();
     consoleError.mockRestore();

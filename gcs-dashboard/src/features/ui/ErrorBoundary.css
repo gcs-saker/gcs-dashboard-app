@@ -1,0 +1,55 @@
+.dashboard-error-boundary {
+  align-content: center;
+  background:
+    linear-gradient(rgba(255, 176, 166, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 176, 166, 0.035) 1px, transparent 1px),
+    #061018;
+  background-size: 28px 28px;
+  border: 1px solid rgba(255, 176, 166, 0.42);
+  color: #dce8f4;
+  display: grid;
+  gap: 10px;
+  min-height: 150px;
+  padding: 18px;
+}
+
+.dashboard-error-boundary strong {
+  font-size: 15px;
+}
+
+.dashboard-error-boundary p {
+  color: #b7c8d6;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.dashboard-error-boundary__topline {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.dashboard-error-boundary__badge {
+  border: 1px solid rgba(255, 176, 166, 0.54);
+  color: #ffb0a6;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 8px;
+}
+
+.dashboard-error-boundary__retry {
+  background: rgba(61, 184, 255, 0.12);
+  border: 1px solid rgba(61, 184, 255, 0.58);
+  color: #dce8f4;
+  cursor: pointer;
+  font-weight: 800;
+  justify-self: start;
+  min-height: 34px;
+  padding: 6px 12px;
+}
+
+.dashboard-error-boundary__retry:hover {
+  background: rgba(61, 184, 255, 0.2);
+}
