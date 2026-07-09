@@ -47,7 +47,8 @@ def test_m10_first_read_view_uses_windowed_latest_stream_session_projection() ->
     migration = READ_VIEW_MIGRATION.read_text(encoding="utf-8")
     read_sql = READ_SQL.read_text(encoding="utf-8")
 
-    assert "CREATE VIEW IF NOT EXISTS operational_stream_session_latest" in migration
+    assert "DROP VIEW IF EXISTS operational_stream_session_latest" in migration
+    assert "CREATE VIEW operational_stream_session_latest" in migration
     assert "ROW_NUMBER() OVER" in migration
     assert "PARTITION BY group_id, stream_id, COALESCE(session_id, '')" in migration
     assert "ORDER BY last_heartbeat_at DESC, id DESC" in migration
