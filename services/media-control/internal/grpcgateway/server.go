@@ -4,48 +4,48 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log"
 	"net"
 	"strings"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
 const (
-	serviceName            = "gcs.saker.v1.SakerGatewayService"
-	methodExchange         = "Exchange"
-	fullMethodExchange     = "/gcs.saker.v1.SakerGatewayService/Exchange"
-	metadataAuthorization  = "authorization"
-	metadataGatewayToken   = "x-gcs-gateway-token"
-	metadataReconnect      = "x-gcs-gateway-reconnect"
-	bearerPrefix           = "bearer "
 	defaultMaxPayloadBytes = 64 * 1024
-	reasonAccepted         = "accepted"
-	reasonMalformed        = "malformed_protobuf"
 	reasonUnauthorized     = "unauthorized_gateway_metadata"
-	reasonBackpressure     = "payload_too_large"
-	reasonReconnect        = "reconnect_requested"
 )
 
 type Server struct {
 	token           string
 	maxPayloadBytes int
+	handler         GatewayRequestHandler
 }
 
 func NewServer(token string, maxPayloadBytes int) Server {
+	return NewServerWithHandler(token, maxPayloadBytes, nil)
+}
+
+func NewServerWithHandler(token string, maxPayloadBytes int, handler GatewayRequestHandler) Server {
 	if maxPayloadBytes <= 0 {
 		maxPayloadBytes = defaultMaxPayloadBytes
+	}
+	if handler == nil {
+		handler = GatewayRequestHandlerFunc(acceptGatewayRequest)
 	}
 	return Server{
 		token:           strings.TrimSpace(token),
 		maxPayloadBytes: maxPayloadBytes,
+		handler:         handler,
 	}
 }
 
 func (s Server) Serve(ctx context.Context, listenAddress string) error {
+	return s.serve(ctx, listenAddress, nil)
+}
+
+func (s Server) serve(ctx context.Context, listenAddress string, onReady func()) error {
 	if strings.TrimSpace(listenAddress) == "" {
 		return nil
 	}
@@ -59,27 +59,14 @@ func (s Server) Serve(ctx context.Context, listenAddress string) error {
 		<-ctx.Done()
 		server.GracefulStop()
 	}()
+	if onReady != nil {
+		onReady()
+	}
 	err = server.Serve(listener)
 	if errors.Is(err, grpc.ErrServerStopped) {
 		return nil
 	}
 	return err
-}
-
-func (s Server) Register(server *grpc.Server) {
-	server.RegisterService(&grpc.ServiceDesc{
-		ServiceName: serviceName,
-		HandlerType: (*gatewayExchangeServer)(nil),
-		Streams: []grpc.StreamDesc{
-			{
-				StreamName:    methodExchange,
-				Handler:       s.exchangeHandler,
-				ServerStreams: true,
-				ClientStreams: true,
-			},
-		},
-		Metadata: "gcs/saker/v1/gateway_service.proto",
-	}, &gatewayExchangeService{})
 }
 
 func (s Server) exchangeHandler(_ any, stream grpc.ServerStream) error {
@@ -96,14 +83,14 @@ func (s Server) exchangeHandler(_ any, stream grpc.ServerStream) error {
 		if err != nil {
 			return err
 		}
-		response := s.handleRequest(request, reconnectRequested)
+		response := s.handleRequest(stream.Context(), request, reconnectRequested)
 		if err := stream.SendMsg(response); err != nil {
 			return err
 		}
 	}
 }
 
-func (s Server) handleRequest(request []byte, reconnectRequested bool) []byte {
+func (s Server) handleRequest(ctx context.Context, request []byte, reconnectRequested bool) []byte {
 	if len(request) > s.maxPayloadBytes {
 		return GatewayResponse("", GatewayAckStatusBackpressure, reasonBackpressure)
 	}
@@ -114,50 +101,10 @@ func (s Server) handleRequest(request []byte, reconnectRequested bool) []byte {
 	if reconnectRequested {
 		return GatewayResponse(gatewayRequest.RequestID, GatewayAckStatusReconnect, reasonReconnect)
 	}
-	return GatewayResponse(gatewayRequest.RequestID, GatewayAckStatusAccepted, reasonAccepted)
+	return gatewayDecisionResponse(gatewayRequest.RequestID, s.handler.HandleGatewayRequest(ctx, gatewayRequest))
 }
-
-func (s Server) authorized(ctx context.Context) bool {
-	if s.token == "" {
-		return false
-	}
-	if metadataContains(ctx, metadataGatewayToken, s.token) {
-		return true
-	}
-	for _, value := range metadataValues(ctx, metadataAuthorization) {
-		if strings.EqualFold(strings.TrimSpace(value), bearerPrefix+s.token) {
-			return true
-		}
-	}
-	return false
-}
-
-func metadataContains(ctx context.Context, key string, expected string) bool {
-	for _, value := range metadataValues(ctx, key) {
-		if strings.TrimSpace(value) == expected {
-			return true
-		}
-	}
-	return false
-}
-
-func metadataValues(ctx context.Context, key string) []string {
-	incoming, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil
-	}
-	return incoming.Get(key)
-}
-
-type gatewayExchangeServer interface{}
-
-type gatewayExchangeService struct{}
 
 func Start(ctx context.Context, listenAddress string, token string, maxPayloadBytes int) {
-	server := NewServer(token, maxPayloadBytes)
-	go func() {
-		if err := server.Serve(ctx, listenAddress); err != nil {
-			log.Printf("gRPC gateway stopped: %v", err)
-		}
-	}()
+	state := StartWithReadiness(ctx, listenAddress, token, maxPayloadBytes)
+	_ = state
 }

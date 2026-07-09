@@ -3,7 +3,7 @@ from typing import Annotated, Generic, TypeAlias, TypeVar
 
 from fastapi import APIRouter, Depends
 
-from api.contracts import StreamErrorDetails, StreamRoutes
+from api.contracts import StreamErrorDetails, StreamRoutes, StreamStatusProtocol
 from api.errors import NotFoundApiError, UnprocessableEntityApiError
 from config import WebRtcIceSettings
 from model.stream_model import StreamPathError, validate_stream_id, validate_stream_path
@@ -20,7 +20,7 @@ from modules.streaming.service import StreamingService
 StreamResponseT = TypeVar("StreamResponseT")
 
 router = APIRouter()
-router.include_router(streaming_module_router, prefix="/module")
+router.include_router(streaming_module_router, prefix=StreamRoutes.MODULE_PREFIX)
 v1_router = APIRouter()
 v1_streaming_service = StreamingService()
 
@@ -76,18 +76,12 @@ class StreamStatusOperation(StreamLookupOperation[StreamStatusResponse]):
 
 @v1_router.get(StreamRoutes.STREAMS, response_model=list[StreamDescriptorResponse])
 async def list_streams(service: StreamServiceDependency) -> list[StreamDescriptorResponse]:
-    return [
-        StreamDescriptorResponse.from_domain(descriptor)
-        for descriptor in service.list_registered_streams()
-    ]
+    return [StreamDescriptorResponse.from_domain(descriptor) for descriptor in service.list_registered_streams()]
 
 
 @v1_router.get(StreamRoutes.ICE_SERVERS, response_model=list[IceServerResponse])
 async def list_stream_ice_servers() -> list[IceServerResponse]:
-    return [
-        IceServerResponse(**server)
-        for server in WebRtcIceSettings.from_env().browser_ice_servers()
-    ]
+    return [IceServerResponse(**server) for server in WebRtcIceSettings.from_env().browser_ice_servers()]
 
 
 @v1_router.get(StreamRoutes.PLAYBACK, response_model=StreamPlaybackResponse)
@@ -116,7 +110,7 @@ async def get_stream(
 
 @router.get(StreamRoutes.STATUS)
 async def stream_status():
-    return {"stream": "ready"}
+    return {StreamStatusProtocol.FIELD_STREAM: StreamStatusProtocol.READY}
 
 
 @router.get(StreamRoutes.PATH_FROM_ID)

@@ -3,85 +3,36 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Final
+from typing import Any
 
-from sqlalchemy import Column, DateTime, Float, MetaData, String, Table
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 
 from model.telemetry_model import TelemetryCreate
 from modules.telemetry_buffer.buffer import TelemetryBufferRecord
+from modules.telemetry_buffer.storage_contract import (
+    HISTORY_ROW_COLUMNS,
+    LATEST_ROW_COLUMNS,
+    TelemetrySqlDialect,
+    TelemetryStorageColumns,
+    TelemetryStorageTables,
+    telemetry_history_table,
+)
 from sql.telemetry_sql import Telemetry
 
-
-class TelemetrySqlDialect:
-    MYSQL: Final = "mysql"
-    MARIADB: Final = "mariadb"
-    POSTGRESQL: Final = "postgresql"
-
-
-class TelemetryStorageTables:
-    LATEST: Final = "telemetry_realtime"
-    HISTORY: Final = "telemetry_history"
-    LATEST_MATERIALIZED_VIEW: Final = "telemetry_latest_mv"
-
-
-class TelemetryStorageColumns:
-    UUID: Final = "uuid"
-    STREAM_UUID: Final = "stream_uuid"
-    LATITUDE: Final = "latitude"
-    LONGITUDE: Final = "longitude"
-    ALTITUDE: Final = "altitude"
-    MAGNETIC_X: Final = "magneticX"
-    MAGNETIC_Y: Final = "magneticY"
-    MAGNETIC_Z: Final = "magneticZ"
-    SOC: Final = "soc"
-    PHONE_BATTERY_SOC: Final = "phoneBatterySOC"
-    VELOCITY: Final = "velocity"
-    TOTAL_DISTANCE: Final = "totalDistance"
-    EPOCH_TIME: Final = "epochTime"
-    PORT_DISTANCE: Final = "portDistance"
-    RECEIVED_AT: Final = "received_at"
-
-
-LATEST_ROW_COLUMNS: Final[tuple[str, ...]] = (
-    TelemetryStorageColumns.UUID,
-    TelemetryStorageColumns.LATITUDE,
-    TelemetryStorageColumns.LONGITUDE,
-    TelemetryStorageColumns.ALTITUDE,
-    TelemetryStorageColumns.MAGNETIC_X,
-    TelemetryStorageColumns.MAGNETIC_Y,
-    TelemetryStorageColumns.MAGNETIC_Z,
-    TelemetryStorageColumns.SOC,
-    TelemetryStorageColumns.PHONE_BATTERY_SOC,
-    TelemetryStorageColumns.VELOCITY,
-    TelemetryStorageColumns.TOTAL_DISTANCE,
-    TelemetryStorageColumns.EPOCH_TIME,
-    TelemetryStorageColumns.PORT_DISTANCE,
-)
-
-HISTORY_ROW_COLUMNS: Final[tuple[str, ...]] = (
-    TelemetryStorageColumns.STREAM_UUID,
-    TelemetryStorageColumns.LATITUDE,
-    TelemetryStorageColumns.LONGITUDE,
-    TelemetryStorageColumns.ALTITUDE,
-    TelemetryStorageColumns.VELOCITY,
-    TelemetryStorageColumns.EPOCH_TIME,
-    TelemetryStorageColumns.RECEIVED_AT,
-)
-
-
-telemetry_history_table = Table(
-    TelemetryStorageTables.HISTORY,
-    MetaData(),
-    Column(TelemetryStorageColumns.STREAM_UUID, String(64), nullable=False),
-    Column(TelemetryStorageColumns.LATITUDE, Float),
-    Column(TelemetryStorageColumns.LONGITUDE, Float),
-    Column(TelemetryStorageColumns.ALTITUDE, Float),
-    Column(TelemetryStorageColumns.VELOCITY, Float),
-    Column(TelemetryStorageColumns.EPOCH_TIME, Float),
-    Column(TelemetryStorageColumns.RECEIVED_AT, DateTime(timezone=True), nullable=False),
-)
+__all__ = [
+    "HISTORY_ROW_COLUMNS",
+    "TelemetryBulkBatch",
+    "TelemetryBulkPayload",
+    "TelemetryBulkWritePlan",
+    "TelemetrySqlDialect",
+    "TelemetryStorageTables",
+    "build_mysql_latest_bulk_upsert",
+    "build_postgres_history_bulk_insert",
+    "build_postgres_latest_bulk_upsert",
+    "plan_mysql_latest_bulk_write",
+    "plan_postgres_bulk_write",
+]
 
 
 @dataclass(frozen=True)

@@ -1,104 +1,91 @@
-# GCS SAKER Dashboard
+# GCS-Saker Dashboard
+
+React + TypeScript dashboard for GCS-Saker. The app is built with Vite, TanStack Query, Zustand, WebRTC/HLS playback components, IndexedDB-backed local UI preferences, and dashboard feature modules.
+
+## Setup
+
+```bash
+npm install
+cp .env.example .env
+npm run dev
+```
+
+`VITE_*` variables are build-time values. Keep real server secrets outside frontend env files because they are baked into the browser bundle.
+
+Local Docker Compose uses the hardened Mosquitto profile by default. Before running the full local stack, generate `../deploy/mosquitto/passwords.local` and keep it out of Git:
+
+```bash
+docker run --rm -it -v "$PWD/../deploy/mosquitto:/work" eclipse-mosquitto:2 \
+  mosquitto_passwd -c /work/passwords.local gcs_backend_pub
+docker run --rm -it -v "$PWD/../deploy/mosquitto:/work" eclipse-mosquitto:2 \
+  mosquitto_passwd /work/passwords.local gcs_device_gateway
+```
+
+The no-auth broker is available only through `docker-compose.mqtt-no-auth.profile.yml` with the `local-mqtt-no-auth` profile for isolated local smoke checks.
+
+## Verification
+
+```bash
+npm run typecheck
+npm run build
+npm test -- --run
+npm run test:coverage
+```
+
+Playwright E2E smoke uses the local Vite web server with MSW preview handlers. It verifies login routing, dashboard entry, stream selection, map marker selection, event log, and CCTV navigation without real credentials:
+
+```bash
+npm run test:e2e
+```
+
+Screenshots and failure context are written under `test-results/` and `playwright-report/`; both are local artifacts and are intentionally ignored by Git.
+
+## Component Scenarios
+
+Dashboard component scenarios use Ladle:
+
+```bash
+npm run stories
+npm run stories:build
+```
+
+Ladle was selected over Storybook for the current M10 scope because the dashboard already uses Vite, and the immediate goal is lightweight state documentation rather than a full design-system addon stack. Stories focus on fixed UI states for streams, system status, event logs, map popups, and audio waveform panels. The story fixtures reuse MSW mock data where possible so API contract mocks and component scenarios do not drift apart.
+
+## Render Diagnostics
+
+Render diagnostics are opt-in and development-only:
+
+```bash
+VITE_RENDER_DIAGNOSTICS=1 npm run dev
+```
+
+The adopted baseline is React Profiler plus the local `useRenderDiagnostics` hook. React Profiler is already part of React, so it gives commit duration and render count evidence without adding a runtime dependency. React Scan and why-did-you-render remain deferred candidates: they are useful for visual overlays and memo diagnostics, but need additional React 19 and production-bundle isolation checks before adoption. Current hotspot baselines are stream grid status updates and audio waveform updates; the guard stores snapshots on `globalThis.__GCS_SAKER_RENDER_DIAGNOSTICS__` and profiler commits on `globalThis.__GCS_SAKER_RENDER_PROFILER_COMMITS__` only when the flag is enabled.
 
 ## Local Server-01 Dashboard Check
 
-로컬에서 dashboard UI를 켜고 Server-01 backend/edge를 같이 확인할 때는 frontend가 직접
-`http://localhost:8001`로 요청하면 안 된다. 로컬 Vite dev server는 `/api`, `/hls`,
-`/webrtc`를 Server-01 public edge로 proxy한다.
+For local UI checks against Server-01 edge, the browser must call the Vite server path and let Vite proxy route traffic. The dashboard should not call `http://localhost:8001` directly.
 
-로컬 `.env` 기준:
+Recommended local `.env` values:
 
 ```bash
 VITE_API_BASE_URL=/api
 VITE_AUTH_API_BASE_URL=/auth-policy/auth
+VITE_STREAM_API_BASE_URL=/media-control
 VITE_HLS_BASE_URL=/hls
 VITE_LOCAL_WEBCAM_WHIP_URL=/webrtc/raw/local/webcam/whip
 VITE_DEV_PROXY_TARGET=https://a4ai.tplinkdns.com
 ```
 
-실행:
+If DevTools shows `http://localhost:8001/auth/login` or `/api/auth/login`, an old `.env` or shell-level `VITE_AUTH_API_BASE_URL` is still active.
 
-```bash
-npm run dev
+## Feature Layout
+
+```text
+src/features/auth/          login/signup API and views
+src/features/dashboard/     dashboard panels, map, events, status, preferences
+src/features/streaming/     WebRTC, HLS, publisher, talkback
+src/features/ui/            shared UI primitives
+src/mocks/                  MSW handlers and fixtures
 ```
 
-브라우저에서 `http://localhost:<vite-port>`로 열면 로그인 요청은 브라우저 기준
-`/auth-policy/auth/login`으로 나가고, Vite가
-`https://a4ai.tplinkdns.com/auth-policy/auth/login`으로 전달한다. DevTools에
-`http://localhost:8001/auth/login` 또는 `/api/auth/login`이 보이면 오래된 `.env` 또는
-shell 환경변수 `VITE_AUTH_API_BASE_URL`이 남아있는 상태다.
-
-## M1 Sample Stream
-
-M1 streaming development uses MediaMTX and the seed stream path `raw/sample/front`.
-
-From the repository root, start MediaMTX:
-
-```bash
-cd gcs-dashboard
-docker compose up mediamtx
-```
-
-Then publish the reproducible sample stream:
-
-```bash
-scripts/publish_sample_stream.sh
-```
-
-The script publishes to `rtsp://127.0.0.1:8554/raw/sample/front`, which maps to backend streamId `raw.sample.front`.
-Full usage and troubleshooting notes are in `docs/m1/sample-stream-publish.md`.
-
-For the full M1 streaming smoke procedure, run:
-
-```bash
-scripts/streaming_e2e_smoke.sh --check
-```
-
-Actual MediaMTX/backend/dashboard smoke testing is documented in `docs/m1/streaming-e2e-smoke-test.md`.
-
-# Getting Started with Create React App
-
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
-
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+Build outputs such as `dist`, `coverage`, `test-results`, certificates, and local env files are intentionally ignored.

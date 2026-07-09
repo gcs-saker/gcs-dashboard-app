@@ -9,7 +9,7 @@ M1-15는 Streaming Core의 최소 실행 흐름을 한 번에 확인하기 위�
 CI나 로컬에서 부담 없이 실행할 수 있는 정적 smoke check:
 
 ```bash
-scripts/streaming_e2e_smoke.sh --check
+scripts/smoke/streaming_e2e_smoke.sh --check
 ```
 
 이 모드는 다음을 확인한다.
@@ -25,14 +25,14 @@ scripts/streaming_e2e_smoke.sh --check
 실제 MediaMTX와 ffmpeg publish까지 수행하려면 `ffmpeg`, Docker, npm, backend Python venv가 필요하다.
 
 ```bash
-scripts/streaming_e2e_smoke.sh --run
+scripts/smoke/streaming_e2e_smoke.sh --run
 ```
 
 실행 흐름:
 
 1. `docker compose up -d mediamtx`
 2. FastAPI backend 실행
-3. `scripts/publish_sample_stream.sh`로 `raw/sample/front` publish
+3. `scripts/smoke/publish_sample_stream.sh`로 `raw/sample/front` publish
 4. backend playback API 확인
 5. HLS fallback playlist 확인
 6. 선택적으로 WHEP offer/answer와 ICE candidate 확인
@@ -41,10 +41,10 @@ scripts/streaming_e2e_smoke.sh --run
 실제 WebRTC SDP와 ICE candidate까지 확인하려면 다음처럼 실행한다.
 
 ```bash
-WEBRTC_ICE_SMOKE=1 WEBRTC_REQUIRE_CONNECTED=1 scripts/streaming_e2e_smoke.sh --run
+WEBRTC_ICE_SMOKE=1 WEBRTC_REQUIRE_CONNECTED=1 scripts/smoke/streaming_e2e_smoke.sh --run
 ```
 
-`WEBRTC_ICE_SMOKE=1`은 `scripts/webrtc_ice_smoke.py`를 호출한다. 이 스크립트는 브라우저와 같은 viewer 역할로 video recvonly WHEP offer를 만들고, local ICE gathering 완료 후 MediaMTX WHEP endpoint에 POST한다. 이후 answer SDP에 다음 값이 있는지 확인한다.
+`WEBRTC_ICE_SMOKE=1`은 `scripts/smoke/webrtc_ice_smoke.py`를 호출한다. 이 스크립트는 브라우저와 같은 viewer 역할로 video recvonly WHEP offer를 만들고, local ICE gathering 완료 후 MediaMTX WHEP endpoint에 POST한다. 이후 answer SDP에 다음 값이 있는지 확인한다.
 
 - `a=ice-ufrag`
 - `a=ice-pwd`
@@ -54,7 +54,7 @@ WEBRTC_ICE_SMOKE=1 WEBRTC_REQUIRE_CONNECTED=1 scripts/streaming_e2e_smoke.sh --r
 도메인/자체서명 TLS 환경에서는 다음처럼 직접 실행할 수 있다.
 
 ```bash
-python scripts/webrtc_ice_smoke.py \
+python scripts/smoke/webrtc_ice_smoke.py \
   --run \
   --whep-url https://a4ai.tplinkdns.com/webrtc/raw/server01/smoke/whep \
   --stun-url stun:stun.l.google.com:19302 \
@@ -138,7 +138,7 @@ localhost/LAN 환경에서는 기본 ICE 서버 없이도 재생될 수 있다. 
 도메인/공유기/NAT 환경에서 TURN 서버가 실제 relay allocation을 반환하는지 확인하려면 서버의 비밀값을 출력하지 않고 `.env`에서만 읽어 다음을 실행한다.
 
 ```bash
-DOCKER_CMD="sudo docker" scripts/turnutils_relay_smoke.sh
+DOCKER_CMD="sudo docker" scripts/smoke/turnutils_relay_smoke.sh
 ```
 
 이 검증은 `3478/tcp|udp` 포트 개방만 보는 것이 아니라 coturn 공식 `turnutils_uclient`를 실행한 뒤 서버 로그의 allocation 증가를 확인한다. 통과 후에도 실제 WebRTC media가 끊기면 공유기에서 `49160-49200/udp` relay 범위가 같은 서버로 포워딩되어 있는지 확인한다.

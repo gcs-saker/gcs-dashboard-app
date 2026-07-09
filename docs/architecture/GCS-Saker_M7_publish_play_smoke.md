@@ -12,19 +12,19 @@
 
 ## 실행
 ```bash
-scripts/m7_publish_play_smoke.sh --check
+scripts/smoke/m7_publish_play_smoke.sh --check
 ```
 
 실제 Docker runtime:
 
 ```bash
-scripts/m7_publish_play_smoke.sh --run
+scripts/smoke/m7_publish_play_smoke.sh --run
 ```
 
 WebRTC WHEP smoke를 제외하고 HLS/MediaMTX만 빠르게 볼 때:
 
 ```bash
-RUN_WEBRTC_ICE_SMOKE=0 scripts/m7_publish_play_smoke.sh --run
+RUN_WEBRTC_ICE_SMOKE=0 scripts/smoke/m7_publish_play_smoke.sh --run
 ```
 
 ## 왜 Docker ffmpeg인가

@@ -1,5 +1,7 @@
-from sqlalchemy import Column, Integer, Float, String, func
+from sqlalchemy import Column, Float, String
+
 from core.db import Base
+
 
 class Telemetry(Base):
     __tablename__ = "telemetry_realtime"

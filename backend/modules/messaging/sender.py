@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
-import os
 from typing import Iterable, Protocol
 
+from pydantic import Field, ValidationError, field_validator
+
+from core.env_parsing import empty_to_none
+from core.settings_base import BackendBaseSettings, settings_error_message
 from mqtt.client import MqttPayload, publish_control_command
 
 
@@ -50,13 +53,11 @@ class MessageEnvelope:
 
 
 class MessageSender(Protocol):
-    def send(self, envelope: MessageEnvelope) -> None:
-        ...
+    def send(self, envelope: MessageEnvelope) -> None: ...
 
 
 class GrpcStreamTransport(Protocol):
-    def send(self, payload: bytes) -> None:
-        ...
+    def send(self, payload: bytes) -> None: ...
 
 
 class MqttMessageSender:
@@ -83,16 +84,17 @@ class GrpcRawStreamTransport:
 
     @classmethod
     def from_env(cls) -> "GrpcRawStreamTransport":
-        target = os.getenv(MessageSenderEnv.GRPC_TARGET, "").strip()
-        if not target:
+        try:
+            settings = GrpcTransportSettings()
+        except ValidationError as exc:
+            raise MessageSenderUnavailable(settings_error_message("grpc control sender", exc)) from exc
+        if not settings.target:
             raise MessageSenderUnavailable("gRPC gateway target is not configured")
-        method = os.getenv(MessageSenderEnv.GRPC_METHOD, GrpcContracts.DEFAULT_METHOD).strip()
-        timeout_seconds = grpc_timeout_seconds(os.getenv(MessageSenderEnv.GRPC_TIMEOUT_SECONDS, ""))
         return cls(
-            target=target,
-            method=method or GrpcContracts.DEFAULT_METHOD,
-            auth_token=os.getenv(MessageSenderEnv.GRPC_AUTH_TOKEN, "").strip(),
-            timeout_seconds=timeout_seconds,
+            target=settings.target,
+            method=settings.method,
+            auth_token=settings.auth_token or "",
+            timeout_seconds=settings.timeout_seconds,
         )
 
     def send(self, payload: bytes) -> None:
@@ -128,19 +130,48 @@ def grpc_metadata(auth_token: str) -> tuple[tuple[str, str], ...] | None:
     )
 
 
-def grpc_timeout_seconds(raw_value: str) -> float:
-    try:
-        timeout = float(raw_value)
-    except ValueError:
-        return GrpcContracts.DEFAULT_TIMEOUT_SECONDS
-    if timeout <= 0:
-        return GrpcContracts.DEFAULT_TIMEOUT_SECONDS
-    return timeout
+class GrpcTransportSettings(BackendBaseSettings):
+    target: str | None = Field(None, validation_alias=MessageSenderEnv.GRPC_TARGET)
+    method: str = Field(GrpcContracts.DEFAULT_METHOD, validation_alias=MessageSenderEnv.GRPC_METHOD)
+    auth_token: str | None = Field(None, validation_alias=MessageSenderEnv.GRPC_AUTH_TOKEN)
+    timeout_seconds: float = Field(
+        GrpcContracts.DEFAULT_TIMEOUT_SECONDS,
+        validation_alias=MessageSenderEnv.GRPC_TIMEOUT_SECONDS,
+        gt=0,
+    )
+
+    @field_validator("target", "auth_token", mode="before")
+    @classmethod
+    def blank_string_to_none(cls, value: object) -> object:
+        if isinstance(value, str):
+            return empty_to_none(value)
+        return value
+
+    @field_validator("method", mode="before")
+    @classmethod
+    def default_method(cls, value: object) -> object:
+        if isinstance(value, str):
+            return empty_to_none(value) or GrpcContracts.DEFAULT_METHOD
+        return value
+
+
+class ControlMessageSenderSettings(BackendBaseSettings):
+    sender_kind: str = Field(MessageSenderKind.MQTT, validation_alias=MessageSenderEnv.CONTROL_SENDER)
+
+    @field_validator("sender_kind", mode="before")
+    @classmethod
+    def normalize_sender_kind(cls, value: object) -> object:
+        if isinstance(value, str):
+            return (empty_to_none(value) or MessageSenderKind.MQTT).lower()
+        return value
 
 
 @lru_cache(maxsize=1)
 def get_message_sender() -> MessageSender:
-    sender_kind = os.getenv(MessageSenderEnv.CONTROL_SENDER, MessageSenderKind.MQTT).strip().lower()
+    try:
+        sender_kind = ControlMessageSenderSettings().sender_kind
+    except ValidationError as exc:
+        raise MessageSenderUnavailable(settings_error_message("control message sender", exc)) from exc
     if sender_kind == MessageSenderKind.MQTT:
         return MqttMessageSender()
     if sender_kind == MessageSenderKind.GRPC:

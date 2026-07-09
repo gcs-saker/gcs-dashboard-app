@@ -15,13 +15,13 @@
 
 ## 확인 명령
 ```bash
-scripts/m7_dashboard_first_frame_smoke.sh --check
+scripts/smoke/m7_dashboard_first_frame_smoke.sh --check
 ```
 
 single-node stack이 떠 있을 때 smoke user seed, API login, `/auth/me`, smoke page 접근성 확인:
 
 ```bash
-scripts/m7_dashboard_first_frame_smoke.sh --run
+scripts/smoke/m7_dashboard_first_frame_smoke.sh --run
 ```
 
 `--run`은 인증된 playback API 응답도 같이 확인한다. `SMOKE_STREAM_ID` 기본값은 `raw.sample.front`이고, `playbackUrls.webrtc/hls`가 `EDGE_BASE_URL` 아래의 `/webrtc`, `/hls`를 바라보지 않으면 실패한다. 이 검증은 smoke stack을 `18080` 같은 대체 포트로 올렸는데 backend가 `8080` URL을 반환하는 설정 drift를 잡기 위한 것이다.
@@ -41,7 +41,7 @@ Codex in-app browser에서 `http://127.0.0.1:18080/?streamingSmoke=1`을 열면 
 이 동작은 보안상 정상이다. streaming smoke라고 해서 인증을 우회하면 운영 dashboard와 다른 경로가 생기므로, 인증된 사용자 기준으로 측정해야 한다.
 
 ## Smoke user
-`scripts/m7_seed_smoke_user.py`는 backend runtime DB에 smoke user를 idempotent하게 만든다.
+`scripts/smoke/m7_seed_smoke_user.py`는 backend runtime DB에 smoke user를 idempotent하게 만든다.
 
 기본값:
 - username: `m7-smoke-viewer`

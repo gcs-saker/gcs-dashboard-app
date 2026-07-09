@@ -76,9 +76,9 @@ class InMemoryOperationalReadRepository(
     private val assetsByGateway: Map<String, List<AssetReadModel>>,
 ) : OperationalReadRepository {
     private val telemetryByUuid = ConcurrentHashMap(telemetry.associateBy { it.uuid })
-    private val telemetryHistory = ConcurrentHashMap<String, MutableList<TelemetryHistoryReadModel>>().apply {
+    private val telemetryHistory = ConcurrentHashMap<String, List<TelemetryHistoryReadModel>>().apply {
         telemetry.forEach { item ->
-            put(item.uuid, mutableListOf(TelemetryHistoryReadModel(Instant.EPOCH, item)))
+            put(item.uuid, listOf(TelemetryHistoryReadModel(Instant.EPOCH, item)))
         }
     }
 
@@ -90,9 +90,7 @@ class InMemoryOperationalReadRepository(
     override fun upsertTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel {
         telemetryByUuid[telemetry.uuid] = telemetry
         telemetryHistory.compute(telemetry.uuid) { _, current ->
-            (current ?: mutableListOf()).apply {
-                add(TelemetryHistoryReadModel(Instant.now(), telemetry))
-            }
+            current.orEmpty() + TelemetryHistoryReadModel(Instant.now(), telemetry)
         }
         return telemetry
     }

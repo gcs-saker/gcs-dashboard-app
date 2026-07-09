@@ -35,7 +35,9 @@ Browser-origin 요청이 다음 endpoint를 호출할 때 CSRF header가 없으�
 
 ## Group/Organization 권한 기준선
 
-현재 권한은 role 기반이다. 다음 단계에서 group 기반 권한을 추가할 때는 아래 규칙을 따른다.
+Spring Security filter chain은 public endpoint, bearer 인증 endpoint, admin endpoint를 먼저 구분한다.
+`/admin/**`는 `ROLE_ADMIN` authority가 없으면 controller에 도달하기 전에 `403`으로 거부한다.
+stream 접근 범위처럼 group hierarchy가 필요한 정책은 application policy service에서 판정하고 audit log를 남긴다.
 
 - user는 하나 이상의 group에 속할 수 있다.
 - stream publisher는 owner group을 가진다.
@@ -48,4 +50,5 @@ Browser-origin 요청이 다음 endpoint를 호출할 때 CSRF header가 없으�
 - CSRF header 누락 시 auth POST가 `403`을 반환해야 한다.
 - configured origin과 CSRF header가 모두 있을 때 auth POST가 통과해야 한다.
 - CORS preflight가 `Authorization`, `Content-Type`, `Accept`, `X-GCS-CSRF`를 허용해야 한다.
+- non-admin bearer token으로 `/admin/**`를 호출하면 Spring Security boundary에서 `403`을 반환해야 한다.
 - frontend authenticated fetch는 refresh 요청을 한 번으로 합치고, retry 요청에 fresh access token을 붙여야 한다.

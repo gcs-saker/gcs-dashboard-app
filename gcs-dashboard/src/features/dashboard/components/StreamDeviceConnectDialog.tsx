@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { DashboardStreamSlot } from "../streamTypes";
-import type { StreamDeviceOption } from "../streamDevices";
+import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { StreamDeviceOption } from "@dashboard/streamDevices";
 
 interface StreamDeviceConnectDialogProps {
   devices: StreamDeviceOption[];

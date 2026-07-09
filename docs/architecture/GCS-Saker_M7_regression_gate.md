@@ -9,13 +9,13 @@
 빠른 PR 계약 검증:
 
 ```bash
-scripts/m7_regression_gate.sh --check
+scripts/gates/m7_regression_gate.sh --check
 ```
 
 릴리즈 또는 고위험 변경 검증:
 
 ```bash
-PYTHON_BIN=python3.12 scripts/m7_regression_gate.sh --full
+PYTHON_BIN=python3.12 scripts/gates/m7_regression_gate.sh --full
 ```
 
 ## v0.2.0 호환 게이트
@@ -34,13 +34,13 @@ Python backend는 `backend/pyproject.toml` 기준 `>=3.12,<3.13`으로 고정한
 
 새 구조는 아래 순서로 확인한다.
 
-1. `scripts/architecture_intent_gate.py --json`
+1. `scripts/gates/architecture_intent_gate.py --json`
 2. `docker compose --profile geo ... config --quiet`
 3. Spring/Kotlin auth-policy `./gradlew check`
 4. Go media-control `go test ./... -cover`
-5. `scripts/m7_single_node_runtime_smoke.sh --check`
-6. `scripts/m7_publish_play_smoke.sh --check`
-7. `scripts/m7_dashboard_first_frame_smoke.sh --check`
+5. `scripts/smoke/m7_single_node_runtime_smoke.sh --check`
+6. `scripts/smoke/m7_publish_play_smoke.sh --check`
+7. `scripts/smoke/m7_dashboard_first_frame_smoke.sh --check`
 
 Docker live 검증이 가능한 환경에서는 `--check` 이후 각 smoke의 `--run`을 실행한다. 실제 영상 first frame 측정은 #210, #212, #214의 상세 smoke가 담당한다.
 

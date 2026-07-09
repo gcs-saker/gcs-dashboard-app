@@ -1,5 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy
 
+import io.github.resilience4j.circuitbreaker.CircuitBreaker
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig
 import kr.co.a4ai.gcssaker.authpolicy.application.OperationalFailureLogContract
 import kr.co.a4ai.gcssaker.authpolicy.application.OperationalFailureLogger
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
@@ -43,6 +45,31 @@ class ResilientSessionStoresTest {
             events.mapNotNull { it.eventType }.toSet(),
         )
         assertEquals(setOf(OperationalFailureLogContract.SEVERITY_WARN), events.map { it.severity }.toSet())
+    }
+
+    @Test
+    fun `principal cache circuit breaker opens after repeated redis failures`() {
+        val repository = InMemoryOperationalEventRepository(emptyList())
+        val circuitBreaker = CircuitBreaker.of(
+            ResilientSessionStoreTestContract.CIRCUIT_BREAKER_NAME,
+            CircuitBreakerConfig.custom()
+                .failureRateThreshold(ResilientSessionStoreTestContract.OPEN_THRESHOLD_PERCENT)
+                .minimumNumberOfCalls(ResilientSessionStoreTestContract.MINIMUM_BREAKER_CALLS)
+                .slidingWindowSize(ResilientSessionStoreTestContract.MINIMUM_BREAKER_CALLS)
+                .waitDurationInOpenState(Duration.ofSeconds(ResilientSessionStoreTestContract.OPEN_WAIT_SECONDS))
+                .build(),
+        )
+        val cache = ResilientPrincipalCache(
+            delegate = RedisPrincipalCache(FailingStringKeyValueStore()),
+            failureLogger = OperationalFailureLogger(repository, fixedClock()),
+            circuitBreaker = circuitBreaker,
+        )
+
+        repeat(ResilientSessionStoreTestContract.MINIMUM_BREAKER_CALLS) {
+            assertNull(cache.getAccessPrincipal(ResilientSessionStoreTestContract.ACCESS_TOKEN))
+        }
+
+        assertEquals(CircuitBreaker.State.OPEN, circuitBreaker.state)
     }
 
     @Test
@@ -96,6 +123,10 @@ private object ResilientSessionStoreTestContract {
     const val ACCESS_TOKEN = "access-token"
     const val REFRESH_TOKEN = "refresh-token"
     const val REDIS_DOWN = "redis unavailable"
+    const val CIRCUIT_BREAKER_NAME = "test-principal-cache"
+    const val OPEN_THRESHOLD_PERCENT = 1.0f
+    const val MINIMUM_BREAKER_CALLS = 2
+    const val OPEN_WAIT_SECONDS = 5L
     val OCCURRED_AT: Instant = Instant.parse("2026-06-29T00:00:00Z")
     val SYSTEM_PRINCIPAL = AuthenticatedPrincipal("system", UserRole.ADMIN, OperationalFailureLogContract.SYSTEM_GROUP_ID)
 }

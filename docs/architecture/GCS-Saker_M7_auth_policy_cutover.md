@@ -21,13 +21,13 @@ login/refresh 응답은 기존 dashboard가 기대하는 `access_token`, `token_
 
 ## 확인 명령
 ```bash
-scripts/m7_auth_policy_cutover_smoke.sh --check
+scripts/smoke/m7_auth_policy_cutover_smoke.sh --check
 ```
 
 single-node stack이 떠 있을 때 edge route로 auth-policy contract를 확인:
 
 ```bash
-scripts/m7_auth_policy_cutover_smoke.sh --run
+scripts/smoke/m7_auth_policy_cutover_smoke.sh --run
 ```
 
 ## 알려진 한계

@@ -1,7 +1,17 @@
 from datetime import datetime, timezone
 
-from modules.ai_contract.schemas import (
+from modules.ai_contract.constants import (
     AI_CONTRACT_SCHEMA_VERSION,
+    MOCK_AI_DETECTION_BBOX,
+    MOCK_AI_DETECTION_CONFIDENCE,
+    MOCK_AI_DETECTION_LABEL,
+    MOCK_AI_DETECTION_TRACK_ID,
+    MOCK_AI_ERROR_CODE,
+    MOCK_AI_ERROR_MESSAGE,
+    MOCK_AI_REPORT_TEXT,
+    MOCK_AI_RISK_SCORE,
+)
+from modules.ai_contract.schemas import (
     AIEndpointErrorResponse,
     AIEndpointRequest,
     AIEndpointResponse,
@@ -19,20 +29,15 @@ class MockAIService:
                 "streamId": request.stream_id,
                 "frame": request.frame.model_dump(by_alias=True),
                 "generatedAt": self._now(),
-                "riskScore": 0.72,
-                "reportText": "Mock AI detected a person near the sample stream.",
+                "riskScore": MOCK_AI_RISK_SCORE,
+                "reportText": MOCK_AI_REPORT_TEXT,
                 "detections": [
                     {
-                        "label": "person",
-                        "bbox": {
-                            "x": 0.18,
-                            "y": 0.22,
-                            "width": 0.24,
-                            "height": 0.34,
-                        },
-                        "confidence": 0.88,
-                        "riskScore": 0.72,
-                        "trackId": "mock-person-001",
+                        "label": MOCK_AI_DETECTION_LABEL,
+                        "bbox": MOCK_AI_DETECTION_BBOX,
+                        "confidence": MOCK_AI_DETECTION_CONFIDENCE,
+                        "riskScore": MOCK_AI_RISK_SCORE,
+                        "trackId": MOCK_AI_DETECTION_TRACK_ID,
                     }
                 ],
             }
@@ -46,8 +51,8 @@ class MockAIService:
                 "frame": request.frame.model_dump(by_alias=True),
                 "generatedAt": self._now(),
                 "error": {
-                    "code": "AI_SIMULATED_ERROR",
-                    "message": "Mock AI endpoint simulated an error.",
+                    "code": MOCK_AI_ERROR_CODE,
+                    "message": MOCK_AI_ERROR_MESSAGE,
                     "retryable": True,
                 },
             }

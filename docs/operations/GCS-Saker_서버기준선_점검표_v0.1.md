@@ -18,8 +18,8 @@ M2-01의 목적은 Server-01과 Server-02에 실제 배포를 시작하기 전�
 서버에 접속한 뒤 repository root에서 실행한다.
 
 ```bash
-scripts/server_baseline_check.sh --server-name Server-01 --output docs/operations/server-baseline-results/Server-01.md
-scripts/server_baseline_check.sh --server-name Server-02 --output docs/operations/server-baseline-results/Server-02.md
+scripts/ops/server_baseline_check.sh --server-name Server-01 --output docs/operations/server-baseline-results/Server-01.md
+scripts/ops/server_baseline_check.sh --server-name Server-02 --output docs/operations/server-baseline-results/Server-02.md
 ```
 
 생성되는 `server-baseline-results` 파일에는 IP, process, disk 정보가 포함될 수 있으므로 민감한 운영 정보가 들어가면 그대로 commit하지 않는다. 공유가 필요하면 private 보안 채널 또는 별도 운영 문서로 관리한다.

@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   DASHBOARD_GEOMETRY_SOURCE,
+  DASHBOARD_QUERY_KEY_FACTORY,
   DASHBOARD_QUERY_KEYS,
   DASHBOARD_SERVER_HEALTH,
   DASHBOARD_STREAM_MODE,
@@ -54,5 +55,23 @@ describe("dashboard state contracts", () => {
     expect(DASHBOARD_QUERY_KEYS.timeSyncStatus).toEqual(["dashboard", "time-sync-status"]);
     expect(DASHBOARD_QUERY_KEYS.streams).toEqual(["dashboard", "streams"]);
     expect(DASHBOARD_QUERY_KEYS.iceServers).toEqual(["streaming", "ice-servers"]);
+  });
+
+  test("builds typed query keys from a single factory boundary", () => {
+    expect(DASHBOARD_QUERY_KEY_FACTORY.serverStatus(5000, "default-fetcher")).toEqual([
+      "dashboard",
+      "server-status",
+      { refreshMs: 5000, fetcherMode: "default-fetcher" },
+    ]);
+    expect(DASHBOARD_QUERY_KEY_FACTORY.operationalEvents({ severity: "warn" })).toEqual([
+      "dashboard",
+      "operational-events",
+      { severity: "warn" },
+    ]);
+    expect(DASHBOARD_QUERY_KEY_FACTORY.operationalEventMetrics({ category: "network" })).toEqual([
+      "dashboard",
+      "operational-event-metrics",
+      { category: "network" },
+    ]);
   });
 });

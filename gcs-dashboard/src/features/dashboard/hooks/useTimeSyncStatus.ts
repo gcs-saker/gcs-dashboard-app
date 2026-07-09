@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer } from "react";
-import { checkTimeSync, fetchTimeSyncStatus, updateTimeSyncConfig } from "../timeSyncApi";
-import type { TimeSyncConfigInput, TimeSyncStatus } from "../timeSync";
+import { checkTimeSync, fetchTimeSyncStatus, updateTimeSyncConfig } from "@dashboard/timeSyncApi";
+import type { TimeSyncConfigInput, TimeSyncStatus } from "@dashboard/timeSync";
 
 interface TimeSyncState {
   errorMessage: string | null;

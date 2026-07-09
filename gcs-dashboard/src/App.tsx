@@ -2,14 +2,14 @@ import { lazy, Suspense } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./features/auth/AuthProvider";
-import { LoginPage } from "./features/auth/LoginPage";
 import { RequireAuth } from "./features/auth/RequireAuth";
-import { SignupPage } from "./features/auth/SignupPage";
 import { createDashboardQueryClient } from "./features/queryClient";
 
 const dashboardQueryClient = createDashboardQueryClient();
 
 const DashboardPage = lazy(() => import("./features/dashboard/DashboardPage").then((module) => ({ default: module.DashboardPage })));
+const LoginPage = lazy(() => import("./features/auth/LoginPage").then((module) => ({ default: module.LoginPage })));
+const SignupPage = lazy(() => import("./features/auth/SignupPage").then((module) => ({ default: module.SignupPage })));
 const LocalWebcamPublisher = lazy(() =>
   import("./features/streaming/components/LocalWebcamPublisher").then((module) => ({ default: module.LocalWebcamPublisher })),
 );

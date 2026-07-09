@@ -6,9 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "m7_final_evidence_gate.py"
+SCRIPT = REPO_ROOT / "scripts" / "gates" / "m7_final_evidence_gate.py"
 
 
 def load_gate_module():

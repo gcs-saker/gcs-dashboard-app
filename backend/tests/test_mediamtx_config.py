@@ -1,8 +1,7 @@
-from pathlib import Path
 import re
+from pathlib import Path
 
 import yaml
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MEDIAMTX_CONFIG = REPO_ROOT / "gcs-dashboard" / "mediamtx.yml"
@@ -132,11 +131,7 @@ def test_mediamtx_routes_publish_auth_to_media_control_without_public_api_port()
     assert all({"action": "publish", "path": None} not in user.get("permissions", []) for user in users)
     assert all({"action": "playback", "path": None} not in user.get("permissions", []) for user in users)
 
-    api_users = [
-        user
-        for user in users
-        if {"action": "api"} in user.get("permissions", [])
-    ]
+    api_users = [user for user in users if {"action": "api"} in user.get("permissions", [])]
 
     assert api_users
     assert "172.16.0.0/12" in api_users[0]["ips"]
@@ -194,7 +189,10 @@ def test_compose_declares_profiled_coturn_service_with_limited_relay_range():
     assert turn["image"] == "${COTURN_IMAGE:-coturn/coturn:4.6.3}"
     assert turn["profiles"] == ["turn"]
     assert "--lt-cred-mech" in turn["command"]
-    assert "--user=${WEBRTC_TURN_USERNAME:-gcs-turn}:${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}" in turn["command"]
+    assert (
+        "--user=${WEBRTC_TURN_USERNAME:-gcs-turn}:${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}"
+        in turn["command"]
+    )
     assert "--min-port=49160" in turn["command"]
     assert "--max-port=49200" in turn["command"]
     assert "${TURN_BIND_ADDR:-0.0.0.0}:${TURN_PORT:-3478}:3478/tcp" in turn["ports"]
@@ -226,5 +224,9 @@ def test_closed_network_mediamtx_does_not_exclude_read_or_playback_auth():
     assert {"action": "publish"} not in config["authHTTPExclude"]
     assert {"action": "read"} not in config["authHTTPExclude"]
     assert {"action": "playback"} not in config["authHTTPExclude"]
-    assert all({"action": "read", "path": None} not in user.get("permissions", []) for user in config["authInternalUsers"])
-    assert all({"action": "playback", "path": None} not in user.get("permissions", []) for user in config["authInternalUsers"])
+    assert all(
+        {"action": "read", "path": None} not in user.get("permissions", []) for user in config["authInternalUsers"]
+    )
+    assert all(
+        {"action": "playback", "path": None} not in user.get("permissions", []) for user in config["authInternalUsers"]
+    )

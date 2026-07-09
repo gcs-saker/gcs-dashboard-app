@@ -3,8 +3,8 @@ from collections.abc import Generator
 import pytest
 from fastapi.testclient import TestClient
 
-from api.stream import get_v1_streaming_service
 import api.stream as stream_api_module
+from api.stream import get_v1_streaming_service
 from main import app
 from modules.streaming import PlaybackUrlBuilder, PlaybackUrlBuilderConfig, StreamingService
 

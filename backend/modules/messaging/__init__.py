@@ -1,6 +1,6 @@
 from modules.messaging.control_publisher import (
-    ControlMessagePublishResult,
     ControlMessagePublisher,
+    ControlMessagePublishResult,
     get_control_message_publisher,
 )
 from modules.messaging.sender import (

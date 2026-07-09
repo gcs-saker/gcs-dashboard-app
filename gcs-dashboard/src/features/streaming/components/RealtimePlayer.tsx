@@ -1,14 +1,16 @@
 import { useEffect } from "react";
 
-import { useRealtimePlayback } from "../hooks/useRealtimePlayback";
-import type { RealtimePlayerProps } from "../types";
+import { useRealtimePlayback } from "@streaming/hooks/useRealtimePlayback";
+import type { RealtimePlayerProps } from "@streaming/types";
 import {
   describeWebRTCFailure,
   isRecoverableWebRTCFailure,
   shouldSkipWebRTCRetryAfterRelayFailure,
-} from "../streamReconnectPolicy";
+} from "@streaming/streamReconnectPolicy";
+import { buildWebRTCRuntimeEvidence } from "@streaming/webrtcRuntimeEvidence";
 import { HLSFallbackPlayer } from "./HLSFallbackPlayer";
 import "./RealtimePlayer.css";
+import { RealtimePlayerPlaceholder } from "./realtime/RealtimePlayerPlaceholder";
 import { WebRTCPlayer } from "./WebRTCPlayer";
 
 export function RealtimePlayer({
@@ -53,13 +55,7 @@ export function RealtimePlayer({
         <span className="realtime-player__mode">mode: {mode}</span>
       </header>
 
-      {mode === "loading" ? (
-        <div className="realtime-player__placeholder" role="status" aria-live="polite">
-          <span className="realtime-player__signal" aria-hidden="true" />
-          <strong>스트림 신호 확인 중</strong>
-          <span>WebRTC 경로와 송출 상태를 확인하고 있습니다.</span>
-        </div>
-      ) : null}
+      {mode === "loading" ? <RealtimePlayerPlaceholder mode="loading" /> : null}
 
       {mode === "webrtc" ? (
         <WebRTCPlayer
@@ -69,11 +65,14 @@ export function RealtimePlayer({
           title={`${title} WebRTC`}
           isOnline={isOnline}
           onStatusChange={(snapshot) => {
+            const evidence = buildWebRTCRuntimeEvidence(snapshot);
             onStatusChange?.({
               mode,
               streamStatus,
               errorMessage,
               webrtcRetryAttempt,
+              webrtcIcePath: evidence.icePath,
+              webrtcSignalingComplete: evidence.signalingComplete,
               hasAudioTrack: snapshot.hasAudioTrack,
               isAudioActive: snapshot.isAudioActive,
               audioPlaybackState: snapshot.audioPlaybackState,
@@ -110,13 +109,7 @@ export function RealtimePlayer({
         />
       ) : null}
 
-      {mode === "reconnecting" ? (
-        <div className="realtime-player__placeholder realtime-player__placeholder--reconnecting" role="status" aria-live="polite">
-          <span className="realtime-player__signal" aria-hidden="true" />
-          <strong>스트림 재연결 중</strong>
-          <span>{reconnectDelayMs !== null ? `${reconnectDelayMs}ms 후 다시 시도합니다.` : "미디어 경로를 다시 연결하고 있습니다."}</span>
-        </div>
-      ) : null}
+      {mode === "reconnecting" ? <RealtimePlayerPlaceholder mode="reconnecting" reconnectDelayMs={reconnectDelayMs} /> : null}
 
       {mode === "hls" ? (
         <HLSFallbackPlayer
@@ -130,40 +123,11 @@ export function RealtimePlayer({
         />
       ) : null}
 
-      {mode === "offline" ? (
-        <div className="realtime-player__placeholder realtime-player__placeholder--offline" role="status">
-          <span className="realtime-player__signal" aria-hidden="true" />
-          <strong>송출 신호 없음</strong>
-          <span>장비가 연결되면 자동으로 수신을 재개합니다.</span>
-        </div>
-      ) : null}
+      {mode === "offline" ? <RealtimePlayerPlaceholder mode="offline" /> : null}
 
-      {mode === "error" ? (
-        <div className="realtime-player__placeholder realtime-player__placeholder--error" role="alert">
-          <span className="realtime-player__signal" aria-hidden="true" />
-          <strong>{playbackErrorTitle(errorMessage)}</strong>
-          <span>{playbackErrorDescription(errorMessage)}</span>
-          <span className="realtime-player__hint">주소 변경 또는 인증 서버 상태를 확인하세요.</span>
-        </div>
-      ) : null}
+      {mode === "error" ? <RealtimePlayerPlaceholder errorMessage={errorMessage} mode="error" /> : null}
     </section>
   );
 }
 
 export default RealtimePlayer;
-
-function playbackErrorTitle(errorMessage: string | null): string {
-  if (errorMessage?.includes("authentication")) return "인증 서버 미연결";
-  if (errorMessage?.includes("404")) return "스트림 경로 없음";
-  if (errorMessage?.includes("502")) return "시그널링 경로 점검 필요";
-  return "수신 경로 오류";
-}
-
-function playbackErrorDescription(errorMessage: string | null): string {
-  if (errorMessage?.includes("authentication")) {
-    return "현재 미리보기 환경에서 인증 API가 응답하지 않아 재생 권한을 확인하지 못했습니다.";
-  }
-  if (errorMessage?.includes("404")) return "송출 path가 아직 등록되지 않았거나 MediaMTX 경로와 일치하지 않습니다.";
-  if (errorMessage?.includes("502")) return "Edge proxy에서 signaling upstream으로 연결하지 못했습니다.";
-  return "실시간 재생 경로를 열 수 없습니다.";
-}

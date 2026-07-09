@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from "react";
 
-import { useHlsFallbackPlayback } from "../hooks/useHlsFallbackPlayback";
-import type { HLSFallbackPlayerProps } from "../types";
-import { detectWebCodecsCapability } from "../webCodecsSupport";
+import { useHlsFallbackPlayback } from "@streaming/hooks/useHlsFallbackPlayback";
+import type { HLSFallbackPlayerProps } from "@streaming/types";
+import { detectWebCodecsCapability } from "@streaming/webCodecsSupport";
 import "./HLSFallbackPlayer.css";
 
 const statusLabel = {

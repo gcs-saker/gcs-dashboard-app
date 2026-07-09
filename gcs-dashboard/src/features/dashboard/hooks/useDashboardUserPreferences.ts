@@ -1,16 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CctvQualityMode } from "../components/CctvChannelCard";
-import type { DashboardLayoutItem, DashboardWidgetId } from "../dashboardLayout";
-import type { MotionMode } from "../motionPreference";
-import { setStreamDeviceAlias } from "../streamPreferences";
+import type { CctvQualityMode } from "@dashboard/components/CctvChannelCard";
+import type { DashboardLayoutItem, DashboardWidgetId } from "@dashboard/dashboardLayout";
+import type { MotionMode } from "@dashboard/motionPreference";
+import { setStreamDeviceAlias } from "@dashboard/streamPreferences";
+import {
+  loadStreamDeviceAliases,
+  saveStreamDeviceAliases,
+} from "@dashboard/streamAliasRepository";
+import { mergeDashboardPreferencesWithStreamAliases } from "@dashboard/dashboardPreferenceMerge";
+import { useDebouncedPreferenceWriter } from "./useDebouncedPreferenceWriter";
 import {
   createDashboardUserPreferenceKey,
   createDefaultDashboardUserPreferences,
   type CctvLayoutMode,
   type DashboardUserPreferences,
   type DashboardView,
-} from "../userPreferences";
-import { loadDashboardUserPreferences, saveDashboardUserPreferences } from "../userPreferencesStore";
+} from "@dashboard/userPreferences";
+import { loadDashboardUserPreferences } from "@dashboard/userPreferencesStore";
 
 type LayoutUpdater = readonly DashboardLayoutItem[] | ((current: DashboardLayoutItem[]) => readonly DashboardLayoutItem[]);
 
@@ -20,13 +26,17 @@ export function useDashboardUserPreferences(username: string | null | undefined)
     createDefaultDashboardUserPreferences(),
   );
   const mutationRevisionRef = useRef(0);
+  const { schedulePreferenceSave } = useDebouncedPreferenceWriter();
 
   useEffect(() => {
     let disposed = false;
     const loadRevision = mutationRevisionRef.current;
-    void loadDashboardUserPreferences(userPreferenceKey).then((storedPreferences) => {
+    void Promise.all([
+      loadDashboardUserPreferences(userPreferenceKey),
+      loadStreamDeviceAliases(userPreferenceKey),
+    ]).then(([storedPreferences, aliases]) => {
       if (!disposed && mutationRevisionRef.current === loadRevision) {
-        setPreferencesState(storedPreferences);
+        setPreferencesState(mergeDashboardPreferencesWithStreamAliases(storedPreferences, aliases));
       }
     });
     return () => {
@@ -39,11 +49,11 @@ export function useDashboardUserPreferences(username: string | null | undefined)
       setPreferencesState((current) => {
         const next = updater(current);
         mutationRevisionRef.current += 1;
-        void saveDashboardUserPreferences(userPreferenceKey, next);
+        schedulePreferenceSave(userPreferenceKey, next);
         return next;
       });
     },
-    [userPreferenceKey],
+    [schedulePreferenceSave, userPreferenceKey],
   );
 
   const setActiveView = useCallback(
@@ -79,11 +89,12 @@ export function useDashboardUserPreferences(username: string | null | undefined)
 
   const setStreamAlias = useCallback(
     (deviceId: string, alias: string): void =>
-      updatePreferences((current) => ({
-        ...current,
-        streamPreferences: setStreamDeviceAlias(current.streamPreferences, deviceId, alias),
-      })),
-    [updatePreferences],
+      updatePreferences((current) => {
+        const streamPreferences = setStreamDeviceAlias(current.streamPreferences, deviceId, alias);
+        void saveStreamDeviceAliases(userPreferenceKey, streamPreferences.deviceAliases);
+        return { ...current, streamPreferences };
+      }),
+    [updatePreferences, userPreferenceKey],
   );
 
   const resetWidgetLayout = useCallback(

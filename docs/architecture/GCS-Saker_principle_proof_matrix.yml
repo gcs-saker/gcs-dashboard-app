@@ -36,19 +36,19 @@ principles:
     issue: 421
     assertions:
       requiredTexts:
-        - path: scripts/generate_test_report.py
+        - path: scripts/reports/generate_test_report.py
           text: "Backend Pytest"
-        - path: scripts/generate_test_report.py
+        - path: scripts/reports/generate_test_report.py
           text: "Frontend Build"
-        - path: scripts/generate_test_report.py
+        - path: scripts/reports/generate_test_report.py
           text: "Go Media Control"
-        - path: scripts/generate_test_report.py
+        - path: scripts/reports/generate_test_report.py
           text: "Spring Auth Policy"
-        - path: scripts/m7_regression_gate.sh
+        - path: scripts/gates/m7_regression_gate.sh
           text: "docker compose"
       evidencePaths:
-        - scripts/generate_test_report.py
-        - scripts/m7_regression_gate.sh
+        - scripts/reports/generate_test_report.py
+        - scripts/gates/m7_regression_gate.sh
 
   - id: PRJ-SECRET-001
     group: security
@@ -390,10 +390,10 @@ principles:
           text: "CachedIceServerProvider"
         - path: services/media-control/internal/domain/ice.go
           text: "HealthyIceServers"
-        - path: scripts/webrtc_ice_smoke.py
+        - path: scripts/smoke/webrtc_ice_smoke.py
           text: "candidate"
       evidencePaths:
-        - scripts/webrtc_ice_smoke.py
+        - scripts/smoke/webrtc_ice_smoke.py
         - services/media-control/internal/turn/cached_registry_test.go
 
   - id: STREAM-OBS-001
@@ -441,10 +441,10 @@ principles:
     issue: 421
     assertions:
       evidencePaths:
-        - scripts/m7_single_node_runtime_smoke.sh
+        - scripts/smoke/m7_single_node_runtime_smoke.sh
         - backend/tests/test_health_readiness_check_script.py
-        - scripts/m7_publish_play_smoke.sh
-        - scripts/m7_dashboard_first_frame_smoke.sh
+        - scripts/smoke/m7_publish_play_smoke.sh
+        - scripts/smoke/m7_dashboard_first_frame_smoke.sh
 
   - id: PERF-SEC-OPS-001
     group: cross-cutting
@@ -457,11 +457,11 @@ principles:
       requiredTexts:
         - path: backend/tests/test_web_security_headers.py
           text: "security"
-        - path: scripts/m7_streaming_stability_soak.sh
+        - path: scripts/smoke/m7_streaming_stability_soak.sh
           text: "soak"
-        - path: scripts/turn_relay_smoke.py
+        - path: scripts/smoke/turn_relay_smoke.py
           text: "relay"
       evidencePaths:
         - docs/architecture/GCS-Saker_M7_performance_benchmark_matrix.md
         - backend/tests/test_web_security_headers.py
-        - scripts/m7_streaming_stability_soak.sh
+        - scripts/smoke/m7_streaming_stability_soak.sh

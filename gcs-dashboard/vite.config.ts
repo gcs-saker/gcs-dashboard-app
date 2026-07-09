@@ -4,10 +4,7 @@ import { defineConfig } from "vitest/config";
 
 const manualChunkRules: Array<[chunkName: string, packageNames: string[]]> = [
   ["vendor-react", ["react", "react-dom", "react-router-dom"]],
-  ["lazy-3d", ["three", "@react-three/fiber"]],
   ["lazy-hls-light", ["hls.js"]],
-  ["lazy-maplibre", ["maplibre-gl"]],
-  ["vendor-charts", ["recharts"]],
 ];
 
 export default defineConfig(({ mode }) => {
@@ -18,7 +15,13 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     resolve: {
       alias: {
-        "@": new URL("./src", import.meta.url).pathname
+        "@": new URL("./src", import.meta.url).pathname,
+        "@auth": new URL("./src/features/auth", import.meta.url).pathname,
+        "@dashboard": new URL("./src/features/dashboard", import.meta.url).pathname,
+        "@features": new URL("./src/features", import.meta.url).pathname,
+        "@mocks": new URL("./src/mocks", import.meta.url).pathname,
+        "@streaming": new URL("./src/features/streaming", import.meta.url).pathname,
+        "@ui": new URL("./src/features/ui", import.meta.url).pathname
       }
     },
     build: {
@@ -70,12 +73,12 @@ export default defineConfig(({ mode }) => {
       environment: "jsdom",
       exclude: ["e2e/**", "**/node_modules/**", "**/dist/**"],
       globals: true,
-      setupFiles: "./src/setupTests.js",
+      setupFiles: "./src/setupTests.ts",
       coverage: {
         provider: "istanbul",
         reporter: ["text", "text-summary"],
-        include: ["src/**/*.{jsx,ts,tsx}"],
-        exclude: ["src/index.tsx", "src/setupTests.js"]
+        include: ["src/**/*.{ts,tsx}"],
+        exclude: ["src/index.tsx", "src/setupTests.ts"]
       }
     }
   };

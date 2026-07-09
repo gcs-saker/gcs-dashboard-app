@@ -35,8 +35,8 @@ MediaMTX 관리 API는 내부 스트림 discovery를 위해 활성화하되 외�
 | 단계 | 기준 | 명령 예시 |
 | --- | --- | --- |
 | process | container가 running 상태 | `sudo docker ps --filter name=mediamtx` |
-| listener | HLS/WebRTC/WHEP/ingest port가 listen | `python scripts/health_readiness_check.py --run ...` |
-| playback | sample stream publish 후 HLS playlist 또는 WHEP endpoint가 응답 | `scripts/streaming_e2e_smoke.sh --run` |
+| listener | HLS/WebRTC/WHEP/ingest port가 listen | `python scripts/ops/health_readiness_check.py --run ...` |
+| playback | sample stream publish 후 HLS playlist 또는 WHEP endpoint가 응답 | `scripts/smoke/streaming_e2e_smoke.sh --run` |
 | backend contract | backend playback API가 WebRTC primary와 HLS fallback URL을 반환 | `/api/v1/streams/{streamId}/playback` |
 
 MediaMTX API/metrics가 필요한 경우에도 외부 publish 없이 내부 네트워크 또는 서버 로컬에서만 확인한다. API 권한은 Docker 내부망 백엔드 접근만 허용하고, metrics/pprof 권한은 API 사용자에 포함하지 않는다.
@@ -67,13 +67,13 @@ MediaMTX image 내부에 어떤 shell/network tool이 포함되는지 배포 이
 ### 정적 계약 확인
 
 ```bash
-python scripts/health_readiness_check.py --check
+python scripts/ops/health_readiness_check.py --check
 ```
 
 ### 실행 중인 서비스 확인
 
 ```bash
-python scripts/health_readiness_check.py --run \
+python scripts/ops/health_readiness_check.py --run \
   --backend-url http://127.0.0.1:8001 \
   --mediamtx-host 127.0.0.1 \
   --mediamtx-hls-port 8888 \
@@ -83,7 +83,7 @@ python scripts/health_readiness_check.py --run \
 ### sample playback까지 확인
 
 ```bash
-scripts/streaming_e2e_smoke.sh --run
+scripts/smoke/streaming_e2e_smoke.sh --run
 ```
 
 ## 장애 판정

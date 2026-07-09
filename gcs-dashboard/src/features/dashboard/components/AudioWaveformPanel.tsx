@@ -1,5 +1,6 @@
 import { memo, useMemo, type CSSProperties } from "react";
-import type { DashboardStreamSlot } from "../streamTypes";
+import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
+import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 import {
   buildAudioWaveformBars,
   formatPlaybackMode,
@@ -7,8 +8,8 @@ import {
   getLatencyTone,
   getPacketLossTone,
   type AudioAnalysisSnapshot,
-} from "../dashboardPresentation";
-import { useRafNumber } from "../hooks/useRafNumber";
+} from "@dashboard/dashboardPresentation";
+import { useRafNumber } from "@dashboard/hooks/useRafNumber";
 
 interface AudioWaveformPanelProps {
   analysis: AudioAnalysisSnapshot | null;
@@ -21,6 +22,7 @@ export const AudioWaveformPanel = memo(function AudioWaveformPanel({
   isMotionEnabled = true,
   selectedStream,
 }: AudioWaveformPanelProps) {
+  useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.audioWaveformPanel);
   const isSelectedAnalysis = analysis?.streamId === selectedStream.id;
   const isActive = Boolean(analysis?.isAudioActive);
   const hasTrack = Boolean(analysis?.hasAudioTrack);

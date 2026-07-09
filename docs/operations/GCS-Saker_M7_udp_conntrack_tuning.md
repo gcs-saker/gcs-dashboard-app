@@ -6,7 +6,7 @@ WebRTC direct/STUN과 TURN relay는 모두 UDP packet 흐름에 민감하다. �
 ## 점검 스크립트
 
 ```bash
-scripts/server_udp_tuning_check.sh
+scripts/ops/server_udp_tuning_check.sh
 ```
 
 이 스크립트는 값을 변경하지 않고 현재 sysctl 값과 권장 기준만 출력한다.
@@ -32,7 +32,7 @@ net.ipv4.ip_local_port_range = 20000 60999
 
 ```bash
 sudo sysctl --system
-scripts/server_udp_tuning_check.sh
+scripts/ops/server_udp_tuning_check.sh
 ```
 
 ## 주의

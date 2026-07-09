@@ -19,11 +19,11 @@ This document records the release cutover evidence for #423. It is intentionally
 Problem:
 
 - Server host did not have the `protoc` executable.
-- `scripts/grpc_runtime_smoke.py` failed at descriptor compile time.
+- `scripts/smoke/grpc_runtime_smoke.py` failed at descriptor compile time.
 
 Fix:
 
-- `scripts/grpc_runtime_smoke.py` now tries `protoc` first and falls back to `python -m grpc_tools.protoc`.
+- `scripts/smoke/grpc_runtime_smoke.py` now tries `protoc` first and falls back to `python -m grpc_tools.protoc`.
 - `backend/requirements.txt` pins `grpcio-tools==1.76.0`.
 
 Why it matters:
@@ -70,7 +70,7 @@ The following commands passed before server deployment:
 PYTHONPATH=backend python3 -m pytest backend/tests -q
 npm run test:coverage
 npm run build
-python3 scripts/m7_final_evidence_gate.py --run --timeout-seconds 120
+python3 scripts/gates/m7_final_evidence_gate.py --run --timeout-seconds 120
 ```
 
 Results:
@@ -86,7 +86,7 @@ Results:
 Both servers ran the same command from `/home/user/gcs-saker-runtime/current`:
 
 ```bash
-python3 scripts/m7_final_evidence_gate.py --run --timeout-seconds 120
+python3 scripts/gates/m7_final_evidence_gate.py --run --timeout-seconds 120
 ```
 
 ### Server-01

@@ -1,10 +1,8 @@
-from pathlib import Path
 import subprocess
-import sys
-
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "m7_regression_gate.sh"
+SCRIPT = REPO_ROOT / "scripts" / "gates" / "m7_regression_gate.sh"
 DOC = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_M7_regression_gate.md"
 
 

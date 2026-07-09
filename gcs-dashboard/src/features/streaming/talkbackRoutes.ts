@@ -1,4 +1,4 @@
-import { TALKBACK_OPERATOR_ID } from "../../config";
+import { TALKBACK_OPERATOR_ID } from "@/config";
 
 export const TALKBACK_MEDIA_PATH_PREFIX = "talkback";
 export const TALKBACK_WHIP_SUFFIX = "whip";

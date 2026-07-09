@@ -1,8 +1,10 @@
 from typing import Any
 
-from sqlalchemy import Column, BigInteger, String, Enum, ForeignKey, Index
-from core.db import Base
+from sqlalchemy import BigInteger, Column, Enum, ForeignKey, Index, String
 from sqlalchemy.orm import relationship
+
+from core.db import Base
+
 
 class Gateway(Base):
     __tablename__ = "gateway"
@@ -15,8 +17,9 @@ class Gateway(Base):
     os: Any = Column(Enum("android", "iphone", "etc"), nullable=False)
     name = Column(String(100), nullable=True)
     status = Column(String(50), nullable=True)
-    
+
     assets = relationship("GatewayAsset", back_populates="gateway")
+
 
 class UnmannedAsset(Base):
     __tablename__ = "unmanned_assets"
@@ -30,14 +33,13 @@ class UnmannedAsset(Base):
     description = Column(String(2000), nullable=True)
     image_url = Column(String(1000), nullable=True)
     status = Column(String(50), default="active")
-    
+
     gateways = relationship("GatewayAsset", back_populates="asset")
+
 
 class GatewayAsset(Base):
     __tablename__ = "gateway_assets"
-    __table_args__ = (
-        Index("idx_gateway_assets_asset_id", "asset_id"),
-    )
+    __table_args__ = (Index("idx_gateway_assets_asset_id", "asset_id"),)
 
     gateway_id = Column(BigInteger, ForeignKey("gateway.id"), primary_key=True)
     asset_id = Column(BigInteger, ForeignKey("unmanned_assets.id"), primary_key=True)

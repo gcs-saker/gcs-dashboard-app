@@ -1,10 +1,10 @@
 import { memo, useCallback } from "react";
-import type { DashboardStreamSlot } from "../streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 import {
   getDashboardStreamDisplayName,
   getDashboardStreamStatusClass,
   getDashboardStreamStatusText,
-} from "../streamTypes";
+} from "@dashboard/streamTypes";
 
 interface StreamCardProps {
   stream: DashboardStreamSlot;

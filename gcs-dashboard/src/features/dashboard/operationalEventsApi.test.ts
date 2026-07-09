@@ -10,8 +10,10 @@ import {
   fetchOperationalEventPage,
   fetchOperationalEventMetrics,
   fetchOperationalEvents,
+  OperationalEventStreamError,
   parseOperationalEventSseBuffer,
 } from "./operationalEventsApi";
+import { ApiHttpError } from "@features/apiClient";
 import type { OperationalEventFilters } from "./operationalEvents";
 
 describe("operationalEventsApi", () => {
@@ -228,6 +230,30 @@ describe("operationalEventsApi", () => {
     await expect(
       consumeOperationalEventStream({ query: "", severity: "all", from: "", to: "" }, { onEvent: vi.fn() }, { fetcher }),
     ).rejects.toThrow("Operational event stream payload is invalid");
+  });
+
+  test("exposes event stream HTTP failures as API HTTP errors", async () => {
+    const fetcher = vi.fn(async () => jsonResponse({ detail: "down" }, 503));
+
+    await expect(
+      consumeOperationalEventStream({ query: "", severity: "all", from: "", to: "" }, { onEvent: vi.fn() }, { fetcher }),
+    ).rejects.toBeInstanceOf(ApiHttpError);
+  });
+
+  test("exposes missing stream body as an event stream error", async () => {
+    const fetcher = vi.fn(async () => ({ ok: true, status: 200, body: null }) as Response);
+
+    await expect(
+      consumeOperationalEventStream({ query: "", severity: "all", from: "", to: "" }, { onEvent: vi.fn() }, { fetcher }),
+    ).rejects.toBeInstanceOf(OperationalEventStreamError);
+  });
+
+  test("rejects invalid stream JSON with a stream specific error", async () => {
+    const fetcher = vi.fn(async () => streamResponse(["event: operational-event\ndata: not-json\n\n"]));
+
+    await expect(
+      consumeOperationalEventStream({ query: "", severity: "all", from: "", to: "" }, { onEvent: vi.fn() }, { fetcher }),
+    ).rejects.toThrow("Operational event stream payload JSON is invalid");
   });
 });
 

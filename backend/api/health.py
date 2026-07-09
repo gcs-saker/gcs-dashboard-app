@@ -36,9 +36,7 @@ DatabaseProbeDependency = Annotated[DatabaseProbe, Depends(get_database_probe)]
 async def healthz() -> HealthReportResponse:
     report = HealthReport.from_checks(
         SERVICE_NAME,
-        (
-            HealthCheckResult(name="api", status="ok", required=True),
-        ),
+        (HealthCheckResult(name="api", status="ok", required=True),),
     )
     return HealthReportResponse.from_domain(report)
 

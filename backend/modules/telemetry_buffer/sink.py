@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import os
 from typing import Protocol
+
+from pydantic import Field, ValidationError
 
 from api.telemetry import upsert_telemetry
 from core.db import SessionLocal
+from core.settings_base import BackendBaseSettings, SettingsConfigurationError, settings_error_message
 from model.telemetry_model import TelemetryCreate
 from modules.telemetry_buffer.buffer import (
     InMemoryTelemetryWriteBuffer,
@@ -25,9 +27,19 @@ class TelemetryBufferEnv:
     AUTO_FLUSH_MAX_ITEMS = "TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS"
 
 
+class TelemetryBufferSettings(BackendBaseSettings):
+    auto_flush_max_items: int = Field(1000, validation_alias=TelemetryBufferEnv.AUTO_FLUSH_MAX_ITEMS, gt=0)
+
+    @classmethod
+    def from_env(cls) -> "TelemetryBufferSettings":
+        try:
+            return cls()
+        except ValidationError as exc:
+            raise SettingsConfigurationError(settings_error_message("telemetry buffer", exc)) from exc
+
+
 class TelemetryBulkSink(Protocol):
-    def flush(self, records: list[TelemetryBufferRecord]) -> int:
-        ...
+    def flush(self, records: list[TelemetryBufferRecord]) -> int: ...
 
 
 @dataclass(frozen=True)
@@ -98,8 +110,9 @@ class BufferedTelemetrySink:
 
 
 def build_buffered_telemetry_sink() -> BufferedTelemetrySink:
+    settings = TelemetryBufferSettings.from_env()
     return BufferedTelemetrySink(
         buffer=InMemoryTelemetryWriteBuffer(),
         bulk_sink=LegacyDbTelemetryBulkSink(),
-        auto_flush_max_items=int(os.getenv(TelemetryBufferEnv.AUTO_FLUSH_MAX_ITEMS, "1000")),
+        auto_flush_max_items=settings.auto_flush_max_items,
     )

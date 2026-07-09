@@ -1,0 +1,39 @@
+.cctv-view__summary {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.cctv-view__summary span {
+  background: rgba(5, 13, 17, 0.68);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--text);
+  min-height: 26px;
+  padding: 4px 9px;
+}
+
+.cctv-channel-card {
+  grid-template-rows: minmax(72px, 1fr) 28px 24px 24px 30px;
+}
+
+.cctv-channel-card__statusbar {
+  align-items: center;
+  background: rgba(5, 13, 17, 0.42);
+  border-top: 1px solid rgba(94, 151, 181, 0.18);
+  color: var(--muted);
+  display: grid;
+  font-size: 0.62rem;
+  font-weight: 900;
+  gap: 4px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 0 8px;
+}
+
+.cctv-channel-card__statusbar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

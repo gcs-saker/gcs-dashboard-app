@@ -1,4 +1,4 @@
-import { backendRootUrl } from "../../config";
+import { backendRootUrl } from "@/config";
 import { BACKEND_ROOT_ROUTES } from "@/features/apiRoutes";
 import { DASHBOARD_SERVER_HEALTH, type DashboardServerHealth } from "@/features/stateContracts";
 

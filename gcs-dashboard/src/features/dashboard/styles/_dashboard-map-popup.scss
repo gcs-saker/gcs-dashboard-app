@@ -1,0 +1,115 @@
+.stream-map-popup {
+  background:
+    linear-gradient(180deg, rgba(18, 41, 52, 0.96), rgba(5, 13, 17, 0.96)),
+    rgba(5, 13, 17, 0.92);
+  border: 1px solid rgba(94, 151, 181, 0.58);
+  border-radius: 6px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+  color: var(--text);
+  display: grid;
+  gap: 10px;
+  max-width: min(292px, calc(100% - 28px));
+  padding: 12px;
+  position: absolute;
+  right: 14px;
+  top: 68px;
+  z-index: 12;
+}
+
+.stream-map-popup__header {
+  align-items: start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.stream-map-popup__header div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.stream-map-popup__header span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.stream-map-popup__header strong {
+  color: var(--heading);
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stream-map-popup__header button {
+  background: rgba(5, 13, 17, 0.7);
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 900;
+  height: 26px;
+  width: 28px;
+}
+
+.stream-map-popup dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.stream-map-popup dl div {
+  align-items: center;
+  border-top: 1px solid rgba(94, 151, 181, 0.18);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 68px minmax(0, 1fr);
+  min-height: 26px;
+  padding-top: 6px;
+}
+
+.stream-map-popup dt {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.stream-map-popup dd {
+  color: var(--heading);
+  font-size: 0.72rem;
+  font-weight: 800;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stream-map-popup__actions {
+  align-items: center;
+  border-top: 1px solid rgba(94, 151, 181, 0.18);
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding-top: 8px;
+}
+
+.stream-map-popup__actions button {
+  background: rgba(61, 184, 255, 0.1);
+  border: 1px solid rgba(61, 184, 255, 0.42);
+  border-radius: 5px;
+  color: var(--cyan);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 900;
+  min-height: 28px;
+  padding: 0 10px;
+}
+
+.stream-map-popup__actions span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+}

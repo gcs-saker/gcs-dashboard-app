@@ -54,6 +54,54 @@ data class OrganizationUnit(
     }
 }
 
+class OrganizationHierarchy private constructor(
+    private val unitsById: Map<GroupId, OrganizationUnit>,
+) {
+    fun isAncestor(candidateAncestorId: GroupId, childId: GroupId): Boolean {
+        var current = unitsById[childId]?.parentId
+        while (current != null) {
+            if (current == candidateAncestorId) {
+                return true
+            }
+            current = unitsById[current]?.parentId
+        }
+        return false
+    }
+
+    fun units(): List<OrganizationUnit> = unitsById.values.toList()
+
+    companion object {
+        fun of(units: Collection<OrganizationUnit>): OrganizationHierarchy {
+            val unitsById = units.associateBy { it.id }
+            require(unitsById.size == units.size) { "group id must be unique" }
+            require(unitsById.isNotEmpty()) { "group hierarchy must not be empty" }
+            validateParentReferences(unitsById)
+            validateAcyclic(unitsById)
+            return OrganizationHierarchy(unitsById)
+        }
+
+        private fun validateParentReferences(unitsById: Map<GroupId, OrganizationUnit>) {
+            unitsById.values.forEach { unit ->
+                require(unit.parentId != unit.id) { "group must not be its own parent" }
+                if (unit.parentId != null) {
+                    require(unitsById.containsKey(unit.parentId)) { "parent group must exist" }
+                }
+            }
+        }
+
+        private fun validateAcyclic(unitsById: Map<GroupId, OrganizationUnit>) {
+            unitsById.keys.forEach { groupId ->
+                val seen = mutableSetOf<GroupId>()
+                var current: GroupId? = groupId
+                while (current != null) {
+                    require(seen.add(current)) { "group hierarchy must not contain a cycle" }
+                    current = unitsById[current]?.parentId
+                }
+            }
+        }
+    }
+}
+
 data class AuthenticatedPrincipal(
     val username: String,
     val role: UserRole,

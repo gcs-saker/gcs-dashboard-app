@@ -1,12 +1,11 @@
-import json
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "m7_performance_benchmark_matrix.py"
+SCRIPT = REPO_ROOT / "scripts" / "benchmarks" / "m7_performance_benchmark_matrix.py"
 DOC = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_M7_performance_benchmark_matrix.md"
 
 

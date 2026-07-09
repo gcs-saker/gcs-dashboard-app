@@ -26,6 +26,16 @@ class ApiModuleConfig {
         }
 
     @Bean
+    fun apiAccessLogSink(): ApiAccessLogSink = Slf4jApiAccessLogSink()
+
+    @Bean
+    fun apiAccessLogFilterRegistration(sink: ApiAccessLogSink): FilterRegistrationBean<ApiAccessLogFilter> =
+        FilterRegistrationBean(ApiAccessLogFilter(sink)).apply {
+            order = 3
+            addUrlPatterns("/*")
+        }
+
+    @Bean
     fun authRateLimiter(settings: AuthRuntimeSettings): FixedWindowRateLimiter =
         FixedWindowRateLimiter(
             maxRequests = settings.authRateLimitPerMinute,
