@@ -9,6 +9,7 @@ from pydantic import Field, ValidationError, field_validator, model_validator
 
 from core.env_parsing import empty_to_none
 from core.settings_base import BackendBaseSettings, SettingsConfigurationError, settings_error_message
+from core.tracing import trace_mqtt_publish
 
 MqttPayload = str | bytes
 logger = logging.getLogger(__name__)
@@ -100,7 +101,8 @@ def publish_control_command(
 ) -> None:
     logger.info("MQTT publish topic=%s payload=%s", topic, mqtt_payload_log_value(message))
     mqtt_client = client or get_mqtt_client()
-    result = mqtt_client.publish(topic, message)
+    with trace_mqtt_publish(topic=topic):
+        result = mqtt_client.publish(topic, message)
     rc = getattr(result, "rc", 0)
     if rc:
         raise RuntimeError(f"MQTT publish failed: rc={rc}")

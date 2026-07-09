@@ -17,6 +17,7 @@ from api.contracts import (
 from config import WebSecuritySettings
 from core.security import require_role
 from core.security_contract import ROLE_OPERATOR, ROLE_VIEWER
+from core.tracing import TracingSettings, configure_global_tracing, trace_fastapi_request
 from modules.ai_contract.router import router as mock_ai_router
 from mqtt.subscriber import start_optional_telemetry_subscriber
 
@@ -35,6 +36,8 @@ app = FastAPI(
 )
 
 web_security_settings = WebSecuritySettings.from_env()
+tracing_settings = TracingSettings.from_env()
+tracer_provider = configure_global_tracing(tracing_settings)
 
 app.add_middleware(
     CORSMiddleware,
@@ -65,6 +68,19 @@ async def add_security_headers(
     )
     mark_legacy_route(request, response)
     return response
+
+
+@app.middleware("http")
+async def add_trace_span(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    return await trace_fastapi_request(
+        request,
+        call_next,
+        settings=tracing_settings,
+        provider=tracer_provider,
+    )
 
 
 def mark_legacy_route(request: Request, response: Response) -> None:
