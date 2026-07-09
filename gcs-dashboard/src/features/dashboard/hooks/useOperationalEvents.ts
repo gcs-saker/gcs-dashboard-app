@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DASHBOARD_QUERY_KEYS } from "../../stateContracts";
-import { consumeOperationalEventStream, fetchOperationalEventPage } from "../operationalEventsApi";
-import type { OperationalEvent, OperationalEventFilters } from "../operationalEvents";
+import { DASHBOARD_QUERY_KEY_FACTORY } from "@features/stateContracts";
+import {
+  dashboardRefetchInterval,
+  DASHBOARD_QUERY_POLICY,
+  withAbortSignal,
+} from "@features/queryClient";
+import { consumeOperationalEventStream, fetchOperationalEventPage } from "@dashboard/operationalEventsApi";
+import type { OperationalEvent, OperationalEventFilters } from "@dashboard/operationalEvents";
 
 interface OperationalEventsState {
   events: OperationalEvent[];
@@ -18,7 +23,7 @@ const operationalEventHistoryByFilter = new Map<string, OperationalEvent[]>();
 export function useOperationalEvents(
   filters: OperationalEventFilters,
   fetcher: typeof fetch = fetch,
-  pollIntervalMs = 10_000,
+  pollIntervalMs = DASHBOARD_QUERY_POLICY.operationsRefetchMs,
 ): OperationalEventsState {
   const filterKey = useMemo(() => JSON.stringify(filters), [filters]);
   const queryFilters = useMemo(() => ({ ...filters }), [filterKey]);
@@ -26,14 +31,15 @@ export function useOperationalEvents(
     () => readOperationalEventHistory(filterKey),
   );
   const query = useQuery<OperationalEvent[]>({
-    queryKey: [...DASHBOARD_QUERY_KEYS.operationalEvents, queryFilters],
+    queryKey: DASHBOARD_QUERY_KEY_FACTORY.operationalEvents(queryFilters),
     queryFn: ({ signal }) =>
       fetchOperationalEventPage(
         queryFilters,
-        ((input, init) => fetcher(input, { ...init, signal })) as typeof fetch,
+        withAbortSignal(fetcher, signal),
       ).then((page) => page.events),
     placeholderData: readOperationalEventHistory(filterKey),
-    refetchInterval: pollIntervalMs > 0 ? pollIntervalMs : false,
+    refetchInterval: dashboardRefetchInterval(pollIntervalMs),
+    staleTime: DASHBOARD_QUERY_POLICY.operationsStaleTimeMs,
   });
 
   useEffect(() => {

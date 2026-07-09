@@ -11,9 +11,9 @@ class MapConfigService:
     def get_config(self) -> MapConfigResponse:
         return MapConfigResponse(
             provider=self._provider(),
-            styleUrl=self.settings.style_url,
+            style_url=self.settings.style_url,
             attribution=self.settings.attribution,
-            requiresApiKey=self.settings.requires_api_key,
+            requires_api_key=self.settings.requires_api_key,
         )
 
     def _provider(self) -> MapProvider:

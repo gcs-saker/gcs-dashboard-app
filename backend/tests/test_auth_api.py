@@ -7,8 +7,8 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from api.contracts import AuthProtocol
 from api.auth import get_password_hash
+from api.contracts import AuthProtocol
 from core.db import Base, get_db
 from core.security import AuthSettings, create_access_token, create_refresh_token
 from main import app

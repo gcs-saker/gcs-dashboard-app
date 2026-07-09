@@ -1,14 +1,13 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import sys
 from pathlib import Path
-import importlib.util
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "dragonfly_profile_smoke.py"
+SCRIPT = REPO_ROOT / "scripts" / "smoke" / "dragonfly_profile_smoke.py"
 MATRIX = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_v2_completion_matrix.yml"
 STATUS = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_runtime_stack_status.yml"
 
@@ -48,7 +47,10 @@ def test_dragonfly_profile_records_license_and_non_default_promotion_gate() -> N
     assert payload["license"]["source"].startswith("https://www.dragonflydb.io/docs/about/license")
     assert "not offered as a managed" in payload["license"]["productionUseNote"]
     assert "profile remains optional" in "\n".join(payload["runtimeChecks"])
-    assert "Promote to active only after Redis and DragonFly runtime smoke results are equivalent" in payload["promotionGate"]
+    assert (
+        "Promote to active only after Redis and DragonFly runtime smoke results are equivalent"
+        in payload["promotionGate"]
+    )
 
 
 def test_dragonfly_smoke_allows_server_env_without_explicit_dragonfly_image(tmp_path: Path) -> None:

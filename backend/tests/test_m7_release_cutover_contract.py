@@ -4,7 +4,6 @@ from pathlib import Path
 
 import yaml
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EVIDENCE_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_M7_release_cutover_evidence_2026-06-26.md"
 RELEASE_NOTE = REPO_ROOT / "docs" / "releases" / "GCS-Saker_v0.7.1_M7_release_cutover_notes.md"
@@ -29,8 +28,8 @@ def test_m7_release_cutover_note_links_completion_and_evidence_commands() -> Non
     release_note = RELEASE_NOTE.read_text(encoding="utf-8")
 
     assert "v0.7.1" in release_note
-    assert "scripts/m7_final_evidence_gate.py --run --timeout-seconds 120" in release_note
-    assert "scripts/v2_completion_gate.py --require-complete" in release_note
+    assert "scripts/gates/m7_final_evidence_gate.py --run --timeout-seconds 120" in release_note
+    assert "scripts/gates/v2_completion_gate.py --require-complete" in release_note
     assert "Server-01 final evidence gate: `complete=true`" in release_note
     assert "Server-02 final evidence gate: `complete=true`" in release_note
 

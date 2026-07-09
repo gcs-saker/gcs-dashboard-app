@@ -1,0 +1,55 @@
+.dashboard-story-shell {
+  background: #05101a;
+  color: #dce8f4;
+  display: grid;
+  gap: 18px;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.dashboard-story-shell__header {
+  display: grid;
+  gap: 6px;
+  max-width: 860px;
+}
+
+.dashboard-story-shell__header h1 {
+  font-size: 22px;
+  margin: 0;
+}
+
+.dashboard-story-shell__header p {
+  color: #8da1af;
+  font-size: 13px;
+  margin: 0;
+}
+
+.dashboard-story-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.dashboard-story-player-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.dashboard-story-popup-stage {
+  align-items: start;
+  background:
+    linear-gradient(rgba(126, 180, 222, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(126, 180, 222, 0.08) 1px, transparent 1px),
+    #06111b;
+  background-size: 32px 32px;
+  border: 1px solid rgba(74, 144, 196, 0.34);
+  display: grid;
+  min-height: 440px;
+  padding: 24px;
+  position: relative;
+}
+
+.dashboard-story-popup-stage .stream-map-popup {
+  position: static;
+}

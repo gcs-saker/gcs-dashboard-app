@@ -13,3 +13,5 @@ class BadRequestApiError(reason: String) : ApiError(HttpStatus.BAD_REQUEST, reas
 class UnauthorizedApiError(reason: String) : ApiError(HttpStatus.UNAUTHORIZED, reason)
 
 class ForbiddenApiError(reason: String) : ApiError(HttpStatus.FORBIDDEN, reason)
+
+class NotFoundApiError(reason: String) : ApiError(HttpStatus.NOT_FOUND, reason)

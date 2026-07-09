@@ -19,7 +19,7 @@ requiredGates:
     releaseBlocker: false
     evidence:
       - contracts/proto/gcs/saker/v1/gateway_service.proto
-      - scripts/grpc_runtime_smoke.py
+      - scripts/smoke/grpc_runtime_smoke.py
       - backend/tests/test_message_sender_abstraction.py
       - backend/tests/test_protocol_v2_gateway_service.py
       - backend/modules/protocol_v2/gateway_service.py
@@ -55,7 +55,7 @@ requiredGates:
     releaseBlocker: false
     evidence:
       - deploy/postgres/init/001_geo_telemetry.sql
-      - scripts/postgis_runtime_smoke.py
+      - scripts/smoke/postgis_runtime_smoke.py
       - backend/tests/test_postgis_schema_contract.py
     missing:
       - "auth/user/ops full PostgreSQL migration cutover runbook"
@@ -69,7 +69,7 @@ requiredGates:
     releaseBlocker: false
     evidence:
       - deploy/compose/compose.dragonfly.override.yml
-      - scripts/dragonfly_profile_smoke.py
+      - scripts/smoke/dragonfly_profile_smoke.py
       - docs/architecture/GCS-Saker_M8_dragonfly_compatibility_profile.md
       - backend/tests/test_dragonfly_cache_profile_contract.py
     missing:
@@ -84,7 +84,7 @@ requiredGates:
     releaseBlocker: false
     evidence:
       - deploy/compose/compose.single-node.poc.yml
-      - scripts/mqtt_hardened_profile_smoke.py
+      - scripts/smoke/mqtt_hardened_profile_smoke.py
       - backend/tests/test_mqtt_hardened_profile_smoke_contract.py
       - backend/tests/test_mqtt_consumer_bridge.py
       - deploy/mosquitto/README.md
@@ -104,7 +104,7 @@ requiredGates:
       - backend/modules/telemetry_buffer
       - backend/tests/test_telemetry_write_buffer.py
       - backend/tests/test_telemetry_bulk_flush_benchmark.py
-      - scripts/telemetry_bulk_flush_benchmark.py
+      - scripts/benchmarks/telemetry_bulk_flush_benchmark.py
       - docs/architecture/GCS-Saker_telemetry_storage_bulk_write_contract.md
     missing:
       - "live DB-backed flush latency benchmark"
@@ -117,8 +117,8 @@ requiredGates:
     currentState: active-validated-observability
     releaseBlocker: false
     evidence:
-      - scripts/webrtc_ice_smoke.py
-      - scripts/m7_dashboard_first_frame_smoke.sh
+      - scripts/smoke/webrtc_ice_smoke.py
+      - scripts/smoke/m7_dashboard_first_frame_smoke.sh
       - services/media-control/internal/turn
       - gcs-dashboard/src/features/streaming/components/WebRTCPlayer.tsx
       - docs/operations/GCS-Saker_M7_ICE_관측과_TURN_부하절감_가이드.md
@@ -135,7 +135,7 @@ requiredGates:
     evidence:
       - contracts/proto/gcs/saker/v1/ai_overlay.proto
       - backend/modules/protocol_v2/ai_overlay.py
-      - scripts/ai_overlay_sidecar_smoke.py
+      - scripts/smoke/ai_overlay_sidecar_smoke.py
       - gcs-dashboard/src/features/streaming/webCodecsPipelinePlan.ts
       - docs/architecture/GCS-Saker_M8_ai_sidecar_overlay_contract.md
     missing:
@@ -155,7 +155,7 @@ requiredGates:
       - deploy/mediamtx/mediamtx.closed-network.yml
       - docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md
       - backend/tests/test_closed_network_static_check.py
-      - scripts/closed_network_static_check.py
+      - scripts/gates/closed_network_static_check.py
     missing:
       - "actual air-gapped hardware install rehearsal"
       - "local STUN/TURN media smoke with external DNS blocked"
@@ -167,11 +167,11 @@ requiredGates:
     currentState: evidence-gate-passing
     releaseBlocker: false
     evidence:
-      - scripts/m7_final_evidence_gate.py
-      - scripts/m7_performance_benchmark_matrix.py
+      - scripts/gates/m7_final_evidence_gate.py
+      - scripts/benchmarks/m7_performance_benchmark_matrix.py
       - docs/architecture/GCS-Saker_M7_performance_benchmark_matrix.md
       - docs/architecture/GCS-Saker_M7_final_architecture_evidence.md
-      - scripts/generate_test_report.py
+      - scripts/reports/generate_test_report.py
     missing:
       - "legacy/v0.2.0/M7 same-condition live benchmark rerun"
       - "external NAT relay ratio and first-frame soak result"
@@ -186,8 +186,8 @@ requiredGates:
       - docs/architecture/GCS-Saker_v2_completion_matrix.yml
       - docs/operations/GCS-Saker_M7_release_cutover_evidence_2026-06-26.md
       - docs/releases/GCS-Saker_v0.7.1_M7_release_cutover_notes.md
-      - scripts/m7_final_evidence_gate.py
-      - scripts/v2_completion_gate.py
+      - scripts/gates/m7_final_evidence_gate.py
+      - scripts/gates/v2_completion_gate.py
     missing:
       - "two-endpoint external NAT multi-minute soak"
       - "real Redis/TURN/MediaMTX live failure injection in field-like network"

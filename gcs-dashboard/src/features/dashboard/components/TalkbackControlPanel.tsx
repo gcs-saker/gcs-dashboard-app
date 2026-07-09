@@ -1,8 +1,11 @@
-import { useMemo } from "react";
-
-import { useWhipAudioPublisher, type UseWhipAudioPublisherOptions } from "../../streaming/hooks/useWhipAudioPublisher";
-import type { DashboardStreamSlot } from "../streamTypes";
-import { getDashboardStreamDisplayName } from "../streamTypes";
+import { useWhipAudioPublisher, type UseWhipAudioPublisherOptions } from "@streaming/hooks/useWhipAudioPublisher";
+import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import {
+  buildTalkbackSelectionViewModel,
+  formatTalkbackMicLevel,
+  isTalkbackActive,
+  talkbackStatusText,
+} from "@dashboard/talkbackPresentation";
 
 interface TalkbackControlPanelProps extends UseWhipAudioPublisherOptions {
   selectedStreamIds: string[];
@@ -15,12 +18,8 @@ export function TalkbackControlPanel({
   ...publisherOptions
 }: TalkbackControlPanelProps) {
   const talkback = useWhipAudioPublisher(publisherOptions);
-  const selectedStreams = useMemo(
-    () => streams.filter((stream) => stream.streamPath && selectedStreamIds.includes(stream.streamPath)),
-    [selectedStreamIds, streams],
-  );
-  const selectedStreamPaths = selectedStreams.map((stream) => stream.streamPath).filter(Boolean) as string[];
-  const isActive = talkback.status === "active" || talkback.status === "publishing" || talkback.status === "requesting-mic";
+  const selection = buildTalkbackSelectionViewModel(streams, selectedStreamIds);
+  const isActive = isTalkbackActive(talkback.status);
 
   return (
     <section className="talkback-panel" aria-label="다중 stream 음성 송신">
@@ -28,21 +27,19 @@ export function TalkbackControlPanel({
         {talkbackStatusText(talkback.status)}
       </span>
       <span className="talkback-panel__targets">
-        {selectedStreams.length > 0
-          ? selectedStreams.map(getDashboardStreamDisplayName).join(", ")
-          : "대상 없음"}
+        {selection.targetsText}
       </span>
       <span
         className={`talkback-panel__mic ${talkback.hasLocalAudioTrack ? "has-track" : ""}`}
-        aria-label={`마이크 입력 ${formatMicLevel(talkback.micLevel)}`}
+        aria-label={`마이크 입력 ${formatTalkbackMicLevel(talkback.micLevel)}`}
       >
         <i style={{ width: `${Math.round((talkback.micLevel ?? 0) * 100)}%` }} />
-        <em>{talkback.hasLocalAudioTrack ? `MIC ${formatMicLevel(talkback.micLevel)}` : "MIC 대기"}</em>
+        <em>{talkback.hasLocalAudioTrack ? `MIC ${formatTalkbackMicLevel(talkback.micLevel)}` : "MIC 대기"}</em>
       </span>
       <button
         className={`ops-command-button ${isActive ? "is-active" : ""}`}
-        disabled={selectedStreamPaths.length === 0 || isActive}
-        onClick={() => void talkback.start(selectedStreamPaths)}
+        disabled={selection.selectedStreamPaths.length === 0 || isActive}
+        onClick={() => void talkback.start(selection.selectedStreamPaths)}
         type="button"
       >
         마이크 송신
@@ -63,20 +60,4 @@ export function TalkbackControlPanel({
       {talkback.errorMessage ? <span className="talkback-panel__error">{talkback.errorMessage}</span> : null}
     </section>
   );
-}
-
-function formatMicLevel(level: number | null): string {
-  if (level === null) return "대기";
-  return `${Math.round(level * 100)}%`;
-}
-
-function talkbackStatusText(status: ReturnType<typeof useWhipAudioPublisher>["status"]): string {
-  const labels: Record<ReturnType<typeof useWhipAudioPublisher>["status"], string> = {
-    idle: "Talkback 대기",
-    "requesting-mic": "마이크 권한",
-    publishing: "송신 연결",
-    active: "송신 중",
-    error: "송신 오류",
-  };
-  return labels[status];
 }

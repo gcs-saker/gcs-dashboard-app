@@ -5,6 +5,7 @@ import (
 	"net"
 	"strings"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -27,6 +28,14 @@ func TestExchangeAcceptsAuthorizedGatewayRequest(t *testing.T) {
 
 func TestExchangeRejectsUnauthorizedMetadata(t *testing.T) {
 	_, err := exchangeOnce(t, gatewayRequest("req-unauthorized", true), "wrong-token", nil)
+
+	if status.Code(err) != codes.Unauthenticated {
+		t.Fatalf("expected unauthenticated error, got %v", err)
+	}
+}
+
+func TestExchangeRejectsMissingGatewayMetadata(t *testing.T) {
+	_, err := exchangeOnceWithMetadata(t, gatewayRequest("req-missing-auth", true), metadata.MD{}, nil)
 
 	if status.Code(err) != codes.Unauthenticated {
 		t.Fatalf("expected unauthenticated error, got %v", err)
@@ -79,12 +88,106 @@ func TestExchangeKeepsOneBidiStreamForMultipleGatewayMessages(t *testing.T) {
 	}
 }
 
+func TestExchangeRoutesPlannedGatewayPayloadsToHandler(t *testing.T) {
+	payloadKinds := []GatewayPayloadKind{
+		GatewayPayloadTelemetry,
+		GatewayPayloadStream,
+		GatewayPayloadCommandAck,
+	}
+	for _, payloadKind := range payloadKinds {
+		t.Run(string(payloadKind), func(t *testing.T) {
+			handler := &recordingGatewayHandler{}
+
+			response, err := exchangeOnce(t, gatewayRequestOfKind("req-"+string(payloadKind), payloadKind), testGatewayToken, func(server Server) Server {
+				server.handler = handler
+				return server
+			})
+
+			if err != nil {
+				t.Fatalf("exchange failed: %v", err)
+			}
+			assertResponse(t, response, "req-"+string(payloadKind), GatewayAckStatusAccepted, reasonAccepted)
+			if len(handler.requests) != 1 {
+				t.Fatalf("handler request count mismatch: got %d", len(handler.requests))
+			}
+			if handler.requests[0].Payload.Kind != payloadKind {
+				t.Fatalf("handler payload kind mismatch: got %q want %q", handler.requests[0].Payload.Kind, payloadKind)
+			}
+			if string(handler.requests[0].Payload.Value) != string(payloadKind)+"-bytes" {
+				t.Fatalf("handler payload value mismatch: got %q", handler.requests[0].Payload.Value)
+			}
+		})
+	}
+}
+
+func TestExchangeReturnsGatewayHandlerDecision(t *testing.T) {
+	handler := &recordingGatewayHandler{
+		decision: GatewayRequestDecision{
+			Status:     GatewayAckStatusRejected,
+			ReasonCode: "policy_rejected",
+		},
+	}
+
+	response, err := exchangeOnce(t, gatewayRequest("req-rejected", true), testGatewayToken, func(server Server) Server {
+		server.handler = handler
+		return server
+	})
+
+	if err != nil {
+		t.Fatalf("exchange failed: %v", err)
+	}
+	assertResponse(t, response, "req-rejected", GatewayAckStatusRejected, "policy_rejected")
+}
+
+func TestStartWithReadinessReportsListeningState(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("reserve port: %v", err)
+	}
+	address := listener.Addr().String()
+	_ = listener.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	readiness := StartWithReadiness(ctx, address, testGatewayToken, defaultMaxPayloadBytes)
+
+	assertReadinessEventually(t, readiness, true, "")
+}
+
+func TestStartWithReadinessReportsServeFailure(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("reserve port: %v", err)
+	}
+	defer listener.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	readiness := StartWithReadiness(ctx, listener.Addr().String(), testGatewayToken, defaultMaxPayloadBytes)
+
+	assertReadinessEventually(t, readiness, false, "listen_failed")
+}
+
 func exchangeOnce(
 	t *testing.T,
 	request []byte,
 	token string,
 	mutate func(Server) Server,
 	extraMetadata ...metadata.MD,
+) ([]byte, error) {
+	t.Helper()
+	gatewayMetadata := metadata.Pairs(metadataGatewayToken, token)
+	for _, item := range extraMetadata {
+		gatewayMetadata = metadata.Join(gatewayMetadata, item)
+	}
+	return exchangeOnceWithMetadata(t, request, gatewayMetadata, mutate)
+}
+
+func exchangeOnceWithMetadata(
+	t *testing.T,
+	request []byte,
+	gatewayMetadata metadata.MD,
+	mutate func(Server) Server,
 ) ([]byte, error) {
 	t.Helper()
 	listener := bufconn.Listen(1024 * 1024)
@@ -101,11 +204,8 @@ func exchangeOnce(
 
 	ctx := metadata.NewOutgoingContext(
 		context.Background(),
-		metadata.Pairs(metadataGatewayToken, token),
+		gatewayMetadata,
 	)
-	for _, item := range extraMetadata {
-		ctx = metadata.NewOutgoingContext(ctx, metadata.Join(metadata.Pairs(metadataGatewayToken, token), item))
-	}
 	conn, err := grpc.DialContext(
 		ctx,
 		"bufnet",
@@ -138,15 +238,38 @@ func exchangeOnce(
 }
 
 func gatewayRequest(requestID string, includePayload bool) []byte {
+	if includePayload {
+		return gatewayRequestOfKind(requestID, GatewayPayloadTelemetry)
+	}
 	payload := make([]byte, 0, 96)
 	payload = encodeString(payload, requestFieldRequestID, requestID)
 	payload = encodeString(payload, requestFieldOrgID, "a4ai")
 	payload = encodeString(payload, requestFieldGroupID, "co-a")
 	payload = encodeString(payload, requestFieldAssetID, "raw.mobile.front")
-	if includePayload {
-		payload = encodeString(payload, requestFieldTelemetry, "telemetry-bytes")
-	}
 	return payload
+}
+
+func gatewayRequestOfKind(requestID string, payloadKind GatewayPayloadKind) []byte {
+	payload := make([]byte, 0, 96)
+	payload = encodeString(payload, requestFieldRequestID, requestID)
+	payload = encodeString(payload, requestFieldOrgID, "a4ai")
+	payload = encodeString(payload, requestFieldGroupID, "co-a")
+	payload = encodeString(payload, requestFieldAssetID, "raw.mobile.front")
+	payload = encodeString(payload, requestPayloadField(payloadKind), string(payloadKind)+"-bytes")
+	return payload
+}
+
+func requestPayloadField(kind GatewayPayloadKind) int {
+	switch kind {
+	case GatewayPayloadTelemetry:
+		return requestFieldTelemetry
+	case GatewayPayloadStream:
+		return requestFieldStreamEvent
+	case GatewayPayloadCommandAck:
+		return requestFieldCommandAck
+	default:
+		panic("unsupported test gateway request payload kind")
+	}
 }
 
 func assertResponse(t *testing.T, payload []byte, requestID string, expectedStatus GatewayAckStatus, reasonCode string) {
@@ -215,9 +338,39 @@ func exchangeMany(t *testing.T, requestIDs []string, token string) ([][]byte, er
 	return responses, nil
 }
 
+type recordingGatewayHandler struct {
+	requests []GatewayStreamRequest
+	decision GatewayRequestDecision
+}
+
+func (h *recordingGatewayHandler) HandleGatewayRequest(_ context.Context, request GatewayStreamRequest) GatewayRequestDecision {
+	h.requests = append(h.requests, request)
+	if h.decision.Status != 0 {
+		return h.decision
+	}
+	return GatewayRequestDecision{
+		Status:     GatewayAckStatusAccepted,
+		ReasonCode: reasonAccepted,
+	}
+}
+
 type decodedResponse struct {
 	strings map[int][]byte
 	varints map[int]uint64
+}
+
+func assertReadinessEventually(t *testing.T, readiness *Readiness, expectedReady bool, expectedReason string) {
+	t.Helper()
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		ready, reason := readiness.Ready()
+		if ready == expectedReady && reason == expectedReason {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	ready, reason := readiness.Ready()
+	t.Fatalf("readiness mismatch: ready=%v reason=%q", ready, reason)
 }
 
 func decodeResponse(t *testing.T, payload []byte) decodedResponse {

@@ -1,6 +1,5 @@
-from pathlib import Path
 import subprocess
-
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FINAL_CLEANUP_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_M7_final_cleanup_runbook_v0.1.md"

@@ -3,9 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { AuthProvider } from "../auth/AuthProvider";
-import { clearAuthSession, storeAuthSession } from "../auth/authStorage";
-import { createDashboardQueryClient } from "../queryClient";
+import { AuthProvider } from "@auth/AuthProvider";
+import { clearAuthSession, storeAuthSession } from "@auth/authStorage";
+import { createDashboardQueryClient } from "@features/queryClient";
 import { DashboardPage } from "./DashboardPage";
 
 function renderDashboard() {

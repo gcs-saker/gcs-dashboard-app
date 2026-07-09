@@ -114,6 +114,8 @@ export interface RealtimePlayerSnapshot {
   streamStatus: StreamRuntimeStatus | "unknown";
   errorMessage: string | null;
   webrtcRetryAttempt?: number;
+  webrtcIcePath?: "direct" | "relay" | "unknown";
+  webrtcSignalingComplete?: boolean;
   hasAudioTrack?: boolean;
   isAudioActive?: boolean;
   audioPlaybackState?: WebRTCAudioPlaybackState;

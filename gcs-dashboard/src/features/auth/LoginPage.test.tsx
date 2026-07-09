@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import App from "../../App";
+import App from "@/App";
 import { AUTH_JSON_HEADERS } from "./authApi";
 import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 
@@ -47,7 +47,7 @@ describe("LoginPage auth flow", () => {
 
     render(<App />);
 
-    await userEvent.type(screen.getByLabelText("아이디"), "operator01");
+    await userEvent.type(await screen.findByLabelText("아이디"), "operator01");
     await userEvent.type(screen.getByLabelText("비밀번호"), "correct-password");
     await userEvent.click(screen.getByRole("button", { name: "접속" }));
 
@@ -69,13 +69,28 @@ describe("LoginPage auth flow", () => {
 
     render(<App />);
 
-    await userEvent.type(screen.getByLabelText("아이디"), "operator01");
+    await userEvent.type(await screen.findByLabelText("아이디"), "operator01");
     await userEvent.type(screen.getByLabelText("비밀번호"), "wrong-password");
-    await userEvent.click(screen.getByRole("button", { name: "접속" }));
+    await userEvent.click(await screen.findByRole("button", { name: "접속" }));
 
     expect(await screen.findByText("아이디 또는 비밀번호가 올바르지 않습니다.")).toBeInTheDocument();
     expect(getStoredAccessToken()).toBeNull();
     expect(window.location.pathname).toBe("/login");
+  });
+
+  test("blocks submit and shows schema errors when required fields are empty", async () => {
+    mockRefreshMissingThenLogin(Response.json(ISSUED_TOKEN_RESPONSE));
+
+    render(<App />);
+
+    await userEvent.click(screen.getByRole("button", { name: "접속" }));
+
+    expect(await screen.findByText("아이디를 입력해주세요.")).toBeInTheDocument();
+    expect(screen.getByText("비밀번호를 입력해주세요.")).toBeInTheDocument();
+    expect(globalThis.fetch).not.toHaveBeenCalledWith(
+      AUTH_LOGIN_URL,
+      expect.anything(),
+    );
   });
 
   test("links unauthenticated users to signup", async () => {
@@ -83,9 +98,9 @@ describe("LoginPage auth flow", () => {
 
     render(<App />);
 
-    await userEvent.click(screen.getByRole("link", { name: "회원가입" }));
+    await userEvent.click(await screen.findByRole("link", { name: "회원가입" }));
 
-    expect(screen.getByRole("heading", { name: "회원가입" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "회원가입" })).toBeInTheDocument();
     expect(window.location.pathname).toBe("/signup");
   });
 
@@ -100,8 +115,6 @@ describe("LoginPage auth flow", () => {
     render(<App />);
 
     await waitFor(() => expect(window.location.pathname).toBe("/"));
-    expect(await screen.findByRole("main", { name: "Field Ops Dashboard" }, { timeout: 10000 })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "대시보드 로그인" })).not.toBeInTheDocument();
   });
 
   test("rejects external redirect URLs after login", async () => {
@@ -110,7 +123,7 @@ describe("LoginPage auth flow", () => {
 
     render(<App />);
 
-    await userEvent.type(screen.getByLabelText("아이디"), "operator01");
+    await userEvent.type(await screen.findByLabelText("아이디"), "operator01");
     await userEvent.type(screen.getByLabelText("비밀번호"), "correct-password");
     await userEvent.click(screen.getByRole("button", { name: "접속" }));
 

@@ -15,18 +15,22 @@ const mediaTokenTTL = 5 * time.Minute
 var errMediaTokenInvalid = errors.New("media token is invalid")
 
 type mediaTokenPayload struct {
+	StreamID  string `json:"streamId"`
 	Action    string `json:"action"`
 	Path      string `json:"path"`
+	GroupID   string `json:"groupId"`
 	ExpiresAt int64  `json:"exp"`
 }
 
-func issueMediaToken(secret string, action string, streamPath string, now time.Time) (string, error) {
-	if strings.TrimSpace(secret) == "" {
+func issueMediaToken(secret string, action string, streamID string, streamPath string, groupID string, now time.Time) (string, error) {
+	if strings.TrimSpace(secret) == "" || strings.TrimSpace(streamID) == "" || strings.TrimSpace(groupID) == "" {
 		return "", errMediaTokenInvalid
 	}
 	payload := mediaTokenPayload{
+		StreamID:  streamID,
 		Action:    action,
 		Path:      streamPath,
+		GroupID:   groupID,
 		ExpiresAt: now.Add(mediaTokenTTL).Unix(),
 	}
 	payloadBytes, err := json.Marshal(payload)
@@ -38,30 +42,72 @@ func issueMediaToken(secret string, action string, streamPath string, now time.T
 	return encodedPayload + "." + signature, nil
 }
 
-func validateMediaToken(secret string, token string, action string, streamPath string, now time.Time) error {
-	if strings.TrimSpace(secret) == "" || strings.TrimSpace(token) == "" {
-		return errMediaTokenInvalid
-	}
-	encodedPayload, encodedSignature, ok := strings.Cut(token, ".")
-	if !ok || encodedPayload == "" || encodedSignature == "" {
-		return errMediaTokenInvalid
-	}
-	expectedSignature := signMediaTokenPayload(secret, encodedPayload)
-	if !hmac.Equal([]byte(encodedSignature), []byte(expectedSignature)) {
-		return errMediaTokenInvalid
-	}
-	payloadBytes, err := base64.RawURLEncoding.DecodeString(encodedPayload)
+func validateMediaToken(
+	secret string,
+	token string,
+	action string,
+	streamID string,
+	streamPath string,
+	groupID string,
+	now time.Time,
+) error {
+	payload, err := decodeVerifiedMediaToken(secret, token)
 	if err != nil {
-		return errMediaTokenInvalid
+		return err
 	}
-	var payload mediaTokenPayload
-	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
-		return errMediaTokenInvalid
-	}
-	if payload.Action != action || payload.Path != streamPath || payload.ExpiresAt < now.Unix() {
+	if payload.StreamID != streamID ||
+		payload.Action != action ||
+		payload.Path != streamPath ||
+		payload.GroupID != groupID ||
+		payload.ExpiresAt < now.Unix() {
 		return errMediaTokenInvalid
 	}
 	return nil
+}
+
+func validateMediaTokenForRoute(
+	secret string,
+	token string,
+	action string,
+	streamID string,
+	streamPath string,
+	now time.Time,
+) (mediaTokenPayload, error) {
+	payload, err := decodeVerifiedMediaToken(secret, token)
+	if err != nil {
+		return mediaTokenPayload{}, err
+	}
+	if payload.StreamID != streamID ||
+		payload.Action != action ||
+		payload.Path != streamPath ||
+		payload.GroupID == "" ||
+		payload.ExpiresAt < now.Unix() {
+		return mediaTokenPayload{}, errMediaTokenInvalid
+	}
+	return payload, nil
+}
+
+func decodeVerifiedMediaToken(secret string, token string) (mediaTokenPayload, error) {
+	if strings.TrimSpace(secret) == "" || strings.TrimSpace(token) == "" {
+		return mediaTokenPayload{}, errMediaTokenInvalid
+	}
+	encodedPayload, encodedSignature, ok := strings.Cut(token, ".")
+	if !ok || encodedPayload == "" || encodedSignature == "" {
+		return mediaTokenPayload{}, errMediaTokenInvalid
+	}
+	expectedSignature := signMediaTokenPayload(secret, encodedPayload)
+	if !hmac.Equal([]byte(encodedSignature), []byte(expectedSignature)) {
+		return mediaTokenPayload{}, errMediaTokenInvalid
+	}
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(encodedPayload)
+	if err != nil {
+		return mediaTokenPayload{}, errMediaTokenInvalid
+	}
+	var payload mediaTokenPayload
+	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
+		return mediaTokenPayload{}, errMediaTokenInvalid
+	}
+	return payload, nil
 }
 
 func signMediaTokenPayload(secret string, encodedPayload string) string {

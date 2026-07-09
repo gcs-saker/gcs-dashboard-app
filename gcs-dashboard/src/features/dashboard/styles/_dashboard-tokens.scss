@@ -1,0 +1,26 @@
+@mixin dashboard-theme {
+  --bg: #050b10;
+  --panel: #0b1720;
+  --panel-strong: #10212a;
+  --line: #28506a;
+  --line-soft: rgba(94, 151, 181, 0.36);
+  --text: #dce8f2;
+  --muted: #8da1af;
+  --cyan: #3db8ff;
+  --green: #59d174;
+  --amber: #f3c84d;
+  --red: #e45d53;
+  --violet: #a88df0;
+  --heading: #eff7fb;
+  --accent: #3db8ff;
+  --shadow-panel: 0 18px 44px rgba(0, 0, 0, 0.28);
+  --surface-glass: rgba(5, 13, 17, 0.74);
+  --surface-deep: rgba(3, 10, 15, 0.94);
+  --surface-overlay: rgba(0, 0, 0, 0.42);
+  --state-danger-surface: rgba(228, 93, 83, 0.14);
+  --state-success-surface: rgba(86, 211, 124, 0.18);
+  --state-warning-surface: rgba(243, 200, 77, 0.12);
+  --motion-fast: 120ms;
+  --motion-normal: 180ms;
+  --motion-slow: 520ms;
+}

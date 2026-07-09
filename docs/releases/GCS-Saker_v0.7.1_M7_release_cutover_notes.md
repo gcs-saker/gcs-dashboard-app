@@ -25,13 +25,13 @@ Primary evidence document:
 Required local command:
 
 ```bash
-python3 scripts/m7_final_evidence_gate.py --run --timeout-seconds 120
+python3 scripts/gates/m7_final_evidence_gate.py --run --timeout-seconds 120
 ```
 
 Required completion command:
 
 ```bash
-python3 scripts/v2_completion_gate.py --require-complete
+python3 scripts/gates/v2_completion_gate.py --require-complete
 ```
 
 ## Test Result Summary

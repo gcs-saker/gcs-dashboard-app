@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-from pathlib import Path
 import importlib.util
 import json
 import subprocess
 import sys
-
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-GRPC_SMOKE = REPO_ROOT / "scripts" / "grpc_runtime_smoke.py"
-DRAGONFLY_SMOKE = REPO_ROOT / "scripts" / "dragonfly_profile_smoke.py"
-POSTGIS_SMOKE = REPO_ROOT / "scripts" / "postgis_runtime_smoke.py"
-MQTT_SMOKE = REPO_ROOT / "scripts" / "mqtt_hardened_profile_smoke.py"
+GRPC_SMOKE = REPO_ROOT / "scripts" / "smoke" / "grpc_runtime_smoke.py"
+DRAGONFLY_SMOKE = REPO_ROOT / "scripts" / "smoke" / "dragonfly_profile_smoke.py"
+POSTGIS_SMOKE = REPO_ROOT / "scripts" / "smoke" / "postgis_runtime_smoke.py"
+MQTT_SMOKE = REPO_ROOT / "scripts" / "smoke" / "mqtt_hardened_profile_smoke.py"
 
 
 def run_check(script: Path) -> dict:
@@ -50,9 +49,15 @@ def test_grpc_runtime_smoke_reports_integrated_runtime_state_and_follow_up_gates
     assert payload["descriptorFallbackCommand"][:3] == [sys.executable, "-m", "grpc_tools.protoc"]
     assert "client implementation behind MessageSender abstraction" in payload["implementedRuntime"]
     assert "SakerGatewayService.Exchange server implementation in media-control" in payload["implementedRuntime"]
+    assert (
+        "MEDIA_CONTROL_GRPC_LISTEN_ADDR compose wiring for local and single-node runtime"
+        in payload["implementedRuntime"]
+    )
     assert "explicit GatewayStreamRequest and GatewayStreamResponse DTO mappers" in payload["implementedRuntime"]
-    assert "native/device gateway packaging outside smoke script" in payload["remainingBeforeFullActive"]
-    assert "compose internal network" in payload["promotionGate"]
+    assert "planned telemetry, stream_event, command_ack payloads over one bidi stream" in payload["implementedRuntime"]
+    assert payload["requestPayloads"] == ["telemetry", "stream_event", "command_ack"]
+    assert "long-lived multi-minute soak in staging network" in payload["remainingBeforeFullActive"]
+    assert "telemetry, stream_event, and command_ack" in payload["promotionGate"]
 
 
 def test_grpc_runtime_smoke_falls_back_to_grpc_tools_when_protoc_is_missing(monkeypatch, tmp_path) -> None:

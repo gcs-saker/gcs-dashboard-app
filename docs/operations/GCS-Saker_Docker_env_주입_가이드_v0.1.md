@@ -62,7 +62,7 @@ M2 Server-01 production 후보에서는 `edge` Nginx container가 외부 `443/tc
 ### 정적 env 계약 확인
 
 ```bash
-python scripts/docker_env_check.py
+python scripts/gates/docker_env_check.py
 ```
 
 ### compose 해석 확인
@@ -93,4 +93,4 @@ docker compose --env-file .env up --build
 
 ## #112 반영 기준
 
-로컬 복구 중 확인한 `mediamtx.yml` 디렉터리 생성 문제는 compose/env 재현성 문제로 관리한다. bind mount 대상은 반드시 파일이어야 하며, `scripts/docker_env_check.py`에서 이를 확인한다.
+로컬 복구 중 확인한 `mediamtx.yml` 디렉터리 생성 문제는 compose/env 재현성 문제로 관리한다. bind mount 대상은 반드시 파일이어야 하며, `scripts/gates/docker_env_check.py`에서 이를 확인한다.

@@ -27,7 +27,7 @@ GCS-Saker는 공개망과 폐쇄망 모두에서 동작해야 한다. 폐쇄망�
 인터넷을 끊은 상태에서도 아래 검사는 실행되어야 한다.
 
 ```bash
-python3 scripts/closed_network_static_check.py
+python3 scripts/gates/closed_network_static_check.py
 docker compose --env-file deploy/compose/.env.closed-network.example -f deploy/compose/compose.single-node.poc.yml config --quiet
 ```
 
@@ -43,10 +43,10 @@ docker compose --env-file deploy/compose/.env.closed-network.example -f deploy/c
 ## 로컬 폐쇄망 모의 절차
 
 1. private `.env`에 `gcs-dashboard/.env.closed-network.example` 값을 복사한다.
-2. `WEBRTC_TURN_PASSWORD`, `MYSQL_PASSWORD`, `AUTH_JWT_SECRET`를 실제 secret으로 바꾼다.
+2. `WEBRTC_TURN_PASSWORD`, `MYSQL_PASSWORD`, `AUTH_JWT_SECRET`, `AUTH_POLICY_ADMIN_PASSWORD`, `AUTH_POLICY_OPERATOR_PASSWORD`, `AUTH_POLICY_SMOKE_PASSWORD`를 실제 secret으로 바꾼다.
 3. TURN/STUN host를 같은 LAN에서 접근 가능한 IP 또는 VIP로 바꾼다.
 4. 외부 인터넷을 끊거나 firewall에서 외부 DNS/HTTP를 막는다.
-5. `python3 scripts/closed_network_static_check.py`를 실행한다.
+5. `python3 scripts/gates/closed_network_static_check.py`를 실행한다.
 6. `docker compose --env-file deploy/compose/.env.closed-network.example -f deploy/compose/compose.single-node.poc.yml config --quiet`를 실행한다.
 7. Docker image가 이미 준비된 상태에서 compose를 실행한다.
 8. dashboard에서 시간 동기화 모드를 `폐쇄망`으로 설정하고 내부 time server를 점검한다.
@@ -91,7 +91,7 @@ MEDIA_CONTROL_TURN_MAX_HEALTHY_SERVERS=1
 배포 전 아래 명령이 통과해야 한다.
 
 ```bash
-python3 scripts/closed_network_static_check.py
+python3 scripts/gates/closed_network_static_check.py
 docker compose --env-file deploy/compose/.env.closed-network.example -f deploy/compose/compose.single-node.poc.yml config --quiet
 ```
 
@@ -121,7 +121,7 @@ secret은 산출물에 포함하지 않는다. 현장별 `.env`는 별도 보안
 4. 현장 `.env.closed-network`를 작성한다.
 5. `docker compose --env-file .env.closed-network -f compose.single-node.poc.yml config --quiet`로 계약을 확인한다.
 6. `docker compose ... up -d`로 구동한다.
-7. `scripts/closed_network_static_check.py`, runtime smoke, publish/play smoke를 순서대로 실행한다.
+7. `scripts/gates/closed_network_static_check.py`, runtime smoke, publish/play smoke를 순서대로 실행한다.
 
 이 경로의 장점은 설치 범위가 작고 rollback이 단순하다는 점이다. 단점은 Docker Engine 버전과 compose plugin 버전이 너무 낮으면 compose schema나 healthcheck 동작이 달라질 수 있다는 점이다.
 

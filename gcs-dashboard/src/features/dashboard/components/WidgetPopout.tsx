@@ -1,4 +1,4 @@
-import type { DashboardWidgetDefinition } from "../dashboardLayout";
+import type { DashboardWidgetDefinition } from "@dashboard/dashboardLayout";
 
 interface WidgetPopoutProps {
   widget: DashboardWidgetDefinition;

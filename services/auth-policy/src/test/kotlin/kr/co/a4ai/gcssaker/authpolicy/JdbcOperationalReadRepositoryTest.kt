@@ -8,7 +8,9 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.StreamSessionReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalReadRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.OperationalReadSql
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.jdbc.core.JdbcTemplate
@@ -180,6 +182,46 @@ class JdbcOperationalReadRepositoryTest {
         assertEquals("raw.mobile.front", sessions.single().streamId)
         assertEquals("offline", sessions.single().status)
         assertEquals(timestamp.plusSeconds(30), sessions.single().lastHeartbeatAt)
+    }
+
+    @Test
+    fun `latest stream session query uses read view instead of inline anti join`() {
+        assertTrue("operational_stream_session_latest" in OperationalReadSql.selectLatestStreamSessions)
+        assertFalse("NOT EXISTS" in OperationalReadSql.selectLatestStreamSessions)
+    }
+
+    @Test
+    fun `jdbc operational read schema creates latest stream session view`() {
+        val dataSource = h2DataSource()
+        val repository = JdbcOperationalReadRepository(dataSource, emptyList(), emptyMap())
+        val jdbc = JdbcTemplate(dataSource)
+
+        repository.recordStreamSession(
+            streamSession(
+                streamId = "raw.mobile.front",
+                sessionId = "session-1",
+                status = "online",
+                heartbeatAt = timestamp,
+            ),
+        )
+        repository.recordStreamSession(
+            streamSession(
+                streamId = "raw.mobile.front",
+                sessionId = "session-1",
+                status = "offline",
+                heartbeatAt = timestamp.plusSeconds(30),
+            ),
+        )
+
+        val viewCount = jdbc.queryForObject("SELECT COUNT(*) FROM operational_stream_session_latest", Int::class.java)
+        val latestStatus = jdbc.queryForObject(
+            "SELECT status FROM operational_stream_session_latest WHERE stream_id = ?",
+            String::class.java,
+            "raw.mobile.front",
+        )
+
+        assertEquals(1, viewCount)
+        assertEquals("offline", latestStatus)
     }
 
     private fun telemetry(

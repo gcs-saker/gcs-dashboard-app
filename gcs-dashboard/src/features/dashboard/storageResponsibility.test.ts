@@ -15,6 +15,8 @@ describe("storageResponsibility", () => {
         "cctv-grid-preference",
         "motion-mode",
         "map-preference",
+        "server-health-history",
+        "rtt-snapshot-cache",
       ]),
     );
     expect(BROWSER_STORAGE_RESPONSIBILITIES.sessionStorage).not.toContain("stream-device-alias");
@@ -30,5 +32,13 @@ describe("storageResponsibility", () => {
         "longLivedAccessToken",
       ]),
     );
+  });
+
+  test("keeps forbidden auth names out of IndexedDB responsibilities", () => {
+    const indexedDbResponsibilities = BROWSER_STORAGE_RESPONSIBILITIES.indexedDb.join(" ").toLowerCase();
+
+    for (const forbiddenKey of FORBIDDEN_BROWSER_STORAGE_KEYS) {
+      expect(indexedDbResponsibilities).not.toContain(forbiddenKey.toLowerCase());
+    }
   });
 });

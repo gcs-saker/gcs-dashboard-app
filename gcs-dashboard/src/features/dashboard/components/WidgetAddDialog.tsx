@@ -1,4 +1,4 @@
-import type { DashboardLayoutItem } from "../dashboardLayout";
+import type { DashboardLayoutItem } from "@dashboard/dashboardLayout";
 
 interface WidgetAddDialogProps {
   layout: DashboardLayoutItem[];

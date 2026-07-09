@@ -1,6 +1,5 @@
-from pathlib import Path
 import re
-
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 NGINX_PROXY_CONFIG = REPO_ROOT / "deploy" / "nginx" / "gcs-saker.reverse-proxy.example.conf"
@@ -44,8 +43,8 @@ def test_reverse_proxy_preserves_websocket_upgrade_headers() -> None:
 def test_reverse_proxy_sets_browser_security_headers() -> None:
     config = read_config()
 
-    assert 'add_header X-Frame-Options DENY always;' in config
-    assert 'add_header X-Content-Type-Options nosniff always;' in config
+    assert "add_header X-Frame-Options DENY always;" in config
+    assert "add_header X-Content-Type-Options nosniff always;" in config
     assert "frame-ancestors 'none'" in config
     assert "object-src 'none'" in config
     assert "connect-src 'self' https: wss: stun: turn:;" in config
@@ -127,11 +126,9 @@ def test_media_proxy_rewrites_public_prefixes_to_mediamtx_paths() -> None:
     webrtc_location = extract_location(config, "/webrtc/")
 
     assert "rewrite ^/hls/(.*)$ /$1 break;" in hls_location
-    assert 'set $gcs_mediamtx_hls "mediamtx:8888";' in hls_location
-    assert "proxy_pass http://$gcs_mediamtx_hls;" in hls_location
+    assert "proxy_pass http://gcs_mediamtx_hls;" in hls_location
     assert "rewrite ^/webrtc/(.*)$ /$1 break;" in webrtc_location
-    assert 'set $gcs_mediamtx_webrtc "mediamtx:8889";' in webrtc_location
-    assert "proxy_pass http://$gcs_mediamtx_webrtc;" in webrtc_location
+    assert "proxy_pass http://gcs_mediamtx_webrtc;" in webrtc_location
 
 
 def test_auth_proxy_rewrites_dashboard_api_auth_prefix_to_backend_auth_router() -> None:

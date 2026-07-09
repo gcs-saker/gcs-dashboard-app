@@ -1,35 +1,56 @@
 # Python
 __pycache__/
+**/__pycache__/
 *.py[cod]
+*$py.class
 .pytest_cache/
 .coverage
+**/.coverage
+.coverage.*
+**/.coverage.*
+coverage.xml
+**/coverage.xml
 htmlcov/
+**/htmlcov/
 .mypy_cache/
 .ruff_cache/
 .venv/
 venv/
 backend/venv/
+pip-wheel-metadata/
 
 # Node / frontend
 node_modules/
-gcs-dashboard/node_modules/
-gcs-dashboard/dist/
-gcs-dashboard/coverage/
+**/node_modules/
+dist/
+**/dist/
+coverage/
+**/coverage/
+test-results/
+**/test-results/
+playwright-report/
+**/playwright-report/
 gcs-dashboard/certs/
+*.tsbuildinfo
 
 # JVM / Spring Kotlin
 .gradle/
 .gradle-user-home/
 build/
+**/build/
 out/
+**/out/
 *.class
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
+*.war
+*.ear
 
 # Go
 bin/
 .go-build-cache/
 coverage.out
+*.coverprofile
 *.test
 
 # Local environment
@@ -37,20 +58,43 @@ coverage.out
 .env.*
 !.env.example
 !.env.*.example
+*.local
+*.local.*
 docs/operations/server-baseline-results/
 
 # Local runtime data
 tmp/
+temp/
 docker-data/
 volumes/
 mysql-data/
 postgres-data/
 redis-data/
+dragonfly-data/
 mediamtx-recordings/
 coturn-state/
 deploy/mosquitto/passwords.local
+*.sqlite
+*.sqlite3
+*.db
+
+# Secrets / certificates
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+*.jks
+secrets/
+certs/
+private/
 
 # OS / editor
 .DS_Store
+.AppleDouble
+.LSOverride
 .idea/
 .vscode/
+*.swp
+*.swo

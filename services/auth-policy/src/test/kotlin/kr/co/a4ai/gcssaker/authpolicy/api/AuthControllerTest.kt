@@ -48,6 +48,10 @@ class AuthControllerTest {
         refreshCookieSecure = false,
         refreshCookieSameSite = "lax",
         allowedOrigins = AllowedOrigins.of(setOf(TRUSTED_ORIGIN)),
+        adminUsername = "admin01",
+        adminPassword = "admin-password",
+        adminCompanyId = 1,
+        adminGroupId = "bn-1",
         operatorUsername = OPERATOR_USERNAME,
         operatorPassword = OPERATOR_PASSWORD,
         operatorCompanyId = 1,
@@ -357,10 +361,11 @@ class AuthControllerTest {
         override fun publishStreamAccess(
             principal: AuthenticatedPrincipal,
             streamId: String,
+            publisherGroupId: GroupId,
             allowed: Boolean,
             reason: String,
         ) {
-            events.add("stream:$streamId:$allowed")
+            events.add("stream:$streamId:${publisherGroupId.value}:$allowed")
         }
     }
 }

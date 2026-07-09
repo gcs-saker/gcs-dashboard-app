@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { TacticalLeafletMap } from "./TacticalLeafletMap";
-import type { DashboardStreamSlot } from "../streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 
 interface LeafletTestMock {
   instances: Array<{

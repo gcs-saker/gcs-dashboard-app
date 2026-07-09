@@ -1,0 +1,77 @@
+@media (max-width: 1500px) {
+  .ops-dashboard {
+    overflow: auto;
+  }
+
+  .ops-dashboard__grid {
+    grid-template-columns: minmax(260px, 0.72fr) minmax(560px, 1.28fr);
+    grid-template-rows: minmax(220px, auto) minmax(360px, 54vh) minmax(260px, auto) minmax(180px, auto);
+    overflow: visible;
+  }
+
+  .asset-tree,
+  .selected-stream,
+  .stream-grid,
+  .ops-summary,
+  .telemetry-panel,
+  .audio-waveform,
+  .ai-panel {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .telemetry-panel {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .ops-summary {
+    grid-column: 1;
+    grid-row: 2 / 5;
+  }
+
+  .selected-stream {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .tactical-map {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .stream-grid,
+  .audio-waveform,
+  .ai-panel {
+    grid-column: 1 / -1;
+  }
+
+  .stream-grid {
+    grid-row: 3;
+    min-height: 260px;
+  }
+
+  .audio-waveform {
+    grid-row: 4;
+  }
+}
+
+@media (max-height: 860px) and (min-width: 1501px) {
+  .ops-dashboard__tabs {
+    min-height: 64px;
+    padding-top: 8px;
+  }
+
+  .ops-dashboard__grid {
+    grid-template-rows: minmax(190px, 0.24fr) minmax(190px, 0.24fr) minmax(150px, 0.18fr) minmax(150px, 0.18fr);
+  }
+
+  .stream-grid {
+    min-height: 300px;
+  }
+
+  .audio-waveform__scope,
+  .audio-waveform__body {
+    min-height: 0;
+  }
+}

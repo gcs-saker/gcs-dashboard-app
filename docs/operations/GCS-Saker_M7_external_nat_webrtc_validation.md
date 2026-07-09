@@ -23,7 +23,7 @@ WEBRTC_TURN_USERNAME=... \
 WEBRTC_TURN_PASSWORD=... \
 EDGE_BASE_URL=https://a4ai.tplinkdns.com \
 STREAM_PATH=raw/nat/smoke \
-scripts/m7_external_nat_webrtc_smoke.sh --run
+scripts/smoke/m7_external_nat_webrtc_smoke.sh --run
 ```
 
 자체서명 인증서 환경에서는 기본값으로 `INSECURE_TLS=1`이 적용된다. 정식 인증서 전환 뒤에는 `INSECURE_TLS=0`으로 검증한다.
@@ -34,7 +34,7 @@ relay-only 검증은 다음처럼 실행한다.
 RELAY_ONLY=1 \
 WEBRTC_TURN_USERNAME=... \
 WEBRTC_TURN_PASSWORD=... \
-scripts/m7_external_nat_webrtc_smoke.sh --run
+scripts/smoke/m7_external_nat_webrtc_smoke.sh --run
 ```
 
 ## 통과 기준

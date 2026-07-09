@@ -1,24 +1,20 @@
 import type { Dispatch } from "react";
 
-import { WEBRTC_ICE_SERVERS } from "../../../config";
-import type { WebRTCPlaybackStatus } from "../types";
+import { WEBRTC_ICE_SERVERS } from "@/config";
 import type { PlaybackAction, SignalingTimingRecorder } from "./whepPlaybackContracts";
+import {
+  isWhepConnectionInterrupted,
+  isWhepConnectionReady,
+} from "./whepConnectionState";
+import { postWhepOfferWithReadyRetry } from "./whepOfferClient";
 import { countSdpCandidates, messageFromUnknown, reportWhepDebug } from "./whepPlaybackDebug";
 
 const ICE_GATHERING_TIMEOUT_MS = 2500;
-const WHEP_READY_RETRY_STATUS_CODES = new Set([404, 409, 425, 503]);
-const WHEP_READY_RETRY_DELAYS_MS = [500, 1_000, 2_000] as const;
 const DIRECT_FIRST_RTC_CONFIGURATION = Object.freeze({
   bundlePolicy: "max-bundle",
   iceCandidatePoolSize: 0,
   iceTransportPolicy: "all",
 } satisfies Omit<RTCConfiguration, "iceServers">);
-
-class WhepHttpError extends Error {
-  constructor(readonly status: number) {
-    super(`WHEP request failed with ${status}`);
-  }
-}
 
 export function dispatchStateFromConnection(
   peerConnection: RTCPeerConnection,
@@ -27,19 +23,12 @@ export function dispatchStateFromConnection(
   const connectionState = peerConnection.connectionState;
   const iceConnectionState = peerConnection.iceConnectionState;
 
-  if (connectionState === "connected" || iceConnectionState === "connected" || iceConnectionState === "completed") {
+  if (isWhepConnectionReady(connectionState, iceConnectionState)) {
     dispatch({ type: "playing", connectionState, iceConnectionState });
     return;
   }
 
-  if (
-    connectionState === "failed" ||
-    connectionState === "disconnected" ||
-    connectionState === "closed" ||
-    iceConnectionState === "failed" ||
-    iceConnectionState === "disconnected" ||
-    iceConnectionState === "closed"
-  ) {
+  if (isWhepConnectionInterrupted(connectionState, iceConnectionState)) {
     dispatch({
       type: "error",
       message: `WebRTC connection interrupted (${connectionState}/${iceConnectionState})`,
@@ -50,29 +39,6 @@ export function dispatchStateFromConnection(
   }
 
   dispatch({ type: "connection", connectionState, iceConnectionState });
-}
-
-export function statusFromConnection(
-  connectionState: RTCPeerConnectionState,
-  iceConnectionState: RTCIceConnectionState,
-  fallbackStatus: WebRTCPlaybackStatus,
-): WebRTCPlaybackStatus {
-  if (connectionState === "connected" || iceConnectionState === "connected" || iceConnectionState === "completed") {
-    return "playing";
-  }
-
-  if (
-    connectionState === "failed" ||
-    connectionState === "disconnected" ||
-    connectionState === "closed" ||
-    iceConnectionState === "failed" ||
-    iceConnectionState === "disconnected" ||
-    iceConnectionState === "closed"
-  ) {
-    return "error";
-  }
-
-  return fallbackStatus === "idle" ? "loading" : fallbackStatus;
 }
 
 export async function connectWithWhep(
@@ -141,78 +107,6 @@ export function requestVideoPlayback(videoElement: HTMLVideoElement, dispatch: D
   } catch {
     dispatch({ type: "audio-playback", blocked: true });
   }
-}
-
-async function postWhepOfferWithReadyRetry(
-  whepUrl: string,
-  offerSdp: string,
-  fetcher: typeof fetch,
-  signal: AbortSignal,
-  recordTiming: SignalingTimingRecorder,
-): Promise<Response> {
-  let attempt = 0;
-  while (true) {
-    try {
-      return await postWhepOffer(whepUrl, offerSdp, fetcher, signal, recordTiming);
-    } catch (error) {
-      if (!(error instanceof WhepHttpError) || !isRetryableWhepStatus(error.status) || attempt >= WHEP_READY_RETRY_DELAYS_MS.length) {
-        throw error;
-      }
-      const delayMs = WHEP_READY_RETRY_DELAYS_MS[attempt];
-      attempt += 1;
-      reportWhepDebug("whep-ready-retry", whepUrl, { status: String(error.status), delayMs: String(delayMs) });
-      await sleepUnlessAborted(delayMs, signal);
-    }
-  }
-}
-
-async function postWhepOffer(
-  whepUrl: string,
-  offerSdp: string,
-  fetcher: typeof fetch,
-  signal: AbortSignal,
-  recordTiming: SignalingTimingRecorder,
-): Promise<Response> {
-  const response = await fetcher(whepUrl, {
-    method: "POST",
-    headers: {
-      Accept: "application/sdp",
-      "Content-Type": "application/sdp",
-    },
-    body: offerSdp,
-    signal,
-  });
-  recordTiming("whepResponseMs");
-  reportWhepDebug("whep-post-response", whepUrl, { status: String(response.status) });
-
-  if (!response.ok) {
-    throw new WhepHttpError(response.status);
-  }
-
-  return response;
-}
-
-function isRetryableWhepStatus(status: number): boolean {
-  return WHEP_READY_RETRY_STATUS_CODES.has(status);
-}
-
-function sleepUnlessAborted(delayMs: number, signal: AbortSignal): Promise<void> {
-  if (signal.aborted) {
-    return Promise.reject(new Error("WebRTC playback was aborted"));
-  }
-  return new Promise((resolve, reject) => {
-    const cleanup = () => signal.removeEventListener("abort", abort);
-    const timeoutId = globalThis.setTimeout(() => {
-      cleanup();
-      resolve();
-    }, delayMs);
-    const abort = () => {
-      globalThis.clearTimeout(timeoutId);
-      cleanup();
-      reject(new Error("WebRTC playback was aborted"));
-    };
-    signal.addEventListener("abort", abort, { once: true });
-  });
 }
 
 function waitForIceGatheringComplete(

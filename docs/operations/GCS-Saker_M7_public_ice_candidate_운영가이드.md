@@ -34,8 +34,8 @@ sudo docker compose -f /opt/gcs-saker/current/deploy/compose/docker-compose.sing
 외부 NAT 단말:
 
 ```bash
-scripts/m7_external_webrtc_smoke.py --ice-profile stun-direct --stream-id raw.local.webcam
-scripts/m7_external_webrtc_smoke.py --ice-profile turn-relay --stream-id raw.local.webcam
+scripts/smoke/m7_external_nat_webrtc_smoke.sh --ice-profile stun-direct --stream-id raw.local.webcam
+scripts/smoke/m7_external_nat_webrtc_smoke.sh --ice-profile turn-relay --stream-id raw.local.webcam
 ```
 
 ## 완료 기준

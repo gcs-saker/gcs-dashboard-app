@@ -1,5 +1,7 @@
-from sqlalchemy import BigInteger, Column, Integer, String, ForeignKey
+from sqlalchemy import BigInteger, Column, ForeignKey, Integer, String
+
 from core.db import Base
+
 
 class User(Base):
     __tablename__ = "users"

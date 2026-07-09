@@ -1,6 +1,6 @@
 from sqlalchemy.dialects import postgresql
 
-from api.telemetry import _build_postgres_telemetry_upsert
+from modules.telemetry_ingest.service import _build_postgres_telemetry_upsert
 
 
 def test_postgres_telemetry_upsert_uses_single_atomic_statement() -> None:

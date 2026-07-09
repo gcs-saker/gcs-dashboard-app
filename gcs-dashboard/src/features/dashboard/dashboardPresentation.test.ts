@@ -4,8 +4,10 @@ import {
   DASHBOARD_STREAM_STATUS,
 } from "@/features/stateContracts";
 import {
+  buildAudioWaveformBars,
   formatBearing,
   formatBearingDelta,
+  formatPlaybackMode,
   getJitterTone,
   getLatencyTone,
   getPacketLossTone,
@@ -71,5 +73,23 @@ describe("dashboardPresentation", () => {
     expect(getPacketLossTone(0)).toBe("good");
     expect(getPacketLossTone(3)).toBe("warning");
     expect(getPacketLossTone(4)).toBe("danger");
+  });
+
+  it("builds deterministic quiet waveform bars and bounded active bars", () => {
+    expect(buildAudioWaveformBars(null, false)).toEqual(Array.from({ length: 28 }, () => 4));
+
+    const activeBars = buildAudioWaveformBars(0.5, true);
+
+    expect(activeBars).toHaveLength(28);
+    expect(Math.min(...activeBars)).toBeGreaterThanOrEqual(6);
+    expect(Math.max(...activeBars)).toBeLessThanOrEqual(94);
+  });
+
+  it("formats playback mode labels for primary and fallback stream paths", () => {
+    expect(formatPlaybackMode("webrtc", "online")).toBe("WebRTC");
+    expect(formatPlaybackMode("hls", "fallback")).toBe("HLS fallback");
+    expect(formatPlaybackMode("reconnecting", "reconnecting")).toBe("재연결");
+    expect(formatPlaybackMode(null, "offline")).toBe("오프라인");
+    expect(formatPlaybackMode(null, "online")).toBe("대기");
   });
 });

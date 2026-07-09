@@ -1,9 +1,8 @@
-from pathlib import Path
 import subprocess
-
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "health_readiness_check.py"
+SCRIPT = REPO_ROOT / "scripts" / "ops" / "health_readiness_check.py"
 HEALTH_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_health_readiness_기준_v0.1.md"
 BACKEND_DOCKERFILE = REPO_ROOT / "backend" / "Dockerfile"
 BACKEND_PYPROJECT = REPO_ROOT / "backend" / "pyproject.toml"

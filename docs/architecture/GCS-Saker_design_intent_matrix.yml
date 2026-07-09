@@ -65,9 +65,9 @@ intents:
         http3EdgeProfile: deferred
         aiOverlaySidecar: contract
       evidencePaths:
-        - scripts/grpc_runtime_smoke.py
-        - scripts/dragonfly_profile_smoke.py
-        - scripts/postgis_runtime_smoke.py
+        - scripts/smoke/grpc_runtime_smoke.py
+        - scripts/smoke/dragonfly_profile_smoke.py
+        - scripts/smoke/postgis_runtime_smoke.py
         - gcs-dashboard/src/features/streaming/webCodecsPipelinePlan.ts
 
   - id: ARCH-EDGE-001
@@ -123,7 +123,7 @@ intents:
           text: "rpc Exchange(stream GatewayStreamRequest) returns (stream GatewayStreamResponse);"
         - path: backend/modules/messaging/sender.py
           text: "MessageSender"
-        - path: scripts/grpc_runtime_smoke.py
+        - path: scripts/smoke/grpc_runtime_smoke.py
           text: "runtime-integrated"
         - path: backend/modules/protocol_v2/gateway_service.py
           text: "GatewayStreamRequest"
@@ -154,8 +154,8 @@ intents:
         - path: services/media-control/README.md
           text: "WebRTC/WHEP/HLS는 MediaMTX와 coturn이 담당한다."
       evidencePaths:
-        - scripts/m7_publish_play_smoke.sh
-        - scripts/m7_dashboard_first_frame_smoke.sh
+        - scripts/smoke/m7_publish_play_smoke.sh
+        - scripts/smoke/m7_dashboard_first_frame_smoke.sh
 
   - id: ARCH-SECURITY-001
     title: "스트림 제어 정보와 ICE 서버 목록은 인증 후 반환한다"
@@ -193,19 +193,21 @@ intents:
     rationale: "스트리밍 시스템은 HTTP 200만으로 성공을 판단할 수 없다."
     assertions:
       requiredTexts:
-        - path: gcs-dashboard/src/features/streaming/hooks/useWhepPlayback.ts
+        - path: gcs-dashboard/src/features/streaming/hooks/whepPlaybackStateContract.ts
           text: "first-frame"
-        - path: gcs-dashboard/src/features/streaming/hooks/whepPlaybackAudio.ts
+        - path: gcs-dashboard/src/features/streaming/hooks/whepAudioStats.ts
           text: "selectedPair"
+        - path: gcs-dashboard/src/features/streaming/webrtcRuntimeEvidence.ts
+          text: "buildWebRTCRuntimeEvidence"
         - path: gcs-dashboard/src/features/streaming/components/WebRTCPlayer.tsx
           text: "data-first-frame-latency-ms"
         - path: gcs-dashboard/src/features/streaming/components/WebRTCPlayer.tsx
           text: "data-audio-level"
-        - path: scripts/m7_dashboard_first_frame_smoke.sh
+        - path: scripts/smoke/m7_dashboard_first_frame_smoke.sh
           text: "first-frame"
       evidencePaths:
         - gcs-dashboard/src/features/streaming/components/WebRTCPlayer.test.tsx
-        - scripts/webrtc_ice_smoke.py
+        - scripts/smoke/webrtc_ice_smoke.py
 
   - id: ARCH-PERF-001
     title: "성능 최적화는 benchmark matrix와 smoke gate로 회귀를 감지한다"
@@ -223,14 +225,14 @@ intents:
       requiredTexts:
         - path: docs/architecture/GCS-Saker_M7_performance_benchmark_matrix.md
           text: "m7-performance-benchmark-v1"
-        - path: scripts/m7_performance_benchmark_matrix.py
+        - path: scripts/benchmarks/m7_performance_benchmark_matrix.py
           text: "schemaVersion"
         - path: backend/tests/test_m7_performance_benchmark_matrix.py
           text: "ops_event_graphql_page"
         - path: backend/tests/test_protobuf_performance_baseline.py
           text: "protobuf_bytes < result.json_bytes"
       evidencePaths:
-        - scripts/m7_performance_benchmark_matrix.py
+        - scripts/benchmarks/m7_performance_benchmark_matrix.py
         - backend/tests/test_m7_performance_benchmark_matrix.py
 
   - id: ARCH-DATA-001

@@ -1,0 +1,32 @@
+.system-status dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.system-status dl div {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.system-status dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.system-status dd {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  font-size: 0.84rem;
+  margin: 0;
+}
+
+.system-status__updated {
+  color: var(--muted);
+  font-size: 0.74rem;
+  margin: 0;
+  padding: 0 12px 10px;
+}

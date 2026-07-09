@@ -5,8 +5,8 @@ import pytest
 from modules.protocol_v2.gateway_service import (
     GatewayAckStatus,
     GatewayPayloadKind,
-    GatewayStreamRequestFields,
     GatewayStreamRequest,
+    GatewayStreamRequestFields,
     GatewayStreamRequestPayload,
     GatewayStreamResponse,
 )

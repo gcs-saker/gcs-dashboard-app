@@ -4,7 +4,7 @@ import {
   getDashboardStreamStatusClass,
   getDashboardStreamStatusText,
   type DashboardStreamSlot,
-} from "../streamTypes";
+} from "@dashboard/streamTypes";
 
 export type CctvQualityMode = "preview" | "high";
 

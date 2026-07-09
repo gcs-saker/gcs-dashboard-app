@@ -9,8 +9,7 @@ from mqtt.topics import MqttTopicSegments
 
 
 class TelemetrySink(Protocol):
-    def upsert(self, telemetry: TelemetryCreate) -> object:
-        ...
+    def upsert(self, telemetry: TelemetryCreate) -> object: ...
 
 
 @dataclass(frozen=True)
@@ -30,7 +29,11 @@ class MqttConsumerBridge:
         message = parse_asset_message(topic, payload)
         if message.channel == MqttTopicSegments.TELEMETRY:
             telemetry = TelemetryEnvelopePayload.from_protobuf_wire(message.payload)
-            if telemetry.org_id != message.org_id or telemetry.group_id != message.group_id or telemetry.asset_id != message.asset_id:
+            if (
+                telemetry.org_id != message.org_id
+                or telemetry.group_id != message.group_id
+                or telemetry.asset_id != message.asset_id
+            ):
                 raise ValueError("telemetry envelope does not match MQTT topic identity")
             return self.telemetry_sink.upsert(telemetry.to_legacy_telemetry())
         return None

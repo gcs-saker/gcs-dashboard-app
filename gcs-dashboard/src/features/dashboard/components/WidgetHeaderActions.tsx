@@ -1,4 +1,4 @@
-import type { DashboardWidgetId } from "../dashboardLayout";
+import type { DashboardWidgetId } from "@dashboard/dashboardLayout";
 
 interface WidgetHeaderActionsProps {
   widgetId: DashboardWidgetId;

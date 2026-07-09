@@ -1,8 +1,8 @@
 # GCS-Saker Mosquitto Hardened Profile
 
-This directory contains the default hardened MQTT broker configuration for the single-node runtime.
+This directory contains the default hardened MQTT broker configuration for the single-node and local dashboard runtimes.
 
-Do not commit a real Mosquitto password file. Generate it locally and point `MQTT_PASSWORD_FILE` at that file from `deploy/compose/.env.single-node`. The broker is no longer promoted through a separate override file; `deploy/compose/compose.single-node.poc.yml` mounts this hardened config by default.
+Do not commit a real Mosquitto password file. Generate it locally and point `MQTT_PASSWORD_FILE` at that file from `deploy/compose/.env.single-node` or `gcs-dashboard/.env`. The broker is no longer promoted through a separate hardened override file; `deploy/compose/compose.single-node.poc.yml` and `gcs-dashboard/docker-compose.yml` mount this hardened config by default.
 
 Example:
 
@@ -34,7 +34,9 @@ Media frames must not be carried by MQTT. WebRTC/HLS media continues to use Medi
 Run the isolated profile smoke from the repository root:
 
 ```bash
-python3 scripts/mqtt_hardened_profile_smoke.py --run
+python3 scripts/smoke/mqtt_hardened_profile_smoke.py --run
 ```
 
 The smoke creates a temporary password file outside the repository, starts only the default hardened MQTT service in an isolated compose project, verifies anonymous rejection, publishes protobuf telemetry from `gcs_device_gateway`, subscribes as `gcs_backend_pub`, then verifies command delivery in the reverse direction. Cleanup uses `docker compose down --remove-orphans` for the isolated project and never removes volumes.
+
+No-auth MQTT is not a default runtime. If a legacy local smoke needs it, use `gcs-dashboard/docker-compose.mqtt-no-auth.profile.yml` with the `local-mqtt-no-auth` profile and do not reuse it for staging, production, or closed-network runs.

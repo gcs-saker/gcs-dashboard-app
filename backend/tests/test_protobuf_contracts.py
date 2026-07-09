@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
 import re
 import subprocess
+from pathlib import Path
 
 from modules.protocol_v2.stream_control import StreamCommandPayload
 from modules.protocol_v2.telemetry import TelemetryEnvelopePayload
@@ -39,9 +39,12 @@ def test_proto_files_use_stable_package_and_language_options() -> None:
     for proto_file in PROTO_FILES:
         content = proto_file.read_text(encoding="utf-8")
 
-        assert 'package gcs.saker.v1;' in content
-        assert 'option go_package = "github.com/gcs-saker/gcs-dashboard-app/contracts/gen/go/gcs/saker/v1;sakerv1";' in content
-        assert 'option java_multiple_files = true;' in content
+        assert "package gcs.saker.v1;" in content
+        assert (
+            'option go_package = "github.com/gcs-saker/gcs-dashboard-app/contracts/gen/go/gcs/saker/v1;sakerv1";'
+            in content
+        )
+        assert "option java_multiple_files = true;" in content
         assert 'option java_package = "kr.co.a4ai.gcssaker.contracts.v1";' in content
 
 

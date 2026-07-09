@@ -8,6 +8,7 @@ import org.springframework.data.redis.core.StringRedisTemplate
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AllowedOrigins
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthPolicyConfig
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
+import kr.co.a4ai.gcssaker.authpolicy.configuration.OperationalPolicyConfig
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.NoopPrincipalCache
@@ -39,6 +40,9 @@ class AuthPolicyConfigTest {
                     "AUTH_POLICY_REFRESH_COOKIE_SECURE" to "true",
                     "AUTH_POLICY_REFRESH_COOKIE_SAMESITE" to "strict",
                     "AUTH_POLICY_ALLOWED_ORIGINS" to "http://localhost:18080, https://gcs.example.test ",
+                    "AUTH_POLICY_ADMIN_USERNAME" to "admin",
+                    "AUTH_POLICY_ADMIN_PASSWORD" to "admin-password",
+                    "AUTH_POLICY_ADMIN_GROUP_ID" to "bn-1",
                     "AUTH_POLICY_OPERATOR_USERNAME" to "op",
                     "AUTH_POLICY_OPERATOR_PASSWORD" to "op-password",
                     "AUTH_POLICY_OPERATOR_GROUP_ID" to "bn-1",
@@ -60,6 +64,7 @@ class AuthPolicyConfigTest {
         assertTrue(settings.refreshCookieSecure)
         assertEquals("strict", settings.refreshCookieSameSite)
         assertEquals(setOf("http://localhost:18080", "https://gcs.example.test"), settings.allowedOrigins.toSet())
+        assertEquals("admin", settings.adminUsername)
         assertEquals("op", settings.operatorUsername)
         assertEquals("viewer", settings.smokeUsername)
         assertTrue(settings.redisPrincipalCacheEnabled)
@@ -78,6 +83,7 @@ class AuthPolicyConfigTest {
                     "AUTH_REFRESH_COOKIE_NAME" to "backend_refresh",
                     "AUTH_REFRESH_COOKIE_SAMESITE" to "lax",
                     "BACKEND_CORS_ALLOW_ORIGINS" to "http://localhost:5173",
+                    "AUTH_POLICY_ADMIN_PASSWORD" to "admin-password",
                     "AUTH_POLICY_OPERATOR_PASSWORD" to "operator-password",
                     "AUTH_POLICY_SMOKE_PASSWORD" to "viewer-password",
                 ),
@@ -107,10 +113,76 @@ class AuthPolicyConfigTest {
     }
 
     @Test
+    fun `production profile fails closed when admin password is missing`() {
+        val error = assertFailsWith<IllegalStateException> {
+            AuthRuntimeSettings.fromEnvironment(
+                productionEnvironment(
+                    "AUTH_POLICY_JWT_SECRET" to "prod-secret-at-least-32-characters",
+                    "AUTH_POLICY_OPERATOR_PASSWORD" to "operator-password",
+                    "AUTH_POLICY_SMOKE_PASSWORD" to "viewer-password",
+                ),
+            )
+        }
+
+        assertTrue(error.message.orEmpty().contains("AUTH_POLICY_ADMIN_PASSWORD"))
+        assertFalse(error.message.orEmpty().contains("admin-password"))
+    }
+
+    @Test
+    fun `production profile fails closed when operator password is missing`() {
+        val error = assertFailsWith<IllegalStateException> {
+            AuthRuntimeSettings.fromEnvironment(
+                productionEnvironment(
+                    "AUTH_POLICY_JWT_SECRET" to "prod-secret-at-least-32-characters",
+                    "AUTH_POLICY_ADMIN_PASSWORD" to "admin-password",
+                    "AUTH_POLICY_SMOKE_PASSWORD" to "viewer-password",
+                ),
+            )
+        }
+
+        assertTrue(error.message.orEmpty().contains("AUTH_POLICY_OPERATOR_PASSWORD"))
+        assertFalse(error.message.orEmpty().contains("correct-password"))
+    }
+
+    @Test
+    fun `production profile fails closed when smoke password is missing`() {
+        val error = assertFailsWith<IllegalStateException> {
+            AuthRuntimeSettings.fromEnvironment(
+                productionEnvironment(
+                    "AUTH_POLICY_JWT_SECRET" to "prod-secret-at-least-32-characters",
+                    "AUTH_POLICY_ADMIN_PASSWORD" to "admin-password",
+                    "AUTH_POLICY_OPERATOR_PASSWORD" to "operator-password",
+                ),
+            )
+        }
+
+        assertTrue(error.message.orEmpty().contains("AUTH_POLICY_SMOKE_PASSWORD"))
+        assertFalse(error.message.orEmpty().contains("m7-smoke-pass"))
+    }
+
+    @Test
+    fun `local defaults are rejected without explicit local test or dev profile`() {
+        val env = StandardEnvironment()
+        env.propertySources.addFirst(
+            MapPropertySource(
+                "test",
+                mapOf("AUTH_POLICY_ALLOW_LOCAL_DEFAULTS" to "true"),
+            ),
+        )
+
+        val error = assertFailsWith<IllegalStateException> {
+            AuthRuntimeSettings.fromEnvironment(env)
+        }
+
+        assertTrue(error.message.orEmpty().contains("AUTH_POLICY_JWT_SECRET"))
+    }
+
+    @Test
     fun `local profile can use development auth defaults explicitly`() {
         val settings = AuthRuntimeSettings.fromEnvironment(localEnvironment())
 
         assertEquals("local-auth-policy-secret-at-least-32-characters", settings.jwtSecret)
+        assertEquals("admin-password", settings.adminPassword)
         assertEquals("correct-password", settings.operatorPassword)
         assertEquals("m7-smoke-pass", settings.smokePassword)
     }
@@ -130,14 +202,16 @@ class AuthPolicyConfigTest {
             StatelessRefreshSessionStore,
         )
 
+        assertNotNull(repository.findByUsername("admin01"))
         assertNotNull(repository.findByUsername("operator01"))
         assertNotNull(repository.findByUsername("m7-smoke-viewer"))
+        assertNotNull(sessionService.login("admin01", "admin-password"))
         assertNotNull(sessionService.login("operator01", "correct-password"))
     }
 
     @Test
     fun `configuration seeds operational event repository for dashboard log integration`() {
-        val repository = AuthPolicyConfig().operationalEventRepository(
+        val repository = OperationalPolicyConfig().operationalEventRepository(
             AuthRuntimeSettings.fromEnvironment(localEnvironment()),
             EmptyObjectProvider(),
             EmptyObjectProvider<StringRedisTemplate>(),
@@ -198,6 +272,12 @@ class AuthPolicyConfigTest {
 private fun localEnvironment(): StandardEnvironment =
     StandardEnvironment().apply {
         setActiveProfiles("local")
+    }
+
+private fun productionEnvironment(vararg values: Pair<String, String>): StandardEnvironment =
+    StandardEnvironment().apply {
+        setActiveProfiles("prod")
+        propertySources.addFirst(MapPropertySource("test", mapOf(*values)))
     }
 
 private class EmptyObjectProvider<T> : ObjectProvider<T> {

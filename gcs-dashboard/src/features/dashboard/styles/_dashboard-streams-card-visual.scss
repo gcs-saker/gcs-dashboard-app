@@ -1,0 +1,64 @@
+.stream-card__visual {
+  min-height: 78px;
+  overflow: hidden;
+}
+
+.stream-card__visual::before,
+.stream-card__visual::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+}
+
+.stream-card__visual::before {
+  background:
+    linear-gradient(90deg, rgba(180, 221, 242, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(180, 221, 242, 0.08) 1px, transparent 1px);
+  background-size: 36px 36px;
+  inset: 0;
+  opacity: 0.58;
+}
+
+.stream-card__visual::after {
+  background: linear-gradient(180deg, transparent 0 58%, rgba(3, 8, 13, 0.62));
+  inset: 0;
+}
+
+.stream-card__visual .reticle {
+  height: 36px;
+  width: 36px;
+}
+
+.stream-card__detail {
+  align-items: center;
+  display: flex;
+  padding: 0 12px;
+}
+
+.stream-card__connect,
+.stream-card__talkback {
+  background: rgba(10, 20, 28, 0.88);
+  border: 0;
+  border-top: 1px solid var(--line-soft);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.stream-card__connect:hover,
+.stream-card__connect:focus-visible {
+  color: var(--cyan);
+}
+
+.stream-card__talkback[aria-pressed="true"] {
+  color: var(--violet);
+}
+
+.stream-card__failure {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 0.8rem;
+  padding: 0 12px;
+}

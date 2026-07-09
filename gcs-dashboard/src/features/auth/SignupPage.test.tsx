@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import App from "../../App";
+import App from "@/App";
 import { AUTH_JSON_HEADERS } from "./authApi";
 import { clearAuthSession } from "./authStorage";
 
@@ -51,7 +51,7 @@ describe("SignupPage auth flow", () => {
 
     render(<App />);
 
-    await userEvent.type(screen.getByLabelText("아이디"), "viewer02");
+    await userEvent.type(await screen.findByLabelText("아이디"), "viewer02");
     await userEvent.type(screen.getByLabelText("이메일"), "viewer02@example.com");
     await userEvent.type(screen.getByLabelText("비밀번호"), "strong-password");
     await userEvent.type(screen.getByLabelText("비밀번호 확인"), "strong-password");
@@ -83,7 +83,7 @@ describe("SignupPage auth flow", () => {
 
     render(<App />);
 
-    await userEvent.type(screen.getByLabelText("아이디"), "viewer02");
+    await userEvent.type(await screen.findByLabelText("아이디"), "viewer02");
     await userEvent.type(screen.getByLabelText("이메일"), "viewer02@example.com");
     await userEvent.type(screen.getByLabelText("비밀번호"), "strong-password");
     await userEvent.type(screen.getByLabelText("비밀번호 확인"), "different-password");
@@ -104,7 +104,7 @@ describe("SignupPage auth flow", () => {
 
     render(<App />);
 
-    await userEvent.type(screen.getByLabelText("아이디"), "operator01");
+    await userEvent.type(await screen.findByLabelText("아이디"), "operator01");
     await userEvent.type(screen.getByLabelText("이메일"), "new-operator@example.com");
     await userEvent.type(screen.getByLabelText("비밀번호"), "strong-password");
     await userEvent.type(screen.getByLabelText("비밀번호 확인"), "strong-password");

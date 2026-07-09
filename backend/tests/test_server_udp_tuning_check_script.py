@@ -1,9 +1,8 @@
 import subprocess
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "server_udp_tuning_check.sh"
+SCRIPT = REPO_ROOT / "scripts" / "ops" / "server_udp_tuning_check.sh"
 DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_M7_udp_conntrack_tuning.md"
 
 

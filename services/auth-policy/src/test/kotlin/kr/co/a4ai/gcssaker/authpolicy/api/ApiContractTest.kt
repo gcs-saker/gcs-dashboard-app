@@ -34,6 +34,12 @@ class ApiContractTest {
         assertEquals(ApiContractFixtures.TELEMETRY_HISTORY, OperationalReadApiRoutes.TELEMETRY_HISTORY)
         assertEquals(ApiContractFixtures.ASSET_BY_GATEWAY, OperationalReadApiRoutes.ASSET_BY_GATEWAY)
         assertEquals(ApiContractFixtures.STREAM_POLICY_ROOT, StreamPolicyApiRoutes.ROOT)
+        assertEquals(ApiContractFixtures.DEVICE_POLICY_ROOT, DevicePolicyApiRoutes.ROOT)
+        assertEquals(ApiContractFixtures.DEVICE_POLICY_PUBLISH, DevicePolicyApiRoutes.PUBLISH)
+        assertEquals(ApiContractFixtures.ADMIN_DEVICE_ROOT, AdminDeviceApiRoutes.ROOT)
+        assertEquals(ApiContractFixtures.ADMIN_DEVICE_ACTIVATE, AdminDeviceApiRoutes.ACTIVATE)
+        assertEquals(ApiContractFixtures.ADMIN_DEVICE_DISABLE, AdminDeviceApiRoutes.DISABLE)
+        assertEquals(ApiContractFixtures.ADMIN_DEVICE_ROTATE_CREDENTIAL, AdminDeviceApiRoutes.ROTATE_CREDENTIAL)
     }
 
     @Test
@@ -63,6 +69,10 @@ class ApiContractTest {
             TimeSyncController::class to "status",
             TimeSyncController::class to "check",
             TimeSyncController::class to "updateConfig",
+            AdminDeviceController::class to "register",
+            AdminDeviceController::class to "activate",
+            AdminDeviceController::class to "disable",
+            AdminDeviceController::class to "rotateCredential",
         )
 
         bearerProtectedMethods.forEach { (controller, methodName) ->
@@ -98,6 +108,11 @@ class ApiContractTest {
             OperationalReadApiRoutes.TELEMETRY_HISTORY,
             OperationalReadApiRoutes.ASSET_BY_GATEWAY,
             StreamPolicyApiRoutes.ROOT + StreamPolicyApiRoutes.ACCESS,
+            DevicePolicyApiRoutes.ROOT + DevicePolicyApiRoutes.PUBLISH,
+            AdminDeviceApiRoutes.ROOT,
+            AdminDeviceApiRoutes.ROOT + AdminDeviceApiRoutes.ACTIVATE,
+            AdminDeviceApiRoutes.ROOT + AdminDeviceApiRoutes.DISABLE,
+            AdminDeviceApiRoutes.ROOT + AdminDeviceApiRoutes.ROTATE_CREDENTIAL,
         )
 
         assertEquals(routes.size, routes.toSet().size)
@@ -284,6 +299,71 @@ class ApiContractTest {
         assertTrue(responsePayload.contains(quoted(ApiContractFixtures.PERMISSION_VIEW_STREAM_VALUE)))
     }
 
+    @Test
+    fun `device publish authorization request does not accept group id`() {
+        val requestPayload = objectMapper.writeValueAsString(
+            DevicePublishAuthorizationRequest(
+                deviceUuid = ApiContractFixtures.DEVICE_UUID_VALUE,
+                credential = ApiContractFixtures.DEVICE_CREDENTIAL_VALUE,
+                streamId = ApiContractFixtures.STREAM_ID_VALUE,
+                path = ApiContractFixtures.STREAM_PATH_VALUE,
+            ),
+        )
+        val responsePayload = objectMapper.writeValueAsString(
+            DevicePublishAuthorizationResponse(
+                deviceUuid = ApiContractFixtures.DEVICE_UUID_VALUE,
+                streamId = ApiContractFixtures.STREAM_ID_VALUE,
+                path = ApiContractFixtures.STREAM_PATH_VALUE,
+                publisherGroupId = ApiContractFixtures.GROUP_ID_VALUE,
+                reason = ApiContractFixtures.DEVICE_AUTH_REASON_VALUE,
+                policyVersion = ApiContractFixtures.DEVICE_POLICY_VERSION_VALUE,
+            ),
+        )
+
+        assertTrue(requestPayload.contains(quoted(DevicePolicyApiFields.DEVICE_UUID)))
+        assertTrue(requestPayload.contains(quoted(DevicePolicyApiFields.CREDENTIAL)))
+        assertTrue(requestPayload.contains(quoted(DevicePolicyApiFields.STREAM_ID)))
+        assertTrue(requestPayload.contains(quoted(DevicePolicyApiFields.PATH)))
+        assertFalse(requestPayload.contains(quoted(DevicePolicyApiFields.PUBLISHER_GROUP_ID)))
+        assertFalse(requestPayload.contains(quoted(StreamPolicyApiFields.GROUP_ID)))
+        assertTrue(responsePayload.contains(quoted(DevicePolicyApiFields.PUBLISHER_GROUP_ID)))
+        assertTrue(responsePayload.contains(quoted(DevicePolicyApiFields.POLICY_VERSION)))
+    }
+
+    @Test
+    fun `admin device lifecycle dto returns credential only for issue responses`() {
+        val requestPayload = objectMapper.writeValueAsString(
+            RegisterDeviceRequest(
+                groupId = ApiContractFixtures.GROUP_ID_VALUE,
+                displayName = ApiContractFixtures.DEVICE_DISPLAY_NAME_VALUE,
+            ),
+        )
+        val credentialPayload = objectMapper.writeValueAsString(
+            DeviceCredentialIssueResponse(
+                deviceUuid = ApiContractFixtures.DEVICE_UUID_VALUE,
+                credential = ApiContractFixtures.DEVICE_CREDENTIAL_VALUE,
+                groupId = ApiContractFixtures.GROUP_ID_VALUE,
+                displayName = ApiContractFixtures.DEVICE_DISPLAY_NAME_VALUE,
+                status = ApiContractFixtures.DEVICE_STATUS_VALUE,
+            ),
+        )
+        val statusPayload = objectMapper.writeValueAsString(
+            RegisteredDeviceResponse(
+                deviceUuid = ApiContractFixtures.DEVICE_UUID_VALUE,
+                groupId = ApiContractFixtures.GROUP_ID_VALUE,
+                displayName = ApiContractFixtures.DEVICE_DISPLAY_NAME_VALUE,
+                status = ApiContractFixtures.DEVICE_STATUS_VALUE,
+            ),
+        )
+
+        assertTrue(requestPayload.contains(quoted(AdminDeviceApiFields.GROUP_ID)))
+        assertTrue(requestPayload.contains(quoted(AdminDeviceApiFields.DISPLAY_NAME)))
+        assertFalse(requestPayload.contains(quoted(AdminDeviceApiFields.DEVICE_UUID)))
+        assertTrue(credentialPayload.contains(quoted(AdminDeviceApiFields.CREDENTIAL)))
+        assertTrue(statusPayload.contains(quoted(AdminDeviceApiFields.DEVICE_UUID)))
+        assertFalse(statusPayload.contains(quoted(AdminDeviceApiFields.CREDENTIAL)))
+    }
+
     private fun quoted(value: String): String = "\"$value\""
 }
 
@@ -308,6 +388,12 @@ private object ApiContractFixtures {
     const val TELEMETRY_HISTORY = "/telemetry/{uuid}/history"
     const val ASSET_BY_GATEWAY = "/asset/{gatewayUuid}"
     const val STREAM_POLICY_ROOT = "/policy/streams"
+    const val DEVICE_POLICY_ROOT = "/policy/devices"
+    const val DEVICE_POLICY_PUBLISH = "/publish"
+    const val ADMIN_DEVICE_ROOT = "/admin/devices"
+    const val ADMIN_DEVICE_ACTIVATE = "/{deviceUuid}/activate"
+    const val ADMIN_DEVICE_DISABLE = "/{deviceUuid}/disable"
+    const val ADMIN_DEVICE_ROTATE_CREDENTIAL = "/{deviceUuid}/credential"
     const val ACCESS_TOKEN_VALUE = "access-token"
     const val EXPIRES_IN_MINUTES_VALUE = 30L
     const val USERNAME_VALUE = "operator01"
@@ -361,5 +447,11 @@ private object ApiContractFixtures {
     const val ICE_PATH_VALUE = "relay"
     const val ICE_PATH_COUNT_VALUE = 1L
     const val RELAY_FALLBACK_REASON_VALUE = "srflx candidate failed"
+    const val DEVICE_UUID_VALUE = "device-front-001"
+    const val DEVICE_CREDENTIAL_VALUE = "device-secret"
+    const val DEVICE_AUTH_REASON_VALUE = "device group authorized"
+    const val DEVICE_POLICY_VERSION_VALUE = "device-policy-v1"
+    const val DEVICE_DISPLAY_NAME_VALUE = "Daegu Drone 01"
+    const val DEVICE_STATUS_VALUE = "pending"
     val INSTANT_VALUE: Instant = Instant.parse("2026-06-01T00:00:00Z")
 }

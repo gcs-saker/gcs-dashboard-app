@@ -1,42 +1,27 @@
-import { authUrl } from "../../config";
+import { authUrl } from "@/config";
 import { AUTH_ROUTES } from "@/features/apiRoutes";
-import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
+import { clearAuthSession, storeAuthSession } from "./authStorage";
+import { AuthApiError, parseAuthError } from "./authErrors";
+import {
+  AUTH_ACCEPT_HEADERS,
+  AUTH_CSRF_HEADERS,
+  AUTH_JSON_HEADERS,
+  buildAuthHeaders,
+  withAuth,
+} from "./authHeaders";
 import type { AuthenticatedUser, LoginRequest, SignupRequest, SignupResponse, TokenResponse } from "./types";
 
-export const CSRF_HEADER_NAME = "X-GCS-CSRF";
-export const CSRF_HEADER_VALUE = "same-origin";
-export const AUTH_CSRF_HEADERS = Object.freeze({
-  [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
-});
-export const AUTH_JSON_HEADERS = Object.freeze({
-  "Content-Type": "application/json",
-  [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
-});
-export const AUTH_ACCEPT_HEADERS = Object.freeze({
-  Accept: "application/json",
-  [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
-});
+export {
+  AUTH_ACCEPT_HEADERS,
+  AUTH_CSRF_HEADERS,
+  AUTH_JSON_HEADERS,
+  buildAuthHeaders,
+  CSRF_HEADER_NAME,
+  CSRF_HEADER_VALUE,
+} from "./authHeaders";
+export { AuthApiError } from "./authErrors";
 
 let refreshInFlight: Promise<TokenResponse> | null = null;
-
-export class AuthApiError extends Error {
-  readonly status: number;
-
-  constructor(status: number, message: string) {
-    super(message);
-    this.name = "AuthApiError";
-    this.status = status;
-  }
-}
-
-async function parseError(response: Response): Promise<string> {
-  try {
-    const payload = (await response.json()) as { detail?: string };
-    return payload.detail ?? "authentication request failed";
-  } catch {
-    return "authentication request failed";
-  }
-}
 
 export async function loginRequest(credentials: LoginRequest): Promise<TokenResponse> {
   const response = await fetch(authUrl(AUTH_ROUTES.login), {
@@ -47,7 +32,7 @@ export async function loginRequest(credentials: LoginRequest): Promise<TokenResp
   });
 
   if (!response.ok) {
-    throw new AuthApiError(response.status, await parseError(response));
+    throw new AuthApiError(response.status, await parseAuthError(response));
   }
 
   return (await response.json()) as TokenResponse;
@@ -62,7 +47,7 @@ export async function refreshSessionRequest(fetcher: typeof fetch = fetch): Prom
 
   if (!response.ok) {
     clearAuthSession();
-    throw new AuthApiError(response.status, await parseError(response));
+    throw new AuthApiError(response.status, await parseAuthError(response));
   }
 
   const token = (await response.json()) as TokenResponse;
@@ -88,7 +73,7 @@ export async function signupRequest(payload: SignupRequest): Promise<SignupRespo
   });
 
   if (!response.ok) {
-    throw new AuthApiError(response.status, await parseError(response));
+    throw new AuthApiError(response.status, await parseAuthError(response));
   }
 
   return (await response.json()) as SignupResponse;
@@ -101,16 +86,10 @@ export async function fetchCurrentUser(accessToken: string): Promise<Authenticat
   });
 
   if (!response.ok) {
-    throw new AuthApiError(response.status, await parseError(response));
+    throw new AuthApiError(response.status, await parseAuthError(response));
   }
 
   return (await response.json()) as AuthenticatedUser;
-}
-
-export function buildAuthHeaders(headers: Record<string, string> = {}): Record<string, string> {
-  const accessToken = getStoredAccessToken();
-  if (!accessToken) return headers;
-  return { ...headers, Authorization: `Bearer ${accessToken}` };
 }
 
 export async function authenticatedFetch(
@@ -142,23 +121,4 @@ export function persistTokenResponse(token: TokenResponse): void {
     expiresAt: new Date(Date.now() + token.expires_in_minutes * 60_000).toISOString(),
     user: { username: token.username, role: token.role },
   });
-}
-
-function withAuth(init: RequestInit): RequestInit {
-  return {
-    ...init,
-    credentials: "include",
-    headers: buildAuthHeaders(headersToRecord(init.headers)),
-  };
-}
-
-function headersToRecord(headers: HeadersInit | undefined): Record<string, string> {
-  if (!headers) return {};
-  if (headers instanceof Headers) {
-    return Object.fromEntries(headers.entries());
-  }
-  if (Array.isArray(headers)) {
-    return Object.fromEntries(headers);
-  }
-  return headers;
 }

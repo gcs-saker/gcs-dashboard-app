@@ -1,6 +1,7 @@
 import type { OperationalEvent, OperationalEventMetrics, OperationalEventTimeBucket } from "@/features/dashboard/operationalEvents";
 import type { StreamRegistryResponse, TelemetryReadResponse } from "@/features/dashboard/streamDevices";
 import type { TokenResponse } from "@/features/auth/types";
+import type { DashboardMapConfig } from "@/config";
 
 export const MOCK_OPERATOR_TOKEN: TokenResponse = Object.freeze({
   access_token: "mock-access-token",
@@ -30,6 +31,13 @@ export const MOCK_STREAM_REGISTRY: readonly StreamRegistryResponse[] = Object.fr
     sensorId: "webcam",
   },
 ]);
+
+export const MOCK_MAP_CONFIG: DashboardMapConfig = Object.freeze({
+  provider: "esri-satellite",
+  styleUrl: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  attribution: "Esri World Imagery",
+  requiresApiKey: false,
+});
 
 export const MOCK_TELEMETRY: readonly TelemetryReadResponse[] = Object.freeze([
   {

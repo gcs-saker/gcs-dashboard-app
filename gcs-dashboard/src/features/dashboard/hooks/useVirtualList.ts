@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 export interface VirtualListRange {
   endIndex: number;
@@ -55,17 +56,33 @@ export function useVirtualList({
     return () => observer.disconnect();
   }, [containerElement]);
 
-  const range = useMemo((): VirtualListRange => {
-    const visibleCount = Math.ceil((viewport.height || itemHeight * 8) / itemHeight);
+  const virtualizer = useVirtualizer({
+    count: itemCount,
+    estimateSize: () => itemHeight,
+    getScrollElement: () => containerElement,
+    initialRect: {
+      height: itemHeight * VirtualListContract.INITIAL_VISIBLE_ROWS,
+      width: VirtualListContract.INITIAL_WIDTH,
+    },
+    overscan,
+  });
+
+  const range = ((): VirtualListRange => {
+    const visibleCount = Math.ceil((viewport.height || itemHeight * VirtualListContract.INITIAL_VISIBLE_ROWS) / itemHeight);
     const startIndex = Math.max(0, Math.floor(viewport.scrollTop / itemHeight) - overscan);
     const endIndex = Math.min(itemCount, startIndex + visibleCount + overscan * 2);
     return {
       endIndex,
       offsetTop: startIndex * itemHeight,
       startIndex,
-      totalHeight: itemCount * itemHeight,
+      totalHeight: virtualizer.getTotalSize(),
     };
-  }, [itemCount, itemHeight, overscan, viewport.height, viewport.scrollTop]);
+  })();
 
   return { containerRef, onScroll, range };
 }
+
+const VirtualListContract = {
+  INITIAL_VISIBLE_ROWS: 8,
+  INITIAL_WIDTH: 0,
+} as const;

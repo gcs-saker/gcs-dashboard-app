@@ -1,5 +1,8 @@
-from pydantic import BaseModel, ConfigDict
 from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
+
+
 # -----------------------------
 # 모델 정의
 # -----------------------------
@@ -17,7 +20,8 @@ class TelemetryCreate(BaseModel):
     totalDistance: Optional[float] = None
     epochTime: Optional[int] = None
     portDistance: Optional[float] = None
-    
+
+
 class TelemetryResponse(BaseModel):
     uuid: Optional[str] = None
     latitude: Optional[float] = None
@@ -30,7 +34,7 @@ class TelemetryResponse(BaseModel):
     phoneBatterySOC: Optional[float] = None
     velocity: Optional[float] = None
     totalDistance: Optional[float] = None
-    epochTime: Optional[str] = None   # ✅ int → str 로 수정
+    epochTime: Optional[str] = None  # ✅ int → str 로 수정
     portDistance: Optional[float] = None
-    
+
     model_config = ConfigDict(from_attributes=True)

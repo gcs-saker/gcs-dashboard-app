@@ -1,9 +1,8 @@
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPLETION_GATE_DOC = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_M7_migration_completion_gate.md"
-SMOKE_SCRIPT = REPO_ROOT / "scripts" / "m7_single_node_runtime_smoke.sh"
+SMOKE_SCRIPT = REPO_ROOT / "scripts" / "smoke" / "m7_single_node_runtime_smoke.sh"
 NGINX_CONFIG = REPO_ROOT / "deploy" / "nginx" / "gcs-saker.reverse-proxy.example.conf"
 
 

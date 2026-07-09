@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PUBLIC_ICE_ENV = REPO_ROOT / "deploy" / "compose" / ".env.public-ice.example"
 PUBLIC_ICE_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_M7_public_ice_candidate_운영가이드.md"

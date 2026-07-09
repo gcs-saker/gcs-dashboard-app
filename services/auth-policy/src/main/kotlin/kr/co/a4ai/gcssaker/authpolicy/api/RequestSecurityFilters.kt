@@ -3,16 +3,12 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpStatus
-import org.springframework.http.MediaType
 import org.springframework.web.filter.OncePerRequestFilter
 import io.micrometer.tracing.Tracer
 import org.slf4j.MDC
-import java.time.Clock
-import java.time.Duration
+import org.slf4j.LoggerFactory
+import java.util.concurrent.TimeUnit
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 
 object RequestTraceContract {
     const val CORRELATION_ID_HEADER = "X-GCS-Correlation-Id"
@@ -26,15 +22,6 @@ object RequestTraceContract {
     const val TRACE_ID_LENGTH = 32
     const val TRACEPARENT_PARTS = 4
     val EXPOSED_HEADERS = listOf(CORRELATION_ID_HEADER, TRACE_ID_HEADER)
-}
-
-object RateLimitContract {
-    const val RETRY_AFTER_HEADER = "Retry-After"
-    const val ERROR_DETAIL_FIELD = "detail"
-    const val RATE_LIMIT_EXCEEDED = "rate limit exceeded"
-    const val LOGIN_PATH = AuthApiRoutes.ROOT + AuthApiRoutes.LOGIN
-    const val REFRESH_PATH = AuthApiRoutes.ROOT + AuthApiRoutes.REFRESH
-    const val SIGNUP_PATH = AuthApiRoutes.ROOT + AuthApiRoutes.SIGNUP
 }
 
 class CorrelationIdFilter(
@@ -87,89 +74,73 @@ class CorrelationIdFilter(
         this?.currentSpan()?.context()?.traceId()?.takeIf { it.isNotBlank() }
 }
 
-class RateLimitFilter(
-    private val limiter: FixedWindowRateLimiter,
-    private val enabled: Boolean,
+object ApiAccessLogContract {
+    const val LOG_NAME = "gcs.api.access"
+    const val UNKNOWN_VALUE = "-"
+}
+
+data class ApiAccessRecord(
+    val method: String,
+    val path: String,
+    val status: Int,
+    val durationMs: Long,
+    val correlationId: String,
+    val traceId: String,
+    val remoteAddress: String,
+)
+
+interface ApiAccessLogSink {
+    fun append(record: ApiAccessRecord)
+}
+
+class Slf4jApiAccessLogSink : ApiAccessLogSink {
+    private val logger = LoggerFactory.getLogger(ApiAccessLogContract.LOG_NAME)
+
+    override fun append(record: ApiAccessRecord) {
+        logger.info(
+            "api_access method={} path={} status={} durationMs={} correlationId={} traceId={} remote={}",
+            record.method,
+            record.path,
+            record.status,
+            record.durationMs,
+            record.correlationId,
+            record.traceId,
+            record.remoteAddress,
+        )
+    }
+}
+
+class ApiAccessLogFilter(
+    private val sink: ApiAccessLogSink,
 ) : OncePerRequestFilter() {
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        if (!enabled || !request.isRateLimitedAuthPath()) {
+        val startedAt = System.nanoTime()
+        try {
             filterChain.doFilter(request, response)
-            return
+        } finally {
+            sink.append(request.toAccessRecord(response, startedAt))
         }
-
-        val key = "${request.remoteAddr}:${request.requestURI}"
-        val decision = limiter.tryAcquire(key)
-        if (decision.allowed) {
-            filterChain.doFilter(request, response)
-            return
-        }
-
-        response.status = HttpStatus.TOO_MANY_REQUESTS.value()
-        response.contentType = MediaType.APPLICATION_JSON_VALUE
-        response.setHeader(RateLimitContract.RETRY_AFTER_HEADER, decision.retryAfterSeconds.toString())
-        response.writer.write("""{"${RateLimitContract.ERROR_DETAIL_FIELD}":"${RateLimitContract.RATE_LIMIT_EXCEEDED}"}""")
     }
 
-    private fun HttpServletRequest.isRateLimitedAuthPath(): Boolean =
-        method.equals(HttpMethods.POST, ignoreCase = true) &&
-            requestURI in RATE_LIMITED_AUTH_PATHS
-
-    private companion object {
-        val RATE_LIMITED_AUTH_PATHS = setOf(
-            RateLimitContract.LOGIN_PATH,
-            RateLimitContract.REFRESH_PATH,
-            RateLimitContract.SIGNUP_PATH,
+    private fun HttpServletRequest.toAccessRecord(
+        response: HttpServletResponse,
+        startedAt: Long,
+    ): ApiAccessRecord =
+        ApiAccessRecord(
+            method = method,
+            path = requestURI,
+            status = response.status,
+            durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt),
+            correlationId = attributeOrUnknown(RequestTraceContract.CORRELATION_ID_ATTRIBUTE),
+            traceId = attributeOrUnknown(RequestTraceContract.TRACE_ID_ATTRIBUTE),
+            remoteAddress = remoteAddr ?: ApiAccessLogContract.UNKNOWN_VALUE,
         )
-    }
-}
 
-class FixedWindowRateLimiter(
-    private val maxRequests: Int,
-    private val window: Duration,
-    private val clock: Clock = Clock.systemUTC(),
-) {
-    private val windows = ConcurrentHashMap<String, WindowCounter>()
-
-    fun tryAcquire(key: String): RateLimitDecision {
-        if (maxRequests <= 0) return RateLimitDecision.denied(window.seconds)
-        val nowMillis = clock.millis()
-        val windowMillis = window.toMillis().coerceAtLeast(1)
-        val next = windows.compute(key) { _, current ->
-            if (current == null || nowMillis >= current.resetAtMillis) {
-                WindowCounter(count = 1, resetAtMillis = nowMillis + windowMillis)
-            } else {
-                current.copy(count = current.count + 1)
-            }
-        } ?: WindowCounter(count = 1, resetAtMillis = nowMillis + windowMillis)
-
-        if (next.count <= maxRequests) {
-            return RateLimitDecision.allowed()
-        }
-        return RateLimitDecision.denied(((next.resetAtMillis - nowMillis) / 1000).coerceAtLeast(1))
-    }
-
-    private data class WindowCounter(
-        val count: Int,
-        val resetAtMillis: Long,
-    )
-}
-
-data class RateLimitDecision(
-    val allowed: Boolean,
-    val retryAfterSeconds: Long,
-) {
-    companion object {
-        fun allowed(): RateLimitDecision = RateLimitDecision(true, 0)
-
-        fun denied(retryAfterSeconds: Long): RateLimitDecision =
-            RateLimitDecision(false, retryAfterSeconds)
-    }
-}
-
-private object HttpMethods {
-    const val POST = "POST"
+    private fun HttpServletRequest.attributeOrUnknown(name: String): String =
+        getAttribute(name)?.toString()?.takeIf { it.isNotBlank() }
+            ?: ApiAccessLogContract.UNKNOWN_VALUE
 }

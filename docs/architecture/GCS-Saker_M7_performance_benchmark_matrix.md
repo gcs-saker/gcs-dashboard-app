@@ -9,7 +9,7 @@
 - `m7`: Spring/Kotlin auth-policy, Go media-control, MediaMTX/coturn 중심 M7 runtime
 
 ## 공통 지표
-`scripts/m7_performance_benchmark_matrix.py --check`가 다음 metric 계약을 고정한다.
+`scripts/benchmarks/m7_performance_benchmark_matrix.py --check`가 다음 metric 계약을 고정한다.
 
 | metric | 의미 | 병목 판단 |
 | --- | --- | --- |
@@ -31,7 +31,7 @@ WebRTC media 계측은 같은 report에 별도 smoke 수치로 함께 기록한�
 - `hls_master_latency_ms`
 - `hls_variant_latency_ms`
 
-ICE path 계측은 `scripts/webrtc_ice_smoke.py --run`의 selected pair 통계를 기준으로 기록한다.
+ICE path 계측은 `scripts/smoke/webrtc_ice_smoke.py --run`의 selected pair 통계를 기준으로 기록한다.
 
 | metric | 의미 | 병목 판단 |
 | --- | --- | --- |
@@ -74,13 +74,13 @@ ICE 경로는 최소 두 profile을 같은 stream id로 비교한다.
 ## 실행 순서
 1. single-node 또는 서버 runtime을 띄운다.
 2. sample stream을 먼저 publish한다.
-3. `scripts/m7_publish_play_smoke.sh --run`으로 MediaMTX/HLS/WHEP 경로를 확인한다.
+3. `scripts/smoke/m7_publish_play_smoke.sh --run`으로 MediaMTX/HLS/WHEP 경로를 확인한다.
 4. benchmark profile 파일을 준비한다.
 5. 다음 명령으로 API/HLS 반복 지연을 측정한다.
 
 ```bash
 M7_BENCHMARK_PASSWORD='smoke-password' \
-scripts/m7_performance_benchmark_matrix.py \
+scripts/benchmarks/m7_performance_benchmark_matrix.py \
   --profile-json /path/to/m7-benchmark-profiles.json \
   --iterations 30 \
   --warmup 5 \
@@ -91,7 +91,7 @@ scripts/m7_performance_benchmark_matrix.py \
 
 ```bash
 M7_BENCHMARK_PASSWORD='smoke-password' \
-scripts/m7_performance_benchmark_matrix.py \
+scripts/benchmarks/m7_performance_benchmark_matrix.py \
   --profile-json /path/to/m7-benchmark-profiles.json \
   --iterations 30 \
   --warmup 5 \
@@ -157,7 +157,7 @@ scripts/m7_performance_benchmark_matrix.py \
 #421의 단일 재현 명령은 아래와 같다.
 
 ```bash
-python3 scripts/m7_final_evidence_gate.py --run --timeout-seconds 120
+python3 scripts/gates/m7_final_evidence_gate.py --run --timeout-seconds 120
 ```
 
 이 명령은 benchmark schema, telemetry bulk synthetic benchmark, WebRTC ICE static contract, gRPC descriptor smoke, AI overlay metadata smoke, MQTT hardened profile check, closed-network static check, 기본/폐쇄망 compose config를 같은 JSON 결과로 묶는다.

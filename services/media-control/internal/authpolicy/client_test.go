@@ -2,6 +2,7 @@ package authpolicy
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -40,6 +41,61 @@ func TestClientAuthorizesStreamThroughAuthPolicy(t *testing.T) {
 	}
 	if decision.PrincipalID != "viewer-a" || decision.GroupID != "co-a" || decision.PolicyVersion == "" || decision.PrincipalVersion == "" {
 		t.Fatalf("expected enriched decision metadata, got %#v", decision)
+	}
+}
+
+func TestClientAuthorizesDevicePublishThroughAuthPolicy(t *testing.T) {
+	var requestBody map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/policy/devices/publish" {
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "" {
+			t.Fatalf("device publish policy must not forward bearer authorization")
+		}
+		if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+			t.Fatal(err)
+		}
+		_, _ = w.Write([]byte(`{"deviceUuid":"device-001","streamId":"raw.drone-01.front","path":"raw/drone-01/front","publisherGroupId":"co-a","reason":"device group authorized","policyVersion":"device-policy-v1"}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, server.Client())
+	authorization, err := client.AuthorizeDevicePublish(
+		context.Background(),
+		domain.DevicePublishCommand{
+			DeviceUUID: "device-001",
+			Credential: "secret",
+			StreamID:   "raw.drone-01.front",
+			Path:       "raw/drone-01/front",
+		},
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requestBody["groupId"] != nil || requestBody["publisherGroupId"] != nil {
+		t.Fatalf("device publish request leaked group field: %#v", requestBody)
+	}
+	if authorization.PublisherGroupID != "co-a" || authorization.PolicyVersion != "device-policy-v1" {
+		t.Fatalf("unexpected device publish authorization %#v", authorization)
+	}
+}
+
+func TestClientRejectsDeniedDevicePublish(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, server.Client())
+	_, err := client.AuthorizeDevicePublish(
+		context.Background(),
+		domain.DevicePublishCommand{DeviceUUID: "device-001", Credential: "wrong", StreamID: "raw.drone.front", Path: "raw/drone/front"},
+	)
+
+	if err != domain.ErrDevicePublishAccessDenied {
+		t.Fatalf("expected device publish access denied, got %v", err)
 	}
 }
 
