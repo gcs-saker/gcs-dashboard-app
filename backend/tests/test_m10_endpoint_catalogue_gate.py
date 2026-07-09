@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENDPOINT_CATALOGUE = REPO_ROOT / "docs/architecture/GCS-Saker_M10_endpoint_catalogue.md"
 FRONTEND_SRC = REPO_ROOT / "gcs-dashboard/src"

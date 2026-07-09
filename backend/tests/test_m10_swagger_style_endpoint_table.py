@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SWAGGER_STYLE_TABLE = REPO_ROOT / "docs/api/GCS-Saker_API_Swagger_Style_Table.md"
 

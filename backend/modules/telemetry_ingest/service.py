@@ -118,9 +118,7 @@ def format_epoch(epoch_val: object) -> str:
 def _build_postgres_telemetry_upsert(payload: dict[str, object | None]) -> Insert:
     insert_statement = postgres_insert(Telemetry).values(**payload)
     update_columns = {
-        column_name: getattr(insert_statement.excluded, column_name)
-        for column_name in payload
-        if column_name != "uuid"
+        column_name: getattr(insert_statement.excluded, column_name) for column_name in payload if column_name != "uuid"
     }
     return insert_statement.on_conflict_do_update(
         index_elements=["uuid"],

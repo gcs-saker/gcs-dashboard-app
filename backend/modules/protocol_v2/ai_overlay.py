@@ -16,6 +16,13 @@ from modules.protocol_v2.ai_overlay_geometry import bounding_box_from_points
 from modules.protocol_v2.ai_overlay_points import OverlayPointPayload
 from modules.protocol_v2.ai_overlay_wire import decode_overlay_event, encode_overlay_event
 
+__all__ = [
+    "AiOverlayEventPayload",
+    "bounding_box_from_points",
+    "dashboard_response_from_overlay_events",
+    "events_from_dashboard_response",
+]
+
 
 @dataclass(frozen=True)
 class AiOverlayEventPayload:

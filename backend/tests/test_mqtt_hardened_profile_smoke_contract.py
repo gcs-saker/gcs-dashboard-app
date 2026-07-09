@@ -5,7 +5,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SMOKE_SCRIPT = REPO_ROOT / "scripts" / "smoke" / "mqtt_hardened_profile_smoke.py"
 ACL = REPO_ROOT / "deploy" / "mosquitto" / "acl.hardened"
@@ -49,7 +48,7 @@ def test_mqtt_hardened_smoke_isolated_compose_contract_avoids_volume_deletion() 
     assert "compose.mqtt-hardened.override.yml" not in payload["profile"]["composeCommand"]
     assert "COMPOSE_PROJECT_NAME from inherited env files is filtered" in "\n".join(payload["safety"])
     assert "down --remove-orphans" in source
-    assert "down\", \"-v\"" not in source
+    assert 'down", "-v"' not in source
     assert "--remove-orphans" in payload["profile"]["composeCommand"] or "--remove-orphans" in source
 
 

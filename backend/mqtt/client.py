@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from functools import lru_cache
 import logging
 import os
+from dataclasses import dataclass
+from functools import lru_cache
 from typing import Protocol
 
 import paho.mqtt.client as mqtt
@@ -60,8 +60,7 @@ class MqttSettings:
 
 
 class PublishableMqttClient(Protocol):
-    def publish(self, topic: str, payload: MqttPayload) -> object:
-        ...
+    def publish(self, topic: str, payload: MqttPayload) -> object: ...
 
 
 def optional_env(name: str) -> str | None:

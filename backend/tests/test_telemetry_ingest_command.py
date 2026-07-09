@@ -1,5 +1,5 @@
-from modules.telemetry_ingest import TelemetryIngestCommand, TelemetryReadModelStore, format_epoch_millis
 from model.telemetry_model import TelemetryCreate
+from modules.telemetry_ingest import TelemetryIngestCommand, TelemetryReadModelStore, format_epoch_millis
 
 
 def test_telemetry_ingest_command_separates_db_payload_from_read_model_snapshot() -> None:

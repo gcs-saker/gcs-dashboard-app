@@ -1,6 +1,6 @@
+import re
 from dataclasses import dataclass
 from datetime import date
-import re
 from typing import Literal
 
 StreamPrefix = Literal["raw", "ai", "archive"]
@@ -118,9 +118,7 @@ def _validate_named_segments(*segments: str) -> tuple[str, ...]:
         if segment in {".", ".."}:
             raise StreamPathError("stream path must not contain traversal segments")
         if not SEGMENT_PATTERN.fullmatch(segment):
-            raise StreamPathError(
-                "stream path segments may contain only letters, numbers, hyphen, and underscore"
-            )
+            raise StreamPathError("stream path segments may contain only letters, numbers, hyphen, and underscore")
     return segments
 
 

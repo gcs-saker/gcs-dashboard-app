@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from modules.protocol_v2.wire import DecodedWireMessage, decode_message
-from modules.protocol_v2.wire import encode_varint_field
+from modules.protocol_v2.wire import DecodedWireMessage, decode_message, encode_varint_field
 
 
 class TimestampedFields:

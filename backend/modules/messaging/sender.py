@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from functools import lru_cache
-import os
 from typing import Iterable, Protocol
 
 from mqtt.client import MqttPayload, publish_control_command
@@ -50,13 +50,11 @@ class MessageEnvelope:
 
 
 class MessageSender(Protocol):
-    def send(self, envelope: MessageEnvelope) -> None:
-        ...
+    def send(self, envelope: MessageEnvelope) -> None: ...
 
 
 class GrpcStreamTransport(Protocol):
-    def send(self, payload: bytes) -> None:
-        ...
+    def send(self, payload: bytes) -> None: ...
 
 
 class MqttMessageSender:

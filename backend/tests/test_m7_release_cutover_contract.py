@@ -4,7 +4,6 @@ from pathlib import Path
 
 import yaml
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EVIDENCE_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_M7_release_cutover_evidence_2026-06-26.md"
 RELEASE_NOTE = REPO_ROOT / "docs" / "releases" / "GCS-Saker_v0.7.1_M7_release_cutover_notes.md"

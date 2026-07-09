@@ -6,16 +6,15 @@ from typing import Callable, Protocol, TypeVar
 from modules.ai_contract.schemas import AIEndpointResponse, FrameReference
 from modules.protocol_v2.ai_overlay_contract import DEFAULT_AI_MODEL_ID, DEFAULT_AI_REPORT_TEXT
 from modules.protocol_v2.ai_overlay_geometry import bounding_box_from_points
-from modules.protocol_v2.ai_overlay_points import OverlayPointPayload
-from modules.protocol_v2.ai_overlay_points import points_from_bbox
+from modules.protocol_v2.ai_overlay_points import OverlayPointPayload, points_from_bbox
 from modules.protocol_v2.wire_helpers import unix_millis
 
 
 class DashboardOverlayEvent(Protocol):
-    stream_id: str
+    @property
+    def stream_id(self) -> str: ...
 
-    def to_dashboard_detection(self, *, risk_score: float) -> dict[str, object]:
-        ...
+    def to_dashboard_detection(self, *, risk_score: float) -> dict[str, object]: ...
 
 
 OverlayEventT = TypeVar("OverlayEventT", bound=DashboardOverlayEvent)

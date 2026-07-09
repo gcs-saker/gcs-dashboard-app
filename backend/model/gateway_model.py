@@ -1,16 +1,19 @@
-from pydantic import BaseModel, ConfigDict
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
+
 
 # ✅ Create 용 DTO
 class GatewayCreate(BaseModel):
     cid: str
     uuid: str
     company_id: int
-    type: str   # "smartphone", "tablet", "smartwatch", "etc"
-    os: str     # "android", "iphone", "etc"
+    type: str  # "smartphone", "tablet", "smartwatch", "etc"
+    os: str  # "android", "iphone", "etc"
     name: Optional[str] = None
     status: Optional[str] = None
+
 
 # ✅ Response 용 DTO
 class GatewayResponse(BaseModel):

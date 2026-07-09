@@ -49,7 +49,10 @@ def test_direct_python_legacy_routes_are_marked_as_fallback() -> None:
         response = client.get("/auth/me")
 
     assert response.headers[SecurityHeaderNames.DEPRECATION.lower()] == "true"
-    assert response.headers[SecurityHeaderNames.X_GCS_LEGACY_FALLBACK.lower()] == SecurityHeaderValues.LEGACY_FALLBACK_DIRECT
+    assert (
+        response.headers[SecurityHeaderNames.X_GCS_LEGACY_FALLBACK.lower()]
+        == SecurityHeaderValues.LEGACY_FALLBACK_DIRECT
+    )
     assert response.headers[SecurityHeaderNames.X_GCS_REPLACEMENT_ROUTE.lower()] == "/auth-policy/auth"
 
 

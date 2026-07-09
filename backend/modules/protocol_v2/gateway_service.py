@@ -18,6 +18,13 @@ from modules.protocol_v2.gateway_service_payloads import (
 from modules.protocol_v2.wire import decode_message, encode_bytes, encode_string, encode_varint_field
 from modules.protocol_v2.wire_helpers import optional_string, single_bytes, single_int, single_string
 
+__all__ = [
+    "GatewayAckStatus",
+    "GatewayPayloadKind",
+    "GatewayStreamRequest",
+    "GatewayStreamResponse",
+]
+
 
 @dataclass(frozen=True)
 class GatewayStreamRequest:

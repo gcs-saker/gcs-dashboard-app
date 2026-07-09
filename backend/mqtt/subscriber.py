@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
-from fastapi import FastAPI
 import paho.mqtt.client as mqtt
+from fastapi import FastAPI
 
+from modules.telemetry_buffer import build_buffered_telemetry_sink
 from mqtt.client import MqttSettings, configure_mqtt_resilience
 from mqtt.consumer_bridge import MqttConsumerBridge
-from modules.telemetry_buffer import build_buffered_telemetry_sink
 from mqtt.topics import telemetry_subscription_topic
 
 
@@ -17,23 +17,17 @@ class SubscribableMqttClient(Protocol):
     on_connect: Callable[[Any, Any, Any, int], None] | None
     on_message: Callable[[Any, Any, Any], None] | None
 
-    def username_pw_set(self, username: str, password: str | None = None) -> None:
-        ...
+    def username_pw_set(self, username: str, password: str | None = None) -> None: ...
 
-    def reconnect_delay_set(self, min_delay: int, max_delay: int) -> None:
-        ...
+    def reconnect_delay_set(self, min_delay: int, max_delay: int) -> None: ...
 
-    def max_inflight_messages_set(self, inflight: int) -> None:
-        ...
+    def max_inflight_messages_set(self, inflight: int) -> None: ...
 
-    def connect(self, host: str, port: int, keepalive: int) -> None:
-        ...
+    def connect(self, host: str, port: int, keepalive: int) -> None: ...
 
-    def subscribe(self, topic: str, qos: int = 0) -> object:
-        ...
+    def subscribe(self, topic: str, qos: int = 0) -> object: ...
 
-    def loop_start(self) -> None:
-        ...
+    def loop_start(self) -> None: ...
 
 
 @dataclass(frozen=True)

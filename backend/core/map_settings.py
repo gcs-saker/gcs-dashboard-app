@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 
 from core.env_parsing import empty_to_none, parse_bool
 
 DEFAULT_MAP_PROVIDER = "esri-satellite"
-DEFAULT_MAP_STYLE_URL = "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+DEFAULT_MAP_STYLE_URL = (
+    "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+)
 DEFAULT_MAP_ATTRIBUTION = "Esri World Imagery"
 
 

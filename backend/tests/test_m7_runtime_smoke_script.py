@@ -1,7 +1,6 @@
 import subprocess
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -69,28 +68,16 @@ def test_m7_runtime_smoke_requires_backend_stream_status_payload_and_read_model_
 
 
 def test_mediamtx_additional_hosts_are_env_driven_for_public_nat_candidates():
-    deploy_config = (
-        REPO_ROOT / "deploy" / "mediamtx" / "mediamtx.closed-network.yml"
-    ).read_text(encoding="utf-8")
+    deploy_config = (REPO_ROOT / "deploy" / "mediamtx" / "mediamtx.closed-network.yml").read_text(encoding="utf-8")
     dashboard_config = (REPO_ROOT / "gcs-dashboard" / "mediamtx.yml").read_text(encoding="utf-8")
-    single_node_compose = (
-        REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
-    ).read_text(encoding="utf-8")
-    dashboard_compose = (REPO_ROOT / "gcs-dashboard" / "docker-compose.yml").read_text(
-        encoding="utf-8"
-    )
-    single_node_env = (
-        REPO_ROOT / "deploy" / "compose" / ".env.single-node.example"
-    ).read_text(encoding="utf-8")
+    single_node_compose = (REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml").read_text(encoding="utf-8")
+    dashboard_compose = (REPO_ROOT / "gcs-dashboard" / "docker-compose.yml").read_text(encoding="utf-8")
+    single_node_env = (REPO_ROOT / "deploy" / "compose" / ".env.single-node.example").read_text(encoding="utf-8")
 
     assert "webrtcAdditionalHosts: []" in deploy_config
     assert "webrtcAdditionalHosts: []" in dashboard_config
-    expected_override = (
-        "MTX_WEBRTCADDITIONALHOSTS: ${MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS:-127.0.0.1}"
-    )
-    expected_interface_override = (
-        "MTX_WEBRTCIPSFROMINTERFACES: ${MEDIAMTX_WEBRTC_IPS_FROM_INTERFACES:-true}"
-    )
+    expected_override = "MTX_WEBRTCADDITIONALHOSTS: ${MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS:-127.0.0.1}"
+    expected_interface_override = "MTX_WEBRTCIPSFROMINTERFACES: ${MEDIAMTX_WEBRTC_IPS_FROM_INTERFACES:-true}"
     assert expected_override in single_node_compose
     assert expected_override in dashboard_compose
     assert expected_interface_override in single_node_compose

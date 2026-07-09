@@ -6,7 +6,6 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from core.auth_config import AuthConfigError, AuthSettings
-from core.security_errors import configuration_error, unauthorized
 from core.security_contract import (
     AUTHENTICATION_REQUIRED_DETAIL,
     BEARER_TOKEN_REQUIRED_DETAIL,
@@ -14,6 +13,7 @@ from core.security_contract import (
     ROLE_REQUIRED_DETAIL_TEMPLATE,
     UserRole,
 )
+from core.security_errors import configuration_error, unauthorized
 from core.security_tokens import (
     AuthenticatedUser,
     create_access_token,
@@ -23,6 +23,17 @@ from core.security_tokens import (
     normalize_role,
 )
 
+__all__ = [
+    "AuthenticatedUser",
+    "AuthSettings",
+    "create_access_token",
+    "create_refresh_token",
+    "decode_access_token",
+    "decode_refresh_token",
+    "get_current_user",
+    "normalize_role",
+    "require_role",
+]
 
 bearer_scheme = HTTPBearer(auto_error=False)
 

@@ -1,7 +1,7 @@
 import asyncio
 
-from fastapi import HTTPException
 import pytest
+from fastapi import HTTPException
 
 from api.stream import resolve_stream_id, resolve_stream_path
 from model.stream_model import (

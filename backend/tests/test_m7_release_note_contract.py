@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RELEASE_NOTE = REPO_ROOT / "docs" / "releases" / "GCS-Saker_v0.7.0_M7_release_notes.md"
 RELEASE_README = REPO_ROOT / "docs" / "releases" / "README.md"

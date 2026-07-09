@@ -4,7 +4,6 @@ from pathlib import Path
 
 import yaml
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 STATUS_FILE = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_runtime_stack_status.yml"
 COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
@@ -74,9 +73,7 @@ def test_active_ingress_routes_are_visible_in_nginx_contract() -> None:
                 f"location = {route.rstrip('/')}" in nginx
                 or f"location {route}" in nginx
                 or f"location ^~ {route}" in nginx
-            ), (
-                f"{name} route {route} is not visible in nginx"
-            )
+            ), f"{name} route {route} is not visible in nginx"
 
 
 def test_runtime_stack_status_tracks_completed_and_incomplete_migration_items() -> None:
@@ -100,7 +97,9 @@ def test_non_active_items_record_missing_runtime_or_profile_gate() -> None:
         if entry["status"] == "active":
             continue
         has_missing_runtime = bool(entry.get("missingRuntime"))
-        has_profile_runtime = bool(entry.get("runtime", {}).get("profile") or entry.get("runtime", {}).get("overrideFile"))
+        has_profile_runtime = bool(
+            entry.get("runtime", {}).get("profile") or entry.get("runtime", {}).get("overrideFile")
+        )
         has_contract_evidence = entry["status"] in {
             "runtime-validated-profile",
             "synthetic-benchmarked",

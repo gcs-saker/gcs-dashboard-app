@@ -1,7 +1,6 @@
 import subprocess
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "smoke" / "m7_streaming_stability_soak.sh"
 DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_M7_streaming_stability_soak.md"
@@ -37,7 +36,7 @@ def test_m7_streaming_stability_soak_collects_server_and_ice_metrics() -> None:
     script = SCRIPT.read_text(encoding="utf-8")
     doc = DOC.read_text(encoding="utf-8")
 
-    assert 'stats --no-stream' in script
+    assert "stats --no-stream" in script
     assert "SERVER_SSH_TARGET" in script
     assert "SERVER_DOCKER_COMMAND" in script
     assert "TURN primary" in script

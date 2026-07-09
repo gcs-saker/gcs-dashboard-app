@@ -1,10 +1,11 @@
 import asyncio
 from typing import Any, cast
 
-from fastapi import HTTPException
 import pytest
+from fastapi import HTTPException
 from starlette.routing import Route
 
+import modules.streaming.router as streaming_router_module
 from api.stream import router as stream_router
 from modules.streaming import (
     DEFAULT_STREAM_SEEDS,
@@ -12,12 +13,11 @@ from modules.streaming import (
     PlaybackUrlBuilder,
     PlaybackUrlBuilderConfig,
     StreamDescriptor,
-    StreamSeed,
     StreamingService,
+    StreamSeed,
     validate_stream_status,
 )
 from modules.streaming.mediamtx_client import MediaMTXClient, MediaMTXPath
-import modules.streaming.router as streaming_router_module
 from modules.streaming.router import (
     get_playback_urls,
     get_stream_registry_item,
@@ -187,12 +187,14 @@ def test_mediamtx_path_factory_rejects_items_without_a_path_name():
 
 
 def test_mediamtx_path_factory_extracts_runtime_source_and_reader_count():
-    path = MediaMTXPath.from_api_item({
-        "name": "raw/drone-07/front",
-        "ready": True,
-        "source": {"type": "webRTCSession"},
-        "readers": [{"id": "reader-001"}, {"id": "reader-002"}],
-    })
+    path = MediaMTXPath.from_api_item(
+        {
+            "name": "raw/drone-07/front",
+            "ready": True,
+            "source": {"type": "webRTCSession"},
+            "readers": [{"id": "reader-001"}, {"id": "reader-002"}],
+        }
+    )
 
     assert path == MediaMTXPath(
         name="raw/drone-07/front",

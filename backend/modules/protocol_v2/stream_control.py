@@ -58,7 +58,9 @@ class StreamCommandPayload:
         encode_string(payload, StreamCommandFields.COMMAND_TYPE, self.command_type)
         if self.payload:
             encode_bytes(payload, StreamCommandFields.PAYLOAD, self.payload)
-        encode_bytes(payload, StreamCommandFields.TIME, timestamped_wire(self.observed_unix_millis, self.observed_unix_millis))
+        encode_bytes(
+            payload, StreamCommandFields.TIME, timestamped_wire(self.observed_unix_millis, self.observed_unix_millis)
+        )
         return bytes(payload)
 
     @classmethod

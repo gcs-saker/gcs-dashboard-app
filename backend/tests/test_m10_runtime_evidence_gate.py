@@ -6,7 +6,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "gates" / "m10_runtime_evidence_gate.py"
 
@@ -39,7 +38,12 @@ def test_m10_runtime_evidence_gate_check_exposes_live_nat_and_db_metrics() -> No
     assert "explain.sharedHitBlocks" in payload["dbRuntimeRequiredMetrics"]
     assert "explain.walRecords" in payload["dbRuntimeRequiredMetrics"]
     command_names = {command["name"] for command in payload["commands"]}
-    assert {"external_nat_contract", "performance_schema", "postgis_runtime_contract", "postgis_runtime_run"} <= command_names
+    assert {
+        "external_nat_contract",
+        "performance_schema",
+        "postgis_runtime_contract",
+        "postgis_runtime_run",
+    } <= command_names
 
 
 def test_m10_runtime_evidence_gate_validates_external_nat_report(tmp_path: Path) -> None:
