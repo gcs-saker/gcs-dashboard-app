@@ -16,6 +16,7 @@ object AuthSecurityRouteContract {
     private const val ASSET_PREFIX = "/asset/**"
     private const val ADMIN_PREFIX = "/admin/**"
     private const val ROLE_PREFIX = "ROLE_"
+    private const val ADMIN_ROLE_NAME = "ADMIN"
 
     val CORS_METHODS = listOf(HttpMethod.GET.name(), HttpMethod.POST.name(), HttpMethod.OPTIONS.name())
     val CORS_HEADERS = listOf(
@@ -39,13 +40,14 @@ object AuthSecurityRouteContract {
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.LOGOUT),
         RouteMatcher(HttpMethod.POST, DevicePolicyApiRoutes.ROOT + DevicePolicyApiRoutes.PUBLISH),
     )
+    val ADMIN_MATCHERS = listOf(RouteMatcher(null, ADMIN_PREFIX))
+    val ADMIN_AUTHORITY = roleAuthority(ADMIN_ROLE_NAME)
     val PROTECTED_MATCHERS = listOf(
         RouteMatcher(HttpMethod.GET, AuthApiRoutes.ROOT + AuthApiRoutes.ME),
         RouteMatcher(null, StreamPolicyApiRoutes.ROOT + ALL_PATHS),
         RouteMatcher(null, OPS_PREFIX),
         RouteMatcher(null, TELEMETRY_PREFIX),
         RouteMatcher(null, ASSET_PREFIX),
-        RouteMatcher(null, ADMIN_PREFIX),
         RouteMatcher(null, GraphQlApiRoutes.GRAPHQL),
     )
 

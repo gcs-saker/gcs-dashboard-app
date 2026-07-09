@@ -64,6 +64,10 @@ class AuthSecurityConfig {
                 AuthSecurityRouteContract.PUBLIC_MATCHERS.forEach { matcher ->
                     requests.requestMatchers(matcher.toPathPatternRequestMatcher()).permitAll()
                 }
+                AuthSecurityRouteContract.ADMIN_MATCHERS.forEach { matcher ->
+                    requests.requestMatchers(matcher.toPathPatternRequestMatcher())
+                        .hasAuthority(AuthSecurityRouteContract.ADMIN_AUTHORITY)
+                }
                 AuthSecurityRouteContract.PROTECTED_MATCHERS.forEach { matcher ->
                     requests.requestMatchers(matcher.toPathPatternRequestMatcher()).authenticated()
                 }
