@@ -182,6 +182,8 @@ def test_webrtc_ice_smoke_script_documents_live_whep_ice_run() -> None:
     assert "wait_for_ice_gathering_complete" in script
     assert "candidate summary" in script
     assert "Selected ICE pair" in script
+    assert "Direct ICE path ratio" in script
+    assert "Relay ICE path ratio" in script
     assert "relay_fallback_reason" in script
     assert "--require-connected" in script
     assert "--measure-audio-video-sync" in script
@@ -189,3 +191,12 @@ def test_webrtc_ice_smoke_script_documents_live_whep_ice_run() -> None:
     assert "WHEP offer/answer" in doc
     assert "ICE candidate" in doc
     assert "stun:stun.l.google.com:19302" in doc
+
+
+def test_webrtc_ice_smoke_redacts_media_token_query() -> None:
+    module = load_smoke_module()
+
+    redacted = module.redact_url_query("https://edge.example/webrtc/raw/nat/smoke/whep?playbackToken=secret")
+
+    assert redacted == "https://edge.example/webrtc/raw/nat/smoke/whep?<redacted-query>"
+    assert "secret" not in redacted

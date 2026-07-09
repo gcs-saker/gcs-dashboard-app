@@ -12,11 +12,13 @@ import sys
 import time
 from typing import Sequence
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlunsplit, urlsplit
 from urllib.request import Request, urlopen
 
 
 DEFAULT_WHIP_URL = "https://a4ai.tplinkdns.com/webrtc/raw/nat/smoke/whip"
 DEFAULT_ICE_SERVER_URL = "stun:a4ai.tplinkdns.com:3478"
+REDACTED_QUERY = "<redacted-query>"
 CONNECTED_ICE_STATES = {"connected", "completed"}
 FAILED_ICE_STATES = {"failed", "closed", "disconnected"}
 
@@ -51,6 +53,13 @@ def post_whip_offer(whip_url: str, offer_sdp: str, insecure: bool) -> str:
     if not payload.strip():
         raise RuntimeError("WHIP answer response was empty")
     return payload
+
+
+def redact_url_query(raw_url: str) -> str:
+    parsed = urlsplit(raw_url)
+    if not parsed.query:
+        return raw_url
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, REDACTED_QUERY, parsed.fragment))
 
 
 async def wait_for_ice_gathering_complete(peer_connection: object, timeout_seconds: float) -> None:
@@ -221,7 +230,7 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         await asyncio.sleep(args.publish_seconds)
 
         print("WebRTC WHIP publish smoke run passed")
-        print(f"WHIP URL: {args.whip_url}")
+        print(f"WHIP URL: {redact_url_query(args.whip_url)}")
         print(f"ICE server URL: {args.ice_server_url}")
         print(f"Local offer ready ms: {offer_ready_ms:.1f}")
         print(f"WHIP answer latency ms: {answer_ms:.1f}")

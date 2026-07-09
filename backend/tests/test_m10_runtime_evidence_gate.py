@@ -35,6 +35,7 @@ def test_m10_runtime_evidence_gate_check_exposes_live_nat_and_db_metrics() -> No
     assert "WHEP answer latency ms" in payload["externalNatRequiredMetrics"]
     assert "First video frame latency ms" in payload["externalNatRequiredMetrics"]
     assert "Audio/video sync offset ms" in payload["externalNatRequiredMetrics"]
+    assert "Relay ICE path ratio" in payload["externalNatRequiredMetrics"]
     assert "explain.sharedHitBlocks" in payload["dbRuntimeRequiredMetrics"]
     assert "explain.walRecords" in payload["dbRuntimeRequiredMetrics"]
     command_names = {command["name"] for command in payload["commands"]}
@@ -57,6 +58,8 @@ def test_m10_runtime_evidence_gate_validates_external_nat_report(tmp_path: Path)
                 "Audio/video sync offset ms: 37.4",
                 "Selected ICE pair: local=srflx, remote=host, protocol=udp, rtt_ms=12.5",
                 "ICE path: direct",
+                "Direct ICE path ratio: 1.0000",
+                "Relay ICE path ratio: 0.0000",
                 "Relay fallback reason: none",
                 "External NAT smoke wall latency ms: 1402",
             ]
@@ -71,6 +74,7 @@ def test_m10_runtime_evidence_gate_validates_external_nat_report(tmp_path: Path)
     assert validation["metrics"]["firstVideoFrameLatencyMs"] == 922.2
     assert validation["metrics"]["audioVideoSyncOffsetMs"] == 37.4
     assert validation["metrics"]["icePath"] == "direct"
+    assert validation["metrics"]["relayIcePathRatio"] == 0.0
 
 
 def test_m10_runtime_evidence_gate_rejects_missing_external_nat_metrics(tmp_path: Path) -> None:

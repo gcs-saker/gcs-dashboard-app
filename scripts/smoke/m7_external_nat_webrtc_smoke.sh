@@ -128,6 +128,46 @@ resolve_publish_whip_url() {
     | python3 -c 'import json,sys; payload=json.load(sys.stdin); print(payload["whipUrl"])'
 }
 
+resolve_playback_whep_url() {
+  local playback_auth_url="${EDGE_BASE_URL}/media-control/api/v1/streams/${STREAM_ID}/playback"
+  if [[ -z "$AUTH_BEARER_TOKEN" ]]; then
+    echo "AUTH_BEARER_TOKEN is required to request an authorized WHEP playback URL" >&2
+    exit 1
+  fi
+  # shellcheck disable=SC2046
+  curl $(tls_args) -fsS \
+    -H "Authorization: Bearer ${AUTH_BEARER_TOKEN}" \
+    -H "Accept: application/json" \
+    "$playback_auth_url" \
+    | python3 -c 'import json,sys; payload=json.load(sys.stdin); print(payload["playbackUrls"]["webrtc"])'
+}
+
+resolve_playback_whep_url_with_retry() {
+  local attempt=1
+  local output
+  local status
+  local line
+  while [[ "$attempt" -le "$WHEP_RETRY_COUNT" ]]; do
+    set +e
+    output="$(resolve_playback_whep_url 2>&1)"
+    status=$?
+    set -e
+    if [[ "$status" -eq 0 && -n "$output" ]]; then
+      printf '%s\n' "$output"
+      return 0
+    fi
+    line="authorized WHEP playback URL attempt ${attempt}: waiting for stream registry"
+    echo "$line" >&2
+    if [[ -n "$REPORT_FILE" ]]; then
+      printf '%s\n' "$line" >>"$REPORT_FILE"
+    fi
+    sleep "$WHEP_RETRY_DELAY_SECONDS"
+    attempt=$((attempt + 1))
+  done
+  printf '%s\n' "$output" >&2
+  return "$status"
+}
+
 run_turn_allocation() {
   local label="$1"
   local turn_url="$2"
@@ -167,6 +207,9 @@ run_whep_playback_with_retry() {
     status=$?
     set -e
     printf '%s\n' "$output"
+    if [[ -n "$REPORT_FILE" ]]; then
+      printf '%s\n' "$output" >>"$REPORT_FILE"
+    fi
     if [[ "$status" -eq 0 ]]; then
       append_report "WHEP playback attempt ${attempt}: success"
       return 0
@@ -279,6 +322,10 @@ run_live() {
   fi
 
   if [[ "$RUN_WHEP_PLAYBACK" == "1" ]]; then
+    if [[ -n "$AUTH_BEARER_TOKEN" ]]; then
+      whep_url="$(resolve_playback_whep_url_with_retry)"
+      append_report "authorized WHEP playback URL resolved through media-control"
+    fi
     run_whep_playback_with_retry "$whep_url" "$ice_server_for_media"
   fi
 

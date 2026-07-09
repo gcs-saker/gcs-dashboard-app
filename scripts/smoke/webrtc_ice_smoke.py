@@ -13,11 +13,13 @@ import sys
 import time
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlunsplit, urlsplit
 from urllib.request import Request, urlopen
 
 
 DEFAULT_WHEP_URL = "http://127.0.0.1:8889/raw/sample/front/whep"
 DEFAULT_STUN_URL = "stun:stun.l.google.com:19302"
+REDACTED_QUERY = "<redacted-query>"
 REQUIRED_SDP_MARKERS = ("ice-ufrag", "ice-pwd", "fingerprint")
 CONNECTED_ICE_STATES = {"connected", "completed"}
 FAILED_ICE_STATES = {"failed", "closed", "disconnected"}
@@ -328,6 +330,13 @@ def post_whep_offer(whep_url: str, offer_sdp: str, insecure: bool) -> str:
     return payload
 
 
+def redact_url_query(raw_url: str) -> str:
+    parsed = urlsplit(raw_url)
+    if not parsed.query:
+        return raw_url
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, REDACTED_QUERY, parsed.fragment))
+
+
 async def wait_for_ice_gathering_complete(peer_connection: object, timeout_seconds: float) -> None:
     if getattr(peer_connection, "iceGatheringState") == "complete":
         return
@@ -449,6 +458,7 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
                 path=selected_pair.path,
                 relay_fallback_reason=infer_relay_fallback_reason(selected_pair, local_inspection, answer_inspection),
             )
+        path_summary = summarize_ice_paths([selected_pair] if selected_pair is not None else [])
 
         frame = None
         first_frame_elapsed_ms = None
@@ -467,7 +477,7 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
                 first_audio_frame_elapsed_ms = (time.perf_counter() - started) * 1000
 
         print("WebRTC ICE smoke run passed")
-        print(f"WHEP URL: {args.whep_url}")
+        print(f"WHEP URL: {redact_url_query(args.whep_url)}")
         print(f"ICE server URL: {args.ice_server_url}")
         print(f"Local offer candidates: {local_inspection.candidate_count}")
         print_candidate_summary("Local offer", local_inspection.candidates)
@@ -478,6 +488,13 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
         print(f"ICE gathering state: {peer_connection.iceGatheringState}")
         print(f"ICE connection state: {peer_connection.iceConnectionState}")
         print_selected_ice_pair(selected_pair)
+        print(
+            "ICE path summary: "
+            f"total={path_summary.total}, direct={path_summary.direct}, relay={path_summary.relay}, "
+            f"direct_ratio={path_summary.direct_ratio:.4f}, relay_ratio={path_summary.relay_ratio:.4f}"
+        )
+        print(f"Direct ICE path ratio: {path_summary.direct_ratio:.4f}")
+        print(f"Relay ICE path ratio: {path_summary.relay_ratio:.4f}")
         if frame is not None and first_frame_elapsed_ms is not None:
             print(f"First video frame latency ms: {first_frame_elapsed_ms:.1f}")
             print(f"First video frame size: {frame.width}x{frame.height}")  # type: ignore[attr-defined]

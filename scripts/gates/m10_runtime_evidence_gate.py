@@ -20,6 +20,8 @@ EXTERNAL_NAT_REQUIRED_METRICS = (
     "Audio/video sync offset ms",
     "Selected ICE pair",
     "ICE path",
+    "Direct ICE path ratio",
+    "Relay ICE path ratio",
     "Relay fallback reason",
     "External NAT smoke wall latency ms",
 )
@@ -154,6 +156,8 @@ def validate_external_nat_report(path: Path | None) -> dict[str, Any]:
         "firstVideoFrameLatencyMs": extract_number(content, "First video frame latency ms"),
         "audioVideoSyncOffsetMs": extract_number(content, "Audio/video sync offset ms"),
         "externalNatWallLatencyMs": extract_number(content, "External NAT smoke wall latency ms"),
+        "directIcePathRatio": extract_number(content, "Direct ICE path ratio"),
+        "relayIcePathRatio": extract_number(content, "Relay ICE path ratio"),
         "icePath": extract_text_after_colon(content, "ICE path"),
         "relayFallbackReason": extract_text_after_colon(content, "Relay fallback reason"),
     }
