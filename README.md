@@ -53,6 +53,15 @@ The initial Ruff gate intentionally focuses on syntax, import order, undefined n
 
 Python structured logs use JSON lines with stable fields: `event`, `severity`, `component`, optional `trace_id`, `http_method`, `http_route`, `status_code`, `stream_id`, and `error_type`. Do not log token, password, cookie, credential, secret, media, or raw payload fields; those keys are redacted by the shared logging processor.
 
+Python latency micro benchmarks are separated from WebRTC first-frame measurements. Use them only for control/data plane regression checks:
+
+```bash
+cd backend
+python3 -m pytest tests/test_latency_benchmark_guard.py -m benchmark --benchmark-only
+```
+
+The benchmark cases cover DTO/protobuf conversion and the MediaMTX HTTP client wrapper. They do not prove live media latency.
+
 Spring auth-policy:
 
 ```bash
