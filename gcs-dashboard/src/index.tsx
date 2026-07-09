@@ -9,8 +9,18 @@ if (rootElement === null) {
   throw new Error("Root element #root was not found");
 }
 
-ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+void prepareApplication().then(() => {
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  );
+});
+
+async function prepareApplication(): Promise<void> {
+  if (!import.meta.env.DEV) {
+    return;
+  }
+  const { enableMocking } = await import("./mocks/enableMocking");
+  await enableMocking();
+}

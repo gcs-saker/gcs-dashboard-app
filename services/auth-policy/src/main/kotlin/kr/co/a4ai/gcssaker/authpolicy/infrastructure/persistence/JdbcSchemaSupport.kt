@@ -1,48 +1,30 @@
 package kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence
 
-import org.springframework.jdbc.core.ConnectionCallback
-import org.springframework.jdbc.core.JdbcTemplate
+import org.flywaydb.core.Flyway
+import java.util.Collections
+import javax.sql.DataSource
 
-internal data class JdbcIndexDefinition(
-    val name: String,
-    val table: String,
-    val columns: List<String>,
-) {
-    val createSql: String =
-        "CREATE INDEX $name ON $table (${columns.joinToString(JdbcSchemaContract.COLUMN_SEPARATOR)})"
-}
+internal object AuthPolicyJdbcMigrations {
+    const val LOCATION = "classpath:db/migration"
 
-internal object JdbcSchemaContract {
-    const val COLUMN_SEPARATOR = ", "
-}
+    private val migratedDataSources = Collections.synchronizedSet(mutableSetOf<String>())
 
-internal fun JdbcTemplate.createIndexIfMissing(index: JdbcIndexDefinition) {
-    val exists = execute(
-        ConnectionCallback { connection ->
-            val schemas = listOf(connection.schema, null).distinct()
-            val tables = listOf(index.table, index.table.uppercase()).distinct()
-            for (schema in schemas) {
-                for (table in tables) {
-                    connection.metaData
-                        .getIndexInfo(connection.catalog, schema, table, false, false)
-                        .use { resultSet ->
-                            while (resultSet.next()) {
-                                if (resultSet.getString(JdbcIndexMetadataColumns.indexName).equals(index.name, ignoreCase = true)) {
-                                    return@ConnectionCallback true
-                                }
-                            }
-                        }
-                }
-            }
-            false
-        },
-    ) ?: false
-
-    if (!exists) {
-        execute(index.createSql)
+    fun ensure(dataSource: DataSource) {
+        val signature = migrationSignature(dataSource)
+        if (!migratedDataSources.add(signature)) {
+            return
+        }
+        Flyway.configure()
+            .dataSource(dataSource)
+            .locations(LOCATION)
+            .baselineOnMigrate(true)
+            .baselineVersion("0")
+            .load()
+            .migrate()
     }
-}
 
-private object JdbcIndexMetadataColumns {
-    const val indexName = "INDEX_NAME"
+    private fun migrationSignature(dataSource: DataSource): String =
+        dataSource.connection.use { connection ->
+            listOfNotNull(connection.metaData.url, connection.catalog, connection.schema).joinToString("|")
+        }
 }

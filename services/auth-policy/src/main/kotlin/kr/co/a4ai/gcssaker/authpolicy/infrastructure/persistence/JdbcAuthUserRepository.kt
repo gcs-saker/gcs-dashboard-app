@@ -15,7 +15,7 @@ class JdbcAuthUserRepository(
     private val jdbc = JdbcTemplate(dataSource)
 
     init {
-        AuthPolicySchema.ensure(jdbc)
+        AuthPolicySchema.ensure(dataSource)
         seedUsers(initialUsers)
     }
 
@@ -79,8 +79,8 @@ class JdbcAuthUserRepository(
 }
 
 object AuthPolicySchema {
-    fun ensure(jdbc: JdbcTemplate) {
-        jdbc.execute(AuthUserSql.createTable)
+    fun ensure(dataSource: DataSource) {
+        AuthPolicyJdbcMigrations.ensure(dataSource)
     }
 }
 
@@ -95,19 +95,6 @@ private object AuthUserColumns {
 }
 
 private object AuthUserSql {
-    const val createTable = """
-        CREATE TABLE IF NOT EXISTS auth_users (
-            id INT NOT NULL PRIMARY KEY,
-            username VARCHAR(128) NOT NULL,
-            email VARCHAR(255) NOT NULL,
-            password_hash VARCHAR(255) NOT NULL,
-            company_id INT NOT NULL,
-            role VARCHAR(32) NOT NULL,
-            group_id VARCHAR(64) NOT NULL,
-            CONSTRAINT ux_auth_users_username UNIQUE (username),
-            CONSTRAINT ux_auth_users_email UNIQUE (email)
-        )
-    """
     const val selectByUsername = """
         SELECT id, username, email, password_hash, company_id, role, group_id
         FROM auth_users

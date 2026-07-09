@@ -26,6 +26,8 @@ WebRTC media 계측은 같은 report에 별도 smoke 수치로 함께 기록한�
 
 - `whep_answer_latency_ms`
 - `first_video_frame_latency_ms`
+- `first_audio_frame_latency_ms`
+- `audio_video_sync_offset_ms`
 - `hls_master_latency_ms`
 - `hls_variant_latency_ms`
 
@@ -134,6 +136,8 @@ scripts/m7_performance_benchmark_matrix.py \
 | WHIP ICE connected latency | 579.7 ms |
 | WHEP answer latency | 276.5 ms |
 | WHEP first video frame latency | 922.2 ms |
+| WHEP first audio frame latency | 측정 필요 |
+| WHEP audio/video sync offset | 측정 필요 |
 
 ### 비교 기준 고정 상태
 `legacy`, `v0.2.0`, `m7` profile label과 metric schema는 `m7-performance-benchmark-v1`로 고정했다. 운영 중인 profile이 바뀌어도 같은 script, 같은 stream id, 같은 metric name으로 재측정하면 이전 baseline과 직접 비교할 수 있다. 현재 live 운영 기준선은 위 `m7` 실측값으로 본다.
@@ -145,6 +149,7 @@ scripts/m7_performance_benchmark_matrix.py \
 - 결과 JSON 또는 check output에 `icePathMetrics`와 selected candidate type, ICE RTT, direct/relay ratio 계약이 포함된다.
 - API/HLS metric은 p50/p95/max/errors를 가진다.
 - WebRTC media 수치는 `m7_publish_play_smoke.sh --run` 또는 browser first-frame smoke 결과와 함께 보고한다.
+- 외부 NAT smoke 결과에는 `audio_video_sync_offset_ms` 또는 `Audio/video sync offset ms`가 포함되어야 한다.
 - Docker daemon, 포트, 권한 문제로 live run이 실패하면 실패 지점과 재실행 조건을 남긴다.
 
 ## M7 final evidence gate

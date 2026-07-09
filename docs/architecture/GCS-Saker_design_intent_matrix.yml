@@ -232,3 +232,30 @@ intents:
       evidencePaths:
         - scripts/m7_performance_benchmark_matrix.py
         - backend/tests/test_m7_performance_benchmark_matrix.py
+
+  - id: ARCH-DATA-001
+    title: "auth-policy schema는 repository DDL이 아니라 versioned migration으로 증명한다"
+    category: data-persistence
+    severity: p1
+    cadence: everyPullRequest
+    issue: 426
+    linkedStacks:
+      - springAuthPolicy
+      - postgresPrimaryStore
+    rationale: "사용자, 운영 이벤트, telemetry read model schema가 코드 init에 숨어 있으면 빈 DB, 기존 DB, PostgreSQL 전환 검증이 흔들린다."
+    assertions:
+      requiredTexts:
+        - path: services/auth-policy/build.gradle.kts
+          text: "org.flywaydb:flyway-core"
+        - path: services/auth-policy/src/main/resources/application.yml
+          text: "baseline-version: 0"
+        - path: services/auth-policy/src/main/resources/db/migration/V1__auth_policy_core_schema.sql
+          text: "CREATE TABLE IF NOT EXISTS auth_users"
+        - path: services/auth-policy/src/main/resources/db/migration/V1__auth_policy_core_schema.sql
+          text: "CREATE INDEX IF NOT EXISTS ix_stream_sessions_group_status_heartbeat"
+        - path: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/JdbcFlywayMigrationTest.kt
+          text: "flyway_schema_history"
+      evidencePaths:
+        - services/auth-policy/src/main/resources/db/migration/V1__auth_policy_core_schema.sql
+        - services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/JdbcFlywayMigrationTest.kt
+        - services/auth-policy/README.md

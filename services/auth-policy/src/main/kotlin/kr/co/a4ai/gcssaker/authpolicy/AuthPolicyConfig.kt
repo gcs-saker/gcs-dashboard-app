@@ -43,6 +43,8 @@ import kr.co.a4ai.gcssaker.authpolicy.application.InMemoryOperationalAuditSink
 import kr.co.a4ai.gcssaker.authpolicy.application.NoopOperationalAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.OperationalAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.OperationalAuditPublisherMetrics
+import kr.co.a4ai.gcssaker.authpolicy.application.OperationalFailureLogger
+import kr.co.a4ai.gcssaker.authpolicy.application.OperationalFailureLoggerFacade
 import kr.co.a4ai.gcssaker.authpolicy.application.RepositorySecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.RepositorySettingsAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
@@ -56,6 +58,8 @@ import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisPrincipalCache
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisRefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisCachePolicy
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisTemplateStringKeyValueStore
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.resilience.ResilientPrincipalCache
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.resilience.ResilientRefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.observability.AuthPolicyObservation
 import io.micrometer.observation.ObservationRegistry
 import io.micrometer.tracing.Tracer
@@ -121,22 +125,28 @@ class AuthPolicyConfig {
     fun principalCache(
         settings: AuthRuntimeSettings,
         redisTemplate: ObjectProvider<StringRedisTemplate>,
+        failureLogger: OperationalFailureLoggerFacade,
     ): PrincipalCache {
         if (!settings.redisPrincipalCacheEnabled) {
             return NoopPrincipalCache
         }
-        return redisTemplate.getIfAvailable()?.let { RedisPrincipalCache(it) } ?: NoopPrincipalCache
+        return redisTemplate.getIfAvailable()
+            ?.let { ResilientPrincipalCache(RedisPrincipalCache(it), failureLogger) }
+            ?: NoopPrincipalCache
     }
 
     @Bean
     fun refreshSessionStore(
         settings: AuthRuntimeSettings,
         redisTemplate: ObjectProvider<StringRedisTemplate>,
+        failureLogger: OperationalFailureLoggerFacade,
     ): RefreshSessionStore {
         if (!settings.redisRefreshSessionEnabled) {
             return StatelessRefreshSessionStore
         }
-        return redisTemplate.getIfAvailable()?.let { RedisRefreshSessionStore(it) } ?: StatelessRefreshSessionStore
+        return redisTemplate.getIfAvailable()
+            ?.let { ResilientRefreshSessionStore(RedisRefreshSessionStore(it), failureLogger) }
+            ?: StatelessRefreshSessionStore
     }
 
     @Bean
@@ -180,6 +190,12 @@ class AuthPolicyConfig {
         operationalEventRepository: OperationalEventRepository,
     ): SecurityAuditPublisher =
         RepositorySecurityAuditPublisher(operationalEventRepository)
+
+    @Bean
+    fun operationalFailureLogger(
+        operationalEventRepository: OperationalEventRepository,
+    ): OperationalFailureLoggerFacade =
+        OperationalFailureLogger(operationalEventRepository)
 
     @Bean
     fun bearerPrincipalResolver(sessions: AuthSessionService): BearerPrincipalResolver =
@@ -523,12 +539,17 @@ data class AuthRuntimeSettings(
 ) {
     companion object {
         private const val DEFAULT_SECRET = "local-auth-policy-secret-at-least-32-characters"
+        private const val DEFAULT_OPERATOR_PASSWORD = "correct-password"
+        private const val DEFAULT_SMOKE_PASSWORD = "m7-smoke-pass"
+        private val LOCAL_DEFAULT_PROFILES = setOf("local", "dev", "test")
 
         fun fromEnvironment(env: Environment): AuthRuntimeSettings =
             AuthRuntimeSettings(
-                jwtSecret = env.getProperty("AUTH_POLICY_JWT_SECRET")
-                    ?: env.getProperty("AUTH_JWT_SECRET")
-                    ?: DEFAULT_SECRET,
+                jwtSecret = requiredSecret(
+                    env,
+                    listOf("AUTH_POLICY_JWT_SECRET", "AUTH_JWT_SECRET"),
+                    DEFAULT_SECRET,
+                ),
                 jwtIssuer = env.getProperty("AUTH_POLICY_JWT_ISSUER")
                     ?: env.getProperty("AUTH_JWT_ISSUER")
                     ?: "gcs-saker",
@@ -546,11 +567,19 @@ data class AuthRuntimeSettings(
                         .ifEmpty { csvEnv(env, "BACKEND_CORS_ALLOW_ORIGINS") },
                 ),
                 operatorUsername = env.getProperty("AUTH_POLICY_OPERATOR_USERNAME") ?: "operator01",
-                operatorPassword = env.getProperty("AUTH_POLICY_OPERATOR_PASSWORD") ?: "correct-password",
+                operatorPassword = requiredSecret(
+                    env,
+                    listOf("AUTH_POLICY_OPERATOR_PASSWORD"),
+                    DEFAULT_OPERATOR_PASSWORD,
+                ),
                 operatorCompanyId = intEnv(env, "AUTH_POLICY_OPERATOR_COMPANY_ID", 1),
                 operatorGroupId = env.getProperty("AUTH_POLICY_OPERATOR_GROUP_ID") ?: "co-a",
                 smokeUsername = env.getProperty("AUTH_POLICY_SMOKE_USERNAME") ?: "m7-smoke-viewer",
-                smokePassword = env.getProperty("AUTH_POLICY_SMOKE_PASSWORD") ?: "m7-smoke-pass",
+                smokePassword = requiredSecret(
+                    env,
+                    listOf("AUTH_POLICY_SMOKE_PASSWORD"),
+                    DEFAULT_SMOKE_PASSWORD,
+                ),
                 smokeCompanyId = intEnv(env, "AUTH_POLICY_SMOKE_COMPANY_ID", 1),
                 smokeGroupId = env.getProperty("AUTH_POLICY_SMOKE_GROUP_ID") ?: "co-a",
                 signupInvites = signupInvites(env),
@@ -581,6 +610,23 @@ data class AuthRuntimeSettings(
                 postProcessingMaxPoolSize = intEnv(env, "AUTH_POLICY_POST_PROCESSING_MAX_POOL_SIZE", 4),
                 postProcessingQueueCapacity = intEnv(env, "AUTH_POLICY_POST_PROCESSING_QUEUE_CAPACITY", 256),
             )
+
+        private fun requiredSecret(env: Environment, names: List<String>, localDefault: String): String {
+            val configured = names.asSequence()
+                .mapNotNull { env.getProperty(it)?.trim()?.takeIf(String::isNotEmpty) }
+                .firstOrNull()
+            if (configured != null) {
+                return configured
+            }
+            if (allowsLocalDefaults(env)) {
+                return localDefault
+            }
+            error("Missing required auth-policy secret setting: ${names.joinToString(" or ")}")
+        }
+
+        private fun allowsLocalDefaults(env: Environment): Boolean =
+            boolEnv(env, "AUTH_POLICY_ALLOW_LOCAL_DEFAULTS", false) ||
+                env.activeProfiles.any { it in LOCAL_DEFAULT_PROFILES }
 
         private fun longEnv(env: Environment, name: String, defaultValue: Long): Long =
             env.getProperty(name)?.toLongOrNull()?.takeIf { it > 0 } ?: defaultValue

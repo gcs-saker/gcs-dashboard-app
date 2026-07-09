@@ -32,6 +32,8 @@ REQUIRED_METRICS = (
 MEDIA_SMOKE_METRICS = (
     "whep_answer_latency_ms",
     "first_video_frame_latency_ms",
+    "first_audio_frame_latency_ms",
+    "audio_video_sync_offset_ms",
     "hls_master_latency_ms",
     "hls_variant_latency_ms",
 )

@@ -23,7 +23,7 @@ class JdbcOperationalReadRepository(
     private val jdbc = JdbcTemplate(dataSource)
 
     init {
-        OperationalReadSchema.ensure(jdbc)
+        OperationalReadSchema.ensure(dataSource)
         seedTelemetry(telemetry)
         seedAssets(assetsByGateway)
     }
@@ -282,23 +282,8 @@ class JdbcOperationalReadRepository(
 }
 
 object OperationalReadSchema {
-    fun ensure(jdbc: JdbcTemplate) {
-        jdbc.execute(OperationalReadSql.createTelemetryTable)
-        jdbc.createIndexIfMissing(OperationalReadSql.telemetryGroupUuidIndex)
-        jdbc.execute(OperationalReadSql.createTelemetryHistoryTable)
-        OperationalReadSql.alterTelemetryHistoryTimestampColumns.forEach { statement -> runCatching { jdbc.execute(statement) } }
-        jdbc.createIndexIfMissing(OperationalReadSql.telemetryHistoryUuidRecordedIndex)
-        jdbc.execute(OperationalReadSql.createAssetTable)
-        OperationalReadSql.alterAssetTimestampColumns.forEach { statement -> runCatching { jdbc.execute(statement) } }
-        jdbc.createIndexIfMissing(OperationalReadSql.assetGatewayGroupIndex)
-        jdbc.execute(OperationalReadSql.createServerHealthSnapshotTable)
-        OperationalReadSql.alterServerHealthSnapshotTimestampColumns.forEach { statement -> runCatching { jdbc.execute(statement) } }
-        jdbc.createIndexIfMissing(OperationalReadSql.serverHealthGroupCheckedIndex)
-        jdbc.createIndexIfMissing(OperationalReadSql.serverHealthGroupServiceCheckedIndex)
-        jdbc.execute(OperationalReadSql.createStreamSessionTable)
-        OperationalReadSql.alterStreamSessionTimestampColumns.forEach { statement -> runCatching { jdbc.execute(statement) } }
-        jdbc.createIndexIfMissing(OperationalReadSql.streamSessionGroupStreamHeartbeatIndex)
-        jdbc.createIndexIfMissing(OperationalReadSql.streamSessionGroupStatusHeartbeatIndex)
+    fun ensure(dataSource: DataSource) {
+        AuthPolicyJdbcMigrations.ensure(dataSource)
     }
 }
 
@@ -342,147 +327,6 @@ private object OperationalReadColumns {
 }
 
 internal object OperationalReadSql {
-    const val telemetryTable = "telemetry_latest"
-    const val telemetryHistoryTable = "telemetry_history"
-    const val assetTable = "gateway_assets"
-    const val serverHealthSnapshotTable = "server_health_snapshots"
-    const val streamSessionTable = "stream_sessions"
-    const val telemetryGroupUuidIndexName = "ix_telemetry_latest_group_uuid"
-    const val telemetryHistoryUuidRecordedIndexName = "ix_telemetry_history_uuid_recorded"
-    const val assetGatewayGroupIndexName = "ix_gateway_assets_gateway_group"
-    const val serverHealthGroupCheckedIndexName = "ix_server_health_group_checked"
-    const val serverHealthGroupServiceCheckedIndexName = "ix_server_health_group_service_checked"
-    const val streamSessionGroupStreamHeartbeatIndexName = "ix_stream_sessions_group_stream_heartbeat"
-    const val streamSessionGroupStatusHeartbeatIndexName = "ix_stream_sessions_group_status_heartbeat"
-    val createTelemetryTable = """
-        CREATE TABLE IF NOT EXISTS telemetry_latest (
-            uuid VARCHAR(128) NOT NULL PRIMARY KEY,
-            latitude ${JdbcSchemaTypes.float64} NOT NULL,
-            longitude ${JdbcSchemaTypes.float64} NOT NULL,
-            altitude ${JdbcSchemaTypes.float64} NOT NULL,
-            magnetic_x ${JdbcSchemaTypes.float64} NOT NULL,
-            magnetic_y ${JdbcSchemaTypes.float64} NOT NULL,
-            magnetic_z ${JdbcSchemaTypes.float64} NOT NULL,
-            soc VARCHAR(32) NOT NULL,
-            phone_battery_soc ${JdbcSchemaTypes.float64} NOT NULL,
-            velocity ${JdbcSchemaTypes.float64} NOT NULL,
-            total_distance ${JdbcSchemaTypes.float64} NOT NULL,
-            epoch_time VARCHAR(32) NOT NULL,
-            port_distance ${JdbcSchemaTypes.float64} NOT NULL,
-            group_id VARCHAR(64) NOT NULL
-        )
-    """
-    val telemetryGroupUuidIndex = JdbcIndexDefinition(
-        name = telemetryGroupUuidIndexName,
-        table = telemetryTable,
-        columns = listOf(OperationalReadColumns.groupId, OperationalReadColumns.uuid),
-    )
-    val createTelemetryHistoryTable = """
-        CREATE TABLE IF NOT EXISTS telemetry_history (
-            uuid VARCHAR(128) NOT NULL,
-            recorded_at TIMESTAMP(3) NOT NULL,
-            latitude ${JdbcSchemaTypes.float64} NOT NULL,
-            longitude ${JdbcSchemaTypes.float64} NOT NULL,
-            altitude ${JdbcSchemaTypes.float64} NOT NULL,
-            magnetic_x ${JdbcSchemaTypes.float64} NOT NULL,
-            magnetic_y ${JdbcSchemaTypes.float64} NOT NULL,
-            magnetic_z ${JdbcSchemaTypes.float64} NOT NULL,
-            soc VARCHAR(32) NOT NULL,
-            phone_battery_soc ${JdbcSchemaTypes.float64} NOT NULL,
-            velocity ${JdbcSchemaTypes.float64} NOT NULL,
-            total_distance ${JdbcSchemaTypes.float64} NOT NULL,
-            epoch_time VARCHAR(32) NOT NULL,
-            port_distance ${JdbcSchemaTypes.float64} NOT NULL,
-            group_id VARCHAR(64) NOT NULL
-        )
-    """
-    val telemetryHistoryUuidRecordedIndex = JdbcIndexDefinition(
-        name = telemetryHistoryUuidRecordedIndexName,
-        table = telemetryHistoryTable,
-        columns = listOf(OperationalReadColumns.uuid, OperationalReadColumns.recordedAt),
-    )
-    val alterTelemetryHistoryTimestampColumns = listOf(
-        "ALTER TABLE $telemetryHistoryTable ALTER COLUMN ${OperationalReadColumns.recordedAt} SET DATA TYPE TIMESTAMP(3)",
-    )
-    const val createAssetTable = """
-        CREATE TABLE IF NOT EXISTS gateway_assets (
-            gateway_uuid VARCHAR(128) NOT NULL,
-            id INT NOT NULL,
-            cid VARCHAR(128) NOT NULL,
-            uuid VARCHAR(128) NOT NULL,
-            company_id INT NOT NULL,
-            type VARCHAR(64) NOT NULL,
-            name VARCHAR(128) NOT NULL,
-            description VARCHAR(512),
-            image_url VARCHAR(512),
-            status VARCHAR(32) NOT NULL,
-            created_at TIMESTAMP(3) NOT NULL,
-            updated_at TIMESTAMP(3) NOT NULL,
-            group_id VARCHAR(64) NOT NULL,
-            PRIMARY KEY (gateway_uuid, uuid)
-        )
-    """
-    val assetGatewayGroupIndex = JdbcIndexDefinition(
-        name = assetGatewayGroupIndexName,
-        table = assetTable,
-        columns = listOf(OperationalReadColumns.gatewayUuid, OperationalReadColumns.groupId),
-    )
-    val alterAssetTimestampColumns = listOf(
-        "ALTER TABLE $assetTable ALTER COLUMN ${OperationalReadColumns.createdAt} SET DATA TYPE TIMESTAMP(3)",
-        "ALTER TABLE $assetTable ALTER COLUMN ${OperationalReadColumns.updatedAt} SET DATA TYPE TIMESTAMP(3)",
-    )
-    const val createServerHealthSnapshotTable = """
-        CREATE TABLE IF NOT EXISTS server_health_snapshots (
-            id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-            service_name VARCHAR(128) NOT NULL,
-            status VARCHAR(32) NOT NULL,
-            checked_at TIMESTAMP(3) NOT NULL,
-            latency_ms BIGINT,
-            message VARCHAR(512),
-            group_id VARCHAR(64) NOT NULL
-        )
-    """
-    val serverHealthGroupCheckedIndex = JdbcIndexDefinition(
-        name = serverHealthGroupCheckedIndexName,
-        table = serverHealthSnapshotTable,
-        columns = listOf(OperationalReadColumns.groupId, OperationalReadColumns.checkedAt),
-    )
-    val serverHealthGroupServiceCheckedIndex = JdbcIndexDefinition(
-        name = serverHealthGroupServiceCheckedIndexName,
-        table = serverHealthSnapshotTable,
-        columns = listOf(OperationalReadColumns.groupId, OperationalReadColumns.serviceName, OperationalReadColumns.checkedAt),
-    )
-    val alterServerHealthSnapshotTimestampColumns = listOf(
-        "ALTER TABLE $serverHealthSnapshotTable ALTER COLUMN ${OperationalReadColumns.checkedAt} SET DATA TYPE TIMESTAMP(3)",
-    )
-    const val createStreamSessionTable = """
-        CREATE TABLE IF NOT EXISTS stream_sessions (
-            id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-            stream_id VARCHAR(128) NOT NULL,
-            session_id VARCHAR(128),
-            status VARCHAR(32) NOT NULL,
-            source VARCHAR(64) NOT NULL,
-            started_at TIMESTAMP(3) NOT NULL,
-            last_heartbeat_at TIMESTAMP(3) NOT NULL,
-            stopped_at TIMESTAMP(3),
-            group_id VARCHAR(64) NOT NULL
-        )
-    """
-    val streamSessionGroupStreamHeartbeatIndex = JdbcIndexDefinition(
-        name = streamSessionGroupStreamHeartbeatIndexName,
-        table = streamSessionTable,
-        columns = listOf(OperationalReadColumns.groupId, OperationalReadColumns.streamId, OperationalReadColumns.lastHeartbeatAt),
-    )
-    val streamSessionGroupStatusHeartbeatIndex = JdbcIndexDefinition(
-        name = streamSessionGroupStatusHeartbeatIndexName,
-        table = streamSessionTable,
-        columns = listOf(OperationalReadColumns.groupId, OperationalReadColumns.status, OperationalReadColumns.lastHeartbeatAt),
-    )
-    val alterStreamSessionTimestampColumns = listOf(
-        "ALTER TABLE $streamSessionTable ALTER COLUMN ${OperationalReadColumns.startedAt} SET DATA TYPE TIMESTAMP(3)",
-        "ALTER TABLE $streamSessionTable ALTER COLUMN ${OperationalReadColumns.lastHeartbeatAt} SET DATA TYPE TIMESTAMP(3)",
-        "ALTER TABLE $streamSessionTable ALTER COLUMN ${OperationalReadColumns.stoppedAt} SET DATA TYPE TIMESTAMP(3)",
-    )
     const val selectTelemetry = """
         SELECT uuid, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
                soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id

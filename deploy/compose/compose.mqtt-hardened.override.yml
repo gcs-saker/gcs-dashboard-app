@@ -1,34 +1,10 @@
+# Deprecated compatibility override.
+#
+# Hardened MQTT is now the default in compose.single-node.poc.yml.
+# Keep this file as a no-op so older smoke/run commands that still append it do
+# not reintroduce duplicate Mosquitto config/password bind mounts.
+
 services:
   mqtt:
-    command: ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
-    environment:
-      MQTT_HEALTH_USERNAME: ${MQTT_HEALTH_USERNAME:?Set MQTT_HEALTH_USERNAME}
-      MQTT_HEALTH_PASSWORD: ${MQTT_HEALTH_PASSWORD:?Set MQTT_HEALTH_PASSWORD}
-    volumes:
-      - type: bind
-        source: ../mosquitto/mosquitto.hardened.conf
-        target: /mosquitto/config/mosquitto.conf
-        read_only: true
-      - type: bind
-        source: ../mosquitto/acl.hardened
-        target: /mosquitto/config/acl
-        read_only: true
-      - type: bind
-        source: ${MQTT_PASSWORD_FILE:?Set MQTT_PASSWORD_FILE}
-        target: /mosquitto/config/passwords
-        read_only: true
-      - mqtt-data:/mosquitto/data
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "mosquitto_sub -h 127.0.0.1 -p 1883 -u \"$${MQTT_HEALTH_USERNAME}\" -P \"$${MQTT_HEALTH_PASSWORD}\" -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null",
-        ]
-
-  backend:
-    environment:
-      MQTT_USERNAME: ${MQTT_USERNAME:?Set MQTT_USERNAME}
-      MQTT_PASSWORD: ${MQTT_PASSWORD:?Set MQTT_PASSWORD}
-
-volumes:
-  mqtt-data:
+    labels:
+      kr.co.a4ai.gcssaker.mqtt.hardened: "default"

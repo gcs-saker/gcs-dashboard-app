@@ -69,7 +69,7 @@ def test_postgis_bounded_context_doc_records_query_tuning_reasoning() -> None:
     assert "PostgreSQL/PostGIS primary store" in doc
     assert "Redis 또는 Dragonfly" in doc
     assert "기본 single-node 배포는 PostgreSQL/PostGIS + Redis" in doc
-    assert "EXPLAIN (ANALYZE, BUFFERS)" in doc
+    assert "EXPLAIN (ANALYZE, BUFFERS, WAL)" in doc
     assert "primary key lookup" in doc
     assert "GiST spatial index" in doc
 
@@ -91,7 +91,8 @@ def test_postgis_runtime_smoke_exposes_real_container_execution_contract() -> No
     assert "history_append" in payload["checks"]
     assert "latest_selected_stream_read" in payload["checks"]
     assert "bounded_map_query_json" in payload["checks"]
-    assert "EXPLAIN (ANALYZE, BUFFERS)" in payload["sql"]
+    assert "EXPLAIN (ANALYZE, BUFFERS, WAL)" in payload["sql"]
+    assert "bounded_map_query_explain_analyze_buffers_wal" in payload["checks"]
     assert "position && ST_MakeEnvelope" in payload["sql"]
     assert "INSERT INTO gcs_geo.stream_telemetry_points" in payload["sql"]
     assert "ON CONFLICT (org_id, group_id, stream_id) DO UPDATE" in payload["sql"]

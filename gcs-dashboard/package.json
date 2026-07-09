@@ -31,11 +31,13 @@
   "devDependencies": {
     "@emnapi/core": "1.11.1",
     "@emnapi/runtime": "1.11.1",
+    "@playwright/test": "1.57.0",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.2.0",
     "@vitest/coverage-istanbul": "4.1.7",
     "jsdom": "29.1.1",
+    "msw": "2.12.4",
     "typescript": "6.0.3",
     "vite": "8.0.16",
     "vitest": "4.1.7"
@@ -51,6 +53,7 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "test:smoke:failure": "vitest run src/features/streaming/failureSmokeScenarios.test.ts src/features/streaming/components/RealtimePlayer.test.tsx src/features/streaming/components/HLSFallbackPlayer.test.tsx",
     "test:coverage": "vitest run --coverage",
     "audit": "npm audit --audit-level=moderate"
@@ -72,6 +75,11 @@
       "last 1 chrome version",
       "last 1 firefox version",
       "last 1 safari version"
+    ]
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
     ]
   }
 }

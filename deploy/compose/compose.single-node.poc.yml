@@ -48,10 +48,31 @@ services:
 
   mqtt:
     image: eclipse-mosquitto:2
-    command: ["mosquitto", "-c", "/mosquitto-no-auth.conf"]
+    command: ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
+    environment:
+      MQTT_HEALTH_USERNAME: ${MQTT_HEALTH_USERNAME:?Set MQTT_HEALTH_USERNAME}
+      MQTT_HEALTH_PASSWORD: ${MQTT_HEALTH_PASSWORD:?Set MQTT_HEALTH_PASSWORD}
+    volumes:
+      - type: bind
+        source: ../mosquitto/mosquitto.hardened.conf
+        target: /mosquitto/config/mosquitto.conf
+        read_only: true
+      - type: bind
+        source: ../mosquitto/acl.hardened
+        target: /mosquitto/config/acl
+        read_only: true
+      - type: bind
+        source: ${MQTT_PASSWORD_FILE:?Set MQTT_PASSWORD_FILE}
+        target: /mosquitto/config/passwords
+        read_only: true
+      - mqtt-data:/mosquitto/data
     healthcheck:
       <<: *health_defaults
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 1883"]
+      test:
+        [
+          "CMD-SHELL",
+          "mosquitto_sub -h 127.0.0.1 -p 1883 -u \"$${MQTT_HEALTH_USERNAME}\" -P \"$${MQTT_HEALTH_PASSWORD}\" -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null",
+        ]
     restart: unless-stopped
     networks:
       - media-net
@@ -73,6 +94,8 @@ services:
       MQTT_HOST: ${MQTT_HOST:-mqtt}
       MQTT_PORT: ${MQTT_PORT:-1883}
       MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-gcs_backend_pub}
+      MQTT_USERNAME: ${MQTT_USERNAME:?Set MQTT_USERNAME}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:?Set MQTT_PASSWORD}
       TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS: ${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}
       CONTROL_MESSAGE_SENDER: ${CONTROL_MESSAGE_SENDER:-mqtt}
       CONTROL_GRPC_TARGET: ${CONTROL_GRPC_TARGET:-media-control:9090}
@@ -327,3 +350,4 @@ networks:
 volumes:
   postgres-geo-data:
   redis-data:
+  mqtt-data:

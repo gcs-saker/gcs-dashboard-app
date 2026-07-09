@@ -6,8 +6,10 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 	"go.opentelemetry.io/otel"
@@ -303,9 +305,11 @@ func TestDashboardStreamListContract(t *testing.T) {
 		t.Fatalf("unexpected status %v", payload[0]["status"])
 	}
 	playback := payload[0]["playbackUrls"].(map[string]any)
-	if playback["webrtc"] != "http://edge.local/webrtc/raw/local/webcam/whep?playbackToken=test-publish-token" {
+	webrtcURL := playback["webrtc"].(string)
+	if !strings.HasPrefix(webrtcURL, "http://edge.local/webrtc/raw/local/webcam/whep?") {
 		t.Fatalf("unexpected webrtc URL %v", playback["webrtc"])
 	}
+	assertMediaURLToken(t, webrtcURL, playbackTokenQueryKey, mediaMTXActionPlayback, "raw/local/webcam")
 }
 
 func TestDashboardStreamListFiltersDeniedStreams(t *testing.T) {
@@ -547,9 +551,11 @@ func TestDashboardPublishUrlRequiresAuthorizationAndAppendsPublisherToken(t *tes
 	if payload["streamId"] != "raw.local.webcam" {
 		t.Fatalf("unexpected streamId %v", payload["streamId"])
 	}
-	if payload["whipUrl"] != "http://edge.local/webrtc/raw/local/webcam/whip?publisherToken=test-publish-token" {
+	whipURL := payload["whipUrl"].(string)
+	if !strings.HasPrefix(whipURL, "http://edge.local/webrtc/raw/local/webcam/whip?") {
 		t.Fatalf("unexpected publish URL %v", payload["whipUrl"])
 	}
+	assertMediaURLToken(t, whipURL, publisherTokenQueryKey, mediaMTXActionPublish, "raw/local/webcam")
 }
 
 func TestDashboardPublishUrlCanBeIssuedBeforeStreamIsRegistered(t *testing.T) {
@@ -567,9 +573,11 @@ func TestDashboardPublishUrlCanBeIssuedBeforeStreamIsRegistered(t *testing.T) {
 	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
 		t.Fatal(err)
 	}
-	if payload["whipUrl"] != "http://edge.local/webrtc/raw/new-drone/front/whip?publisherToken=test-publish-token" {
+	whipURL := payload["whipUrl"].(string)
+	if !strings.HasPrefix(whipURL, "http://edge.local/webrtc/raw/new-drone/front/whip?") {
 		t.Fatalf("unexpected publish URL %v", payload["whipUrl"])
 	}
+	assertMediaURLToken(t, whipURL, publisherTokenQueryKey, mediaMTXActionPublish, "raw/new-drone/front")
 }
 
 func TestMediaMTXPublishAuthRejectsMissingPublisherToken(t *testing.T) {
@@ -593,10 +601,14 @@ func TestMediaMTXPublishAuthRejectsMissingPublisherToken(t *testing.T) {
 
 func TestMediaMTXPublishAuthAcceptsValidPublisherToken(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
+	token, err := issueMediaToken("test-publish-token", mediaMTXActionPublish, "raw/local/webcam", time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/v1/mediamtx/auth",
-		strings.NewReader(`{"action":"publish","path":"raw/local/webcam","protocol":"webrtc","query":"publisherToken=test-publish-token"}`),
+		strings.NewReader(`{"action":"publish","path":"raw/local/webcam","protocol":"webrtc","query":"publisherToken=`+token+`"}`),
 	)
 	recorder := httptest.NewRecorder()
 
@@ -628,10 +640,14 @@ func TestMediaMTXPlaybackAuthRejectsMissingPlaybackToken(t *testing.T) {
 
 func TestMediaMTXPlaybackAuthAcceptsIssuedPlaybackToken(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
+	token, err := issueMediaToken("test-publish-token", mediaMTXActionPlayback, "raw/local/webcam", time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/v1/mediamtx/auth",
-		strings.NewReader(`{"action":"read","path":"raw/local/webcam","protocol":"webrtc","query":"playbackToken=test-publish-token"}`),
+		strings.NewReader(`{"action":"read","path":"raw/local/webcam","protocol":"webrtc","query":"playbackToken=`+token+`"}`),
 	)
 	recorder := httptest.NewRecorder()
 
@@ -639,6 +655,20 @@ func TestMediaMTXPlaybackAuthAcceptsIssuedPlaybackToken(t *testing.T) {
 
 	if recorder.Code != http.StatusNoContent {
 		t.Fatalf("expected 204, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestMediaTokenRejectsWrongStreamAndExpiredToken(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	token, err := issueMediaToken("test-publish-token", mediaMTXActionPlayback, "raw/local/webcam", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validateMediaToken("test-publish-token", token, mediaMTXActionPlayback, "raw/other/webcam", now); err == nil {
+		t.Fatal("expected wrong stream path to be rejected")
+	}
+	if err := validateMediaToken("test-publish-token", token, mediaMTXActionPlayback, "raw/local/webcam", now.Add(mediaTokenTTL+time.Second)); err == nil {
+		t.Fatal("expected expired token to be rejected")
 	}
 }
 
@@ -656,6 +686,24 @@ func newTestServerWithAuthorizer(streams StreamLister, ice IceServerProvider, au
 		panic(err)
 	}
 	return NewServer(streams, ice, playback, authorizer, groups, "test-publish-token")
+}
+
+func assertMediaURLToken(t *testing.T, rawURL string, key string, action string, streamPath string) {
+	t.Helper()
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token := parsed.Query().Get(key)
+	if token == "" {
+		t.Fatalf("expected %s in %s", key, rawURL)
+	}
+	if strings.Contains(token, "test-publish-token") {
+		t.Fatalf("media URL leaked raw signing secret: %s", rawURL)
+	}
+	if err := validateMediaToken("test-publish-token", token, action, streamPath, time.Now()); err != nil {
+		t.Fatalf("expected valid media token in %s: %v", rawURL, err)
+	}
 }
 
 func assertReadinessCheck(t *testing.T, payload map[string]any, name string, status string, reason string) {

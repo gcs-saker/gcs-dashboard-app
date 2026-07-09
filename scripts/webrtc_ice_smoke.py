@@ -378,7 +378,7 @@ async def wait_for_ice_connected(peer_connection: object, timeout_seconds: float
         raise RuntimeError(f"ICE connection did not reach connected/completed: state={final_state}")
 
 
-async def wait_for_video_frame(track_queue: asyncio.Queue[object], timeout_seconds: float) -> object:
+async def wait_for_track_frame(track_queue: asyncio.Queue[object], timeout_seconds: float) -> object:
     track = await asyncio.wait_for(track_queue.get(), timeout=timeout_seconds)
     return await asyncio.wait_for(track.recv(), timeout=timeout_seconds)  # type: ignore[attr-defined]
 
@@ -401,14 +401,19 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
         ),
     )
     video_tracks: asyncio.Queue[object] = asyncio.Queue()
+    audio_tracks: asyncio.Queue[object] = asyncio.Queue()
 
     @peer_connection.on("track")  # type: ignore[attr-defined]
     def on_track(track: object) -> None:
         if getattr(track, "kind", "") == "video":
             video_tracks.put_nowait(track)
+        if getattr(track, "kind", "") == "audio":
+            audio_tracks.put_nowait(track)
 
     try:
         peer_connection.addTransceiver("video", direction="recvonly")
+        if args.measure_audio_video_sync:
+            peer_connection.addTransceiver("audio", direction="recvonly")
 
         started = time.perf_counter()
         offer = await peer_connection.createOffer()
@@ -447,9 +452,19 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
 
         frame = None
         first_frame_elapsed_ms = None
+        first_audio_frame_elapsed_ms = None
         if args.require_video_frame:
-            frame = await wait_for_video_frame(video_tracks, args.timeout_seconds)
+            video_task = asyncio.create_task(wait_for_track_frame(video_tracks, args.timeout_seconds))
+            audio_task = (
+                asyncio.create_task(wait_for_track_frame(audio_tracks, args.timeout_seconds))
+                if args.measure_audio_video_sync
+                else None
+            )
+            frame = await video_task
             first_frame_elapsed_ms = (time.perf_counter() - started) * 1000
+            if audio_task is not None:
+                await audio_task
+                first_audio_frame_elapsed_ms = (time.perf_counter() - started) * 1000
 
         print("WebRTC ICE smoke run passed")
         print(f"WHEP URL: {args.whep_url}")
@@ -466,6 +481,10 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
         if frame is not None and first_frame_elapsed_ms is not None:
             print(f"First video frame latency ms: {first_frame_elapsed_ms:.1f}")
             print(f"First video frame size: {frame.width}x{frame.height}")  # type: ignore[attr-defined]
+        if first_frame_elapsed_ms is not None and first_audio_frame_elapsed_ms is not None:
+            sync_offset_ms = abs(first_audio_frame_elapsed_ms - first_frame_elapsed_ms)
+            print(f"First audio frame latency ms: {first_audio_frame_elapsed_ms:.1f}")
+            print(f"Audio/video sync offset ms: {sync_offset_ms:.1f}")
         return 0
     finally:
         await peer_connection.close()
@@ -508,12 +527,15 @@ def run_static_check() -> int:
             "a=ice-pwd:samplePassword",
             "a=fingerprint:sha-256 00:11:22:33",
             "m=video 9 UDP/TLS/RTP/SAVPF 96",
+            "m=audio 9 UDP/TLS/RTP/SAVPF 111",
             "a=candidate:1 1 udp 2130706431 127.0.0.1 8189 typ host",
         ]
     )
     inspection = require_webrtc_sdp(sample_sdp, "sample")
     if not inspection.has_video_media:
         raise RuntimeError("sample SDP should include a video media section")
+    if not inspection.has_audio_media:
+        raise RuntimeError("sample SDP should include an audio media section")
     sample_pair = SelectedIcePair(
         local_candidate_type="srflx",
         remote_candidate_type="host",
@@ -545,6 +567,7 @@ def run_static_check() -> int:
         f"total={path_summary.total}, direct={path_summary.direct}, relay={path_summary.relay}, "
         f"direct_ratio={path_summary.direct_ratio:.4f}, relay_ratio={path_summary.relay_ratio:.4f}"
     )
+    print("Audio/video sync contract: Audio/video sync offset ms")
     print(f"Default WHEP URL: {DEFAULT_WHEP_URL}")
     print(f"Default ICE server URL: {DEFAULT_STUN_URL}")
     return 0
@@ -574,8 +597,16 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         action="store_true",
         help="Fail unless a decoded remote video frame is received.",
     )
+    parser.add_argument(
+        "--measure-audio-video-sync",
+        action="store_true",
+        help="When video is required, also receive first audio frame and print audio/video sync offset.",
+    )
     args = parser.parse_args(argv)
     args.ice_server_url = args.ice_server_url or args.stun_url or DEFAULT_STUN_URL
+    if args.measure_audio_video_sync:
+        args.require_connected = True
+        args.require_video_frame = True
     if not args.check and not args.run:
         args.check = True
     return args

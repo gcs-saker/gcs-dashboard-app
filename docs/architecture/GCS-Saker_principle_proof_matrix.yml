@@ -319,7 +319,7 @@ principles:
   - id: STACK-MQTT-001
     group: stack-migration
     principle: "MQTT broker는 telemetry/control message 흡수 계층으로 두고 media frame은 싣지 않는다."
-    expectedProof: "MQTT hardened profile과 protocol migration plan이 media frame 제외 원칙을 명시한다."
+    expectedProof: "기본 single-node compose의 MQTT hardened profile과 protocol migration plan이 media frame 제외 원칙을 명시한다."
     proofState: automated
     severity: p0
     issue: 416
@@ -327,10 +327,10 @@ principles:
       requiredTexts:
         - path: docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md
           text: "media frame은 MQTT에 태우지 않는다."
-        - path: deploy/compose/compose.mqtt-hardened.override.yml
+        - path: deploy/compose/compose.single-node.poc.yml
           text: "mosquitto"
       evidencePaths:
-        - deploy/compose/compose.mqtt-hardened.override.yml
+        - deploy/compose/compose.single-node.poc.yml
         - backend/tests/test_mqtt_consumer_bridge.py
 
   - id: STACK-GRAPHQL-001
