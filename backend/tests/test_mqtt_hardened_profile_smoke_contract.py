@@ -75,3 +75,18 @@ def test_single_node_compose_uses_hardened_mqtt_by_default() -> None:
     assert "MQTT_PASSWORD_FILE" in compose
     assert "MQTT_HEALTH_USERNAME" in compose
     assert "MQTT_USERNAME: ${MQTT_USERNAME:?Set MQTT_USERNAME}" in compose
+
+
+def test_local_compose_uses_hardened_mqtt_and_keeps_no_auth_in_explicit_profile() -> None:
+    compose = (REPO_ROOT / "gcs-dashboard" / "docker-compose.yml").read_text(encoding="utf-8")
+    local_no_auth = (REPO_ROOT / "gcs-dashboard" / "docker-compose.mqtt-no-auth.profile.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "mosquitto-no-auth.conf" not in compose
+    assert "mosquitto.hardened.conf" in compose
+    assert "acl.hardened" in compose
+    assert "MQTT_PASSWORD_FILE" in compose
+    assert "MQTT_USERNAME: ${MQTT_USERNAME:?Set MQTT_USERNAME in .env}" in compose
+    assert "local-mqtt-no-auth" in local_no_auth
+    assert "mosquitto-no-auth.conf" in local_no_auth

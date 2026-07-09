@@ -1,0 +1,4 @@
+services:
+  mqtt:
+    profiles: ["local-mqtt-no-auth"]
+    command: ["mosquitto", "-c", "/mosquitto-no-auth.conf"]
