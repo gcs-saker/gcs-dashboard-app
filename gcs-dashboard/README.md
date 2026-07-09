@@ -32,11 +32,13 @@ npm test -- --run
 npm run test:coverage
 ```
 
-E2E tests require a running dashboard/backend target:
+Playwright E2E smoke uses the local Vite web server with MSW preview handlers. It verifies login routing, dashboard entry, stream selection, map marker selection, event log, and CCTV navigation without real credentials:
 
 ```bash
 npm run test:e2e
 ```
+
+Screenshots and failure context are written under `test-results/` and `playwright-report/`; both are local artifacts and are intentionally ignored by Git.
 
 ## Local Server-01 Dashboard Check
 
