@@ -51,6 +51,16 @@ npm run stories:build
 
 Ladle was selected over Storybook for the current M10 scope because the dashboard already uses Vite, and the immediate goal is lightweight state documentation rather than a full design-system addon stack. Stories focus on fixed UI states for streams, system status, event logs, map popups, and audio waveform panels. The story fixtures reuse MSW mock data where possible so API contract mocks and component scenarios do not drift apart.
 
+## Render Diagnostics
+
+Render diagnostics are opt-in and development-only:
+
+```bash
+VITE_RENDER_DIAGNOSTICS=1 npm run dev
+```
+
+The adopted baseline is React Profiler plus the local `useRenderDiagnostics` hook. React Profiler is already part of React, so it gives commit duration and render count evidence without adding a runtime dependency. React Scan and why-did-you-render remain deferred candidates: they are useful for visual overlays and memo diagnostics, but need additional React 19 and production-bundle isolation checks before adoption. Current hotspot baselines are stream grid status updates and audio waveform updates; the guard stores snapshots on `globalThis.__GCS_SAKER_RENDER_DIAGNOSTICS__` and profiler commits on `globalThis.__GCS_SAKER_RENDER_PROFILER_COMMITS__` only when the flag is enabled.
+
 ## Local Server-01 Dashboard Check
 
 For local UI checks against Server-01 edge, the browser must call the Vite server path and let Vite proxy route traffic. The dashboard should not call `http://localhost:8001` directly.
