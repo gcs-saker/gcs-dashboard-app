@@ -9,6 +9,7 @@ from core.auth_config import AUTH_JWT_SECRET, AuthConfigError, AuthSettings
 from core.db import DatabaseSettings
 from core.ice_settings import WebRtcIceSettings
 from core.settings_base import SettingsConfigurationError
+from core.web_security_settings import WebSecuritySettings
 from main import app
 from modules.telemetry_buffer.sink import TelemetryBufferSettings
 
@@ -55,6 +56,14 @@ def test_telemetry_buffer_settings_rejects_invalid_flush_size(monkeypatch: pytes
 
     with pytest.raises(SettingsConfigurationError, match="telemetry buffer configuration error"):
         TelemetryBufferSettings.from_env()
+
+
+def test_web_security_settings_accepts_csv_allowed_origins(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BACKEND_CORS_ALLOW_ORIGINS", "https://a4ai.tplinkdns.com,http://localhost:5173")
+
+    settings = WebSecuritySettings.from_env()
+
+    assert settings.allowed_origins == ("https://a4ai.tplinkdns.com", "http://localhost:5173")
 
 
 def test_app_startup_with_test_env_fixture() -> None:
