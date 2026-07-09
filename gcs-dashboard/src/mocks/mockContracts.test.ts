@@ -5,6 +5,7 @@ import {
   MOCK_OPERATIONAL_BUCKETS,
   MOCK_OPERATIONAL_EVENTS,
   MOCK_OPERATIONAL_METRICS,
+  MOCK_MAP_CONFIG,
   MOCK_STREAM_REGISTRY,
   MOCK_TELEMETRY,
 } from "./fixtures";
@@ -20,6 +21,12 @@ describe("mock API contracts", () => {
     expect(MOCK_OPERATIONAL_EVENTS.every((event) => event.id && event.occurredAt && event.message)).toBe(true);
     expect(MOCK_OPERATIONAL_METRICS.totalEvents).toBe(MOCK_OPERATIONAL_EVENTS.length);
     expect(MOCK_OPERATIONAL_BUCKETS.reduce((sum, bucket) => sum + bucket.eventCount, 0)).toBe(MOCK_OPERATIONAL_EVENTS.length);
+  });
+
+  test("keeps map fixture explicit for closed-network preview fallback", () => {
+    expect(MOCK_MAP_CONFIG.provider).toBe("esri-satellite");
+    expect(MOCK_MAP_CONFIG.styleUrl).toContain("{z}/{y}/{x}");
+    expect(MOCK_MAP_CONFIG.requiresApiKey).toBe(false);
   });
 
   test("matches parameterized MSW URL patterns with query strings", () => {

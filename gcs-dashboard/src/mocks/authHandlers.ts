@@ -27,10 +27,13 @@ export const authHandlers = [
       role: "viewer",
     }, 201),
   ),
-  http.get(urlPattern(authUrl(AUTH_ROUTES.me)), () =>
-    json({
+  http.get(urlPattern(authUrl(AUTH_ROUTES.me)), ({ request }) => {
+    if (hasScenario(request, MockScenario.AUTH_403)) {
+      return json({ detail: "mock operator forbidden" }, 403);
+    }
+    return json({
       username: MOCK_OPERATOR_TOKEN.username,
       role: MOCK_OPERATOR_TOKEN.role,
-    }),
-  ),
+    });
+  }),
 ];

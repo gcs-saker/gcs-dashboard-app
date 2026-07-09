@@ -7,24 +7,46 @@ import {
   MOCK_OPERATIONAL_METRICS,
   MOCK_TELEMETRY,
 } from "./fixtures";
-import { json, urlPattern } from "./handlerUtils";
+import { eventStream, hasScenario, json, MockScenario, urlPattern } from "./handlerUtils";
 
 export const dashboardHandlers = [
-  http.get(urlPattern(apiUrl(DASHBOARD_API_ROUTES.telemetryAll)), () => json(MOCK_TELEMETRY)),
-  http.get(urlPattern(apiUrl(`${DASHBOARD_API_ROUTES.telemetryIngest}:uuid${DASHBOARD_API_ROUTES.telemetryHistorySuffix}`)), ({ params }) =>
-    json([
+  http.get(urlPattern(apiUrl(DASHBOARD_API_ROUTES.telemetryAll)), ({ request }) => {
+    if (hasScenario(request, MockScenario.TELEMETRY_503)) {
+      return json({ detail: "mock telemetry degraded" }, 503);
+    }
+    return json(MOCK_TELEMETRY);
+  }),
+  http.get(urlPattern(apiUrl(`${DASHBOARD_API_ROUTES.telemetryIngest}:uuid${DASHBOARD_API_ROUTES.telemetryHistorySuffix}`)), ({ params, request }) => {
+    if (hasScenario(request, MockScenario.TELEMETRY_503)) {
+      return json({ detail: "mock telemetry history degraded" }, 503);
+    }
+    return json([
       {
         recordedAt: "2026-06-29T00:00:00Z",
         telemetry: MOCK_TELEMETRY.find((item) => item.uuid === params.uuid) ?? MOCK_TELEMETRY[0],
       },
-    ]),
-  ),
-  http.get(urlPattern(apiUrl(DASHBOARD_API_ROUTES.operationalEvents)), () => json(MOCK_OPERATIONAL_EVENTS)),
-  http.get(urlPattern(apiUrl(DASHBOARD_API_ROUTES.operationalEventsPage)), () =>
-    json({
+    ]);
+  }),
+  http.get(urlPattern(apiUrl(DASHBOARD_API_ROUTES.operationalEvents)), ({ request }) => {
+    if (hasScenario(request, MockScenario.OPS_503)) {
+      return json({ detail: "mock operational event degraded" }, 503);
+    }
+    return json(MOCK_OPERATIONAL_EVENTS);
+  }),
+  http.get(urlPattern(apiUrl(DASHBOARD_API_ROUTES.operationalEventsPage)), ({ request }) => {
+    if (hasScenario(request, MockScenario.OPS_503)) {
+      return json({ detail: "mock operational event page degraded" }, 503);
+    }
+    return json({
       events: MOCK_OPERATIONAL_EVENTS,
       nextCursor: null,
-    }),
+    });
+  }),
+  http.get(urlPattern(apiUrl(DASHBOARD_API_ROUTES.operationalEventsStream)), () =>
+    eventStream([
+      `event: operational-event\ndata: ${JSON.stringify(MOCK_OPERATIONAL_EVENTS[0])}`,
+      `event: heartbeat\ndata: ${JSON.stringify({ checkedAt: "2026-06-29T00:00:30Z" })}`,
+    ]),
   ),
   http.get(urlPattern(apiUrl(DASHBOARD_API_ROUTES.operationalEventMetrics)), () => json(MOCK_OPERATIONAL_METRICS)),
   http.get(urlPattern(apiUrl(DASHBOARD_API_ROUTES.operationalEventBuckets)), () => json(MOCK_OPERATIONAL_BUCKETS)),
