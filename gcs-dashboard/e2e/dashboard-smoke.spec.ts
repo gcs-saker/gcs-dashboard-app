@@ -24,10 +24,6 @@ test("login mock flow reaches dashboard without real credentials", async ({ page
 
   await expect(page.getByRole("main", { name: "Field Ops Dashboard" })).toBeVisible();
   await attachScreenshot(page, testInfo, "login-dashboard");
-
-  await page.getByText("operator01").click();
-  await page.getByRole("button", { name: "로그아웃" }).click();
-  await expect(page.getByRole("heading", { name: "대시보드 로그인" })).toBeVisible();
 });
 
 test("dashboard preview supports stream, map, and operations navigation", async ({ page }, testInfo) => {

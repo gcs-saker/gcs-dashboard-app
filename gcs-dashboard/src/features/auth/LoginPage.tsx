@@ -1,7 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthApiError } from "./authApi";
 import { useAuth } from "./AuthProvider";
+import { loginFormSchema, toLoginRequest, type LoginFormValues } from "./loginFormContract";
 import "./LoginPage.css";
 
 function safeRedirectPath(value: string | null): string {
@@ -16,12 +19,20 @@ export function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const params = new URLSearchParams(location.search);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const registeredUsername = params.get("registered") === "1" ? params.get("username") : null;
   const redirectPath = safeRedirectPath(params.get("redirect"));
+  const {
+    formState: { errors, isSubmitting },
+    handleSubmit,
+    register,
+  } = useForm<LoginFormValues>({
+    defaultValues: {
+      password: "",
+      username: "",
+    },
+    resolver: zodResolver(loginFormSchema),
+  });
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -29,13 +40,11 @@ export function LoginPage() {
     }
   }, [isAuthenticated, navigate, redirectPath]);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
-    setIsSubmitting(true);
+  const submitLogin = handleSubmit(async (values): Promise<void> => {
     setErrorMessage(null);
 
     try {
-      await login({ username, password });
+      await login(toLoginRequest(values));
       navigate(redirectPath, { replace: true });
     } catch (error) {
       if (error instanceof AuthApiError && error.status === 401) {
@@ -43,14 +52,12 @@ export function LoginPage() {
       } else {
         setErrorMessage("인증 서버 상태를 확인해주세요.");
       }
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  });
 
   return (
     <main className="auth-page">
-      <form className="auth-login" onSubmit={handleSubmit}>
+      <form className="auth-login" noValidate onSubmit={submitLogin}>
         <div className="auth-login__header">
           <p>GCS-SAKER</p>
           <h1>대시보드 로그인</h1>
@@ -65,26 +72,34 @@ export function LoginPage() {
         <label>
           <span>아이디</span>
           <input
+            aria-describedby={errors.username ? "login-username-error" : undefined}
+            aria-invalid={Boolean(errors.username)}
             autoComplete="username"
-            name="username"
-            onChange={(event) => setUsername(event.target.value)}
-            required
             type="text"
-            value={username}
+            {...register("username")}
           />
         </label>
+        {errors.username?.message ? (
+          <p className="auth-login__error" id="login-username-error" role="alert">
+            {errors.username.message}
+          </p>
+        ) : null}
 
         <label>
           <span>비밀번호</span>
           <input
+            aria-describedby={errors.password ? "login-password-error" : undefined}
+            aria-invalid={Boolean(errors.password)}
             autoComplete="current-password"
-            name="password"
-            onChange={(event) => setPassword(event.target.value)}
-            required
             type="password"
-            value={password}
+            {...register("password")}
           />
         </label>
+        {errors.password?.message ? (
+          <p className="auth-login__error" id="login-password-error" role="alert">
+            {errors.password.message}
+          </p>
+        ) : null}
 
         {errorMessage ? <p className="auth-login__error">{errorMessage}</p> : null}
 
