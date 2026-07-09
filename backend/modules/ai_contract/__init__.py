@@ -9,6 +9,8 @@ from modules.ai_contract.constants import (
     MOCK_AI_REPORT_TEXT,
     MOCK_AI_RISK_SCORE,
 )
+from modules.ai_contract.mock_service import MockAIService
+from modules.ai_contract.provider import AIInferenceProvider
 from modules.ai_contract.schemas import (
     AI_CONTRACT_SCHEMA_VERSION,
     AIEndpointErrorResponse,
@@ -18,8 +20,6 @@ from modules.ai_contract.schemas import (
     DetectionResult,
     FrameReference,
 )
-from modules.ai_contract.mock_service import MockAIService
-from modules.ai_contract.provider import AIInferenceProvider
 
 __all__ = [
     "AI_CONTRACT_SCHEMA_VERSION",

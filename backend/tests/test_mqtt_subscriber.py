@@ -4,11 +4,12 @@ from types import SimpleNamespace
 from typing import Any, Callable
 
 from fastapi import FastAPI
+
+import mqtt.subscriber as subscriber_module
 from model.telemetry_model import TelemetryCreate
 from modules.protocol_v2.telemetry import TelemetryEnvelopePayload
 from mqtt.client import MqttSettings
 from mqtt.consumer_bridge import MqttConsumerBridge
-import mqtt.subscriber as subscriber_module
 from mqtt.subscriber import build_telemetry_subscriber, start_optional_telemetry_subscriber
 from mqtt.topics import telemetry_subscription_topic
 

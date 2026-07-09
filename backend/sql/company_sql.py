@@ -1,6 +1,6 @@
 # models/company.py
-from sqlalchemy import Column, BigInteger, String
-from sqlalchemy.sql import func
+from sqlalchemy import BigInteger, Column, String
+
 from core.db import Base
 
 

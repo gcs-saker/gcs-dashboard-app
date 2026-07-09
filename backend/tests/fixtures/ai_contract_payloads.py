@@ -13,7 +13,6 @@ from modules.ai_contract.constants import (
     MOCK_AI_RISK_SCORE,
 )
 
-
 AI_SAMPLE_STREAM_ID: Final = "raw.sample.front"
 AI_SAMPLE_REAR_STREAM_ID: Final = "raw.sample.rear"
 AI_SAMPLE_FRAME_ID: Final = "frame-0001"

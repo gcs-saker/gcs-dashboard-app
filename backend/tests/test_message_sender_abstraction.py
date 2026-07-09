@@ -7,16 +7,15 @@ from model.control_model import ControlCommand
 from modules.messaging.control_publisher import ControlMessagePublisher, get_control_message_publisher
 from modules.messaging.sender import (
     GrpcMessageSender,
-    MessageEnvelope,
     MessageContentType,
+    MessageEnvelope,
     MessageSenderEnv,
     MessageSenderKind,
     MessageSenderUnavailable,
+    get_message_sender,
     grpc_metadata,
     grpc_timeout_seconds,
-    get_message_sender,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONTROL_API = REPO_ROOT / "backend" / "api" / "control.py"

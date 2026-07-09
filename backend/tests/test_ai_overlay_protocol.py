@@ -10,8 +10,8 @@ from modules.ai_contract.constants import (
     MOCK_AI_RISK_SCORE,
 )
 from modules.protocol_v2.ai_overlay import (
-    AiOverlayEventPayload,
     DEFAULT_AI_MODEL_ID,
+    AiOverlayEventPayload,
     OverlayPointPayload,
     bounding_box_from_points,
     dashboard_response_from_overlay_events,

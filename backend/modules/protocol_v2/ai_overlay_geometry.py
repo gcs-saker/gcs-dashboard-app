@@ -6,12 +6,10 @@ from typing import Protocol
 
 class OverlayPointLike(Protocol):
     @property
-    def x(self) -> float:
-        ...
+    def x(self) -> float: ...
 
     @property
-    def y(self) -> float:
-        ...
+    def y(self) -> float: ...
 
 
 def bounding_box_from_points(points: Sequence[OverlayPointLike]) -> dict[str, float]:

@@ -1,6 +1,5 @@
-from pathlib import Path
 import re
-
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 POLICY_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_Cloudflare_DNS_DDNS_정책_v0.1.md"

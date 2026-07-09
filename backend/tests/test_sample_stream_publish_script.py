@@ -1,7 +1,6 @@
-from pathlib import Path
 import os
 import subprocess
-
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "smoke" / "publish_sample_stream.sh"

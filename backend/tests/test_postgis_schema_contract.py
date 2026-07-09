@@ -1,10 +1,9 @@
-from pathlib import Path
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 import yaml
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SINGLE_NODE_COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"

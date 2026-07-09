@@ -1,7 +1,6 @@
 import subprocess
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "smoke" / "m7_media_control_cutover_smoke.sh"
 

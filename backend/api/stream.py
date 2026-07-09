@@ -76,18 +76,12 @@ class StreamStatusOperation(StreamLookupOperation[StreamStatusResponse]):
 
 @v1_router.get(StreamRoutes.STREAMS, response_model=list[StreamDescriptorResponse])
 async def list_streams(service: StreamServiceDependency) -> list[StreamDescriptorResponse]:
-    return [
-        StreamDescriptorResponse.from_domain(descriptor)
-        for descriptor in service.list_registered_streams()
-    ]
+    return [StreamDescriptorResponse.from_domain(descriptor) for descriptor in service.list_registered_streams()]
 
 
 @v1_router.get(StreamRoutes.ICE_SERVERS, response_model=list[IceServerResponse])
 async def list_stream_ice_servers() -> list[IceServerResponse]:
-    return [
-        IceServerResponse(**server)
-        for server in WebRtcIceSettings.from_env().browser_ice_servers()
-    ]
+    return [IceServerResponse(**server) for server in WebRtcIceSettings.from_env().browser_ice_servers()]
 
 
 @v1_router.get(StreamRoutes.PLAYBACK, response_model=StreamPlaybackResponse)

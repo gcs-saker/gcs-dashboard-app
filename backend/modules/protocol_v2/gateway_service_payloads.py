@@ -3,10 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from modules.protocol_v2.gateway_service_contract import (
-    GatewayPayloadKind,
-    GatewayStreamResponseFields,
     REQUEST_PAYLOAD_FIELDS,
     RESPONSE_PAYLOAD_FIELDS,
+    GatewayPayloadKind,
+    GatewayStreamResponseFields,
 )
 from modules.protocol_v2.wire import DecodedWireMessage
 

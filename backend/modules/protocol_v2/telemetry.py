@@ -7,7 +7,6 @@ from uuid import uuid4
 from model.telemetry_model import TelemetryCreate
 from modules.protocol_v2.telemetry_contract import (
     AssetKinds,
-    GeoPointFields,
     HealthStates,
 )
 from modules.protocol_v2.telemetry_geo import legacy_epoch_seconds

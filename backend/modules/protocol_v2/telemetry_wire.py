@@ -17,21 +17,50 @@ from modules.protocol_v2.wire_helpers import (
 
 
 class TelemetryWireSource(Protocol):
-    event_id: str
-    org_id: str
-    group_id: str
-    asset_id: str
-    asset_kind: int
-    observed_unix_millis: int
-    received_unix_millis: int
-    latitude: float
-    longitude: float
-    altitude_m: float
-    heading_deg: float
-    speed_mps: float
-    battery_percent: float
-    health: int
-    active_stream_ids: tuple[str, ...]
+    @property
+    def event_id(self) -> str: ...
+
+    @property
+    def org_id(self) -> str: ...
+
+    @property
+    def group_id(self) -> str: ...
+
+    @property
+    def asset_id(self) -> str: ...
+
+    @property
+    def asset_kind(self) -> int: ...
+
+    @property
+    def observed_unix_millis(self) -> int: ...
+
+    @property
+    def received_unix_millis(self) -> int: ...
+
+    @property
+    def latitude(self) -> float: ...
+
+    @property
+    def longitude(self) -> float: ...
+
+    @property
+    def altitude_m(self) -> float: ...
+
+    @property
+    def heading_deg(self) -> float: ...
+
+    @property
+    def speed_mps(self) -> float: ...
+
+    @property
+    def battery_percent(self) -> float: ...
+
+    @property
+    def health(self) -> int: ...
+
+    @property
+    def active_stream_ids(self) -> tuple[str, ...]: ...
 
 
 @dataclass(frozen=True)
@@ -60,8 +89,14 @@ def encode_telemetry_envelope(source: TelemetryWireSource) -> bytes:
     encode_string(payload, TelemetryEnvelopeFields.GROUP_ID, source.group_id)
     encode_string(payload, TelemetryEnvelopeFields.ASSET_ID, source.asset_id)
     encode_varint_field(payload, TelemetryEnvelopeFields.ASSET_KIND, source.asset_kind)
-    encode_bytes(payload, TelemetryEnvelopeFields.TIME, timestamped_wire(source.observed_unix_millis, source.received_unix_millis))
-    encode_bytes(payload, TelemetryEnvelopeFields.POSITION, geo_point_wire(source.latitude, source.longitude, source.altitude_m))
+    encode_bytes(
+        payload,
+        TelemetryEnvelopeFields.TIME,
+        timestamped_wire(source.observed_unix_millis, source.received_unix_millis),
+    )
+    encode_bytes(
+        payload, TelemetryEnvelopeFields.POSITION, geo_point_wire(source.latitude, source.longitude, source.altitude_m)
+    )
     encode_double(payload, TelemetryEnvelopeFields.HEADING_DEG, source.heading_deg)
     encode_double(payload, TelemetryEnvelopeFields.SPEED_MPS, source.speed_mps)
     encode_double(payload, TelemetryEnvelopeFields.BATTERY_PERCENT, source.battery_percent)

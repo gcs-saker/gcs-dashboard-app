@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 
 from core.env_parsing import empty_to_none
 
@@ -60,8 +60,7 @@ class WebRtcIceSettings:
     def from_env(cls) -> "WebRtcIceSettings":
         return cls(
             stun_url=empty_to_none(os.getenv("WEBRTC_STUN_URL")) or DEFAULT_WEBRTC_STUN_URL,
-            turn_url=empty_to_none(os.getenv("WEBRTC_TURN_URL"))
-            or empty_to_none(os.getenv("MEDIAMTX_TURN_URL")),
+            turn_url=empty_to_none(os.getenv("WEBRTC_TURN_URL")) or empty_to_none(os.getenv("MEDIAMTX_TURN_URL")),
             turn_username=empty_to_none(os.getenv("WEBRTC_TURN_USERNAME"))
             or empty_to_none(os.getenv("MEDIAMTX_TURN_USERNAME")),
             turn_password=empty_to_none(os.getenv("WEBRTC_TURN_PASSWORD"))

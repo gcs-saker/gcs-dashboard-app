@@ -5,9 +5,9 @@ from functools import lru_cache
 
 from api.contracts import ControlProtocol
 from model.control_model import ControlCommand
-from mqtt.topics import command_topic
 from modules.messaging.sender import MessageContentType, MessageEnvelope, MessageSender, get_message_sender
 from modules.protocol_v2.stream_control import StreamCommandPayload
+from mqtt.topics import command_topic
 
 
 @dataclass(frozen=True)

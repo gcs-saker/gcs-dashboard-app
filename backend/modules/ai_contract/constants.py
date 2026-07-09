@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Final, Literal
 
-
 AI_CONTRACT_SCHEMA_VERSION: Final[Literal["ai.detection.v1alpha1"]] = "ai.detection.v1alpha1"
 AI_MOCK_UNAVAILABLE_STATUS_CODE: Final = 503
 

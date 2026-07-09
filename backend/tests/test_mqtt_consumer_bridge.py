@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import pytest
 
+from api.telemetry import upsert_telemetry
+from core.db import Base, engine
 from model.telemetry_model import TelemetryCreate
 from modules.protocol_v2.telemetry import TelemetryEnvelopePayload
-from mqtt.consumer_bridge import MqttConsumerBridge, parse_asset_message
 from modules.telemetry_buffer import BufferedTelemetrySink, InMemoryTelemetryWriteBuffer
-from api.telemetry import upsert_telemetry
-from core.db import Base
-from core.db import engine
+from mqtt.consumer_bridge import MqttConsumerBridge, parse_asset_message
 
 
 class FakeTelemetrySink:

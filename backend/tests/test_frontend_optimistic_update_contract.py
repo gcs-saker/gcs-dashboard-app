@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_SRC = REPO_ROOT / "gcs-dashboard" / "src"
 AUDIT_DOC = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_frontend_optimistic_update_audit.md"

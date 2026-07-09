@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 READ_VIEW_DOC = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_M10_read_view_strategy.md"
 READ_VIEW_MIGRATION = (

@@ -13,7 +13,6 @@ from modules.ai_contract.schemas import (
     AIEndpointResponse,
 )
 
-
 router = APIRouter(prefix="/ai/mock", tags=["AI Mock"])
 ai_provider: AIInferenceProvider = MockAIService()
 

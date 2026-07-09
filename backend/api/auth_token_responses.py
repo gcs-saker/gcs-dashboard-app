@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from core.security import AuthConfigError, AuthSettings, create_access_token, create_refresh_token, normalize_role
 from api.contracts import AuthProtocol
 from api.errors import ServiceUnavailableApiError
+from core.security import AuthConfigError, AuthSettings, create_access_token, create_refresh_token, normalize_role
 from model.user_model import TokenResponse
 
 
@@ -19,7 +19,9 @@ def create_login_token_response(username: str, role: str | None, settings: AuthS
     return token_response(username, role, access_token, settings), refresh_token
 
 
-def create_refreshed_token_response(username: str, role: str | None, settings: AuthSettings) -> tuple[TokenResponse, str]:
+def create_refreshed_token_response(
+    username: str, role: str | None, settings: AuthSettings
+) -> tuple[TokenResponse, str]:
     access_token = create_access_token(username, role, settings=settings)
     refresh_token = create_refresh_token(username, role, settings=settings)
     return token_response(username, role, access_token, settings), refresh_token

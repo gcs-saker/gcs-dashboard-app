@@ -7,11 +7,11 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import exists
 from sqlalchemy.orm import Session
 
-from api.contracts import AuthErrorDetails, AuthRoutes
 from api.auth_cookies import clear_refresh_cookie, set_refresh_cookie
 from api.auth_passwords import get_password_hash, verify_password
 from api.auth_request_guards import assert_browser_csrf_header, assert_trusted_request_origin
 from api.auth_token_responses import create_login_token_response, create_refreshed_token_response, load_auth_settings
+from api.contracts import AuthErrorDetails, AuthRoutes
 from api.errors import BadRequestApiError, UnauthorizedApiError
 from core.db import get_db
 from core.security import (
@@ -69,11 +69,7 @@ def login(
 ) -> TokenResponse:
     assert_trusted_request_origin(request)
     assert_browser_csrf_header(request)
-    db_user = (
-        db.query(User.username, User.password_hash, User.role)
-        .filter(User.username == user.username)
-        .first()
-    )
+    db_user = db.query(User.username, User.password_hash, User.role).filter(User.username == user.username).first()
     if not db_user or not verify_password(user.password, cast(str, db_user.password_hash)):
         raise UnauthorizedApiError(AuthErrorDetails.INVALID_CREDENTIALS)
 
@@ -88,7 +84,9 @@ def login(
 
 
 @router.post(AuthRoutes.REFRESH, response_model=TokenResponse)
-def refresh_session(request: Request, response: Response, db: Annotated[Session, Depends(get_db)]) -> TokenResponse | JSONResponse:
+def refresh_session(
+    request: Request, response: Response, db: Annotated[Session, Depends(get_db)]
+) -> TokenResponse | JSONResponse:
     assert_trusted_request_origin(request)
     assert_browser_csrf_header(request)
     auth_settings = load_auth_settings()

@@ -43,8 +43,13 @@ Python backend:
 ```bash
 cd backend
 python3.12 -m pip install -r requirements.txt
+python3.12 -m ruff check .
+python3.12 -m ruff format --check .
+python3.12 -m mypy --config-file pyproject.toml .
 PYTHONPATH=. python3.12 -m pytest -q
 ```
+
+The initial Ruff gate intentionally focuses on syntax, import order, undefined names, and unused imports. Wider lint rules should be added in separate issues so style expansion does not hide behavior changes.
 
 Spring auth-policy:
 

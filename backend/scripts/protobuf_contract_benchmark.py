@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
-from pathlib import Path
 import struct
 import sys
 import time
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from modules.protocol_v2.stream_control import StreamCommandPayload
-
+from modules.protocol_v2.stream_control import StreamCommandPayload  # noqa: E402
 
 SAMPLE_TELEMETRY: dict[str, Any] = {
     "event_id": "evt-20260618-0001",
@@ -209,13 +208,18 @@ def run_stream_command_benchmark(iterations: int = 20_000) -> BenchmarkResult:
     )
     protobuf_payload = command.to_protobuf_wire()
 
-    json_encode_ms = measure_ms(iterations, lambda: encode_json({
-        "command_id": command.command_id,
-        "stream_id": command.stream_id,
-        "target_asset_id": command.target_asset_id,
-        "command_type": command.command_type,
-        "observed_unix_millis": command.observed_unix_millis,
-    }))
+    json_encode_ms = measure_ms(
+        iterations,
+        lambda: encode_json(
+            {
+                "command_id": command.command_id,
+                "stream_id": command.stream_id,
+                "target_asset_id": command.target_asset_id,
+                "command_type": command.command_type,
+                "observed_unix_millis": command.observed_unix_millis,
+            }
+        ),
+    )
     json_decode_ms = measure_ms(iterations, lambda: json.loads(json_payload))
     protobuf_encode_ms = measure_ms(iterations, command.to_protobuf_wire)
     protobuf_decode_ms = measure_ms(iterations, lambda: StreamCommandPayload.from_protobuf_wire(protobuf_payload))

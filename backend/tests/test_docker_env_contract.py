@@ -1,10 +1,9 @@
-from pathlib import Path
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 import yaml
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "gates" / "docker_env_check.py"
@@ -84,10 +83,10 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
         "${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}"
     )
     assert services["backend"]["environment"]["CONTROL_MESSAGE_SENDER"] == "${CONTROL_MESSAGE_SENDER:-mqtt}"
-    assert services["backend"]["environment"]["MEDIAMTX_PUBLIC_WEBRTC_BASE_URL"].startswith("${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:")
-    assert services["backend"]["environment"]["WEBRTC_STUN_URL"] == (
-        "${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
+    assert services["backend"]["environment"]["MEDIAMTX_PUBLIC_WEBRTC_BASE_URL"].startswith(
+        "${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:"
     )
+    assert services["backend"]["environment"]["WEBRTC_STUN_URL"] == ("${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}")
     assert services["backend"]["environment"]["DASHBOARD_MAP_PROVIDER"] == "${DASHBOARD_MAP_PROVIDER:-esri-satellite}"
     assert services["backend"]["environment"]["DASHBOARD_MAP_STYLE_URL"] == (
         "${DASHBOARD_MAP_STYLE_URL:-https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}}"
@@ -111,9 +110,7 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
         "${VITE_STREAM_API_BASE_URL:-/media-control}"
     )
     assert services["nginx"]["build"]["args"]["VITE_HLS_BASE_URL"] == "${VITE_HLS_BASE_URL:-/hls}"
-    assert services["nginx"]["build"]["args"]["VITE_LOCAL_WEBCAM_WHIP_URL"].startswith(
-        "${VITE_LOCAL_WEBCAM_WHIP_URL:"
-    )
+    assert services["nginx"]["build"]["args"]["VITE_LOCAL_WEBCAM_WHIP_URL"].startswith("${VITE_LOCAL_WEBCAM_WHIP_URL:")
     assert services["nginx"]["build"]["args"]["VITE_WEBRTC_STUN_URL"] == (
         "${VITE_WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
     )
@@ -357,7 +354,10 @@ def test_compose_publishes_only_edge_https_by_default_for_external_ingress() -> 
     assert "${LOCAL_BIND_ADDR:-127.0.0.1}:${DASHBOARD_HTTP_PORT:-3000}:3000" in services["nginx"]["ports"]
     assert "${LOCAL_BIND_ADDR:-127.0.0.1}:${BACKEND_HTTP_PORT:-8001}:8001" in services["backend"]["ports"]
     assert "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_HLS_PORT:-8888}:8888/tcp" in services["mediamtx"]["ports"]
-    assert "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_SIGNALING_PORT:-8889}:8889/tcp" in services["mediamtx"]["ports"]
+    assert (
+        "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_WEBRTC_SIGNALING_PORT:-8889}:8889/tcp"
+        in services["mediamtx"]["ports"]
+    )
 
 
 def test_edge_reverse_proxy_mounts_tls_material_from_private_env_path() -> None:
@@ -406,7 +406,10 @@ def test_compose_declares_turn_service_as_opt_in_profile() -> None:
     assert "--min-port=49160" in turn["command"]
     assert "--max-port=49200" in turn["command"]
     assert "--lt-cred-mech" in turn["command"]
-    assert "--user=${WEBRTC_TURN_USERNAME:-gcs-turn}:${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}" in turn["command"]
+    assert (
+        "--user=${WEBRTC_TURN_USERNAME:-gcs-turn}:${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}"
+        in turn["command"]
+    )
     assert "--no-multicast-peers" not in turn["command"]
 
 
@@ -432,7 +435,10 @@ def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
     assert "ARG VITE_LOCAL_WEBCAM_WHIP_URL=https://localhost/webrtc/raw/local/webcam/whip" in dockerfile
     assert "ARG VITE_WEBRTC_STUN_URL=stun:stun.l.google.com:19302" in dockerfile
     assert "ARG VITE_MAP_PROVIDER=esri-satellite" in dockerfile
-    assert "ARG VITE_MAP_STYLE_URL=https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" in dockerfile
+    assert (
+        "ARG VITE_MAP_STYLE_URL=https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        in dockerfile
+    )
     assert "COPY --from=builder /app/dist /usr/share/nginx/html" in dockerfile
     assert "COPY nginx.conf /etc/nginx/nginx.conf" in dockerfile
     assert "EXPOSE 3000" in dockerfile

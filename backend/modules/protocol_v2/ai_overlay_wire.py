@@ -20,18 +20,41 @@ from modules.protocol_v2.wire_helpers import (
 
 
 class AiOverlayWireSource(Protocol):
-    event_id: str
-    stream_id: str
-    model_id: str
-    kind: int
-    label: str
-    confidence: float
-    points: tuple[OverlayPointPayload, ...]
-    latitude: float
-    longitude: float
-    altitude_m: float
-    observed_unix_millis: int
-    received_unix_millis: int
+    @property
+    def event_id(self) -> str: ...
+
+    @property
+    def stream_id(self) -> str: ...
+
+    @property
+    def model_id(self) -> str: ...
+
+    @property
+    def kind(self) -> int: ...
+
+    @property
+    def label(self) -> str: ...
+
+    @property
+    def confidence(self) -> float: ...
+
+    @property
+    def points(self) -> tuple[OverlayPointPayload, ...]: ...
+
+    @property
+    def latitude(self) -> float: ...
+
+    @property
+    def longitude(self) -> float: ...
+
+    @property
+    def altitude_m(self) -> float: ...
+
+    @property
+    def observed_unix_millis(self) -> int: ...
+
+    @property
+    def received_unix_millis(self) -> int: ...
 
 
 @dataclass(frozen=True)
@@ -60,8 +83,12 @@ def encode_overlay_event(source: AiOverlayWireSource) -> bytes:
     encode_double(payload, AiOverlayEventFields.CONFIDENCE, source.confidence)
     for point in source.points:
         encode_bytes(payload, AiOverlayEventFields.POINT, point.to_protobuf_wire())
-    encode_bytes(payload, AiOverlayEventFields.GEO_ANCHOR, geo_point_wire(source.latitude, source.longitude, source.altitude_m))
-    encode_bytes(payload, AiOverlayEventFields.TIME, timestamped_wire(source.observed_unix_millis, source.received_unix_millis))
+    encode_bytes(
+        payload, AiOverlayEventFields.GEO_ANCHOR, geo_point_wire(source.latitude, source.longitude, source.altitude_m)
+    )
+    encode_bytes(
+        payload, AiOverlayEventFields.TIME, timestamped_wire(source.observed_unix_millis, source.received_unix_millis)
+    )
     return bytes(payload)
 
 
@@ -76,7 +103,9 @@ def decode_overlay_event(payload: bytes) -> DecodedAiOverlayEvent:
         kind=single_int(decoded, AiOverlayEventFields.KIND),
         label=single_string(decoded, AiOverlayEventFields.LABEL),
         confidence=single_float(decoded, AiOverlayEventFields.CONFIDENCE),
-        points=tuple(OverlayPointPayload.from_protobuf_wire(point) for point in decoded.bytes_values(AiOverlayEventFields.POINT)),
+        points=tuple(
+            OverlayPointPayload.from_protobuf_wire(point) for point in decoded.bytes_values(AiOverlayEventFields.POINT)
+        ),
         latitude=single_float(geo_anchor, GeoPointFields.LATITUDE) if geo_anchor else 0,
         longitude=single_float(geo_anchor, GeoPointFields.LONGITUDE) if geo_anchor else 0,
         altitude_m=single_float(geo_anchor, GeoPointFields.ALTITUDE_M) if geo_anchor else 0,

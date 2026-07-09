@@ -78,9 +78,7 @@ def test_playback_url_builder_rejects_non_http_public_base_urls(base_url):
     ],
 )
 def test_playback_url_builder_rejects_invalid_stream_ids(stream_id):
-    builder = PlaybackUrlBuilder(
-        PlaybackUrlBuilderConfig(public_webrtc_base_url="https://media.example.com/webrtc")
-    )
+    builder = PlaybackUrlBuilder(PlaybackUrlBuilderConfig(public_webrtc_base_url="https://media.example.com/webrtc"))
 
     with pytest.raises(StreamPathError):
         builder.build_from_stream_id(stream_id)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 from typing import Protocol
 
 from api.telemetry import upsert_telemetry
@@ -26,8 +26,7 @@ class TelemetryBufferEnv:
 
 
 class TelemetryBulkSink(Protocol):
-    def flush(self, records: list[TelemetryBufferRecord]) -> int:
-        ...
+    def flush(self, records: list[TelemetryBufferRecord]) -> int: ...
 
 
 @dataclass(frozen=True)

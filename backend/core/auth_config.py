@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 from typing import Literal
 
 AUTH_JWT_SECRET = "AUTH_JWT_SECRET"
@@ -17,7 +17,7 @@ DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES = 30
 DEFAULT_REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 DEFAULT_JWT_ISSUER = "gcs-saker"
 DEFAULT_REFRESH_COOKIE_NAME = "gcs_saker_refresh"
-DEFAULT_REFRESH_COOKIE_SAMESITE = "lax"
+DEFAULT_REFRESH_COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
 MIN_SECRET_LENGTH = 32
 
 
@@ -95,6 +95,10 @@ def _parse_bool_env(name: str, default: bool) -> bool:
 
 def _parse_cookie_samesite(value: str) -> Literal["lax", "strict", "none"]:
     normalized = value.strip().lower()
-    if normalized in {"lax", "strict", "none"}:
-        return normalized
+    if normalized == "lax":
+        return "lax"
+    if normalized == "strict":
+        return "strict"
+    if normalized == "none":
+        return "none"
     raise AuthConfigError(f"{AUTH_REFRESH_COOKIE_SAMESITE} must be lax, strict, or none")
