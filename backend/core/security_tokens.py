@@ -86,7 +86,7 @@ def create_token(
         JWT_CLAIM_EXPIRES_AT: expire,
         JWT_CLAIM_ISSUER: settings.issuer,
     }
-    return jwt.encode(payload, settings.secret, algorithm=settings.algorithm)
+    return jwt.encode(payload, settings.secret.get_secret_value(), algorithm=settings.algorithm)
 
 
 def decode_access_token(token: str, settings: AuthSettings | None = None) -> AuthenticatedUser:
@@ -106,7 +106,7 @@ def decode_token(
     try:
         payload = jwt.decode(
             token,
-            auth_settings.secret,
+            auth_settings.secret.get_secret_value(),
             algorithms=[auth_settings.algorithm],
             issuer=auth_settings.issuer,
         )

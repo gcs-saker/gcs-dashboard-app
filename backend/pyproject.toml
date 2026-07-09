@@ -12,6 +12,7 @@ warn_unused_configs = true
 no_implicit_optional = true
 check_untyped_defs = true
 explicit_package_bases = true
+plugins = ["pydantic.mypy"]
 
 [tool.ruff]
 target-version = "py312"

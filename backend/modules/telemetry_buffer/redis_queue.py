@@ -6,8 +6,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Protocol
 
+from pydantic import Field, ValidationError, field_validator
+
+from core.env_parsing import empty_to_none
+from core.settings_base import BackendBaseSettings, SettingsConfigurationError, settings_error_message
 from model.telemetry_model import TelemetryCreate
 from modules.telemetry_buffer.buffer import TelemetryBufferRecord, TelemetryBufferStats
+
+TELEMETRY_REDIS_KEY_PREFIX_ENV = "TELEMETRY_REDIS_KEY_PREFIX"
 
 
 class TelemetryRedisKeys:
@@ -35,6 +41,11 @@ class RedisListClient(Protocol):
 class RedisTelemetryBufferConfig:
     key_prefix: str = TelemetryRedisKeys.DEFAULT_PREFIX
 
+    @classmethod
+    def from_env(cls) -> "RedisTelemetryBufferConfig":
+        settings = RedisTelemetryBufferSettings.from_env()
+        return cls(key_prefix=settings.key_prefix)
+
     def history_queue_key(self) -> str:
         return f"{self.key_prefix}:{TelemetryRedisKeys.HISTORY_QUEUE}"
 
@@ -42,12 +53,30 @@ class RedisTelemetryBufferConfig:
         return f"{self.key_prefix}:{TelemetryRedisKeys.LATEST_PREFIX}:{stream_key}"
 
 
+class RedisTelemetryBufferSettings(BackendBaseSettings):
+    key_prefix: str = Field(TelemetryRedisKeys.DEFAULT_PREFIX, validation_alias=TELEMETRY_REDIS_KEY_PREFIX_ENV)
+
+    @field_validator("key_prefix", mode="before")
+    @classmethod
+    def default_blank_prefix(cls, value: object) -> object:
+        if isinstance(value, str):
+            return empty_to_none(value) or TelemetryRedisKeys.DEFAULT_PREFIX
+        return value
+
+    @classmethod
+    def from_env(cls) -> "RedisTelemetryBufferSettings":
+        try:
+            return cls()
+        except ValidationError as exc:
+            raise SettingsConfigurationError(settings_error_message("redis telemetry buffer", exc)) from exc
+
+
 class RedisTelemetryWriteBuffer:
     """Redis/Dragonfly compatible queue buffer for telemetry write-behind."""
 
     def __init__(self, client: RedisListClient, config: RedisTelemetryBufferConfig | None = None) -> None:
         self._client = client
-        self._config = config or RedisTelemetryBufferConfig()
+        self._config = config or RedisTelemetryBufferConfig.from_env()
 
     def put_latest(self, record: TelemetryBufferRecord) -> None:
         self._client.set(self._config.latest_key(record.key), serialize_record(record))

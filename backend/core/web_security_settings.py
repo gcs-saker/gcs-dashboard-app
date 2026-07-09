@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import os
-from dataclasses import dataclass
+from pydantic import Field, ValidationError, field_validator
 
 from core.env_parsing import csv_to_tuple, empty_to_none
+from core.settings_base import BackendBaseSettings, SettingsConfigurationError, settings_error_message
 
 DEFAULT_ALLOWED_ORIGINS = (
     "http://localhost:5173",
@@ -24,16 +24,30 @@ DEFAULT_CONTENT_SECURITY_POLICY = (
 )
 
 
-@dataclass(frozen=True)
-class WebSecuritySettings:
-    allowed_origins: tuple[str, ...]
-    content_security_policy: str
+class WebSecuritySettings(BackendBaseSettings):
+    allowed_origins: tuple[str, ...] = Field(DEFAULT_ALLOWED_ORIGINS, validation_alias="BACKEND_CORS_ALLOW_ORIGINS")
+    content_security_policy: str = Field(
+        DEFAULT_CONTENT_SECURITY_POLICY,
+        validation_alias="BACKEND_CONTENT_SECURITY_POLICY",
+    )
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, value: object) -> object:
+        if isinstance(value, str):
+            return csv_to_tuple(value) or DEFAULT_ALLOWED_ORIGINS
+        return value
+
+    @field_validator("content_security_policy", mode="before")
+    @classmethod
+    def default_content_security_policy(cls, value: object) -> object:
+        if isinstance(value, str):
+            return empty_to_none(value) or DEFAULT_CONTENT_SECURITY_POLICY
+        return value
 
     @classmethod
     def from_env(cls) -> "WebSecuritySettings":
-        configured_origins = csv_to_tuple(os.getenv("BACKEND_CORS_ALLOW_ORIGINS"))
-        configured_csp = empty_to_none(os.getenv("BACKEND_CONTENT_SECURITY_POLICY"))
-        return cls(
-            allowed_origins=configured_origins or DEFAULT_ALLOWED_ORIGINS,
-            content_security_policy=configured_csp or DEFAULT_CONTENT_SECURITY_POLICY,
-        )
+        try:
+            return cls()
+        except ValidationError as exc:
+            raise SettingsConfigurationError(settings_error_message("web security", exc)) from exc

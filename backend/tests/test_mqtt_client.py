@@ -1,4 +1,5 @@
 import mqtt.client as mqtt_client
+from core.settings_base import SettingsConfigurationError
 from mqtt.client import MqttSettings, get_mqtt_client, publish_control_command
 
 
@@ -68,20 +69,26 @@ def test_mqtt_settings_treats_blank_credentials_as_unset(monkeypatch) -> None:
     assert settings.password is None
 
 
-def test_mqtt_settings_falls_back_from_invalid_numeric_env(monkeypatch) -> None:
+def test_mqtt_settings_rejects_invalid_numeric_env(monkeypatch) -> None:
     monkeypatch.setenv("MQTT_PORT", "not-a-port")
-    monkeypatch.setenv("MQTT_KEEPALIVE", "-1")
+
+    try:
+        MqttSettings.from_env()
+    except SettingsConfigurationError as error:
+        assert "mqtt configuration error" in str(error)
+        assert "MQTT_PORT" in str(error)
+    else:
+        raise AssertionError("expected invalid MQTT_PORT to fail settings loading")
+
+
+def test_mqtt_settings_normalizes_reconnect_window(monkeypatch) -> None:
     monkeypatch.setenv("MQTT_RECONNECT_MIN_DELAY_SECONDS", "40")
     monkeypatch.setenv("MQTT_RECONNECT_MAX_DELAY_SECONDS", "2")
-    monkeypatch.setenv("MQTT_MAX_INFLIGHT_MESSAGES", "0")
 
     settings = MqttSettings.from_env()
 
-    assert settings.port == 1883
-    assert settings.keepalive == 60
     assert settings.reconnect_min_delay_seconds == 40
     assert settings.reconnect_max_delay_seconds == 40
-    assert settings.max_inflight_messages == 20
 
 
 def test_publish_control_command_uses_injected_client() -> None:

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-import os
-from dataclasses import dataclass
 from typing import Literal
+
+from pydantic import Field, SecretStr, ValidationError, field_validator
+
+from core.settings_base import BackendBaseSettings, SettingsConfigurationError, settings_error_message
 
 AUTH_JWT_SECRET = "AUTH_JWT_SECRET"
 AUTH_JWT_ALGORITHM = "AUTH_JWT_ALGORITHM"
@@ -21,84 +23,45 @@ DEFAULT_REFRESH_COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
 MIN_SECRET_LENGTH = 32
 
 
-class AuthConfigError(RuntimeError):
+class AuthConfigError(SettingsConfigurationError):
     pass
 
 
-@dataclass(frozen=True)
-class AuthSettings:
-    secret: str
-    algorithm: str = DEFAULT_JWT_ALGORITHM
-    access_token_expire_minutes: int = DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES
-    refresh_token_expire_minutes: int = DEFAULT_REFRESH_TOKEN_EXPIRE_MINUTES
-    issuer: str = DEFAULT_JWT_ISSUER
-    refresh_cookie_name: str = DEFAULT_REFRESH_COOKIE_NAME
-    refresh_cookie_secure: bool = True
-    refresh_cookie_samesite: Literal["lax", "strict", "none"] = DEFAULT_REFRESH_COOKIE_SAMESITE
+class AuthSettings(BackendBaseSettings):
+    secret: SecretStr = Field(validation_alias=AUTH_JWT_SECRET)
+    algorithm: str = Field(DEFAULT_JWT_ALGORITHM, validation_alias=AUTH_JWT_ALGORITHM)
+    access_token_expire_minutes: int = Field(
+        DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES,
+        validation_alias=AUTH_ACCESS_TOKEN_EXPIRE_MINUTES,
+        gt=0,
+    )
+    refresh_token_expire_minutes: int = Field(
+        DEFAULT_REFRESH_TOKEN_EXPIRE_MINUTES,
+        validation_alias=AUTH_REFRESH_TOKEN_EXPIRE_MINUTES,
+        gt=0,
+    )
+    issuer: str = Field(DEFAULT_JWT_ISSUER, validation_alias=AUTH_JWT_ISSUER)
+    refresh_cookie_name: str = Field(DEFAULT_REFRESH_COOKIE_NAME, validation_alias=AUTH_REFRESH_COOKIE_NAME)
+    refresh_cookie_secure: bool = Field(True, validation_alias=AUTH_REFRESH_COOKIE_SECURE)
+    refresh_cookie_samesite: Literal["lax", "strict", "none"] = Field(
+        DEFAULT_REFRESH_COOKIE_SAMESITE,
+        validation_alias=AUTH_REFRESH_COOKIE_SAMESITE,
+    )
+
+    @field_validator("secret")
+    @classmethod
+    def validate_secret_length(cls, secret: SecretStr) -> SecretStr:
+        if len(secret.get_secret_value()) < MIN_SECRET_LENGTH:
+            raise ValueError(f"{AUTH_JWT_SECRET} must be set to at least {MIN_SECRET_LENGTH} characters")
+        return secret
 
     @classmethod
     def from_env(cls) -> "AuthSettings":
-        secret = _required_secret()
-        return cls(
-            secret=secret,
-            algorithm=_string_env(AUTH_JWT_ALGORITHM, cls.algorithm),
-            access_token_expire_minutes=_parse_positive_int_env(
-                AUTH_ACCESS_TOKEN_EXPIRE_MINUTES,
-                str(DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES),
-            ),
-            refresh_token_expire_minutes=_parse_positive_int_env(
-                AUTH_REFRESH_TOKEN_EXPIRE_MINUTES,
-                str(DEFAULT_REFRESH_TOKEN_EXPIRE_MINUTES),
-            ),
-            issuer=_string_env(AUTH_JWT_ISSUER, cls.issuer),
-            refresh_cookie_name=_string_env(AUTH_REFRESH_COOKIE_NAME, cls.refresh_cookie_name),
-            refresh_cookie_secure=_parse_bool_env(AUTH_REFRESH_COOKIE_SECURE, cls.refresh_cookie_secure),
-            refresh_cookie_samesite=_parse_cookie_samesite(
-                os.getenv(AUTH_REFRESH_COOKIE_SAMESITE, cls.refresh_cookie_samesite),
-            ),
-        )
-
-
-def _required_secret() -> str:
-    secret = (os.getenv(AUTH_JWT_SECRET) or "").strip()
-    if len(secret) < MIN_SECRET_LENGTH:
-        raise AuthConfigError(f"{AUTH_JWT_SECRET} must be set to at least {MIN_SECRET_LENGTH} characters")
-    return secret
-
-
-def _string_env(name: str, default: str) -> str:
-    return os.getenv(name, default).strip() or default
-
-
-def _parse_positive_int_env(name: str, default: str) -> int:
-    value = os.getenv(name, default).strip()
-    try:
-        parsed = int(value)
-    except ValueError as exc:
-        raise AuthConfigError(f"{name} must be an integer") from exc
-    if parsed <= 0:
-        raise AuthConfigError(f"{name} must be positive")
-    return parsed
-
-
-def _parse_bool_env(name: str, default: bool) -> bool:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    normalized = raw.strip().lower()
-    if normalized in {"1", "true", "yes", "on"}:
-        return True
-    if normalized in {"0", "false", "no", "off"}:
-        return False
-    raise AuthConfigError(f"{name} must be a boolean")
-
-
-def _parse_cookie_samesite(value: str) -> Literal["lax", "strict", "none"]:
-    normalized = value.strip().lower()
-    if normalized == "lax":
-        return "lax"
-    if normalized == "strict":
-        return "strict"
-    if normalized == "none":
-        return "none"
-    raise AuthConfigError(f"{AUTH_REFRESH_COOKIE_SAMESITE} must be lax, strict, or none")
+        try:
+            return cls()
+        except ValidationError as exc:
+            if any(AUTH_JWT_SECRET in error.get("loc", ()) for error in exc.errors()):
+                raise AuthConfigError(
+                    f"{AUTH_JWT_SECRET} must be set to at least {MIN_SECRET_LENGTH} characters"
+                ) from exc
+            raise AuthConfigError(settings_error_message("auth", exc)) from exc

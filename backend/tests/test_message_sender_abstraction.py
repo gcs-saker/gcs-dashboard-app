@@ -7,6 +7,7 @@ from model.control_model import ControlCommand
 from modules.messaging.control_publisher import ControlMessagePublisher, get_control_message_publisher
 from modules.messaging.sender import (
     GrpcMessageSender,
+    GrpcTransportSettings,
     MessageContentType,
     MessageEnvelope,
     MessageSenderEnv,
@@ -14,7 +15,6 @@ from modules.messaging.sender import (
     MessageSenderUnavailable,
     get_message_sender,
     grpc_metadata,
-    grpc_timeout_seconds,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -146,11 +146,21 @@ def test_grpc_metadata_is_empty_when_token_is_not_configured() -> None:
     assert grpc_metadata("") is None
 
 
-def test_grpc_timeout_uses_safe_default_for_invalid_values() -> None:
-    assert grpc_timeout_seconds("") == 2.0
-    assert grpc_timeout_seconds("-1") == 2.0
-    assert grpc_timeout_seconds("0") == 2.0
-    assert grpc_timeout_seconds("3.5") == 3.5
+def test_grpc_transport_settings_rejects_invalid_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(MessageSenderEnv.GRPC_TIMEOUT_SECONDS, "0")
+
+    with pytest.raises(Exception, match="greater than 0"):
+        GrpcTransportSettings()
+
+
+def test_grpc_transport_settings_accepts_valid_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(MessageSenderEnv.GRPC_TARGET, "gateway.internal:9090")
+    monkeypatch.setenv(MessageSenderEnv.GRPC_TIMEOUT_SECONDS, "3.5")
+
+    settings = GrpcTransportSettings()
+
+    assert settings.target == "gateway.internal:9090"
+    assert settings.timeout_seconds == 3.5
 
 
 def test_message_sender_factory_rejects_unknown_sender(monkeypatch: pytest.MonkeyPatch) -> None:

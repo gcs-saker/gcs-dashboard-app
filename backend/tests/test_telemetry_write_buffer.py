@@ -173,6 +173,15 @@ def test_redis_buffer_keeps_latest_and_history_contract_without_key_scan() -> No
     assert stats.pending_history_count == 0
 
 
+def test_redis_buffer_config_reads_key_prefix_from_env(monkeypatch) -> None:
+    monkeypatch.setenv("TELEMETRY_REDIS_KEY_PREFIX", "ops:test")
+
+    config = RedisTelemetryBufferConfig.from_env()
+
+    assert config.history_queue_key() == "ops:test:history"
+    assert config.latest_key("raw.mobile.front") == "ops:test:latest:raw.mobile.front"
+
+
 def test_redis_buffer_restores_drained_records_in_original_order() -> None:
     client = FakeRedisListClient()
     buffer = RedisTelemetryWriteBuffer(client=client)
