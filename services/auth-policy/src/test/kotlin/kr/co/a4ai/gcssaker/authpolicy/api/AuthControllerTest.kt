@@ -1,8 +1,8 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
 import jakarta.servlet.http.Cookie
-import kr.co.a4ai.gcssaker.authpolicy.AllowedOrigins
-import kr.co.a4ai.gcssaker.authpolicy.AuthRuntimeSettings
+import kr.co.a4ai.gcssaker.authpolicy.configuration.AllowedOrigins
+import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
 import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthRegistrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService

@@ -1,7 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
-import kr.co.a4ai.gcssaker.authpolicy.AllowedOrigins
-import kr.co.a4ai.gcssaker.authpolicy.AuthRuntimeSettings
+import kr.co.a4ai.gcssaker.authpolicy.configuration.AllowedOrigins
+import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvite
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvites

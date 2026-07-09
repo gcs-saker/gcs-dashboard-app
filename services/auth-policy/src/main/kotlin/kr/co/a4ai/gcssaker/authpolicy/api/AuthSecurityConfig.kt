@@ -4,7 +4,7 @@ import com.auth0.jwt.exceptions.JWTVerificationException
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import kr.co.a4ai.gcssaker.authpolicy.AuthRuntimeSettings
+import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import org.springframework.context.annotation.Bean

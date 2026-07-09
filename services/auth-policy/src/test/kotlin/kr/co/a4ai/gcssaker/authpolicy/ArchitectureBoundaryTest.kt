@@ -21,7 +21,7 @@ class ArchitectureBoundaryTest {
             .sorted()
 
         assertEquals(
-            listOf("AuthPolicyApplication.kt", "AuthPolicyConfig.kt"),
+            listOf("AuthPolicyApplication.kt"),
             rootFiles,
         )
     }
