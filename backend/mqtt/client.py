@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import logging
-import os
-from dataclasses import dataclass
 from functools import lru_cache
 from typing import Protocol
 
 import paho.mqtt.client as mqtt
+from pydantic import Field, ValidationError, field_validator, model_validator
+
+from core.env_parsing import empty_to_none
+from core.settings_base import BackendBaseSettings, SettingsConfigurationError, settings_error_message
 
 MqttPayload = str | bytes
 logger = logging.getLogger(__name__)
@@ -24,59 +26,47 @@ class MqttEnv:
     MAX_INFLIGHT_MESSAGES = "MQTT_MAX_INFLIGHT_MESSAGES"
 
 
-@dataclass(frozen=True)
-class MqttSettings:
-    host: str = "localhost"
-    port: int = 1883
-    client_id: str = "gcs_backend_pub"
-    keepalive: int = 60
-    username: str | None = None
-    password: str | None = None
-    reconnect_min_delay_seconds: int = 1
-    reconnect_max_delay_seconds: int = 30
-    max_inflight_messages: int = 20
+class MqttSettings(BackendBaseSettings):
+    host: str = Field("localhost", validation_alias=MqttEnv.HOST)
+    port: int = Field(1883, validation_alias=MqttEnv.PORT, gt=0)
+    client_id: str = Field("gcs_backend_pub", validation_alias=MqttEnv.CLIENT_ID)
+    keepalive: int = Field(60, validation_alias=MqttEnv.KEEPALIVE, gt=0)
+    username: str | None = Field(None, validation_alias=MqttEnv.USERNAME)
+    password: str | None = Field(None, validation_alias=MqttEnv.PASSWORD)
+    reconnect_min_delay_seconds: int = Field(1, validation_alias=MqttEnv.RECONNECT_MIN_DELAY, gt=0)
+    reconnect_max_delay_seconds: int = Field(30, validation_alias=MqttEnv.RECONNECT_MAX_DELAY, gt=0)
+    max_inflight_messages: int = Field(20, validation_alias=MqttEnv.MAX_INFLIGHT_MESSAGES, gt=0)
+
+    @field_validator("host", "client_id", mode="before")
+    @classmethod
+    def default_blank_required_string(cls, value: object) -> object:
+        if isinstance(value, str):
+            return empty_to_none(value)
+        return value
+
+    @field_validator("username", "password", mode="before")
+    @classmethod
+    def blank_optional_string_to_none(cls, value: object) -> object:
+        if isinstance(value, str):
+            return empty_to_none(value)
+        return value
+
+    @model_validator(mode="after")
+    def normalize_reconnect_window(self) -> "MqttSettings":
+        if self.reconnect_max_delay_seconds < self.reconnect_min_delay_seconds:
+            self.reconnect_max_delay_seconds = self.reconnect_min_delay_seconds
+        return self
 
     @classmethod
     def from_env(cls) -> "MqttSettings":
-        reconnect_min_delay_seconds = positive_int_env(
-            MqttEnv.RECONNECT_MIN_DELAY,
-            cls.reconnect_min_delay_seconds,
-        )
-        reconnect_max_delay_seconds = positive_int_env(
-            MqttEnv.RECONNECT_MAX_DELAY,
-            cls.reconnect_max_delay_seconds,
-        )
-        return cls(
-            host=os.getenv(MqttEnv.HOST, cls.host),
-            port=positive_int_env(MqttEnv.PORT, cls.port),
-            client_id=os.getenv(MqttEnv.CLIENT_ID, cls.client_id),
-            keepalive=positive_int_env(MqttEnv.KEEPALIVE, cls.keepalive),
-            username=optional_env(MqttEnv.USERNAME),
-            password=optional_env(MqttEnv.PASSWORD),
-            reconnect_min_delay_seconds=reconnect_min_delay_seconds,
-            reconnect_max_delay_seconds=max(reconnect_min_delay_seconds, reconnect_max_delay_seconds),
-            max_inflight_messages=positive_int_env(MqttEnv.MAX_INFLIGHT_MESSAGES, cls.max_inflight_messages),
-        )
+        try:
+            return cls()
+        except ValidationError as exc:
+            raise SettingsConfigurationError(settings_error_message("mqtt", exc)) from exc
 
 
 class PublishableMqttClient(Protocol):
     def publish(self, topic: str, payload: MqttPayload) -> object: ...
-
-
-def optional_env(name: str) -> str | None:
-    value = os.getenv(name)
-    if value is None:
-        return None
-    stripped = value.strip()
-    return stripped or None
-
-
-def positive_int_env(name: str, default: int) -> int:
-    try:
-        value = int(os.getenv(name, str(default)))
-    except ValueError:
-        return default
-    return value if value > 0 else default
 
 
 def configure_mqtt_resilience(client: object, settings: MqttSettings) -> None:

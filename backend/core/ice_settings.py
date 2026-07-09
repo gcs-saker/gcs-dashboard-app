@@ -1,11 +1,20 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 
+from pydantic import Field, ValidationError, field_validator
+
 from core.env_parsing import empty_to_none
+from core.settings_base import BackendBaseSettings, SettingsConfigurationError, settings_error_message
 
 DEFAULT_WEBRTC_STUN_URL = "stun:stun.l.google.com:19302"
+WEBRTC_STUN_URL_ENV = "WEBRTC_STUN_URL"
+WEBRTC_TURN_URL_ENV = "WEBRTC_TURN_URL"
+WEBRTC_TURN_USERNAME_ENV = "WEBRTC_TURN_USERNAME"
+WEBRTC_TURN_PASSWORD_ENV = "WEBRTC_TURN_PASSWORD"
+MEDIAMTX_TURN_URL_ENV = "MEDIAMTX_TURN_URL"
+MEDIAMTX_TURN_USERNAME_ENV = "MEDIAMTX_TURN_USERNAME"
+MEDIAMTX_TURN_PASSWORD_ENV = "MEDIAMTX_TURN_PASSWORD"
 
 
 class IceServerFields:
@@ -49,22 +58,38 @@ class BrowserIceServerList:
         return tuple(server.to_api_dict() for server in self.values)
 
 
-@dataclass(frozen=True)
-class WebRtcIceSettings:
-    stun_url: str | None = DEFAULT_WEBRTC_STUN_URL
-    turn_url: str | None = None
-    turn_username: str | None = None
-    turn_password: str | None = None
+class WebRtcIceSettings(BackendBaseSettings):
+    stun_url: str | None = Field(DEFAULT_WEBRTC_STUN_URL, validation_alias=WEBRTC_STUN_URL_ENV)
+    turn_url: str | None = Field(None, validation_alias=WEBRTC_TURN_URL_ENV)
+    turn_username: str | None = Field(None, validation_alias=WEBRTC_TURN_USERNAME_ENV)
+    turn_password: str | None = Field(None, validation_alias=WEBRTC_TURN_PASSWORD_ENV)
+    mediamtx_turn_url: str | None = Field(None, validation_alias=MEDIAMTX_TURN_URL_ENV)
+    mediamtx_turn_username: str | None = Field(None, validation_alias=MEDIAMTX_TURN_USERNAME_ENV)
+    mediamtx_turn_password: str | None = Field(None, validation_alias=MEDIAMTX_TURN_PASSWORD_ENV)
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def empty_string_to_none(cls, value: object) -> object:
+        if isinstance(value, str):
+            return empty_to_none(value)
+        return value
 
     @classmethod
     def from_env(cls) -> "WebRtcIceSettings":
-        return cls(
-            stun_url=empty_to_none(os.getenv("WEBRTC_STUN_URL")) or DEFAULT_WEBRTC_STUN_URL,
-            turn_url=empty_to_none(os.getenv("WEBRTC_TURN_URL")) or empty_to_none(os.getenv("MEDIAMTX_TURN_URL")),
-            turn_username=empty_to_none(os.getenv("WEBRTC_TURN_USERNAME"))
-            or empty_to_none(os.getenv("MEDIAMTX_TURN_USERNAME")),
-            turn_password=empty_to_none(os.getenv("WEBRTC_TURN_PASSWORD"))
-            or empty_to_none(os.getenv("MEDIAMTX_TURN_PASSWORD")),
+        try:
+            settings = cls()
+        except ValidationError as exc:
+            raise SettingsConfigurationError(settings_error_message("webrtc ice", exc)) from exc
+        return settings.with_legacy_mediamtx_fallbacks()
+
+    def with_legacy_mediamtx_fallbacks(self) -> "WebRtcIceSettings":
+        return self.model_copy(
+            update={
+                "stun_url": self.stun_url or DEFAULT_WEBRTC_STUN_URL,
+                "turn_url": self.turn_url or self.mediamtx_turn_url,
+                "turn_username": self.turn_username or self.mediamtx_turn_username,
+                "turn_password": self.turn_password or self.mediamtx_turn_password,
+            }
         )
 
     def browser_ice_servers(self) -> tuple[dict[str, str], ...]:

@@ -36,16 +36,16 @@ class StreamDescriptorResponse(BaseModel):
     def from_domain(cls, descriptor: StreamDescriptor) -> "StreamDescriptorResponse":
         stream_path = descriptor.stream_path
         return cls(
-            streamId=descriptor.stream_id,
+            stream_id=descriptor.stream_id,
             path=descriptor.path,
             prefix=stream_path.prefix,
-            assetId=stream_path.asset_id,
-            sensorId=stream_path.sensor_id,
-            processorId=stream_path.processor_id,
+            asset_id=stream_path.asset_id,
+            sensor_id=stream_path.sensor_id,
+            processor_id=stream_path.processor_id,
             date=stream_path.archive_date,
             status=descriptor.status,
-            displayName=descriptor.display_name,
-            playbackUrls=PlaybackUrlsResponse.from_domain(descriptor.playback_urls),
+            display_name=descriptor.display_name,
+            playback_urls=PlaybackUrlsResponse.from_domain(descriptor.playback_urls),
         )
 
 
@@ -59,9 +59,9 @@ class StreamPlaybackResponse(BaseModel):
     @classmethod
     def from_domain(cls, descriptor: StreamDescriptor) -> "StreamPlaybackResponse":
         return cls(
-            streamId=descriptor.stream_id,
+            stream_id=descriptor.stream_id,
             status=descriptor.status,
-            playbackUrls=PlaybackUrlsResponse.from_domain(descriptor.playback_urls),
+            playback_urls=PlaybackUrlsResponse.from_domain(descriptor.playback_urls),
         )
 
 
@@ -73,7 +73,7 @@ class StreamStatusResponse(BaseModel):
 
     @classmethod
     def from_domain(cls, descriptor: StreamDescriptor) -> "StreamStatusResponse":
-        return cls(streamId=descriptor.stream_id, status=descriptor.status)
+        return cls(stream_id=descriptor.stream_id, status=descriptor.status)
 
 
 class StreamingModuleStatusResponse(BaseModel):
@@ -86,7 +86,7 @@ class StreamingModuleStatusResponse(BaseModel):
     @classmethod
     def from_domain(cls, status: StreamingModuleStatus) -> "StreamingModuleStatusResponse":
         return cls(
-            registryReady=status.registry_ready,
-            playbackUrlBuilderReady=status.playback_url_builder_ready,
-            registeredStreams=status.registered_streams,
+            registry_ready=status.registry_ready,
+            playback_url_builder_ready=status.playback_url_builder_ready,
+            registered_streams=status.registered_streams,
         )

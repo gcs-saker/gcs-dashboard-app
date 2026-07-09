@@ -1,6 +1,7 @@
 import pytest
 
 from core.db import DEFAULT_DATABASE_URL, LEGACY_MYSQL_ALLOWED_ENV, DatabaseSettings
+from core.settings_base import SettingsConfigurationError
 
 
 def test_database_settings_uses_safe_default_without_env(monkeypatch) -> None:
@@ -25,7 +26,7 @@ def test_database_settings_rejects_mysql_unless_legacy_flag_is_explicit(monkeypa
     monkeypatch.setenv("DATABASE_URL", "mysql+pymysql://legacy:test@mysql:3306/gcs")
     monkeypatch.delenv(LEGACY_MYSQL_ALLOWED_ENV, raising=False)
 
-    with pytest.raises(ValueError, match="legacy fallback dialect"):
+    with pytest.raises(SettingsConfigurationError, match="legacy fallback dialect"):
         DatabaseSettings.from_env()
 
     monkeypatch.setenv(LEGACY_MYSQL_ALLOWED_ENV, "true")
