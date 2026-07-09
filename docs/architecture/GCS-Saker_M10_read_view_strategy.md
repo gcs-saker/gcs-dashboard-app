@@ -39,7 +39,9 @@
 ### SQL
 
 ```sql
-CREATE VIEW IF NOT EXISTS operational_stream_session_latest AS
+DROP VIEW IF EXISTS operational_stream_session_latest;
+
+CREATE VIEW operational_stream_session_latest AS
 SELECT
     stream_id,
     session_id,
