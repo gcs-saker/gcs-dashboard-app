@@ -32,22 +32,8 @@ internal object OperationalReadSql {
     """
     const val selectLatestStreamSessions = """
         SELECT stream_id, session_id, status, source, started_at, last_heartbeat_at, stopped_at, group_id
-        FROM stream_sessions current_session
+        FROM operational_stream_session_latest
         WHERE (group_id = ? OR ? = ?)
-          AND NOT EXISTS (
-              SELECT 1
-              FROM stream_sessions newer_session
-              WHERE newer_session.group_id = current_session.group_id
-                AND newer_session.stream_id = current_session.stream_id
-                AND COALESCE(newer_session.session_id, '') = COALESCE(current_session.session_id, '')
-                AND (
-                    newer_session.last_heartbeat_at > current_session.last_heartbeat_at
-                    OR (
-                        newer_session.last_heartbeat_at = current_session.last_heartbeat_at
-                        AND newer_session.id > current_session.id
-                    )
-                )
-          )
         ORDER BY last_heartbeat_at DESC, stream_id
     """
     const val deleteTelemetryByUuid = "DELETE FROM telemetry_latest WHERE uuid = ?"
