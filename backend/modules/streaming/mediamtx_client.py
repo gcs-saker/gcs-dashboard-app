@@ -3,15 +3,28 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+
+import httpx
 
 from config import MediaServerSettings
 
 
 class MediaMTXClientError(RuntimeError):
     """Raised when the MediaMTX control API cannot be queried."""
+
+
+class MediaMTXApiRoutes:
+    PATHS_LIST = "/v3/paths/list"
+
+
+class MediaMTXApiQuery:
+    ITEMS_PER_PAGE = "itemsPerPage"
+    DEFAULT_ITEMS_PER_PAGE = "1000"
+
+
+class MediaMTXHttpHeaders:
+    ACCEPT = "Accept"
+    APPLICATION_JSON = "application/json"
 
 
 @dataclass(frozen=True)
@@ -47,7 +60,10 @@ class MediaMTXClient:
         return cls(api_base_url)
 
     def list_paths(self) -> list[MediaMTXPath]:
-        payload = self._get_json("/v3/paths/list", {"itemsPerPage": "1000"})
+        payload = self._get_json(
+            MediaMTXApiRoutes.PATHS_LIST,
+            {MediaMTXApiQuery.ITEMS_PER_PAGE: MediaMTXApiQuery.DEFAULT_ITEMS_PER_PAGE},
+        )
         items = payload.get("items", [])
         if not isinstance(items, list):
             raise MediaMTXClientError("MediaMTX paths response is missing an items list")
@@ -61,17 +77,20 @@ class MediaMTXClient:
         return paths
 
     def _get_json(self, path: str, query: dict[str, str] | None = None) -> dict[str, object]:
-        query_string = f"?{urlencode(query)}" if query else ""
-        request = Request(f"{self.base_url}{path}{query_string}", headers={"Accept": "application/json"})
         try:
-            with urlopen(request, timeout=self.timeout_seconds) as response:
-                raw_payload = response.read().decode("utf-8")
-        except (HTTPError, URLError, TimeoutError) as exc:
+            with httpx.Client(base_url=self.base_url, timeout=self.timeout_seconds) as client:
+                response = client.get(
+                    path,
+                    params=query,
+                    headers={MediaMTXHttpHeaders.ACCEPT: MediaMTXHttpHeaders.APPLICATION_JSON},
+                )
+                response.raise_for_status()
+        except (httpx.HTTPStatusError, httpx.RequestError, httpx.TimeoutException) as exc:
             raise MediaMTXClientError(f"MediaMTX API request failed: {exc}") from exc
 
         try:
-            payload = json.loads(raw_payload)
-        except json.JSONDecodeError as exc:
+            payload = response.json()
+        except (json.JSONDecodeError, ValueError) as exc:
             raise MediaMTXClientError("MediaMTX API returned invalid JSON") from exc
 
         if not isinstance(payload, dict):

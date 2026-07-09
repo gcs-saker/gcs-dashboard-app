@@ -29,6 +29,7 @@ python-multipart==0.0.31
 paho-mqtt==1.6.1
 
 httpx==0.28.1
+respx==0.23.1
 grpcio==1.76.0
 grpcio-tools==1.76.0
 pytest==9.0.3
