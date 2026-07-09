@@ -12,6 +12,17 @@ npm run dev
 
 `VITE_*` variables are build-time values. Keep real server secrets outside frontend env files because they are baked into the browser bundle.
 
+Local Docker Compose uses the hardened Mosquitto profile by default. Before running the full local stack, generate `../deploy/mosquitto/passwords.local` and keep it out of Git:
+
+```bash
+docker run --rm -it -v "$PWD/../deploy/mosquitto:/work" eclipse-mosquitto:2 \
+  mosquitto_passwd -c /work/passwords.local gcs_backend_pub
+docker run --rm -it -v "$PWD/../deploy/mosquitto:/work" eclipse-mosquitto:2 \
+  mosquitto_passwd /work/passwords.local gcs_device_gateway
+```
+
+The no-auth broker is available only through `docker-compose.mqtt-no-auth.profile.yml` with the `local-mqtt-no-auth` profile for isolated local smoke checks.
+
 ## Verification
 
 ```bash

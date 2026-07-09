@@ -33,9 +33,35 @@ services:
   mqtt:
     image: eclipse-mosquitto:2
     container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-mqtt
-    command: ["mosquitto", "-c", "/mosquitto-no-auth.conf"]
+    command: ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
+    environment:
+      MQTT_HEALTH_USERNAME: ${MQTT_HEALTH_USERNAME:?Set MQTT_HEALTH_USERNAME in .env}
+      MQTT_HEALTH_PASSWORD: ${MQTT_HEALTH_PASSWORD:?Set MQTT_HEALTH_PASSWORD in .env}
     ports:
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MQTT_HOST_PORT:-1883}:1883"
+    volumes:
+      - type: bind
+        source: ../deploy/mosquitto/mosquitto.hardened.conf
+        target: /mosquitto/config/mosquitto.conf
+        read_only: true
+      - type: bind
+        source: ../deploy/mosquitto/acl.hardened
+        target: /mosquitto/config/acl
+        read_only: true
+      - type: bind
+        source: ${MQTT_PASSWORD_FILE:?Set MQTT_PASSWORD_FILE in .env}
+        target: /mosquitto/config/passwords
+        read_only: true
+      - mqtt-data:/mosquitto/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mosquitto_sub -h 127.0.0.1 -p 1883 -u \"$${MQTT_HEALTH_USERNAME}\" -P \"$${MQTT_HEALTH_PASSWORD}\" -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     restart: always
 
   backend:
@@ -57,6 +83,8 @@ services:
       MQTT_HOST: ${MQTT_HOST:-mqtt}
       MQTT_PORT: ${MQTT_PORT:-1883}
       MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-gcs_backend_pub}
+      MQTT_USERNAME: ${MQTT_USERNAME:?Set MQTT_USERNAME in .env}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:?Set MQTT_PASSWORD in .env}
       TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS: ${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}
       CONTROL_MESSAGE_SENDER: ${CONTROL_MESSAGE_SENDER:-mqtt}
       MEDIAMTX_PUBLIC_WEBRTC_BASE_URL: ${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8889}
@@ -76,7 +104,7 @@ services:
       postgres:
         condition: service_healthy
       mqtt:
-        condition: service_started
+        condition: service_healthy
     restart: always
 
   mediamtx:
@@ -209,3 +237,4 @@ services:
 
 volumes:
   postgres-data:
+  mqtt-data:

@@ -18,6 +18,7 @@ DASHBOARD_DOCKERIGNORE = REPO_ROOT / "gcs-dashboard" / ".dockerignore"
 BACKEND_DOCKERIGNORE = REPO_ROOT / "backend" / ".dockerignore"
 MEDIA_CONTROL_DOCKERFILE = REPO_ROOT / "services" / "media-control" / "Dockerfile"
 ENV_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_Docker_env_주입_가이드_v0.1.md"
+LOCAL_MQTT_NO_AUTH_OVERRIDE = REPO_ROOT / "gcs-dashboard" / "docker-compose.mqtt-no-auth.profile.yml"
 
 
 def load_yaml(path: Path) -> dict:
@@ -77,6 +78,8 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["backend"]["environment"]["AUTH_REFRESH_COOKIE_SECURE"] == "${AUTH_REFRESH_COOKIE_SECURE:-false}"
     assert services["backend"]["environment"]["AUTH_REFRESH_COOKIE_SAMESITE"] == "${AUTH_REFRESH_COOKIE_SAMESITE:-lax}"
     assert services["backend"]["environment"]["MQTT_HOST"] == "${MQTT_HOST:-mqtt}"
+    assert services["backend"]["environment"]["MQTT_USERNAME"] == "${MQTT_USERNAME:?Set MQTT_USERNAME in .env}"
+    assert services["backend"]["environment"]["MQTT_PASSWORD"] == "${MQTT_PASSWORD:?Set MQTT_PASSWORD in .env}"
     assert services["backend"]["environment"]["TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS"] == (
         "${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}"
     )
@@ -118,6 +121,51 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["nginx"]["build"]["args"]["VITE_MAP_STYLE_URL"] == (
         "${VITE_MAP_STYLE_URL:-https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}}"
     )
+
+
+def test_local_compose_uses_hardened_mqtt_by_default() -> None:
+    compose = load_yaml(COMPOSE_FILE)
+    mqtt = compose["services"]["mqtt"]
+    backend = compose["services"]["backend"]
+    healthcheck_command = " ".join(mqtt["healthcheck"]["test"])
+
+    assert mqtt["command"] == ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
+    assert {
+        "type": "bind",
+        "source": "../deploy/mosquitto/mosquitto.hardened.conf",
+        "target": "/mosquitto/config/mosquitto.conf",
+        "read_only": True,
+    } in mqtt["volumes"]
+    assert {
+        "type": "bind",
+        "source": "../deploy/mosquitto/acl.hardened",
+        "target": "/mosquitto/config/acl",
+        "read_only": True,
+    } in mqtt["volumes"]
+    assert {
+        "type": "bind",
+        "source": "${MQTT_PASSWORD_FILE:?Set MQTT_PASSWORD_FILE in .env}",
+        "target": "/mosquitto/config/passwords",
+        "read_only": True,
+    } in mqtt["volumes"]
+    assert mqtt["environment"]["MQTT_HEALTH_USERNAME"] == "${MQTT_HEALTH_USERNAME:?Set MQTT_HEALTH_USERNAME in .env}"
+    assert mqtt["environment"]["MQTT_HEALTH_PASSWORD"] == "${MQTT_HEALTH_PASSWORD:?Set MQTT_HEALTH_PASSWORD in .env}"
+    assert "mosquitto_sub" in healthcheck_command
+    assert "$$SYS/broker/version" in healthcheck_command
+    assert "$${MQTT_HEALTH_USERNAME}" in healthcheck_command
+    assert "$${MQTT_HEALTH_PASSWORD}" in healthcheck_command
+    assert backend["depends_on"]["mqtt"]["condition"] == "service_healthy"
+
+
+def test_no_auth_mqtt_is_only_available_as_explicit_local_smoke_profile() -> None:
+    compose = COMPOSE_FILE.read_text(encoding="utf-8")
+    override = load_yaml(LOCAL_MQTT_NO_AUTH_OVERRIDE)
+    override_text = LOCAL_MQTT_NO_AUTH_OVERRIDE.read_text(encoding="utf-8")
+
+    assert "mosquitto-no-auth.conf" not in compose
+    assert override["services"]["mqtt"]["profiles"] == ["local-mqtt-no-auth"]
+    assert override["services"]["mqtt"]["command"] == ["mosquitto", "-c", "/mosquitto-no-auth.conf"]
+    assert "local-mqtt-no-auth" in override_text
 
 
 def test_single_node_mqtt_is_hardened_by_default_and_healthcheck_authenticates() -> None:
