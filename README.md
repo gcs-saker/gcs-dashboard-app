@@ -51,6 +51,8 @@ PYTHONPATH=. python3.12 -m pytest -q
 
 The initial Ruff gate intentionally focuses on syntax, import order, undefined names, and unused imports. Wider lint rules should be added in separate issues so style expansion does not hide behavior changes.
 
+Python structured logs use JSON lines with stable fields: `event`, `severity`, `component`, optional `trace_id`, `http_method`, `http_route`, `status_code`, `stream_id`, and `error_type`. Do not log token, password, cookie, credential, secret, media, or raw payload fields; those keys are redacted by the shared logging processor.
+
 Spring auth-policy:
 
 ```bash

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from functools import lru_cache
 from typing import Protocol
 
@@ -9,10 +8,11 @@ from pydantic import Field, ValidationError, field_validator, model_validator
 
 from core.env_parsing import empty_to_none
 from core.settings_base import BackendBaseSettings, SettingsConfigurationError, settings_error_message
+from core.structured_logging import get_logger
 from core.tracing import trace_mqtt_publish
 
 MqttPayload = str | bytes
-logger = logging.getLogger(__name__)
+logger = get_logger("mqtt")
 
 
 class MqttEnv:
@@ -99,7 +99,12 @@ def publish_control_command(
     message: MqttPayload,
     client: PublishableMqttClient | None = None,
 ) -> None:
-    logger.info("MQTT publish topic=%s payload=%s", topic, mqtt_payload_log_value(message))
+    logger.info(
+        "mqtt_publish_requested",
+        destination=topic,
+        payload_kind=mqtt_payload_kind(message),
+        payload_bytes=mqtt_payload_size(message),
+    )
     mqtt_client = client or get_mqtt_client()
     with trace_mqtt_publish(topic=topic):
         result = mqtt_client.publish(topic, message)
@@ -108,7 +113,13 @@ def publish_control_command(
         raise RuntimeError(f"MQTT publish failed: rc={rc}")
 
 
-def mqtt_payload_log_value(message: MqttPayload) -> str:
+def mqtt_payload_kind(message: MqttPayload) -> str:
     if isinstance(message, bytes):
-        return f"<binary {len(message)} bytes>"
-    return message
+        return "binary"
+    return "text"
+
+
+def mqtt_payload_size(message: MqttPayload) -> int:
+    if isinstance(message, bytes):
+        return len(message)
+    return len(message.encode("utf-8"))

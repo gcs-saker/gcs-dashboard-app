@@ -17,6 +17,13 @@ from api.contracts import (
 from config import WebSecuritySettings
 from core.security import require_role
 from core.security_contract import ROLE_OPERATOR, ROLE_VIEWER
+from core.structured_logging import (
+    StructuredLoggingSettings,
+    configure_structured_logging,
+    get_logger,
+    log_request_completed,
+    log_request_failed,
+)
 from core.tracing import TracingSettings, configure_global_tracing, trace_fastapi_request
 from modules.ai_contract.router import router as mock_ai_router
 from mqtt.subscriber import start_optional_telemetry_subscriber
@@ -38,6 +45,9 @@ app = FastAPI(
 web_security_settings = WebSecuritySettings.from_env()
 tracing_settings = TracingSettings.from_env()
 tracer_provider = configure_global_tracing(tracing_settings)
+structured_logging_settings = StructuredLoggingSettings.from_env()
+configure_structured_logging(structured_logging_settings)
+request_logger = get_logger("python-api")
 
 app.add_middleware(
     CORSMiddleware,
@@ -81,6 +91,20 @@ async def add_trace_span(
         settings=tracing_settings,
         provider=tracer_provider,
     )
+
+
+@app.middleware("http")
+async def add_structured_request_log(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        log_request_failed(request_logger, request, exc)
+        raise
+    log_request_completed(request_logger, request, response)
+    return response
 
 
 def mark_legacy_route(request: Request, response: Response) -> None:
