@@ -6,6 +6,7 @@ import { DashboardOverlays, type DashboardOverlaysProps } from "@dashboard/compo
 import { StreamNotificationToast } from "@dashboard/components/atoms/StreamNotificationToast";
 import { DashboardWidgetControls } from "@dashboard/components/molecules/DashboardWidgetControls";
 import { DashboardHeader, type DashboardHeaderProps } from "@dashboard/components/navigation/DashboardHeader";
+import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
 import { DashboardViewRouter, type DashboardViewRouterProps } from "./DashboardViewRouter";
 
 export interface DashboardWidgetControlBindings {
@@ -55,7 +56,15 @@ export function DashboardPageView({
 
       {notification ? <StreamNotificationToast notification={notification} onDismiss={onDismissNotification} /> : null}
 
-      <DashboardViewRouter {...routerProps} widgetControls={widgetControls} />
+      <DashboardErrorBoundary
+        boundaryId={`dashboard-route:${routerProps.activeView}`}
+        description="현재 화면만 격리되었습니다. 상단 메뉴로 다른 화면을 열거나 다시 시도할 수 있습니다."
+        resetKeys={[routerProps.activeView]}
+        scope="route"
+        title="대시보드 화면"
+      >
+        <DashboardViewRouter {...routerProps} widgetControls={widgetControls} />
+      </DashboardErrorBoundary>
       <DashboardOverlays {...overlayProps} widgetControls={widgetControls} />
     </main>
   );

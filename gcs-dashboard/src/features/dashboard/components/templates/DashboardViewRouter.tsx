@@ -9,6 +9,7 @@ import type { CctvLayoutMode, DashboardUserPreferences, DashboardView } from "@d
 import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 import { CctvView } from "@dashboard/components/cctv/CctvView";
 import { SystemStatusPanel } from "@dashboard/components/SystemStatusPanel";
+import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
 import { DashboardMainGrid } from "./DashboardMainGrid";
 import { EventLogView, TacticalLeafletMap, TimeSyncSettingsView } from "@dashboard/dashboardLazyViews";
 
@@ -50,34 +51,46 @@ export interface DashboardViewRouterProps {
 
 export function DashboardViewRouter(props: DashboardViewRouterProps) {
   if (props.activeView === "events") {
-    return <Suspense fallback={<section className="event-log-view" role="status">이벤트로그 준비 중</section>}><EventLogView /></Suspense>;
+    return (
+      <DashboardErrorBoundary boundaryId="view:event-log" resetKeys={[props.activeView]} scope="route" title="이벤트로그">
+        <Suspense fallback={<section className="event-log-view" role="status">이벤트로그 준비 중</section>}><EventLogView /></Suspense>
+      </DashboardErrorBoundary>
+    );
   }
   if (props.activeView === "settings") {
     return (
-      <Suspense fallback={<section className="time-sync-view" role="status">운영설정 준비 중</section>}>
-        <TimeSyncSettingsView motionMode={props.motionMode} onMotionModeChange={props.onMotionModeChange} />
-      </Suspense>
+      <DashboardErrorBoundary boundaryId="view:settings" resetKeys={[props.activeView]} scope="route" title="운영설정">
+        <Suspense fallback={<section className="time-sync-view" role="status">운영설정 준비 중</section>}>
+          <TimeSyncSettingsView motionMode={props.motionMode} onMotionModeChange={props.onMotionModeChange} />
+        </Suspense>
+      </DashboardErrorBoundary>
     );
   }
   if (props.activeView === "status") {
-    return <section className="server-status-view" aria-label="서버 상태"><SystemStatusPanel onAuthFailure={props.onAuthFailure} variant="page" /></section>;
+    return (
+      <DashboardErrorBoundary boundaryId="view:server-status" resetKeys={[props.activeView]} scope="route" title="서버 상태">
+        <section className="server-status-view" aria-label="서버 상태"><SystemStatusPanel onAuthFailure={props.onAuthFailure} variant="page" /></section>
+      </DashboardErrorBoundary>
+    );
   }
   if (props.activeView === "cctv") {
     return (
-      <CctvView
-        audioActiveStreamId={props.audioActiveStreamId}
-        cctvGridSize={props.cctvGridSize}
-        cctvLayoutMode={props.cctvLayoutMode}
-        cctvQualityMode={props.cctvQualityMode}
-        cctvStatusSummary={props.cctvStatusSummary}
-        cctvStreams={props.cctvStreams}
-        onSelectStream={props.onSelectStream}
-        onSetLayoutMode={props.onSetCctvLayoutMode}
-        onSetQualityMode={props.onSetCctvQualityMode}
-        onToggleTalkbackTarget={props.onToggleTalkbackTarget}
-        selectedStreamId={props.selectedStreamId}
-        talkbackTargetStreamIds={props.talkbackTargetStreamIds}
-      />
+      <DashboardErrorBoundary boundaryId="view:cctv" resetKeys={[props.activeView]} scope="route" title="CCTV">
+        <CctvView
+          audioActiveStreamId={props.audioActiveStreamId}
+          cctvGridSize={props.cctvGridSize}
+          cctvLayoutMode={props.cctvLayoutMode}
+          cctvQualityMode={props.cctvQualityMode}
+          cctvStatusSummary={props.cctvStatusSummary}
+          cctvStreams={props.cctvStreams}
+          onSelectStream={props.onSelectStream}
+          onSetLayoutMode={props.onSetCctvLayoutMode}
+          onSetQualityMode={props.onSetCctvQualityMode}
+          onToggleTalkbackTarget={props.onToggleTalkbackTarget}
+          selectedStreamId={props.selectedStreamId}
+          talkbackTargetStreamIds={props.talkbackTargetStreamIds}
+        />
+      </DashboardErrorBoundary>
     );
   }
   return (
