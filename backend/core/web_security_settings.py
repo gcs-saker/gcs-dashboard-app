@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from typing import Annotated
+
 from pydantic import Field, ValidationError, field_validator
+from pydantic_settings import NoDecode
 
 from core.env_parsing import csv_to_tuple, empty_to_none
 from core.settings_base import BackendBaseSettings, SettingsConfigurationError, settings_error_message
@@ -25,7 +28,10 @@ DEFAULT_CONTENT_SECURITY_POLICY = (
 
 
 class WebSecuritySettings(BackendBaseSettings):
-    allowed_origins: tuple[str, ...] = Field(DEFAULT_ALLOWED_ORIGINS, validation_alias="BACKEND_CORS_ALLOW_ORIGINS")
+    allowed_origins: Annotated[tuple[str, ...], NoDecode] = Field(
+        DEFAULT_ALLOWED_ORIGINS,
+        validation_alias="BACKEND_CORS_ALLOW_ORIGINS",
+    )
     content_security_policy: str = Field(
         DEFAULT_CONTENT_SECURITY_POLICY,
         validation_alias="BACKEND_CONTENT_SECURITY_POLICY",
