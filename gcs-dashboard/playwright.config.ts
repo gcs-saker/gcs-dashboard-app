@@ -19,7 +19,6 @@ export default defineConfig({
   webServer: {
     command: "npm run dev -- --host 127.0.0.1 --port 4178",
     env: {
-      VITE_ENABLE_MSW: "true",
       VITE_RENDER_DIAGNOSTICS: "1",
     },
     reuseExistingServer: !process.env.CI,
