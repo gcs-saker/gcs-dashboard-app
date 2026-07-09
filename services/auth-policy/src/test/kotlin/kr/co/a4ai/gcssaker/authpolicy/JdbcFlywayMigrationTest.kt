@@ -26,7 +26,7 @@ class JdbcFlywayMigrationTest {
             Int::class.java,
             "1",
         )
-        val tableCount = jdbc.queryForObject(
+        val relationCount = jdbc.queryForObject(
             """
             SELECT COUNT(*)
             FROM INFORMATION_SCHEMA.TABLES
@@ -37,14 +37,21 @@ class JdbcFlywayMigrationTest {
                 'TELEMETRY_HISTORY',
                 'GATEWAY_ASSETS',
                 'SERVER_HEALTH_SNAPSHOTS',
-                'STREAM_SESSIONS'
+                'STREAM_SESSIONS',
+                'OPERATIONAL_STREAM_SESSION_LATEST'
             )
             """.trimIndent(),
             Int::class.java,
         )
+        val latestViewVersion = jdbc.queryForObject(
+            "SELECT \"installed_rank\" FROM \"flyway_schema_history\" WHERE \"version\" = ? AND \"success\" = TRUE",
+            Int::class.java,
+            "4",
+        )
 
         assertEquals(1, installedRank)
-        assertEquals(7, tableCount)
+        assertEquals(4, latestViewVersion)
+        assertEquals(8, relationCount)
         assertTrue(jdbc.queryForObject("SELECT COUNT(*) FROM telemetry_latest", Int::class.java)!! > 0)
     }
 
