@@ -41,6 +41,7 @@ def test_swagger_style_table_covers_core_public_endpoints() -> None:
         "/media-control/api/v1/streams/{streamId}/publish",
         "/auth-policy/policy/devices/publish",
         "/auth-policy/admin/devices",
+        "/auth-policy/admin/devices/{deviceUuid}",
         "/auth-policy/admin/devices/{deviceUuid}/activate",
         "/auth-policy/admin/devices/{deviceUuid}/disable",
         "/auth-policy/admin/devices/{deviceUuid}/credential",

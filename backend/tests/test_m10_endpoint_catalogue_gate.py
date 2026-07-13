@@ -37,6 +37,7 @@ def test_endpoint_catalogue_covers_public_entrypoint_and_routes() -> None:
         "/media-control/api/v1/streams/{streamId}/publish",
         "/auth-policy/policy/devices/publish",
         "/auth-policy/admin/devices",
+        "/auth-policy/admin/devices/{deviceUuid}",
         "/auth-policy/admin/devices/{deviceUuid}/credential",
         "/webrtc/{streamPath}/whip",
         "/webrtc/{streamPath}/whep",

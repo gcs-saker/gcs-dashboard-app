@@ -117,12 +117,15 @@ Go media-control은 Spring auth-policy의 `POST /policy/streams/access`로 strea
 
 | Method | 외부 URL | 필요한 데이터 | 응답 핵심 필드 | 용도 |
 | --- | --- | --- | --- | --- |
-| `POST` | `/auth-policy/admin/devices` | admin bearer, `groupId`, `displayName` | `deviceUuid`, `credential`, `groupId`, `status` | 장비 등록 및 최초 secret 발급 |
+| `GET` | `/auth-policy/admin/devices` | admin bearer | `devices[]`, `sensors[]`, `streamPaths[]` | 등록 장비 목록 조회 |
+| `POST` | `/auth-policy/admin/devices` | admin bearer, `groupId`, `displayName`, optional `deviceType`, `sensors[]`, `streamPaths[]` | `deviceUuid`, `credential`, `deviceType`, `groupId`, `status` | 장비 등록 및 최초 secret 발급 |
+| `GET` | `/auth-policy/admin/devices/{deviceUuid}` | admin bearer, `deviceUuid` | `deviceUuid`, `deviceType`, `groupId`, `displayName`, `status`, `sensors[]`, `streamPaths[]` | 등록 장비 단건 조회 |
+| `PATCH` | `/auth-policy/admin/devices/{deviceUuid}` | admin bearer, `groupId`, `displayName`, `status`, `deviceType`, `sensors[]`, `streamPaths[]` 중 변경 필드 | `deviceUuid`, `deviceType`, `groupId`, `displayName`, `status`, `sensors[]`, `streamPaths[]` | 장비 표시명, 소속 group, lifecycle status, 센서, streamPath 수정 |
 | `POST` | `/auth-policy/admin/devices/{deviceUuid}/activate` | admin bearer, `deviceUuid` | `deviceUuid`, `status` | 송출 허용 상태 전환 |
 | `POST` | `/auth-policy/admin/devices/{deviceUuid}/disable` | admin bearer, `deviceUuid` | `deviceUuid`, `status` | 분실/폐기/침해 의심 장비 차단 |
 | `POST` | `/auth-policy/admin/devices/{deviceUuid}/credential` | admin bearer, `deviceUuid` | `deviceUuid`, 새 `credential`, `status` | 장비 credential 회전 |
 
-credential 원문은 최초 발급/재발급 응답에만 노출한다. DB에는 hash만 저장한다.
+credential 원문은 최초 발급/재발급 응답에만 노출한다. 목록/단건/수정 응답과 DB에는 credential 원문이 아니라 hash 또는 public metadata만 남긴다.
 
 ## 7. WebRTC, HLS, MediaMTX
 

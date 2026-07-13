@@ -74,6 +74,36 @@ class AdminDeviceControllerTest {
     }
 
     @Test
+    fun `admin lists gets and updates registered device without credential exposure`() {
+        val registered = controller.register(
+            authorization = bearer(accessToken(AdminDeviceControllerFixtures.ADMIN_USERNAME)),
+            request = AdminDeviceControllerFixtures.registerRequest(),
+        )
+
+        val updated = controller.update(
+            authorization = bearer(accessToken(AdminDeviceControllerFixtures.ADMIN_USERNAME)),
+            deviceUuid = registered.deviceUuid,
+            request = AdminDeviceControllerFixtures.updateRequest(),
+        )
+        val listed = controller.list(
+            authorization = bearer(accessToken(AdminDeviceControllerFixtures.ADMIN_USERNAME)),
+        )
+        val found = controller.get(
+            authorization = bearer(accessToken(AdminDeviceControllerFixtures.ADMIN_USERNAME)),
+            deviceUuid = registered.deviceUuid,
+        )
+
+        assertEquals(AdminDeviceControllerFixtures.UPDATED_GROUP_ID, updated.groupId)
+        assertEquals(AdminDeviceControllerFixtures.UPDATED_DISPLAY_NAME, updated.displayName)
+        assertEquals(RegisteredDeviceStatus.ACTIVE.name.lowercase(), updated.status)
+        assertEquals(AdminDeviceControllerFixtures.UPDATED_DEVICE_TYPE, updated.deviceType)
+        assertEquals(AdminDeviceControllerFixtures.SENSOR_ID, updated.sensors.single().sensorId)
+        assertEquals(AdminDeviceControllerFixtures.STREAM_PATH, updated.streamPaths.single().streamPath)
+        assertEquals(updated, found)
+        assertEquals(listOf(updated), listed)
+    }
+
+    @Test
     fun `admin activates disables and rotates credential`() {
         val first = controller.register(
             authorization = bearer(accessToken(AdminDeviceControllerFixtures.ADMIN_USERNAME)),
@@ -121,10 +151,28 @@ private object AdminDeviceControllerFixtures {
     const val PASSWORD = "pass"
     const val DEVICE_UUID = "00000000-0000-4000-8000-000000000002"
     const val GROUP_ID = "co-a"
+    const val UPDATED_GROUP_ID = "co-b"
+    const val UPDATED_DISPLAY_NAME = "Daegu Drone 01 Updated"
+    const val UPDATED_DEVICE_TYPE = "phone"
+    const val SENSOR_ID = "gps-main"
+    const val STREAM_PATH = "raw/daegu/drone-01"
 
     fun registerRequest(): RegisterDeviceRequest =
         RegisterDeviceRequest(
             groupId = GROUP_ID,
             displayName = "Daegu Drone 01",
+            deviceType = "drone",
+            sensors = listOf(DeviceSensorRequest(SENSOR_ID, "gps")),
+            streamPaths = listOf(DeviceStreamRequest(STREAM_PATH)),
+        )
+
+    fun updateRequest(): UpdateDeviceRequest =
+        UpdateDeviceRequest(
+            groupId = UPDATED_GROUP_ID,
+            displayName = UPDATED_DISPLAY_NAME,
+            status = RegisteredDeviceStatus.ACTIVE.name.lowercase(),
+            deviceType = UPDATED_DEVICE_TYPE,
+            sensors = listOf(DeviceSensorRequest(SENSOR_ID, "camera")),
+            streamPaths = listOf(DeviceStreamRequest(STREAM_PATH)),
         )
 }

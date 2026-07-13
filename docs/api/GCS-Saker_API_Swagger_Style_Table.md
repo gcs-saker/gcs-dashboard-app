@@ -114,7 +114,10 @@ media frame은 WebRTC/HLS media plane으로만 보낸다. JSON, MQTT, gRPC, Grap
 
 | Method | Path | Auth | Headers | Params | Body | Response | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| POST | `/auth-policy/admin/devices` | admin bearer | `Authorization`, `Content-Type: application/json` | none | `groupId`, `displayName` | `deviceUuid`, `credential`, `groupId`, `displayName`, `status` | credential 원문은 최초 1회 응답에만 표시하고 DB에는 hash만 저장 |
+| GET | `/auth-policy/admin/devices` | admin bearer | `Authorization` | none | none | `devices[]` with `deviceUuid`, `deviceType`, `groupId`, `displayName`, `status`, `sensors[]`, `streamPaths[]` | credential 원문/해시는 응답하지 않음 |
+| POST | `/auth-policy/admin/devices` | admin bearer | `Authorization`, `Content-Type: application/json` | none | `groupId`, `displayName`, optional `deviceType`, `sensors[]`, `streamPaths[]` | `deviceUuid`, `credential`, `deviceType`, `groupId`, `displayName`, `status`, `sensors[]`, `streamPaths[]` | credential 원문은 최초 1회 응답에만 표시하고 DB에는 hash만 저장 |
+| GET | `/auth-policy/admin/devices/{deviceUuid}` | admin bearer | `Authorization` | path `deviceUuid` | none | `deviceUuid`, `deviceType`, `groupId`, `displayName`, `status`, `sensors[]`, `streamPaths[]` | 운영자 장비 상세 조회 |
+| PATCH | `/auth-policy/admin/devices/{deviceUuid}` | admin bearer | `Authorization`, `Content-Type: application/json` | path `deviceUuid` | optional `groupId`, `displayName`, `status`, `deviceType`, `sensors[]`, `streamPaths[]` | `deviceUuid`, `deviceType`, `groupId`, `displayName`, `status`, `sensors[]`, `streamPaths[]` | 소속 group/status/sensor/streamPath 변경. credential은 별도 rotate endpoint만 사용 |
 | POST | `/auth-policy/admin/devices/{deviceUuid}/activate` | admin bearer | `Authorization` | path `deviceUuid` | none | `deviceUuid`, `groupId`, `displayName`, `status` | PENDING/DISABLED 장비를 ACTIVE로 전환 |
 | POST | `/auth-policy/admin/devices/{deviceUuid}/disable` | admin bearer | `Authorization` | path `deviceUuid` | none | `deviceUuid`, `groupId`, `displayName`, `status` | 분실/폐기/침해 의심 장비 차단 |
 | POST | `/auth-policy/admin/devices/{deviceUuid}/credential` | admin bearer | `Authorization` | path `deviceUuid` | none | `deviceUuid`, `credential`, `groupId`, `displayName`, `status` | 기존 credential을 폐기하고 새 credential 발급 |
