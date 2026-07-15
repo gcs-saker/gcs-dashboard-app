@@ -79,6 +79,19 @@ class AuthSecurityConfigTest @Autowired constructor(
     }
 
     @Test
+    fun `public login route without csrf reaches browser write guard`() {
+        mockMvc.post(AuthApiRoutes.ROOT + AuthApiRoutes.LOGIN) {
+            header(HttpHeaders.ORIGIN, AuthSecurityConfigTestContract.TRUSTED_ORIGIN)
+            contentType = org.springframework.http.MediaType.APPLICATION_JSON
+            content = AuthSecurityConfigTestContract.LOGIN_PAYLOAD
+        }
+            .andExpect {
+                status { isForbidden() }
+                jsonPath("$.${AuthSecurityRouteContract.ERROR_DETAIL_FIELD}").value(AuthApiErrors.CSRF_HEADER_REQUIRED)
+            }
+    }
+
+    @Test
     fun `device publish policy route uses device credential instead of bearer session`() {
         mockMvc.post(DevicePolicyApiRoutes.ROOT + DevicePolicyApiRoutes.PUBLISH) {
             contentType = org.springframework.http.MediaType.APPLICATION_JSON
