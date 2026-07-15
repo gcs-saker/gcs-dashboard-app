@@ -37,6 +37,25 @@ class DeviceLifecycleServiceTest {
     }
 
     @Test
+    fun `list get and update registered device metadata`() {
+        service.register(DeviceLifecycleFixtures.registerCommand())
+
+        val updated = service.update(
+            deviceUuid = DeviceLifecycleFixtures.DEVICE_UUID,
+            command = DeviceLifecycleFixtures.updateCommand(),
+        )
+
+        assertEquals(listOf(updated), service.list())
+        assertEquals(updated, service.get(DeviceLifecycleFixtures.DEVICE_UUID))
+        assertEquals(DeviceLifecycleFixtures.UPDATED_GROUP_ID, updated.groupId.value)
+        assertEquals(DeviceLifecycleFixtures.UPDATED_DISPLAY_NAME, updated.displayName)
+        assertEquals(RegisteredDeviceStatus.ACTIVE, updated.status)
+        assertEquals(DeviceType.PHONE, updated.deviceType)
+        assertEquals(DeviceLifecycleFixtures.SENSOR_ID, updated.sensors.values.single().sensorId)
+        assertEquals(DeviceLifecycleFixtures.UPDATED_STREAM_PATH, updated.streamPaths.values.single().streamPath)
+    }
+
+    @Test
     fun `rotate credential returns new secret and replaces stored hash`() {
         val firstIssue = service.register(DeviceLifecycleFixtures.registerCommand())
         val firstHash = repository.findByDeviceUuid(DeviceLifecycleFixtures.DEVICE_UUID)?.credentialHash
@@ -88,10 +107,31 @@ private object DeviceLifecycleFixtures {
     const val DEVICE_UUID = "00000000-0000-4000-8000-000000000001"
     const val GROUP_ID = "co-a"
     const val DISPLAY_NAME = "Daegu Drone 01"
+    const val UPDATED_GROUP_ID = "co-b"
+    const val UPDATED_DISPLAY_NAME = "Daegu Drone 01 Updated"
 
     fun registerCommand(): RegisterDeviceCommand =
         RegisterDeviceCommand(
             groupId = GROUP_ID,
             displayName = DISPLAY_NAME,
+            deviceType = DeviceType.DRONE.apiValue,
+            sensors = listOf(RegisteredDeviceSensor(SENSOR_ID, SENSOR_TYPE)),
+            streamPaths = listOf(RegisteredDeviceStream(STREAM_PATH)),
         )
+
+    fun updateCommand(): UpdateDeviceCommand =
+        UpdateDeviceCommand(
+            groupId = UPDATED_GROUP_ID,
+            displayName = UPDATED_DISPLAY_NAME,
+            status = RegisteredDeviceStatus.ACTIVE.name.lowercase(),
+            deviceType = DeviceType.PHONE.apiValue,
+            sensors = listOf(RegisteredDeviceSensor(SENSOR_ID, UPDATED_SENSOR_TYPE)),
+            streamPaths = listOf(RegisteredDeviceStream(UPDATED_STREAM_PATH)),
+        )
+
+    const val SENSOR_ID = "gps-main"
+    const val SENSOR_TYPE = "gps"
+    const val UPDATED_SENSOR_TYPE = "camera"
+    const val STREAM_PATH = "raw/daegu/drone-01"
+    const val UPDATED_STREAM_PATH = "raw/daegu/phone-01"
 }

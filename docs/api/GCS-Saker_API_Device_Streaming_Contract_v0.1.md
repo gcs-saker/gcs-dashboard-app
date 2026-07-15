@@ -119,7 +119,10 @@
 
 | Method | Public URL | 내부 auth-policy route | 인증 | 용도 |
 | --- | --- | --- | --- | --- |
+| GET | `<EDGE>/auth-policy/admin/devices` | `/admin/devices` | admin bearer | 등록 장비 목록 조회 |
 | POST | `<EDGE>/auth-policy/admin/devices` | `/admin/devices` | admin bearer | 장비 UUID와 최초 credential 발급 |
+| GET | `<EDGE>/auth-policy/admin/devices/{deviceUuid}` | `/admin/devices/{deviceUuid}` | admin bearer | 등록 장비 단건 조회 |
+| PATCH | `<EDGE>/auth-policy/admin/devices/{deviceUuid}` | `/admin/devices/{deviceUuid}` | admin bearer | 장비 표시명, 소속 group, lifecycle status 수정 |
 | POST | `<EDGE>/auth-policy/admin/devices/{deviceUuid}/activate` | `/admin/devices/{deviceUuid}/activate` | admin bearer | 장비 송출 활성화 |
 | POST | `<EDGE>/auth-policy/admin/devices/{deviceUuid}/disable` | `/admin/devices/{deviceUuid}/disable` | admin bearer | 분실/폐기/차단 장비 비활성화 |
 | POST | `<EDGE>/auth-policy/admin/devices/{deviceUuid}/credential` | `/admin/devices/{deviceUuid}/credential` | admin bearer | 장비 credential 재발급 |
@@ -129,9 +132,33 @@
 ```json
 {
   "groupId": "co-a",
-  "displayName": "Daegu Drone 01"
+  "displayName": "Daegu Drone 01",
+  "deviceType": "drone",
+  "sensors": [
+    {
+      "sensorId": "gps-main",
+      "sensorType": "gps"
+    }
+  ],
+  "streamPaths": [
+    {
+      "streamPath": "raw/daegu/drone-01",
+      "kind": "webrtc"
+    }
+  ]
 }
 ```
+
+수정 요청 body는 필요한 필드만 보낸다.
+
+```json
+{
+  "displayName": "Daegu Drone 01 Updated",
+  "status": "active"
+}
+```
+
+목록, 단건 조회, 수정 응답은 `credential`을 포함하지 않는다. credential 원문은 최초 등록과 재발급 응답에만 노출한다.
 
 등록/재발급 응답의 `credential`은 최초 1회만 운영자에게 보여주고, 서버 DB에는 hash만 저장한다.
 

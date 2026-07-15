@@ -1,5 +1,6 @@
 package kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence
 
+import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceType
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDevice
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceRepository
@@ -12,13 +13,19 @@ class JdbcRegisteredDeviceRepository(
     dataSource: DataSource,
 ) : RegisteredDeviceRepository {
     private val jdbc = JdbcTemplate(dataSource)
+    private val metadata = JdbcRegisteredDeviceMetadataDao(jdbc)
 
     init {
         AuthPolicyJdbcMigrations.ensure(dataSource)
     }
 
     override fun findByDeviceUuid(deviceUuid: String): RegisteredDevice? =
-        jdbc.query(RegisteredDeviceSql.selectByUuid, rowMapper, deviceUuid).firstOrNull()
+        jdbc.query(RegisteredDeviceSql.selectByUuid, rowMapper, deviceUuid)
+            .firstOrNull()
+            ?.let { metadata.attach(listOf(it)).first() }
+
+    override fun list(): List<RegisteredDevice> =
+        metadata.attach(jdbc.query(RegisteredDeviceSql.selectAll, rowMapper))
 
     @Synchronized
     override fun save(device: RegisteredDevice): RegisteredDevice {
@@ -30,6 +37,7 @@ class JdbcRegisteredDeviceRepository(
                 device.displayName,
                 device.credentialHash,
                 device.status.name.lowercase(),
+                device.deviceType.apiValue,
             )
         } else {
             jdbc.update(
@@ -38,9 +46,11 @@ class JdbcRegisteredDeviceRepository(
                 device.displayName,
                 device.credentialHash,
                 device.status.name.lowercase(),
+                device.deviceType.apiValue,
                 device.deviceUuid,
             )
         }
+        metadata.replace(device)
         return device
     }
 
@@ -52,6 +62,7 @@ class JdbcRegisteredDeviceRepository(
                 displayName = rs.getString(RegisteredDeviceColumns.displayName),
                 credentialHash = rs.getString(RegisteredDeviceColumns.credentialHash),
                 status = RegisteredDeviceStatus.valueOf(rs.getString(RegisteredDeviceColumns.status).uppercase()),
+                deviceType = DeviceType.entries.first { it.apiValue == rs.getString(RegisteredDeviceColumns.deviceType) },
             )
         }
     }
@@ -63,21 +74,27 @@ private object RegisteredDeviceColumns {
     const val displayName = "display_name"
     const val credentialHash = "credential_hash"
     const val status = "status"
+    const val deviceType = "device_type"
 }
 
 private object RegisteredDeviceSql {
+    const val selectAll = """
+        SELECT device_uuid, group_id, display_name, credential_hash, status, device_type
+        FROM registered_devices
+        ORDER BY device_uuid ASC
+    """
     const val selectByUuid = """
-        SELECT device_uuid, group_id, display_name, credential_hash, status
+        SELECT device_uuid, group_id, display_name, credential_hash, status, device_type
         FROM registered_devices
         WHERE device_uuid = ?
     """
     const val insert = """
-        INSERT INTO registered_devices (device_uuid, group_id, display_name, credential_hash, status)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO registered_devices (device_uuid, group_id, display_name, credential_hash, status, device_type)
+        VALUES (?, ?, ?, ?, ?, ?)
     """
     const val update = """
         UPDATE registered_devices
-        SET group_id = ?, display_name = ?, credential_hash = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+        SET group_id = ?, display_name = ?, credential_hash = ?, status = ?, device_type = ?, updated_at = CURRENT_TIMESTAMP
         WHERE device_uuid = ?
     """
 }

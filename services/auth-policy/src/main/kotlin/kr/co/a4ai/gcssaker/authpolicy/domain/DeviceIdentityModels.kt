@@ -6,12 +6,64 @@ enum class RegisteredDeviceStatus {
     DISABLED,
 }
 
+enum class DeviceType(val apiValue: String) {
+    ROBOT("robot"),
+    DRONE("drone"),
+    CAMERA("camera"),
+    MIC("mic"),
+    PHONE("phone"),
+    EDGE_GATEWAY("edge-gateway"),
+}
+
+data class RegisteredDeviceSensor(
+    val sensorId: String,
+    val sensorType: String,
+    val status: String = DeviceRegistryDefaults.ACTIVE_STATUS,
+) {
+    init {
+        require(sensorId.isNotBlank()) { DeviceRegistryErrors.SENSOR_ID_REQUIRED }
+        require(sensorType.isNotBlank()) { DeviceRegistryErrors.SENSOR_TYPE_REQUIRED }
+        require(status.isNotBlank()) { DeviceRegistryErrors.SENSOR_STATUS_REQUIRED }
+    }
+}
+
+data class RegisteredDeviceStream(
+    val streamPath: String,
+    val kind: String = DeviceRegistryDefaults.WEBRTC_KIND,
+    val status: String = DeviceRegistryDefaults.ACTIVE_STATUS,
+) {
+    init {
+        require(streamPath.isNotBlank()) { DeviceRegistryErrors.STREAM_PATH_REQUIRED }
+        require(kind.isNotBlank()) { DeviceRegistryErrors.STREAM_KIND_REQUIRED }
+        require(status.isNotBlank()) { DeviceRegistryErrors.STREAM_STATUS_REQUIRED }
+    }
+}
+
+data class RegisteredDeviceSensors(
+    val values: List<RegisteredDeviceSensor>,
+) {
+    companion object {
+        fun empty(): RegisteredDeviceSensors = RegisteredDeviceSensors(emptyList())
+    }
+}
+
+data class RegisteredDeviceStreams(
+    val values: List<RegisteredDeviceStream>,
+) {
+    companion object {
+        fun empty(): RegisteredDeviceStreams = RegisteredDeviceStreams(emptyList())
+    }
+}
+
 data class RegisteredDevice(
     val deviceUuid: String,
     val groupId: GroupId,
     val displayName: String,
     val credentialHash: String,
     val status: RegisteredDeviceStatus = RegisteredDeviceStatus.PENDING,
+    val deviceType: DeviceType = DeviceType.DRONE,
+    val sensors: RegisteredDeviceSensors = RegisteredDeviceSensors.empty(),
+    val streamPaths: RegisteredDeviceStreams = RegisteredDeviceStreams.empty(),
 ) {
     init {
         require(deviceUuid.isNotBlank()) { "device uuid must not be blank" }
@@ -20,7 +72,22 @@ data class RegisteredDevice(
     }
 }
 
+object DeviceRegistryDefaults {
+    const val ACTIVE_STATUS = "active"
+    const val WEBRTC_KIND = "webrtc"
+}
+
+object DeviceRegistryErrors {
+    const val SENSOR_ID_REQUIRED = "sensor id must not be blank"
+    const val SENSOR_TYPE_REQUIRED = "sensor type must not be blank"
+    const val SENSOR_STATUS_REQUIRED = "sensor status must not be blank"
+    const val STREAM_PATH_REQUIRED = "stream path must not be blank"
+    const val STREAM_KIND_REQUIRED = "stream kind must not be blank"
+    const val STREAM_STATUS_REQUIRED = "stream status must not be blank"
+}
+
 interface RegisteredDeviceRepository {
+    fun list(): List<RegisteredDevice>
     fun findByDeviceUuid(deviceUuid: String): RegisteredDevice?
     fun save(device: RegisteredDevice): RegisteredDevice
 }
@@ -29,6 +96,9 @@ class InMemoryRegisteredDeviceRepository(
     initialDevices: Collection<RegisteredDevice> = emptyList(),
 ) : RegisteredDeviceRepository {
     private val devicesByUuid = initialDevices.associateBy { it.deviceUuid }.toMutableMap()
+
+    override fun list(): List<RegisteredDevice> =
+        devicesByUuid.values.sortedBy { it.deviceUuid }
 
     override fun findByDeviceUuid(deviceUuid: String): RegisteredDevice? =
         devicesByUuid[deviceUuid]

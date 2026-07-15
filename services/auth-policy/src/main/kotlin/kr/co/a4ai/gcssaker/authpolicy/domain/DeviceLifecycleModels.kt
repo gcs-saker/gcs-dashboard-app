@@ -7,6 +7,18 @@ import java.util.UUID
 data class RegisterDeviceCommand(
     val groupId: String,
     val displayName: String,
+    val deviceType: String? = null,
+    val sensors: List<RegisteredDeviceSensor> = emptyList(),
+    val streamPaths: List<RegisteredDeviceStream> = emptyList(),
+)
+
+data class UpdateDeviceCommand(
+    val groupId: String? = null,
+    val displayName: String? = null,
+    val status: String? = null,
+    val deviceType: String? = null,
+    val sensors: List<RegisteredDeviceSensor>? = null,
+    val streamPaths: List<RegisteredDeviceStream>? = null,
 )
 
 data class DeviceCredentialIssue(
@@ -38,6 +50,12 @@ class DeviceLifecycleService(
     private val credentialGenerator: DeviceCredentialGenerator = DeviceCredentialGenerator(),
     private val uuidGenerator: () -> String = { UUID.randomUUID().toString() },
 ) {
+    fun list(): List<RegisteredDevice> =
+        devices.list()
+
+    fun get(deviceUuid: String): RegisteredDevice =
+        devices.findByDeviceUuid(deviceUuid) ?: throw DeviceNotFoundException(deviceUuid)
+
     fun register(command: RegisterDeviceCommand): DeviceCredentialIssue {
         val deviceUuid = uniqueDeviceUuid()
         val credential = credentialGenerator.generate()
@@ -47,6 +65,9 @@ class DeviceLifecycleService(
             displayName = command.displayName,
             credentialHash = passwordHasher.hash(credential),
             status = RegisteredDeviceStatus.PENDING,
+            deviceType = command.deviceType?.let(::parseDeviceType) ?: DeviceType.DRONE,
+            sensors = RegisteredDeviceSensors(command.sensors),
+            streamPaths = RegisteredDeviceStreams(command.streamPaths),
         )
         return DeviceCredentialIssue(devices.save(device), credential)
     }
@@ -68,19 +89,43 @@ class DeviceLifecycleService(
         updateStatus(deviceUuid, RegisteredDeviceStatus.DISABLED)
 
     fun rotateCredential(deviceUuid: String): DeviceCredentialIssue {
-        val device = devices.findByDeviceUuid(deviceUuid) ?: throw DeviceNotFoundException(deviceUuid)
+        val device = get(deviceUuid)
         val credential = credentialGenerator.generate()
         val updated = devices.save(device.copy(credentialHash = passwordHasher.hash(credential)))
         return DeviceCredentialIssue(updated, credential)
     }
 
+    fun update(deviceUuid: String, command: UpdateDeviceCommand): RegisteredDevice {
+        val current = get(deviceUuid)
+        return devices.save(
+            current.copy(
+                groupId = command.groupId?.let(::GroupId) ?: current.groupId,
+                displayName = command.displayName ?: current.displayName,
+                status = command.status?.let(::parseStatus) ?: current.status,
+                deviceType = command.deviceType?.let(::parseDeviceType) ?: current.deviceType,
+                sensors = command.sensors?.let(::RegisteredDeviceSensors) ?: current.sensors,
+                streamPaths = command.streamPaths?.let(::RegisteredDeviceStreams) ?: current.streamPaths,
+            ),
+        )
+    }
+
     private fun updateStatus(deviceUuid: String, status: RegisteredDeviceStatus): RegisteredDevice {
-        val device = devices.findByDeviceUuid(deviceUuid) ?: throw DeviceNotFoundException(deviceUuid)
+        val device = get(deviceUuid)
         return devices.save(device.copy(status = status))
     }
+
+    private fun parseStatus(status: String): RegisteredDeviceStatus =
+        RegisteredDeviceStatus.entries.firstOrNull { it.name.equals(status, ignoreCase = true) }
+            ?: throw IllegalArgumentException(DeviceLifecycleContract.INVALID_DEVICE_STATUS)
+
+    private fun parseDeviceType(deviceType: String): DeviceType =
+        DeviceType.entries.firstOrNull { it.apiValue == deviceType || it.name.equals(deviceType, ignoreCase = true) }
+            ?: throw IllegalArgumentException(DeviceLifecycleContract.INVALID_DEVICE_TYPE)
 }
 
 object DeviceLifecycleContract {
     const val UUID_GENERATION_ATTEMPTS = 3
     const val UUID_GENERATION_FAILED = "device uuid generation failed"
+    const val INVALID_DEVICE_STATUS = "invalid device status"
+    const val INVALID_DEVICE_TYPE = "invalid device type"
 }

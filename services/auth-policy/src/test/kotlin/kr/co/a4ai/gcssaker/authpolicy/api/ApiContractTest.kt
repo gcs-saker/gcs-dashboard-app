@@ -37,6 +37,7 @@ class ApiContractTest {
         assertEquals(ApiContractFixtures.DEVICE_POLICY_ROOT, DevicePolicyApiRoutes.ROOT)
         assertEquals(ApiContractFixtures.DEVICE_POLICY_PUBLISH, DevicePolicyApiRoutes.PUBLISH)
         assertEquals(ApiContractFixtures.ADMIN_DEVICE_ROOT, AdminDeviceApiRoutes.ROOT)
+        assertEquals(ApiContractFixtures.ADMIN_DEVICE_DEVICE, AdminDeviceApiRoutes.DEVICE)
         assertEquals(ApiContractFixtures.ADMIN_DEVICE_ACTIVATE, AdminDeviceApiRoutes.ACTIVATE)
         assertEquals(ApiContractFixtures.ADMIN_DEVICE_DISABLE, AdminDeviceApiRoutes.DISABLE)
         assertEquals(ApiContractFixtures.ADMIN_DEVICE_ROTATE_CREDENTIAL, AdminDeviceApiRoutes.ROTATE_CREDENTIAL)
@@ -69,7 +70,10 @@ class ApiContractTest {
             TimeSyncController::class to "status",
             TimeSyncController::class to "check",
             TimeSyncController::class to "updateConfig",
+            AdminDeviceController::class to "list",
+            AdminDeviceController::class to "get",
             AdminDeviceController::class to "register",
+            AdminDeviceController::class to "update",
             AdminDeviceController::class to "activate",
             AdminDeviceController::class to "disable",
             AdminDeviceController::class to "rotateCredential",
@@ -110,6 +114,7 @@ class ApiContractTest {
             StreamPolicyApiRoutes.ROOT + StreamPolicyApiRoutes.ACCESS,
             DevicePolicyApiRoutes.ROOT + DevicePolicyApiRoutes.PUBLISH,
             AdminDeviceApiRoutes.ROOT,
+            AdminDeviceApiRoutes.ROOT + AdminDeviceApiRoutes.DEVICE,
             AdminDeviceApiRoutes.ROOT + AdminDeviceApiRoutes.ACTIVATE,
             AdminDeviceApiRoutes.ROOT + AdminDeviceApiRoutes.DISABLE,
             AdminDeviceApiRoutes.ROOT + AdminDeviceApiRoutes.ROTATE_CREDENTIAL,
@@ -336,29 +341,53 @@ class ApiContractTest {
             RegisterDeviceRequest(
                 groupId = ApiContractFixtures.GROUP_ID_VALUE,
                 displayName = ApiContractFixtures.DEVICE_DISPLAY_NAME_VALUE,
+                deviceType = ApiContractFixtures.DEVICE_TYPE_VALUE,
+                sensors = listOf(ApiContractFixtures.sensorRequest()),
+                streamPaths = listOf(ApiContractFixtures.streamRequest()),
             ),
         )
         val credentialPayload = objectMapper.writeValueAsString(
             DeviceCredentialIssueResponse(
                 deviceUuid = ApiContractFixtures.DEVICE_UUID_VALUE,
+                deviceType = ApiContractFixtures.DEVICE_TYPE_VALUE,
                 credential = ApiContractFixtures.DEVICE_CREDENTIAL_VALUE,
                 groupId = ApiContractFixtures.GROUP_ID_VALUE,
                 displayName = ApiContractFixtures.DEVICE_DISPLAY_NAME_VALUE,
                 status = ApiContractFixtures.DEVICE_STATUS_VALUE,
+                sensors = listOf(ApiContractFixtures.sensorResponse()),
+                streamPaths = listOf(ApiContractFixtures.streamResponse()),
             ),
         )
         val statusPayload = objectMapper.writeValueAsString(
             RegisteredDeviceResponse(
                 deviceUuid = ApiContractFixtures.DEVICE_UUID_VALUE,
+                deviceType = ApiContractFixtures.DEVICE_TYPE_VALUE,
                 groupId = ApiContractFixtures.GROUP_ID_VALUE,
                 displayName = ApiContractFixtures.DEVICE_DISPLAY_NAME_VALUE,
                 status = ApiContractFixtures.DEVICE_STATUS_VALUE,
+                sensors = listOf(ApiContractFixtures.sensorResponse()),
+                streamPaths = listOf(ApiContractFixtures.streamResponse()),
+            ),
+        )
+        val updatePayload = objectMapper.writeValueAsString(
+            UpdateDeviceRequest(
+                groupId = ApiContractFixtures.GROUP_ID_VALUE,
+                displayName = ApiContractFixtures.DEVICE_DISPLAY_NAME_VALUE,
+                status = ApiContractFixtures.DEVICE_STATUS_VALUE,
+                deviceType = ApiContractFixtures.DEVICE_TYPE_VALUE,
+                sensors = listOf(ApiContractFixtures.sensorRequest()),
+                streamPaths = listOf(ApiContractFixtures.streamRequest()),
             ),
         )
 
         assertTrue(requestPayload.contains(quoted(AdminDeviceApiFields.GROUP_ID)))
         assertTrue(requestPayload.contains(quoted(AdminDeviceApiFields.DISPLAY_NAME)))
+        assertTrue(requestPayload.contains(quoted(AdminDeviceApiFields.DEVICE_TYPE)))
+        assertTrue(requestPayload.contains(quoted(AdminDeviceApiFields.SENSORS)))
+        assertTrue(requestPayload.contains(quoted(AdminDeviceApiFields.STREAM_PATHS)))
         assertFalse(requestPayload.contains(quoted(AdminDeviceApiFields.DEVICE_UUID)))
+        assertTrue(updatePayload.contains(quoted(AdminDeviceApiFields.STATUS)))
+        assertFalse(updatePayload.contains(quoted(AdminDeviceApiFields.CREDENTIAL)))
         assertTrue(credentialPayload.contains(quoted(AdminDeviceApiFields.CREDENTIAL)))
         assertTrue(statusPayload.contains(quoted(AdminDeviceApiFields.DEVICE_UUID)))
         assertFalse(statusPayload.contains(quoted(AdminDeviceApiFields.CREDENTIAL)))
@@ -391,6 +420,7 @@ private object ApiContractFixtures {
     const val DEVICE_POLICY_ROOT = "/policy/devices"
     const val DEVICE_POLICY_PUBLISH = "/publish"
     const val ADMIN_DEVICE_ROOT = "/admin/devices"
+    const val ADMIN_DEVICE_DEVICE = "/{deviceUuid}"
     const val ADMIN_DEVICE_ACTIVATE = "/{deviceUuid}/activate"
     const val ADMIN_DEVICE_DISABLE = "/{deviceUuid}/disable"
     const val ADMIN_DEVICE_ROTATE_CREDENTIAL = "/{deviceUuid}/credential"
@@ -448,10 +478,41 @@ private object ApiContractFixtures {
     const val ICE_PATH_COUNT_VALUE = 1L
     const val RELAY_FALLBACK_REASON_VALUE = "srflx candidate failed"
     const val DEVICE_UUID_VALUE = "device-front-001"
+    const val DEVICE_TYPE_VALUE = "drone"
     const val DEVICE_CREDENTIAL_VALUE = "device-secret"
     const val DEVICE_AUTH_REASON_VALUE = "device group authorized"
     const val DEVICE_POLICY_VERSION_VALUE = "device-policy-v1"
     const val DEVICE_DISPLAY_NAME_VALUE = "Daegu Drone 01"
     const val DEVICE_STATUS_VALUE = "pending"
+    const val SENSOR_ID_VALUE = "gps-main"
+    const val SENSOR_TYPE_VALUE = "gps"
+    const val STREAM_PATH_DEVICE_VALUE = "raw/daegu/drone-01"
+    const val STREAM_KIND_VALUE = "webrtc"
     val INSTANT_VALUE: Instant = Instant.parse("2026-06-01T00:00:00Z")
+
+    fun sensorRequest(): DeviceSensorRequest =
+        DeviceSensorRequest(
+            sensorId = SENSOR_ID_VALUE,
+            sensorType = SENSOR_TYPE_VALUE,
+        )
+
+    fun streamRequest(): DeviceStreamRequest =
+        DeviceStreamRequest(
+            streamPath = STREAM_PATH_DEVICE_VALUE,
+            kind = STREAM_KIND_VALUE,
+        )
+
+    fun sensorResponse(): DeviceSensorResponse =
+        DeviceSensorResponse(
+            sensorId = SENSOR_ID_VALUE,
+            sensorType = SENSOR_TYPE_VALUE,
+            status = DEVICE_STATUS_VALUE,
+        )
+
+    fun streamResponse(): DeviceStreamResponse =
+        DeviceStreamResponse(
+            streamPath = STREAM_PATH_DEVICE_VALUE,
+            kind = STREAM_KIND_VALUE,
+            status = DEVICE_STATUS_VALUE,
+        )
 }
