@@ -1,8 +1,11 @@
+@file:Suppress("DEPRECATION")
+
 package kr.co.a4ai.gcssaker.authpolicy.api
 
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
-import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher
+import org.springframework.security.web.util.matcher.RequestMatcher
 
 object AuthSecurityRouteContract {
     const val ALL_PATHS = "/**"
@@ -58,10 +61,10 @@ data class RouteMatcher(
     val method: HttpMethod?,
     val pattern: String,
 ) {
-    fun toPathPatternRequestMatcher(): PathPatternRequestMatcher =
+    fun toRequestMatcher(): RequestMatcher =
         if (method == null) {
-            PathPatternRequestMatcher.withDefaults().matcher(pattern)
+            AntPathRequestMatcher(pattern)
         } else {
-            PathPatternRequestMatcher.withDefaults().matcher(method, pattern)
+            AntPathRequestMatcher(pattern, method.name())
         }
 }

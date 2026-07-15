@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package kr.co.a4ai.gcssaker.authpolicy.api
 
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
@@ -9,7 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
-import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
@@ -23,7 +25,7 @@ class AuthSecurityConfig {
         settings: AuthRuntimeSettings,
     ): SecurityFilterChain {
         http
-            .securityMatcher(PathPatternRequestMatcher.withDefaults().matcher(AuthSecurityRouteContract.AUTH_PREFIX))
+            .securityMatcher(AntPathRequestMatcher(AuthSecurityRouteContract.AUTH_PREFIX))
             .csrf { csrf -> csrf.disable() }
             .cors { cors -> cors.configurationSource(corsConfigurationSource(settings)) }
             .sessionManagement { sessionsConfig ->
@@ -62,14 +64,14 @@ class AuthSecurityConfig {
             }
             .authorizeHttpRequests { requests ->
                 AuthSecurityRouteContract.PUBLIC_MATCHERS.forEach { matcher ->
-                    requests.requestMatchers(matcher.toPathPatternRequestMatcher()).permitAll()
+                    requests.requestMatchers(matcher.toRequestMatcher()).permitAll()
                 }
                 AuthSecurityRouteContract.ADMIN_MATCHERS.forEach { matcher ->
-                    requests.requestMatchers(matcher.toPathPatternRequestMatcher())
+                    requests.requestMatchers(matcher.toRequestMatcher())
                         .hasAuthority(AuthSecurityRouteContract.ADMIN_AUTHORITY)
                 }
                 AuthSecurityRouteContract.PROTECTED_MATCHERS.forEach { matcher ->
-                    requests.requestMatchers(matcher.toPathPatternRequestMatcher()).authenticated()
+                    requests.requestMatchers(matcher.toRequestMatcher()).authenticated()
                 }
                 requests.anyRequest().authenticated()
             }
