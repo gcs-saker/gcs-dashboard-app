@@ -17,6 +17,7 @@ object RateLimitContract {
     const val LOGIN_PATH = AuthApiRoutes.ROOT + AuthApiRoutes.LOGIN
     const val REFRESH_PATH = AuthApiRoutes.ROOT + AuthApiRoutes.REFRESH
     const val SIGNUP_PATH = AuthApiRoutes.ROOT + AuthApiRoutes.SIGNUP
+    const val DEVICE_BOOTSTRAP_PATH = DeviceBootstrapApiRoutes.ROOT + DeviceBootstrapApiRoutes.REGISTER
 }
 
 class RateLimitFilter(
@@ -55,6 +56,7 @@ class RateLimitFilter(
             RateLimitContract.LOGIN_PATH,
             RateLimitContract.REFRESH_PATH,
             RateLimitContract.SIGNUP_PATH,
+            RateLimitContract.DEVICE_BOOTSTRAP_PATH,
         )
     }
 }

@@ -50,5 +50,6 @@ class ApiModuleConfig {
         FilterRegistrationBean(RateLimitFilter(authRateLimiter, settings.authRateLimitEnabled)).apply {
             order = 2
             addUrlPatterns("${AuthApiRoutes.ROOT}/*")
+            addUrlPatterns("${DeviceBootstrapApiRoutes.ROOT}/*")
         }
 }

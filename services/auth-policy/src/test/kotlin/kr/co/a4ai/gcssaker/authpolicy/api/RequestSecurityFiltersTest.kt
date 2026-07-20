@@ -89,6 +89,22 @@ class RequestSecurityFiltersTest {
     }
 
     @Test
+    fun `rate limit filter covers device bootstrap registration`() {
+        val filter = RateLimitFilter(
+            limiter = FixedWindowRateLimiter(maxRequests = 1, window = Duration.ofMinutes(1)),
+            enabled = true,
+        )
+        val first = MockHttpServletResponse()
+        val second = MockHttpServletResponse()
+
+        filter.doFilter(deviceBootstrapRequest(), first, MockFilterChain())
+        filter.doFilter(deviceBootstrapRequest(), second, MockFilterChain())
+
+        assertEquals(200, first.status)
+        assertEquals(429, second.status)
+    }
+
+    @Test
     fun `api access log filter records request path status and correlation id`() {
         val sink = RecordingApiAccessLogSink()
         val request = MockHttpServletRequest("GET", "/auth-policy/healthz").apply {
@@ -113,6 +129,11 @@ class RequestSecurityFiltersTest {
     private fun authRequest(): MockHttpServletRequest =
         MockHttpServletRequest("POST", RateLimitContract.LOGIN_PATH).apply {
             remoteAddr = "203.0.113.10"
+        }
+
+    private fun deviceBootstrapRequest(): MockHttpServletRequest =
+        MockHttpServletRequest("POST", RateLimitContract.DEVICE_BOOTSTRAP_PATH).apply {
+            remoteAddr = "203.0.113.20"
         }
 
     private class RecordingApiAccessLogSink : ApiAccessLogSink {

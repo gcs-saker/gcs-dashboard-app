@@ -103,6 +103,17 @@ class AuthSecurityConfigTest @Autowired constructor(
     }
 
     @Test
+    fun `device bootstrap route is public but requires provisioning token`() {
+        mockMvc.post(DeviceBootstrapApiRoutes.ROOT + DeviceBootstrapApiRoutes.REGISTER) {
+            contentType = org.springframework.http.MediaType.APPLICATION_JSON
+            content = AuthSecurityConfigTestContract.DEVICE_BOOTSTRAP_PAYLOAD
+        }
+            .andExpect {
+                status { isForbidden() }
+            }
+    }
+
+    @Test
     fun `admin device route rejects non admin bearer auth at security boundary`() {
         mockMvc.post(AdminDeviceApiRoutes.ROOT) {
             header(HttpHeaders.AUTHORIZATION, bearerAccessToken())
@@ -133,4 +144,6 @@ private object AuthSecurityConfigTestContract {
     const val ADMIN_DEVICE_PAYLOAD = """{"groupId":"co-a","displayName":"Daegu Drone 01"}"""
     const val DEVICE_PUBLISH_PAYLOAD =
         """{"deviceUuid":"unknown-device","credential":"wrong","streamId":"raw.front.drone-1","path":"raw/front/drone-1"}"""
+    const val DEVICE_BOOTSTRAP_PAYLOAD =
+        """{"provisioningToken":"wrong","displayName":"Bootstrap Drone 01","deviceType":"drone"}"""
 }

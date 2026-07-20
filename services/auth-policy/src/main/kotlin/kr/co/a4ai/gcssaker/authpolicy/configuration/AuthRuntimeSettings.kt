@@ -1,6 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy.configuration
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvites
+import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceBootstrapTokens
 import org.springframework.core.env.Environment
 
 data class AuthRuntimeSettings(
@@ -25,6 +26,7 @@ data class AuthRuntimeSettings(
     val smokeCompanyId: Int,
     val smokeGroupId: String,
     val signupInvites: SignupInvites,
+    val deviceBootstrapTokens: DeviceBootstrapTokens = DeviceBootstrapTokens.empty(),
     val redisPrincipalCacheEnabled: Boolean = true,
     val redisRefreshSessionEnabled: Boolean = true,
     val jdbcPersistenceEnabled: Boolean = true,

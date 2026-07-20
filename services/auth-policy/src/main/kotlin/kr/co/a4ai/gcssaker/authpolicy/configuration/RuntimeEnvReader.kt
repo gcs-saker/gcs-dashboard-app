@@ -1,6 +1,8 @@
 package kr.co.a4ai.gcssaker.authpolicy.configuration
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
+import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceBootstrapToken
+import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceBootstrapTokens
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvite
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvites
 import org.springframework.core.env.Environment
@@ -44,6 +46,13 @@ internal class RuntimeEnvReader(private val env: Environment) {
         return SignupInvites.of(raw.split(",").map(String::trim).filter(String::isNotEmpty).map(::signupInvite))
     }
 
+    fun deviceBootstrapTokens(): DeviceBootstrapTokens {
+        val raw = env.getProperty(AuthRuntimeEnvKeys.AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS)
+            ?: AuthRuntimeDefaults.DEVICE_BOOTSTRAP_TOKENS.takeIf { allowsLocalDefaults() }
+            ?: return DeviceBootstrapTokens.empty()
+        return DeviceBootstrapTokens.of(raw.split(",").map(String::trim).filter(String::isNotEmpty).map(::bootstrapToken))
+    }
+
     private fun allowsLocalDefaults(): Boolean =
         env.activeProfiles.any { it in LOCAL_DEFAULT_PROFILES }
 
@@ -56,5 +65,13 @@ internal class RuntimeEnvReader(private val env: Environment) {
             "${AuthRuntimeEnvKeys.AUTH_POLICY_SIGNUP_INVITES} must use code:companyId:groupId entries"
         }
         return SignupInvite(parts[0].trim(), parts[1].trim().toInt(), GroupId(parts[2].trim()))
+    }
+
+    private fun bootstrapToken(item: String): DeviceBootstrapToken {
+        val parts = item.split(":")
+        require(parts.size == 2) {
+            "${AuthRuntimeEnvKeys.AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS} must use token:groupId entries"
+        }
+        return DeviceBootstrapToken(parts[0].trim(), GroupId(parts[1].trim()))
     }
 }

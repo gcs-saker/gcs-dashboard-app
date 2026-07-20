@@ -49,6 +49,7 @@ class AuthPolicyConfigTest {
                     "AUTH_POLICY_SMOKE_USERNAME" to "viewer",
                     "AUTH_POLICY_SMOKE_PASSWORD" to "viewer-password",
                     "AUTH_POLICY_SMOKE_GROUP_ID" to "co-a",
+                    "AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS" to "bootstrap-token-a:co-a,bootstrap-token-b:co-b",
                     "AUTH_POLICY_OPERATIONAL_EVENT_CACHE_KEY_PREFIX" to "test:ops-events:",
                 ),
             ),
@@ -67,6 +68,8 @@ class AuthPolicyConfigTest {
         assertEquals("admin", settings.adminUsername)
         assertEquals("op", settings.operatorUsername)
         assertEquals("viewer", settings.smokeUsername)
+        assertEquals(GroupId("co-a"), settings.deviceBootstrapTokens.groupIdFor("bootstrap-token-a"))
+        assertEquals(GroupId("co-b"), settings.deviceBootstrapTokens.groupIdFor("bootstrap-token-b"))
         assertTrue(settings.redisPrincipalCacheEnabled)
         assertEquals("test:ops-events:", settings.operationalEventCacheKeyPrefix)
     }
@@ -185,6 +188,7 @@ class AuthPolicyConfigTest {
         assertEquals("admin-password", settings.adminPassword)
         assertEquals("correct-password", settings.operatorPassword)
         assertEquals("m7-smoke-pass", settings.smokePassword)
+        assertEquals(GroupId("co-a"), settings.deviceBootstrapTokens.groupIdFor("LOCAL-DEVICE-BOOTSTRAP"))
     }
 
     @Test
