@@ -19,6 +19,7 @@
 | 운영 Edge 예시 | `https://a4ai.tplinkdns.com` |
 | 로컬 Edge 예시 | `http://localhost:8080` |
 | 인증 API public prefix | `/auth-policy/auth` |
+| 장비 최초 등록 public prefix | `/auth-policy/device-bootstrap` |
 | Dashboard REST API public prefix | `/api` |
 | Media Control public prefix | `/media-control` |
 | WebRTC signaling public prefix | `/webrtc` |
@@ -80,6 +81,76 @@
 | POST | `<EDGE>/auth-policy/policy/streams/access` | `/policy/streams/access` | bearer | stream 접근 권한 판정 |
 
 이 API는 보통 media-control이 내부적으로 호출한다. 외부 dashboard/device가 직접 호출하는 것을 기본 흐름으로 두지 않는다.
+
+## Device Bootstrap API
+
+이 API는 로봇, 드론, 휴대폰, edge gateway가 처음 서버에 연결될 때 `deviceUuid`와 최초 device credential을 자동 발급받기 위한 API다.
+
+무제한 공개 등록을 막기 위해 요청에는 서버 운영자가 사전에 배포한 `provisioningToken`이 필요하다. 서버는 `AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS` 설정에서 token과 group을 매핑한다.
+
+설정 형식:
+
+```text
+AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS=<token>:<groupId>,<token2>:<groupId2>
+```
+
+| Method | Public URL | 내부 auth-policy route | 인증 | 용도 |
+| --- | --- | --- | --- | --- |
+| POST | `<EDGE>/auth-policy/device-bootstrap/register` | `/device-bootstrap/register` | provisioning token | 장비 UUID와 최초 credential 자동 발급 |
+
+요청 body:
+
+```json
+{
+  "provisioningToken": "<provisioning-token>",
+  "displayName": "Daegu Drone 01",
+  "deviceType": "drone",
+  "sensors": [
+    {
+      "sensorId": "gps-main",
+      "sensorType": "gps"
+    }
+  ],
+  "streamPaths": [
+    {
+      "streamPath": "raw/daegu/drone-01",
+      "kind": "webrtc"
+    }
+  ]
+}
+```
+
+응답 body:
+
+```json
+{
+  "deviceUuid": "00000000-0000-4000-8000-000000000001",
+  "deviceType": "drone",
+  "credential": "<device-secret-shown-once>",
+  "displayName": "Daegu Drone 01",
+  "status": "pending",
+  "sensors": [
+    {
+      "sensorId": "gps-main",
+      "sensorType": "gps",
+      "status": "active"
+    }
+  ],
+  "streamPaths": [
+    {
+      "streamPath": "raw/daegu/drone-01",
+      "kind": "webrtc",
+      "status": "active"
+    }
+  ]
+}
+```
+
+요청에는 `groupId`를 넣지 않는다. 서버가 provisioning token에 묶인 group을 원장으로 삼아 `registered_devices.group_id`에 저장한다.
+
+발급 직후 장비 lifecycle status는 `pending`이다. 실제 송출을 허용하려면 관리자가 `<EDGE>/auth-policy/admin/devices/{deviceUuid}/activate`를 호출해 활성화한다.
+
+장비는 응답의 `deviceUuid`와 `credential`을 로컬 secure storage에 저장한다. credential 원문은 서버 DB에 저장하지 않고 hash만 저장한다. credential을 분실하면 관리자 credential rotate API로 재발급한다.
 
 ## Device Publish Policy API
 
@@ -253,7 +324,9 @@ Authorization: Bearer <accessToken>
 
 ## 외부 로봇 / 드론 WebRTC 송출 흐름
 
-1. 장비 또는 gateway에 `deviceUuid`와 device credential을 안전하게 보관한다.
+1. 최초 연결 장비는 `<EDGE>/auth-policy/device-bootstrap/register`로 `deviceUuid`와 device credential을 발급받아 안전하게 보관한다.
+   - 이미 등록된 장비는 저장된 `deviceUuid`와 device credential을 재사용한다.
+   - 관리자가 사전 등록하는 경우 `<EDGE>/auth-policy/admin/devices` 응답의 값을 장비에 주입한다.
 2. stream id를 정한다.
    - 예: `raw.drone01.front`
    - Media path: `raw/drone01/front`

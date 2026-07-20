@@ -5,6 +5,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.CachedAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.DevicePublishAuthorizationService
+import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceBootstrapService
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceLifecycleService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
@@ -123,6 +124,13 @@ class AuthPolicyConfig {
         passwordHasher: PasswordHasher,
     ): DeviceLifecycleService =
         DeviceLifecycleService(devices, passwordHasher)
+
+    @Bean
+    fun deviceBootstrapService(
+        lifecycle: DeviceLifecycleService,
+        settings: AuthRuntimeSettings,
+    ): DeviceBootstrapService =
+        DeviceBootstrapService(lifecycle, settings.deviceBootstrapTokens)
 
     @Bean
     fun timeSyncConfigRepository(env: Environment): TimeSyncConfigRepository =

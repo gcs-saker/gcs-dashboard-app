@@ -42,6 +42,7 @@ object AuthSecurityRouteContract {
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.REFRESH),
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.LOGOUT),
         RouteMatcher(HttpMethod.POST, DevicePolicyApiRoutes.ROOT + DevicePolicyApiRoutes.PUBLISH),
+        RouteMatcher(HttpMethod.POST, DeviceBootstrapApiRoutes.ROOT + DeviceBootstrapApiRoutes.REGISTER),
     )
     val ADMIN_MATCHERS = listOf(RouteMatcher(null, ADMIN_PREFIX))
     val ADMIN_AUTHORITY = roleAuthority(ADMIN_ROLE_NAME)

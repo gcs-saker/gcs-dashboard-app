@@ -36,6 +36,8 @@ class ApiContractTest {
         assertEquals(ApiContractFixtures.STREAM_POLICY_ROOT, StreamPolicyApiRoutes.ROOT)
         assertEquals(ApiContractFixtures.DEVICE_POLICY_ROOT, DevicePolicyApiRoutes.ROOT)
         assertEquals(ApiContractFixtures.DEVICE_POLICY_PUBLISH, DevicePolicyApiRoutes.PUBLISH)
+        assertEquals(ApiContractFixtures.DEVICE_BOOTSTRAP_ROOT, DeviceBootstrapApiRoutes.ROOT)
+        assertEquals(ApiContractFixtures.DEVICE_BOOTSTRAP_REGISTER, DeviceBootstrapApiRoutes.REGISTER)
         assertEquals(ApiContractFixtures.ADMIN_DEVICE_ROOT, AdminDeviceApiRoutes.ROOT)
         assertEquals(ApiContractFixtures.ADMIN_DEVICE_DEVICE, AdminDeviceApiRoutes.DEVICE)
         assertEquals(ApiContractFixtures.ADMIN_DEVICE_ACTIVATE, AdminDeviceApiRoutes.ACTIVATE)
@@ -113,6 +115,7 @@ class ApiContractTest {
             OperationalReadApiRoutes.ASSET_BY_GATEWAY,
             StreamPolicyApiRoutes.ROOT + StreamPolicyApiRoutes.ACCESS,
             DevicePolicyApiRoutes.ROOT + DevicePolicyApiRoutes.PUBLISH,
+            DeviceBootstrapApiRoutes.ROOT + DeviceBootstrapApiRoutes.REGISTER,
             AdminDeviceApiRoutes.ROOT,
             AdminDeviceApiRoutes.ROOT + AdminDeviceApiRoutes.DEVICE,
             AdminDeviceApiRoutes.ROOT + AdminDeviceApiRoutes.ACTIVATE,
@@ -393,6 +396,39 @@ class ApiContractTest {
         assertFalse(statusPayload.contains(quoted(AdminDeviceApiFields.CREDENTIAL)))
     }
 
+    @Test
+    fun `device bootstrap dto issues identity without accepting group id`() {
+        val requestPayload = objectMapper.writeValueAsString(
+            DeviceBootstrapRequest(
+                provisioningToken = ApiContractFixtures.PROVISIONING_TOKEN_VALUE,
+                displayName = ApiContractFixtures.DEVICE_DISPLAY_NAME_VALUE,
+                deviceType = ApiContractFixtures.DEVICE_TYPE_VALUE,
+                sensors = listOf(ApiContractFixtures.sensorRequest()),
+                streamPaths = listOf(ApiContractFixtures.streamRequest()),
+            ),
+        )
+        val responsePayload = objectMapper.writeValueAsString(
+            DeviceBootstrapResponse(
+                deviceUuid = ApiContractFixtures.DEVICE_UUID_VALUE,
+                deviceType = ApiContractFixtures.DEVICE_TYPE_VALUE,
+                credential = ApiContractFixtures.DEVICE_CREDENTIAL_VALUE,
+                displayName = ApiContractFixtures.DEVICE_DISPLAY_NAME_VALUE,
+                status = ApiContractFixtures.DEVICE_STATUS_VALUE,
+                sensors = listOf(ApiContractFixtures.sensorResponse()),
+                streamPaths = listOf(ApiContractFixtures.streamResponse()),
+            ),
+        )
+
+        assertTrue(requestPayload.contains(quoted(DeviceBootstrapApiFields.PROVISIONING_TOKEN)))
+        assertTrue(requestPayload.contains(quoted(DeviceBootstrapApiFields.DISPLAY_NAME)))
+        assertTrue(requestPayload.contains(quoted(DeviceBootstrapApiFields.DEVICE_TYPE)))
+        assertFalse(requestPayload.contains(quoted(DeviceBootstrapApiFields.DEVICE_UUID)))
+        assertFalse(requestPayload.contains(quoted(AdminDeviceApiFields.GROUP_ID)))
+        assertTrue(responsePayload.contains(quoted(DeviceBootstrapApiFields.DEVICE_UUID)))
+        assertTrue(responsePayload.contains(quoted(DeviceBootstrapApiFields.CREDENTIAL)))
+        assertFalse(responsePayload.contains(quoted(AdminDeviceApiFields.GROUP_ID)))
+    }
+
     private fun quoted(value: String): String = "\"$value\""
 }
 
@@ -419,6 +455,8 @@ private object ApiContractFixtures {
     const val STREAM_POLICY_ROOT = "/policy/streams"
     const val DEVICE_POLICY_ROOT = "/policy/devices"
     const val DEVICE_POLICY_PUBLISH = "/publish"
+    const val DEVICE_BOOTSTRAP_ROOT = "/device-bootstrap"
+    const val DEVICE_BOOTSTRAP_REGISTER = "/register"
     const val ADMIN_DEVICE_ROOT = "/admin/devices"
     const val ADMIN_DEVICE_DEVICE = "/{deviceUuid}"
     const val ADMIN_DEVICE_ACTIVATE = "/{deviceUuid}/activate"
@@ -480,6 +518,7 @@ private object ApiContractFixtures {
     const val DEVICE_UUID_VALUE = "device-front-001"
     const val DEVICE_TYPE_VALUE = "drone"
     const val DEVICE_CREDENTIAL_VALUE = "device-secret"
+    const val PROVISIONING_TOKEN_VALUE = "bootstrap-token"
     const val DEVICE_AUTH_REASON_VALUE = "device group authorized"
     const val DEVICE_POLICY_VERSION_VALUE = "device-policy-v1"
     const val DEVICE_DISPLAY_NAME_VALUE = "Daegu Drone 01"

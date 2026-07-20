@@ -55,6 +55,7 @@ object AuthRuntimeSettingsReader {
             smokeCompanyId = reader.int(AuthRuntimeEnvKeys.AUTH_POLICY_SMOKE_COMPANY_ID, AuthRuntimeDefaults.COMPANY_ID),
             smokeGroupId = reader.string(AuthRuntimeEnvKeys.AUTH_POLICY_SMOKE_GROUP_ID, AuthRuntimeDefaults.GROUP_ID),
             signupInvites = reader.signupInvites(),
+            deviceBootstrapTokens = reader.deviceBootstrapTokens(),
             redisPrincipalCacheEnabled = reader.bool(AuthRuntimeEnvKeys.AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED, true),
             redisRefreshSessionEnabled = reader.bool(AuthRuntimeEnvKeys.AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED, true),
             jdbcPersistenceEnabled = reader.bool(AuthRuntimeEnvKeys.AUTH_POLICY_JDBC_PERSISTENCE_ENABLED, true),
