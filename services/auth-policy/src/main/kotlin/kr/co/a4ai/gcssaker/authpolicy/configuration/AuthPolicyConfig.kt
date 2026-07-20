@@ -7,8 +7,11 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.CachedAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.DevicePublishAuthorizationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceBootstrapService
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceLifecycleService
+import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceProvisioningTokenRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceProvisioningTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryDeviceProvisioningTokenRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryRegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
@@ -20,6 +23,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.RefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfigRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncStatusService
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcDeviceProvisioningTokenRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcRegisteredDeviceRepository
 import org.springframework.beans.factory.ObjectProvider
@@ -126,11 +130,32 @@ class AuthPolicyConfig {
         DeviceLifecycleService(devices, passwordHasher)
 
     @Bean
+    fun deviceProvisioningTokenRepository(
+        settings: AuthRuntimeSettings,
+        dataSource: ObjectProvider<DataSource>,
+    ): DeviceProvisioningTokenRepository =
+        if (settings.jdbcPersistenceEnabled) {
+            dataSource.getIfAvailable()?.let { JdbcDeviceProvisioningTokenRepository(it) }
+                ?: InMemoryDeviceProvisioningTokenRepository()
+        } else {
+            InMemoryDeviceProvisioningTokenRepository()
+        }
+
+    @Bean
+    fun deviceProvisioningTokenService(
+        tokens: DeviceProvisioningTokenRepository,
+        passwordHasher: PasswordHasher,
+        hierarchyRepository: OrganizationHierarchyRepository,
+    ): DeviceProvisioningTokenService =
+        DeviceProvisioningTokenService(tokens, passwordHasher, hierarchyRepository)
+
+    @Bean
     fun deviceBootstrapService(
         lifecycle: DeviceLifecycleService,
         settings: AuthRuntimeSettings,
+        provisioningTokens: DeviceProvisioningTokenService,
     ): DeviceBootstrapService =
-        DeviceBootstrapService(lifecycle, settings.deviceBootstrapTokens)
+        DeviceBootstrapService(lifecycle, settings.deviceBootstrapTokens, provisioningTokens)
 
     @Bean
     fun timeSyncConfigRepository(env: Environment): TimeSyncConfigRepository =

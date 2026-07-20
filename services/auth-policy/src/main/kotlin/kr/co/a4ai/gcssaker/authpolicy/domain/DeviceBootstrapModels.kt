@@ -42,9 +42,11 @@ class DeviceBootstrapRejectedException : RuntimeException(DeviceBootstrapContrac
 class DeviceBootstrapService(
     private val lifecycle: DeviceLifecycleService,
     private val tokens: DeviceBootstrapTokens,
+    private val provisioningTokens: DeviceProvisioningTokenService? = null,
 ) {
     fun bootstrap(command: DeviceBootstrapCommand): DeviceCredentialIssue {
-        val groupId = tokens.groupIdFor(command.provisioningToken)
+        val groupId = provisioningTokens?.consume(command.provisioningToken)
+            ?: tokens.groupIdFor(command.provisioningToken)
             ?: throw DeviceBootstrapRejectedException()
         return lifecycle.register(
             RegisterDeviceCommand(

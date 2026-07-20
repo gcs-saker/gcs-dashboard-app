@@ -21,7 +21,12 @@ object AuthSecurityRouteContract {
     private const val ROLE_PREFIX = "ROLE_"
     private const val ADMIN_ROLE_NAME = "ADMIN"
 
-    val CORS_METHODS = listOf(HttpMethod.GET.name(), HttpMethod.POST.name(), HttpMethod.OPTIONS.name())
+    val CORS_METHODS = listOf(
+        HttpMethod.GET.name(),
+        HttpMethod.POST.name(),
+        HttpMethod.PATCH.name(),
+        HttpMethod.OPTIONS.name(),
+    )
     val CORS_HEADERS = listOf(
         HttpHeaders.AUTHORIZATION,
         HttpHeaders.CONTENT_TYPE,

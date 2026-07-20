@@ -1,6 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy
 
 import kr.co.a4ai.gcssaker.authpolicy.api.AuthApiRoutes
+import kr.co.a4ai.gcssaker.authpolicy.api.AdminProvisioningTokenApiRoutes
 import kr.co.a4ai.gcssaker.authpolicy.api.DeviceBootstrapApiRoutes
 import kr.co.a4ai.gcssaker.authpolicy.api.GraphQlApiRoutes
 import kr.co.a4ai.gcssaker.authpolicy.api.HealthApiRoutes
@@ -23,6 +24,7 @@ class ApiContractDocumentationTest {
             AuthApiRoutes.ROOT + AuthApiRoutes.REFRESH,
             AuthApiRoutes.ROOT + AuthApiRoutes.ME,
             AuthApiRoutes.ROOT + AuthApiRoutes.LOGOUT,
+            AdminProvisioningTokenApiRoutes.ROOT,
             DeviceBootstrapApiRoutes.ROOT + DeviceBootstrapApiRoutes.REGISTER,
             StreamPolicyApiRoutes.ROOT + StreamPolicyApiRoutes.ACCESS,
             GraphQlApiRoutes.GRAPHQL,

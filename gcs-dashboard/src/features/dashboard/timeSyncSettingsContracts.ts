@@ -1,10 +1,11 @@
-export type SettingsTab = "time" | "streaming" | "security" | "motion" | "map" | "account";
-export type PolicySettingsTab = Exclude<SettingsTab, "time" | "motion">;
+export type SettingsTab = "time" | "streaming" | "security" | "provisioning" | "motion" | "map" | "account";
+export type PolicySettingsTab = Exclude<SettingsTab, "time" | "motion" | "provisioning">;
 
 export const SETTINGS_TABS: readonly { id: SettingsTab; label: string }[] = [
   { id: "time", label: "시간 동기화" },
   { id: "streaming", label: "스트리밍" },
   { id: "security", label: "보안" },
+  { id: "provisioning", label: "장비 등록" },
   { id: "motion", label: "화면 효과" },
   { id: "map", label: "지도" },
   { id: "account", label: "계정/권한" },

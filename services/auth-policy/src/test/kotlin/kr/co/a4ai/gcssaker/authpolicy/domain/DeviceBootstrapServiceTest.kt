@@ -41,10 +41,39 @@ class DeviceBootstrapServiceTest {
 
         assertEquals(emptyList(), repository.list())
     }
+
+    @Test
+    fun `bootstrap consumes admin issued provisioning token`() {
+        val deviceRepository = InMemoryRegisteredDeviceRepository()
+        val tokenRepository = InMemoryDeviceProvisioningTokenRepository()
+        val tokenService = DeviceProvisioningTokenService(
+            repository = tokenRepository,
+            passwordHasher = passwordHasher,
+            tokenGenerator = DeviceProvisioningTokenGenerator(DeviceBootstrapFixtures.random()),
+        )
+        val issued = tokenService.issue(DeviceBootstrapFixtures.provisioningCommand())
+        val bootstrap = DeviceBootstrapService(
+            lifecycle = DeviceLifecycleService(
+                devices = deviceRepository,
+                passwordHasher = passwordHasher,
+                uuidGenerator = { DeviceBootstrapFixtures.DB_TOKEN_DEVICE_UUID },
+            ),
+            tokens = DeviceBootstrapTokens.empty(),
+            provisioningTokens = tokenService,
+        )
+
+        bootstrap.bootstrap(DeviceBootstrapFixtures.command(provisioningToken = issued.token))
+
+        assertEquals(DeviceBootstrapFixtures.GROUP_ID, deviceRepository.list().single().groupId.value)
+        assertFailsWith<DeviceBootstrapRejectedException> {
+            bootstrap.bootstrap(DeviceBootstrapFixtures.command(provisioningToken = issued.token))
+        }
+    }
 }
 
 private object DeviceBootstrapFixtures {
     const val DEVICE_UUID = "00000000-0000-4000-8000-000000000021"
+    const val DB_TOKEN_DEVICE_UUID = "00000000-0000-4000-8000-000000000022"
     const val PROVISIONING_TOKEN = "valid-bootstrap-token"
     const val UNKNOWN_TOKEN = "unknown-bootstrap-token"
     const val GROUP_ID = "co-a"
@@ -62,4 +91,16 @@ private object DeviceBootstrapFixtures {
     const val SENSOR_ID = "gps-main"
     const val SENSOR_TYPE = "gps"
     const val STREAM_PATH = "raw/daegu/bootstrap-drone-01"
+
+    fun provisioningCommand(): DeviceProvisioningTokenIssueCommand =
+        DeviceProvisioningTokenIssueCommand(
+            groupId = GROUP_ID,
+            label = "Daegu field bootstrap",
+            ttlMinutes = 60,
+            maxUses = 1,
+            createdBy = "admin01",
+        )
+
+    fun random(): java.security.SecureRandom =
+        java.security.SecureRandom.getInstance("SHA1PRNG").apply { setSeed(17L) }
 }

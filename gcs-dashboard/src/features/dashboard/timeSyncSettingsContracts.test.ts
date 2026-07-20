@@ -15,6 +15,7 @@ describe("timeSyncSettingsContracts", () => {
       "time",
       "streaming",
       "security",
+      "provisioning",
       "motion",
       "map",
       "account",
@@ -38,5 +39,6 @@ describe("timeSyncSettingsContracts", () => {
   test("does not expose time or motion tabs as static policy tabs", () => {
     expect(Object.keys(SETTINGS_POLICIES)).not.toContain("time");
     expect(Object.keys(SETTINGS_POLICIES)).not.toContain("motion");
+    expect(Object.keys(SETTINGS_POLICIES)).not.toContain("provisioning");
   });
 });
