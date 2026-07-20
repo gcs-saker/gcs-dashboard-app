@@ -43,6 +43,7 @@ class ApiContractTest {
         assertEquals(ApiContractFixtures.ADMIN_DEVICE_ACTIVATE, AdminDeviceApiRoutes.ACTIVATE)
         assertEquals(ApiContractFixtures.ADMIN_DEVICE_DISABLE, AdminDeviceApiRoutes.DISABLE)
         assertEquals(ApiContractFixtures.ADMIN_DEVICE_ROTATE_CREDENTIAL, AdminDeviceApiRoutes.ROTATE_CREDENTIAL)
+        assertEquals(ApiContractFixtures.ADMIN_PROVISIONING_TOKEN_ROOT, AdminProvisioningTokenApiRoutes.ROOT)
     }
 
     @Test
@@ -79,6 +80,8 @@ class ApiContractTest {
             AdminDeviceController::class to "activate",
             AdminDeviceController::class to "disable",
             AdminDeviceController::class to "rotateCredential",
+            AdminProvisioningTokenController::class to "list",
+            AdminProvisioningTokenController::class to "issue",
         )
 
         bearerProtectedMethods.forEach { (controller, methodName) ->
@@ -121,6 +124,7 @@ class ApiContractTest {
             AdminDeviceApiRoutes.ROOT + AdminDeviceApiRoutes.ACTIVATE,
             AdminDeviceApiRoutes.ROOT + AdminDeviceApiRoutes.DISABLE,
             AdminDeviceApiRoutes.ROOT + AdminDeviceApiRoutes.ROTATE_CREDENTIAL,
+            AdminProvisioningTokenApiRoutes.ROOT,
         )
 
         assertEquals(routes.size, routes.toSet().size)
@@ -429,6 +433,51 @@ class ApiContractTest {
         assertFalse(responsePayload.contains(quoted(AdminDeviceApiFields.GROUP_ID)))
     }
 
+    @Test
+    fun `provisioning token dto exposes raw token only in issue response`() {
+        val requestPayload = objectMapper.writeValueAsString(
+            IssueProvisioningTokenRequest(
+                groupId = ApiContractFixtures.GROUP_ID_VALUE,
+                label = ApiContractFixtures.PROVISIONING_TOKEN_LABEL_VALUE,
+                ttlMinutes = ApiContractFixtures.PROVISIONING_TOKEN_TTL_VALUE,
+                maxUses = ApiContractFixtures.PROVISIONING_TOKEN_MAX_USES_VALUE,
+            ),
+        )
+        val issuePayload = objectMapper.writeValueAsString(
+            ProvisioningTokenIssueResponse(
+                tokenId = ApiContractFixtures.PROVISIONING_TOKEN_ID_VALUE,
+                token = ApiContractFixtures.PROVISIONING_TOKEN_VALUE,
+                groupId = ApiContractFixtures.GROUP_ID_VALUE,
+                label = ApiContractFixtures.PROVISIONING_TOKEN_LABEL_VALUE,
+                status = ApiContractFixtures.DEVICE_STATUS_VALUE,
+                maxUses = ApiContractFixtures.PROVISIONING_TOKEN_MAX_USES_VALUE,
+                usedCount = 0,
+                expiresAt = ApiContractFixtures.INSTANT_VALUE.toString(),
+                createdBy = ApiContractFixtures.USERNAME_VALUE,
+                createdAt = ApiContractFixtures.INSTANT_VALUE.toString(),
+            ),
+        )
+        val recordPayload = objectMapper.writeValueAsString(
+            ProvisioningTokenRecordResponse(
+                tokenId = ApiContractFixtures.PROVISIONING_TOKEN_ID_VALUE,
+                groupId = ApiContractFixtures.GROUP_ID_VALUE,
+                label = ApiContractFixtures.PROVISIONING_TOKEN_LABEL_VALUE,
+                status = ApiContractFixtures.DEVICE_STATUS_VALUE,
+                maxUses = ApiContractFixtures.PROVISIONING_TOKEN_MAX_USES_VALUE,
+                usedCount = 0,
+                expiresAt = ApiContractFixtures.INSTANT_VALUE.toString(),
+                createdBy = ApiContractFixtures.USERNAME_VALUE,
+                createdAt = ApiContractFixtures.INSTANT_VALUE.toString(),
+            ),
+        )
+
+        assertTrue(requestPayload.contains(quoted(AdminProvisioningTokenApiFields.GROUP_ID)))
+        assertTrue(requestPayload.contains(quoted(AdminProvisioningTokenApiFields.LABEL)))
+        assertTrue(requestPayload.contains(quoted(AdminProvisioningTokenApiFields.TTL_MINUTES)))
+        assertTrue(issuePayload.contains(quoted(AdminProvisioningTokenApiFields.TOKEN)))
+        assertFalse(recordPayload.contains(quoted(AdminProvisioningTokenApiFields.TOKEN)))
+    }
+
     private fun quoted(value: String): String = "\"$value\""
 }
 
@@ -462,6 +511,7 @@ private object ApiContractFixtures {
     const val ADMIN_DEVICE_ACTIVATE = "/{deviceUuid}/activate"
     const val ADMIN_DEVICE_DISABLE = "/{deviceUuid}/disable"
     const val ADMIN_DEVICE_ROTATE_CREDENTIAL = "/{deviceUuid}/credential"
+    const val ADMIN_PROVISIONING_TOKEN_ROOT = "/admin/provisioning-tokens"
     const val ACCESS_TOKEN_VALUE = "access-token"
     const val EXPIRES_IN_MINUTES_VALUE = 30L
     const val USERNAME_VALUE = "operator01"
@@ -519,6 +569,10 @@ private object ApiContractFixtures {
     const val DEVICE_TYPE_VALUE = "drone"
     const val DEVICE_CREDENTIAL_VALUE = "device-secret"
     const val PROVISIONING_TOKEN_VALUE = "bootstrap-token"
+    const val PROVISIONING_TOKEN_ID_VALUE = "provisioning-token-001"
+    const val PROVISIONING_TOKEN_LABEL_VALUE = "Daegu field bootstrap"
+    const val PROVISIONING_TOKEN_TTL_VALUE = 60L
+    const val PROVISIONING_TOKEN_MAX_USES_VALUE = 1
     const val DEVICE_AUTH_REASON_VALUE = "device group authorized"
     const val DEVICE_POLICY_VERSION_VALUE = "device-policy-v1"
     const val DEVICE_DISPLAY_NAME_VALUE = "Daegu Drone 01"

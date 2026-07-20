@@ -114,6 +114,8 @@ media frame은 WebRTC/HLS media plane으로만 보낸다. JSON, MQTT, gRPC, Grap
 
 | Method | Path | Auth | Headers | Params | Body | Response | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| GET | `/auth-policy/admin/provisioning-tokens` | admin bearer | `Authorization` | none | none | `tokenId`, `groupId`, `label`, `status`, `maxUses`, `usedCount`, `expiresAt`, `createdBy`, `createdAt` | token 원문은 절대 응답하지 않음 |
+| POST | `/auth-policy/admin/provisioning-tokens` | admin bearer | `Authorization`, `Content-Type: application/json` | none | `groupId`, `label`, optional `ttlMinutes`, `maxUses` | `tokenId`, `token`, `groupId`, `label`, `status`, `maxUses`, `usedCount`, `expiresAt`, `createdBy`, `createdAt` | token 원문은 발급 응답 1회만 표시. DB에는 hash만 저장 |
 | GET | `/auth-policy/admin/devices` | admin bearer | `Authorization` | none | none | `devices[]` with `deviceUuid`, `deviceType`, `groupId`, `displayName`, `status`, `sensors[]`, `streamPaths[]` | credential 원문/해시는 응답하지 않음 |
 | POST | `/auth-policy/admin/devices` | admin bearer | `Authorization`, `Content-Type: application/json` | none | `groupId`, `displayName`, optional `deviceType`, `sensors[]`, `streamPaths[]` | `deviceUuid`, `credential`, `deviceType`, `groupId`, `displayName`, `status`, `sensors[]`, `streamPaths[]` | credential 원문은 최초 1회 응답에만 표시하고 DB에는 hash만 저장 |
 | GET | `/auth-policy/admin/devices/{deviceUuid}` | admin bearer | `Authorization` | path `deviceUuid` | none | `deviceUuid`, `deviceType`, `groupId`, `displayName`, `status`, `sensors[]`, `streamPaths[]` | 운영자 장비 상세 조회 |

@@ -86,9 +86,11 @@
 
 이 API는 로봇, 드론, 휴대폰, edge gateway가 처음 서버에 연결될 때 `deviceUuid`와 최초 device credential을 자동 발급받기 위한 API다.
 
-무제한 공개 등록을 막기 위해 요청에는 서버 운영자가 사전에 배포한 `provisioningToken`이 필요하다. 서버는 `AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS` 설정에서 token과 group을 매핑한다.
+무제한 공개 등록을 막기 위해 요청에는 서버 운영자가 사전에 배포한 `provisioningToken`이 필요하다. 기본 운영 흐름에서는 관리자 화면의 `운영 설정 > 장비 등록`에서 group에 묶인 일회성 token을 발급하고, 장비 담당자에게 별도 보안 채널로 전달한다.
 
-설정 형식:
+초기/비상 운영에서는 서버 환경변수로 고정 token을 둘 수도 있다. 이 방식은 재시작 전후 고정값 노출 위험이 있으므로 정식 장비 등록에는 관리자 발급 token을 우선 사용한다.
+
+환경변수 fallback 형식:
 
 ```text
 AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS=<token>:<groupId>,<token2>:<groupId2>
@@ -97,6 +99,43 @@ AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS=<token>:<groupId>,<token2>:<groupId2>
 | Method | Public URL | 내부 auth-policy route | 인증 | 용도 |
 | --- | --- | --- | --- | --- |
 | POST | `<EDGE>/auth-policy/device-bootstrap/register` | `/device-bootstrap/register` | provisioning token | 장비 UUID와 최초 credential 자동 발급 |
+
+## Admin Provisioning Token API
+
+운영자가 로봇/드론 최초 등록에 사용할 bootstrap token을 발급하고 조회하는 API다. token 원문은 발급 응답에서만 1회 표시되며, 목록/DB에는 hash와 metadata만 남는다.
+
+| Method | Public URL | 내부 auth-policy route | 인증 | 용도 |
+| --- | --- | --- | --- | --- |
+| GET | `<EDGE>/auth-policy/admin/provisioning-tokens` | `/admin/provisioning-tokens` | admin bearer | 발급 이력/상태 조회. token 원문 없음 |
+| POST | `<EDGE>/auth-policy/admin/provisioning-tokens` | `/admin/provisioning-tokens` | admin bearer | group에 묶인 bootstrap token 발급 |
+
+발급 요청 body:
+
+```json
+{
+  "groupId": "co-a",
+  "label": "Daegu drone onboarding",
+  "ttlMinutes": 60,
+  "maxUses": 1
+}
+```
+
+발급 응답 body:
+
+```json
+{
+  "tokenId": "<token-id>",
+  "token": "<shown-once-provisioning-token>",
+  "groupId": "co-a",
+  "label": "Daegu drone onboarding",
+  "status": "active",
+  "maxUses": 1,
+  "usedCount": 0,
+  "expiresAt": "2026-07-20T02:00:00Z",
+  "createdBy": "admin",
+  "createdAt": "2026-07-20T01:00:00Z"
+}
+```
 
 요청 body:
 

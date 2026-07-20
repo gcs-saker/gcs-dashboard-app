@@ -57,6 +57,9 @@ data class OrganizationUnit(
 class OrganizationHierarchy private constructor(
     private val unitsById: Map<GroupId, OrganizationUnit>,
 ) {
+    fun contains(groupId: GroupId): Boolean =
+        unitsById.containsKey(groupId)
+
     fun isAncestor(candidateAncestorId: GroupId, childId: GroupId): Boolean {
         var current = unitsById[childId]?.parentId
         while (current != null) {

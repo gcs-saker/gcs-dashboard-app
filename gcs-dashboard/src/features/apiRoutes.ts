@@ -9,6 +9,7 @@ export const AUTH_ROUTES = Object.freeze({
 export const BACKEND_ROOT_ROUTES = Object.freeze({
   healthz: "/healthz",
   readyz: "/readyz",
+  provisioningTokens: "/auth-policy/admin/provisioning-tokens",
   mediaControlHealthz: "/media-control/healthz",
   mediaControlReadyz: "/media-control/readyz",
   streamStatus: "/stream/status",
