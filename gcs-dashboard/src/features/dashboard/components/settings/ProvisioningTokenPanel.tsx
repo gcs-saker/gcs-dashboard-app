@@ -1,4 +1,4 @@
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useProvisioningTokens } from "@dashboard/hooks/useProvisioningTokens";
 import {
@@ -7,11 +7,20 @@ import {
   type ProvisioningTokenRecord,
 } from "@dashboard/deviceProvisioningTokens";
 
+type TokenCopyStatus = "idle" | "copied" | "failed";
+
+const TOKEN_COPY_STATUS_LABELS: Readonly<Record<TokenCopyStatus, string>> = {
+  copied: "복사됨",
+  failed: "복사 실패",
+  idle: "클릭해서 복사",
+};
+
 export function ProvisioningTokenPanel() {
   const { currentUser } = useAuth();
   const { clearIssuedToken, errorMessage, issuedToken, isIssuing, isLoading, issue, records, refresh } =
     useProvisioningTokens();
   const [form, setForm] = useState<IssueProvisioningTokenInput>(DEFAULT_PROVISIONING_TOKEN_INPUT);
+  const [copyStatus, setCopyStatus] = useState<TokenCopyStatus>("idle");
   const isAdmin = currentUser?.role === "admin";
 
   const submit = useCallback((event: FormEvent<HTMLFormElement>) => {
@@ -19,6 +28,20 @@ export function ProvisioningTokenPanel() {
     if (!isAdmin) return;
     void issue(form);
   }, [form, isAdmin, issue]);
+
+  const copyIssuedToken = useCallback(async () => {
+    if (!issuedToken) return;
+    try {
+      await navigator.clipboard.writeText(issuedToken.token);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("failed");
+    }
+  }, [issuedToken]);
+
+  useEffect(() => {
+    setCopyStatus("idle");
+  }, [issuedToken?.tokenId]);
 
   return (
     <section className="time-sync-view__policy provisioning-token-panel" aria-label="장비 등록 토큰">
@@ -81,7 +104,15 @@ export function ProvisioningTokenPanel() {
       {issuedToken ? (
         <article className="provisioning-token-panel__issued">
           <span>이번 응답에서만 보이는 토큰</span>
-          <strong>{issuedToken.token}</strong>
+          <button
+            aria-label="발급된 provisioning token 복사"
+            className="provisioning-token-panel__copy-token"
+            onClick={() => void copyIssuedToken()}
+            type="button"
+          >
+            <strong>{issuedToken.token}</strong>
+            <small>{TOKEN_COPY_STATUS_LABELS[copyStatus]}</small>
+          </button>
           <button type="button" onClick={clearIssuedToken}>확인 후 숨기기</button>
         </article>
       ) : null}
