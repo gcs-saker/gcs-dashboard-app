@@ -50,6 +50,7 @@
 
 .provisioning-token-panel__form button,
 .provisioning-token-panel__form input,
+.provisioning-token-panel__copy-token,
 .provisioning-token-panel__issued button {
   background: rgba(8, 28, 42, 0.94);
   border: 1px solid var(--line-soft);
@@ -60,12 +61,14 @@
 }
 
 .provisioning-token-panel__form button,
+.provisioning-token-panel__copy-token,
 .provisioning-token-panel__issued button {
   cursor: pointer;
   font-weight: 900;
 }
 
 .provisioning-token-panel__form button:hover:not(:disabled),
+.provisioning-token-panel__copy-token:hover,
 .provisioning-token-panel__issued button:hover {
   border-color: var(--accent);
   color: var(--heading);
@@ -89,6 +92,20 @@
 .provisioning-token-panel__issued strong {
   color: #b8ffd4;
   overflow-wrap: anywhere;
+}
+
+.provisioning-token-panel__copy-token {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  min-height: 56px;
+  text-align: left;
+}
+
+.provisioning-token-panel__copy-token small {
+  color: var(--muted);
+  font-weight: 800;
 }
 
 .provisioning-token-panel__records {
