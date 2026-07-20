@@ -1,8 +1,11 @@
 .event-log-view {
   display: grid;
   gap: 10px;
-  grid-template-rows: auto auto auto auto 1fr;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   background: rgba(3, 10, 15, 0.72);
+  height: calc(100vh - 88px);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .server-status-view {
