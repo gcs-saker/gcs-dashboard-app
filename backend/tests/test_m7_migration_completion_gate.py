@@ -71,6 +71,9 @@ def test_nginx_contract_keeps_legacy_backend_fallbacks_outside_active_gate() -> 
     assert "location /api/control/" in config
     assert 'add_header X-GCS-Legacy-Fallback "disabled" always;' in config
     assert "return 410;" in config
-    assert "proxy_pass http://gcs_backend;" in config
-    assert "proxy_pass http://gcs_auth_policy;" in config
-    assert "proxy_pass http://gcs_media_control;" in config
+    assert "set $backend_host backend;" in config
+    assert "set $auth_policy_host auth-policy;" in config
+    assert "set $media_control_host media-control;" in config
+    assert "proxy_pass http://$backend_host:8001;" in config
+    assert "proxy_pass http://$auth_policy_host:8080;" in config
+    assert "proxy_pass http://$media_control_host:8081;" in config

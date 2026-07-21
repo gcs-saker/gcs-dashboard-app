@@ -84,23 +84,23 @@ intents:
     assertions:
       nginxRoutes:
         - route: /healthz
-          proxyPass: http://gcs_auth_policy/healthz
+          proxyPass: http://$auth_policy_host:8080/healthz
         - route: /readyz
-          proxyPass: http://gcs_auth_policy/readyz
+          proxyPass: http://$auth_policy_host:8080/readyz
         - route: /auth-policy/
-          proxyPass: http://gcs_auth_policy
+          proxyPass: http://$auth_policy_host:8080
         - route: /media-control/
-          proxyPass: http://gcs_media_control
+          proxyPass: http://$media_control_host:8081
         - route: /api/telemetry/
-          proxyPass: http://gcs_auth_policy
+          proxyPass: http://$auth_policy_host:8080
         - route: /api/ops/
-          proxyPass: http://gcs_auth_policy
+          proxyPass: http://$auth_policy_host:8080
         - route: /api/stream/
-          proxyPass: http://gcs_media_control
+          proxyPass: http://$media_control_host:8081
         - route: /hls/
-          proxyPass: http://gcs_mediamtx_hls
+          proxyPass: http://$mediamtx_host:8888
         - route: /webrtc/
-          proxyPass: http://gcs_mediamtx_webrtc
+          proxyPass: http://$mediamtx_host:8889
       evidencePaths:
         - deploy/nginx/single-node.poc.conf
 
