@@ -117,3 +117,98 @@
 .provisioning-token-panel__record {
   min-height: 112px;
 }
+
+.device-approval-panel {
+  grid-template-columns: 1fr;
+  margin-top: 14px;
+}
+
+.device-approval-panel__hint {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.device-approval-panel__list {
+  display: grid;
+  gap: 10px;
+}
+
+.device-approval-panel__list > p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.device-approval-panel__card {
+  align-items: center;
+  border-color: rgba(62, 164, 255, 0.32);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(160px, 0.8fr) auto;
+  min-height: auto;
+}
+
+.device-approval-panel__card small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.device-approval-panel__card dl {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.device-approval-panel__card dl div {
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.device-approval-panel__card dt,
+.device-approval-panel__card dd {
+  margin: 0;
+}
+
+.device-approval-panel__card dd {
+  color: var(--heading);
+  font-weight: 900;
+}
+
+.device-approval-panel__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.device-approval-panel__actions button {
+  background: rgba(8, 28, 42, 0.94);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.device-approval-panel__actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--heading);
+}
+
+.device-approval-panel__actions button:last-child {
+  border-color: rgba(255, 108, 93, 0.4);
+  color: #ffb0a6;
+}
+
+.device-approval-panel__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 840px) {
+  .device-approval-panel__card {
+    grid-template-columns: 1fr;
+  }
+}
