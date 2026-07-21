@@ -6,13 +6,29 @@ enum class RegisteredDeviceStatus {
     DISABLED,
 }
 
-enum class DeviceType(val apiValue: String) {
-    ROBOT("robot"),
-    DRONE("drone"),
-    CAMERA("camera"),
-    MIC("mic"),
-    PHONE("phone"),
-    EDGE_GATEWAY("edge-gateway"),
+enum class DeviceType(
+    val apiValue: String,
+    private val aliases: Set<String> = emptySet(),
+) {
+    ROBOT("robot", setOf("ugv", "rover", "ground-robot", "ground_robot")),
+    DRONE("drone", setOf("uav", "uas")),
+    CAMERA("camera", setOf("webcam", "cctv", "ip-camera", "ip_camera")),
+    MIC("mic", setOf("microphone")),
+    PHONE("phone", setOf("mobile", "smartphone")),
+    EDGE_GATEWAY("edge-gateway", setOf("edge_gateway", "gateway")),
+    ;
+
+    fun matches(raw: String): Boolean {
+        val normalized = raw.trim().lowercase()
+        return normalized == apiValue ||
+            normalized == name.lowercase() ||
+            normalized in aliases
+    }
+
+    companion object {
+        fun parse(raw: String): DeviceType? =
+            entries.firstOrNull { it.matches(raw) }
+    }
 }
 
 data class RegisteredDeviceSensor(
