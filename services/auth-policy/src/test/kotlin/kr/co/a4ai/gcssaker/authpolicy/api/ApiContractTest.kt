@@ -36,7 +36,9 @@ class ApiContractTest {
         assertEquals(ApiContractFixtures.STREAM_POLICY_ROOT, StreamPolicyApiRoutes.ROOT)
         assertEquals(ApiContractFixtures.DEVICE_POLICY_ROOT, DevicePolicyApiRoutes.ROOT)
         assertEquals(ApiContractFixtures.DEVICE_POLICY_PUBLISH, DevicePolicyApiRoutes.PUBLISH)
+        assertEquals(ApiContractFixtures.DEVICE_BOOTSTRAP_EDGE_PREFIX, DeviceBootstrapApiRoutes.EDGE_PREFIX)
         assertEquals(ApiContractFixtures.DEVICE_BOOTSTRAP_ROOT, DeviceBootstrapApiRoutes.ROOT)
+        assertEquals(ApiContractFixtures.DEVICE_BOOTSTRAP_EDGE_ROOT, DeviceBootstrapApiRoutes.EDGE_ROOT)
         assertEquals(ApiContractFixtures.DEVICE_BOOTSTRAP_REGISTER, DeviceBootstrapApiRoutes.REGISTER)
         assertEquals(ApiContractFixtures.ADMIN_DEVICE_ROOT, AdminDeviceApiRoutes.ROOT)
         assertEquals(ApiContractFixtures.ADMIN_DEVICE_DEVICE, AdminDeviceApiRoutes.DEVICE)
@@ -119,6 +121,7 @@ class ApiContractTest {
             StreamPolicyApiRoutes.ROOT + StreamPolicyApiRoutes.ACCESS,
             DevicePolicyApiRoutes.ROOT + DevicePolicyApiRoutes.PUBLISH,
             DeviceBootstrapApiRoutes.ROOT + DeviceBootstrapApiRoutes.REGISTER,
+            DeviceBootstrapApiRoutes.EDGE_ROOT + DeviceBootstrapApiRoutes.REGISTER,
             AdminDeviceApiRoutes.ROOT,
             AdminDeviceApiRoutes.ROOT + AdminDeviceApiRoutes.DEVICE,
             AdminDeviceApiRoutes.ROOT + AdminDeviceApiRoutes.ACTIVATE,
@@ -504,7 +507,9 @@ private object ApiContractFixtures {
     const val STREAM_POLICY_ROOT = "/policy/streams"
     const val DEVICE_POLICY_ROOT = "/policy/devices"
     const val DEVICE_POLICY_PUBLISH = "/publish"
+    const val DEVICE_BOOTSTRAP_EDGE_PREFIX = "/auth-policy"
     const val DEVICE_BOOTSTRAP_ROOT = "/device-bootstrap"
+    const val DEVICE_BOOTSTRAP_EDGE_ROOT = "/auth-policy/device-bootstrap"
     const val DEVICE_BOOTSTRAP_REGISTER = "/register"
     const val ADMIN_DEVICE_ROOT = "/admin/devices"
     const val ADMIN_DEVICE_DEVICE = "/{deviceUuid}"

@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping(DeviceBootstrapApiRoutes.ROOT)
+@RequestMapping(value = [DeviceBootstrapApiRoutes.ROOT, DeviceBootstrapApiRoutes.EDGE_ROOT])
 class DeviceBootstrapController(
     private val bootstrap: DeviceBootstrapService,
 ) {
