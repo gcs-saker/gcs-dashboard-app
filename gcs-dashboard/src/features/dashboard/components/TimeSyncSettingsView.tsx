@@ -3,6 +3,7 @@ import { useTimeSyncStatus } from "@dashboard/hooks/useTimeSyncStatus";
 import { calculateBrowserOffsetMs, type TimeSyncConfigInput } from "@dashboard/timeSync";
 import type { MotionMode } from "@dashboard/motionPreference";
 import type { PolicySettingsTab, SettingsTab } from "@dashboard/timeSyncSettingsContracts";
+import { DeviceApprovalPanel } from "./settings/DeviceApprovalPanel";
 import { MotionPolicyPanel } from "./settings/MotionPolicyPanel";
 import { ProvisioningTokenPanel } from "./settings/ProvisioningTokenPanel";
 import { SettingsPolicyPanel } from "./settings/SettingsPolicyPanel";
@@ -69,7 +70,10 @@ export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }
       ) : activeTab === "motion" ? (
         <MotionPolicyPanel motionMode={motionMode} onMotionModeChange={onMotionModeChange} />
       ) : activeTab === "provisioning" ? (
-        <ProvisioningTokenPanel />
+        <>
+          <ProvisioningTokenPanel />
+          <DeviceApprovalPanel />
+        </>
       ) : (
         <SettingsPolicyPanel tab={activeTab as PolicySettingsTab} />
       )}

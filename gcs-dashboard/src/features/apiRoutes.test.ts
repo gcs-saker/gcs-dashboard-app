@@ -31,6 +31,7 @@ describe("api route contracts", () => {
 
   test("keeps operational root and media-control routes centralized", () => {
     expect(BACKEND_ROOT_ROUTES.streamStatus).toBe("/stream/status");
+    expect(BACKEND_ROOT_ROUTES.adminDevices).toBe("/auth-policy/admin/devices");
     expect(BACKEND_ROOT_ROUTES.provisioningTokens).toBe("/auth-policy/admin/provisioning-tokens");
     expect(STREAM_API_ROUTES.streams).toBe("/streams");
     expect(STREAM_API_ROUTES.iceServers).toBe("/streams/ice-servers");
