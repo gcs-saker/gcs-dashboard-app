@@ -142,12 +142,20 @@ X-GCS-Device-UUID: <server-issued-uuid>
 X-GCS-Device-Credential: <device-secret>
 ```
 
-응답에는 `whipUrl`이 포함됩니다.
+응답에는 `whipUrl`과 `iceServers`가 포함됩니다.
 
 ```json
 {
   "streamId": "raw.drone-01.front",
-  "whipUrl": "https://a4ai.tplinkdns.com/webrtc/raw/drone-01/front/whip?publisherToken=<short-lived-token>"
+  "whipUrl": "https://a4ai.tplinkdns.com/webrtc/raw/drone-01/front/whip?publisherToken=<short-lived-token>",
+  "iceServers": [
+    { "urls": "stun:a4ai.tplinkdns.com:3478" },
+    {
+      "urls": "turn:a4ai.tplinkdns.com:3478?transport=udp",
+      "username": "<turn-username>",
+      "credential": "<turn-credential>"
+    }
+  ]
 }
 ```
 
@@ -155,7 +163,9 @@ X-GCS-Device-Credential: <device-secret>
 
 - 송출 시작 직전에 publish API 호출
 - 응답의 `whipUrl`을 그대로 사용
+- 응답의 `iceServers`를 peer connection 설정에 그대로 사용
 - `/webrtc/.../whip` 주소와 `publisherToken`을 장비에서 임의 생성하지 않기
+- `/media-control/api/v1/streams/ice-servers`를 무인증으로 별도 호출하지 않기
 - `publisherToken`은 짧은 수명의 송출 토큰이므로, 실패/만료 시 publish API를 다시 호출
 
 ## 6. WHIP 송출
@@ -246,7 +256,7 @@ publishResponse = GET /media-control/api/v1/streams/{streamId}/publish
         X-GCS-Device-UUID = identity.deviceUuid
         X-GCS-Device-Credential = identity.credential
 
-peer = createWebRtcPeerConnection()
+peer = createWebRtcPeerConnection(iceServers = publishResponse.iceServers)
 offer = peer.createOffer()
 answer = POST publishResponse.whipUrl with application/sdp body
 peer.setRemoteDescription(answer)

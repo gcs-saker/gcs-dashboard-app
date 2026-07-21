@@ -587,9 +587,10 @@ func TestDashboardIceServersForwardsAuthorizationHeader(t *testing.T) {
 
 func TestDashboardPublishUrlRequiresAuthorizationAndAppendsPublisherToken(t *testing.T) {
 	path, _ := domain.NewStreamPath("raw/local/webcam")
+	ice, _ := domain.NewIceServer("stun:a4ai.tplinkdns.com:3478", domain.IceServerSTUN, "", "", true)
 	server := newTestServer(
 		fakeStreams{streams: []domain.StreamDescriptor{{Path: path, Ready: true, Status: domain.StreamStatusOnline}}},
-		fakeIce{},
+		fakeIce{servers: []domain.IceServer{ice}},
 	)
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.local.webcam/publish", nil)
 	request.Header.Set("Authorization", "Bearer publisher-token")
@@ -607,6 +608,9 @@ func TestDashboardPublishUrlRequiresAuthorizationAndAppendsPublisherToken(t *tes
 	whipURL := payload.WhipURL
 	if !strings.HasPrefix(whipURL, "http://edge.local/webrtc/raw/local/webcam/whip?") {
 		t.Fatalf("unexpected publish URL %v", payload.WhipURL)
+	}
+	if len(payload.IceServers) != 1 || payload.IceServers[0].URLs != "stun:a4ai.tplinkdns.com:3478" {
+		t.Fatalf("expected publish response to include authorized ICE servers, got %#v", payload.IceServers)
 	}
 	assertMediaURLToken(t, whipURL, publisherTokenQueryKey, mediaMTXActionPublish, "raw/local/webcam")
 }
@@ -632,9 +636,10 @@ func TestDashboardPublishUrlCanBeIssuedBeforeStreamIsRegistered(t *testing.T) {
 
 func TestDashboardPublishUrlUsesDevicePolicyWithoutGroupID(t *testing.T) {
 	var observed domain.DevicePublishCommand
+	ice, _ := domain.NewIceServer("turn:a4ai.tplinkdns.com:3478?transport=udp", domain.IceServerTURN, "gcs-turn", "secret", true)
 	server := newTestServerWithDevicePublisher(
 		fakeStreams{},
-		fakeIce{},
+		fakeIce{servers: []domain.IceServer{ice}},
 		fakeDevicePublisher{observed: &observed},
 	)
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.drone-01.front/publish", nil)
@@ -655,6 +660,9 @@ func TestDashboardPublishUrlUsesDevicePolicyWithoutGroupID(t *testing.T) {
 	}
 	payload := decodeTestJSON[streamPublishResponse](t, recorder)
 	assertMediaURLTokenForGroup(t, payload.WhipURL, publisherTokenQueryKey, mediaMTXActionPublish, "raw/drone-01/front", "co-device")
+	if len(payload.IceServers) != 1 || payload.IceServers[0].Credential == nil {
+		t.Fatalf("expected device publish response to include authorized TURN credentials, got %#v", payload.IceServers)
+	}
 }
 
 func TestDashboardPublishUrlRejectsInvalidDeviceCredential(t *testing.T) {

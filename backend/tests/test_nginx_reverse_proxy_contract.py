@@ -63,6 +63,11 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "upstream gcs_mediamtx_hls" in config
     assert "upstream gcs_mediamtx_webrtc" in config
     assert "resolver 127.0.0.11 valid=10s ipv6=off;" in config
+    assert "set $dashboard_host dashboard;" in config
+    assert "set $backend_host backend;" in config
+    assert "set $auth_policy_host auth-policy;" in config
+    assert "set $media_control_host media-control;" in config
+    assert "set $mediamtx_host mediamtx;" in config
     assert "location /api/auth/" in config
     assert "location = /api/v1/map/config" in config
     assert "location /auth-policy/" in config
@@ -79,7 +84,7 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "location /ws/" in config
     assert "location /hls/" in config
     assert "location /webrtc/" in config
-    assert "proxy_pass http://gcs_dashboard;" in extract_locations(config, "/")[-1]
+    assert "proxy_pass http://$dashboard_host:3000;" in extract_locations(config, "/")[-1]
 
 
 def test_reverse_proxy_disables_buffering_for_operational_event_stream() -> None:
@@ -87,7 +92,7 @@ def test_reverse_proxy_disables_buffering_for_operational_event_stream() -> None
 
     ops_event_stream_location = extract_exact_location(config, "/api/ops/events/stream")
 
-    assert "proxy_pass http://gcs_auth_policy/ops/events/stream;" in ops_event_stream_location
+    assert "proxy_pass http://$auth_policy_host:8080/ops/events/stream;" in ops_event_stream_location
     assert "proxy_buffering off;" in ops_event_stream_location
     assert "proxy_cache off;" in ops_event_stream_location
     assert "proxy_read_timeout 65s;" in ops_event_stream_location
@@ -102,10 +107,10 @@ def test_reverse_proxy_routes_root_health_checks_to_auth_policy() -> None:
     api_healthz_location = extract_exact_location(config, "/api/healthz")
     api_readyz_location = extract_exact_location(config, "/api/readyz")
 
-    assert "proxy_pass http://gcs_auth_policy/healthz;" in healthz_location
-    assert "proxy_pass http://gcs_auth_policy/readyz;" in readyz_location
-    assert "proxy_pass http://gcs_backend/healthz;" in api_healthz_location
-    assert "proxy_pass http://gcs_backend/readyz;" in api_readyz_location
+    assert "proxy_pass http://$auth_policy_host:8080/healthz;" in healthz_location
+    assert "proxy_pass http://$auth_policy_host:8080/readyz;" in readyz_location
+    assert "proxy_pass http://$backend_host:8001/healthz;" in api_healthz_location
+    assert "proxy_pass http://$backend_host:8001/readyz;" in api_readyz_location
     assert "proxy_read_timeout 10s;" in healthz_location
     assert "proxy_read_timeout 10s;" in readyz_location
     assert "proxy_read_timeout 10s;" in api_healthz_location
@@ -126,9 +131,9 @@ def test_media_proxy_rewrites_public_prefixes_to_mediamtx_paths() -> None:
     webrtc_location = extract_location(config, "/webrtc/")
 
     assert "rewrite ^/hls/(.*)$ /$1 break;" in hls_location
-    assert "proxy_pass http://gcs_mediamtx_hls;" in hls_location
+    assert "proxy_pass http://$mediamtx_host:8888;" in hls_location
     assert "rewrite ^/webrtc/(.*)$ /$1 break;" in webrtc_location
-    assert "proxy_pass http://gcs_mediamtx_webrtc;" in webrtc_location
+    assert "proxy_pass http://$mediamtx_host:8889;" in webrtc_location
 
 
 def test_auth_proxy_rewrites_dashboard_api_auth_prefix_to_backend_auth_router() -> None:
@@ -137,7 +142,7 @@ def test_auth_proxy_rewrites_dashboard_api_auth_prefix_to_backend_auth_router() 
 
     assert "Legacy fallback only" in auth_location
     assert "rewrite ^/api/auth/(.*)$ /auth/$1 break;" in auth_location
-    assert "proxy_pass http://gcs_backend;" in auth_location
+    assert "proxy_pass http://$backend_host:8001;" in auth_location
     assert "proxy_read_timeout 60s;" in auth_location
 
 
@@ -146,7 +151,7 @@ def test_exact_legacy_map_config_route_is_allowlisted_until_cutover() -> None:
     map_config_location = extract_exact_location(config, "/api/v1/map/config")
 
     assert "Legacy allowlist" in map_config_location
-    assert "proxy_pass http://gcs_backend/api/v1/map/config;" in map_config_location
+    assert "proxy_pass http://$backend_host:8001/api/v1/map/config;" in map_config_location
     assert 'add_header Deprecation "true" always;' in map_config_location
     assert 'add_header X-GCS-Replacement-Route "/auth-policy/map/config" always;' in map_config_location
 
@@ -156,7 +161,7 @@ def test_auth_policy_cutover_prefix_rewrites_to_spring_auth_policy() -> None:
     auth_policy_location = extract_location(config, "/auth-policy/")
 
     assert "rewrite ^/auth-policy/(.*)$ /$1 break;" in auth_policy_location
-    assert "proxy_pass http://gcs_auth_policy;" in auth_policy_location
+    assert "proxy_pass http://$auth_policy_host:8080;" in auth_policy_location
     assert "proxy_read_timeout 60s;" in auth_policy_location
 
 
@@ -165,7 +170,7 @@ def test_media_control_cutover_prefix_rewrites_to_go_media_control() -> None:
     media_control_location = extract_location(config, "/media-control/")
 
     assert "rewrite ^/media-control/(.*)$ /$1 break;" in media_control_location
-    assert "proxy_pass http://gcs_media_control;" in media_control_location
+    assert "proxy_pass http://$media_control_host:8081;" in media_control_location
     assert "proxy_read_timeout 60s;" in media_control_location
 
 
@@ -174,7 +179,7 @@ def test_legacy_api_prefixes_do_not_rewrite_broadly_to_backend_routers() -> None
     control_location = extract_location(config, "/api/control/")
 
     assert "rewrite ^/api/control/" not in control_location
-    assert "proxy_pass http://gcs_backend;" not in control_location
+    assert "proxy_pass http://$backend_host:8001;" not in control_location
     assert "return 410;" in control_location
     assert 'add_header X-GCS-Legacy-Fallback "disabled" always;' in control_location
 
@@ -187,12 +192,12 @@ def test_read_only_asset_telemetry_and_ops_paths_are_cut_over_to_auth_policy() -
     ops_location = extract_location(config, "/api/ops/")
 
     assert "rewrite ^/api/asset/(.*)$ /asset/$1 break;" in asset_location
-    assert "proxy_pass http://gcs_auth_policy;" in asset_location
-    assert "proxy_pass http://gcs_auth_policy/telemetry/all;" in telemetry_all_location
+    assert "proxy_pass http://$auth_policy_host:8080;" in asset_location
+    assert "proxy_pass http://$auth_policy_host:8080/telemetry/all;" in telemetry_all_location
     assert "rewrite ^/api/telemetry/(.*)$ /telemetry/$1 break;" in telemetry_location
-    assert "proxy_pass http://gcs_auth_policy;" in telemetry_location
+    assert "proxy_pass http://$auth_policy_host:8080;" in telemetry_location
     assert "rewrite ^/api/ops/(.*)$ /ops/$1 break;" in ops_location
-    assert "proxy_pass http://gcs_auth_policy;" in ops_location
+    assert "proxy_pass http://$auth_policy_host:8080;" in ops_location
 
 
 def test_legacy_stream_prefix_is_cut_over_to_go_media_control_for_runtime_smoke() -> None:
@@ -201,8 +206,8 @@ def test_legacy_stream_prefix_is_cut_over_to_go_media_control_for_runtime_smoke(
     stream_location = extract_location(config, "/stream/")
 
     assert "rewrite ^/api/stream/(.*)$ /stream/$1 break;" in api_stream_location
-    assert "proxy_pass http://gcs_media_control;" in api_stream_location
-    assert "proxy_pass http://gcs_media_control;" in stream_location
+    assert "proxy_pass http://$media_control_host:8081;" in api_stream_location
+    assert "proxy_pass http://$media_control_host:8081;" in stream_location
     for location in (api_stream_location, stream_location):
         assert 'add_header Deprecation "true" always;' in location
         assert 'add_header X-GCS-Replacement-Route "/media-control/api/v1/streams" always;' in location
@@ -221,7 +226,7 @@ def test_unknown_legacy_api_and_ws_prefixes_are_not_broad_backend_fallbacks() ->
     ws_location = extract_location(config, "/ws/")
 
     for location in (api_location, ws_location):
-        assert "proxy_pass http://gcs_backend;" not in location
+        assert "proxy_pass http://$backend_host:8001;" not in location
         assert "return 410;" in location
         assert 'add_header X-GCS-Legacy-Fallback "disabled" always;' in location
 
@@ -232,9 +237,9 @@ def test_single_node_nginx_also_disables_unknown_legacy_fallbacks() -> None:
     ws_location = extract_location(config, "/ws/")
     map_config_location = extract_exact_location(config, "/api/v1/map/config")
 
-    assert "proxy_pass http://gcs_backend/api/v1/map/config;" in map_config_location
+    assert "proxy_pass http://$backend_host:8001/api/v1/map/config;" in map_config_location
     for location in (api_location, ws_location):
-        assert "proxy_pass http://gcs_backend;" not in location
+        assert "proxy_pass http://$backend_host:8001;" not in location
         assert "return 410;" in location
         assert 'add_header X-GCS-Legacy-Fallback "disabled" always;' in location
 

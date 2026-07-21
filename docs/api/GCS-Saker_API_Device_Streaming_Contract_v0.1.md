@@ -287,7 +287,7 @@ GraphQL은 media path가 아니다. Dashboard 복합 조회가 REST 조합으로
 | GET | `<EDGE>/media-control/api/v1/streams` | `/api/v1/streams` | bearer | 접근 가능한 stream 목록 |
 | GET | `<EDGE>/media-control/api/v1/streams/{streamId}` | `/api/v1/streams/{streamId}` | bearer | stream 단건 정보 |
 | GET | `<EDGE>/media-control/api/v1/streams/{streamId}/playback` | `/api/v1/streams/{streamId}/playback` | bearer | short-lived WHEP/HLS 수신 URL 발급 |
-| GET | `<EDGE>/media-control/api/v1/streams/{streamId}/publish` | `/api/v1/streams/{streamId}/publish` | bearer 또는 device credential | short-lived WHIP 송출 URL 발급 |
+| GET | `<EDGE>/media-control/api/v1/streams/{streamId}/publish` | `/api/v1/streams/{streamId}/publish` | bearer 또는 device credential | short-lived WHIP 송출 URL과 ICE 후보 발급 |
 | GET | `<EDGE>/media-control/api/v1/streams/{streamId}/status` | `/api/v1/streams/{streamId}/status` | bearer | stream 상태 조회 |
 | GET | `<EDGE>/media-control/api/v1/streams/ice-servers` | `/api/v1/streams/ice-servers` | bearer | STUN/TURN ICE server 목록 조회 |
 
@@ -309,12 +309,20 @@ GET <EDGE>/media-control/api/v1/streams/raw.local.webcam/publish
 Authorization: Bearer <accessToken>
 ```
 
-4. 응답의 `whipUrl`을 사용한다.
+4. 응답의 `whipUrl`과 `iceServers`를 사용한다.
 
 ```json
 {
   "streamId": "raw.local.webcam",
   "whipUrl": "<EDGE>/webrtc/raw/local/webcam/whip?publisherToken=<short-lived-token>",
+  "iceServers": [
+    { "urls": "stun:a4ai.tplinkdns.com:3478" },
+    {
+      "urls": "turn:a4ai.tplinkdns.com:3478?transport=udp",
+      "username": "<turn-username>",
+      "credential": "<turn-credential>"
+    }
+  ],
   "playbackUrls": {
     "webrtc": "<EDGE>/webrtc/raw/local/webcam/whep?playbackToken=<short-lived-token>",
     "hls": "<EDGE>/hls/raw/local/webcam/index.m3u8?playbackToken=<short-lived-token>"
@@ -324,14 +332,15 @@ Authorization: Bearer <accessToken>
 
 `publisherToken`은 stream-scoped short-lived token이다. MediaMTX auth hook은 token의 `streamId`, `path`, signed `groupId` claim, `action=publish`, `exp`, HMAC signature를 검증한다. 장비 송출의 경우 group은 URL이나 stream id에서 받지 않고 auth-policy가 `registered_devices.group_id`로 결정한 값을 media-control이 token claim으로 서명한다. 따라서 token이 노출되어도 다른 stream, 다른 action으로 재사용할 수 없고 만료 시간이 지나면 거부된다.
 
-5. WebRTC publisher가 `whipUrl`로 SDP offer를 POST한다.
+5. WebRTC publisher가 `iceServers`로 peer connection을 만들고 `whipUrl`로 SDP offer를 POST한다.
 6. 송출 중 GPS가 있으면 telemetry ingest API 또는 MQTT/Protobuf telemetry channel로 함께 보낸다.
 
 직접 사용할 수 있는 송출 주소 template:
 
-- 권장: `GET <EDGE>/media-control/api/v1/streams/{streamId}/publish` 후 응답의 `whipUrl` 사용
+- 권장: `GET <EDGE>/media-control/api/v1/streams/{streamId}/publish` 후 응답의 `whipUrl`, `iceServers` 사용
 - 내부 동작 template: `<EDGE>/webrtc/{streamPath}/whip?publisherToken=<short-lived-token>`
 - 예: `<EDGE>/webrtc/raw/local/webcam/whip?publisherToken=<short-lived-token>`
+- 금지: 장비가 인증 없이 `/media-control/api/v1/streams/ice-servers`를 별도 호출하는 방식. 장비는 `publish` 응답 안의 `iceServers`를 우선 사용한다.
 
 ## Dashboard 수신 흐름
 

@@ -233,11 +233,21 @@ describe("LocalWebcamPublisher", () => {
     await waitFor(() => expect(peerConnection.setLocalDescription).toHaveBeenCalled());
     expect(screen.getByRole("status")).toHaveTextContent("ICE 후보 수집");
     expect(screen.getByText("STUN/TURN ICE 서버를 이용해 후보를 수집하고 있습니다.")).toBeInTheDocument();
-    expect(fetcher).not.toHaveBeenCalled();
+    expect(fetcher).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/streams/raw.local.webcam/publish"),
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetcher).not.toHaveBeenCalledWith(
+      "http://media.example.test/authorized/whip?publisherToken=test-publish-token",
+      expect.objectContaining({ method: "POST" }),
+    );
 
     peerConnection.completeIceGathering();
 
-    await waitFor(() => expect(fetcher).toHaveBeenCalled());
+    await waitFor(() => expect(fetcher).toHaveBeenCalledWith(
+      "http://media.example.test/authorized/whip?publisherToken=test-publish-token",
+      expect.objectContaining({ method: "POST" }),
+    ));
     expect(screen.getByRole("status")).toHaveTextContent("송출 중");
   });
 
@@ -312,8 +322,12 @@ describe("LocalWebcamPublisher", () => {
 
       await waitFor(() => expect(peerConnectionConstructor).toHaveBeenCalled());
       expect(peerConnectionConstructor).toHaveBeenCalledWith({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        iceServers: [{ urls: "stun:a4ai.tplinkdns.com:3478" }],
       });
+      expect(fetcher).not.toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/streams/ice-servers"),
+        expect.anything(),
+      );
     } finally {
       globalThis.RTCPeerConnection = originalPeerConnection;
     }
@@ -483,6 +497,7 @@ function createPublisherFetcher(): typeof fetch {
       return {
         ok: true,
         json: async () => ({
+          iceServers: [{ urls: "stun:a4ai.tplinkdns.com:3478" }],
           streamId: "raw.local.webcam",
           whipUrl: "http://media.example.test/authorized/whip?publisherToken=test-publish-token",
         }),
