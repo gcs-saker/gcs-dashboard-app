@@ -20,6 +20,7 @@ class ApiContractTest {
     fun `routes are owned by domain specific route contracts`() {
         assertEquals(ApiContractFixtures.AUTH_ROOT, AuthApiRoutes.ROOT)
         assertEquals(ApiContractFixtures.AUTH_LOGIN, AuthApiRoutes.LOGIN)
+        assertEquals(ApiContractFixtures.ERROR_PATH, AuthSecurityRouteContract.ERROR_PATH)
         assertEquals(ApiContractFixtures.HEALTHZ, HealthApiRoutes.HEALTHZ)
         assertEquals(ApiContractFixtures.ACTUATOR_PROMETHEUS, ObservabilityApiRoutes.PROMETHEUS)
         assertEquals(ApiContractFixtures.TIME_SYNC_STATUS, TimeSyncApiRoutes.STATUS)
@@ -103,6 +104,7 @@ class ApiContractTest {
             AuthApiRoutes.ROOT + AuthApiRoutes.REFRESH,
             AuthApiRoutes.ROOT + AuthApiRoutes.ME,
             AuthApiRoutes.ROOT + AuthApiRoutes.LOGOUT,
+            AuthSecurityRouteContract.ERROR_PATH,
             HealthApiRoutes.HEALTHZ,
             HealthApiRoutes.READYZ,
             ObservabilityApiRoutes.PROMETHEUS,
@@ -487,6 +489,7 @@ class ApiContractTest {
 private object ApiContractFixtures {
     const val AUTH_ROOT = "/auth"
     const val AUTH_LOGIN = "/login"
+    const val ERROR_PATH = "/error"
     const val HEALTHZ = "/healthz"
     const val ACTUATOR_PROMETHEUS = "/actuator/prometheus"
     const val TIME_SYNC_STATUS = "/ops/time/status"
