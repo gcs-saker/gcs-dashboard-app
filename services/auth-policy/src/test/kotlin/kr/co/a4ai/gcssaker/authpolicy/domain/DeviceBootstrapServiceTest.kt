@@ -34,6 +34,28 @@ class DeviceBootstrapServiceTest {
     }
 
     @Test
+    fun `bootstrap accepts field device type alias`() {
+        val aliasRepository = InMemoryRegisteredDeviceRepository()
+        val aliasService = DeviceBootstrapService(
+            lifecycle = DeviceLifecycleService(
+                devices = aliasRepository,
+                passwordHasher = passwordHasher,
+                uuidGenerator = { DeviceBootstrapFixtures.ALIAS_DEVICE_UUID },
+            ),
+            tokens = DeviceBootstrapTokens.of(
+                listOf(DeviceBootstrapToken(DeviceBootstrapFixtures.PROVISIONING_TOKEN, GroupId(DeviceBootstrapFixtures.GROUP_ID))),
+            ),
+        )
+
+        val issue = aliasService.bootstrap(
+            DeviceBootstrapFixtures.command(deviceType = DeviceBootstrapFixtures.UAV_ALIAS),
+        )
+
+        assertEquals(DeviceType.DRONE, issue.device.deviceType)
+        assertEquals(DeviceType.DRONE, aliasRepository.findByDeviceUuid(DeviceBootstrapFixtures.ALIAS_DEVICE_UUID)?.deviceType)
+    }
+
+    @Test
     fun `bootstrap rejects unknown provisioning token before uuid issue`() {
         assertFailsWith<DeviceBootstrapRejectedException> {
             service.bootstrap(DeviceBootstrapFixtures.command(provisioningToken = DeviceBootstrapFixtures.UNKNOWN_TOKEN))
@@ -74,16 +96,21 @@ class DeviceBootstrapServiceTest {
 private object DeviceBootstrapFixtures {
     const val DEVICE_UUID = "00000000-0000-4000-8000-000000000021"
     const val DB_TOKEN_DEVICE_UUID = "00000000-0000-4000-8000-000000000022"
+    const val ALIAS_DEVICE_UUID = "00000000-0000-4000-8000-000000000023"
     const val PROVISIONING_TOKEN = "valid-bootstrap-token"
     const val UNKNOWN_TOKEN = "unknown-bootstrap-token"
     const val GROUP_ID = "co-a"
     const val DISPLAY_NAME = "Bootstrap Drone 01"
+    const val UAV_ALIAS = "uav"
 
-    fun command(provisioningToken: String = PROVISIONING_TOKEN): DeviceBootstrapCommand =
+    fun command(
+        provisioningToken: String = PROVISIONING_TOKEN,
+        deviceType: String = DeviceType.DRONE.apiValue,
+    ): DeviceBootstrapCommand =
         DeviceBootstrapCommand(
             provisioningToken = provisioningToken,
             displayName = DISPLAY_NAME,
-            deviceType = DeviceType.DRONE.apiValue,
+            deviceType = deviceType,
             sensors = listOf(RegisteredDeviceSensor(SENSOR_ID, SENSOR_TYPE)),
             streamPaths = listOf(RegisteredDeviceStream(STREAM_PATH)),
         )

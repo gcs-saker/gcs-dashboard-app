@@ -119,7 +119,7 @@ class DeviceLifecycleService(
             ?: throw IllegalArgumentException(DeviceLifecycleContract.INVALID_DEVICE_STATUS)
 
     private fun parseDeviceType(deviceType: String): DeviceType =
-        DeviceType.entries.firstOrNull { it.apiValue == deviceType || it.name.equals(deviceType, ignoreCase = true) }
+        DeviceType.parse(deviceType)
             ?: throw IllegalArgumentException(DeviceLifecycleContract.INVALID_DEVICE_TYPE)
 }
 

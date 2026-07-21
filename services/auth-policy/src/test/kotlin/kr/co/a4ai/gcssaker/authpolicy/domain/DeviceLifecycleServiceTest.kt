@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DeviceLifecycleServiceTest {
@@ -26,6 +27,35 @@ class DeviceLifecycleServiceTest {
         assertEquals(DeviceLifecycleFixtures.GROUP_ID, stored?.groupId?.value)
         assertNotEquals(issue.credential, stored?.credentialHash)
         assertTrue(passwordHasher.verify(issue.credential, stored?.credentialHash ?: ""))
+    }
+
+    @Test
+    fun `device type parser accepts field aliases and normalizes them`() {
+        assertEquals(DeviceType.DRONE, DeviceType.parse("uav"))
+        assertEquals(DeviceType.DRONE, DeviceType.parse("UAS"))
+        assertEquals(DeviceType.ROBOT, DeviceType.parse("ugv"))
+        assertEquals(DeviceType.ROBOT, DeviceType.parse("ground_robot"))
+        assertEquals(DeviceType.CAMERA, DeviceType.parse("webcam"))
+        assertEquals(DeviceType.CAMERA, DeviceType.parse("ip-camera"))
+        assertEquals(DeviceType.EDGE_GATEWAY, DeviceType.parse("edge_gateway"))
+        assertNull(DeviceType.parse("unknown-device-type"))
+    }
+
+    @Test
+    fun `register stores normalized device type from alias`() {
+        val aliasRepository = InMemoryRegisteredDeviceRepository()
+        val aliasService = DeviceLifecycleService(
+            devices = aliasRepository,
+            passwordHasher = passwordHasher,
+            uuidGenerator = { DeviceLifecycleFixtures.ALIAS_DEVICE_UUID },
+        )
+
+        val issue = aliasService.register(
+            DeviceLifecycleFixtures.registerCommand(deviceType = DeviceLifecycleFixtures.UAV_ALIAS),
+        )
+
+        assertEquals(DeviceType.DRONE, issue.device.deviceType)
+        assertEquals(DeviceType.DRONE, aliasRepository.findByDeviceUuid(DeviceLifecycleFixtures.ALIAS_DEVICE_UUID)?.deviceType)
     }
 
     @Test
@@ -105,16 +135,18 @@ class DeviceLifecycleServiceTest {
 
 private object DeviceLifecycleFixtures {
     const val DEVICE_UUID = "00000000-0000-4000-8000-000000000001"
+    const val ALIAS_DEVICE_UUID = "00000000-0000-4000-8000-000000000002"
     const val GROUP_ID = "co-a"
     const val DISPLAY_NAME = "Daegu Drone 01"
+    const val UAV_ALIAS = "uav"
     const val UPDATED_GROUP_ID = "co-b"
     const val UPDATED_DISPLAY_NAME = "Daegu Drone 01 Updated"
 
-    fun registerCommand(): RegisterDeviceCommand =
+    fun registerCommand(deviceType: String = DeviceType.DRONE.apiValue): RegisterDeviceCommand =
         RegisterDeviceCommand(
             groupId = GROUP_ID,
             displayName = DISPLAY_NAME,
-            deviceType = DeviceType.DRONE.apiValue,
+            deviceType = deviceType,
             sensors = listOf(RegisteredDeviceSensor(SENSOR_ID, SENSOR_TYPE)),
             streamPaths = listOf(RegisteredDeviceStream(STREAM_PATH)),
         )
