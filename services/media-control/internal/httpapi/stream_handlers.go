@@ -61,14 +61,5 @@ func (s Server) dashboardIceServers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	servers := s.healthyIceServers()
-	payload := make([]iceServerResponse, 0, len(servers))
-	for _, server := range servers {
-		payload = append(payload, iceServerResponse{
-			URLs:       server.URL,
-			Username:   emptyAsNil(server.Username),
-			Credential: emptyAsNil(server.Credential),
-		})
-	}
-	writeJSON(w, http.StatusOK, payload)
+	writeJSON(w, http.StatusOK, s.iceServerResponses())
 }

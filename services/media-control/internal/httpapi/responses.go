@@ -32,8 +32,9 @@ type streamStatusResponse struct {
 }
 
 type streamPublishResponse struct {
-	StreamID string `json:"streamId"`
-	WhipURL  string `json:"whipUrl"`
+	StreamID   string              `json:"streamId"`
+	WhipURL    string              `json:"whipUrl"`
+	IceServers []iceServerResponse `json:"iceServers"`
 }
 
 type streamListResponse struct {

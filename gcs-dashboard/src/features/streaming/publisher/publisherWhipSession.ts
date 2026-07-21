@@ -1,7 +1,7 @@
 import { WEBRTC_ICE_SERVERS } from "@/config";
 import { loadWebRtcIceServers } from "@streaming/iceServers";
 import { SDP_OFFER_HEADERS } from "@streaming/streamingProtocolHeaders";
-import { fetchAuthorizedPublishWhipUrl } from "./publisherApi";
+import { fetchAuthorizedPublishSession } from "./publisherApi";
 import type { PublisherStepId, WebcamPublisherStatus } from "./publisherContracts";
 import { waitForIceGatheringComplete, waitForPeerConnectionReady } from "./publisherWebRtc";
 
@@ -37,7 +37,10 @@ export async function startPublisherWhipSession({
   let currentStep: PublisherStepId = "ice";
   try {
     onStatus("creating-offer");
-    const iceServers = peerConnectionFactory ? WEBRTC_ICE_SERVERS : await loadWebRtcIceServers(fetcher);
+    const publishSession = await fetchAuthorizedPublishSession(streamId, fetcher);
+    const iceServers = peerConnectionFactory
+      ? WEBRTC_ICE_SERVERS
+      : await resolvePublisherIceServers(fetcher, publishSession.iceServers);
     const peerConnection = peerConnectionFactory?.() ?? new RTCPeerConnection({ iceServers });
     onPeerConnection(peerConnection);
     peerConnection.onconnectionstatechange = () => onConnectionChange(peerConnection);
@@ -53,8 +56,7 @@ export async function startPublisherWhipSession({
 
     currentStep = "signaling";
     onStatus("sending-offer");
-    const publishWhipUrl = await fetchAuthorizedPublishWhipUrl(streamId, fetcher);
-    const response = await fetcher(publishWhipUrl, { method: "POST", headers: SDP_OFFER_HEADERS, body: sdp });
+    const response = await fetcher(publishSession.whipUrl, { method: "POST", headers: SDP_OFFER_HEADERS, body: sdp });
     if (!response.ok) throw new Error(`WHIP publish failed with ${response.status}`);
 
     const answer = await response.text();
@@ -66,4 +68,14 @@ export async function startPublisherWhipSession({
   } catch (error) {
     throw new PublisherWhipSessionError(currentStep, error);
   }
+}
+
+async function resolvePublisherIceServers(
+  fetcher: typeof fetch,
+  authorizedIceServers: RTCIceServer[],
+): Promise<RTCIceServer[]> {
+  if (authorizedIceServers.length > 0) {
+    return authorizedIceServers;
+  }
+  return loadWebRtcIceServers(fetcher);
 }

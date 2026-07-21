@@ -81,12 +81,12 @@
 | GET | `/media-control/api/v1/streams/ice-servers` | bearer | `Authorization` | none | none | `iceServers[]` | STUN 우선, TURN fallback 후보 |
 | GET | `/media-control/api/v1/streams/{streamId}` | bearer | `Authorization` | path `streamId` | none | stream descriptor | 단건 stream 정보 |
 | GET | `/media-control/api/v1/streams/{streamId}/playback` | bearer | `Authorization` | path `streamId` | none | `streamId`, `status`, `playbackUrls.webrtc`, `playbackUrls.hls` | dashboard 수신 URL 발급 |
-| GET | `/media-control/api/v1/streams/{streamId}/publish` | bearer 또는 device credential | `Authorization` 또는 `X-GCS-Device-UUID`, `X-GCS-Device-Credential` | path `streamId` | none | `streamId`, `whipUrl` | browser/mobile publisher 또는 robot/drone gateway 송출 URL 발급 |
+| GET | `/media-control/api/v1/streams/{streamId}/publish` | bearer 또는 device credential | `Authorization` 또는 `X-GCS-Device-UUID`, `X-GCS-Device-Credential` | path `streamId` | none | `streamId`, `whipUrl`, `iceServers[]` | browser/mobile publisher 또는 robot/drone gateway 송출 URL/ICE 후보 발급 |
 | GET | `/media-control/api/v1/streams/{streamId}/status` | bearer | `Authorization` | path `streamId` | none | `streamId`, `status` | 연결 상태 확인 |
 
 `streamId`는 API에서는 `raw.local.webcam` 같은 dot 형식, MediaMTX path에서는 `raw/local/webcam` 같은 slash 형식을 사용한다.
 
-`publish` 응답의 `whipUrl`에는 short-lived `publisherToken`이 포함된다. 이 token은 `streamId`, `path`, signed `groupId` claim, `action=publish`, `exp`, HMAC signature에 묶인다. 장비 요청은 media-control이 auth-policy device publish policy를 내부 호출하므로 request body나 URL에 `groupId`를 싣지 않는다.
+`publish` 응답의 `whipUrl`에는 short-lived `publisherToken`이 포함된다. 이 token은 `streamId`, `path`, signed `groupId` claim, `action=publish`, `exp`, HMAC signature에 묶인다. 장비 요청은 media-control이 auth-policy device publish policy를 내부 호출하므로 request body나 URL에 `groupId`를 싣지 않는다. 장비 송출 클라이언트는 별도 무인증 ICE API 호출 대신 같은 응답의 `iceServers[]`를 WebRTC 설정에 주입한다.
 
 ## WebRTC / HLS Media Plane
 

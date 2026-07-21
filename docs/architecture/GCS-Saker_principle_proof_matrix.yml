@@ -214,13 +214,13 @@ principles:
     assertions:
       nginxRoutes:
         - route: /auth-policy/
-          proxyPass: http://gcs_auth_policy
+          proxyPass: http://$auth_policy_host:8080
         - route: /media-control/
-          proxyPass: http://gcs_media_control
+          proxyPass: http://$media_control_host:8081
         - route: /webrtc/
-          proxyPass: http://gcs_mediamtx_webrtc
+          proxyPass: http://$mediamtx_host:8889
         - route: /hls/
-          proxyPass: http://gcs_mediamtx_hls
+          proxyPass: http://$mediamtx_host:8888
       evidencePaths:
         - deploy/nginx/single-node.poc.conf
 
@@ -360,9 +360,9 @@ principles:
     assertions:
       nginxRoutes:
         - route: /webrtc/
-          proxyPass: http://gcs_mediamtx_webrtc
+          proxyPass: http://$mediamtx_host:8889
         - route: /hls/
-          proxyPass: http://gcs_mediamtx_hls
+          proxyPass: http://$mediamtx_host:8888
       requiredTexts:
         - path: gcs-dashboard/src/features/streaming/components/WebRTCPlayer.tsx
           text: "data-first-frame-latency-ms"

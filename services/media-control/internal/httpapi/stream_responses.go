@@ -87,9 +87,23 @@ func (s Server) writeStreamPublishResponseForGroup(
 	}
 	whipURL := strings.TrimSuffix(playbackURLs.WebRTC, "/whep") + "/whip?" + publisherTokenQueryKey + "=" + url.QueryEscape(token)
 	writeJSON(w, http.StatusOK, streamPublishResponse{
-		StreamID: parsed.StreamID,
-		WhipURL:  whipURL,
+		StreamID:   parsed.StreamID,
+		WhipURL:    whipURL,
+		IceServers: s.iceServerResponses(),
 	})
+}
+
+func (s Server) iceServerResponses() []iceServerResponse {
+	servers := s.healthyIceServers()
+	payload := make([]iceServerResponse, 0, len(servers))
+	for _, server := range servers {
+		payload = append(payload, iceServerResponse{
+			URLs:       server.URL,
+			Username:   emptyAsNil(server.Username),
+			Credential: emptyAsNil(server.Credential),
+		})
+	}
+	return payload
 }
 
 func (s Server) withPlaybackToken(playbackURLs domain.PlaybackURLs, parsed domain.ParsedStreamPath) domain.PlaybackURLs {
