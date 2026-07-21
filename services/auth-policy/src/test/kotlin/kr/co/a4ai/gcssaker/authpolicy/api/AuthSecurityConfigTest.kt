@@ -114,6 +114,17 @@ class AuthSecurityConfigTest @Autowired constructor(
     }
 
     @Test
+    fun `edge prefixed device bootstrap route is public but requires provisioning token`() {
+        mockMvc.post(DeviceBootstrapApiRoutes.EDGE_ROOT + DeviceBootstrapApiRoutes.REGISTER) {
+            contentType = org.springframework.http.MediaType.APPLICATION_JSON
+            content = AuthSecurityConfigTestContract.DEVICE_BOOTSTRAP_PAYLOAD
+        }
+            .andExpect {
+                status { isForbidden() }
+            }
+    }
+
+    @Test
     fun `admin device route rejects non admin bearer auth at security boundary`() {
         mockMvc.post(AdminDeviceApiRoutes.ROOT) {
             header(HttpHeaders.AUTHORIZATION, bearerAccessToken())
