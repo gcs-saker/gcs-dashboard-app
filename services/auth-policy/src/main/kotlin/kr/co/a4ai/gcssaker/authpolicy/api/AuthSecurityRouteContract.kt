@@ -9,6 +9,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher
 
 object AuthSecurityRouteContract {
     const val ALL_PATHS = "/**"
+    const val ERROR_PATH = "/error"
     const val ERROR_DETAIL_FIELD = "detail"
     const val AUTH_PREFIX = "/auth/**"
     private const val ACTUATOR_HEALTH = "/actuator/health"
@@ -41,6 +42,7 @@ object AuthSecurityRouteContract {
         RouteMatcher(HttpMethod.GET, ACTUATOR_INFO),
         RouteMatcher(HttpMethod.GET, ACTUATOR_PROMETHEUS),
         RouteMatcher(HttpMethod.OPTIONS, ALL_PATHS),
+        RouteMatcher(null, ERROR_PATH),
         RouteMatcher(null, AUTH_PREFIX),
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.SIGNUP),
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.LOGIN),
