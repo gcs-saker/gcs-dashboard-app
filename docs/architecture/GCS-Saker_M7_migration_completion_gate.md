@@ -31,7 +31,8 @@ Telemetry ingest path는 M7-15 기준으로 Spring/Kotlin auth-policy read-model
 | `/api/control/*` | Edge disabled | 실제 장비 제어 정책이 확정될 때까지 public edge에서는 broad fallback으로 공개하지 않는다. |
 | `/api/v1/ai/mock/detections` | Edge disabled | 실제 AI overlay server 연동 전 mock contract이며 public edge 기본 경로에서는 닫는다. |
 | `/metrics` | Edge disabled | 신규 서비스별 metrics 설계 전까지 public edge에는 공개하지 않는다. |
-| `/ws/*` | Edge disabled | WebSocket contract가 확정될 때까지 public edge에서는 410으로 닫는다. |
+| `/ws/v1/telemetry` | Kotlin auth-policy | 인증된 그룹별 telemetry push 전용 exact WebSocket 경로다. |
+| 그 외 `/ws/*` | Edge disabled | 명시적으로 승인된 WebSocket 외 broad fallback은 410으로 닫는다. |
 
 ## 운영 판단
 

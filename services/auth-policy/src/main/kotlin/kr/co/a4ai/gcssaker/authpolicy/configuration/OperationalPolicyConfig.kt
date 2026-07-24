@@ -27,12 +27,17 @@ import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import org.springframework.scheduling.annotation.EnableScheduling
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryAlertRuleEngine
+import kr.co.a4ai.gcssaker.authpolicy.api.TelemetryWebSocketHub
 import java.util.concurrent.ThreadPoolExecutor
 import javax.sql.DataSource
 
 @Configuration
 @EnableScheduling
 class OperationalPolicyConfig {
+    @Bean
+    fun telemetryWebSocketHub(objectMapper: ObjectMapper): TelemetryWebSocketHub =
+        TelemetryWebSocketHub(objectMapper)
+
     @Bean
     fun geofenceRepository(): GeofenceRepository = InMemoryGeofenceRepository()
 

@@ -28,6 +28,7 @@ class OperationalReadController(
     private val clock: Clock = Clock.systemUTC(),
     private val geofenceEvaluator: GeofenceTelemetryEvaluator = GeofenceTelemetryEvaluator.NOOP,
     private val alertRuleEngine: TelemetryAlertRuleEngine = TelemetryAlertRuleEngine.NOOP,
+    private val telemetryPublisher: TelemetryWebSocketPublisher = TelemetryWebSocketPublisher.NOOP,
 ) {
     private val requestReader = OperationalReadRequestReader(principalResolver)
 
@@ -50,6 +51,7 @@ class OperationalReadController(
         val telemetry = repository.upsertTelemetry(request.toReadModel(principal))
         geofenceEvaluator.evaluate(telemetry, Instant.now(clock))
         alertRuleEngine.evaluate(telemetry, Instant.now(clock))
+        telemetryPublisher.publish(telemetry)
         return telemetry.toResponse()
     }
 
@@ -66,6 +68,7 @@ class OperationalReadController(
         )
         geofenceEvaluator.evaluate(telemetry, Instant.now(clock))
         alertRuleEngine.evaluate(telemetry, Instant.now(clock))
+        telemetryPublisher.publish(telemetry)
         return telemetry.toResponse()
     }
 

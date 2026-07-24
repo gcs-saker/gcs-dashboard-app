@@ -1,0 +1,84 @@
+package kr.co.a4ai.gcssaker.authpolicy.api
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
+import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
+import org.springframework.context.annotation.Configuration
+import org.springframework.security.core.Authentication
+import org.springframework.web.socket.CloseStatus
+import org.springframework.web.socket.TextMessage
+import org.springframework.web.socket.WebSocketSession
+import org.springframework.web.socket.config.annotation.EnableWebSocket
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
+import org.springframework.web.socket.handler.TextWebSocketHandler
+import java.util.concurrent.ConcurrentHashMap
+
+object TelemetryWebSocketContract {
+    const val PATH = "/ws/v1/telemetry"
+}
+
+fun interface TelemetryWebSocketPublisher {
+    fun publish(telemetry: TelemetryReadModel)
+
+    companion object {
+        val NOOP = TelemetryWebSocketPublisher { }
+    }
+}
+
+class TelemetryWebSocketHub(
+    private val objectMapper: ObjectMapper,
+) : TextWebSocketHandler(), TelemetryWebSocketPublisher {
+    private data class Subscriber(
+        val session: WebSocketSession,
+        val principal: AuthenticatedPrincipal,
+    )
+
+    private val subscribers = ConcurrentHashMap<String, Subscriber>()
+
+    override fun afterConnectionEstablished(session: WebSocketSession) {
+        val principal = (session.principal as? Authentication)?.principal as? AuthenticatedPrincipal
+        if (principal == null) {
+            session.close(CloseStatus.NOT_ACCEPTABLE.withReason("authenticated principal required"))
+            return
+        }
+        subscribers[session.id] = Subscriber(session, principal)
+    }
+
+    override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
+        subscribers.remove(session.id)
+    }
+
+    override fun handleTransportError(session: WebSocketSession, exception: Throwable) {
+        subscribers.remove(session.id)
+        if (session.isOpen) session.close(CloseStatus.SERVER_ERROR)
+    }
+
+    override fun publish(telemetry: TelemetryReadModel) {
+        val payload = TextMessage(objectMapper.writeValueAsString(telemetry.toResponse()))
+        subscribers.values.forEach { subscriber ->
+            if (subscriber.principal.role == UserRole.ADMIN || subscriber.principal.groupId == telemetry.groupId) {
+                runCatching {
+                    synchronized(subscriber.session) {
+                        if (subscriber.session.isOpen) subscriber.session.sendMessage(payload)
+                    }
+                }.onFailure {
+                    subscribers.remove(subscriber.session.id)
+                }
+            }
+        }
+    }
+
+    fun connectionCount(): Int = subscribers.size
+}
+
+@Configuration
+@EnableWebSocket
+class TelemetryWebSocketConfig(
+    private val hub: TelemetryWebSocketHub,
+) : WebSocketConfigurer {
+    override fun registerWebSocketHandlers(registry: WebSocketHandlerRegistry) {
+        registry.addHandler(hub, TelemetryWebSocketContract.PATH)
+    }
+}
