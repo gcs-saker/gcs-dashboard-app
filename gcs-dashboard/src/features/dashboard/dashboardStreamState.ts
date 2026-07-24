@@ -34,6 +34,7 @@ function isSameStreamDevice(device: StreamDeviceOption, nextDevice: StreamDevice
     device.geometry.lat === nextDevice.geometry.lat &&
     device.geometry.lng === nextDevice.geometry.lng &&
     device.geometry.altitudeM === nextDevice.geometry.altitudeM &&
+    device.geometry.batteryPercent === nextDevice.geometry.batteryPercent &&
     device.geometry.headingDeg === nextDevice.geometry.headingDeg &&
     device.geometry.pitchDeg === nextDevice.geometry.pitchDeg &&
     device.geometry.rollDeg === nextDevice.geometry.rollDeg &&
@@ -57,6 +58,7 @@ function isSameStreamSlot(stream: DashboardStreamSlot, nextStream: DashboardStre
     stream.geometry?.lat === nextStream.geometry?.lat &&
     stream.geometry?.lng === nextStream.geometry?.lng &&
     stream.geometry?.altitudeM === nextStream.geometry?.altitudeM &&
+    stream.geometry?.batteryPercent === nextStream.geometry?.batteryPercent &&
     stream.geometry?.headingDeg === nextStream.geometry?.headingDeg &&
     stream.geometry?.pitchDeg === nextStream.geometry?.pitchDeg &&
     stream.geometry?.rollDeg === nextStream.geometry?.rollDeg &&

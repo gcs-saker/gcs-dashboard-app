@@ -35,7 +35,15 @@ export function StreamMapPopup({ onClose, stream }: StreamMapPopupProps) {
       <dl>
         <div>
           <dt>상태</dt>
-          <dd>{getDashboardStreamStatusText(stream.status)}</dd>
+          <dd><span className="stream-map-popup__badge">{getDashboardStreamStatusText(stream.status)}</span></dd>
+        </div>
+        <div>
+          <dt>배터리</dt>
+          <dd>
+            <span className="stream-map-popup__badge">
+              {geometry?.batteryPercent === undefined ? "대기" : `${Math.round(geometry.batteryPercent)}%`}
+            </span>
+          </dd>
         </div>
         <div>
           <dt>단말 ID</dt>

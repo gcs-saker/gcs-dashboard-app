@@ -1,5 +1,6 @@
 import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 import { coordinateText, markerClassForStream } from "./mapContracts";
+import { StreamMapMarkerContent } from "./StreamMapMarkerContent";
 
 export interface StreamMarkerPosition {
   left: number;
@@ -30,8 +31,7 @@ export function PublicMapMarkers({
           aria-label={`${stream.title} 위치 ${coordinateText(stream)}`}
           onClick={() => onStreamMarkerSelect(stream.id)}
         >
-          <span className="offline-map-marker__dot" />
-          <span className="offline-map-marker__label">{stream.title}</span>
+          <StreamMapMarkerContent stream={stream} />
         </button>
       ))}
     </div>
