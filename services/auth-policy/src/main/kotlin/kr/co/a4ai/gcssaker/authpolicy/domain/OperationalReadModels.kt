@@ -18,6 +18,12 @@ data class TelemetryReadModel(
     val epochTime: String,
     val portDistance: Double,
     val groupId: GroupId,
+    val batteryPercent: Double? = null,
+    val rollDeg: Double? = null,
+    val pitchDeg: Double? = null,
+    val yawDeg: Double? = null,
+    val linkQualityPercent: Double? = null,
+    val observedAt: Instant? = null,
 )
 
 data class TelemetryHistoryReadModel(

@@ -17,6 +17,12 @@ data class TelemetryReadResponse(
     val totalDistance: Double,
     val epochTime: String,
     val portDistance: Double,
+    val batteryPercent: Double? = null,
+    val rollDeg: Double? = null,
+    val pitchDeg: Double? = null,
+    val yawDeg: Double? = null,
+    val linkQualityPercent: Double? = null,
+    val observedAt: Instant? = null,
 )
 
 data class TelemetryHistoryResponse(
@@ -39,6 +45,11 @@ data class TelemetryIngestRequest(
     val epochTime: Long? = null,
     val observedUnixMillis: Long? = null,
     val portDistance: Double? = null,
+    val batteryPercent: Double? = null,
+    val rollDeg: Double? = null,
+    val pitchDeg: Double? = null,
+    val yawDeg: Double? = null,
+    val linkQualityPercent: Double? = null,
 )
 
 data class AssetReadResponse(

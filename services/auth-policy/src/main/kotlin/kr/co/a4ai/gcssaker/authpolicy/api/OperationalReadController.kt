@@ -3,6 +3,7 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 import com.fasterxml.jackson.databind.ObjectMapper
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.GeofenceTelemetryEvaluator
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryAlertRuleEngine
 import org.springframework.http.CacheControl
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -26,6 +27,7 @@ class OperationalReadController(
     private val streamPolicy: OperationalReadStreamPolicy = OperationalReadStreamPolicy(),
     private val clock: Clock = Clock.systemUTC(),
     private val geofenceEvaluator: GeofenceTelemetryEvaluator = GeofenceTelemetryEvaluator.NOOP,
+    private val alertRuleEngine: TelemetryAlertRuleEngine = TelemetryAlertRuleEngine.NOOP,
 ) {
     private val requestReader = OperationalReadRequestReader(principalResolver)
 
@@ -47,6 +49,7 @@ class OperationalReadController(
         val principal = requestReader.principal(authorization)
         val telemetry = repository.upsertTelemetry(request.toReadModel(principal))
         geofenceEvaluator.evaluate(telemetry, Instant.now(clock))
+        alertRuleEngine.evaluate(telemetry, Instant.now(clock))
         return telemetry.toResponse()
     }
 
@@ -62,6 +65,7 @@ class OperationalReadController(
             request.toDeviceReadModel(principal, deviceId, Instant.now(clock)),
         )
         geofenceEvaluator.evaluate(telemetry, Instant.now(clock))
+        alertRuleEngine.evaluate(telemetry, Instant.now(clock))
         return telemetry.toResponse()
     }
 

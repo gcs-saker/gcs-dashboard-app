@@ -25,10 +25,13 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.core.task.TaskExecutor
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
+import org.springframework.scheduling.annotation.EnableScheduling
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryAlertRuleEngine
 import java.util.concurrent.ThreadPoolExecutor
 import javax.sql.DataSource
 
 @Configuration
+@EnableScheduling
 class OperationalPolicyConfig {
     @Bean
     fun geofenceRepository(): GeofenceRepository = InMemoryGeofenceRepository()
@@ -38,6 +41,10 @@ class OperationalPolicyConfig {
         geofences: GeofenceRepository,
         events: OperationalEventRepository,
     ): GeofenceTelemetryEvaluator = GeofenceTelemetryEvaluator(geofences, events)
+
+    @Bean
+    fun telemetryAlertRuleEngine(events: OperationalEventRepository): TelemetryAlertRuleEngine =
+        TelemetryAlertRuleEngine(events)
 
     @Bean
     fun operationalPostProcessingExecutor(settings: AuthRuntimeSettings): TaskExecutor =
