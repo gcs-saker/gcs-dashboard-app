@@ -3,6 +3,7 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 import com.fasterxml.jackson.databind.ObjectMapper
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.core.Authentication
@@ -19,17 +20,9 @@ object TelemetryWebSocketContract {
     const val PATH = "/ws/v1/telemetry"
 }
 
-fun interface TelemetryWebSocketPublisher {
-    fun publish(telemetry: TelemetryReadModel)
-
-    companion object {
-        val NOOP = TelemetryWebSocketPublisher { }
-    }
-}
-
 class TelemetryWebSocketHub(
     private val objectMapper: ObjectMapper,
-) : TextWebSocketHandler(), TelemetryWebSocketPublisher {
+) : TextWebSocketHandler(), TelemetryPublisher {
     private data class Subscriber(
         val session: WebSocketSession,
         val principal: AuthenticatedPrincipal,

@@ -16,7 +16,8 @@ import org.springframework.web.socket.WebSocketSession
 import java.time.Instant
 
 class TelemetryWebSocketHubTest {
-    private val hub = TelemetryWebSocketHub(ObjectMapper())
+    private val objectMapper = ObjectMapper().findAndRegisterModules()
+    private val hub = TelemetryWebSocketHub(objectMapper)
 
     @Test
     fun `pushes telemetry only to subscribers in the device group`() {
@@ -30,7 +31,7 @@ class TelemetryWebSocketHubTest {
         val payload = ArgumentCaptor.forClass(TextMessage::class.java)
         Mockito.verify(groupA).sendMessage(payload.capture())
         Mockito.verify(groupB, Mockito.never()).sendMessage(Mockito.any())
-        assertEquals("device-001", ObjectMapper().readTree(payload.value.payload)["uuid"].asText())
+        assertEquals("device-001", objectMapper.readTree(payload.value.payload)["uuid"].asText())
     }
 
     @Test

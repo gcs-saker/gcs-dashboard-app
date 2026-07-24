@@ -4,14 +4,14 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.GeofenceTelemetryEvaluator
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryAlertRuleEngine
-import kr.co.a4ai.gcssaker.authpolicy.api.TelemetryWebSocketPublisher
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryPublisher
 import kr.co.a4ai.gcssaker.authpolicy.protocol.v2.TelemetryEnvelopePayload
 
 class MqttTelemetryConsumerBridge(
     private val repository: OperationalReadRepository,
     private val geofenceEvaluator: GeofenceTelemetryEvaluator = GeofenceTelemetryEvaluator.NOOP,
     private val alertRuleEngine: TelemetryAlertRuleEngine = TelemetryAlertRuleEngine.NOOP,
-    private val telemetryPublisher: TelemetryWebSocketPublisher = TelemetryWebSocketPublisher.NOOP,
+    private val telemetryPublisher: TelemetryPublisher = TelemetryPublisher.NOOP,
 ) {
     fun handle(topic: String, payload: ByteArray): TelemetryReadModel? {
         val message = MqttAssetTopic.parse(topic)
