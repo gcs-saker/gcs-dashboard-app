@@ -82,6 +82,12 @@ data class TelemetryEnvelopePayload(
             epochTime = legacyEpochTime(observedUnixMillis),
             portDistance = 0.0,
             groupId = GroupId(groupId),
+            batteryPercent = batteryPercent,
+            rollDeg = attitudeDeg.x,
+            pitchDeg = attitudeDeg.y,
+            yawDeg = attitudeDeg.z,
+            linkQualityPercent = linkQualityPercent,
+            observedAt = java.time.Instant.ofEpochMilli(observedUnixMillis),
         )
 
     companion object {

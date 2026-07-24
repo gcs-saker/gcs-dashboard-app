@@ -27,6 +27,12 @@ internal fun TelemetryIngestRequest.toReadModel(principal: AuthenticatedPrincipa
         epochTime = formatEpochTime(epochTime),
         portDistance = portDistance ?: 0.0,
         groupId = GroupId(principal.groupId.value),
+        batteryPercent = batteryPercent,
+        rollDeg = rollDeg,
+        pitchDeg = pitchDeg,
+        yawDeg = yawDeg,
+        linkQualityPercent = linkQualityPercent,
+        observedAt = observedUnixMillis?.let(Instant::ofEpochMilli),
     )
 }
 
@@ -106,6 +112,12 @@ internal fun TelemetryReadModel.toResponse(): TelemetryReadResponse =
         totalDistance = totalDistance,
         epochTime = epochTime,
         portDistance = portDistance,
+        batteryPercent = batteryPercent,
+        rollDeg = rollDeg,
+        pitchDeg = pitchDeg,
+        yawDeg = yawDeg,
+        linkQualityPercent = linkQualityPercent,
+        observedAt = observedAt,
     )
 
 internal fun TelemetryHistoryReadModel.toResponse(): TelemetryHistoryResponse =
