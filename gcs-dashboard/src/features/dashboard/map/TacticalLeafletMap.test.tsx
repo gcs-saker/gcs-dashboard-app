@@ -93,8 +93,10 @@ describe("TacticalLeafletMap", () => {
     );
     expect(screen.getByTestId("map-coordinate-source")).toHaveTextContent("실시간 GPS");
     expect(screen.getByTestId("offline-map-center")).toHaveTextContent("35.871435, 128.601445");
-    expect(screen.getByRole("button", { name: /로컬 웹캠 위치/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /배터리 78%/ })).toHaveTextContent("정상78%");
+    const marker = screen.getByRole("button", { name: /로컬 웹캠 위치/ });
+    expect(marker).toBeInTheDocument();
+    expect(within(marker).getByText("정상")).toBeInTheDocument();
+    expect(within(marker).getByText("78%")).toBeInTheDocument();
     expect(leafletMock().instances[0].latLngToContainerPoint).toHaveBeenCalledWith([35.871435, 128.601445]);
     expect(screen.getByRole("button", { name: "자동 포커스 켜짐" })).toHaveClass("is-active");
   });

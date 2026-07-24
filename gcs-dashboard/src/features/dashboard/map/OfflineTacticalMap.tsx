@@ -82,7 +82,7 @@ export function OfflineTacticalMap({
           style={{ left: `${left}%`, top: `${top}%` }}
           type="button"
           title={`${stream.title} / ${coordinateText(stream)}`}
-          aria-label={`${stream.title} 위치 ${coordinateText(stream)}, 상태 ${stream.status}${stream.geometry?.batteryPercent === undefined ? "" : `, 배터리 ${Math.round(stream.geometry.batteryPercent)}%`}`}
+          aria-label={`${stream.title} 위치 ${coordinateText(stream)}`}
           onClick={() => onStreamMarkerSelect(stream.id)}
         >
           <StreamMapMarkerContent stream={stream} />
