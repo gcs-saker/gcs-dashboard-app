@@ -12,11 +12,14 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneOffset
 
 class OperationalReadControllerTest {
     private val passwordHasher = PasswordHasher()
@@ -60,6 +63,7 @@ class OperationalReadControllerTest {
             ),
         ),
         principalResolver = BearerPrincipalResolver(sessions),
+        clock = Clock.fixed(timestamp, ZoneOffset.UTC),
     )
 
     @Test
@@ -109,6 +113,80 @@ class OperationalReadControllerTest {
         assertEquals("raw.mobile.gps", ingested.uuid)
         assertEquals("00:01:05", ingested.epochTime)
         assertTrue(telemetry.any { it.uuid == "raw.mobile.gps" && it.latitude == 35.882 })
+    }
+
+    @Test
+    fun `device telemetry ingest binds path identity validates timestamp and stores latest snapshot`() {
+        val token = bearer(accessToken("viewer-a"))
+        val observed = timestamp.toEpochMilli()
+
+        val first = controller.ingestDeviceTelemetry(
+            "device-001",
+            token,
+            TelemetryIngestRequest(
+                uuid = null,
+                latitude = 35.882,
+                observedUnixMillis = observed,
+            ),
+        )
+        val latest = controller.ingestDeviceTelemetry(
+            "device-001",
+            token,
+            TelemetryIngestRequest(
+                uuid = "device-001",
+                latitude = 35.883,
+                observedUnixMillis = observed + 1_000,
+            ),
+        )
+
+        assertEquals("device-001", first.uuid)
+        assertEquals(35.883, latest.latitude)
+        assertEquals(
+            35.883,
+            controller.telemetryAll(token).single { it.uuid == "device-001" }.latitude,
+        )
+    }
+
+    @Test
+    fun `device telemetry ingest rejects mismatched identity and invalid timestamps`() {
+        val token = bearer(accessToken("viewer-a"))
+
+        assertEquals(
+            OperationalReadApiErrors.DEVICE_ID_MISMATCH,
+            assertThrows<BadRequestApiError> {
+                controller.ingestDeviceTelemetry(
+                    "device-001",
+                    token,
+                    TelemetryIngestRequest(
+                        uuid = "device-002",
+                        observedUnixMillis = timestamp.toEpochMilli(),
+                    ),
+                )
+            }.reason,
+        )
+        assertEquals(
+            OperationalReadApiErrors.OBSERVED_TIMESTAMP_REQUIRED,
+            assertThrows<BadRequestApiError> {
+                controller.ingestDeviceTelemetry(
+                    "device-001",
+                    token,
+                    TelemetryIngestRequest(uuid = null),
+                )
+            }.reason,
+        )
+        assertEquals(
+            OperationalReadApiErrors.OBSERVED_TIMESTAMP_IN_FUTURE,
+            assertThrows<BadRequestApiError> {
+                controller.ingestDeviceTelemetry(
+                    "device-001",
+                    token,
+                    TelemetryIngestRequest(
+                        uuid = null,
+                        observedUnixMillis = timestamp.toEpochMilli() + TelemetryIngestPolicy.MAX_FUTURE_SKEW_MILLIS + 1,
+                    ),
+                )
+            }.reason,
+        )
     }
 
     @Test

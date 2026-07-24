@@ -37,6 +37,7 @@ data class TelemetryIngestRequest(
     val velocity: Double? = null,
     val totalDistance: Double? = null,
     val epochTime: Long? = null,
+    val observedUnixMillis: Long? = null,
     val portDistance: Double? = null,
 )
 

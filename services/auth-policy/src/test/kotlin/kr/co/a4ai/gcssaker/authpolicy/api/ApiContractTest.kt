@@ -32,6 +32,7 @@ class ApiContractTest {
         assertEquals(ApiContractFixtures.GRAPHQL, GraphQlApiRoutes.GRAPHQL)
         assertEquals(ApiContractFixtures.TELEMETRY_ALL, OperationalReadApiRoutes.TELEMETRY_ALL)
         assertEquals(ApiContractFixtures.TELEMETRY_INGEST, OperationalReadApiRoutes.TELEMETRY_INGEST)
+        assertEquals(ApiContractFixtures.DEVICE_TELEMETRY_INGEST, OperationalReadApiRoutes.DEVICE_TELEMETRY_INGEST)
         assertEquals(ApiContractFixtures.TELEMETRY_HISTORY, OperationalReadApiRoutes.TELEMETRY_HISTORY)
         assertEquals(ApiContractFixtures.ASSET_BY_GATEWAY, OperationalReadApiRoutes.ASSET_BY_GATEWAY)
         assertEquals(ApiContractFixtures.STREAM_POLICY_ROOT, StreamPolicyApiRoutes.ROOT)
@@ -118,6 +119,7 @@ class ApiContractTest {
             OperationalEventApiRoutes.EVENTS_BUCKETS,
             OperationalReadApiRoutes.TELEMETRY_ALL,
             OperationalReadApiRoutes.TELEMETRY_INGEST,
+            OperationalReadApiRoutes.DEVICE_TELEMETRY_INGEST,
             OperationalReadApiRoutes.TELEMETRY_HISTORY,
             OperationalReadApiRoutes.ASSET_BY_GATEWAY,
             StreamPolicyApiRoutes.ROOT + StreamPolicyApiRoutes.ACCESS,
@@ -505,6 +507,7 @@ private object ApiContractFixtures {
     const val GRAPHQL_OPERATIONAL_EVENT_PAGE = "operationalEventPage"
     const val TELEMETRY_ALL = "/telemetry/all"
     const val TELEMETRY_INGEST = "/telemetry/"
+    const val DEVICE_TELEMETRY_INGEST = "/api/v1/devices/{deviceId}/telemetry"
     const val TELEMETRY_HISTORY = "/telemetry/{uuid}/history"
     const val ASSET_BY_GATEWAY = "/asset/{gatewayUuid}"
     const val STREAM_POLICY_ROOT = "/policy/streams"
