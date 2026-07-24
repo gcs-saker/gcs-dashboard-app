@@ -62,6 +62,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | GET | `/api/telemetry/all` | bearer | `Authorization` | none | none | telemetry list | dashboard telemetry table |
 | POST | `/api/telemetry/` | bearer | `Authorization`, `Content-Type: application/json` | none | `uuid`, `streamId`, `latitude`, `longitude`, `altitudeM`, `headingDeg`, `speedMps`, `batteryPercent`, `observedAt` | saved telemetry | REST 호환 경로, 대량 ingest는 MQTT/gRPC 후보 |
+| POST | `/api/v1/devices/{deviceUuid}/telemetry` | device credential 또는 bearer | `X-GCS-Device-UUID`, `X-GCS-Device-Credential`, `Content-Type: application/json` | path `deviceUuid` | `uuid`, 좌표, 고도, heading, battery, roll/pitch/yaw, link quality, velocity, `observedUnixMillis` | saved telemetry | stream publish와 동일한 UUID/credential 사용, 등록 장비 group을 서버가 결정 |
 | GET | `/api/telemetry/{uuid}/history` | bearer | `Authorization` | path `uuid` | none | telemetry history | 선택 stream geometry/telemetry |
 | GET | `/api/asset/{gatewayUuid}` | bearer | `Authorization` | path `gatewayUuid` | none | `gatewayUuid`, `assetId`, `displayName`, `status` | 자산 트리 표시 |
 

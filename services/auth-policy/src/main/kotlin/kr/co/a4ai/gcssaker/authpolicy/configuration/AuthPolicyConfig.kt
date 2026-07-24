@@ -5,6 +5,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.CachedAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.DevicePublishAuthorizationService
+import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceCredentialAuthenticationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceBootstrapService
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceLifecycleService
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceProvisioningTokenRepository
@@ -116,11 +117,17 @@ class AuthPolicyConfig {
         }
 
     @Bean
-    fun devicePublishAuthorizationService(
+    fun deviceCredentialAuthenticationService(
         devices: RegisteredDeviceRepository,
         passwordHasher: PasswordHasher,
+    ): DeviceCredentialAuthenticationService =
+        DeviceCredentialAuthenticationService(devices, passwordHasher)
+
+    @Bean
+    fun devicePublishAuthorizationService(
+        deviceCredentials: DeviceCredentialAuthenticationService,
     ): DevicePublishAuthorizationService =
-        DevicePublishAuthorizationService(devices, passwordHasher)
+        DevicePublishAuthorizationService(deviceCredentials)
 
     @Bean
     fun deviceLifecycleService(

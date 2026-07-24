@@ -83,6 +83,7 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "location /api/asset/" in config
     assert "location = /api/telemetry/all" in config
     assert "location /api/telemetry/" in config
+    assert "location ~ ^/api/v1/devices/[^/]+/telemetry$" in config
     assert "location = /api/ops/events/stream" in config
     assert "location /api/ops/" in config
     assert "location /api/stream/" in config

@@ -19,6 +19,7 @@ data class TelemetryReadModel(
     val portDistance: Double,
     val groupId: GroupId,
     val batteryPercent: Double? = null,
+    val headingDeg: Double? = null,
     val rollDeg: Double? = null,
     val pitchDeg: Double? = null,
     val yawDeg: Double? = null,

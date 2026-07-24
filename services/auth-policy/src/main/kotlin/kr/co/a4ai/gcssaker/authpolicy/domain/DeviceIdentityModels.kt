@@ -143,19 +143,31 @@ data class DevicePublishAuthorization(
 
 class DevicePublishAuthorizationRejectedException(message: String) : RuntimeException(message)
 
-class DevicePublishAuthorizationService(
+class DeviceCredentialAuthenticationService(
     private val devices: RegisteredDeviceRepository,
     private val passwordHasher: PasswordHasher,
 ) {
-    fun authorize(command: DevicePublishAuthorizationCommand): DevicePublishAuthorization {
-        val device = devices.findByDeviceUuid(command.deviceUuid)
+    fun authenticate(deviceUuid: String, credential: String): RegisteredDevice {
+        val device = devices.findByDeviceUuid(deviceUuid)
             ?: throw DevicePublishAuthorizationRejectedException(DevicePublishAuthorizationReasons.AUTHENTICATION_FAILED)
         if (device.status != RegisteredDeviceStatus.ACTIVE) {
             throw DevicePublishAuthorizationRejectedException(DevicePublishAuthorizationReasons.DEVICE_INACTIVE)
         }
-        if (!passwordHasher.verify(command.credential, device.credentialHash)) {
+        if (!passwordHasher.verify(credential, device.credentialHash)) {
             throw DevicePublishAuthorizationRejectedException(DevicePublishAuthorizationReasons.AUTHENTICATION_FAILED)
         }
+        return device
+    }
+}
+
+class DevicePublishAuthorizationService(
+    private val deviceCredentials: DeviceCredentialAuthenticationService,
+) {
+    constructor(devices: RegisteredDeviceRepository, passwordHasher: PasswordHasher) :
+        this(DeviceCredentialAuthenticationService(devices, passwordHasher))
+
+    fun authorize(command: DevicePublishAuthorizationCommand): DevicePublishAuthorization {
+        val device = deviceCredentials.authenticate(command.deviceUuid, command.credential)
         val streamPath = StreamPath(command.path)
         require(command.streamId.isNotBlank()) { "stream id must not be blank" }
         return DevicePublishAuthorization(

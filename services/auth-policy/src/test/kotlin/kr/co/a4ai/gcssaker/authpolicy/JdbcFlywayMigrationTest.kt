@@ -48,9 +48,15 @@ class JdbcFlywayMigrationTest {
             Int::class.java,
             "4",
         )
+        val geometryMigration = jdbc.queryForObject(
+            "SELECT \"installed_rank\" FROM \"flyway_schema_history\" WHERE \"version\" = ? AND \"success\" = TRUE",
+            Int::class.java,
+            "7",
+        )
 
         assertEquals(1, installedRank)
         assertEquals(4, latestViewVersion)
+        assertEquals(7, geometryMigration)
         assertEquals(8, relationCount)
         assertTrue(jdbc.queryForObject("SELECT COUNT(*) FROM telemetry_latest", Int::class.java)!! > 0)
     }

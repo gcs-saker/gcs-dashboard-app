@@ -34,6 +34,8 @@ object AuthSecurityRouteContract {
         AuthSecurityHeaders.CSRF_HEADER_NAME,
         RequestTraceContract.CORRELATION_ID_HEADER,
         RequestTraceContract.TRACEPARENT_HEADER,
+        DeviceTelemetryAuthHeaders.DEVICE_UUID,
+        DeviceTelemetryAuthHeaders.DEVICE_CREDENTIAL,
     )
     val PUBLIC_MATCHERS = listOf(
         RouteMatcher(HttpMethod.GET, HealthApiRoutes.HEALTHZ),
@@ -51,6 +53,7 @@ object AuthSecurityRouteContract {
         RouteMatcher(HttpMethod.POST, DevicePolicyApiRoutes.ROOT + DevicePolicyApiRoutes.PUBLISH),
         RouteMatcher(HttpMethod.POST, DeviceBootstrapApiRoutes.ROOT + DeviceBootstrapApiRoutes.REGISTER),
         RouteMatcher(HttpMethod.POST, DeviceBootstrapApiRoutes.EDGE_ROOT + DeviceBootstrapApiRoutes.REGISTER),
+        RouteMatcher(HttpMethod.POST, "/api/v1/devices/*/telemetry"),
     )
     val ADMIN_MATCHERS = listOf(RouteMatcher(null, ADMIN_PREFIX))
     val ADMIN_AUTHORITY = roleAuthority(ADMIN_ROLE_NAME)
