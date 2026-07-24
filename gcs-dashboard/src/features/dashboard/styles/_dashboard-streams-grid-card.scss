@@ -11,7 +11,7 @@
 .stream-card {
   color: var(--text);
   display: grid;
-  grid-template-rows: minmax(0, 1fr) 32px 34px;
+  grid-template-rows: 38px minmax(126px, 1fr) 30px 32px 34px;
   min-height: 184px;
   min-width: 0;
   padding: 0;
@@ -24,8 +24,7 @@
   border: 0;
   color: inherit;
   cursor: pointer;
-  display: grid;
-  grid-template-rows: 38px minmax(126px, 1fr) 30px;
+  display: block;
   min-height: 0;
   min-width: 0;
   padding: 0;

@@ -17,6 +17,8 @@ export function RealtimePlayer({
   streamId,
   title = "Realtime stream",
   className,
+  muted = false,
+  controls = true,
   fetcher,
   reconnectDelaysMs,
   playbackReadyRetryDelaysMs,
@@ -64,6 +66,8 @@ export function RealtimePlayer({
           streamId={streamId}
           title={`${title} WebRTC`}
           isOnline={isOnline}
+          muted={muted}
+          controls={controls}
           onStatusChange={(snapshot) => {
             const evidence = buildWebRTCRuntimeEvidence(snapshot);
             onStatusChange?.({
@@ -118,8 +122,8 @@ export function RealtimePlayer({
           title={`${title} HLS fallback`}
           fallbackReason={fallbackReason}
           latencyMode="stable"
-          muted={false}
-          controls
+          muted={muted}
+          controls={controls}
         />
       ) : null}
 

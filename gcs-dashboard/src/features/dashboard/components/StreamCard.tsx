@@ -1,4 +1,5 @@
 import { memo, useCallback } from "react";
+import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
 import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 import {
   getDashboardStreamDisplayName,
@@ -47,14 +48,20 @@ export const StreamCard = memo(function StreamCard({
           </span>
           {hasAudioActivity ? <span className="stream-card__audio">음성</span> : null}
         </span>
-        <span className={`stream-card__visual mode-${stream.mode.toLowerCase()}`}>
-          <span className="reticle" />
-          <span className="stream-card__visual-status">
-            {stream.streamPath ? `상태: ${getDashboardStreamStatusText(stream.status)}` : "상태: 주소 대기"}
-          </span>
-        </span>
-        <span className="stream-card__detail">{getDashboardStreamDisplayName(stream)}</span>
       </button>
+      <div className={`stream-card__visual mode-${stream.mode.toLowerCase()}`}>
+        {stream.streamPath ? (
+          <RealtimePlayer controls={false} muted streamId={stream.streamPath} title={`${stream.title} 미리보기`} />
+        ) : (
+          <>
+            <span className="reticle" />
+            <span className="stream-card__visual-status">
+              상태: 주소 대기
+            </span>
+          </>
+        )}
+      </div>
+      <span className="stream-card__detail">{getDashboardStreamDisplayName(stream)}</span>
       {isSelected ? <span className="stream-card__selected-link">현재 선택</span> : null}
       <button className="stream-card__connect" onClick={selectStream} type="button">
         주소 연결
