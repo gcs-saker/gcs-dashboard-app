@@ -39,6 +39,13 @@ def test_reverse_proxy_preserves_websocket_upgrade_headers() -> None:
     assert "proxy_set_header Connection $connection_upgrade;" in webrtc_location
     assert "proxy_read_timeout 3600s;" in webrtc_location
 
+    telemetry_location = extract_exact_location(config, "/ws/v1/telemetry")
+    assert "proxy_pass http://$auth_policy_host:8080;" in telemetry_location
+    assert "proxy_set_header Upgrade $http_upgrade;" in telemetry_location
+    assert 'proxy_set_header Connection "upgrade";' in telemetry_location
+    assert "proxy_read_timeout 75s;" in telemetry_location
+    assert "proxy_buffering off;" in telemetry_location
+
 
 def test_reverse_proxy_sets_browser_security_headers() -> None:
     config = read_config()
@@ -82,6 +89,7 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "location /stream/" in config
     assert "location /api/" in config
     assert "location /ws/" in config
+    assert "location = /ws/v1/telemetry" in config
     assert "location /hls/" in config
     assert "location /webrtc/" in config
     assert "proxy_pass http://$dashboard_host:3000;" in extract_locations(config, "/")[-1]

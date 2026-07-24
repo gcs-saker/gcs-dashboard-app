@@ -30,7 +30,8 @@ def test_m7_completion_gate_isolates_legacy_and_future_python_paths() -> None:
         "`/api/control/*` | Edge disabled | 실제 장비 제어 정책이 확정될 때까지 public edge에서는 broad fallback",
         "`/api/v1/ai/mock/detections` | Edge disabled | 실제 AI overlay server 연동 전 mock contract",
         "`/metrics` | Edge disabled | 신규 서비스별 metrics 설계 전까지 public edge에는 공개하지 않는다",
-        "`/ws/*` | Edge disabled | WebSocket contract가 확정될 때까지 public edge에서는 410으로 닫는다",
+        "`/ws/v1/telemetry` | Kotlin auth-policy | 인증된 그룹별 telemetry push",
+        "그 외 `/ws/*` | Edge disabled | 명시적으로 승인된 WebSocket 외 broad fallback은 410으로 닫는다",
         "구현 전 기능은 언어 전환 완료의 blocker로 보지 않는다",
     ]:
         assert legacy_term in doc
