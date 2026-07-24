@@ -19,6 +19,7 @@ export interface DashboardStreamGeometry {
   lat: number;
   lng: number;
   altitudeM: number;
+  batteryPercent?: number;
   headingDeg: number;
   pitchDeg: number;
   rollDeg: number;

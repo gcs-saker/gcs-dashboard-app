@@ -102,6 +102,25 @@
   white-space: nowrap;
 }
 
+.offline-map-marker__badges {
+  display: flex;
+  gap: 3px;
+  order: 1;
+}
+
+.offline-map-marker__badge,
+.stream-map-popup__badge {
+  background: rgba(5, 13, 17, 0.9);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: currentColor;
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 3px 5px;
+  white-space: nowrap;
+}
+
 .map-coordinate-source {
   background: rgba(5, 13, 17, 0.78);
   border: 1px solid var(--line);

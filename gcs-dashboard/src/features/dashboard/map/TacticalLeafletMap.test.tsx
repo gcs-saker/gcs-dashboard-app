@@ -41,6 +41,7 @@ const stream: DashboardStreamSlot = {
     lat: 35.871435,
     lng: 128.601445,
     altitudeM: 12,
+    batteryPercent: 78,
     headingDeg: 24,
     pitchDeg: 0,
     rollDeg: 0,
@@ -93,6 +94,7 @@ describe("TacticalLeafletMap", () => {
     expect(screen.getByTestId("map-coordinate-source")).toHaveTextContent("실시간 GPS");
     expect(screen.getByTestId("offline-map-center")).toHaveTextContent("35.871435, 128.601445");
     expect(screen.getByRole("button", { name: /로컬 웹캠 위치/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /배터리 78%/ })).toHaveTextContent("정상78%");
     expect(leafletMock().instances[0].latLngToContainerPoint).toHaveBeenCalledWith([35.871435, 128.601445]);
     expect(screen.getByRole("button", { name: "자동 포커스 켜짐" })).toHaveClass("is-active");
   });
@@ -109,6 +111,8 @@ describe("TacticalLeafletMap", () => {
     expect(screen.getByText("미등록")).toBeInTheDocument();
     expect(screen.getByText("raw.local.webcam")).toBeInTheDocument();
     expect(screen.getByText("35.871435, 128.601445")).toBeInTheDocument();
+    expect(screen.getByText("배터리")).toBeInTheDocument();
+    expect(screen.getAllByText("78%").length).toBeGreaterThan(0);
     expect(screen.getByText("24deg / 64deg")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "지도 정보 닫기" }));

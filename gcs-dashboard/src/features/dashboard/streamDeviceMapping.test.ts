@@ -43,6 +43,11 @@ describe("streamDeviceMapping", () => {
             altitude: 81,
             velocity: 3,
             epochTime: "00:00:10",
+            headingDeg: 127,
+            batteryPercent: 78,
+            pitchDeg: -2,
+            rollDeg: 3,
+            yawDeg: 126,
           },
         ],
       ]),
@@ -55,6 +60,11 @@ describe("streamDeviceMapping", () => {
       geometry: {
         lat: 35.8842,
         lng: 128.6123,
+        batteryPercent: 78,
+        headingDeg: 127,
+        pitchDeg: -2,
+        rollDeg: 3,
+        yawDeg: 126,
         source: "telemetry",
       },
     });
