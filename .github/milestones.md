@@ -1,6 +1,24 @@
 # GCS Saker Milestones
 
-프로젝트 1번의 마일스톤 정의입니다.
+프로젝트 마일스톤 정의입니다.
+
+기준일: 2026-07-24 KST
+
+> 최초 계획은 M0~M5였으나 실제 개발은 M7 active runtime 전환과 M10 계약/경계 정리까지 진행됐다. 아래 체크리스트는 최초 목표를 보존하며, 실제 완료일과 현재 남은 조건은 `.github/backlog-status.md`를 기준으로 한다.
+
+## 실제 완료 기준선
+
+| 날짜 | 기준선 | 판정 |
+| --- | --- | --- |
+| 2026-05-21 | legacy snapshot tag | M0 legacy 보존 완료 |
+| 2026-05-26 | M1 implementation/release candidate | Streaming Core 코드 완료 |
+| 2026-05-29 | `v0.2.0` | M2 배포 가능 baseline 완료 |
+| 2026-06-04 | `v0.7.0` | M7 active runtime 전환 완료 |
+| 2026-06-26 | `v0.7.1` | M7 cutover evidence gate 완료 |
+| 2026-07-06 | `v0.7.2` | M10 contract/runtime boundary 기준선 |
+| 2026-07-21 | `9646033` | device bootstrap/approval 및 WHIP ICE hotfix 기준선 |
+
+M3~M6은 별도 release tag가 없으므로 전체 완료로 간주하지 않는다. 현재 열린 수락 기준은 backlog status 문서에서 개별 추적한다.
 
 ---
 
@@ -143,5 +161,21 @@ TURN, 장애 복구, 성능 측정, 실증 문서, 최종 납품 패키지를 �
 
 ---
 
+## M6 이후 확장 마일스톤
+
+| Milestone | 범위 | 현재 상태 |
+| --- | --- | --- |
+| M6 | mobile session, FCM, closed network, server topology | 계획/부분 구현 |
+| M7 | Spring/Kotlin auth-policy, Go media-control, active runtime cutover | 2026-06-26 완료 |
+| M8 | Windows Operator Client 및 local protocol migration | 계획과 PoC 혼재 |
+| M9 | mobile/tablet responsive web | 계획 |
+| M10 | API, protocol, runtime boundary hardening | 2026-07-06 기준선 완료, 후속 hotfix 반영 |
+| M11 | DeepStream/GStreamer 및 native/mobile client 기술 검토 | discovery backlog |
+
+---
+
 생성일: 2026-05-21
-마일스톤 수: 6개 (M0 ~ M5)
+
+상태 갱신일: 2026-07-24
+
+상세 백로그: `.github/backlog-status.md`

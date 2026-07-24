@@ -18,8 +18,21 @@ GCS-Saker는 milestone 종료 시점마다 tag와 release note를 남긴다. 각
 | `v0.6.0` | M6 | Mobile/closed-network planning |
 | `v0.7.0` | M7 | Spring/Kotlin auth-policy, Go media-control, single-node active runtime path |
 | `v0.7.1` | M7 | M7 release cutover evidence gate and server verification patch |
+| `v0.7.2` | M10 | API contract와 runtime boundary refactor 기준선 |
 
 Patch version은 같은 milestone 안에서 보안 패치, 장애 수정, 문서 보강, hotfix가 있을 때 사용한다.
+
+## 실제 릴리스 타임라인
+
+| 날짜 | Tag/기준선 | 비고 |
+| --- | --- | --- |
+| 2026-05-21 | `legacy-saker-before-realtime-2026-05-21` | legacy snapshot |
+| 2026-05-29 | `v0.2.0` | stable server baseline |
+| 2026-06-04 | `v0.7.0` | M7 completion release |
+| 2026-06-26 | `v0.7.1` | M7 release cutover evidence |
+| 2026-07-06 | `v0.7.2` | contract/runtime boundary refactor |
+
+`v0.3.0`, `v0.4.0`, `v0.6.0`, `v1.0.0`은 계획된 버전이지만 2026-07-24 현재 tag가 없다. 이 버전들을 소급 생성하지 않는다. M3~M6 완료 여부는 `.github/backlog-status.md`의 이슈별 acceptance evidence로 판단하며, `v1.0.0`은 M5 실서버 부하·복구·납품 증거가 완료된 뒤 생성한다.
 
 예시:
 
