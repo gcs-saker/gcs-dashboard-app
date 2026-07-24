@@ -24,10 +24,19 @@ describe("telemetryContracts", () => {
       altitude: 120,
       velocity: 8.5,
       epochTime: "00:10:23",
+      headingDeg: 130,
+      batteryPercent: 78,
+      rollDeg: 1.3,
+      pitchDeg: -2.1,
+      yawDeg: 127,
+      gyroRadPerSec: { x: 0.01, y: -0.02, z: 0.03 },
+      accelMps2: { x: 0.1, y: 0.2, z: 9.81 },
+      linkQualityPercent: 92.5,
     };
 
     expect(isTelemetryReadResponse(telemetry)).toBe(true);
     expect(isTelemetryHistoryResponse({ recordedAt: "2026-06-01T00:00:00Z", telemetry })).toBe(true);
     expect(isTelemetryHistoryResponse({ recordedAt: "2026-06-01T00:00:00Z", telemetry: { uuid: "bad" } })).toBe(false);
+    expect(isTelemetryReadResponse({ ...telemetry, gyroRadPerSec: { x: 1, y: 2 } })).toBe(false);
   });
 });

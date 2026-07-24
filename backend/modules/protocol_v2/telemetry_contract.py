@@ -11,12 +11,22 @@ class TelemetryEnvelopeFields:
     BATTERY_PERCENT = 10
     HEALTH = 11
     ACTIVE_STREAM_ID = 12
+    ATTITUDE_DEG = 13
+    GYRO_RAD_PER_SEC = 14
+    ACCEL_MPS2 = 15
+    LINK_QUALITY_PERCENT = 16
 
 
 class GeoPointFields:
     LATITUDE = 1
     LONGITUDE = 2
     ALTITUDE_M = 3
+
+
+class Vector3Fields:
+    X = 1
+    Y = 2
+    Z = 3
 
 
 class AssetKinds:

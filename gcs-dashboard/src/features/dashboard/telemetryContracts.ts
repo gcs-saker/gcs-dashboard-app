@@ -24,6 +24,29 @@ export function isTelemetryReadResponse(payload: unknown): payload is TelemetryR
     typeof candidate.longitude === "number" &&
     typeof candidate.altitude === "number" &&
     typeof candidate.velocity === "number" &&
-    typeof candidate.epochTime === "string"
+    typeof candidate.epochTime === "string" &&
+    isOptionalNumber(candidate.headingDeg) &&
+    isOptionalNumber(candidate.batteryPercent) &&
+    isOptionalNumber(candidate.rollDeg) &&
+    isOptionalNumber(candidate.pitchDeg) &&
+    isOptionalNumber(candidate.yawDeg) &&
+    isOptionalVector3(candidate.gyroRadPerSec) &&
+    isOptionalVector3(candidate.accelMps2) &&
+    isOptionalNumber(candidate.linkQualityPercent)
+  );
+}
+
+function isOptionalNumber(value: unknown): boolean {
+  return value === undefined || typeof value === "number";
+}
+
+function isOptionalVector3(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { x?: unknown; y?: unknown; z?: unknown };
+  return (
+    typeof candidate.x === "number" &&
+    typeof candidate.y === "number" &&
+    typeof candidate.z === "number"
   );
 }
