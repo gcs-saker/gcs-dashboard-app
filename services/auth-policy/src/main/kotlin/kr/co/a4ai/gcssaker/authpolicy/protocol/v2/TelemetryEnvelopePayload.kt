@@ -16,6 +16,10 @@ object TelemetryEnvelopeFields {
     const val BATTERY_PERCENT = 10
     const val HEALTH = 11
     const val ACTIVE_STREAM_ID = 12
+    const val ATTITUDE_DEG = 13
+    const val GYRO_RAD_PER_SEC = 14
+    const val ACCEL_MPS2 = 15
+    const val LINK_QUALITY_PERCENT = 16
 }
 
 object TimestampedFields {
@@ -28,6 +32,18 @@ object GeoPointFields {
     const val LONGITUDE = 2
     const val ALTITUDE_M = 3
 }
+
+object Vector3Fields {
+    const val X = 1
+    const val Y = 2
+    const val Z = 3
+}
+
+data class TelemetryVector3(
+    val x: Double = 0.0,
+    val y: Double = 0.0,
+    val z: Double = 0.0,
+)
 
 data class TelemetryEnvelopePayload(
     val eventId: String,
@@ -45,6 +61,10 @@ data class TelemetryEnvelopePayload(
     val batteryPercent: Double,
     val health: Long,
     val activeStreamIds: List<String>,
+    val attitudeDeg: TelemetryVector3 = TelemetryVector3(),
+    val gyroRadPerSec: TelemetryVector3 = TelemetryVector3(),
+    val accelMps2: TelemetryVector3 = TelemetryVector3(),
+    val linkQualityPercent: Double = 0.0,
 ) {
     fun toReadModel(): TelemetryReadModel =
         TelemetryReadModel(
@@ -85,8 +105,25 @@ data class TelemetryEnvelopePayload(
                 batteryPercent = decoded.singleDouble(TelemetryEnvelopeFields.BATTERY_PERCENT),
                 health = decoded.singleLong(TelemetryEnvelopeFields.HEALTH),
                 activeStreamIds = decoded.strings(TelemetryEnvelopeFields.ACTIVE_STREAM_ID),
+                attitudeDeg = decoded.optionalVector3(TelemetryEnvelopeFields.ATTITUDE_DEG),
+                gyroRadPerSec = decoded.optionalVector3(TelemetryEnvelopeFields.GYRO_RAD_PER_SEC),
+                accelMps2 = decoded.optionalVector3(TelemetryEnvelopeFields.ACCEL_MPS2),
+                linkQualityPercent = decoded.optionalDouble(TelemetryEnvelopeFields.LINK_QUALITY_PERCENT),
             )
         }
+
+        private fun DecodedWireMessage.optionalVector3(fieldNumber: Int): TelemetryVector3 {
+            val vector = fields[fieldNumber]?.singleOrNull() as? ByteArray ?: return TelemetryVector3()
+            val decoded = ProtobufWireDecoder.decode(vector)
+            return TelemetryVector3(
+                x = decoded.singleDouble(Vector3Fields.X),
+                y = decoded.singleDouble(Vector3Fields.Y),
+                z = decoded.singleDouble(Vector3Fields.Z),
+            )
+        }
+
+        private fun DecodedWireMessage.optionalDouble(fieldNumber: Int): Double =
+            fields[fieldNumber]?.singleOrNull() as? Double ?: 0.0
 
         private fun legacyEpochTime(unixMillis: Long): String {
             val seconds = (unixMillis / 1000) % 86_400

@@ -30,6 +30,16 @@ class TelemetryEnvelopePayload:
     battery_percent: float
     health: int
     active_stream_ids: tuple[str, ...] = ()
+    roll_deg: float = 0
+    pitch_deg: float = 0
+    yaw_deg: float = 0
+    gyro_x_rad_per_sec: float = 0
+    gyro_y_rad_per_sec: float = 0
+    gyro_z_rad_per_sec: float = 0
+    accel_x_mps2: float = 0
+    accel_y_mps2: float = 0
+    accel_z_mps2: float = 0
+    link_quality_percent: float = 0
 
     @classmethod
     def create(
@@ -47,6 +57,16 @@ class TelemetryEnvelopePayload:
         asset_kind: int = AssetKinds.OPERATOR_DEVICE,
         health: int = HealthStates.OK,
         active_stream_ids: tuple[str, ...] = (),
+        roll_deg: float = 0,
+        pitch_deg: float = 0,
+        yaw_deg: float = 0,
+        gyro_x_rad_per_sec: float = 0,
+        gyro_y_rad_per_sec: float = 0,
+        gyro_z_rad_per_sec: float = 0,
+        accel_x_mps2: float = 0,
+        accel_y_mps2: float = 0,
+        accel_z_mps2: float = 0,
+        link_quality_percent: float = 0,
         observed_unix_millis: int | None = None,
         received_unix_millis: int | None = None,
     ) -> "TelemetryEnvelopePayload":
@@ -67,6 +87,16 @@ class TelemetryEnvelopePayload:
             battery_percent=battery_percent,
             health=health,
             active_stream_ids=active_stream_ids,
+            roll_deg=roll_deg,
+            pitch_deg=pitch_deg,
+            yaw_deg=yaw_deg,
+            gyro_x_rad_per_sec=gyro_x_rad_per_sec,
+            gyro_y_rad_per_sec=gyro_y_rad_per_sec,
+            gyro_z_rad_per_sec=gyro_z_rad_per_sec,
+            accel_x_mps2=accel_x_mps2,
+            accel_y_mps2=accel_y_mps2,
+            accel_z_mps2=accel_z_mps2,
+            link_quality_percent=link_quality_percent,
         )
 
     def to_protobuf_wire(self) -> bytes:
@@ -91,6 +121,16 @@ class TelemetryEnvelopePayload:
             battery_percent=decoded.battery_percent,
             health=decoded.health,
             active_stream_ids=decoded.active_stream_ids,
+            roll_deg=decoded.roll_deg,
+            pitch_deg=decoded.pitch_deg,
+            yaw_deg=decoded.yaw_deg,
+            gyro_x_rad_per_sec=decoded.gyro_x_rad_per_sec,
+            gyro_y_rad_per_sec=decoded.gyro_y_rad_per_sec,
+            gyro_z_rad_per_sec=decoded.gyro_z_rad_per_sec,
+            accel_x_mps2=decoded.accel_x_mps2,
+            accel_y_mps2=decoded.accel_y_mps2,
+            accel_z_mps2=decoded.accel_z_mps2,
+            link_quality_percent=decoded.link_quality_percent,
         )
 
     def to_legacy_telemetry(self) -> TelemetryCreate:

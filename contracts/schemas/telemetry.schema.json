@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcs-saker.dev/contracts/telemetry.schema.json",
+  "title": "GCS-Saker Telemetry Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "orgId",
+    "groupId",
+    "assetId",
+    "assetKind",
+    "timestamp",
+    "position",
+    "headingDeg",
+    "speedMps",
+    "batteryPercent",
+    "attitudeDeg",
+    "gyroRadPerSec",
+    "accelMps2",
+    "linkQualityPercent"
+  ],
+  "properties": {
+    "eventId": { "type": "string", "minLength": 1 },
+    "orgId": { "type": "string", "minLength": 1 },
+    "groupId": { "type": "string", "minLength": 1 },
+    "assetId": { "type": "string", "minLength": 1 },
+    "assetKind": {
+      "enum": ["drone", "groundRobot", "fixedCamera", "operatorDevice"]
+    },
+    "timestamp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observedUnixMillis", "receivedUnixMillis"],
+      "properties": {
+        "observedUnixMillis": { "type": "integer", "minimum": 0 },
+        "receivedUnixMillis": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["latitude", "longitude", "altitudeM"],
+      "properties": {
+        "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+        "altitudeM": { "type": "number" }
+      }
+    },
+    "headingDeg": { "type": "number", "minimum": 0, "maximum": 360 },
+    "speedMps": { "type": "number", "minimum": 0 },
+    "batteryPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+    "attitudeDeg": { "$ref": "#/$defs/attitude" },
+    "gyroRadPerSec": { "$ref": "#/$defs/vector3" },
+    "accelMps2": { "$ref": "#/$defs/vector3" },
+    "linkQualityPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+    "activeStreamIds": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "default": []
+    }
+  },
+  "$defs": {
+    "vector3": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" }
+      }
+    },
+    "attitude": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roll", "pitch", "yaw"],
+      "properties": {
+        "roll": { "type": "number", "minimum": -180, "maximum": 180 },
+        "pitch": { "type": "number", "minimum": -90, "maximum": 90 },
+        "yaw": { "type": "number", "minimum": 0, "maximum": 360 }
+      }
+    }
+  }
+}

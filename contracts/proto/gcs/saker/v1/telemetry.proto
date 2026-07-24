@@ -21,8 +21,12 @@ message TelemetryEnvelope {
   double battery_percent = 10;
   HealthState health = 11;
   repeated string active_stream_ids = 12;
+  Vector3 attitude_deg = 13; // x=roll, y=pitch, z=yaw
+  Vector3 gyro_rad_per_sec = 14;
+  Vector3 accel_mps2 = 15;
+  double link_quality_percent = 16;
 
-  reserved 13 to 20;
+  reserved 17 to 20;
 }
 
 message TelemetryBatch {

@@ -32,6 +32,20 @@ export interface TelemetryReadResponse {
   altitude: number;
   velocity: number;
   epochTime: string;
+  headingDeg?: number;
+  batteryPercent?: number;
+  rollDeg?: number;
+  pitchDeg?: number;
+  yawDeg?: number;
+  gyroRadPerSec?: TelemetryVector3;
+  accelMps2?: TelemetryVector3;
+  linkQualityPercent?: number;
+}
+
+export interface TelemetryVector3 {
+  x: number;
+  y: number;
+  z: number;
 }
 
 export interface TelemetryHistoryResponse {
