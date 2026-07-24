@@ -139,6 +139,8 @@ export interface RealtimePlayerProps {
   streamId: string;
   title?: string;
   className?: string;
+  muted?: boolean;
+  controls?: boolean;
   fetcher?: typeof fetch;
   reconnectDelaysMs?: readonly number[];
   playbackReadyRetryDelaysMs?: readonly number[];
