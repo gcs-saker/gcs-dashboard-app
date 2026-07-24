@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
+import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
@@ -22,6 +23,7 @@ class OperationalReadController(
     private val principalResolver: BearerPrincipalResolver,
     private val objectMapper: ObjectMapper = ObjectMapper(),
     private val streamPolicy: OperationalReadStreamPolicy = OperationalReadStreamPolicy(),
+    private val clock: Clock = Clock.systemUTC(),
 ) {
     private val requestReader = OperationalReadRequestReader(principalResolver)
 
@@ -42,6 +44,19 @@ class OperationalReadController(
     ): TelemetryReadResponse {
         val principal = requestReader.principal(authorization)
         return repository.upsertTelemetry(request.toReadModel(principal)).toResponse()
+    }
+
+    @PostMapping(OperationalReadApiRoutes.DEVICE_TELEMETRY_INGEST)
+    @RequiresBearerAuth
+    fun ingestDeviceTelemetry(
+        @PathVariable deviceId: String,
+        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestBody request: TelemetryIngestRequest,
+    ): TelemetryReadResponse {
+        val principal = requestReader.principal(authorization)
+        return repository.upsertTelemetry(
+            request.toDeviceReadModel(principal, deviceId, Instant.now(clock)),
+        ).toResponse()
     }
 
     @GetMapping(OperationalReadApiRoutes.TELEMETRY_HISTORY)

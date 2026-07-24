@@ -30,6 +30,31 @@ internal fun TelemetryIngestRequest.toReadModel(principal: AuthenticatedPrincipa
     )
 }
 
+internal fun TelemetryIngestRequest.toDeviceReadModel(
+    principal: AuthenticatedPrincipal,
+    deviceId: String,
+    now: Instant,
+): TelemetryReadModel {
+    val normalizedDeviceId = deviceId.trim().takeIf { it.isNotEmpty() }
+        ?: throw BadRequestApiError(OperationalReadApiErrors.UUID_REQUIRED)
+    val bodyUuid = uuid?.trim()?.takeIf { it.isNotEmpty() }
+    if (bodyUuid != null && bodyUuid != normalizedDeviceId) {
+        throw BadRequestApiError(OperationalReadApiErrors.DEVICE_ID_MISMATCH)
+    }
+    val observed = observedUnixMillis
+        ?: throw BadRequestApiError(OperationalReadApiErrors.OBSERVED_TIMESTAMP_REQUIRED)
+    if (observed <= 0) {
+        throw BadRequestApiError(OperationalReadApiErrors.OBSERVED_TIMESTAMP_INVALID)
+    }
+    if (observed > now.toEpochMilli() + TelemetryIngestPolicy.MAX_FUTURE_SKEW_MILLIS) {
+        throw BadRequestApiError(OperationalReadApiErrors.OBSERVED_TIMESTAMP_IN_FUTURE)
+    }
+    return copy(
+        uuid = normalizedDeviceId,
+        epochTime = (observed / 1_000) % SECONDS_PER_DAY,
+    ).toReadModel(principal)
+}
+
 internal fun ServerHealthSnapshotRequest.toReadModel(
     principal: AuthenticatedPrincipal,
 ): ServerHealthSnapshotReadModel {
@@ -105,3 +130,4 @@ private fun formatEpochTime(epochTime: Long?): String {
 
 private const val SECONDS_PER_HOUR = 3_600
 private const val SECONDS_PER_MINUTE = 60
+private const val SECONDS_PER_DAY = 86_400
