@@ -2,10 +2,12 @@ package kr.co.a4ai.gcssaker.authpolicy.application
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
+import kr.co.a4ai.gcssaker.authpolicy.domain.GeofenceTelemetryEvaluator
 import kr.co.a4ai.gcssaker.authpolicy.protocol.v2.TelemetryEnvelopePayload
 
 class MqttTelemetryConsumerBridge(
     private val repository: OperationalReadRepository,
+    private val geofenceEvaluator: GeofenceTelemetryEvaluator = GeofenceTelemetryEvaluator.NOOP,
 ) {
     fun handle(topic: String, payload: ByteArray): TelemetryReadModel? {
         val message = MqttAssetTopic.parse(topic)
@@ -16,7 +18,7 @@ class MqttTelemetryConsumerBridge(
         require(telemetry.orgId == message.orgId && telemetry.groupId == message.groupId && telemetry.assetId == message.assetId) {
             "telemetry envelope does not match MQTT topic identity"
         }
-        return repository.upsertTelemetry(telemetry.toReadModel())
+        return repository.upsertTelemetry(telemetry.toReadModel()).also { geofenceEvaluator.evaluate(it) }
     }
 }
 

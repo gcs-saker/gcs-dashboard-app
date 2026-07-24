@@ -14,6 +14,9 @@ import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.SettingsAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.GeofenceRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.GeofenceTelemetryEvaluator
+import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryGeofenceRepository
 import kr.co.a4ai.gcssaker.authpolicy.observability.AuthPolicyObservation
 import io.micrometer.observation.ObservationRegistry
 import org.springframework.beans.factory.ObjectProvider
@@ -27,6 +30,15 @@ import javax.sql.DataSource
 
 @Configuration
 class OperationalPolicyConfig {
+    @Bean
+    fun geofenceRepository(): GeofenceRepository = InMemoryGeofenceRepository()
+
+    @Bean
+    fun geofenceTelemetryEvaluator(
+        geofences: GeofenceRepository,
+        events: OperationalEventRepository,
+    ): GeofenceTelemetryEvaluator = GeofenceTelemetryEvaluator(geofences, events)
+
     @Bean
     fun operationalPostProcessingExecutor(settings: AuthRuntimeSettings): TaskExecutor =
         ThreadPoolTaskExecutor().apply {
