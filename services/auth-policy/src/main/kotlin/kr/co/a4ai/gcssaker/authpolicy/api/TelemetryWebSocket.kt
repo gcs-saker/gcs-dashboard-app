@@ -6,6 +6,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Bean
 import org.springframework.security.core.Authentication
 import org.springframework.web.socket.CloseStatus
 import org.springframework.web.socket.TextMessage
@@ -64,6 +65,13 @@ class TelemetryWebSocketHub(
     }
 
     fun connectionCount(): Int = subscribers.size
+}
+
+@Configuration
+class TelemetryWebSocketBeanConfig {
+    @Bean
+    fun telemetryWebSocketHub(objectMapper: ObjectMapper): TelemetryWebSocketHub =
+        TelemetryWebSocketHub(objectMapper)
 }
 
 @Configuration

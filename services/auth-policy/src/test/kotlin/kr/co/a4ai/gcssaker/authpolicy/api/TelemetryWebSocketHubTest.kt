@@ -45,7 +45,7 @@ class TelemetryWebSocketHubTest {
 
         hub.afterConnectionClosed(session, CloseStatus.NORMAL)
         hub.publish(telemetry(GroupId("a")))
-        Mockito.verifyNoMoreInteractions(session)
+        Mockito.verify(session, Mockito.times(300)).sendMessage(Mockito.any())
         assertEquals(0, hub.connectionCount())
     }
 
