@@ -3,7 +3,8 @@ package kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence
 internal object OperationalReadSql {
     const val selectTelemetry = """
         SELECT uuid, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
-               soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id
+               soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id,
+               battery_percent, heading_deg, roll_deg, pitch_deg, yaw_deg, link_quality_percent, observed_at
         FROM telemetry_latest
         WHERE (group_id = ? OR ? = ?)
         ORDER BY uuid
@@ -17,7 +18,8 @@ internal object OperationalReadSql {
     """
     const val selectTelemetryHistory = """
         SELECT uuid, recorded_at, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
-               soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id
+               soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id,
+               battery_percent, heading_deg, roll_deg, pitch_deg, yaw_deg, link_quality_percent, observed_at
         FROM telemetry_history
         WHERE uuid = ? AND (group_id = ? OR ? = ?)
         ORDER BY recorded_at DESC
@@ -43,16 +45,18 @@ internal object OperationalReadSql {
     const val insertTelemetry = """
         INSERT INTO telemetry_latest (
             uuid, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
-            soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id
+            soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id,
+            battery_percent, heading_deg, roll_deg, pitch_deg, yaw_deg, link_quality_percent, observed_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     const val insertTelemetryHistory = """
         INSERT INTO telemetry_history (
             uuid, recorded_at, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
-            soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id
+            soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id,
+            battery_percent, heading_deg, roll_deg, pitch_deg, yaw_deg, link_quality_percent, observed_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     const val insertAsset = """
         INSERT INTO gateway_assets (

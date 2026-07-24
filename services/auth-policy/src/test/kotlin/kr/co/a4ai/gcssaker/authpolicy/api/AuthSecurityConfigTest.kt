@@ -125,6 +125,19 @@ class AuthSecurityConfigTest @Autowired constructor(
     }
 
     @Test
+    fun `device telemetry route accepts uuid credential authentication at controller boundary`() {
+        mockMvc.post("/api/v1/devices/unknown-device/telemetry") {
+            header(DeviceTelemetryAuthHeaders.DEVICE_UUID, "unknown-device")
+            header(DeviceTelemetryAuthHeaders.DEVICE_CREDENTIAL, "wrong")
+            contentType = org.springframework.http.MediaType.APPLICATION_JSON
+            content = """{"uuid":"unknown-device","observedUnixMillis":1}"""
+        }
+            .andExpect {
+                status { isForbidden() }
+            }
+    }
+
+    @Test
     fun `admin device route rejects non admin bearer auth at security boundary`() {
         mockMvc.post(AdminDeviceApiRoutes.ROOT) {
             header(HttpHeaders.AUTHORIZATION, bearerAccessToken())

@@ -28,6 +28,7 @@ internal fun TelemetryIngestRequest.toReadModel(principal: AuthenticatedPrincipa
         portDistance = portDistance ?: 0.0,
         groupId = GroupId(principal.groupId.value),
         batteryPercent = batteryPercent,
+        headingDeg = headingDeg,
         rollDeg = rollDeg,
         pitchDeg = pitchDeg,
         yawDeg = yawDeg,
@@ -38,6 +39,12 @@ internal fun TelemetryIngestRequest.toReadModel(principal: AuthenticatedPrincipa
 
 internal fun TelemetryIngestRequest.toDeviceReadModel(
     principal: AuthenticatedPrincipal,
+    deviceId: String,
+    now: Instant,
+): TelemetryReadModel = toDeviceReadModel(principal.groupId, deviceId, now)
+
+internal fun TelemetryIngestRequest.toDeviceReadModel(
+    groupId: GroupId,
     deviceId: String,
     now: Instant,
 ): TelemetryReadModel {
@@ -58,7 +65,13 @@ internal fun TelemetryIngestRequest.toDeviceReadModel(
     return copy(
         uuid = normalizedDeviceId,
         epochTime = (observed / 1_000) % SECONDS_PER_DAY,
-    ).toReadModel(principal)
+    ).toReadModel(
+        AuthenticatedPrincipal(
+            username = normalizedDeviceId,
+            role = kr.co.a4ai.gcssaker.authpolicy.domain.UserRole.VIEWER,
+            groupId = groupId,
+        ),
+    )
 }
 
 internal fun ServerHealthSnapshotRequest.toReadModel(
@@ -113,6 +126,7 @@ internal fun TelemetryReadModel.toResponse(): TelemetryReadResponse =
         epochTime = epochTime,
         portDistance = portDistance,
         batteryPercent = batteryPercent,
+        headingDeg = headingDeg,
         rollDeg = rollDeg,
         pitchDeg = pitchDeg,
         yawDeg = yawDeg,

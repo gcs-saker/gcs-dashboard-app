@@ -195,11 +195,40 @@ Content-Type: application/sdp
 
 현재 media frame은 WebRTC로 보내고, GPS/health/ACK 같은 데이터는 control/data plane으로 분리하는 방향입니다.
 
+스트림 publish 인증에 사용하는 동일한 `deviceUuid`와 `credential`로 geometry를 전송합니다.
+
+```http
+POST https://a4ai.tplinkdns.com/api/v1/devices/{deviceUuid}/telemetry
+X-GCS-Device-UUID: <deviceUuid>
+X-GCS-Device-Credential: <credential>
+Content-Type: application/json
+```
+
+```json
+{
+  "uuid": "<deviceUuid>",
+  "latitude": 35.871435,
+  "longitude": 128.601445,
+  "altitude": 31.5,
+  "headingDeg": 121.0,
+  "batteryPercent": 74.0,
+  "rollDeg": 2.0,
+  "pitchDeg": -1.0,
+  "yawDeg": 121.0,
+  "linkQualityPercent": 92.0,
+  "velocity": 1.8,
+  "observedUnixMillis": 1784869200000
+}
+```
+
+URL의 `{deviceUuid}`, `X-GCS-Device-UUID`, body의 `uuid`는 모두 같아야 합니다. 서버는 UUID에 등록된 group을 사용하므로 장비가 `groupId`를 보내거나 선택하지 않습니다.
+
 담당자 구현 TODO:
 
 - 영상 프레임에 GPS를 섞어 보내지 않기
 - GPS, battery, heading, network 상태를 별도 telemetry payload로 분리
 - 장비 시간 기준을 서버 시간과 맞출 수 있도록 timestamp 포함
+- publish URL 발급과 geometry 전송에 동일한 UUID/credential 사용
 - 추후 MQTT/Protobuf 계약이 확정되면 해당 topic/payload로 전환할 수 있게 telemetry 모듈을 분리
 
 ## 8. 오류 처리 기준

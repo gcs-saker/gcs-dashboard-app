@@ -83,6 +83,7 @@ data class TelemetryEnvelopePayload(
             portDistance = 0.0,
             groupId = GroupId(groupId),
             batteryPercent = batteryPercent,
+            headingDeg = headingDeg,
             rollDeg = attitudeDeg.x,
             pitchDeg = attitudeDeg.y,
             yawDeg = attitudeDeg.z,

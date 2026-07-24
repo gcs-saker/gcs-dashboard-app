@@ -10,6 +10,10 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
+import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceCredentialAuthenticationService
+import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryRegisteredDeviceRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDevice
+import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.assertThrows
@@ -65,6 +69,78 @@ class OperationalReadControllerTest {
         principalResolver = BearerPrincipalResolver(sessions),
         clock = Clock.fixed(timestamp, ZoneOffset.UTC),
     )
+
+    @Test
+    fun `active robot sends geometry using the same uuid credential identity as stream publish`() {
+        val credential = "robot-device-secret"
+        val telemetryRepository = InMemoryOperationalReadRepository(emptyList(), emptyMap())
+        val deviceCredentials = DeviceCredentialAuthenticationService(
+            InMemoryRegisteredDeviceRepository(
+                listOf(
+                    RegisteredDevice(
+                        deviceUuid = "robot-uuid-001",
+                        groupId = GroupId("co-a"),
+                        displayName = "Robot 1",
+                        credentialHash = passwordHasher.hash(credential),
+                        status = RegisteredDeviceStatus.ACTIVE,
+                    ),
+                ),
+            ),
+            passwordHasher,
+        )
+        val deviceController = OperationalReadController(
+            repository = telemetryRepository,
+            principalResolver = BearerPrincipalResolver(sessions),
+            clock = Clock.fixed(timestamp, ZoneOffset.UTC),
+            deviceCredentials = deviceCredentials,
+        )
+
+        val response = deviceController.ingestDeviceTelemetry(
+            deviceId = "robot-uuid-001",
+            authorization = null,
+            request = TelemetryIngestRequest(
+                uuid = "robot-uuid-001",
+                latitude = 35.881,
+                longitude = 128.611,
+                altitude = 31.5,
+                observedUnixMillis = timestamp.toEpochMilli(),
+                batteryPercent = 74.0,
+                headingDeg = 121.0,
+                rollDeg = 2.0,
+                pitchDeg = -1.0,
+                yawDeg = 121.0,
+                linkQualityPercent = 92.0,
+            ),
+            deviceUuid = "robot-uuid-001",
+            deviceCredential = credential,
+        )
+
+        assertEquals("robot-uuid-001", response.uuid)
+        assertEquals(35.881, response.latitude)
+        assertEquals(74.0, response.batteryPercent)
+        assertEquals(121.0, response.headingDeg)
+        assertEquals(121.0, response.yawDeg)
+        assertEquals(92.0, response.linkQualityPercent)
+        assertEquals(1, telemetryRepository.telemetryFor(principal("viewer-a")).size)
+    }
+
+    @Test
+    fun `robot geometry rejects a different header uuid`() {
+        val error = assertThrows<ResponseStatusException> {
+            controller.ingestDeviceTelemetry(
+                deviceId = "robot-uuid-001",
+                authorization = null,
+                request = TelemetryIngestRequest(
+                    uuid = "robot-uuid-001",
+                    observedUnixMillis = timestamp.toEpochMilli(),
+                ),
+                deviceUuid = "robot-uuid-002",
+                deviceCredential = "secret",
+            )
+        }
+
+        assertEquals(HttpStatus.FORBIDDEN, error.statusCode)
+    }
 
     @Test
     fun `telemetry read model keeps python compatible array response and filters by group`() {
@@ -346,4 +422,7 @@ class OperationalReadControllerTest {
 
     private fun bearer(token: String): String =
         "${AuthTokenContract.BEARER_PREFIX}$token"
+
+    private fun principal(username: String) =
+        sessions.verifyAccessToken(accessToken(username))
 }

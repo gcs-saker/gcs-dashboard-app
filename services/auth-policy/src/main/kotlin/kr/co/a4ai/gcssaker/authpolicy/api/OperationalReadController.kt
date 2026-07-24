@@ -5,6 +5,8 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.GeofenceTelemetryEvaluator
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryAlertRuleEngine
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryPublisher
+import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceCredentialAuthenticationService
+import kr.co.a4ai.gcssaker.authpolicy.domain.DevicePublishAuthorizationRejectedException
 import org.springframework.http.CacheControl
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -30,6 +32,7 @@ class OperationalReadController(
     private val geofenceEvaluator: GeofenceTelemetryEvaluator = GeofenceTelemetryEvaluator.NOOP,
     private val alertRuleEngine: TelemetryAlertRuleEngine = TelemetryAlertRuleEngine.NOOP,
     private val telemetryPublisher: TelemetryPublisher = TelemetryPublisher.NOOP,
+    private val deviceCredentials: DeviceCredentialAuthenticationService? = null,
 ) {
     private val requestReader = OperationalReadRequestReader(principalResolver)
 
@@ -62,10 +65,24 @@ class OperationalReadController(
         @PathVariable deviceId: String,
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @RequestBody request: TelemetryIngestRequest,
+        @RequestHeader(DeviceTelemetryAuthHeaders.DEVICE_UUID, required = false) deviceUuid: String? = null,
+        @RequestHeader(DeviceTelemetryAuthHeaders.DEVICE_CREDENTIAL, required = false) deviceCredential: String? = null,
     ): TelemetryReadResponse {
-        val principal = requestReader.principal(authorization)
+        val groupId = if (!deviceUuid.isNullOrBlank() || !deviceCredential.isNullOrBlank()) {
+            if (deviceUuid != deviceId) {
+                throw ForbiddenApiError(OperationalReadApiErrors.DEVICE_ID_MISMATCH)
+            }
+            try {
+                deviceCredentials?.authenticate(deviceUuid, deviceCredential.orEmpty())?.groupId
+                    ?: throw UnauthorizedApiError(AuthApiErrors.AUTHENTICATION_REQUIRED)
+            } catch (error: DevicePublishAuthorizationRejectedException) {
+                throw ForbiddenApiError(error.message ?: "device authentication failed")
+            }
+        } else {
+            requestReader.principal(authorization).groupId
+        }
         val telemetry = repository.upsertTelemetry(
-            request.toDeviceReadModel(principal, deviceId, Instant.now(clock)),
+            request.toDeviceReadModel(groupId, deviceId, Instant.now(clock)),
         )
         geofenceEvaluator.evaluate(telemetry, Instant.now(clock))
         alertRuleEngine.evaluate(telemetry, Instant.now(clock))

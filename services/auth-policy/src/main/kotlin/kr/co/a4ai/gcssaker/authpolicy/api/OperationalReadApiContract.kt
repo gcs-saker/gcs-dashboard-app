@@ -15,6 +15,11 @@ object TelemetryIngestPolicy {
     const val MAX_FUTURE_SKEW_MILLIS = 300_000L
 }
 
+object DeviceTelemetryAuthHeaders {
+    const val DEVICE_UUID = "X-GCS-Device-UUID"
+    const val DEVICE_CREDENTIAL = "X-GCS-Device-Credential"
+}
+
 object OperationalReadQueryPolicy {
     const val DEFAULT_LIMIT = 100
     const val MIN_LIMIT = 1

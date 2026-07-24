@@ -33,11 +33,29 @@ class JdbcOperationalReadRepositoryTest {
 
         val principal = AuthenticatedPrincipal("viewer-a", UserRole.VIEWER, GroupId("co-a"))
         val before = repository.telemetryFor(principal)
-        repository.upsertTelemetry(telemetry("raw.mobile", GroupId("co-a"), latitude = 35.88))
+        repository.upsertTelemetry(
+            telemetry("raw.mobile", GroupId("co-a"), latitude = 35.88).copy(
+                batteryPercent = 74.0,
+                headingDeg = 121.0,
+                rollDeg = 2.0,
+                pitchDeg = -1.0,
+                yawDeg = 120.0,
+                linkQualityPercent = 92.0,
+                observedAt = timestamp,
+            ),
+        )
         val after = repository.telemetryFor(principal)
+        val mobile = after.single { it.uuid == "raw.mobile" }
 
         assertEquals(listOf("raw.a"), before.map { it.uuid })
-        assertTrue(after.any { it.uuid == "raw.mobile" && it.latitude == 35.88 })
+        assertEquals(35.88, mobile.latitude)
+        assertEquals(74.0, mobile.batteryPercent)
+        assertEquals(121.0, mobile.headingDeg)
+        assertEquals(2.0, mobile.rollDeg)
+        assertEquals(-1.0, mobile.pitchDeg)
+        assertEquals(120.0, mobile.yawDeg)
+        assertEquals(92.0, mobile.linkQualityPercent)
+        assertEquals(timestamp, mobile.observedAt)
         assertTrue(after.none { it.uuid == "raw.b" })
     }
 

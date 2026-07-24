@@ -25,6 +25,13 @@ internal object OperationalReadRowMappers {
             epochTime = rs.getString(OperationalReadColumns.epochTime),
             portDistance = rs.getDouble(OperationalReadColumns.portDistance),
             groupId = GroupId(rs.getString(OperationalReadColumns.groupId)),
+            batteryPercent = rs.getObject(OperationalReadColumns.batteryPercent, java.lang.Double::class.java)?.toDouble(),
+            headingDeg = rs.getObject(OperationalReadColumns.headingDeg, java.lang.Double::class.java)?.toDouble(),
+            rollDeg = rs.getObject(OperationalReadColumns.rollDeg, java.lang.Double::class.java)?.toDouble(),
+            pitchDeg = rs.getObject(OperationalReadColumns.pitchDeg, java.lang.Double::class.java)?.toDouble(),
+            yawDeg = rs.getObject(OperationalReadColumns.yawDeg, java.lang.Double::class.java)?.toDouble(),
+            linkQualityPercent = rs.getObject(OperationalReadColumns.linkQualityPercent, java.lang.Double::class.java)?.toDouble(),
+            observedAt = rs.getTimestamp(OperationalReadColumns.observedAt)?.toInstant(),
         )
     }
 
@@ -104,6 +111,13 @@ internal object OperationalReadColumns {
     const val epochTime = "epoch_time"
     const val portDistance = "port_distance"
     const val recordedAt = "recorded_at"
+    const val batteryPercent = "battery_percent"
+    const val headingDeg = "heading_deg"
+    const val rollDeg = "roll_deg"
+    const val pitchDeg = "pitch_deg"
+    const val yawDeg = "yaw_deg"
+    const val linkQualityPercent = "link_quality_percent"
+    const val observedAt = "observed_at"
     const val serviceName = "service_name"
     const val checkedAt = "checked_at"
     const val latencyMs = "latency_ms"

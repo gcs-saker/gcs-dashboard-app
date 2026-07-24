@@ -35,6 +35,13 @@ internal class OperationalReadJdbcWriter(
             telemetry.epochTime,
             telemetry.portDistance,
             telemetry.groupId.value,
+            telemetry.batteryPercent,
+            telemetry.headingDeg,
+            telemetry.rollDeg,
+            telemetry.pitchDeg,
+            telemetry.yawDeg,
+            telemetry.linkQualityPercent,
+            telemetry.observedAt?.let(Timestamp::from),
         )
     }
 
@@ -56,6 +63,13 @@ internal class OperationalReadJdbcWriter(
             telemetry.epochTime,
             telemetry.portDistance,
             telemetry.groupId.value,
+            telemetry.batteryPercent,
+            telemetry.headingDeg,
+            telemetry.rollDeg,
+            telemetry.pitchDeg,
+            telemetry.yawDeg,
+            telemetry.linkQualityPercent,
+            telemetry.observedAt?.let(Timestamp::from),
         )
     }
 
