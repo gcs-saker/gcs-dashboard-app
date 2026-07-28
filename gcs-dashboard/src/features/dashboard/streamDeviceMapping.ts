@@ -29,7 +29,10 @@ export function streamDeviceFromRegistryItem(
   telemetryByUuid: Map<string, TelemetryReadResponse> = new Map(),
 ): StreamDeviceOption {
   const mediaType = item.sensorId.toLowerCase().includes("thermal") ? "ir" : "eo";
-  const telemetry = telemetryByUuid.get(item.streamId) ?? telemetryByUuid.get(item.path);
+  const telemetry =
+    telemetryByUuid.get(item.streamId) ??
+    telemetryByUuid.get(item.path) ??
+    telemetryByUuid.get(item.assetId);
   return {
     id: `registry-${item.streamId}`,
     name: item.displayName ?? `${item.assetId} ${item.sensorId}`,
