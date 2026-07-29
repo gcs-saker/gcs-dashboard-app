@@ -324,6 +324,15 @@ services:
     networks:
       - control-net
 
+  mobile-publisher:
+    image: ${MOBILE_PUBLISHER_IMAGE:-gcs-mobile-publisher:latest}
+    healthcheck:
+      <<: *health_defaults
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz >/dev/null"]
+    restart: unless-stopped
+    networks:
+      - control-net
+
   edge:
     image: nginx:1.29-alpine
     ports:
@@ -337,6 +346,8 @@ services:
       auth-policy:
         condition: service_healthy
       dashboard:
+        condition: service_healthy
+      mobile-publisher:
         condition: service_healthy
       media-control:
         condition: service_started
