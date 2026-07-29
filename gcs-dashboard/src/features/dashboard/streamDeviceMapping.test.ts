@@ -70,6 +70,40 @@ describe("streamDeviceMapping", () => {
     });
   });
 
+  test("uses device UUID telemetry through the registry asset ID", () => {
+    const deviceUuid = "61519988-afea-4096-a10a-816569a8dfd2";
+    const device = streamDeviceFromRegistryItem(
+      {
+        streamId: "raw.uav01.front",
+        path: "raw/uav01/front",
+        prefix: "raw",
+        assetId: deviceUuid,
+        sensorId: "front",
+        status: "online",
+      },
+      new Map([
+        [
+          deviceUuid,
+          {
+            uuid: deviceUuid,
+            latitude: 36.1195,
+            longitude: 128.3446,
+            altitude: 50,
+            velocity: 0,
+            epochTime: "00:00:10",
+          },
+        ],
+      ]),
+    );
+
+    expect(device.geometry).toMatchObject({
+      lat: 36.1195,
+      lng: 128.3446,
+      altitudeM: 50,
+      source: "telemetry",
+    });
+  });
+
   test("keeps fallback geometry in the Daegu operating area", () => {
     expect(mediaTypeFromStreamPath("ai.drn-01.front.detector")).toBe("ai");
     expect(mediaTypeFromStreamPath("raw.drn-01.thermal")).toBe("ir");
