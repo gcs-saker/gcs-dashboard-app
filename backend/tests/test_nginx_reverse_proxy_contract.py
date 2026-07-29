@@ -244,6 +244,17 @@ def test_single_node_nginx_also_disables_unknown_legacy_fallbacks() -> None:
         assert 'add_header X-GCS-Legacy-Fallback "disabled" always;' in location
 
 
+def test_single_node_nginx_routes_mobile_publisher_without_replacing_dashboard() -> None:
+    config = read_single_node_config()
+    publisher_location = extract_location(config, "/publisher/")
+    root_location = extract_locations(config, "/")[-1]
+
+    assert "upstream gcs_mobile_publisher" in config
+    assert "server mobile-publisher:8080;" in config
+    assert "proxy_pass http://$mobile_publisher_host:8080;" in publisher_location
+    assert "proxy_pass http://$dashboard_host:3000;" in root_location
+
+
 def test_reverse_proxy_policy_doc_covers_required_endpoint_decisions() -> None:
     doc = NGINX_DOC.read_text(encoding="utf-8")
 
