@@ -11,7 +11,7 @@
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "react-hook-form": "7.81.0",
-    "react-router-dom": "7.18.1",
+    "react-router-dom": "7.18.2",
     "sass": "1.100.0",
     "zod": "4.4.3",
     "zustand": "5.0.14"
@@ -46,12 +46,12 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
+    "audit": "node scripts/npm-audit-ci.mjs",
     "test:e2e": "playwright test",
     "test:smoke:failure": "vitest run src/features/streaming/failureSmokeScenarios.test.ts src/features/streaming/components/RealtimePlayer.test.tsx src/features/streaming/components/HLSFallbackPlayer.test.tsx",
     "test:coverage": "vitest run --coverage",
     "stories": "ladle serve --host 127.0.0.1",
-    "stories:build": "ladle build",
-    "audit": "npm audit --audit-level=moderate"
+    "stories:build": "ladle build"
   },
   "vitest": {
     "collectCoverageFrom": [
