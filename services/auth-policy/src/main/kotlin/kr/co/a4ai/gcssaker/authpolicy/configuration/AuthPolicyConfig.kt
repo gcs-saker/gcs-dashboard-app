@@ -26,6 +26,8 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.RefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupRegistrationTokenRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupRegistrationTokenService
+import kr.co.a4ai.gcssaker.authpolicy.domain.SignupTransactionBoundary
+import kr.co.a4ai.gcssaker.authpolicy.domain.DirectSignupTransactionBoundary
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfigRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncStatusService
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuthUserRepository
@@ -39,6 +41,8 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.core.env.Environment
 import java.time.Duration
 import javax.sql.DataSource
+import org.springframework.jdbc.datasource.DataSourceTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 
 @Configuration
 class AuthPolicyConfig {
@@ -111,8 +115,23 @@ class AuthPolicyConfig {
         repository: SignupRegistrationTokenRepository,
         passwordHasher: PasswordHasher,
         hierarchyRepository: OrganizationHierarchyRepository,
-    ): SignupRegistrationTokenService =
-        SignupRegistrationTokenService(repository, passwordHasher, hierarchyRepository)
+        settings: AuthRuntimeSettings,
+        dataSource: ObjectProvider<DataSource>,
+    ): SignupRegistrationTokenService {
+        val boundary = PersistenceMode.dataSource(settings, dataSource)?.let { source ->
+            val transactions = TransactionTemplate(DataSourceTransactionManager(source))
+            object : SignupTransactionBoundary {
+                override fun <T> execute(action: () -> T): T =
+                    transactions.execute { action() } ?: error("signup transaction returned no result")
+            }
+        } ?: DirectSignupTransactionBoundary
+        return SignupRegistrationTokenService(
+            repository = repository,
+            passwordHasher = passwordHasher,
+            hierarchyRepository = hierarchyRepository,
+            transactionBoundary = boundary,
+        )
+    }
 
     @Bean
     fun organizationHierarchyRepository(

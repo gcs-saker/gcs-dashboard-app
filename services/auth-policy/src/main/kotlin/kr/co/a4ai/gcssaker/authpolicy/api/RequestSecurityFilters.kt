@@ -113,6 +113,7 @@ class Slf4jApiAccessLogSink : ApiAccessLogSink {
 
 class ApiAccessLogFilter(
     private val sink: ApiAccessLogSink,
+    private val clientIpResolver: ClientIpResolver = ClientIpResolver(),
 ) : OncePerRequestFilter() {
     override fun doFilterInternal(
         request: HttpServletRequest,
@@ -138,7 +139,7 @@ class ApiAccessLogFilter(
             durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt),
             correlationId = attributeOrUnknown(RequestTraceContract.CORRELATION_ID_ATTRIBUTE),
             traceId = attributeOrUnknown(RequestTraceContract.TRACE_ID_ATTRIBUTE),
-            remoteAddress = remoteAddr ?: ApiAccessLogContract.UNKNOWN_VALUE,
+            remoteAddress = clientIpResolver.resolve(this),
         )
 
     private fun HttpServletRequest.attributeOrUnknown(name: String): String =

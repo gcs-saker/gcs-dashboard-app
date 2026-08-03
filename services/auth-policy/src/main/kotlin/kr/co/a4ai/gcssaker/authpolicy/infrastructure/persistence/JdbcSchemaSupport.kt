@@ -16,7 +16,7 @@ internal object AuthPolicyJdbcMigrations {
         }
         Flyway.configure()
             .dataSource(dataSource)
-            .locations(LOCATION)
+            .locations(LOCATION, "classpath:db/{vendor}-migration")
             .baselineOnMigrate(true)
             .baselineVersion("0")
             .load()

@@ -3,6 +3,7 @@ package sessionstore
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -25,8 +26,7 @@ func NewRedisStore(address, password string, timeout time.Duration) *RedisStore 
 
 func (s *RedisStore) Ping(ctx context.Context) error { return s.client.Ping(ctx).Err() }
 
-func (s *RedisStore) Save(v domain.PublishSession) error {
-	ctx := context.Background()
+func (s *RedisStore) Save(ctx context.Context, v domain.PublishSession) error {
 	key := keyPrefix + v.SessionID
 	err := s.client.HSet(ctx, key, encode(v)).Err()
 	if err == nil {
@@ -35,13 +35,15 @@ func (s *RedisStore) Save(v domain.PublishSession) error {
 	return err
 }
 
-func (s *RedisStore) Find(id string) (domain.PublishSession, bool) {
-	values, err := s.client.HGetAll(context.Background(), keyPrefix+id).Result()
-	if err != nil || len(values) == 0 {
-		return domain.PublishSession{}, false
+func (s *RedisStore) Find(ctx context.Context, id string) (domain.PublishSession, error) {
+	values, err := s.client.HGetAll(ctx, keyPrefix+id).Result()
+	if err != nil { return domain.PublishSession{}, fmt.Errorf("%w: %v", domain.ErrPublishSessionStoreUnavailable, err) }
+	if len(values) == 0 {
+		return domain.PublishSession{}, domain.ErrPublishSessionNotFound
 	}
 	v, err := decode(values)
-	return v, err == nil
+	if err != nil { return domain.PublishSession{}, fmt.Errorf("%w: corrupt session", domain.ErrPublishSessionStoreUnavailable) }
+	return v, nil
 }
 
 var rotateScript = redis.NewScript(`
@@ -67,26 +69,28 @@ redis.call('PEXPIREAT', KEYS[1], tonumber(ARGV[4]) + 60000)
 return {'rotated', tostring(version)}
 `)
 
-func (s *RedisStore) RotateRenewal(id string, expected, next []byte, publishExpiry, renewalExpiry, now time.Time) (domain.PublishSession, domain.RenewalRotationResult) {
-	result, err := rotateScript.Run(context.Background(), s.client, []string{keyPrefix + id},
+func (s *RedisStore) RotateRenewal(ctx context.Context, id string, expected, next []byte, publishExpiry, renewalExpiry, now time.Time) (domain.PublishSession, domain.RenewalRotationResult, error) {
+	result, err := rotateScript.Run(ctx, s.client, []string{keyPrefix + id},
 		b64(expected), b64(next), millis(publishExpiry), millis(renewalExpiry), millis(now)).StringSlice()
 	if err != nil || len(result) == 0 {
-		return domain.PublishSession{}, domain.RenewalRejected
+		return domain.PublishSession{}, domain.RenewalRejected, fmt.Errorf("%w: rotation failed", domain.ErrPublishSessionStoreUnavailable)
 	}
 	rotation := domain.RenewalRotationResult(result[0])
-	v, _ := s.Find(id)
-	return v, rotation
+	v, findErr := s.Find(ctx, id)
+	return v, rotation, findErr
 }
 
-func (s *RedisStore) End(id string, now time.Time) bool {
-	ctx := context.Background()
+func (s *RedisStore) End(ctx context.Context, id string, now time.Time) error {
 	key := keyPrefix + id
 	exists, err := s.client.Exists(ctx, key).Result()
 	if err != nil || exists == 0 {
-		return false
+		if err != nil { return fmt.Errorf("%w: %v", domain.ErrPublishSessionStoreUnavailable, err) }
+		return domain.ErrPublishSessionNotFound
 	}
-	return s.client.HSet(ctx, key,
-		"status", string(domain.PublishSessionEnded), "updated_ms", millis(now)).Err() == nil
+	if err := s.client.HSet(ctx, key, "status", string(domain.PublishSessionEnded), "updated_ms", millis(now)).Err(); err != nil {
+		return fmt.Errorf("%w: %v", domain.ErrPublishSessionStoreUnavailable, err)
+	}
+	return nil
 }
 
 func encode(v domain.PublishSession) map[string]any {

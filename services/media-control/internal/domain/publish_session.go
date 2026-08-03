@@ -1,10 +1,17 @@
 package domain
 
 import (
+	"context"
 	"crypto/subtle"
+	"errors"
 	"sort"
 	"sync"
 	"time"
+)
+
+var (
+	ErrPublishSessionNotFound = errors.New("publish session not found")
+	ErrPublishSessionStoreUnavailable = errors.New("publish session store unavailable")
 )
 
 type PublishSessionStatus string
@@ -46,10 +53,10 @@ func (s PublishSession) ActiveAt(now time.Time) bool {
 }
 
 type PublishSessionStore interface {
-	Save(session PublishSession) error
-	Find(sessionID string) (PublishSession, bool)
-	RotateRenewal(sessionID string, expectedHash []byte, nextHash []byte, publishExpiry, renewalExpiry, now time.Time) (PublishSession, RenewalRotationResult)
-	End(sessionID string, now time.Time) bool
+	Save(context.Context, PublishSession) error
+	Find(context.Context, string) (PublishSession, error)
+	RotateRenewal(context.Context, string, []byte, []byte, time.Time, time.Time, time.Time) (PublishSession, RenewalRotationResult, error)
+	End(context.Context, string, time.Time) error
 }
 
 type InMemoryPublishSessionStore struct {
@@ -61,35 +68,36 @@ func NewInMemoryPublishSessionStore() *InMemoryPublishSessionStore {
 	return &InMemoryPublishSessionStore{sessions: make(map[string]PublishSession)}
 }
 
-func (s *InMemoryPublishSessionStore) Save(session PublishSession) error {
+func (s *InMemoryPublishSessionStore) Save(_ context.Context, session PublishSession) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sessions[session.SessionID] = clonePublishSession(session)
 	return nil
 }
 
-func (s *InMemoryPublishSessionStore) Find(sessionID string) (PublishSession, bool) {
+func (s *InMemoryPublishSessionStore) Find(_ context.Context, sessionID string) (PublishSession, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	session, ok := s.sessions[sessionID]
-	return clonePublishSession(session), ok
+	if !ok { return PublishSession{}, ErrPublishSessionNotFound }
+	return clonePublishSession(session), nil
 }
 
-func (s *InMemoryPublishSessionStore) RotateRenewal(sessionID string, expectedHash, nextHash []byte, publishExpiry, renewalExpiry, now time.Time) (PublishSession, RenewalRotationResult) {
+func (s *InMemoryPublishSessionStore) RotateRenewal(_ context.Context, sessionID string, expectedHash, nextHash []byte, publishExpiry, renewalExpiry, now time.Time) (PublishSession, RenewalRotationResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	session, ok := s.sessions[sessionID]
 	if !ok || !session.ActiveAt(now) {
-		return PublishSession{}, RenewalRejected
+		return PublishSession{}, RenewalRejected, nil
 	}
 	if subtle.ConstantTimeCompare(session.PreviousRenewalTokenHash, expectedHash) == 1 {
 		session.Status = PublishSessionEnded
 		session.UpdatedAt = now
 		s.sessions[sessionID] = session
-		return clonePublishSession(session), RenewalReplayed
+		return clonePublishSession(session), RenewalReplayed, nil
 	}
 	if subtle.ConstantTimeCompare(session.RenewalTokenHash, expectedHash) != 1 {
-		return PublishSession{}, RenewalRejected
+		return PublishSession{}, RenewalRejected, nil
 	}
 	session.PreviousRenewalTokenHash = append([]byte(nil), session.RenewalTokenHash...)
 	session.RenewalTokenHash = append([]byte(nil), nextHash...)
@@ -98,20 +106,20 @@ func (s *InMemoryPublishSessionStore) RotateRenewal(sessionID string, expectedHa
 	session.RenewalTokenExpiresAt = renewalExpiry
 	session.UpdatedAt = now
 	s.sessions[sessionID] = session
-	return clonePublishSession(session), RenewalRotated
+	return clonePublishSession(session), RenewalRotated, nil
 }
 
-func (s *InMemoryPublishSessionStore) End(sessionID string, now time.Time) bool {
+func (s *InMemoryPublishSessionStore) End(_ context.Context, sessionID string, now time.Time) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	session, ok := s.sessions[sessionID]
 	if !ok {
-		return false
+		return ErrPublishSessionNotFound
 	}
 	session.Status = PublishSessionEnded
 	session.UpdatedAt = now
 	s.sessions[sessionID] = session
-	return true
+	return nil
 }
 
 func clonePublishSession(session PublishSession) PublishSession {

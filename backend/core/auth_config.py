@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import Field, SecretStr, ValidationError, field_validator
+from pydantic import Field, SecretStr, ValidationError, field_validator, model_validator
 
 from core.settings_base import BackendBaseSettings, SettingsConfigurationError, settings_error_message
 
@@ -54,6 +54,12 @@ class AuthSettings(BackendBaseSettings):
         if len(secret.get_secret_value()) < MIN_SECRET_LENGTH:
             raise ValueError(f"{AUTH_JWT_SECRET} must be set to at least {MIN_SECRET_LENGTH} characters")
         return secret
+
+    @model_validator(mode="after")
+    def validate_cookie_security(self) -> "AuthSettings":
+        if self.refresh_cookie_samesite == "none" and not self.refresh_cookie_secure:
+            raise ValueError("SameSite=None refresh cookies require Secure=true")
+        return self
 
     @classmethod
     def from_env(cls) -> "AuthSettings":

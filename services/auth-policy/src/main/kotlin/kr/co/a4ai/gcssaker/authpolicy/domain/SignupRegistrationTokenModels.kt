@@ -43,6 +43,14 @@ interface SignupRegistrationTokenRepository {
     fun consume(tokenId: String, now: Instant): Boolean
 }
 
+interface SignupTransactionBoundary {
+    fun <T> execute(action: () -> T): T
+}
+
+object DirectSignupTransactionBoundary : SignupTransactionBoundary {
+    override fun <T> execute(action: () -> T): T = action()
+}
+
 class InMemorySignupRegistrationTokenRepository : SignupRegistrationTokenRepository {
     private val records = mutableMapOf<String, SignupRegistrationTokenRecord>()
     override fun list() = records.values.sortedByDescending { it.createdAt }
@@ -70,6 +78,7 @@ class SignupRegistrationTokenService(
     private val clock: Clock = Clock.systemUTC(),
     private val generator: SignupRegistrationTokenGenerator = SignupRegistrationTokenGenerator(),
     private val idGenerator: () -> String = { UUID.randomUUID().toString() },
+    private val transactionBoundary: SignupTransactionBoundary = DirectSignupTransactionBoundary,
 ) : SignupInviteResolver {
     fun issue(command: SignupRegistrationTokenIssueCommand): SignupRegistrationTokenIssue {
         require(command.companyId > 0) { "company id must be positive" }
@@ -99,13 +108,17 @@ class SignupRegistrationTokenService(
     fun list(): List<SignupRegistrationTokenRecord> = repository.list()
 
     override fun findByCode(code: String): SignupInvite? {
-        if (code.isBlank()) return null
+        return useInvite(code) { it }
+    }
+
+    override fun <T> useInvite(code: String, action: (SignupInvite) -> T): T? = transactionBoundary.execute {
+        if (code.isBlank()) return@execute null
         val now = clock.instant()
         val record = repository.activeCandidates(now).firstOrNull {
             passwordHasher.verify(code, it.tokenHash)
-        } ?: return null
-        if (!repository.consume(record.tokenId, now)) return null
-        return SignupInvite(code, record.companyId, record.groupId)
+        } ?: return@execute null
+        if (!repository.consume(record.tokenId, now)) return@execute null
+        action(SignupInvite(code, record.companyId, record.groupId))
     }
 }
 
@@ -114,4 +127,9 @@ class CompositeSignupInviteResolver(
 ) : SignupInviteResolver {
     override fun findByCode(code: String): SignupInvite? =
         resolvers.firstNotNullOfOrNull { it.findByCode(code) }
+
+    override fun <T> useInvite(code: String, action: (SignupInvite) -> T): T? {
+        resolvers.forEach { resolver -> resolver.useInvite(code, action)?.let { return it } }
+        return null
+    }
 }

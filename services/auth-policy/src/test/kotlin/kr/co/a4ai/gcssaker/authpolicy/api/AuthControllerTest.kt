@@ -200,9 +200,9 @@ class AuthControllerTest {
             )
         }
 
-        assertEquals(HttpStatus.BAD_REQUEST, duplicateUsername.statusCode)
+        assertEquals(HttpStatus.CONFLICT, duplicateUsername.statusCode)
         assertEquals("Username already registered", duplicateUsername.reason)
-        assertEquals(HttpStatus.BAD_REQUEST, duplicateEmail.statusCode)
+        assertEquals(HttpStatus.CONFLICT, duplicateEmail.statusCode)
         assertEquals("Email already registered", duplicateEmail.reason)
         assertEquals(HttpStatus.BAD_REQUEST, invalidInvite.statusCode)
         assertEquals("Invalid invite code Input", invalidInvite.reason)

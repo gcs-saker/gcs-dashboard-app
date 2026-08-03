@@ -11,8 +11,11 @@ data class SignupInvite(
     }
 }
 
-fun interface SignupInviteResolver {
+interface SignupInviteResolver {
     fun findByCode(code: String): SignupInvite?
+
+    fun <T> useInvite(code: String, action: (SignupInvite) -> T): T? =
+        findByCode(code)?.let(action)
 }
 
 class SignupInvites private constructor(
@@ -41,6 +44,7 @@ data class SignupCommand(
 )
 
 class SignupRejectedException(message: String) : RuntimeException(message)
+class DuplicateAuthUserException(message: String, cause: Throwable? = null) : IllegalArgumentException(message, cause)
 
 class AuthRegistrationService(
     private val users: AuthUserRepository,
@@ -49,22 +53,20 @@ class AuthRegistrationService(
 ) {
     fun signup(command: SignupCommand): AuthUser {
         if (users.findByUsername(command.username) != null) {
-            throw SignupRejectedException("Username already registered")
+            throw DuplicateAuthUserException("Username already registered")
         }
         if (users.findByEmail(command.email) != null) {
-            throw SignupRejectedException("Email already registered")
+            throw DuplicateAuthUserException("Email already registered")
         }
-        val invite = invites.findByCode(command.inviteCode)
-            ?: throw SignupRejectedException("Invalid invite code Input")
-        return users.save(
-            AuthUser(
+        return invites.useInvite(command.inviteCode) { invite ->
+            users.save(AuthUser(
                 username = command.username,
                 email = command.email,
                 passwordHash = passwordHasher.hash(command.password),
                 companyId = invite.companyId,
                 role = UserRole.VIEWER,
                 groupId = invite.groupId,
-            ),
-        )
+            ))
+        } ?: throw SignupRejectedException("Invalid invite code Input")
     }
 }

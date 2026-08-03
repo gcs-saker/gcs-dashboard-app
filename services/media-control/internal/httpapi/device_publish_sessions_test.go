@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -58,7 +59,7 @@ func TestDevicePublishSessionUsesServerOwnedIdentityAndRotatesRenewalToken(t *te
 	if mismatchRecorder.Code != http.StatusUnauthorized {
 		t.Fatalf("expected mismatch rejection, got %d", mismatchRecorder.Code)
 	}
-	if session, ok := store.Find(created.SessionID); !ok || session.Status != domain.PublishSessionActive {
+	if session, err := store.Find(context.Background(), created.SessionID); err != nil || session.Status != domain.PublishSessionActive {
 		t.Fatal("an unrelated token mismatch must not terminate a valid session")
 	}
 
@@ -69,7 +70,7 @@ func TestDevicePublishSessionUsesServerOwnedIdentityAndRotatesRenewalToken(t *te
 	if replayRecorder.Code != http.StatusUnauthorized {
 		t.Fatalf("expected replay rejection, got %d", replayRecorder.Code)
 	}
-	if session, ok := store.Find(created.SessionID); !ok || session.Status != domain.PublishSessionEnded {
+	if session, err := store.Find(context.Background(), created.SessionID); err != nil || session.Status != domain.PublishSessionEnded {
 		t.Fatal("renewal replay must end the session")
 	}
 }

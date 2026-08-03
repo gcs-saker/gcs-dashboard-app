@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"strings"
+	"time"
 )
 
 type Telemetry struct {
@@ -48,10 +50,43 @@ func (h TelemetryHandler) HandleGatewayRequest(ctx context.Context, request Gate
 	if telemetry.AssetID != identity.DeviceUUID {
 		return GatewayRequestDecision{Status: GatewayAckStatusRejected, ReasonCode: reasonIdentityMismatch}
 	}
+	if err := ValidateTelemetry(telemetry, time.Now()); err != nil {
+		return GatewayRequestDecision{Status: GatewayAckStatusRejected, ReasonCode: reasonSemanticInvalid}
+	}
 	if err := h.store.StoreTelemetry(ctx, identity, telemetry); err != nil {
 		return GatewayRequestDecision{Status: GatewayAckStatusBackpressure, ReasonCode: reasonStoreFailed}
 	}
 	return GatewayRequestDecision{Status: GatewayAckStatusAccepted, ReasonCode: reasonAccepted}
+}
+
+func ValidateTelemetry(v Telemetry, now time.Time) error {
+	if strings.TrimSpace(v.EventID) == "" || strings.TrimSpace(v.AssetID) == "" || v.ObservedUnixMillis <= 0 {
+		return fmt.Errorf("required identity or time missing")
+	}
+	observed := time.UnixMilli(v.ObservedUnixMillis)
+	if observed.After(now.Add(5 * time.Minute)) {
+		return fmt.Errorf("observed time exceeds future skew")
+	}
+	values := []float64{v.Latitude, v.Longitude, v.AltitudeM, v.HeadingDeg, v.SpeedMPS,
+		v.BatteryPercent, v.RollDeg, v.PitchDeg, v.YawDeg, v.LinkQualityPercent}
+	for _, value := range values {
+		if math.IsNaN(value) || math.IsInf(value, 0) { return fmt.Errorf("non-finite telemetry") }
+	}
+	if v.Latitude < -90 || v.Latitude > 90 || v.Longitude < -180 || v.Longitude > 180 {
+		return fmt.Errorf("position outside WGS84")
+	}
+	if v.Latitude == 0 && v.Longitude == 0 { return fmt.Errorf("null-island position rejected") }
+	if v.AltitudeM < -500 || v.AltitudeM > 20000 || v.SpeedMPS < 0 || v.SpeedMPS > 200 {
+		return fmt.Errorf("altitude or speed outside contract")
+	}
+	if v.HeadingDeg < 0 || v.HeadingDeg >= 360 || v.BatteryPercent < 0 || v.BatteryPercent > 100 ||
+		v.LinkQualityPercent < 0 || v.LinkQualityPercent > 100 {
+		return fmt.Errorf("heading or percentage outside contract")
+	}
+	for _, angle := range []float64{v.RollDeg, v.PitchDeg, v.YawDeg} {
+		if angle < -360 || angle > 360 { return fmt.Errorf("attitude outside contract") }
+	}
+	return nil
 }
 
 type protobufFields struct {

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -114,7 +115,7 @@ func (s Server) createDevicePublishSession(w http.ResponseWriter, r *http.Reques
 		PublishTokenExpiresAt: now.Add(publishAccessTTL), RenewalTokenExpiresAt: now.Add(publishRenewalTTL),
 		CreatedAt: now, UpdatedAt: now,
 	}
-	if err := s.publishSessions.Save(session); err != nil {
+	if err := s.publishSessions.Save(r.Context(), session); err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
 		return
 	}
@@ -152,10 +153,16 @@ func (s Server) renewDevicePublishSession(w http.ResponseWriter, r *http.Request
 		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
 		return
 	}
-	session, result := s.publishSessions.RotateRenewal(
+	session, result, storeErr := s.publishSessions.RotateRenewal(
+		r.Context(),
 		sessionID, s.hashRenewalToken(raw), s.hashRenewalToken(nextRenewal),
 		now.Add(publishAccessTTL), now.Add(publishRenewalTTL), now,
 	)
+	if storeErr != nil {
+		w.Header().Set("Retry-After", "1")
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
 	if result != domain.RenewalRotated {
 		// Only a confirmed replay of the immediately previous token terminates the
 		// session. Random mismatches must not become a session-termination oracle.
@@ -178,12 +185,21 @@ func (s Server) renewDevicePublishSession(w http.ResponseWriter, r *http.Request
 
 func (s Server) endDevicePublishSession(w http.ResponseWriter, r *http.Request, sessionID string) {
 	raw := bearerToken(r.Header.Get(authorizationHeader))
-	session, ok := s.publishSessions.Find(sessionID)
-	if raw == "" || !ok || !hmac.Equal(session.RenewalTokenHash, s.hashRenewalToken(raw)) {
+	session, findErr := s.publishSessions.Find(r.Context(), sessionID)
+	if errors.Is(findErr, domain.ErrPublishSessionStoreUnavailable) {
+		w.Header().Set("Retry-After", "1")
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
+	if raw == "" || findErr != nil || !hmac.Equal(session.RenewalTokenHash, s.hashRenewalToken(raw)) {
 		writeJSON(w, http.StatusUnauthorized, errorPayload(errPublishSessionRenewalDenied))
 		return
 	}
-	s.publishSessions.End(sessionID, s.now())
+	if err := s.publishSessions.End(r.Context(), sessionID, s.now()); err != nil {
+		w.Header().Set("Retry-After", "1")
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
 	s.auditDeviceSession(r, "publish_session_ended", session.DeviceUUID, "allowed")
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -192,8 +208,8 @@ func (s Server) validateActivePublishSession(payload mediaTokenPayload, now time
 	if payload.SessionID == "" {
 		return true
 	} // Legacy token compatibility during migration.
-	session, ok := s.publishSessions.Find(payload.SessionID)
-	return ok && session.ActiveAt(now) && session.DeviceUUID == payload.DeviceUUID &&
+	session, err := s.publishSessions.Find(context.Background(), payload.SessionID)
+	return err == nil && session.ActiveAt(now) && session.DeviceUUID == payload.DeviceUUID &&
 		session.SensorID == payload.SensorID && session.StreamID == payload.StreamID && session.Path == payload.Path &&
 		session.GroupID == payload.GroupID && session.CredentialVersion == payload.CredentialVersion &&
 		session.DevicePolicyVersion == payload.DevicePolicyVersion

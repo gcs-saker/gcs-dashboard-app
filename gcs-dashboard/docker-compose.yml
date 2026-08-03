@@ -64,6 +64,21 @@ services:
       retries: 12
     restart: always
 
+  redis:
+    image: redis:7.4.2-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-redis
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping 2>/dev/null | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+    restart: always
+
   backend:
     image: ${BACKEND_IMAGE:-gcs-saker-backend:local}
     build:
@@ -147,7 +162,7 @@ services:
       MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL: ${MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL:-/webrtc}
       MEDIA_CONTROL_PUBLIC_HLS_BASE_URL: ${MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-/hls}
       MEDIA_CONTROL_PUBLISH_TOKEN: ${MEDIA_CONTROL_PUBLISH_TOKEN:?Set MEDIA_CONTROL_PUBLISH_TOKEN in .env}
-      MEDIA_CONTROL_AUTH_MODE: ${MEDIA_CONTROL_AUTH_MODE:-allow-all}
+      MEDIA_CONTROL_AUTH_MODE: ${MEDIA_CONTROL_AUTH_MODE:-required}
       MEDIA_CONTROL_STUN_URL: ${MEDIA_CONTROL_STUN_URL:-stun:stun.l.google.com:19302}
       MEDIA_CONTROL_TURN_PRIMARY_URL: ${MEDIA_CONTROL_TURN_PRIMARY_URL:-turn:turn:3478?transport=udp}
       MEDIA_CONTROL_TURN_SECONDARY_URL: ${MEDIA_CONTROL_TURN_SECONDARY_URL:-turn:turn:3478?transport=tcp}
@@ -158,9 +173,14 @@ services:
       MEDIA_CONTROL_GRPC_LISTEN_ADDR: :9090
       MEDIA_CONTROL_GRPC_TOKEN: ${MEDIA_CONTROL_GRPC_TOKEN:-${MEDIA_CONTROL_PUBLISH_TOKEN:?Set MEDIA_CONTROL_PUBLISH_TOKEN in .env}}
       MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES: ${MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES:-65536}
-      AUTH_POLICY_BASE_URL: ${AUTH_POLICY_BASE_URL:-}
+      AUTH_POLICY_BASE_URL: ${AUTH_POLICY_BASE_URL:?Set AUTH_POLICY_BASE_URL in .env}
+      MEDIA_CONTROL_REDIS_ADDR: ${MEDIA_CONTROL_REDIS_ADDR:-redis:6379}
+      MEDIA_CONTROL_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
       TURN_USERNAME: ${WEBRTC_TURN_USERNAME:-gcs-turn}
       TURN_PASSWORD: ${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: always
 
   turn:
@@ -238,3 +258,4 @@ services:
 volumes:
   postgres-data:
   mqtt-data:
+  redis-data:

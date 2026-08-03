@@ -10,6 +10,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthRegistrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupCommand
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupRejectedException
+import kr.co.a4ai.gcssaker.authpolicy.domain.DuplicateAuthUserException
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -49,6 +50,8 @@ class AuthController(
                     inviteCode = request.inviteCode,
                 ),
             )
+        } catch (exc: DuplicateAuthUserException) {
+            throw ConflictApiError(exc.message ?: AuthApiErrors.SIGNUP_REJECTED)
         } catch (exc: SignupRejectedException) {
             throw BadRequestApiError(exc.message ?: AuthApiErrors.SIGNUP_REJECTED)
         } catch (exc: IllegalArgumentException) {

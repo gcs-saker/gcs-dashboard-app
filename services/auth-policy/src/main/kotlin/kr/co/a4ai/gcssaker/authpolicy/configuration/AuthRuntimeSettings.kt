@@ -51,6 +51,12 @@ data class AuthRuntimeSettings(
     val postProcessingMaxPoolSize: Int = AuthRuntimeDefaults.POST_PROCESSING_MAX_POOL_SIZE,
     val postProcessingQueueCapacity: Int = AuthRuntimeDefaults.POST_PROCESSING_QUEUE_CAPACITY,
 ) {
+    init {
+        require(!refreshCookieSameSite.equals("none", ignoreCase = true) || refreshCookieSecure) {
+            "SameSite=None refresh cookies require Secure=true"
+        }
+    }
+
     companion object {
         fun fromEnvironment(env: Environment): AuthRuntimeSettings =
             AuthRuntimeSettingsReader.fromEnvironment(env)

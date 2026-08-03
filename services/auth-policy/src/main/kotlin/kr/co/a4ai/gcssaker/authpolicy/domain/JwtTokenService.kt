@@ -16,6 +16,10 @@ class JwtTokenService(
     private val refreshTokenTtl: Duration = Duration.ofDays(7),
     private val clock: Clock = Clock.systemUTC(),
 ) {
+    data class VerifiedAccessToken(
+        val principal: AuthenticatedPrincipal,
+        val remainingTtl: Duration,
+    )
     private val algorithm: Algorithm = Algorithm.HMAC256(secret)
     private val accessVerifier: JWTVerifier = JWT.require(algorithm)
         .withIssuer(issuer)
@@ -42,7 +46,16 @@ class JwtTokenService(
     }
 
     fun verifyAccessToken(token: String): AuthenticatedPrincipal {
-        return principalFromVerifiedToken(accessVerifier.verify(token))
+        return verifyAccessTokenWithTtl(token).principal
+    }
+
+    fun verifyAccessTokenWithTtl(token: String): VerifiedAccessToken {
+        val decoded = accessVerifier.verify(token)
+        val expiresAt = decoded.expiresAtAsInstant
+            ?: throw IllegalArgumentException("exp claim is required")
+        val remainingTtl = Duration.between(clock.instant(), expiresAt)
+        require(!remainingTtl.isZero && !remainingTtl.isNegative) { "access token is expired" }
+        return VerifiedAccessToken(principalFromVerifiedToken(decoded), remainingTtl)
     }
 
     fun verifyRefreshToken(token: String): AuthenticatedPrincipal {

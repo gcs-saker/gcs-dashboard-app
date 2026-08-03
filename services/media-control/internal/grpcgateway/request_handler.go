@@ -8,6 +8,7 @@ import (
 const (
 	reasonAccepted         = "accepted"
 	reasonMalformed        = "malformed_protobuf"
+	reasonSemanticInvalid  = "telemetry_semantic_invalid"
 	reasonBackpressure     = "payload_too_large"
 	reasonReconnect        = "reconnect_requested"
 	reasonStoreFailed      = "telemetry_store_failed"
