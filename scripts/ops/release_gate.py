@@ -15,7 +15,10 @@ from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 COMPOSE = ROOT / "deploy/compose/compose.single-node.poc.yml"
-MIGRATIONS = ROOT / "services/auth-policy/src/main/resources/db/migration"
+MIGRATION_ROOTS = (
+    ROOT / "services/auth-policy/src/main/resources/db/migration",
+    ROOT / "services/auth-policy/src/main/resources/db/postgresql-migration",
+)
 
 
 def run(*args: str, secret_output: bool = False) -> str:
@@ -44,7 +47,7 @@ def require_private_file(path: pathlib.Path) -> None:
 
 
 def migration_inventory() -> list[dict[str, str]]:
-    files = sorted(MIGRATIONS.glob("V*__*.sql"))
+    files = sorted(path for root in MIGRATION_ROOTS for path in root.glob("V*__*.sql"))
     if not files:
         raise RuntimeError("no Flyway migrations found")
     inventory = []
