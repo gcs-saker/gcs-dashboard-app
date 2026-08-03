@@ -16,7 +16,41 @@ ALTER TABLE gateway_assets
     ALTER COLUMN updated_at TYPE TIMESTAMPTZ(3) USING updated_at AT TIME ZONE 'UTC';
 ALTER TABLE server_health_snapshots
     ALTER COLUMN checked_at TYPE TIMESTAMPTZ(3) USING checked_at AT TIME ZONE 'UTC';
+
+-- PostgreSQL prevents changing a column type while a view depends on it.
+-- Recreate the read model in the same transactional Flyway migration so
+-- consumers never observe an interval without the view.
+DROP VIEW operational_stream_session_latest;
+
 ALTER TABLE stream_sessions
     ALTER COLUMN started_at TYPE TIMESTAMPTZ(3) USING started_at AT TIME ZONE 'UTC',
     ALTER COLUMN last_heartbeat_at TYPE TIMESTAMPTZ(3) USING last_heartbeat_at AT TIME ZONE 'UTC',
     ALTER COLUMN stopped_at TYPE TIMESTAMPTZ(3) USING stopped_at AT TIME ZONE 'UTC';
+
+CREATE VIEW operational_stream_session_latest AS
+SELECT
+    stream_id,
+    session_id,
+    status,
+    source,
+    started_at,
+    last_heartbeat_at,
+    stopped_at,
+    group_id
+FROM (
+    SELECT
+        stream_id,
+        session_id,
+        status,
+        source,
+        started_at,
+        last_heartbeat_at,
+        stopped_at,
+        group_id,
+        ROW_NUMBER() OVER (
+            PARTITION BY group_id, stream_id, COALESCE(session_id, '')
+            ORDER BY last_heartbeat_at DESC, id DESC
+        ) AS session_rank
+    FROM stream_sessions
+) ranked_stream_sessions
+WHERE session_rank = 1;
