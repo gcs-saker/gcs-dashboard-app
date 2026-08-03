@@ -187,6 +187,10 @@ services:
       args:
         SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
     env_file: *service_env_files
+    ports:
+      # Host nginx terminates public TLS/HTTP2 and forwards gRPC here. Keep
+      # this listener loopback-only; it is not a public plaintext endpoint.
+      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIA_CONTROL_GRPC_HOST_PORT:-9090}:9090"
     environment:
       MEDIAMTX_API_BASE_URL: ${MEDIAMTX_API_BASE_URL:-http://mediamtx:9997}
       TURN_USERNAME: ${TURN_USERNAME:-gcs-turn}

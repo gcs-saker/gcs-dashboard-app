@@ -273,6 +273,9 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
         "${MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://localhost:8080/hls}"
     )
     assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_LISTEN_ADDR"] == ":9090"
+    assert services["media-control"]["ports"] == [
+        "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIA_CONTROL_GRPC_HOST_PORT:-9090}:9090"
+    ]
     assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_TOKEN"] == (
         "${MEDIA_CONTROL_GRPC_TOKEN:-${MEDIA_CONTROL_PUBLISH_TOKEN:?Set MEDIA_CONTROL_PUBLISH_TOKEN}}"
     )
