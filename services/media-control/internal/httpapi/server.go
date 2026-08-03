@@ -48,6 +48,8 @@ type Server struct {
 	publishToken    string
 	metrics         *Metrics
 	gateway         GatewayReadiness
+	publishSessions domain.PublishSessionStore
+	now             func() time.Time
 }
 
 func NewServer(
@@ -81,7 +83,13 @@ func NewServerWithMetrics(
 		groups:       groups,
 		publishToken: strings.TrimSpace(publishToken),
 		metrics:      metrics,
+		now:          time.Now,
 	}
+}
+
+func (s Server) WithPublishSessionStore(store domain.PublishSessionStore) Server {
+	s.publishSessions = store
+	return s
 }
 
 func (s Server) WithDevicePublishAuthorizer(authorizer DevicePublishAuthorizer) Server {
@@ -107,12 +115,14 @@ func (s Server) Routes() http.Handler {
 	s.handle(mux, routeDashboardIceServers, s.dashboardIceServers)
 	s.handle(mux, routeDashboardStreamItemPrefix, s.dashboardStreamItem)
 	s.handle(mux, routeDashboardStreams, s.dashboardStreamList)
+	s.handle(mux, routeDevicePublishSessions, s.devicePublishSessions)
+	s.handle(mux, routeDevicePublishSessionPrefix, s.devicePublishSessions)
 	return mux
 }
 
 func (s Server) handle(mux *http.ServeMux, route string, handler http.HandlerFunc) {
 	metricRoute := route
-	if route == routeDashboardStreamItemPrefix {
+	if route == routeDashboardStreamItemPrefix || route == routeDevicePublishSessionPrefix {
 		metricRoute = routeDashboardStreamItemMetric
 	}
 	mux.Handle(

@@ -324,8 +324,7 @@ class ApiContractTest {
             DevicePublishAuthorizationRequest(
                 deviceUuid = ApiContractFixtures.DEVICE_UUID_VALUE,
                 credential = ApiContractFixtures.DEVICE_CREDENTIAL_VALUE,
-                streamId = ApiContractFixtures.STREAM_ID_VALUE,
-                path = ApiContractFixtures.STREAM_PATH_VALUE,
+                sensorId = "front",
             ),
         )
         val responsePayload = objectMapper.writeValueAsString(
@@ -333,7 +332,10 @@ class ApiContractTest {
                 deviceUuid = ApiContractFixtures.DEVICE_UUID_VALUE,
                 streamId = ApiContractFixtures.STREAM_ID_VALUE,
                 path = ApiContractFixtures.STREAM_PATH_VALUE,
+                sensorId = "front",
                 publisherGroupId = ApiContractFixtures.GROUP_ID_VALUE,
+                credentialVersion = 1,
+                devicePolicyVersion = 1,
                 reason = ApiContractFixtures.DEVICE_AUTH_REASON_VALUE,
                 policyVersion = ApiContractFixtures.DEVICE_POLICY_VERSION_VALUE,
             ),
@@ -341,8 +343,8 @@ class ApiContractTest {
 
         assertTrue(requestPayload.contains(quoted(DevicePolicyApiFields.DEVICE_UUID)))
         assertTrue(requestPayload.contains(quoted(DevicePolicyApiFields.CREDENTIAL)))
-        assertTrue(requestPayload.contains(quoted(DevicePolicyApiFields.STREAM_ID)))
-        assertTrue(requestPayload.contains(quoted(DevicePolicyApiFields.PATH)))
+        assertFalse(requestPayload.contains(quoted(DevicePolicyApiFields.STREAM_ID)))
+        assertFalse(requestPayload.contains(quoted(DevicePolicyApiFields.PATH)))
         assertFalse(requestPayload.contains(quoted(DevicePolicyApiFields.PUBLISHER_GROUP_ID)))
         assertFalse(requestPayload.contains(quoted(StreamPolicyApiFields.GROUP_ID)))
         assertTrue(responsePayload.contains(quoted(DevicePolicyApiFields.PUBLISHER_GROUP_ID)))

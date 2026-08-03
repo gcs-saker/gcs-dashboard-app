@@ -12,6 +12,7 @@ class DevicePublishAuthorizationServiceTest {
         displayName = "Front Drone",
         credentialHash = passwordHasher.hash(DeviceAuthorizationFixtures.CREDENTIAL),
         status = RegisteredDeviceStatus.ACTIVE,
+        sensors = RegisteredDeviceSensors(listOf(RegisteredDeviceSensor("front", "camera"))),
     )
     private val service = DevicePublishAuthorizationService(
         devices = InMemoryRegisteredDeviceRepository(listOf(activeDevice)),
@@ -58,15 +59,14 @@ class DevicePublishAuthorizationServiceTest {
 private object DeviceAuthorizationFixtures {
     const val DEVICE_UUID = "device-front-001"
     const val CREDENTIAL = "device-secret"
-    const val STREAM_ID = "raw.front.drone-1"
-    const val STREAM_PATH = "raw/front/drone-1"
+    const val STREAM_ID = "raw.device-front-001.front"
+    const val STREAM_PATH = "raw/device-front-001/front"
     const val GROUP_ID = "co-a"
 
     fun command(credential: String = CREDENTIAL): DevicePublishAuthorizationCommand =
         DevicePublishAuthorizationCommand(
             deviceUuid = DEVICE_UUID,
             credential = credential,
-            streamId = STREAM_ID,
-            path = STREAM_PATH,
+            sensorId = "front",
         )
 }

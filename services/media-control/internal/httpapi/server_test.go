@@ -655,7 +655,7 @@ func TestDashboardPublishUrlUsesDevicePolicyWithoutGroupID(t *testing.T) {
 	if observed.DeviceUUID != "device-uuid-001" || observed.Credential != "device-secret" {
 		t.Fatalf("expected device credential to be forwarded, got %#v", observed)
 	}
-	if observed.StreamID != "raw.drone-01.front" || observed.Path != "raw/drone-01/front" {
+	if observed.SensorID != "front" || observed.StreamID != "" || observed.Path != "" {
 		t.Fatalf("unexpected device publish command %#v", observed)
 	}
 	payload := decodeTestJSON[streamPublishResponse](t, recorder)

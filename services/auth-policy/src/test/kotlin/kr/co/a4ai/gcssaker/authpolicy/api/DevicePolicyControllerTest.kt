@@ -6,6 +6,8 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryRegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDevice
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceStatus
+import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceSensor
+import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceSensors
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
@@ -24,6 +26,7 @@ class DevicePolicyControllerTest {
                         displayName = "Front Drone",
                         credentialHash = passwordHasher.hash(DevicePolicyFixtures.CREDENTIAL),
                         status = RegisteredDeviceStatus.ACTIVE,
+                        sensors = RegisteredDeviceSensors(listOf(RegisteredDeviceSensor("front", "camera"))),
                     ),
                 ),
             ),
@@ -55,15 +58,14 @@ class DevicePolicyControllerTest {
 private object DevicePolicyFixtures {
     const val DEVICE_UUID = "device-front-001"
     const val CREDENTIAL = "device-secret"
-    const val STREAM_ID = "raw.front.drone-1"
-    const val STREAM_PATH = "raw/front/drone-1"
+    const val STREAM_ID = "raw.device-front-001.front"
+    const val STREAM_PATH = "raw/device-front-001/front"
     const val GROUP_ID = "co-a"
 
     fun request(credential: String = CREDENTIAL): DevicePublishAuthorizationRequest =
         DevicePublishAuthorizationRequest(
             deviceUuid = DEVICE_UUID,
             credential = credential,
-            streamId = STREAM_ID,
-            path = STREAM_PATH,
+            sensorId = "front",
         )
 }

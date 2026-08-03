@@ -3,7 +3,7 @@ WORKDIR /workspace
 COPY gradlew gradlew.bat settings.gradle.kts build.gradle.kts ./
 COPY gradle ./gradle
 COPY src ./src
-RUN ./gradlew --no-daemon clean bootJar
+RUN gradle --no-daemon clean bootJar
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app

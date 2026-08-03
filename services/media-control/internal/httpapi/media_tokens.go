@@ -8,6 +8,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 )
 
 const mediaTokenTTL = 5 * time.Minute
@@ -15,11 +17,35 @@ const mediaTokenTTL = 5 * time.Minute
 var errMediaTokenInvalid = errors.New("media token is invalid")
 
 type mediaTokenPayload struct {
-	StreamID  string `json:"streamId"`
-	Action    string `json:"action"`
-	Path      string `json:"path"`
-	GroupID   string `json:"groupId"`
-	ExpiresAt int64  `json:"exp"`
+	StreamID            string `json:"streamId"`
+	Action              string `json:"action"`
+	Path                string `json:"path"`
+	GroupID             string `json:"groupId"`
+	SessionID           string `json:"sessionId,omitempty"`
+	DeviceUUID          string `json:"deviceUuid,omitempty"`
+	SensorID            string `json:"sensorId,omitempty"`
+	CredentialVersion   int64  `json:"credentialVersion,omitempty"`
+	DevicePolicyVersion int64  `json:"devicePolicyVersion,omitempty"`
+	TokenID             string `json:"jti,omitempty"`
+	ExpiresAt           int64  `json:"exp"`
+}
+
+func issueDeviceMediaToken(secret string, session domain.PublishSession, tokenID string, now time.Time) (string, error) {
+	if strings.TrimSpace(secret) == "" || !session.ActiveAt(now) || tokenID == "" {
+		return "", errMediaTokenInvalid
+	}
+	payload := mediaTokenPayload{
+		StreamID: session.StreamID, Action: mediaMTXActionPublish, Path: session.Path, GroupID: session.GroupID,
+		SessionID: session.SessionID, DeviceUUID: session.DeviceUUID, SensorID: session.SensorID,
+		CredentialVersion: session.CredentialVersion, DevicePolicyVersion: session.DevicePolicyVersion,
+		TokenID: tokenID, ExpiresAt: session.PublishTokenExpiresAt.Unix(),
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	encoded := base64.RawURLEncoding.EncodeToString(payloadBytes)
+	return encoded + "." + signMediaTokenPayload(secret, encoded), nil
 }
 
 func issueMediaToken(secret string, action string, streamID string, streamPath string, groupID string, now time.Time) (string, error) {
@@ -59,7 +85,7 @@ func validateMediaToken(
 		payload.Action != action ||
 		payload.Path != streamPath ||
 		payload.GroupID != groupID ||
-		payload.ExpiresAt < now.Unix() {
+		payload.ExpiresAt <= now.Unix() {
 		return errMediaTokenInvalid
 	}
 	return nil
@@ -81,7 +107,7 @@ func validateMediaTokenForRoute(
 		payload.Action != action ||
 		payload.Path != streamPath ||
 		payload.GroupID == "" ||
-		payload.ExpiresAt < now.Unix() {
+		payload.ExpiresAt <= now.Unix() {
 		return mediaTokenPayload{}, errMediaTokenInvalid
 	}
 	return payload, nil

@@ -45,8 +45,7 @@ func (s Server) writeDeviceStreamPublish(w http.ResponseWriter, r *http.Request,
 	command := domain.DevicePublishCommand{
 		DeviceUUID: strings.TrimSpace(r.Header.Get(deviceUUIDHeader)),
 		Credential: strings.TrimSpace(r.Header.Get(deviceCredentialHeader)),
-		StreamID:   parsed.StreamID,
-		Path:       parsed.Path,
+		SensorID:   parsed.SensorID,
 	}
 	if command.DeviceUUID == "" || command.Credential == "" {
 		writeJSON(w, http.StatusUnauthorized, errorPayload(errDevicePublisherAuthRequired))

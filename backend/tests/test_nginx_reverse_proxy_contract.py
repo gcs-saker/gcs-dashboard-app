@@ -142,7 +142,8 @@ def test_media_proxy_rewrites_public_prefixes_to_mediamtx_paths() -> None:
     assert "rewrite ^/hls/(.*)$ /$1 break;" in hls_location
     assert "proxy_pass http://$mediamtx_host:8888;" in hls_location
     assert "rewrite ^/webrtc/(.*)$ /$1 break;" in webrtc_location
-    assert "proxy_pass http://$mediamtx_host:8889;" in webrtc_location
+    assert "proxy_pass http://$mediamtx_host:8889$uri$is_args$args;" in webrtc_location
+    assert 'set $args "publisherToken=$gcs_publish_token&$args";' in webrtc_location
 
 
 def test_auth_proxy_rewrites_dashboard_api_auth_prefix_to_backend_auth_router() -> None:
