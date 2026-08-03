@@ -87,6 +87,7 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "location = /api/ops/events/stream" in config
     assert "location /api/ops/" in config
     assert "location /api/stream/" in config
+    assert "location /api/v1/groups" in config
     assert "location /stream/" in config
     assert "location /api/" in config
     assert "location /ws/" in config
