@@ -49,7 +49,7 @@ def test_backend_runtime_is_pinned_to_python_312():
     pyproject = BACKEND_PYPROJECT.read_text(encoding="utf-8")
     python_version = BACKEND_PYTHON_VERSION.read_text(encoding="utf-8").strip()
 
-    assert "FROM python:3.12-slim" in dockerfile
+    assert "FROM python:3.12.11-slim-bookworm@sha256:" in dockerfile
     assert 'requires-python = ">=3.12,<3.13"' in pyproject
     assert 'python_version = "3.12"' in pyproject
     assert python_version == "3.12"
