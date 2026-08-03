@@ -11,6 +11,7 @@ export const BACKEND_ROOT_ROUTES = Object.freeze({
   readyz: "/readyz",
   adminDevices: "/auth-policy/admin/devices",
   provisioningTokens: "/auth-policy/admin/provisioning-tokens",
+  signupTokens: "/auth-policy/admin/signup-tokens",
   mediaControlHealthz: "/media-control/healthz",
   mediaControlReadyz: "/media-control/readyz",
   streamStatus: "/stream/status",

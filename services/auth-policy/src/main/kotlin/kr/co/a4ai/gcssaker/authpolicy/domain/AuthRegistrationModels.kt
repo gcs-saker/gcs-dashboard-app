@@ -11,10 +11,14 @@ data class SignupInvite(
     }
 }
 
+fun interface SignupInviteResolver {
+    fun findByCode(code: String): SignupInvite?
+}
+
 class SignupInvites private constructor(
     private val valuesByCode: Map<String, SignupInvite>,
-) {
-    fun findByCode(code: String): SignupInvite? = valuesByCode[code]
+) : SignupInviteResolver {
+    override fun findByCode(code: String): SignupInvite? = valuesByCode[code]
 
     fun toList(): List<SignupInvite> = valuesByCode.values.toList()
 
@@ -42,7 +46,7 @@ class SignupRejectedException(message: String) : RuntimeException(message)
 class AuthRegistrationService(
     private val users: AuthUserRepository,
     private val passwordHasher: PasswordHasher,
-    private val invites: SignupInvites,
+    private val invites: SignupInviteResolver,
 ) {
     fun signup(command: SignupCommand): AuthUser {
         if (users.findByUsername(command.username) != null) {

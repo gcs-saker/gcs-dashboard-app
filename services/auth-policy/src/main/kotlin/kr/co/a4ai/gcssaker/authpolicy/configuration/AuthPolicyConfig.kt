@@ -4,6 +4,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthRegistrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.CachedAuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.CompositeSignupInviteResolver
 import kr.co.a4ai.gcssaker.authpolicy.domain.DevicePublishAuthorizationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceCredentialAuthenticationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceBootstrapService
@@ -15,18 +16,22 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryDeviceProvisioningTokenRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryRegisteredDeviceRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.InMemorySignupRegistrationTokenRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.PrincipalCache
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.RefreshSessionStore
+import kr.co.a4ai.gcssaker.authpolicy.domain.SignupRegistrationTokenRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.SignupRegistrationTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfigRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncStatusService
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcDeviceProvisioningTokenRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcRegisteredDeviceRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcSignupRegistrationTokenRepository
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -83,8 +88,33 @@ class AuthPolicyConfig {
         users: AuthUserRepository,
         passwordHasher: PasswordHasher,
         settings: AuthRuntimeSettings,
+        signupRegistrationTokens: SignupRegistrationTokenService,
     ): AuthRegistrationService =
-        AuthRegistrationService(users, passwordHasher, settings.signupInvites)
+        AuthRegistrationService(
+            users,
+            passwordHasher,
+            CompositeSignupInviteResolver(settings.signupInvites, signupRegistrationTokens),
+        )
+
+    @Bean
+    fun signupRegistrationTokenRepository(
+        settings: AuthRuntimeSettings,
+        dataSource: ObjectProvider<DataSource>,
+    ): SignupRegistrationTokenRepository =
+        if (settings.jdbcPersistenceEnabled) {
+            dataSource.getIfAvailable()?.let { JdbcSignupRegistrationTokenRepository(it) }
+                ?: InMemorySignupRegistrationTokenRepository()
+        } else {
+            InMemorySignupRegistrationTokenRepository()
+        }
+
+    @Bean
+    fun signupRegistrationTokenService(
+        repository: SignupRegistrationTokenRepository,
+        passwordHasher: PasswordHasher,
+        hierarchyRepository: OrganizationHierarchyRepository,
+    ): SignupRegistrationTokenService =
+        SignupRegistrationTokenService(repository, passwordHasher, hierarchyRepository)
 
     @Bean
     fun organizationHierarchyRepository(
