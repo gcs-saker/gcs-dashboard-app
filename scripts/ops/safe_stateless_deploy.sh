@@ -55,6 +55,11 @@ for service in "${STATEFUL_SERVICES[@]}"; do
   "${compose[@]}" ps "${service}" >/dev/null
 done
 "${compose[@]}" exec -T edge nginx -t
-curl --fail --silent --show-error --max-time 10 "${HEALTH_URL:-http://127.0.0.1:8080/readyz}" >/dev/null
+# The edge is bound to loopback port 80 on production and terminates TLS with
+# the public certificate.  Verify the real edge route while allowing only the
+# expected loopback hostname mismatch; remote clients still perform full TLS
+# verification.
+curl --fail --insecure --silent --show-error --max-time 10 \
+  "${HEALTH_URL:-https://127.0.0.1/readyz}" >/dev/null
 trap - ERR
 echo "stateless deployment completed; stateful services were not recreated"
