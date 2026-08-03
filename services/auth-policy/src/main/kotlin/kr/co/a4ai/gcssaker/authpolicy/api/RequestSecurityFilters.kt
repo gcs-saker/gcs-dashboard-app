@@ -71,7 +71,8 @@ class CorrelationIdFilter(
     }
 
     private fun Tracer?.currentTraceIdOrNull(): String? =
-        this?.currentSpan()?.context()?.traceId()?.takeIf { it.isNotBlank() }
+        runCatching { this?.currentSpan()?.context()?.traceId()?.takeIf { it.isNotBlank() } }
+            .getOrNull()
 }
 
 object ApiAccessLogContract {
