@@ -36,6 +36,7 @@ gcs-dashboard/certs/
 # JVM / Spring Kotlin
 .gradle/
 .gradle-user-home/
+.kotlin/
 build/
 **/build/
 out/

@@ -81,6 +81,8 @@ services:
     image: ${BACKEND_IMAGE:-gcs-saker-backend:arch-poc}
     build:
       context: ../../backend
+      args:
+        SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
     env_file: *service_env_files
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
@@ -134,6 +136,8 @@ services:
     image: ${AUTH_POLICY_IMAGE:-gcs-saker-auth-policy:arch-poc}
     build:
       context: ../../services/auth-policy
+      args:
+        SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
     env_file: *service_env_files
     environment:
       AUTH_POLICY_JWT_ISSUER: ${AUTH_JWT_ISSUER:-gcs-saker}
@@ -146,7 +150,7 @@ services:
       AUTH_POLICY_ADMIN_PASSWORD: ${AUTH_POLICY_ADMIN_PASSWORD:?Set AUTH_POLICY_ADMIN_PASSWORD}
       AUTH_POLICY_OPERATOR_PASSWORD: ${AUTH_POLICY_OPERATOR_PASSWORD:?Set AUTH_POLICY_OPERATOR_PASSWORD}
       AUTH_POLICY_SMOKE_PASSWORD: ${AUTH_POLICY_SMOKE_PASSWORD:?Set AUTH_POLICY_SMOKE_PASSWORD}
-      AUTH_POLICY_SIGNUP_INVITES: ${AUTH_POLICY_SIGNUP_INVITES:-A4AI01:1:co-a}
+      AUTH_POLICY_SIGNUP_INVITES: ${AUTH_POLICY_SIGNUP_INVITES:-}
       AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS: ${AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS:?Set AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS}
       AUTH_POLICY_TRACING_SAMPLING_PROBABILITY: ${AUTH_POLICY_TRACING_SAMPLING_PROBABILITY:-1.0}
       AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED: ${AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED:-true}
@@ -177,6 +181,8 @@ services:
     image: ${MEDIA_CONTROL_IMAGE:-gcs-saker-media-control:arch-poc}
     build:
       context: ../../services/media-control
+      args:
+        SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
     env_file: *service_env_files
     environment:
       MEDIAMTX_API_BASE_URL: ${MEDIAMTX_API_BASE_URL:-http://mediamtx:9997}
@@ -308,6 +314,7 @@ services:
     build:
       context: ../../gcs-dashboard
       args:
+        SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
         VITE_IDENTITY_API_BASE_URL: ${VITE_AUTH_API_BASE_URL:-/auth-policy/auth}
         VITE_STREAM_API_BASE_URL: ${VITE_STREAM_API_BASE_URL:-/media-control}

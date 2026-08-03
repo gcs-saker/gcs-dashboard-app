@@ -30,6 +30,7 @@ data class AuthRuntimeSettings(
     val redisPrincipalCacheEnabled: Boolean = true,
     val redisRefreshSessionEnabled: Boolean = true,
     val jdbcPersistenceEnabled: Boolean = true,
+    val inMemoryPersistenceAllowed: Boolean = true,
     val l1AuthUserCacheEnabled: Boolean = true,
     val redisOperationalEventCacheEnabled: Boolean = true,
     val operationalEventCacheKeyPrefix: String = AuthRuntimeDefaults.OPERATIONAL_EVENT_CACHE_KEY_PREFIX,

@@ -51,6 +51,7 @@ object AuthSecurityRouteContract {
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.REFRESH),
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.LOGOUT),
         RouteMatcher(HttpMethod.POST, DevicePolicyApiRoutes.ROOT + DevicePolicyApiRoutes.PUBLISH),
+        RouteMatcher(HttpMethod.POST, DevicePolicyApiRoutes.ROOT + DevicePolicyApiRoutes.AUTHENTICATE),
         RouteMatcher(HttpMethod.POST, DeviceBootstrapApiRoutes.ROOT + DeviceBootstrapApiRoutes.REGISTER),
         RouteMatcher(HttpMethod.POST, DeviceBootstrapApiRoutes.EDGE_ROOT + DeviceBootstrapApiRoutes.REGISTER),
         RouteMatcher(HttpMethod.POST, "/api/v1/devices/*/telemetry"),

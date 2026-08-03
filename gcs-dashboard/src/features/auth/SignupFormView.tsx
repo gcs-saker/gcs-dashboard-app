@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 
 import { FormField } from "@ui/FormField";
 import type { SignupFormController } from "./useSignupForm";
-import type { UserRole } from "./types";
 
 interface SignupFormViewProps {
   form: SignupFormController;
@@ -60,14 +59,6 @@ export function SignupFormView({ form }: SignupFormViewProps) {
           type="text"
           value={form.inviteCode}
         />
-        <label>
-          <span>권한</span>
-          <select name="role" onChange={(event) => form.setRole(event.target.value as UserRole)} value={form.role}>
-            <option value="viewer">viewer</option>
-            <option value="operator">operator</option>
-          </select>
-        </label>
-
         {form.errorMessage ? <p className="auth-login__error">{form.errorMessage}</p> : null}
         <button disabled={form.isSubmitting} type="submit">
           {form.isSubmitting ? "등록 중" : "가입"}

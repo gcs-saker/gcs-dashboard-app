@@ -42,7 +42,11 @@ internal class RuntimeEnvReader(private val env: Environment) {
     }
 
     fun signupInvites(): SignupInvites {
-        val raw = env.getProperty(AuthRuntimeEnvKeys.AUTH_POLICY_SIGNUP_INVITES) ?: AuthRuntimeDefaults.SIGNUP_INVITES
+        val raw = env.getProperty(AuthRuntimeEnvKeys.AUTH_POLICY_SIGNUP_INVITES)
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+            ?: AuthRuntimeDefaults.SIGNUP_INVITES.takeIf { allowsLocalDefaults() }
+            ?: return SignupInvites.of(emptyList())
         return SignupInvites.of(raw.split(",").map(String::trim).filter(String::isNotEmpty).map(::signupInvite))
     }
 
@@ -53,7 +57,7 @@ internal class RuntimeEnvReader(private val env: Environment) {
         return DeviceBootstrapTokens.of(raw.split(",").map(String::trim).filter(String::isNotEmpty).map(::bootstrapToken))
     }
 
-    private fun allowsLocalDefaults(): Boolean =
+    fun allowsLocalDefaults(): Boolean =
         env.activeProfiles.any { it in LOCAL_DEFAULT_PROFILES }
 
     private fun csv(name: String): Set<String> =

@@ -64,10 +64,9 @@ class AuthPolicyConfig {
         dataSource: ObjectProvider<DataSource>,
     ): AuthUserRepository {
         val initialUsers = seedAuthUsers(settings, passwordHasher)
-        val repository = if (settings.jdbcPersistenceEnabled) {
-            dataSource.getIfAvailable()?.let { JdbcAuthUserRepository(it, initialUsers) }
-                ?: InMemoryAuthUserRepository(initialUsers)
-        } else {
+        val repository = PersistenceMode.dataSource(settings, dataSource)?.let {
+            JdbcAuthUserRepository(it, initialUsers)
+        } ?: run {
             InMemoryAuthUserRepository(initialUsers)
         }
         return if (settings.l1AuthUserCacheEnabled) CachedAuthUserRepository(repository) else repository
@@ -101,10 +100,8 @@ class AuthPolicyConfig {
         settings: AuthRuntimeSettings,
         dataSource: ObjectProvider<DataSource>,
     ): SignupRegistrationTokenRepository =
-        if (settings.jdbcPersistenceEnabled) {
-            dataSource.getIfAvailable()?.let { JdbcSignupRegistrationTokenRepository(it) }
-                ?: InMemorySignupRegistrationTokenRepository()
-        } else {
+        PersistenceMode.dataSource(settings, dataSource)?.let(::JdbcSignupRegistrationTokenRepository)
+            ?: run {
             InMemorySignupRegistrationTokenRepository()
         }
 
@@ -122,10 +119,9 @@ class AuthPolicyConfig {
         dataSource: ObjectProvider<DataSource>,
     ): OrganizationHierarchyRepository {
         val seedUnits = seedOrganizationUnits()
-        return if (settings.jdbcPersistenceEnabled) {
-            dataSource.getIfAvailable()?.let { JdbcOrganizationHierarchyRepository(it, seedUnits) }
-                ?: InMemoryOrganizationHierarchyRepository(seedUnits)
-        } else {
+        return PersistenceMode.dataSource(settings, dataSource)?.let {
+            JdbcOrganizationHierarchyRepository(it, seedUnits)
+        } ?: run {
             InMemoryOrganizationHierarchyRepository(seedUnits)
         }
     }
@@ -139,10 +135,8 @@ class AuthPolicyConfig {
         settings: AuthRuntimeSettings,
         dataSource: ObjectProvider<DataSource>,
     ): RegisteredDeviceRepository =
-        if (settings.jdbcPersistenceEnabled) {
-            dataSource.getIfAvailable()?.let { JdbcRegisteredDeviceRepository(it) }
-                ?: InMemoryRegisteredDeviceRepository()
-        } else {
+        PersistenceMode.dataSource(settings, dataSource)?.let(::JdbcRegisteredDeviceRepository)
+            ?: run {
             InMemoryRegisteredDeviceRepository()
         }
 
@@ -171,10 +165,8 @@ class AuthPolicyConfig {
         settings: AuthRuntimeSettings,
         dataSource: ObjectProvider<DataSource>,
     ): DeviceProvisioningTokenRepository =
-        if (settings.jdbcPersistenceEnabled) {
-            dataSource.getIfAvailable()?.let { JdbcDeviceProvisioningTokenRepository(it) }
-                ?: InMemoryDeviceProvisioningTokenRepository()
-        } else {
+        PersistenceMode.dataSource(settings, dataSource)?.let(::JdbcDeviceProvisioningTokenRepository)
+            ?: run {
             InMemoryDeviceProvisioningTokenRepository()
         }
 

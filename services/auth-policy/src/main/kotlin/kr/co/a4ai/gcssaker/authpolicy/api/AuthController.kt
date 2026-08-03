@@ -47,7 +47,6 @@ class AuthController(
                     email = request.email,
                     password = request.password,
                     inviteCode = request.inviteCode,
-                    role = request.role,
                 ),
             )
         } catch (exc: SignupRejectedException) {

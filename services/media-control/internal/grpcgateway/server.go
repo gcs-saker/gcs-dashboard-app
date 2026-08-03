@@ -21,6 +21,13 @@ type Server struct {
 	token           string
 	maxPayloadBytes int
 	handler         GatewayRequestHandler
+	authenticator   GatewayAuthenticator
+}
+
+func NewDeviceServer(authenticator GatewayAuthenticator, maxPayloadBytes int, handler GatewayRequestHandler) Server {
+	server := NewServerWithHandler("", maxPayloadBytes, handler)
+	server.authenticator = authenticator
+	return server
 }
 
 func NewServer(token string, maxPayloadBytes int) Server {
@@ -70,7 +77,11 @@ func (s Server) serve(ctx context.Context, listenAddress string, onReady func())
 }
 
 func (s Server) exchangeHandler(_ any, stream grpc.ServerStream) error {
-	if !s.authorized(stream.Context()) {
+	credentials, credentialError := gatewayCredentials(stream.Context())
+	if s.authenticator == nil && !s.authorized(stream.Context()) {
+		return status.Error(codes.Unauthenticated, reasonUnauthorized)
+	}
+	if s.authenticator != nil && credentialError != nil {
 		return status.Error(codes.Unauthenticated, reasonUnauthorized)
 	}
 	reconnectRequested := metadataContains(stream.Context(), metadataReconnect, "true")
@@ -83,7 +94,16 @@ func (s Server) exchangeHandler(_ any, stream grpc.ServerStream) error {
 		if err != nil {
 			return err
 		}
-		response := s.handleRequest(stream.Context(), request, reconnectRequested)
+		requestContext := stream.Context()
+		if s.authenticator != nil {
+			identity, err := s.authenticator.AuthenticateGateway(requestContext, credentials)
+			if err != nil {
+				return status.Error(codes.Unauthenticated, reasonUnauthorized)
+			}
+			requestContext = context.WithValue(requestContext, gatewayIdentityContextKey{}, identity)
+			requestContext = context.WithValue(requestContext, gatewayCredentialsContextKey{}, credentials)
+		}
+		response := s.handleRequest(requestContext, request, reconnectRequested)
 		if err := stream.SendMsg(response); err != nil {
 			return err
 		}

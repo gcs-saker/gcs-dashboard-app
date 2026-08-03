@@ -6,6 +6,8 @@ COPY src ./src
 RUN gradle --no-daemon clean bootJar
 
 FROM eclipse-temurin:21-jre
+ARG SOURCE_COMMIT=unknown
+LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
 WORKDIR /app
 COPY --from=build /workspace/build/libs/*.jar /app/auth-policy.jar
 EXPOSE 8080

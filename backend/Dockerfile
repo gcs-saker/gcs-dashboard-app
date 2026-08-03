@@ -1,4 +1,6 @@
 FROM python:3.12-slim
+ARG SOURCE_COMMIT=unknown
+LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
 
 # 타임존 설정
 ENV TZ=Asia/Seoul

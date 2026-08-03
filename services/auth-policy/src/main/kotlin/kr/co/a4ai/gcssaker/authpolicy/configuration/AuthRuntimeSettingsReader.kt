@@ -59,6 +59,7 @@ object AuthRuntimeSettingsReader {
             redisPrincipalCacheEnabled = reader.bool(AuthRuntimeEnvKeys.AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED, true),
             redisRefreshSessionEnabled = reader.bool(AuthRuntimeEnvKeys.AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED, true),
             jdbcPersistenceEnabled = reader.bool(AuthRuntimeEnvKeys.AUTH_POLICY_JDBC_PERSISTENCE_ENABLED, true),
+            inMemoryPersistenceAllowed = reader.allowsLocalDefaults(),
             l1AuthUserCacheEnabled = reader.bool(AuthRuntimeEnvKeys.AUTH_POLICY_L1_AUTH_USER_CACHE_ENABLED, true),
             redisOperationalEventCacheEnabled = reader.bool(
                 AuthRuntimeEnvKeys.AUTH_POLICY_REDIS_OPERATIONAL_EVENT_CACHE_ENABLED,

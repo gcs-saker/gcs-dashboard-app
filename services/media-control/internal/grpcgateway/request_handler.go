@@ -6,10 +6,12 @@ import (
 )
 
 const (
-	reasonAccepted     = "accepted"
-	reasonMalformed    = "malformed_protobuf"
-	reasonBackpressure = "payload_too_large"
-	reasonReconnect    = "reconnect_requested"
+	reasonAccepted         = "accepted"
+	reasonMalformed        = "malformed_protobuf"
+	reasonBackpressure     = "payload_too_large"
+	reasonReconnect        = "reconnect_requested"
+	reasonStoreFailed      = "telemetry_store_failed"
+	reasonIdentityMismatch = "device_identity_mismatch"
 )
 
 type GatewayRequestDecision struct {
@@ -30,17 +32,17 @@ func (f GatewayRequestHandlerFunc) HandleGatewayRequest(ctx context.Context, req
 
 func acceptGatewayRequest(context.Context, GatewayStreamRequest) GatewayRequestDecision {
 	return GatewayRequestDecision{
-		Status:     GatewayAckStatusAccepted,
-		ReasonCode: reasonAccepted,
+		Status:     GatewayAckStatusBackpressure,
+		ReasonCode: reasonStoreFailed,
 	}
 }
 
 func normalizedDecision(decision GatewayRequestDecision) GatewayRequestDecision {
 	if decision.Status == 0 {
-		decision.Status = GatewayAckStatusAccepted
+		decision.Status = GatewayAckStatusBackpressure
 	}
 	if decision.ReasonCode == "" {
-		decision.ReasonCode = reasonAccepted
+		decision.ReasonCode = reasonStoreFailed
 	}
 	return decision
 }

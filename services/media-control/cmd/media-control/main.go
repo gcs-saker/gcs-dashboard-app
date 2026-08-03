@@ -53,11 +53,10 @@ func main() {
 
 	grpcContext, stopGrpc := context.WithCancel(context.Background())
 	defer stopGrpc()
-	grpcReadiness := grpcgateway.StartWithReadiness(
+	grpcReadiness := grpcgateway.StartDeviceWithReadiness(
 		grpcContext,
 		config.grpcListenAddress,
-		config.grpcToken,
-		config.grpcMaxPayloadBytes,
+		newGatewayServer(config),
 	)
 	server = server.WithGatewayReadiness(grpcReadiness)
 

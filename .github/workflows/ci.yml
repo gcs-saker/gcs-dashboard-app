@@ -12,6 +12,31 @@ permissions:
   contents: read
 
 jobs:
+  media-control-test:
+    name: media-control-test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/media-control
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/media-control/go.mod
+          cache-dependency-path: services/media-control/go.sum
+
+      - name: Run race tests
+        run: go test -race -cover ./...
+
+      - name: Run vet
+        run: go vet ./...
+
+      - name: Scan reachable vulnerabilities
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
   auth-policy-test:
     name: auth-policy-test
     runs-on: ubuntu-latest

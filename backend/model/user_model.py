@@ -13,7 +13,6 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     inviteCode: str
-    role: UserRole = "viewer"
 
 
 # 로그인(POST /auth/login) 요청에서 사용

@@ -38,7 +38,6 @@ data class SignupCommand(
     val email: String,
     val password: String,
     val inviteCode: String,
-    val role: String,
 )
 
 class SignupRejectedException(message: String) : RuntimeException(message)
@@ -57,16 +56,13 @@ class AuthRegistrationService(
         }
         val invite = invites.findByCode(command.inviteCode)
             ?: throw SignupRejectedException("Invalid invite code Input")
-        val role = command.role.trim().uppercase().let {
-            runCatching { UserRole.valueOf(it) }.getOrDefault(UserRole.VIEWER)
-        }
         return users.save(
             AuthUser(
                 username = command.username,
                 email = command.email,
                 passwordHash = passwordHasher.hash(command.password),
                 companyId = invite.companyId,
-                role = role,
+                role = UserRole.VIEWER,
                 groupId = invite.groupId,
             ),
         )

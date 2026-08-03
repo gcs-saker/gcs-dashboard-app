@@ -23,11 +23,9 @@ internal fun createOperationalReadRepository(
     objectMapper: ObjectMapper,
 ): OperationalReadRepository {
     val seeds = seedOperationalReadModels()
-    val repository = if (settings.jdbcPersistenceEnabled) {
-        dataSource.getIfAvailable()?.let {
-            JdbcOperationalReadRepository(it, seeds.telemetry, seeds.assetsByGateway)
-        } ?: InMemoryOperationalReadRepository(seeds.telemetry, seeds.assetsByGateway)
-    } else {
+    val repository = PersistenceMode.dataSource(settings, dataSource)?.let {
+        JdbcOperationalReadRepository(it, seeds.telemetry, seeds.assetsByGateway)
+    } ?: run {
         InMemoryOperationalReadRepository(seeds.telemetry, seeds.assetsByGateway)
     }
     return redisTemplate.getIfAvailable()
@@ -43,10 +41,9 @@ internal fun createOperationalEventRepository(
     objectMapper: ObjectMapper,
 ): OperationalEventRepository {
     val initialEvents = seedOperationalEvents()
-    val repository = if (settings.jdbcPersistenceEnabled) {
-        dataSource.getIfAvailable()?.let { JdbcOperationalEventRepository(it, initialEvents) }
-            ?: InMemoryOperationalEventRepository(initialEvents)
-    } else {
+    val repository = PersistenceMode.dataSource(settings, dataSource)?.let {
+        JdbcOperationalEventRepository(it, initialEvents)
+    } ?: run {
         InMemoryOperationalEventRepository(initialEvents)
     }
     return redisTemplate.getIfAvailable()
