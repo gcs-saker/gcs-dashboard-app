@@ -8,12 +8,15 @@ MQTT_PASSWORD_FILE="${MQTT_PASSWORD_FILE:?Set MQTT_PASSWORD_FILE to the private 
 RELEASE_DIR="${RELEASE_DIR:?Set RELEASE_DIR to an existing release evidence directory}"
 PROJECT_NAME="${COMPOSE_PROJECT_NAME:-gcs-saker}"
 export SOURCE_COMMIT="$(git -C "${ROOT}" rev-parse HEAD)"
-STATELESS_SERVICES=(backend auth-policy media-control dashboard mobile-publisher edge)
+STATELESS_SERVICES=(backend auth-policy media-control dashboard edge)
 # Only services with a Compose build definition belong here. The publisher and
 # edge images are supplied by the deployment environment; passing them to
 # `compose build` makes Compose attempt an unauthenticated registry pull.
 BUILD_SERVICES=(backend auth-policy media-control dashboard)
-STATEFUL_SERVICES=(postgres-geo redis mqtt mediamtx turn-primary turn-secondary)
+# The publisher is an externally supplied local image. It is verified but not
+# recreated by this source release, because there is no reproducible build
+# definition or registry artifact for it in this repository.
+UNCHANGED_SERVICES=(mobile-publisher postgres-geo redis mqtt mediamtx turn-primary turn-secondary)
 
 [[ "${RELEASE_DIR}" = /* && -d "${RELEASE_DIR}" ]] || { echo "RELEASE_DIR must be an existing absolute directory" >&2; exit 2; }
 compose=(docker compose --project-name "${PROJECT_NAME}" --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
@@ -55,7 +58,7 @@ trap rollback ERR
 "${compose[@]}" build "${BUILD_SERVICES[@]}"
 "${compose[@]}" images --format json > "${RELEASE_DIR}/deployment-images.json"
 "${compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"
-for service in "${STATEFUL_SERVICES[@]}"; do
+for service in "${UNCHANGED_SERVICES[@]}"; do
   "${compose[@]}" ps "${service}" >/dev/null
 done
 "${compose[@]}" exec -T edge nginx -t
@@ -66,4 +69,4 @@ done
   wget --timeout=10 --tries=1 -q -O- \
   "${HEALTH_URL:-http://127.0.0.1/readyz}" >/dev/null
 trap - ERR
-echo "stateless deployment completed; stateful services were not recreated"
+echo "stateless deployment completed; stateful and external-image services were not recreated"
