@@ -17,7 +17,7 @@ class JdbcOperationalReadRepository(
     assetsByGateway: Map<String, List<AssetReadModel>>,
 ) : OperationalReadRepository {
     private val jdbc = JdbcTemplate(dataSource)
-    private val writer = OperationalReadJdbcWriter(jdbc)
+    private val writer = OperationalReadJdbcWriter(dataSource)
     private val seeder = OperationalReadSeeder(jdbc, writer)
 
     init {

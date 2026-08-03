@@ -9,6 +9,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.DevicePublishAuthorizationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceCredentialAuthenticationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceBootstrapService
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceLifecycleService
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupAccessService
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceProvisioningTokenRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceProvisioningTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
@@ -125,6 +126,12 @@ class AuthPolicyConfig {
             InMemoryOrganizationHierarchyRepository(seedUnits)
         }
     }
+
+    @Bean
+    fun groupAccessService(
+        hierarchyRepository: OrganizationHierarchyRepository,
+        registeredDevices: RegisteredDeviceRepository,
+    ): GroupAccessService = GroupAccessService(hierarchyRepository, registeredDevices)
 
     @Bean
     fun groupPolicyService(hierarchyRepository: OrganizationHierarchyRepository): GroupPolicyService =

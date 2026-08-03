@@ -10,6 +10,7 @@ import (
 )
 
 type DeviceTelemetry struct {
+	EventID            string  `json:"eventId"`
 	UUID               string  `json:"uuid"`
 	Latitude           float64 `json:"latitude"`
 	Longitude          float64 `json:"longitude"`

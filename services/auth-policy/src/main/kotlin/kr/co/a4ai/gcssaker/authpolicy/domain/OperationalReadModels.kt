@@ -25,6 +25,7 @@ data class TelemetryReadModel(
     val yawDeg: Double? = null,
     val linkQualityPercent: Double? = null,
     val observedAt: Instant? = null,
+    val eventId: String? = null,
 )
 
 data class TelemetryHistoryReadModel(
@@ -82,6 +83,7 @@ class InMemoryOperationalReadRepository(
     telemetry: Collection<TelemetryReadModel>,
     private val assetsByGateway: Map<String, List<AssetReadModel>>,
 ) : OperationalReadRepository {
+    private val eventIds = ConcurrentHashMap.newKeySet<String>()
     private val telemetryByUuid = ConcurrentHashMap(telemetry.associateBy { it.uuid })
     private val telemetryHistory = ConcurrentHashMap<String, List<TelemetryHistoryReadModel>>().apply {
         telemetry.forEach { item ->
@@ -95,7 +97,10 @@ class InMemoryOperationalReadRepository(
             .sortedBy { it.uuid }
 
     override fun upsertTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel {
-        telemetryByUuid[telemetry.uuid] = telemetry
+        if (telemetry.eventId != null && !eventIds.add(telemetry.eventId)) return telemetry
+        telemetryByUuid.compute(telemetry.uuid) { _, current ->
+            if (current?.observedAt != null && telemetry.observedAt != null && current.observedAt > telemetry.observedAt) current else telemetry
+        }
         telemetryHistory.compute(telemetry.uuid) { _, current ->
             current.orEmpty() + TelemetryHistoryReadModel(Instant.now(), telemetry)
         }

@@ -50,6 +50,38 @@ internal object OperationalReadSql {
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
+    const val upsertTelemetryPostgres = """
+        INSERT INTO telemetry_latest (
+            event_id, uuid, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
+            soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id,
+            battery_percent, heading_deg, roll_deg, pitch_deg, yaw_deg, link_quality_percent, observed_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (uuid) DO UPDATE SET
+            event_id = EXCLUDED.event_id,
+            latitude = EXCLUDED.latitude,
+            longitude = EXCLUDED.longitude,
+            altitude = EXCLUDED.altitude,
+            magnetic_x = EXCLUDED.magnetic_x,
+            magnetic_y = EXCLUDED.magnetic_y,
+            magnetic_z = EXCLUDED.magnetic_z,
+            soc = EXCLUDED.soc,
+            phone_battery_soc = EXCLUDED.phone_battery_soc,
+            velocity = EXCLUDED.velocity,
+            total_distance = EXCLUDED.total_distance,
+            epoch_time = EXCLUDED.epoch_time,
+            port_distance = EXCLUDED.port_distance,
+            group_id = EXCLUDED.group_id,
+            battery_percent = EXCLUDED.battery_percent,
+            heading_deg = EXCLUDED.heading_deg,
+            roll_deg = EXCLUDED.roll_deg,
+            pitch_deg = EXCLUDED.pitch_deg,
+            yaw_deg = EXCLUDED.yaw_deg,
+            link_quality_percent = EXCLUDED.link_quality_percent,
+            observed_at = EXCLUDED.observed_at
+        WHERE telemetry_latest.observed_at IS NULL
+           OR EXCLUDED.observed_at IS NULL
+           OR EXCLUDED.observed_at >= telemetry_latest.observed_at
+    """
     const val insertTelemetryHistory = """
         INSERT INTO telemetry_history (
             uuid, recorded_at, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
@@ -57,6 +89,14 @@ internal object OperationalReadSql {
             battery_percent, heading_deg, roll_deg, pitch_deg, yaw_deg, link_quality_percent, observed_at
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """
+    const val insertTelemetryHistoryPostgres = """
+        INSERT INTO telemetry_history (
+            event_id, uuid, recorded_at, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
+            soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id,
+            battery_percent, heading_deg, roll_deg, pitch_deg, yaw_deg, link_quality_percent, observed_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (event_id) DO NOTHING
     """
     const val insertAsset = """
         INSERT INTO gateway_assets (

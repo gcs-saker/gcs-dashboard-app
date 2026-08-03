@@ -35,7 +35,7 @@ func (s gatewayTelemetryStore) StoreTelemetry(ctx context.Context, identity grpc
 		return fmt.Errorf("authenticated device changed")
 	}
 	return s.client.IngestDeviceTelemetry(ctx, s.credentials.DeviceUUID, s.credentials.Credential, authpolicy.DeviceTelemetry{
-		UUID: telemetry.AssetID, Latitude: telemetry.Latitude, Longitude: telemetry.Longitude,
+		EventID: telemetry.EventID, UUID: telemetry.AssetID, Latitude: telemetry.Latitude, Longitude: telemetry.Longitude,
 		Altitude: telemetry.AltitudeM, Velocity: telemetry.SpeedMPS, BatteryPercent: telemetry.BatteryPercent,
 		HeadingDeg: telemetry.HeadingDeg, RollDeg: telemetry.RollDeg, PitchDeg: telemetry.PitchDeg,
 		YawDeg: telemetry.YawDeg, LinkQualityPercent: telemetry.LinkQualityPercent,
