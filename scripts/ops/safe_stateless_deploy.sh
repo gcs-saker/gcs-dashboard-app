@@ -9,6 +9,10 @@ RELEASE_DIR="${RELEASE_DIR:?Set RELEASE_DIR to an existing release evidence dire
 PROJECT_NAME="${COMPOSE_PROJECT_NAME:-gcs-saker}"
 export SOURCE_COMMIT="$(git -C "${ROOT}" rev-parse HEAD)"
 STATELESS_SERVICES=(backend auth-policy media-control dashboard mobile-publisher edge)
+# Only services with a Compose build definition belong here. The publisher and
+# edge images are supplied by the deployment environment; passing them to
+# `compose build` makes Compose attempt an unauthenticated registry pull.
+BUILD_SERVICES=(backend auth-policy media-control dashboard)
 STATEFUL_SERVICES=(postgres-geo redis mqtt mediamtx turn-primary turn-secondary)
 
 [[ "${RELEASE_DIR}" = /* && -d "${RELEASE_DIR}" ]] || { echo "RELEASE_DIR must be an existing absolute directory" >&2; exit 2; }
@@ -48,7 +52,7 @@ rollback() {
 }
 trap rollback ERR
 
-"${compose[@]}" build "${STATELESS_SERVICES[@]}"
+"${compose[@]}" build "${BUILD_SERVICES[@]}"
 "${compose[@]}" images --format json > "${RELEASE_DIR}/deployment-images.json"
 "${compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"
 for service in "${STATEFUL_SERVICES[@]}"; do
