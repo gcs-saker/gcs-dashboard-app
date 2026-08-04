@@ -16,7 +16,7 @@ RUN_TURN_ALLOCATIONS="${RUN_TURN_ALLOCATIONS:-1}"
 RUN_WHIP_PUBLISH="${RUN_WHIP_PUBLISH:-1}"
 RUN_WHEP_PLAYBACK="${RUN_WHEP_PLAYBACK:-1}"
 RELAY_ONLY="${RELAY_ONLY:-0}"
-INSECURE_TLS="${INSECURE_TLS:-1}"
+INSECURE_TLS="${INSECURE_TLS:-0}"
 PUBLISH_SECONDS="${PUBLISH_SECONDS:-20}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-15}"
 WHEP_RETRY_COUNT="${WHEP_RETRY_COUNT:-5}"
@@ -49,7 +49,7 @@ Environment:
   RUN_WHIP_PUBLISH      Default: 1
   RUN_WHEP_PLAYBACK     Default: 1
   RELAY_ONLY            Default: 0. Set 1 to use TURN primary for WHIP/WHEP ICE server.
-  INSECURE_TLS          Default: 1 for current self-signed staging certificate.
+  INSECURE_TLS          Default: 0. Production-like validation forbids bypassing TLS trust.
   REPORT_FILE           Optional path to write the same report output.
   WHEP_RETRY_COUNT      Default: 5. Retries WHEP while WHIP path becomes visible.
   WHEP_RETRY_DELAY_SECONDS Default: 2.
