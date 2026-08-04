@@ -11,6 +11,8 @@
 
 TP-Link DDNS의 권한 DNS가 ACME CA에서 `SERVFAIL` 또는 `NXDOMAIN`을 반환할 수 있어 인증서 호스트로 사용하지 않는다. 두 환경은 서로 다른 SNI host와 media-control expected-origin 계약을 사용한다.
 
+기존 PC 클라이언트의 `a4ai.tplinkdns.com` 호스트는 호환 라우트로 유지한다. 신규 Android 클라이언트와 API 응답은 공인 인증서가 적용된 위 origin만 사용한다.
+
 ## TLS edge
 
 `deploy/caddy/Caddyfile.tls-alpn-bootstrap`은 외부 80번 포트가 없는 환경에서 TLS-ALPN-01로 인증서를 발급·자동 갱신한다. Caddy data volume은 private 운영 데이터이며 저장소나 이미지에 포함하지 않는다. staging upstream은 Server-02에서 Server-01 주소만 허용하는 LAN 전용 relay를 통과한다.
