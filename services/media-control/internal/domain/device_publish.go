@@ -13,6 +13,11 @@ type DevicePublishCommand struct {
 	Path     string `json:"path,omitempty"`
 }
 
+type AccountPublishCommand struct {
+	Authorization string
+	SensorID      string `json:"sensorId"`
+}
+
 type DevicePublishAuthorization struct {
 	DeviceUUID          string `json:"deviceUuid"`
 	StreamID            string `json:"streamId"`

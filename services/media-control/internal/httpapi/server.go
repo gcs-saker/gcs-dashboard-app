@@ -38,18 +38,26 @@ type DevicePublishAuthorizer interface {
 	) (domain.DevicePublishAuthorization, error)
 }
 
+type AccountPublishAuthorizer interface {
+	AuthorizeAccountPublish(
+		ctx context.Context,
+		command domain.AccountPublishCommand,
+	) (domain.DevicePublishAuthorization, error)
+}
+
 type Server struct {
-	streams         StreamLister
-	ice             IceServerProvider
-	playback        domain.PlaybackURLBuilder
-	authorizer      StreamAuthorizer
-	devicePublisher DevicePublishAuthorizer
-	groups          domain.StreamGroupResolver
-	publishToken    string
-	metrics         *Metrics
-	gateway         GatewayReadiness
-	publishSessions domain.PublishSessionStore
-	now             func() time.Time
+	streams          StreamLister
+	ice              IceServerProvider
+	playback         domain.PlaybackURLBuilder
+	authorizer       StreamAuthorizer
+	devicePublisher  DevicePublishAuthorizer
+	accountPublisher AccountPublishAuthorizer
+	groups           domain.StreamGroupResolver
+	publishToken     string
+	metrics          *Metrics
+	gateway          GatewayReadiness
+	publishSessions  domain.PublishSessionStore
+	now              func() time.Time
 }
 
 func NewServer(
@@ -97,6 +105,11 @@ func (s Server) WithDevicePublishAuthorizer(authorizer DevicePublishAuthorizer) 
 	return s
 }
 
+func (s Server) WithAccountPublishAuthorizer(authorizer AccountPublishAuthorizer) Server {
+	s.accountPublisher = authorizer
+	return s
+}
+
 func (s Server) WithGatewayReadiness(gateway GatewayReadiness) Server {
 	s.gateway = gateway
 	return s
@@ -117,6 +130,8 @@ func (s Server) Routes() http.Handler {
 	s.handle(mux, routeDashboardStreams, s.dashboardStreamList)
 	s.handle(mux, routeDevicePublishSessions, s.devicePublishSessions)
 	s.handle(mux, routeDevicePublishSessionPrefix, s.devicePublishSessions)
+	s.handle(mux, routeAccountPublishSessions, s.accountPublishSessions)
+	s.handle(mux, routeAccountPublishSessionPrefix, s.accountPublishSessions)
 	return mux
 }
 

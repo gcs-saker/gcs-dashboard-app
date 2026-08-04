@@ -97,7 +97,20 @@ func (s Server) createDevicePublishSession(w http.ResponseWriter, r *http.Reques
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
 		return
 	}
-	publicStreamID, publicPath := opaqueDeviceStreamIdentity(s.publishToken, authorization.DeviceUUID, authorization.SensorID)
+	s.issuePublishSession(w, r, authorization, deviceUUID)
+}
+
+func (s Server) issuePublishSession(
+	w http.ResponseWriter,
+	r *http.Request,
+	authorization domain.DevicePublishAuthorization,
+	auditIdentity string,
+) {
+	publicStreamID, publicPath := opaqueDeviceStreamIdentity(
+		s.publishToken,
+		authorization.DeviceUUID,
+		authorization.SensorID,
+	)
 	now := s.now()
 	renewalToken, err := secureOpaqueToken("gcs_renew_")
 	if err != nil {
@@ -133,7 +146,7 @@ func (s Server) createDevicePublishSession(w http.ResponseWriter, r *http.Reques
 	}
 	urls := s.playback.Build(parsed)
 	publishURL := strings.TrimSuffix(urls.WebRTC, "/whep") + "/whip"
-	s.auditDeviceSession(r, "publish_session_created", deviceUUID, "allowed")
+	s.auditDeviceSession(r, "publish_session_created", auditIdentity, "allowed")
 	writeJSON(w, http.StatusCreated, publishSessionResponse{
 		SessionID: session.SessionID, StreamID: session.StreamID, Protocol: "whip", PublishURL: publishURL,
 		PublishToken: publishToken, RenewalToken: renewalToken,
