@@ -12,6 +12,7 @@ import { SystemStatusPanel } from "@dashboard/components/SystemStatusPanel";
 import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
 import { DashboardMainGrid } from "./DashboardMainGrid";
 import { EventLogView, TacticalLeafletMap, TimeSyncSettingsView } from "@dashboard/dashboardLazyViews";
+import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
 
 export interface DashboardViewRouterProps {
   activeView: DashboardView;
@@ -44,6 +45,7 @@ export interface DashboardViewRouterProps {
   streams: DashboardStreamSlot[];
   tacticalMapWidget: DashboardWidgetDefinition;
   talkbackTargetStreamIds: string[];
+  talkback: TalkbackPublisherSnapshot;
   telemetryRows: TelemetryRow[];
   telemetryWidget: DashboardWidgetDefinition;
   widgetControls: (widgetId: DashboardWidgetId, title: string) => ReactNode;

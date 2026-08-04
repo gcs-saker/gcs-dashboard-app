@@ -2,6 +2,7 @@ import { TalkbackControlPanel } from "@dashboard/components/TalkbackControlPanel
 import type { AuthenticatedUser } from "@auth/types";
 import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 import type { DashboardView } from "@dashboard/userPreferences";
+import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
 
 export interface DashboardHeaderProps {
   activeView: DashboardView;
@@ -14,7 +15,9 @@ export interface DashboardHeaderProps {
   onOpenWidgetDialog: () => void;
   onResetLayout: () => void;
   streams: DashboardStreamSlot[];
+  selectedStreamId: string;
   talkbackTargetStreamIds: string[];
+  talkback: TalkbackPublisherSnapshot;
 }
 
 const DASHBOARD_TABS: readonly { id: DashboardView; label: string }[] = [
@@ -36,7 +39,9 @@ export function DashboardHeader({
   onOpenWidgetDialog,
   onResetLayout,
   streams,
+  selectedStreamId,
   talkbackTargetStreamIds,
+  talkback,
 }: DashboardHeaderProps) {
   return (
     <header className="ops-dashboard__tabs" aria-label="주요 탭">
@@ -66,11 +71,8 @@ export function DashboardHeader({
           </button>
           <span className="ops-layout-status" role="status">{layoutMessage}</span>
         </div>
-        <TalkbackControlPanel selectedStreamIds={talkbackTargetStreamIds} streams={streams} />
+        <TalkbackControlPanel selectedStreamId={selectedStreamId} selectedStreamIds={talkbackTargetStreamIds} streams={streams} talkback={talkback} />
         <div className="ops-dashboard__action-group">
-          <a aria-label="웹캠 송출" className="ops-command-button is-primary" href="/publisher" role="button">
-            송출
-          </a>
           <button aria-label="위젯 추가" className="ops-command-button" onClick={onOpenWidgetDialog} type="button">
             레이아웃
           </button>

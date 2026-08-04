@@ -634,6 +634,37 @@ func TestDashboardPublishUrlCanBeIssuedBeforeStreamIsRegistered(t *testing.T) {
 	assertMediaURLToken(t, whipURL, publisherTokenQueryKey, mediaMTXActionPublish, "raw/new-drone/front")
 }
 
+func TestDashboardTalkbackPublishUsesAuthorizedShortLivedPath(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.drone-01.front/talkback-publish?operatorId=operator01", nil)
+	request.Header.Set("Authorization", "Bearer operator-token")
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	payload := decodeTestJSON[streamPublishResponse](t, recorder)
+	if !strings.HasPrefix(payload.WhipURL, "http://edge.local/webrtc/talkback/raw/drone-01/front/operator01/whip?") {
+		t.Fatalf("unexpected talkback publish URL %v", payload.WhipURL)
+	}
+	assertMediaURLToken(t, payload.WhipURL, publisherTokenQueryKey, mediaMTXActionPublish, "talkback/raw/drone-01/front/operator01")
+}
+
+func TestDashboardTalkbackPublishRejectsNonRawTarget(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/ai.drone-01.front.detector/talkback-publish", nil)
+	request.Header.Set("Authorization", "Bearer operator-token")
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
 func TestDashboardPublishUrlUsesDevicePolicyWithoutGroupID(t *testing.T) {
 	var observed domain.DevicePublishCommand
 	ice, _ := domain.NewIceServer("turn:a4ai.tplinkdns.com:3478?transport=udp", domain.IceServerTURN, "gcs-turn", "secret", true)

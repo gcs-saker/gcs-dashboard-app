@@ -5,10 +5,9 @@ describe("talkbackWhipSession", () => {
   it("publishes talkback audio with a WHIP offer", async () => {
     const audioTrack = {} as MediaStreamTrack;
     const peerConnection = peer();
-    const fetcher = vi.fn(async () => ({
-      ok: true,
-      text: async () => "v=0\r\nanswer",
-    })) as unknown as typeof fetch;
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(Response.json({ whipUrl: "/webrtc/authorized-talkback/whip?publisherToken=short-lived", iceServers: [] }))
+      .mockResolvedValueOnce(new Response("v=0\r\nanswer", { status: 200 })) as unknown as typeof fetch;
 
     const result = await publishTalkbackTarget({
       audioTracks: [audioTrack],
@@ -22,19 +21,18 @@ describe("talkbackWhipSession", () => {
     expect(result.status).toBe("active");
     expect(result.peerConnection).toBe(peerConnection);
     expect(peerConnection.addTrack).toHaveBeenCalledWith(audioTrack);
-    expect(fetcher).toHaveBeenCalledWith(
-      "/webrtc/talkback/raw/sample/front/operator01/whip",
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      "/webrtc/authorized-talkback/whip?publisherToken=short-lived",
       expect.objectContaining({ method: "POST", body: "v=0\r\noffer" }),
     );
   });
 
   it("closes the peer connection when WHIP signaling fails", async () => {
     const peerConnection = peer();
-    const fetcher = vi.fn(async () => ({
-      ok: false,
-      status: 502,
-      text: async () => "",
-    })) as unknown as typeof fetch;
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(Response.json({ whipUrl: "/webrtc/authorized-talkback/whip?publisherToken=short-lived", iceServers: [] }))
+      .mockResolvedValueOnce(new Response("", { status: 502 })) as unknown as typeof fetch;
 
     const result = await publishTalkbackTarget({
       audioTracks: [{} as MediaStreamTrack],

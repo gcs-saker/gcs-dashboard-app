@@ -17,13 +17,15 @@
 
 .time-sync-view__policy span {
   color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 900;
+  font-size: 0.8125rem;
+  font-weight: 600;
 }
 
 .time-sync-view__policy strong {
   color: var(--text);
-  font-size: 0.94rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.45;
 }
 
 .time-sync-view__error {

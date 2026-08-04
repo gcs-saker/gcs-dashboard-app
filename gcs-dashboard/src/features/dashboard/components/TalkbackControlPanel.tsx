@@ -1,4 +1,4 @@
-import { useWhipAudioPublisher, type UseWhipAudioPublisherOptions } from "@streaming/hooks/useWhipAudioPublisher";
+import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
 import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 import {
   buildTalkbackSelectionViewModel,
@@ -7,18 +7,24 @@ import {
   talkbackStatusText,
 } from "@dashboard/talkbackPresentation";
 
-interface TalkbackControlPanelProps extends UseWhipAudioPublisherOptions {
+interface TalkbackControlPanelProps {
+  selectedStreamId: string;
   selectedStreamIds: string[];
   streams: DashboardStreamSlot[];
+  talkback: TalkbackPublisherSnapshot;
 }
 
 export function TalkbackControlPanel({
+  selectedStreamId,
   selectedStreamIds,
   streams,
-  ...publisherOptions
+  talkback,
 }: TalkbackControlPanelProps) {
-  const talkback = useWhipAudioPublisher(publisherOptions);
-  const selection = buildTalkbackSelectionViewModel(streams, selectedStreamIds);
+  const selectedStreamPath = streams.find((stream) => stream.id === selectedStreamId)?.streamPath;
+  const effectiveStreamIds = selectedStreamIds.length > 0
+    ? selectedStreamIds
+    : selectedStreamPath ? [selectedStreamPath] : [];
+  const selection = buildTalkbackSelectionViewModel(streams, effectiveStreamIds);
   const isActive = isTalkbackActive(talkback.status);
 
   return (

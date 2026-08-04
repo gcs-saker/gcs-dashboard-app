@@ -14,6 +14,7 @@ import { DashboardMapWidget, type TacticalMapComponent } from "@dashboard/compon
 import { RenderProfilerBoundary } from "@/features/RenderProfilerBoundary";
 import { RENDER_DIAGNOSTIC_LABELS } from "@/features/renderDiagnostics";
 import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
+import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
 interface DashboardMainGridProps {
   aiResultsWidget: DashboardWidgetDefinition;
   audioActiveStreamId: string | null;
@@ -35,6 +36,7 @@ interface DashboardMainGridProps {
   tacticalMap: TacticalMapComponent;
   tacticalMapWidget: DashboardWidgetDefinition;
   talkbackTargetStreamIds: string[];
+  talkback: TalkbackPublisherSnapshot;
   telemetryRows: TelemetryRow[];
   telemetryWidget: DashboardWidgetDefinition;
   widgetControls: (widgetId: DashboardWidgetId, title: string) => ReactNode;
@@ -132,7 +134,7 @@ export function DashboardMainGrid(props: DashboardMainGridProps) {
       ) : null}
       <RenderProfilerBoundary id={RENDER_DIAGNOSTIC_LABELS.audioWaveformPanel}>
         <DashboardErrorBoundary boundaryId="panel:audio-waveform" resetKeys={[selectedStream.id]} scope="panel" title="음성 파형 분석">
-          <AudioWaveformPanel analysis={props.audioAnalysis} isMotionEnabled={props.motionEnabled} selectedStream={selectedStream}/>
+          <AudioWaveformPanel analysis={props.audioAnalysis} isMotionEnabled={props.motionEnabled} selectedStream={selectedStream} talkback={props.talkback}/>
         </DashboardErrorBoundary>
       </RenderProfilerBoundary>
       {isWidgetVisible("ai-results") ? (

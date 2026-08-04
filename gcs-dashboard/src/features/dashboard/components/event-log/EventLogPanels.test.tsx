@@ -4,7 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { OperationalEvent } from "@dashboard/operationalEvents";
 import { EventLogDetailPanel } from "./EventLogDetailPanel";
-import { EventLogNetworkPanel } from "./EventLogNetworkPanel";
+import { EventLogNetworkPanel, formatNetworkFlowTime } from "./EventLogNetworkPanel";
 import { TimelineEventRow } from "./TimelineEventRow";
 
 const BASE_EVENT: OperationalEvent = {
@@ -95,6 +95,7 @@ describe("event log panels", () => {
 
     const chart = screen.getByLabelText("시간대별 네트워크 지표");
     expect(within(chart).getByText("최근 2/3 events")).toBeInTheDocument();
+    expect(within(chart).getAllByText(formatNetworkFlowTime(BASE_EVENT.occurredAt))).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Signaling 서버 TURN fallback 감지" })).toHaveClass("is-selected");
     expect(screen.getByRole("button", { name: "Network 2" })).toHaveAttribute("aria-pressed", "true");
 

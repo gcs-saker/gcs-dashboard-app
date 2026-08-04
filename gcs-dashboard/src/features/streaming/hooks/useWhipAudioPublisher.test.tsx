@@ -43,11 +43,9 @@ describe("useWhipAudioPublisher", () => {
       peerConnections.push(peerConnection);
       return peerConnection as unknown as RTCPeerConnection;
     });
-    const fetcher = vi.fn(async () => ({
-      ok: true,
-      status: 201,
-      text: async () => "v=0\r\ntalkback-answer",
-    })) as unknown as typeof fetch;
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => init?.method === "GET"
+      ? Response.json({ whipUrl: String(input).replace("/media-control/api/v1/streams/", "/webrtc/").replace("/talkback-publish?operatorId=operator01", "/whip?publisherToken=short-lived"), iceServers: [] })
+      : new Response("v=0\r\ntalkback-answer", { status: 201 })) as unknown as typeof fetch;
 
     const { result } = renderHook(() =>
       useWhipAudioPublisher({
@@ -75,11 +73,11 @@ describe("useWhipAudioPublisher", () => {
     expect(peerConnectionFactory).toHaveBeenCalledTimes(2);
     expect(peerConnections[0].addTrack).toHaveBeenCalledWith(audioTrack);
     expect(fetcher).toHaveBeenCalledWith(
-      "/webrtc/talkback/raw/sample/front/operator01/whip",
+      expect.stringContaining("raw.sample.front/whip?publisherToken=short-lived"),
       expect.objectContaining({ method: "POST", body: "v=0\r\ntalkback-offer" }),
     );
     expect(fetcher).toHaveBeenCalledWith(
-      "/webrtc/talkback/raw/local/rear/operator01/whip",
+      expect.stringContaining("raw.local.rear/whip?publisherToken=short-lived"),
       expect.objectContaining({ method: "POST", body: "v=0\r\ntalkback-offer" }),
     );
 
@@ -138,11 +136,12 @@ describe("useWhipAudioPublisher", () => {
       peerConnections.push(peerConnection);
       return peerConnection as unknown as RTCPeerConnection;
     });
-    const fetcher = vi.fn(async (input: RequestInfo | URL) => ({
-      ok: !String(input).includes("rear"),
-      status: String(input).includes("rear") ? 502 : 201,
-      text: async () => "v=0\r\ntalkback-answer",
-    })) as unknown as typeof fetch;
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === "GET") {
+        return Response.json({ whipUrl: `/webrtc/${String(input).includes("rear") ? "rear" : "front"}/whip?publisherToken=short-lived`, iceServers: [] });
+      }
+      return new Response("v=0\r\ntalkback-answer", { status: String(input).includes("rear") ? 502 : 201 });
+    }) as unknown as typeof fetch;
 
     const { result } = renderHook(() =>
       useWhipAudioPublisher({
