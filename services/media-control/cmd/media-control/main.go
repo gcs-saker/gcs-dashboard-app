@@ -49,6 +49,7 @@ func main() {
 		config.publishToken,
 		metrics,
 	).WithDevicePublishAuthorizer(&authorizer).
+		WithAccountPublishAuthorizer(&authorizer).
 		WithPublishSessionStore(publishSessions)
 
 	grpcContext, stopGrpc := context.WithCancel(context.Background())

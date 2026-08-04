@@ -82,6 +82,31 @@ func TestClientAuthorizesDevicePublishThroughAuthPolicy(t *testing.T) {
 	}
 }
 
+func TestClientAuthorizesAccountPublishWithBearerLogin(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/policy/accounts/publish" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer login-token" {
+			t.Fatalf("missing account bearer token")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"deviceUuid":"account-abc","streamId":"raw.account-abc.front","path":"raw/account-abc/front","sensorId":"front","publisherGroupId":"co-a","credentialVersion":0,"devicePolicyVersion":1,"reason":"account group authorized","policyVersion":"account-publisher-v1"}`))
+	}))
+	defer server.Close()
+	client := NewClient(server.URL, server.Client())
+
+	authorization, err := client.AuthorizeAccountPublish(context.Background(), domain.AccountPublishCommand{
+		Authorization: "Bearer login-token", SensorID: "front",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if authorization.StreamID != "raw.account-abc.front" || authorization.PublisherGroupID != "co-a" {
+		t.Fatalf("unexpected authorization: %#v", authorization)
+	}
+}
+
 func TestClientRejectsDeniedDevicePublish(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusForbidden)

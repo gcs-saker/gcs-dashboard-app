@@ -69,6 +69,7 @@ object AuthSecurityRouteContract {
     val ADMIN_AUTHORITY = roleAuthority(ADMIN_ROLE_NAME)
     val PROTECTED_MATCHERS = listOf(
         RouteMatcher(HttpMethod.GET, AuthApiRoutes.ROOT + AuthApiRoutes.ME),
+        RouteMatcher(null, AccountPublisherPolicyApiRoutes.ROOT + ALL_PATHS),
         RouteMatcher(null, StreamPolicyApiRoutes.ROOT + ALL_PATHS),
         RouteMatcher(null, OPS_PREFIX),
         RouteMatcher(null, TELEMETRY_PREFIX),
