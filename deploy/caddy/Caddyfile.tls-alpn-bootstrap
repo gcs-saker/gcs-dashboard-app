@@ -9,3 +9,8 @@
 {$STAGING_TLS_HOST} {
 	reverse_proxy {$STAGING_UPSTREAM}
 }
+
+https://{$LEGACY_TLS_HOST} {
+	tls {$LEGACY_TLS_CERT} {$LEGACY_TLS_KEY}
+	reverse_proxy {$UPSTREAM}
+}
