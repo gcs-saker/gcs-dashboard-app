@@ -11,6 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 INTENT_MATRIX = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_design_intent_matrix.yml"
 SCRIPT = REPO_ROOT / "scripts" / "gates" / "architecture_intent_gate.py"
 PR_TEMPLATE = REPO_ROOT / ".github" / "pull_request_template.md"
+SINGLE_NODE_NGINX = REPO_ROOT / "deploy" / "nginx" / "single-node.poc.conf"
 
 
 def load_yaml(path: Path) -> dict:
@@ -69,3 +70,12 @@ def test_pull_request_template_requires_design_intent_review() -> None:
     assert "Design Intent" in template
     assert "architecture intent gate" in normalized_template
     assert "active/profile/contract/prototype/deferred" in template
+
+
+def test_publisher_root_normalizes_to_mobile_publisher_route() -> None:
+    nginx = SINGLE_NODE_NGINX.read_text(encoding="utf-8")
+
+    assert "location = /publisher {" in nginx
+    assert "return 308 /publisher/;" in nginx
+    assert "location /publisher/ {" in nginx
+    assert "proxy_pass http://$mobile_publisher_host:8080;" in nginx
