@@ -74,7 +74,26 @@ func (s Server) authorizeMediaMTXPlayback(w http.ResponseWriter, payload mediaMT
 	}
 	target := s.groups.TargetFor(parsed)
 	values, err := url.ParseQuery(strings.TrimPrefix(payload.Query, "?"))
-	if err != nil || validateMediaToken(
+	if err != nil {
+		writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
+		return
+	}
+	if parsed.Prefix == "talkback" {
+		if _, err := validateMediaTokenForRoute(
+			s.publishToken,
+			values.Get(playbackTokenQueryKey),
+			mediaMTXActionPlayback,
+			parsed.StreamID,
+			payload.Path,
+			time.Now(),
+		); err != nil {
+			writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if validateMediaToken(
 		s.publishToken,
 		values.Get(playbackTokenQueryKey),
 		mediaMTXActionPlayback,

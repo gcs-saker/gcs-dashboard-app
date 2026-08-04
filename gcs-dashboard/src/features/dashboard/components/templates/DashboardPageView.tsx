@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import type { DashboardWidgetId } from "@dashboard/dashboardLayout";
 import type { StreamAvailabilityNotification } from "@dashboard/hooks/useStreamAvailabilityNotification";
 import type { DashboardUserPreferences } from "@dashboard/userPreferences";
@@ -36,8 +36,7 @@ export function DashboardPageView({
   routerProps,
   widgetControls: widgetControlBindings,
 }: DashboardPageViewProps) {
-  const talkbackSessionId = useMemo(() => `operator-${crypto.randomUUID()}`, []);
-  const talkback = useWhipAudioPublisher({ operatorId: talkbackSessionId });
+  const talkback = useWhipAudioPublisher();
   const { isWidgetPinned, onHideWidget, onPopOutWidget, onToggleWidgetPin } = widgetControlBindings;
   const widgetControls = useCallback(
     (widgetId: DashboardWidgetId, title: string) => (
