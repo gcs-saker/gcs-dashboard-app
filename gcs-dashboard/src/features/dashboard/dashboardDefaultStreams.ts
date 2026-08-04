@@ -18,7 +18,6 @@ export function createEmptyCctvStreamSlot(channelNumber: number): DashboardStrea
     detail: "클릭하여 채널 변경",
     connectedDeviceId: null,
     streamPath: null,
-    sourceUrl: null,
     geometry: null,
   };
 }
@@ -32,7 +31,6 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
     detail: "전방 EO / raw.sample.front",
     connectedDeviceId: "device-drn-01-front",
     streamPath: "raw.sample.front",
-    sourceUrl: null,
     geometry: {
       lat: 35.871435,
       lng: 128.601445,
@@ -53,7 +51,6 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
     detail: "열화상 fallback / raw.sample.thermal",
     connectedDeviceId: "device-drn-02-thermal",
     streamPath: "raw.sample.thermal",
-    sourceUrl: null,
     geometry: {
       lat: 35.8781,
       lng: 128.5948,
@@ -74,7 +71,6 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
     detail: "AI 감지 overlay / raw.sample.rear",
     connectedDeviceId: "device-ugv-01-rear",
     streamPath: "raw.sample.rear",
-    sourceUrl: null,
     geometry: {
       lat: 35.8669,
       lng: 128.5931,
@@ -95,7 +91,6 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
     detail: "로컬 웹캠 대기 / raw.local.webcam",
     connectedDeviceId: "device-local-webcam",
     streamPath: "raw.local.webcam",
-    sourceUrl: null,
     geometry: {
       lat: 35.8724,
       lng: 128.6072,

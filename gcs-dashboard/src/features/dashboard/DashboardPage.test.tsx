@@ -173,8 +173,8 @@ describe("DashboardPage", () => {
     expect(within(telemetryPanel).getByText("35.866900")).toBeInTheDocument();
     expect(within(telemetryPanel).getByText("128.593100")).toBeInTheDocument();
     expect(within(telemetryPanel).getByText("기본 좌표")).toBeInTheDocument();
-    expect(screen.getByRole("dialog", { name: "스트리밍 3 장비 연결" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "변경 취소" }));
+    expect(screen.getByRole("dialog", { name: "스트리밍 3 스트림 연결" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "취소" }));
   });
 
   test("selects a stream from the tactical map pin without opening the connect dialog", async () => {
@@ -187,7 +187,7 @@ describe("DashboardPage", () => {
     expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 기본 좌표 84deg / FOV 82deg");
     expect(screen.getByText("지도 핀 스트림 선택됨")).toBeInTheDocument();
     expect(screen.getByLabelText("스트리밍 3 단말 정보")).toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: "스트리밍 3 장비 연결" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "스트리밍 3 스트림 연결" })).not.toBeInTheDocument();
   });
 
   test("toggles the selected stream AI mode option", async () => {
@@ -208,20 +208,20 @@ describe("DashboardPage", () => {
 
     await user.click(screen.getByRole("button", { name: "스트리밍 4 선택" }));
 
-    expect(screen.getByRole("dialog", { name: "스트리밍 4 장비 연결" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "스트리밍 4 스트림 연결" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /DRN-01 전방 EO/ }));
 
-    expect(screen.queryByRole("dialog", { name: "스트리밍 4 장비 연결" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "스트리밍 4 스트림 연결" })).not.toBeInTheDocument();
     expect(screen.getAllByText("DRN-01 전방 EO").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 4 기본 좌표 130deg / FOV 72deg");
-    expect(screen.getByRole("status")).toHaveTextContent("스트리밍 장비 연결됨");
+    expect(screen.getByRole("status")).toHaveTextContent("스트림 연결됨");
 
     await user.click(screen.getByRole("button", { name: "스트리밍 4 선택" }));
-    await user.click(screen.getByRole("button", { name: "연결 해제" }));
+    await user.click(screen.getByRole("button", { name: "스트림 연결 해제" }));
 
-    expect(screen.getAllByText("장비 미연결").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByRole("status")).toHaveTextContent("스트리밍 장비 연결 해제됨");
+    expect(screen.getAllByText("스트림 미선택").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole("status")).toHaveTextContent("스트림 연결 해제됨");
   });
 
   test("renders operational status placeholders needed before live backend wiring", () => {
@@ -263,19 +263,19 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("heading", { name: "통합 CCTV 월" })).toBeInTheDocument();
     expect(screen.getByText(/16\s*채널 감시 레이아웃/)).toBeInTheDocument();
     expect(screen.getByText("CCTV 16")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /선택/ })).toHaveLength(16);
+    expect(screen.getAllByRole("button", { name: "스트림 선택" })).toHaveLength(16);
 
     await user.click(screen.getByRole("button", { name: "5x5" }));
 
     expect(screen.getByText(/25\s*채널 감시 레이아웃/)).toBeInTheDocument();
     expect(screen.getByText("CCTV 25")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /선택/ })).toHaveLength(25);
+    expect(screen.getAllByRole("button", { name: "스트림 선택" })).toHaveLength(25);
 
     await user.click(screen.getByRole("button", { name: "3x3" }));
 
     expect(screen.getByText(/9\s*채널 감시 레이아웃/)).toBeInTheDocument();
     expect(screen.getByText("CCTV 09")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /선택/ })).toHaveLength(9);
+    expect(screen.getAllByRole("button", { name: "스트림 선택" })).toHaveLength(9);
   });
 
   test("opens the device change dialog from empty CCTV 5x5 channels", async () => {
@@ -286,34 +286,29 @@ describe("DashboardPage", () => {
     await user.click(screen.getByRole("button", { name: "5x5" }));
     await user.click(screen.getByRole("button", { name: "CCTV 25 선택" }));
 
-    expect(screen.getByRole("dialog", { name: "CCTV 25 장비 연결" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "CCTV 25 스트림 연결" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /DRN-01 전방 EO/ }));
 
-    expect(screen.queryByRole("dialog", { name: "CCTV 25 장비 연결" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "CCTV 25 스트림 연결" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "CCTV 25 선택" })).toHaveTextContent("DRN-01 전방 EO");
-    expect(screen.getByRole("status")).toHaveTextContent("스트리밍 장비 연결됨");
+    expect(screen.getByRole("status")).toHaveTextContent("스트림 연결됨");
   });
 
-  test("connects a manual stream address from a CCTV channel", async () => {
+  test("only offers online registry streams without an address input", async () => {
     const user = userEvent.setup();
     renderDashboard();
 
     await user.click(screen.getByRole("button", { name: "CCTV" }));
     await user.click(screen.getByRole("button", { name: "CCTV 09 선택" }));
 
-    const dialog = screen.getByRole("dialog", { name: "CCTV 09 장비 연결" });
+    const dialog = screen.getByRole("dialog", { name: "CCTV 09 스트림 연결" });
     expect(dialog).toBeInTheDocument();
 
-    await user.clear(within(dialog).getByLabelText("기억할 이름"));
-    await user.type(within(dialog).getByLabelText("기억할 이름"), "휴대폰 후면 카메라");
-    await user.clear(within(dialog).getByLabelText("스트림 주소 / Path"));
-    await user.type(within(dialog).getByLabelText("스트림 주소 / Path"), "https://a4ai.tplinkdns.com/webrtc/raw/local/webcam/whep");
-    await user.click(within(dialog).getByRole("button", { name: "주소 연결" }));
-
-    expect(screen.queryByRole("dialog", { name: "CCTV 09 장비 연결" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "CCTV 09 선택" })).toHaveTextContent("휴대폰 후면 카메라");
-    expect(screen.getByRole("status")).toHaveTextContent("스트리밍 주소 연결됨");
+    expect(within(dialog).queryByText("스트림 주소 / Path")).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "주소 연결" })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /DRN-01 전방 EO/ })).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: /DRN-02 열화상/ })).not.toBeInTheDocument();
   });
 
   test("renders hierarchical asset tree nodes", async () => {
@@ -337,7 +332,7 @@ describe("DashboardPage", () => {
     expect(screen.getByText("스트리밍 3 / AI 감지 overlay")).toBeInTheDocument();
     expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 기본 좌표 84deg / FOV 82deg");
     expect(screen.getByText("자산트리 스트림 선택됨")).toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: "스트리밍 3 장비 연결" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "스트리밍 3 스트림 연결" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "자산트리" })).not.toBeInTheDocument();
   });
 

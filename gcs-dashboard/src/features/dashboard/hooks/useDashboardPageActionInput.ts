@@ -14,7 +14,6 @@ export function useDashboardPageActionInput(
   ui: DashboardLocalUiState,
 ): DashboardPageActionInput {
   return useMemo(() => ({
-    connectManualStreamAddress: streamState.connectManualStreamAddress,
     connectStreamDeviceState: streamState.connectStreamDevice,
     disconnectCurrentStreamSlotState: streamState.disconnectCurrentStreamSlot,
     isWidgetPinned: preferencesApi.isWidgetPinned,
@@ -36,7 +35,6 @@ export function useDashboardPageActionInput(
     preferencesApi.isWidgetPinned,
     preferencesApi.resetWidgetLayout,
     preferencesApi.setLayout,
-    streamState.connectManualStreamAddress,
     streamState.connectStreamDevice,
     streamState.disconnectCurrentStreamSlot,
     streamState.openStreamConnection,

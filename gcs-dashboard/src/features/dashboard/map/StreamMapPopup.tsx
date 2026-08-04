@@ -59,7 +59,7 @@ export function StreamMapPopup({ onClose, stream }: StreamMapPopupProps) {
         </div>
         <div>
           <dt>입력</dt>
-          <dd>{stream.sourceUrl ?? "서버 registry"}</dd>
+          <dd>서버 스트림 목록</dd>
         </div>
         <div>
           <dt>좌표</dt>

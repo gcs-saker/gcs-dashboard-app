@@ -9,7 +9,6 @@ const baseStream = {
   detail: "테스트 스트림",
   id: "raw.test.stream",
   mode: "EO",
-  sourceUrl: null,
   streamPath: "raw.test.stream",
   title: "테스트",
 } satisfies Omit<DashboardStreamSlot, "status">;
@@ -59,7 +58,6 @@ describe("refreshStreamDevicesOnce", () => {
       id: "device-1",
       mediaType: "eo",
       name: "전방 단말",
-      sourceUrl: null,
       status: "online",
       streamPath: "raw.mobile.front",
     };

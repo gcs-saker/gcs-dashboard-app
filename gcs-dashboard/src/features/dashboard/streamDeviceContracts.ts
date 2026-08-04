@@ -9,7 +9,6 @@ export interface StreamDeviceOption {
   id: string;
   name: string;
   streamPath: string;
-  sourceUrl?: string | null;
   status: DashboardStreamStatus;
   mediaType: "eo" | "ir" | "ai" | "map";
   geometry: StreamDeviceGeometry;

@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   connectDeviceToStreamSlot,
-  createManualStreamDeviceOption,
   disconnectStreamSlot,
   MOCK_STREAM_DEVICES,
   type StreamDeviceOption,
@@ -31,7 +30,9 @@ export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
   const preferences = streamPreferences ?? EMPTY_STREAM_PREFERENCES;
   const [streams, setStreams] = useState(() => DEFAULT_DASHBOARD_STREAMS);
   const [streamDevices, setStreamDevices] = useState<StreamDeviceOption[]>(() =>
-    applyStreamDeviceAliases(MOCK_STREAM_DEVICES, preferences.deviceAliases),
+    import.meta.env.MODE === "test"
+      ? applyStreamDeviceAliases(MOCK_STREAM_DEVICES, preferences.deviceAliases)
+      : [],
   );
   const [selectedStreamId, setSelectedStreamId] = useState(DEFAULT_DASHBOARD_STREAMS[0].id);
   const [editingStreamId, setEditingStreamId] = useState<string | null>(null);
@@ -77,20 +78,6 @@ export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
     setEditingStreamId(null);
   }, [editingStreamId, onStreamDeviceAliasChange]);
 
-  const connectManualStreamAddress = useCallback((address: string, displayName: string): void => {
-    if (!editingStreamId) return;
-    const editingStreamTitle = streams.find((stream) => stream.id === editingStreamId)?.title ?? "직접 연결";
-    const device = createManualStreamDeviceOption(address, displayName, editingStreamTitle);
-    onStreamDeviceAliasChange?.(device.id, device.name);
-    setStreams((current) =>
-      current.map((stream) =>
-        stream.id === editingStreamId ? connectDeviceToStreamSlot(stream, device) : stream,
-      ),
-    );
-    setSelectedStreamId(editingStreamId);
-    setEditingStreamId(null);
-  }, [editingStreamId, onStreamDeviceAliasChange, streams]);
-
   const disconnectCurrentStreamSlot = useCallback((): void => {
     setStreams((current) =>
       current.map((stream) => (stream.id === editingStreamId ? disconnectStreamSlot(stream) : stream)),
@@ -107,7 +94,6 @@ export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
   }, []);
 
   return {
-    connectManualStreamAddress,
     connectStreamDevice,
     disconnectCurrentStreamSlot,
     editingStream,
