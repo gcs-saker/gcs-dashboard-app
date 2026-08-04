@@ -44,7 +44,9 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("button", { name: "대시보드" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "서버상태" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "운영설정" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "웹캠 송출" })).toHaveAttribute("href", "/publisher");
+    expect(screen.queryByRole("button", { name: "웹캠 송출" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "마이크 송신" })).toBeEnabled();
+    expect(screen.getAllByText("전방 EO").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "자산" })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "지도 확대" }, { timeout: 10000 })).toBeInTheDocument();

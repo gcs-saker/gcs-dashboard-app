@@ -10,31 +10,35 @@ import {
   type AudioAnalysisSnapshot,
 } from "@dashboard/dashboardPresentation";
 import { useRafNumber } from "@dashboard/hooks/useRafNumber";
+import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
 
 interface AudioWaveformPanelProps {
   analysis: AudioAnalysisSnapshot | null;
   isMotionEnabled?: boolean;
   selectedStream: DashboardStreamSlot;
+  talkback: TalkbackPublisherSnapshot;
 }
 
 export const AudioWaveformPanel = memo(function AudioWaveformPanel({
   analysis,
   isMotionEnabled = true,
   selectedStream,
+  talkback,
 }: AudioWaveformPanelProps) {
   useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.audioWaveformPanel);
   const isSelectedAnalysis = analysis?.streamId === selectedStream.id;
   const isActive = Boolean(analysis?.isAudioActive);
   const hasTrack = Boolean(analysis?.hasAudioTrack);
-  const audioLevel = analysis?.audioLevel ?? null;
-  const displayLevel = audioLevel ?? (isActive ? 0.18 : null);
+  const isMicActive = talkback.hasLocalAudioTrack;
+  const audioLevel = isMicActive ? talkback.micLevel : analysis?.audioLevel ?? null;
+  const displayLevel = audioLevel ?? (isActive || isMicActive ? 0.18 : null);
   const rafAudioLevel = useRafNumber(audioLevel ?? 0, isActive && isMotionEnabled);
   const bars = useMemo(
     () => buildAudioWaveformBars(displayLevel === null ? null : audioLevel === null ? displayLevel : rafAudioLevel, isActive || hasTrack),
     [audioLevel, displayLevel, hasTrack, isActive, rafAudioLevel],
   );
-  const sourceName = analysis?.title ?? selectedStream.title;
-  const modeText = analysis ? formatPlaybackMode(analysis.mode, analysis.streamStatus) : "대기";
+  const sourceName = isMicActive ? "관제 마이크" : analysis?.title ?? selectedStream.title;
+  const modeText = isMicActive ? "송신 음성" : analysis ? formatPlaybackMode(analysis.mode, analysis.streamStatus) : "대기";
   const latencyText = analysis?.firstFrameLatencyMs !== null && analysis?.firstFrameLatencyMs !== undefined ? `${analysis.firstFrameLatencyMs} ms` : "대기";
   const jitterText = analysis?.jitterMs !== null && analysis?.jitterMs !== undefined ? `${analysis.jitterMs} ms` : "대기";
   const lostText = analysis?.packetsLost !== null && analysis?.packetsLost !== undefined ? String(analysis.packetsLost) : "0";
@@ -47,7 +51,7 @@ export const AudioWaveformPanel = memo(function AudioWaveformPanel({
   const jitterTone = getJitterTone(analysis?.jitterMs ?? null);
   const lossTone = getPacketLossTone(analysis?.packetsLost ?? null);
   const iceTone = analysis?.localCandidateType === "relay" ? "warning" : analysis?.localCandidateType ? "good" : "info";
-  const scopeText = isSelectedAnalysis ? "선택 스트림 품질" : analysis ? "최근 음성 수신" : "선택 스트림 품질";
+  const scopeText = isMicActive ? "마이크 송신 레벨" : isSelectedAnalysis ? "선택 스트림 품질" : analysis ? "최근 음성 수신" : "선택 스트림 품질";
 
   return (
     <section aria-labelledby="audio-waveform-title" className={`ops-panel audio-waveform ${isActive ? "has-audio" : ""}`}>
@@ -55,7 +59,7 @@ export const AudioWaveformPanel = memo(function AudioWaveformPanel({
         <h2 id="audio-waveform-title">음성 파형 분석</h2>
         <span className="ops-panel__header-actions">
           <span className={`ops-badge ${isActive ? "is-online" : hasTrack ? "is-warning" : "is-offline"}`}>
-            {isActive ? "수신 중" : hasTrack ? "음성 대기" : "신호 대기"}
+            {isMicActive ? "송신 중" : isActive ? "수신 중" : hasTrack ? "음성 대기" : "신호 대기"}
           </span>
         </span>
       </div>

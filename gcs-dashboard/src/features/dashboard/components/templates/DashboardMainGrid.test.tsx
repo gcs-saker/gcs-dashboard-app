@@ -41,6 +41,7 @@ describe("DashboardMainGrid error isolation", () => {
         tacticalMap={BrokenMap}
         tacticalMapWidget={DASHBOARD_WIDGET_REGISTRY["tactical-map"]}
         talkbackTargetStreamIds={[]}
+        talkback={{ status: "idle", errorMessage: null, hasLocalAudioTrack: false, micLevel: null, targets: [], start: async () => undefined, stop: () => undefined }}
         telemetryRows={[]}
         telemetryWidget={DASHBOARD_WIDGET_REGISTRY["telemetry-panel"]}
         widgetControls={() => null}

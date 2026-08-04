@@ -17,7 +17,33 @@ func (s Server) dashboardStreamItem(w http.ResponseWriter, r *http.Request) {
 		s.writeDashboardStreamPublish(w, r, route.streamID)
 		return
 	}
+	if route.suffix == "talkback-publish" {
+		s.writeDashboardTalkbackPublish(w, r, route.streamID)
+		return
+	}
 	s.writeDashboardStreamRead(w, r, route.streamID, route.suffix)
+}
+
+func (s Server) writeDashboardTalkbackPublish(w http.ResponseWriter, r *http.Request, streamID string) {
+	parsed, err := domain.ParseStreamID(streamID)
+	if err != nil || parsed.Prefix != "raw" {
+		writeJSON(w, http.StatusUnprocessableEntity, errorPayload("talkback target must be a raw stream"))
+		return
+	}
+	if err := s.requireStreamAccess(r.Context(), r.Header.Get(authorizationHeader), parsed); err != nil {
+		s.writeStreamAccessError(w, err)
+		return
+	}
+	operatorID := strings.TrimSpace(r.URL.Query().Get("operatorId"))
+	if operatorID == "" {
+		operatorID = "operator"
+	}
+	talkback, err := domain.ParseStreamPath("talkback/" + parsed.Path + "/" + operatorID)
+	if err != nil {
+		writeJSON(w, http.StatusUnprocessableEntity, errorPayload("operator id is invalid"))
+		return
+	}
+	s.writeStreamPublishResponseForGroup(w, talkback, s.groups.TargetFor(parsed).PublisherGroupID)
 }
 
 func (s Server) writeDashboardStreamPublish(w http.ResponseWriter, r *http.Request, streamID string) {

@@ -1,4 +1,4 @@
-import { talkbackWhipUrl } from "./talkbackRoutes";
+import { fetchAuthorizedTalkbackSession } from "./publisher/publisherApi";
 import { waitForIceGatheringComplete } from "./publisher/publisherWebRtc";
 import { SDP_OFFER_HEADERS } from "./streamingProtocolHeaders";
 import type {
@@ -40,7 +40,8 @@ export async function publishTalkbackTarget({
     if (!sdp) {
       throw new Error("talkback WebRTC offer SDP가 생성되지 않았습니다.");
     }
-    const response = await fetcher(talkbackWhipUrl(streamId, operatorId), {
+    const publishSession = await fetchAuthorizedTalkbackSession(streamId, operatorId, fetcher);
+    const response = await fetcher(publishSession.whipUrl, {
       method: "POST",
       headers: SDP_OFFER_HEADERS,
       body: sdp,

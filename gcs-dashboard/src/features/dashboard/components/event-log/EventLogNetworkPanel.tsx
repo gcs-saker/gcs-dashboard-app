@@ -21,7 +21,12 @@ export function EventLogNetworkPanel(props: EventLogNetworkPanelProps) {
         <span>최근 {props.networkFlowEvents.length}/{props.eventsCount} events</span>
       </div>
       <div className="event-log-view__chart">
-        {props.networkFlowEvents.map((event) => (
+        {props.networkFlowEvents.map((event, index) => {
+          const timeLabel = formatNetworkFlowTime(event.occurredAt);
+          const previousTimeLabel = index > 0
+            ? formatNetworkFlowTime(props.networkFlowEvents[index - 1].occurredAt)
+            : null;
+          return (
           <button
             aria-label={`${event.source} ${event.message}`}
             className={`event-log-view__bar is-${event.severity} ${props.selectedEventId === event.id ? "is-selected" : ""}`}
@@ -29,11 +34,12 @@ export function EventLogNetworkPanel(props: EventLogNetworkPanelProps) {
             onClick={() => props.onSelectEvent(event.id)}
             type="button"
           >
-            <span>{new Date(event.occurredAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}</span>
+            <span>{timeLabel !== previousTimeLabel ? timeLabel : ""}</span>
             <i style={{ height: `${Math.max(6, (event.throughputMbps / props.peakThroughput) * 100)}%` }} />
             <small>{event.connections}</small>
           </button>
-        ))}
+          );
+        })}
       </div>
       <div className="event-log-view__categories" aria-label="분류별 이벤트">
         {props.categoryStats.map((category) => (
@@ -52,4 +58,8 @@ export function EventLogNetworkPanel(props: EventLogNetworkPanelProps) {
       </div>
     </section>
   );
+}
+
+export function formatNetworkFlowTime(occurredAt: string): string {
+  return new Date(occurredAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
 }

@@ -67,6 +67,7 @@ export function useDashboardPageController(): DashboardPageViewProps {
       onOpenWidgetDialog: openWidgetDialog,
       onResetLayout: actions.resetLayout,
       streams: streamState.streams,
+      selectedStreamId: streamState.selectedStreamId,
       talkbackTargetStreamIds: ui.talkbackTargetStreamIds,
     },
     motionMode,
