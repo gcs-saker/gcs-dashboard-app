@@ -36,11 +36,16 @@ func TestDevicePublishSessionUsesServerOwnedIdentityAndRotatesRenewalToken(t *te
 	if observed.SensorID != "front" || observed.StreamID != "" || observed.Path != "" {
 		t.Fatalf("authentication request must contain identity and sensor only: %#v", observed)
 	}
-	if created.StreamID != "raw.device-001.front" || strings.Contains(created.PublishURL, "token") {
+	if !strings.HasPrefix(created.StreamID, "raw.device.pub_") || strings.Contains(created.PublishURL, "token") ||
+		strings.Contains(created.StreamID, "device-001") || strings.Contains(created.PublishURL, "device-001") {
 		t.Fatalf("expected server-owned identity and clean URL: %#v", created)
 	}
 	if created.PublishToken == "" || created.RenewalToken == "" || created.AuthorizationScheme != "Bearer" {
 		t.Fatalf("expected token pair: %#v", created)
+	}
+	if !strings.HasPrefix(created.PublishToken, mediaTokenPrefix) || strings.Contains(created.PublishToken, ".") ||
+		strings.Contains(created.PublishToken, "co-a") || strings.Contains(created.PublishToken, "device-001") {
+		t.Fatalf("publish token must be opaque: %q", created.PublishToken)
 	}
 
 	renewRequest := httptest.NewRequest(http.MethodPost, routeDevicePublishSessionPrefix+created.SessionID+"/renew", nil)

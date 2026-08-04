@@ -20,8 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify public certificate chain and expiry
-        run: scripts/ops/check_public_tls.sh a4ai.tplinkdns.com 443
+      - name: Verify production certificate chain and expiry
+        run: scripts/ops/check_public_tls.sh a4ai.121-159-26-245.sslip.io 443
+      - name: Verify staging certificate chain and expiry
+        run: scripts/ops/check_public_tls.sh staging-a4ai.121-159-26-245.sslip.io 443
 
   media-control-test:
     name: media-control-test

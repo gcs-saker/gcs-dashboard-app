@@ -1,0 +1,11 @@
+{
+	auto_https disable_redirects
+}
+
+{$PUBLIC_TLS_HOST} {
+	reverse_proxy {$UPSTREAM}
+}
+
+{$STAGING_TLS_HOST} {
+	reverse_proxy {$STAGING_UPSTREAM}
+}

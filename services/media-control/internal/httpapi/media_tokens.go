@@ -1,11 +1,14 @@
 package httpapi
 
 import (
-	"crypto/hmac"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"io"
 	"strings"
 	"time"
 
@@ -13,6 +16,8 @@ import (
 )
 
 const mediaTokenTTL = 5 * time.Minute
+
+const mediaTokenPrefix = "gcs_media_v2_"
 
 var errMediaTokenInvalid = errors.New("media token is invalid")
 
@@ -44,8 +49,7 @@ func issueDeviceMediaToken(secret string, session domain.PublishSession, tokenID
 	if err != nil {
 		return "", err
 	}
-	encoded := base64.RawURLEncoding.EncodeToString(payloadBytes)
-	return encoded + "." + signMediaTokenPayload(secret, encoded), nil
+	return encryptMediaToken(secret, payloadBytes)
 }
 
 func issueMediaToken(secret string, action string, streamID string, streamPath string, groupID string, now time.Time) (string, error) {
@@ -63,9 +67,7 @@ func issueMediaToken(secret string, action string, streamID string, streamPath s
 	if err != nil {
 		return "", err
 	}
-	encodedPayload := base64.RawURLEncoding.EncodeToString(payloadBytes)
-	signature := signMediaTokenPayload(secret, encodedPayload)
-	return encodedPayload + "." + signature, nil
+	return encryptMediaToken(secret, payloadBytes)
 }
 
 func validateMediaToken(
@@ -117,15 +119,19 @@ func decodeVerifiedMediaToken(secret string, token string) (mediaTokenPayload, e
 	if strings.TrimSpace(secret) == "" || strings.TrimSpace(token) == "" {
 		return mediaTokenPayload{}, errMediaTokenInvalid
 	}
-	encodedPayload, encodedSignature, ok := strings.Cut(token, ".")
-	if !ok || encodedPayload == "" || encodedSignature == "" {
+	if !strings.HasPrefix(token, mediaTokenPrefix) {
 		return mediaTokenPayload{}, errMediaTokenInvalid
 	}
-	expectedSignature := signMediaTokenPayload(secret, encodedPayload)
-	if !hmac.Equal([]byte(encodedSignature), []byte(expectedSignature)) {
+	sealed, err := base64.RawURLEncoding.DecodeString(strings.TrimPrefix(token, mediaTokenPrefix))
+	if err != nil {
 		return mediaTokenPayload{}, errMediaTokenInvalid
 	}
-	payloadBytes, err := base64.RawURLEncoding.DecodeString(encodedPayload)
+	aead, err := newMediaTokenAEAD(secret)
+	if err != nil || len(sealed) <= aead.NonceSize() {
+		return mediaTokenPayload{}, errMediaTokenInvalid
+	}
+	nonce, ciphertext := sealed[:aead.NonceSize()], sealed[aead.NonceSize():]
+	payloadBytes, err := aead.Open(nil, nonce, ciphertext, []byte(mediaTokenPrefix))
 	if err != nil {
 		return mediaTokenPayload{}, errMediaTokenInvalid
 	}
@@ -136,8 +142,27 @@ func decodeVerifiedMediaToken(secret string, token string) (mediaTokenPayload, e
 	return payload, nil
 }
 
-func signMediaTokenPayload(secret string, encodedPayload string) string {
-	mac := hmac.New(sha256.New, []byte(secret))
-	_, _ = mac.Write([]byte(encodedPayload))
-	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+func encryptMediaToken(secret string, payload []byte) (string, error) {
+	aead, err := newMediaTokenAEAD(secret)
+	if err != nil {
+		return "", errMediaTokenInvalid
+	}
+	nonce := make([]byte, aead.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", err
+	}
+	sealed := aead.Seal(nonce, nonce, payload, []byte(mediaTokenPrefix))
+	return mediaTokenPrefix + base64.RawURLEncoding.EncodeToString(sealed), nil
+}
+
+func newMediaTokenAEAD(secret string) (cipher.AEAD, error) {
+	if strings.TrimSpace(secret) == "" {
+		return nil, errMediaTokenInvalid
+	}
+	key := sha256.Sum256([]byte("gcs-saker/media-token/v2\x00" + secret))
+	block, err := aes.NewCipher(key[:])
+	if err != nil {
+		return nil, err
+	}
+	return cipher.NewGCM(block)
 }

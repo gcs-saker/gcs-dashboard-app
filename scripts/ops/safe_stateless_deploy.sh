@@ -68,5 +68,8 @@ done
 "${compose[@]}" exec -T edge \
   wget --timeout=10 --tries=1 -q -O- \
   "${HEALTH_URL:-http://127.0.0.1/readyz}" >/dev/null
+if [[ -n "${PUBLIC_TLS_HOST:-}" ]]; then
+  "${ROOT}/scripts/ops/check_public_tls.sh" "${PUBLIC_TLS_HOST}" "${PUBLIC_TLS_PORT:-443}"
+fi
 trap - ERR
 echo "stateless deployment completed; stateful and external-image services were not recreated"

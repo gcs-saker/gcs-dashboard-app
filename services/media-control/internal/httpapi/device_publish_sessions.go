@@ -97,6 +97,7 @@ func (s Server) createDevicePublishSession(w http.ResponseWriter, r *http.Reques
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
 		return
 	}
+	publicStreamID, publicPath := opaqueDeviceStreamIdentity(s.publishToken, authorization.DeviceUUID, authorization.SensorID)
 	now := s.now()
 	renewalToken, err := secureOpaqueToken("gcs_renew_")
 	if err != nil {
@@ -110,7 +111,7 @@ func (s Server) createDevicePublishSession(w http.ResponseWriter, r *http.Reques
 	}
 	session := domain.PublishSession{
 		SessionID: sessionID, DeviceUUID: authorization.DeviceUUID, SensorID: authorization.SensorID,
-		StreamID: authorization.StreamID, Path: authorization.Path, GroupID: authorization.PublisherGroupID,
+		StreamID: publicStreamID, Path: publicPath, GroupID: authorization.PublisherGroupID,
 		CredentialVersion: authorization.CredentialVersion, DevicePolicyVersion: authorization.DevicePolicyVersion,
 		Status: domain.PublishSessionActive, RenewalTokenHash: s.hashRenewalToken(renewalToken), RenewalTokenVersion: 1,
 		PublishTokenExpiresAt: now.Add(publishAccessTTL), RenewalTokenExpiresAt: now.Add(publishRenewalTTL),
@@ -236,6 +237,16 @@ func (s Server) hashRenewalToken(token string) []byte {
 	mac := hmac.New(sha256.New, []byte(s.publishToken))
 	mac.Write([]byte(token))
 	return mac.Sum(nil)
+}
+
+func opaqueDeviceStreamIdentity(secret, deviceUUID, sensorID string) (string, string) {
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write([]byte("gcs-saker/device-stream/v1\x00"))
+	_, _ = mac.Write([]byte(deviceUUID))
+	_, _ = mac.Write([]byte("\x00"))
+	_, _ = mac.Write([]byte(sensorID))
+	handle := "pub_" + base64.RawURLEncoding.EncodeToString(mac.Sum(nil)[:20])
+	return "raw.device." + handle, "raw/device/" + handle
 }
 func bearerToken(value string) string {
 	scheme, token, ok := strings.Cut(strings.TrimSpace(value), " ")
