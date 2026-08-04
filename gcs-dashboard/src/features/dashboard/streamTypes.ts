@@ -37,7 +37,6 @@ export interface DashboardStreamSlot {
   aiModeEnabled?: boolean;
   connectedDeviceId?: string | null;
   streamPath?: string | null;
-  sourceUrl?: string | null;
   geometry?: DashboardStreamGeometry | null;
 }
 

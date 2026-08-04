@@ -1,11 +1,6 @@
 import { LOCAL_WEBCAM_STREAM_ID } from "@/config";
-import { normalizeStreamAddress } from "./streamAddress";
 import type { StreamDeviceOption } from "./streamDeviceContracts";
-import {
-  defaultGeometryForStream,
-  mediaTypeFromStreamPath,
-  modeForMediaType,
-} from "./streamDeviceMapping";
+import { modeForMediaType } from "./streamDeviceMapping";
 import type { DashboardStreamSlot } from "./streamTypes";
 
 export function connectDeviceToStreamSlot(
@@ -19,7 +14,6 @@ export function connectDeviceToStreamSlot(
     mode: modeForMediaType(device.mediaType),
     status: device.status,
     streamPath: device.streamPath,
-    sourceUrl: device.sourceUrl ?? null,
     geometry: device.geometry,
   };
 }
@@ -28,28 +22,10 @@ export function disconnectStreamSlot(stream: DashboardStreamSlot): DashboardStre
   return {
     ...stream,
     connectedDeviceId: null,
-    detail: "장비 미연결",
+    detail: "스트림 미선택",
     status: "offline",
     streamPath: null,
-    sourceUrl: null,
     geometry: null,
-  };
-}
-
-export function createManualStreamDeviceOption(
-  address: string,
-  displayName: string,
-  fallbackTitle: string,
-): StreamDeviceOption {
-  const streamPath = normalizeStreamAddress(address);
-  return {
-    id: `manual-${streamPath}`,
-    name: displayName.trim() || fallbackTitle || streamPath,
-    streamPath,
-    sourceUrl: address.trim(),
-    status: "degraded",
-    mediaType: mediaTypeFromStreamPath(streamPath),
-    geometry: defaultGeometryForStream(streamPath, "device"),
   };
 }
 

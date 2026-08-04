@@ -25,7 +25,6 @@ function streamSlot(overrides: Partial<DashboardStreamSlot> = {}): DashboardStre
     detail: "전방 EO / raw.sample.front",
     connectedDeviceId: "device-drn-01-front",
     streamPath: "raw.sample.front",
-    sourceUrl: null,
     geometry: BASE_GEOMETRY,
     ...overrides,
   };
@@ -38,7 +37,6 @@ function streamDevice(overrides: Partial<StreamDeviceOption> = {}): StreamDevice
     mediaType: "eo",
     status: "online",
     streamPath: "raw.sample.front",
-    sourceUrl: null,
     geometry: BASE_GEOMETRY,
     ...overrides,
   };

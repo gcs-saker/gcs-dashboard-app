@@ -41,7 +41,6 @@ function mergeExistingStreamSlot(
     detail: `${device.name} / ${device.streamPath}`,
     mode: modeForMediaType(device.mediaType),
     status: device.status,
-    sourceUrl: device.sourceUrl ?? stream.sourceUrl ?? null,
     geometry: shouldPreferDeviceGeometry(device.geometry) ? device.geometry : stream.geometry ?? device.geometry,
   }];
 }
@@ -61,7 +60,6 @@ function discoverStreamSlots(
       detail: `${device.name} / ${device.streamPath}`,
       connectedDeviceId: device.id,
       streamPath: device.streamPath,
-      sourceUrl: device.sourceUrl ?? null,
       geometry: device.geometry,
     }));
 }

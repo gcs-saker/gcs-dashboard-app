@@ -3,7 +3,6 @@ import { AuthApiError } from "@auth/authApi";
 import { DEFAULT_DASHBOARD_STREAMS } from "./streamTypes";
 import {
   connectDeviceToStreamSlot,
-  createManualStreamDeviceOption,
   disconnectStreamSlot,
   buildTelemetryHistoryPath,
   fetchTelemetryHistory,
@@ -11,7 +10,6 @@ import {
   fetchStreamDeviceOptions,
   mergeStreamSlotsWithDevices,
   MOCK_STREAM_DEVICES,
-  normalizeStreamAddress,
   preferredSelectedStreamId,
 } from "./streamDevices";
 
@@ -24,28 +22,6 @@ describe("streamDevices", () => {
     expect(connected.status).toBe("online");
     expect(connected.detail).toBe("DRN-01 전방 EO / raw.sample.front");
     expect(connected.geometry?.fovDeg).toBe(72);
-  });
-
-  test("normalizes manual WebRTC/HLS addresses into stream paths", () => {
-    expect(normalizeStreamAddress("raw.local.webcam")).toBe("raw.local.webcam");
-    expect(normalizeStreamAddress("/webrtc/raw/local/webcam/whep")).toBe("raw.local.webcam");
-    expect(normalizeStreamAddress("https://a4ai.tplinkdns.com/hls/raw/local/webcam/index.m3u8")).toBe("raw.local.webcam");
-  });
-
-  test("creates a manual device option with a remembered source URL", () => {
-    const device = createManualStreamDeviceOption(
-      "https://a4ai.tplinkdns.com/webrtc/raw/local/webcam/whep",
-      "휴대폰 후면 카메라",
-      "CCTV 01",
-    );
-
-    expect(device).toMatchObject({
-      id: "manual-raw.local.webcam",
-      name: "휴대폰 후면 카메라",
-      streamPath: "raw.local.webcam",
-      sourceUrl: "https://a4ai.tplinkdns.com/webrtc/raw/local/webcam/whep",
-      status: "degraded",
-    });
   });
 
   test("disconnects a stream slot without removing the slot itself", () => {

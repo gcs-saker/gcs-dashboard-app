@@ -120,7 +120,6 @@ export function useDashboardPageController(): DashboardPageViewProps {
       onCancelWidgetDialog: actions.cancelWidgetDialog,
       onCloseAssetDrawer: actions.closeAssetDrawer,
       onClosePopout: closePopout,
-      onConnectAddress: actions.connectStreamAddress,
       onConnectDevice: actions.connectStreamDevice,
       onDisconnectStream: actions.disconnectCurrentStreamSlot,
       onResetLayout: actions.resetLayout,

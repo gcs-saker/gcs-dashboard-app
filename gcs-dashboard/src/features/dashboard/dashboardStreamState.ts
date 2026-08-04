@@ -30,7 +30,6 @@ function isSameStreamDevice(device: StreamDeviceOption, nextDevice: StreamDevice
     device.mediaType === nextDevice.mediaType &&
     device.status === nextDevice.status &&
     device.streamPath === nextDevice.streamPath &&
-    device.sourceUrl === nextDevice.sourceUrl &&
     device.geometry.lat === nextDevice.geometry.lat &&
     device.geometry.lng === nextDevice.geometry.lng &&
     device.geometry.altitudeM === nextDevice.geometry.altitudeM &&
@@ -53,7 +52,6 @@ function isSameStreamSlot(stream: DashboardStreamSlot, nextStream: DashboardStre
     stream.detail === nextStream.detail &&
     stream.connectedDeviceId === nextStream.connectedDeviceId &&
     stream.streamPath === nextStream.streamPath &&
-    stream.sourceUrl === nextStream.sourceUrl &&
     stream.aiModeEnabled === nextStream.aiModeEnabled &&
     stream.geometry?.lat === nextStream.geometry?.lat &&
     stream.geometry?.lng === nextStream.geometry?.lng &&
