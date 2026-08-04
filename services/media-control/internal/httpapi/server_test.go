@@ -665,6 +665,34 @@ func TestDashboardTalkbackPublishRejectsNonRawTarget(t *testing.T) {
 	}
 }
 
+func TestDashboardTalkbackPlaybackUsesAuthorizedShortLivedPath(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.drone-01.front/talkback-playback", nil)
+	request.Header.Set("Authorization", "Bearer receiver-token")
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	payload := decodeTestJSON[streamPlaybackResponse](t, recorder)
+	if !strings.HasPrefix(payload.PlaybackURLs.WebRTC, "http://edge.local/webrtc/talkback/raw/drone-01/front/operator/whep?") {
+		t.Fatalf("unexpected talkback playback URL %v", payload.PlaybackURLs.WebRTC)
+	}
+	assertMediaURLToken(t, payload.PlaybackURLs.WebRTC, playbackTokenQueryKey, mediaMTXActionPlayback, "talkback/raw/drone-01/front/operator")
+	playbackURL, err := url.Parse(payload.PlaybackURLs.WebRTC)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authRequest := httptest.NewRequest(http.MethodPost, routeMediaMTXAuth, strings.NewReader(`{"action":"read","path":"talkback/raw/drone-01/front/operator","protocol":"webrtc","query":"`+playbackURL.RawQuery+`"}`))
+	authRecorder := httptest.NewRecorder()
+	server.Routes().ServeHTTP(authRecorder, authRequest)
+	if authRecorder.Code != http.StatusNoContent {
+		t.Fatalf("expected MediaMTX talkback playback authorization, got %d: %s", authRecorder.Code, authRecorder.Body.String())
+	}
+}
+
 func TestDashboardPublishUrlUsesDevicePolicyWithoutGroupID(t *testing.T) {
 	var observed domain.DevicePublishCommand
 	ice, _ := domain.NewIceServer("turn:a4ai.tplinkdns.com:3478?transport=udp", domain.IceServerTURN, "gcs-turn", "secret", true)

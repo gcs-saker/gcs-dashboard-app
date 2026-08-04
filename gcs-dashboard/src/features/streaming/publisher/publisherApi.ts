@@ -35,6 +35,10 @@ export async function fetchAuthorizedPublishSession(
   };
 }
 
+interface AuthorizedTalkbackPlaybackResponse {
+  playbackUrls?: { webrtc?: string | null };
+}
+
 export async function fetchAuthorizedTalkbackSession(
   streamId: string,
   operatorId: string | undefined,
@@ -57,4 +61,24 @@ export async function fetchAuthorizedTalkbackSession(
     iceServers: Array.isArray(payload.iceServers) ? payload.iceServers : [],
     whipUrl: payload.whipUrl,
   };
+}
+
+export async function fetchAuthorizedTalkbackPlayback(
+  streamId: string,
+  fetcher: typeof fetch,
+): Promise<string> {
+  const response = await authenticatedFetch(
+    streamApiV1Url(`${STREAM_API_ROUTES.streams}/${streamId}/talkback-playback`),
+    { method: "GET", headers: STREAM_JSON_ACCEPT_HEADERS },
+    fetcher,
+  );
+  if (!response.ok) {
+    throw new Error(`Talkback playback authorization failed with ${response.status}`);
+  }
+  const payload = (await response.json()) as AuthorizedTalkbackPlaybackResponse;
+  const whepUrl = payload.playbackUrls?.webrtc;
+  if (!whepUrl) {
+    throw new Error("Talkback playback authorization response did not include a WHEP URL");
+  }
+  return whepUrl;
 }

@@ -124,6 +124,13 @@ paths:
         - { $ref: '#/components/parameters/StreamId' }
         - { name: operatorId, in: query, required: false, description: 브라우저가 생성한 비식별 세션 ID, schema: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$' } }
       responses: { '200': { $ref: '#/components/responses/Json' }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' }, '422': { $ref: '#/components/responses/Error' } }
+  /media-control/api/v1/streams/{streamId}/talkback-playback:
+    get:
+      tags: [Media]
+      summary: 선택 stream 대상 단기 음성 수신 세션 발급
+      description: 원본 stream control 권한을 확인한 뒤 서버가 talkback WHEP 경로와 단기 토큰을 결정한다. 재생 주소는 UI에 표시하거나 저장하지 않는다.
+      parameters: [ { $ref: '#/components/parameters/StreamId' } ]
+      responses: { '200': { $ref: '#/components/responses/Json' }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' }, '422': { $ref: '#/components/responses/Error' } }
   /media-control/api/v1/streams/{streamId}/status:
     get: { tags: [Media], summary: stream 상태, parameters: [ { $ref: '#/components/parameters/StreamId' } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
   /media-control/api/v1/device/publish-sessions:
