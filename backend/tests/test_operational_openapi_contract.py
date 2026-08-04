@@ -1,0 +1,97 @@
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+OPENAPI = REPO_ROOT / "services/auth-policy/src/main/resources/openapi/gcs-saker-operations.openapi.yaml"
+AUTH_SECURITY = REPO_ROOT / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthSecurityRouteContract.kt"
+EDGE_CONFIG = REPO_ROOT / "deploy/nginx/single-node.poc.conf"
+
+
+PUBLIC_EDGE_PATHS = (
+    "/auth-policy/auth/signup",
+    "/auth-policy/auth/login",
+    "/auth-policy/auth/refresh",
+    "/auth-policy/auth/me",
+    "/auth-policy/auth/logout",
+    "/auth-policy/admin/signup-tokens",
+    "/auth-policy/admin/provisioning-tokens",
+    "/auth-policy/admin/devices",
+    "/api/v1/groups",
+    "/api/v1/geofences",
+    "/api/telemetry/all",
+    "/api/telemetry/{uuid}/history",
+    "/api/asset/{gatewayUuid}",
+    "/api/ops/server-health/snapshots",
+    "/api/ops/stream-sessions",
+    "/api/ops/stream-sessions/stream",
+    "/api/ops/events",
+    "/api/ops/events/page",
+    "/api/ops/events/stream",
+    "/api/ops/events/metrics",
+    "/api/ops/events/buckets",
+    "/api/ops/time/status",
+    "/api/ops/time/check",
+    "/api/ops/time/config",
+    "/media-control/healthz",
+    "/media-control/readyz",
+    "/media-control/api/v1/streams",
+    "/media-control/api/v1/streams/ice-servers",
+    "/media-control/api/v1/streams/{streamId}",
+    "/media-control/api/v1/streams/{streamId}/playback",
+    "/media-control/api/v1/streams/{streamId}/publish",
+    "/media-control/api/v1/streams/{streamId}/status",
+    "/media-control/api/v1/device/publish-sessions",
+    "/api/v1/device/publish-sessions",
+    "/api/v1/devices/{deviceUuid}/telemetry",
+    "/gcs.saker.v1.SakerGatewayService/Exchange",
+    "/webrtc/{streamPath}/whip",
+    "/webrtc/{streamPath}/whep",
+    "/hls/{streamPath}/index.m3u8",
+    "/ws/v1/telemetry",
+)
+
+
+def test_operational_openapi_covers_public_edge_contracts() -> None:
+    document = OPENAPI.read_text(encoding="utf-8")
+
+    for path in PUBLIC_EDGE_PATHS:
+        assert f"  {path}:" in document, f"missing operational API path: {path}"
+
+
+def test_operational_swagger_keeps_spec_admin_only_and_ui_read_only() -> None:
+    security = AUTH_SECURITY.read_text(encoding="utf-8")
+    controller = (
+        REPO_ROOT
+        / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalApiDocumentationController.kt"
+    ).read_text(encoding="utf-8")
+
+    assert 'private const val ADMIN_PREFIX = "/admin/**"' in security
+    assert 'const val ROOT = "/admin/api-docs"' in controller
+    assert "OperationalApiDocumentationRoutes.INITIALIZER" in security
+    assert "supportedSubmitMethods: []" in controller
+    assert "persistAuthorization: false" in controller
+    assert "request.headers.Authorization" in controller
+    assert "window.prompt" in controller
+    assert "noindex,nofollow,noarchive" in controller
+
+
+def test_internal_authentication_and_debug_boundaries_remain_blocked_at_edge() -> None:
+    edge = EDGE_CONFIG.read_text(encoding="utf-8")
+    document = OPENAPI.read_text(encoding="utf-8")
+
+    assert "location = /auth-policy/policy/devices/authenticate" in edge
+    assert "x-gcs-exposure: internal-blocked" in document
+    assert "location = /media-control/metrics" in edge
+    assert "location /auth-policy/actuator/" in edge
+
+
+def test_openapi_contains_no_known_secret_material_or_secret_examples() -> None:
+    document = OPENAPI.read_text(encoding="utf-8")
+    forbidden = ("gho_", "@2258703325", "x-gcs-gateway-token:", "example: gcs_renew_", "example: gcs_boot_")
+
+    for value in forbidden:
+        assert value not in document
+
+    assert "writeOnly: true" in document
+    assert "Cache-Control" in document
+    assert "no-store" in document

@@ -43,6 +43,15 @@ object AuthSecurityRouteContract {
         RouteMatcher(HttpMethod.GET, ACTUATOR_HEALTH),
         RouteMatcher(HttpMethod.GET, ACTUATOR_INFO),
         RouteMatcher(HttpMethod.GET, ACTUATOR_PROMETHEUS),
+        RouteMatcher(
+            HttpMethod.GET,
+            OperationalApiDocumentationRoutes.ROOT + OperationalApiDocumentationRoutes.SWAGGER,
+        ),
+        RouteMatcher(
+            HttpMethod.GET,
+            OperationalApiDocumentationRoutes.ROOT + OperationalApiDocumentationRoutes.INITIALIZER,
+        ),
+        RouteMatcher(HttpMethod.GET, "/webjars/swagger-ui/**"),
         RouteMatcher(HttpMethod.OPTIONS, ALL_PATHS),
         RouteMatcher(null, ERROR_PATH),
         RouteMatcher(null, AUTH_PREFIX),

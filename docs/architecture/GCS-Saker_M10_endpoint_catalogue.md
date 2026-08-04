@@ -1,5 +1,9 @@
 # GCS-Saker M10 Endpoint Catalogue
 
+> 운영용 실행 가능 명세는 `docs/api/GCS-Saker_Operational_Swagger_Runbook.md`와
+> `services/auth-policy/src/main/resources/openapi/gcs-saker-operations.openapi.yaml`을 기준으로 한다.
+> Swagger UI는 관리자 전용이며 요청 실행 기능은 비활성화되어 있다.
+
 이 문서는 협업자가 GCS-Saker에 붙을 때 필요한 URL, 인증 방식, 요청 데이터, 프로토콜 경계를 한 곳에서 확인하기 위한 기준 문서다.
 
 ## 1. 공개 인입 원칙

@@ -29,6 +29,9 @@ func TestDevicePublishSessionUsesServerOwnedIdentityAndRotatesRenewalToken(t *te
 	if recorder.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d: %s", recorder.Code, recorder.Body.String())
 	}
+	if recorder.Header().Get("Cache-Control") != "no-store, private" {
+		t.Fatalf("publish token response must not be cached: %q", recorder.Header().Get("Cache-Control"))
+	}
 	created := decodeTestJSON[publishSessionResponse](t, recorder)
 	if observed.SensorID != "front" || observed.StreamID != "" || observed.Path != "" {
 		t.Fatalf("authentication request must contain identity and sensor only: %#v", observed)
@@ -46,6 +49,9 @@ func TestDevicePublishSessionUsesServerOwnedIdentityAndRotatesRenewalToken(t *te
 	server.Routes().ServeHTTP(renewRecorder, renewRequest)
 	if renewRecorder.Code != http.StatusOK {
 		t.Fatalf("expected renewal 200, got %d: %s", renewRecorder.Code, renewRecorder.Body.String())
+	}
+	if renewRecorder.Header().Get("Cache-Control") != "no-store, private" {
+		t.Fatalf("renewed token response must not be cached: %q", renewRecorder.Header().Get("Cache-Control"))
 	}
 	renewed := decodeTestJSON[renewPublishSessionResponse](t, renewRecorder)
 	if renewed.RenewalToken == created.RenewalToken || renewed.PublishToken == created.PublishToken {

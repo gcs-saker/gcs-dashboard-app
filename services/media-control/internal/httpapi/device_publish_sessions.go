@@ -74,6 +74,7 @@ func (s Server) devicePublishSessions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) createDevicePublishSession(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store, private")
 	deviceUUID := strings.TrimSpace(r.Header.Get(deviceUUIDHeader))
 	credential := strings.TrimSpace(r.Header.Get(deviceCredentialHeader))
 	if deviceUUID == "" || credential == "" {
@@ -142,6 +143,7 @@ func (s Server) createDevicePublishSession(w http.ResponseWriter, r *http.Reques
 }
 
 func (s Server) renewDevicePublishSession(w http.ResponseWriter, r *http.Request, sessionID string) {
+	w.Header().Set("Cache-Control", "no-store, private")
 	raw := bearerToken(r.Header.Get(authorizationHeader))
 	if raw == "" {
 		writeJSON(w, http.StatusUnauthorized, errorPayload(errPublishSessionRenewalDenied))

@@ -19,8 +19,10 @@ class JdbcDeviceProvisioningTokenRepository(
         AuthPolicyJdbcMigrations.ensure(dataSource)
     }
 
-    override fun list(): List<DeviceProvisioningTokenRecord> =
-        jdbc.query(DeviceProvisioningTokenSql.selectAll, rowMapper)
+    override fun list(): List<DeviceProvisioningTokenRecord> {
+        jdbc.update(DeviceProvisioningTokenSql.markExpired, DeviceProvisioningTokenStatus.EXPIRED.apiValue())
+        return jdbc.query(DeviceProvisioningTokenSql.selectAll, rowMapper)
+    }
 
     override fun activeCandidates(now: Instant): List<DeviceProvisioningTokenRecord> =
         jdbc.query(DeviceProvisioningTokenSql.selectActiveCandidates, rowMapper, Timestamp.from(now))
@@ -47,9 +49,20 @@ class JdbcDeviceProvisioningTokenRepository(
         jdbc.update(
             DeviceProvisioningTokenSql.consume,
             DeviceProvisioningTokenStatus.EXHAUSTED.apiValue(),
+            Timestamp.from(now),
             tokenId,
             DeviceProvisioningTokenStatus.ACTIVE.apiValue(),
             Timestamp.from(now),
+        ) == 1
+
+    override fun revoke(tokenId: String, revokedBy: String, now: Instant): Boolean =
+        jdbc.update(
+            DeviceProvisioningTokenSql.revoke,
+            DeviceProvisioningTokenStatus.REVOKED.apiValue(),
+            Timestamp.from(now),
+            revokedBy,
+            tokenId,
+            DeviceProvisioningTokenStatus.ACTIVE.apiValue(),
         ) == 1
 
     private companion object {
@@ -67,6 +80,9 @@ class JdbcDeviceProvisioningTokenRepository(
                 expiresAt = rs.getTimestamp(DeviceProvisioningTokenColumns.expiresAt).toInstant(),
                 createdBy = rs.getString(DeviceProvisioningTokenColumns.createdBy),
                 createdAt = rs.getTimestamp(DeviceProvisioningTokenColumns.createdAt).toInstant(),
+                lastUsedAt = rs.getTimestamp(DeviceProvisioningTokenColumns.lastUsedAt)?.toInstant(),
+                revokedAt = rs.getTimestamp(DeviceProvisioningTokenColumns.revokedAt)?.toInstant(),
+                revokedBy = rs.getString(DeviceProvisioningTokenColumns.revokedBy),
             )
         }
     }
@@ -85,16 +101,21 @@ private object DeviceProvisioningTokenColumns {
     const val expiresAt = "expires_at"
     const val createdBy = "created_by"
     const val createdAt = "created_at"
+    const val lastUsedAt = "last_used_at"
+    const val revokedAt = "revoked_at"
+    const val revokedBy = "revoked_by"
 }
 
 private object DeviceProvisioningTokenSql {
     const val selectAll = """
-        SELECT token_id, token_hash, group_id, label, status, max_uses, used_count, expires_at, created_by, created_at
+        SELECT token_id, token_hash, group_id, label, status, max_uses, used_count, expires_at, created_by, created_at,
+               last_used_at, revoked_at, revoked_by
         FROM device_provisioning_tokens
         ORDER BY created_at DESC, token_id ASC
     """
     const val selectActiveCandidates = """
-        SELECT token_id, token_hash, group_id, label, status, max_uses, used_count, expires_at, created_by, created_at
+        SELECT token_id, token_hash, group_id, label, status, max_uses, used_count, expires_at, created_by, created_at,
+               last_used_at, revoked_at, revoked_by
         FROM device_provisioning_tokens
         WHERE status = 'active'
           AND used_count < max_uses
@@ -111,10 +132,20 @@ private object DeviceProvisioningTokenSql {
         UPDATE device_provisioning_tokens
         SET used_count = used_count + 1,
             status = CASE WHEN used_count + 1 >= max_uses THEN ? ELSE status END,
+            last_used_at = ?,
             updated_at = CURRENT_TIMESTAMP
         WHERE token_id = ?
           AND status = ?
           AND used_count < max_uses
           AND expires_at > ?
+    """
+    const val markExpired = """
+        UPDATE device_provisioning_tokens SET status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE status = 'active' AND expires_at <= CURRENT_TIMESTAMP
+    """
+    const val revoke = """
+        UPDATE device_provisioning_tokens
+        SET status = ?, revoked_at = ?, revoked_by = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE token_id = ? AND status = ?
     """
 }

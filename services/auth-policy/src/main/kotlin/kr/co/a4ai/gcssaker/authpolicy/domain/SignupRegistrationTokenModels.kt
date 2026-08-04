@@ -18,9 +18,15 @@ data class SignupRegistrationTokenRecord(
     val expiresAt: Instant,
     val createdBy: String,
     val createdAt: Instant,
+    val status: SignupRegistrationTokenStatus = SignupRegistrationTokenStatus.ACTIVE,
+    val lastUsedAt: Instant? = null,
+    val revokedAt: Instant? = null,
+    val revokedBy: String? = null,
 ) {
-    fun activeAt(now: Instant): Boolean = usedCount < maxUses && expiresAt.isAfter(now)
+    fun activeAt(now: Instant): Boolean = status == SignupRegistrationTokenStatus.ACTIVE && usedCount < maxUses && expiresAt.isAfter(now)
 }
+
+enum class SignupRegistrationTokenStatus { ACTIVE, EXHAUSTED, REVOKED, EXPIRED }
 
 data class SignupRegistrationTokenIssueCommand(
     val companyId: Int,
@@ -41,6 +47,7 @@ interface SignupRegistrationTokenRepository {
     fun activeCandidates(now: Instant): List<SignupRegistrationTokenRecord>
     fun save(record: SignupRegistrationTokenRecord): SignupRegistrationTokenRecord
     fun consume(tokenId: String, now: Instant): Boolean
+    fun revoke(tokenId: String, revokedBy: String, now: Instant): Boolean
 }
 
 interface SignupTransactionBoundary {
@@ -58,7 +65,17 @@ class InMemorySignupRegistrationTokenRepository : SignupRegistrationTokenReposit
     @Synchronized override fun save(record: SignupRegistrationTokenRecord) = record.also { records[it.tokenId] = it }
     @Synchronized override fun consume(tokenId: String, now: Instant): Boolean {
         val record = records[tokenId]?.takeIf { it.activeAt(now) } ?: return false
-        records[tokenId] = record.copy(usedCount = record.usedCount + 1)
+        val usedCount = record.usedCount + 1
+        records[tokenId] = record.copy(
+            usedCount = usedCount,
+            status = if (usedCount >= record.maxUses) SignupRegistrationTokenStatus.EXHAUSTED else record.status,
+            lastUsedAt = now,
+        )
+        return true
+    }
+    @Synchronized override fun revoke(tokenId: String, revokedBy: String, now: Instant): Boolean {
+        val record = records[tokenId]?.takeIf { it.status == SignupRegistrationTokenStatus.ACTIVE } ?: return false
+        records[tokenId] = record.copy(status = SignupRegistrationTokenStatus.REVOKED, revokedAt = now, revokedBy = revokedBy)
         return true
     }
 }
@@ -106,6 +123,9 @@ class SignupRegistrationTokenService(
     }
 
     fun list(): List<SignupRegistrationTokenRecord> = repository.list()
+
+    fun revoke(tokenId: String, revokedBy: String): Boolean =
+        repository.revoke(tokenId, revokedBy, clock.instant())
 
     override fun findByCode(code: String): SignupInvite? {
         return useInvite(code) { it }
