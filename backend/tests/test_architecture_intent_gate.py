@@ -76,6 +76,7 @@ def test_publisher_root_normalizes_to_mobile_publisher_route() -> None:
     nginx = SINGLE_NODE_NGINX.read_text(encoding="utf-8")
 
     assert "location = /publisher {" in nginx
+    assert "absolute_redirect off;" in nginx
     assert "return 308 /publisher/;" in nginx
     assert "location /publisher/ {" in nginx
     assert "proxy_pass http://$mobile_publisher_host:8080;" in nginx
