@@ -5,12 +5,17 @@ COPY gradle ./gradle
 COPY src ./src
 RUN gradle --no-daemon clean bootJar
 
-FROM eclipse-temurin:21.0.8_9-jre@sha256:66bb900643426ad01996d25bada7d56751913f9cec3b827fcb715d2ec9a0fbfc
+FROM eclipse-temurin:21-jre@sha256:273396ed5998598ed1091e8d72711c2d36980a0e65103859c55a4e977a41ffd3
 ARG SOURCE_COMMIT=unknown
 LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
 WORKDIR /app
 COPY --from=build /workspace/build/libs/*.jar /app/auth-policy.jar
-RUN groupadd --system --gid 10002 gcs && useradd --system --uid 10002 --gid gcs --home /app --shell /usr/sbin/nologin gcs \
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -f /usr/bin/pebble \
+    && groupadd --system --gid 10002 gcs \
+    && useradd --system --uid 10002 --gid gcs --home /app --shell /usr/sbin/nologin gcs \
     && chown -R gcs:gcs /app
 USER 10002:10002
 EXPOSE 8080
