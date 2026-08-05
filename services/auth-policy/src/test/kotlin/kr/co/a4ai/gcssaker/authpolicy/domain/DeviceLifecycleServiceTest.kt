@@ -59,6 +59,18 @@ class DeviceLifecycleServiceTest {
     }
 
     @Test
+    fun `register derives server owned stream paths when caller omits addresses`() {
+        val command = DeviceLifecycleFixtures.registerCommand().copy(streamPaths = emptyList())
+
+        val issue = service.register(command)
+
+        assertEquals(
+            "raw/${DeviceLifecycleFixtures.DEVICE_UUID}/${DeviceLifecycleFixtures.SENSOR_ID}",
+            issue.device.streamPaths.values.single().streamPath,
+        )
+    }
+
+    @Test
     fun `activate and disable change device status`() {
         service.register(DeviceLifecycleFixtures.registerCommand())
 

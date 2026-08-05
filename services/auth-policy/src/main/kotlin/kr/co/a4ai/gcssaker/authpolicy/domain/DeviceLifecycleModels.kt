@@ -59,6 +59,11 @@ class DeviceLifecycleService(
     fun register(command: RegisterDeviceCommand): DeviceCredentialIssue {
         val deviceUuid = uniqueDeviceUuid()
         val credential = credentialGenerator.generate()
+        val streams = if (command.streamPaths.isEmpty()) {
+            canonicalStreams(deviceUuid, command.sensors)
+        } else {
+            RegisteredDeviceStreams(command.streamPaths)
+        }
         val device = RegisteredDevice(
             deviceUuid = deviceUuid,
             groupId = GroupId(command.groupId),
@@ -67,7 +72,7 @@ class DeviceLifecycleService(
             status = RegisteredDeviceStatus.PENDING,
             deviceType = command.deviceType?.let(::parseDeviceType) ?: DeviceType.DRONE,
             sensors = RegisteredDeviceSensors(command.sensors),
-            streamPaths = RegisteredDeviceStreams(command.streamPaths),
+            streamPaths = streams,
         )
         return DeviceCredentialIssue(devices.save(device), credential)
     }
