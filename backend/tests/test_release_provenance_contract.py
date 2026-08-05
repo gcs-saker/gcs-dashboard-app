@@ -58,7 +58,7 @@ def test_deploy_is_server01_only_and_rolls_back_with_previous_compose() -> None:
     assert 'DEPLOYMENT_TARGET}" == "server01-production"' in script
     assert 'PROJECT_NAME}" == "gcs-saker-m2-production"' in script
     assert "com.docker.compose.project.config_files" in script
-    assert 'previous_compose=(docker compose' in script
+    assert "previous_compose=(docker compose" in script
     assert '"${previous_compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"' in script
     assert script.index('"${compose[@]}" build') < script.index("trap rollback ERR")
 
@@ -68,7 +68,9 @@ def test_deploy_guards_stateful_container_identity() -> None:
 
     assert "stateful-containers.before.env" in script
     assert "stateful/external service was replaced" in script
-    assert "UNCHANGED_SERVICES=(mobile-publisher postgres-geo redis mqtt mediamtx turn-primary turn-secondary)" in script
+    assert (
+        "UNCHANGED_SERVICES=(mobile-publisher postgres-geo redis mqtt mediamtx turn-primary turn-secondary)" in script
+    )
 
 
 def test_mqtt_password_preparer_grants_only_runtime_read_acl() -> None:
