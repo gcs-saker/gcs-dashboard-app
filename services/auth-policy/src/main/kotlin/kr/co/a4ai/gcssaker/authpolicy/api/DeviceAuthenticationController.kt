@@ -12,6 +12,7 @@ import org.springframework.web.server.ResponseStatusException
 data class DeviceAuthenticationRequest(val deviceUuid: String, val credential: String)
 data class DeviceAuthenticationResponse(
     val deviceUuid: String,
+    val groupId: String,
     val credentialVersion: Long,
     val devicePolicyVersion: Long,
 )
@@ -30,6 +31,7 @@ class DeviceAuthenticationController(
         }
         return DeviceAuthenticationResponse(
             deviceUuid = device.deviceUuid,
+            groupId = device.groupId.value,
             credentialVersion = device.credentialVersion,
             devicePolicyVersion = device.policyVersion,
         )
