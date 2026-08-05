@@ -336,6 +336,14 @@ def test_single_node_edge_depends_on_active_cutover_services() -> None:
     assert "backend" not in edge_depends_on
 
 
+def test_single_node_tmpfs_options_remain_one_mount_spec_per_service() -> None:
+    compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
+
+    assert compose["services"]["backend"]["tmpfs"] == ["/tmp:rw,noexec,nosuid,nodev,size=64m"]
+    assert compose["services"]["auth-policy"]["tmpfs"] == ["/tmp:rw,noexec,nosuid,nodev,size=128m"]
+    assert compose["services"]["media-control"]["tmpfs"] == ["/tmp:rw,noexec,nosuid,nodev,size=64m"]
+
+
 def test_https_edge_healthcheck_allows_temporary_self_signed_certificate() -> None:
     override = load_yaml(EDGE_HTTPS_OVERRIDE_FILE)
     healthcheck = override["services"]["edge"]["healthcheck"]["test"]

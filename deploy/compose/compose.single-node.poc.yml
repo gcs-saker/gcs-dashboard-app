@@ -85,7 +85,7 @@ services:
 
   backend:
     <<: *runtime_hardening
-    tmpfs: [/tmp:rw,noexec,nosuid,nodev,size=64m]
+    tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=64m"]
     mem_limit: ${BACKEND_MEMORY_LIMIT:-768m}
     cpus: ${BACKEND_CPU_LIMIT:-1.5}
     image: ${BACKEND_IMAGE:-gcs-saker-backend:arch-poc}
@@ -147,7 +147,7 @@ services:
 
   auth-policy:
     <<: *runtime_hardening
-    tmpfs: [/tmp:rw,noexec,nosuid,nodev,size=128m]
+    tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=128m"]
     mem_limit: ${AUTH_POLICY_MEMORY_LIMIT:-1g}
     cpus: ${AUTH_POLICY_CPU_LIMIT:-2.0}
     image: ${AUTH_POLICY_IMAGE:-gcs-saker-auth-policy:arch-poc}
@@ -196,7 +196,7 @@ services:
 
   media-control:
     <<: *runtime_hardening
-    tmpfs: [/tmp:rw,noexec,nosuid,nodev,size=64m]
+    tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=64m"]
     mem_limit: ${MEDIA_CONTROL_MEMORY_LIMIT:-768m}
     cpus: ${MEDIA_CONTROL_CPU_LIMIT:-2.0}
     image: ${MEDIA_CONTROL_IMAGE:-gcs-saker-media-control:arch-poc}
