@@ -178,6 +178,7 @@ jobs:
         uses: anchore/scan-action@v6
         with:
           image: gcs-saker-backend:ci
+          config: .github/grype/backend-python312.yaml
           fail-build: true
           severity-cutoff: high
           only-fixed: true

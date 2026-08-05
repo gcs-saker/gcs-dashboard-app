@@ -1,0 +1,30 @@
+# Temporary, narrowly scoped suppressions for Grype's CPython cross-branch
+# matching issue: https://github.com/anchore/grype/issues/2852
+#
+# These rules apply only to the exact CPython binary shipped by the backend
+# image. They must be reviewed or removed by 2026-09-05; the repository
+# contract test enforces that deadline and the complete allowlist.
+ignore:
+  - vulnerability: CVE-2026-11940
+    package: &python312_binary
+      name: python
+      version: 3.12.13
+      type: binary
+  - vulnerability: CVE-2026-11972
+    package: *python312_binary
+  - vulnerability: CVE-2026-15308
+    package: *python312_binary
+  - vulnerability: CVE-2026-3298
+    package: *python312_binary
+  - vulnerability: CVE-2026-3644
+    package: *python312_binary
+  - vulnerability: CVE-2026-4224
+    package: *python312_binary
+  - vulnerability: CVE-2026-4786
+    package: *python312_binary
+  - vulnerability: CVE-2026-6100
+    package: *python312_binary
+  - vulnerability: CVE-2026-7210
+    package: *python312_binary
+  - vulnerability: CVE-2026-9669
+    package: *python312_binary
