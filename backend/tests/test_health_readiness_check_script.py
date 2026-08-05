@@ -8,6 +8,9 @@ BACKEND_DOCKERFILE = REPO_ROOT / "backend" / "Dockerfile"
 BACKEND_PYPROJECT = REPO_ROOT / "backend" / "pyproject.toml"
 BACKEND_PYTHON_VERSION = REPO_ROOT / "backend" / ".python-version"
 MEDIAMTX_CONFIG = REPO_ROOT / "gcs-dashboard" / "mediamtx.yml"
+EXPECTED_BACKEND_RUNTIME = (
+    "python:3.12.13-slim-bookworm@sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b"
+)
 
 
 def test_health_readiness_script_exists_and_has_valid_check_mode():
@@ -49,7 +52,7 @@ def test_backend_runtime_is_pinned_to_python_312():
     pyproject = BACKEND_PYPROJECT.read_text(encoding="utf-8")
     python_version = BACKEND_PYTHON_VERSION.read_text(encoding="utf-8").strip()
 
-    assert "FROM python:3.12.11-slim-bookworm@sha256:" in dockerfile
+    assert dockerfile.count(f"FROM {EXPECTED_BACKEND_RUNTIME}") == 2
     assert 'requires-python = ">=3.12,<3.13"' in pyproject
     assert 'python_version = "3.12"' in pyproject
     assert python_version == "3.12"
