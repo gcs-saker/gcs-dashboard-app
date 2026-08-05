@@ -1,4 +1,5 @@
 import importlib.util
+import os
 from pathlib import Path
 
 import pytest
@@ -43,6 +44,37 @@ def test_mutable_application_image_tag_is_rejected(monkeypatch: pytest.MonkeyPat
 
     with pytest.raises(RuntimeError, match="exact source commit tag"):
         release_gate.application_image_inventory(commit)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX ACL contract")
+def test_private_file_accepts_only_the_named_runtime_read_acl(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    release_gate = load_release_gate()
+    secret = tmp_path / "passwords.local"
+    secret.write_text("health:$hash\n", encoding="utf-8")
+    secret.chmod(0o640)
+    monkeypatch.setattr(
+        release_gate,
+        "run",
+        lambda *args, **kwargs: "user::rw-\nuser:1883:r--\ngroup::---\nmask::r--\nother::---",
+    )
+
+    release_gate.require_private_file(secret, allowed_read_uid="1883")
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX ACL contract")
+def test_private_file_rejects_any_additional_acl_principal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    release_gate = load_release_gate()
+    secret = tmp_path / "passwords.local"
+    secret.write_text("health:$hash\n", encoding="utf-8")
+    secret.chmod(0o640)
+    monkeypatch.setattr(
+        release_gate,
+        "run",
+        lambda *args, **kwargs: "user::rw-\nuser:1883:r--\nuser:2000:r--\ngroup::---\nmask::r--\nother::---",
+    )
+
+    with pytest.raises(RuntimeError, match="beyond owner and runtime uid"):
+        release_gate.require_private_file(secret, allowed_read_uid="1883")
 
 
 def test_deploy_verifies_every_rebuilt_container_revision() -> None:
