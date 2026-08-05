@@ -95,6 +95,8 @@ def test_deploy_is_server01_only_and_rolls_back_with_previous_compose() -> None:
     assert "previous_compose=(docker compose" in script
     assert '"${previous_compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"' in script
     assert script.index('"${compose[@]}" build') < script.index("trap rollback ERR")
+    assert "RELEASE_DIR must be outside the immutable source checkout" in script
+    assert script.index("release_dir_real") < script.index("flyway_file=")
 
 
 def test_deploy_guards_stateful_container_identity() -> None:

@@ -32,6 +32,14 @@ BUILD_SERVICES=(backend auth-policy media-control dashboard)
 UNCHANGED_SERVICES=(mobile-publisher postgres-geo redis mqtt mediamtx turn-primary turn-secondary)
 
 [[ "${RELEASE_DIR}" = /* && -d "${RELEASE_DIR}" ]] || { echo "RELEASE_DIR must be an existing absolute directory" >&2; exit 2; }
+root_real="$(realpath "${ROOT}")"
+release_dir_real="$(realpath "${RELEASE_DIR}")"
+case "${release_dir_real}" in
+  "${root_real}"|"${root_real}"/*)
+    echo "RELEASE_DIR must be outside the immutable source checkout" >&2
+    exit 2
+    ;;
+esac
 compose=(docker compose --project-name "${PROJECT_NAME}" --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
 previous_container_id="$("${compose[@]}" ps -q backend)"
 [[ -n "${previous_container_id}" ]] || { echo "running backend container is required" >&2; exit 2; }
