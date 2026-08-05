@@ -10,6 +10,7 @@ import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthPolicyConfig
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
 import kr.co.a4ai.gcssaker.authpolicy.configuration.OperationalPolicyConfig
 import kr.co.a4ai.gcssaker.authpolicy.configuration.RuntimeEnvReader
+import kr.co.a4ai.gcssaker.authpolicy.configuration.TimeSyncPolicyConfiguration
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.NoopPrincipalCache
@@ -294,7 +295,7 @@ class AuthPolicyConfigTest {
             ),
         )
 
-        val config = AuthPolicyConfig().timeSyncConfigRepository(env).current()
+        val config = TimeSyncPolicyConfiguration().timeSyncConfigRepository(env).current()
 
         assertEquals("10.0.0.10", config.sourceHost)
         assertEquals(123, config.sourcePort)

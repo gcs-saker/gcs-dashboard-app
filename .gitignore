@@ -14,6 +14,7 @@ htmlcov/
 **/htmlcov/
 .mypy_cache/
 .ruff_cache/
+.tools/
 .venv/
 venv/
 backend/venv/

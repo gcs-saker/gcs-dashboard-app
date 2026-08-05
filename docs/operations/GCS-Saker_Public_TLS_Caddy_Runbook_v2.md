@@ -17,6 +17,12 @@ TP-Link DDNS의 권한 DNS가 ACME CA에서 `SERVFAIL` 또는 `NXDOMAIN`을 반�
 
 `deploy/caddy/Caddyfile.tls-alpn-bootstrap`은 외부 80번 포트가 없는 환경에서 TLS-ALPN-01로 인증서를 발급·자동 갱신한다. Caddy data volume은 private 운영 데이터이며 저장소나 이미지에 포함하지 않는다. staging upstream은 Server-02에서 Server-01 주소만 허용하는 LAN 전용 relay를 통과한다.
 
+443 포트의 소유자는 반드시 하나여야 한다. Caddy를 TLS terminator로 사용할 때 host nginx는
+`127.0.0.1:80` application upstream만 제공하고 443을 listen하지 않는다. Caddy와 nginx가 동시에
+443을 점유하도록 실행하면 Caddy가 restart loop에 들어가고 기존 self-signed 인증서가 계속 노출된다.
+전환 전 `ss -ltnp 'sport = :443'`과 `docker ps`로 현재 소유자를 확인하고, Caddy가 정상 인증서를
+제공한 뒤에만 기존 TLS virtual host를 제거한다. 인증서 발급 실패 시 기존 구성을 복원한다.
+
 환경별 media-control 설정은 다음 값을 함께 사용한다.
 
 ```dotenv

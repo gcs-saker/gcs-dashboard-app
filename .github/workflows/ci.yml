@@ -154,6 +154,11 @@ jobs:
       - name: Compile backend modules
         run: python -m compileall -q -x '(^|/)(venv|__pycache__|.pytest_cache)/' .
 
+      - name: Lint and verify backend formatting
+        run: |
+          python -m ruff check .
+          python -m ruff format --check .
+
       - name: Typecheck backend core modules
         run: python -m mypy config.py model/stream_model.py modules/streaming modules/ai_contract api/stream.py mqtt/client.py
 

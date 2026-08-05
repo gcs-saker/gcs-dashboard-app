@@ -11,6 +11,12 @@ endpoint는 실행 대상으로 공개하지 않는다.
 배포 후 다음 URL을 사용한다.
 
 ```text
+https://a4ai.tplinkdns.com/ops/swagger
+```
+
+edge는 이 짧은 canonical 운영 주소를 다음 관리자 API로 scheme-neutral redirect한다.
+
+```text
 https://a4ai.tplinkdns.com/auth-policy/admin/api-docs/swagger
 ```
 
@@ -20,6 +26,9 @@ OpenAPI 원문은 다음 관리자 API에서 제공한다.
 GET https://a4ai.tplinkdns.com/auth-policy/admin/api-docs/openapi.yaml
 Authorization: Bearer <admin-access-token>
 ```
+
+`/openapi.json`과 `/swagger-ui/index.html`은 운영 문서 주소가 아니다. SPA fallback과 혼동하지
+않도록 운영자는 `/ops/swagger`만 사용한다.
 
 Swagger HTML과 로컬 정적 asset에는 secret이 없으므로 로딩을 허용하되, UI가 관리자 access token을
 메모리로 입력받아 보호된 OpenAPI 원문을 요청한다. OpenAPI endpoint는 Spring Security의

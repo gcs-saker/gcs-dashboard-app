@@ -25,8 +25,8 @@ from core.structured_logging import (
     log_request_failed,
 )
 from core.tracing import TracingSettings, configure_global_tracing, trace_fastapi_request
-from modules.ai_contract.router import router as mock_ai_router
 from modules.ai_adapter.router import router as ai_adapter_router
+from modules.ai_contract.router import router as mock_ai_router
 from mqtt.subscriber import start_optional_telemetry_subscriber
 
 

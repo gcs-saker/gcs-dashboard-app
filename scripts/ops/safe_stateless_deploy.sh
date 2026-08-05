@@ -21,6 +21,11 @@ UNCHANGED_SERVICES=(mobile-publisher postgres-geo redis mqtt mediamtx turn-prima
 [[ "${RELEASE_DIR}" = /* && -d "${RELEASE_DIR}" ]] || { echo "RELEASE_DIR must be an existing absolute directory" >&2; exit 2; }
 compose=(docker compose --project-name "${PROJECT_NAME}" --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
 flyway_file="${RELEASE_DIR}/applied-flyway.tsv"
+if [[ -n "${PUBLIC_TLS_HOST:-}" ]]; then
+  # Fail before changing any application container. A broken or self-signed
+  # public edge cannot safely carry credentials, gRPC metadata, or media tokens.
+  "${ROOT}/scripts/ops/check_public_tls.sh" "${PUBLIC_TLS_HOST}" "${PUBLIC_TLS_PORT:-443}"
+fi
 "${compose[@]}" exec -T postgres-geo sh -c \
   'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" --tuples-only --no-align --field-separator="|" --command="select version,checksum from flyway_schema_history where success and type='\''SQL'\'' order by installed_rank"' \
   > "${flyway_file}"

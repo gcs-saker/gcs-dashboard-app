@@ -258,12 +258,28 @@ def test_single_node_nginx_also_disables_unknown_legacy_fallbacks() -> None:
 def test_single_node_nginx_routes_mobile_publisher_without_replacing_dashboard() -> None:
     config = read_single_node_config()
     publisher_location = extract_location(config, "/publisher/")
+    publisher_manifest_location = extract_exact_location(config, "/publisher/manifest.webmanifest")
     root_location = extract_locations(config, "/")[-1]
 
     assert "upstream gcs_mobile_publisher" in config
     assert "server mobile-publisher:8080;" in config
     assert "proxy_pass http://$mobile_publisher_host:8080;" in publisher_location
+    assert "application/manifest+json" in publisher_manifest_location
+    assert "charset utf-8;" in publisher_manifest_location
+    assert '"start_url":"/publisher/"' in publisher_manifest_location
+    assert '"scope":"/publisher/"' in publisher_manifest_location
+    assert "no-cache" in publisher_manifest_location
     assert "proxy_pass http://$dashboard_host:3000;" in root_location
+
+
+def test_operational_swagger_has_one_canonical_edge_entrypoint() -> None:
+    for config in [read_config(), read_single_node_config()]:
+        swagger_location = extract_exact_location(config, "/ops/swagger")
+        openapi_location = extract_exact_location(config, "/ops/openapi.yaml")
+
+        assert "absolute_redirect off;" in swagger_location
+        assert "return 308 /auth-policy/admin/api-docs/swagger;" in swagger_location
+        assert "return 308 /auth-policy/admin/api-docs/openapi.yaml;" in openapi_location
 
 
 def test_reverse_proxy_policy_doc_covers_required_endpoint_decisions() -> None:

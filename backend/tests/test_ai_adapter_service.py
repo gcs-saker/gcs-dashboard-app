@@ -43,11 +43,10 @@ def test_adapter_sends_server_derived_stream_url_and_persists_result() -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine)()
+
     async def run() -> object:
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-            return await AIAdapterService(settings(), client).analyze(
-                session, "raw.robot.front", "detector", "co-a"
-            )
+            return await AIAdapterService(settings(), client).analyze(session, "raw.robot.front", "detector", "co-a")
 
     result = asyncio.run(run())
 
@@ -74,11 +73,10 @@ def test_adapter_maps_timeout_without_affecting_media_stream() -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine)()
+
     async def run() -> None:
         async with httpx.AsyncClient(transport=httpx.MockTransport(timeout)) as client:
-            await AIAdapterService(settings(), client).analyze(
-                session, "raw.robot.front", "detector", "co-a"
-            )
+            await AIAdapterService(settings(), client).analyze(session, "raw.robot.front", "detector", "co-a")
 
     with pytest.raises(AIProcessorUnavailableError):
         asyncio.run(run())

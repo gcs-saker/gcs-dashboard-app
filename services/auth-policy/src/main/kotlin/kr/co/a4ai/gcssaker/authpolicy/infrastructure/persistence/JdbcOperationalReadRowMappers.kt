@@ -25,12 +25,12 @@ internal object OperationalReadRowMappers {
             epochTime = rs.getString(OperationalReadColumns.epochTime),
             portDistance = rs.getDouble(OperationalReadColumns.portDistance),
             groupId = GroupId(rs.getString(OperationalReadColumns.groupId)),
-            batteryPercent = rs.getObject(OperationalReadColumns.batteryPercent, java.lang.Double::class.java)?.toDouble(),
-            headingDeg = rs.getObject(OperationalReadColumns.headingDeg, java.lang.Double::class.java)?.toDouble(),
-            rollDeg = rs.getObject(OperationalReadColumns.rollDeg, java.lang.Double::class.java)?.toDouble(),
-            pitchDeg = rs.getObject(OperationalReadColumns.pitchDeg, java.lang.Double::class.java)?.toDouble(),
-            yawDeg = rs.getObject(OperationalReadColumns.yawDeg, java.lang.Double::class.java)?.toDouble(),
-            linkQualityPercent = rs.getObject(OperationalReadColumns.linkQualityPercent, java.lang.Double::class.java)?.toDouble(),
+            batteryPercent = rs.getObject(OperationalReadColumns.batteryPercent, Double::class.javaObjectType),
+            headingDeg = rs.getObject(OperationalReadColumns.headingDeg, Double::class.javaObjectType),
+            rollDeg = rs.getObject(OperationalReadColumns.rollDeg, Double::class.javaObjectType),
+            pitchDeg = rs.getObject(OperationalReadColumns.pitchDeg, Double::class.javaObjectType),
+            yawDeg = rs.getObject(OperationalReadColumns.yawDeg, Double::class.javaObjectType),
+            linkQualityPercent = rs.getObject(OperationalReadColumns.linkQualityPercent, Double::class.javaObjectType),
             observedAt = rs.getTimestamp(OperationalReadColumns.observedAt)?.toInstant(),
         )
     }

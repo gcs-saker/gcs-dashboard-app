@@ -38,7 +38,15 @@ class AIAdapterSettings(BackendBaseSettings):
         endpoints: dict[str, str] = {}
         for processor_id, endpoint in raw.items():
             parsed = urlparse(endpoint) if isinstance(endpoint, str) else None
-            if not isinstance(processor_id, str) or not processor_id or parsed is None or parsed.scheme not in {"http", "https"} or not parsed.hostname:
-                raise SettingsConfigurationError("AI processor endpoints must map non-empty IDs to absolute HTTP(S) URLs")
+            if (
+                not isinstance(processor_id, str)
+                or not processor_id
+                or parsed is None
+                or parsed.scheme not in {"http", "https"}
+                or not parsed.hostname
+            ):
+                raise SettingsConfigurationError(
+                    "AI processor endpoints must map non-empty IDs to absolute HTTP(S) URLs"
+                )
             endpoints[processor_id] = endpoint
         return endpoints

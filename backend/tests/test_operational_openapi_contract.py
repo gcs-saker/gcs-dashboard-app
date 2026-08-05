@@ -1,9 +1,10 @@
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OPENAPI = REPO_ROOT / "services/auth-policy/src/main/resources/openapi/gcs-saker-operations.openapi.yaml"
-AUTH_SECURITY = REPO_ROOT / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthSecurityRouteContract.kt"
+AUTH_SECURITY = (
+    REPO_ROOT / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthSecurityRouteContract.kt"
+)
 EDGE_CONFIG = REPO_ROOT / "deploy/nginx/single-node.poc.conf"
 
 
