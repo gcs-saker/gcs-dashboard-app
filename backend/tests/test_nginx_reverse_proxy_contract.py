@@ -89,7 +89,7 @@ def test_public_caddy_records_audit_events_without_credentials_or_query_secrets(
         "X-Publisher-Token",
     ]:
         assert f"request>headers>{header} delete" in config
-    assert r'request>uri regexp \\?.*$ ""' in config
+    assert r'request>uri regexp \?.*$ ""' in config
 
 
 def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:

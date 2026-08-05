@@ -17,7 +17,7 @@
 				request>headers>X-Gcs-Device-Credential delete
 				request>headers>X-Gcs-Publish-Token delete
 				request>headers>X-Publisher-Token delete
-				request>uri regexp \\?.*$ ""
+				request>uri regexp \?.*$ ""
 			}
 		}
 	}
