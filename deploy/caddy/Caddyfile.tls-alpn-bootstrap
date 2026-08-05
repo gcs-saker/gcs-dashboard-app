@@ -24,8 +24,7 @@
 	reverse_proxy {$STAGING_UPSTREAM}
 }
 
-https://{$LEGACY_TLS_HOST} {
-	tls {$LEGACY_TLS_CERT} {$LEGACY_TLS_KEY}
+{$LEGACY_TLS_HOST} {
 	import gcs_security_headers
 	reverse_proxy {$UPSTREAM}
 }
