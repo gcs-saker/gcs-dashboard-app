@@ -204,7 +204,7 @@ def test_single_node_keeps_redis_as_default_cache_runtime() -> None:
     compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
     redis = compose["services"]["redis"]
 
-    assert redis["image"] == "redis:7.4-alpine"
+    assert redis["image"] == "redis@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99"
     assert redis["command"] == [
         "redis-server",
         "--appendonly",
@@ -347,6 +347,17 @@ def test_single_node_tmpfs_options_remain_one_mount_spec_per_service() -> None:
             "/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777",
             "/var/cache/nginx:rw,noexec,nosuid,nodev,size=16m,uid=101,gid=101,mode=0755",
         ]
+
+
+def test_single_node_stateful_images_and_resource_limits_are_fixed() -> None:
+    services = load_yaml(SINGLE_NODE_COMPOSE_FILE)["services"]
+
+    for service_name in ("postgres-geo", "redis", "mqtt", "mediamtx", "turn-primary", "turn-secondary"):
+        service = services[service_name]
+        assert "@sha256:" in service["image"]
+        assert service["pids_limit"] > 0
+        assert service["mem_limit"]
+        assert service["cpus"]
 
 
 def test_https_edge_healthcheck_allows_temporary_self_signed_certificate() -> None:

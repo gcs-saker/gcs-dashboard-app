@@ -22,8 +22,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify production certificate chain and expiry
         run: scripts/ops/check_public_tls.sh a4ai.121-159-26-245.sslip.io 443
-      - name: Verify staging certificate chain and expiry
-        run: scripts/ops/check_public_tls.sh staging-a4ai.121-159-26-245.sslip.io 443
 
   media-control-test:
     name: media-control-test
@@ -271,6 +269,9 @@ jobs:
 
       - name: Validate tracked text files are UTF-8
         run: python scripts/gates/utf8_text_contract.py
+
+      - name: Validate canonical script entrypoints
+        run: python scripts/gates/script_entrypoint_contract.py
 
       - name: Validate shell syntax
         run: find scripts deploy -type f -name '*.sh' -print0 | xargs -0 -r bash -n

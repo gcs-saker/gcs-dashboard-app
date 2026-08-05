@@ -7,6 +7,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 RELEASE_GATE = REPO_ROOT / "scripts" / "ops" / "release_gate.py"
 DEPLOY_SCRIPT = REPO_ROOT / "scripts" / "ops" / "safe_stateless_deploy.sh"
 MQTT_PASSWORD_PREPARER = REPO_ROOT / "scripts" / "ops" / "prepare_mqtt_password_file.sh"
+SERVER01_SMOKE = REPO_ROOT / "scripts" / "ops" / "server01_operational_smoke.sh"
+SERVER01_SCOPE = REPO_ROOT / "docs" / "operations" / "GCS-Saker_Server01_managed_scope.md"
 
 
 def load_release_gate():
@@ -79,3 +81,29 @@ def test_mqtt_password_preparer_grants_only_runtime_read_acl() -> None:
     assert 'chmod 600 "${password_file}"' in script
     assert 'setfacl -m "u:${mosquitto_uid}:r--"' in script
     assert 'grep -Fx "user:${mosquitto_uid}:r--"' in script
+
+
+def test_server01_smoke_is_fail_closed_to_the_production_identity() -> None:
+    script = SERVER01_SMOKE.read_text(encoding="utf-8")
+
+    assert "gcs-saker-m2-production" in script
+    assert "https://a4ai.121-159-26-245.sslip.io" in script
+    assert "55122" not in script
+    assert "staging" not in script.lower()
+    assert "/healthz" in script and "/readyz" in script
+    assert "org.opencontainers.image.revision" in script
+
+
+def test_current_scope_excludes_server02_from_managed_operations() -> None:
+    scope = SERVER01_SCOPE.read_text(encoding="utf-8")
+
+    assert "only the production host" in scope
+    assert "outside the managed scope" in scope
+    assert "must not be probed, deployed, restarted" in scope
+
+
+def test_scheduled_public_tls_probe_targets_server01_production_only() -> None:
+    source = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert "scripts/ops/check_public_tls.sh a4ai.121-159-26-245.sslip.io 443" in source
+    assert "staging-a4ai.121-159-26-245.sslip.io" not in source
