@@ -5,6 +5,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 NGINX_PROXY_CONFIG = REPO_ROOT / "deploy" / "nginx" / "gcs-saker.reverse-proxy.example.conf"
 SINGLE_NODE_NGINX_CONFIG = REPO_ROOT / "deploy" / "nginx" / "single-node.poc.conf"
 NGINX_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_Nginx_HTTPS_WSS_reverse_proxy_v0.1.md"
+CADDY_TLS_CONFIG = REPO_ROOT / "deploy" / "caddy" / "Caddyfile.tls-alpn-bootstrap"
 
 
 def read_config() -> str:
@@ -57,6 +58,20 @@ def test_reverse_proxy_sets_browser_security_headers() -> None:
     assert "connect-src 'self' https: wss: stun: turn:;" in config
     assert "worker-src 'self' blob:;" in config
     assert 'add_header Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)" always;' in config
+
+
+def test_public_caddy_terminator_sets_security_headers_for_every_host() -> None:
+    config = CADDY_TLS_CONFIG.read_text(encoding="utf-8")
+
+    assert "(gcs_security_headers)" in config
+    assert config.count("import gcs_security_headers") == 3
+    assert "Strict-Transport-Security" in config
+    assert "Content-Security-Policy" in config
+    assert "Permissions-Policy" in config
+    assert "X-Content-Type-Options" in config
+    assert "X-Frame-Options" in config
+    assert "Referrer-Policy" in config
+    assert "-Server" in config
 
 
 def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:

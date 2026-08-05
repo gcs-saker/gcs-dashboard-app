@@ -65,7 +65,7 @@ class JdbcRegisteredDeviceRepository(
                 groupId = GroupId(rs.getString(RegisteredDeviceColumns.groupId)),
                 displayName = rs.getString(RegisteredDeviceColumns.displayName),
                 credentialHash = rs.getString(RegisteredDeviceColumns.credentialHash),
-                status = RegisteredDeviceStatus.valueOf(rs.getString(RegisteredDeviceColumns.status).uppercase()),
+                status = RegisteredDeviceStatus.fromPersistence(rs.getString(RegisteredDeviceColumns.status)),
                 deviceType = DeviceType.entries.first { it.apiValue == rs.getString(RegisteredDeviceColumns.deviceType) },
                 credentialVersion = rs.getLong(RegisteredDeviceColumns.credentialVersion),
                 policyVersion = rs.getLong(RegisteredDeviceColumns.policyVersion),

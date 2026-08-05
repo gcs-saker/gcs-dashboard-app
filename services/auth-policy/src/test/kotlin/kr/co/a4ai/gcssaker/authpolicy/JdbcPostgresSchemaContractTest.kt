@@ -58,11 +58,21 @@ class JdbcPostgresSchemaContractTest {
         assertTrue("CREATE INDEX IF NOT EXISTS ix_registered_device_streams_status" in migration)
     }
 
+    @Test
+    fun `legacy inactive device status is normalized without changing active devices`() {
+        val migration = Files.readString(deviceStatusNormalizationMigration)
+
+        assertTrue("SET status = 'disabled'" in migration)
+        assertTrue("WHERE UPPER(status) = 'INACTIVE'" in migration)
+    }
+
     private companion object {
         val coreSchemaMigration: Path = Path.of("src/main/resources/db/migration/V1__auth_policy_core_schema.sql")
         val groupHierarchyMigration: Path = Path.of("src/main/resources/db/migration/V2__group_hierarchy_and_device_identity.sql")
         val deviceCredentialMigration: Path = Path.of("src/main/resources/db/migration/V3__registered_device_credential_hash.sql")
         val deviceRegistryMetadataMigration: Path = Path.of("src/main/resources/db/migration/V5__device_registry_metadata.sql")
+        val deviceStatusNormalizationMigration: Path =
+            Path.of("src/main/resources/db/migration/V13__normalize_legacy_device_status.sql")
         val postgresInvalidDoubleType = Regex("\\bDOUBLE\\s+NOT\\s+NULL\\b", RegexOption.IGNORE_CASE)
     }
 }

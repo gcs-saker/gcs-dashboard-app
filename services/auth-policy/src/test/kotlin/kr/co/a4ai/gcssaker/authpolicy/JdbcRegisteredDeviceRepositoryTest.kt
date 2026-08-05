@@ -17,6 +17,12 @@ import kotlin.test.assertEquals
 
 class JdbcRegisteredDeviceRepositoryTest {
     @Test
+    fun `legacy inactive status maps to disabled during rolling deployment`() {
+        assertEquals(RegisteredDeviceStatus.DISABLED, RegisteredDeviceStatus.fromPersistence("INACTIVE"))
+        assertEquals(RegisteredDeviceStatus.ACTIVE, RegisteredDeviceStatus.fromPersistence("active"))
+    }
+
+    @Test
     fun `jdbc repository stores registered device credential hash and group`() {
         val dataSource = h2DataSource()
         JdbcOrganizationHierarchyRepository(

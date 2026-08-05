@@ -4,6 +4,16 @@ enum class RegisteredDeviceStatus {
     ACTIVE,
     PENDING,
     DISABLED,
+    ;
+
+    companion object {
+        fun fromPersistence(raw: String): RegisteredDeviceStatus =
+            when (raw.trim().uppercase()) {
+                "INACTIVE" -> DISABLED
+                else -> entries.firstOrNull { it.name == raw.trim().uppercase() }
+                    ?: throw IllegalArgumentException("unsupported registered device status")
+            }
+    }
 }
 
 enum class DeviceType(

@@ -2,15 +2,30 @@
 	auto_https disable_redirects
 }
 
+(gcs_security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' blob:; connect-src 'self' https: wss: stun: turn:; worker-src 'self' blob:;"
+		Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer-when-downgrade"
+		-Server
+	}
+}
+
 {$PUBLIC_TLS_HOST} {
+	import gcs_security_headers
 	reverse_proxy {$UPSTREAM}
 }
 
 {$STAGING_TLS_HOST} {
+	import gcs_security_headers
 	reverse_proxy {$STAGING_UPSTREAM}
 }
 
 https://{$LEGACY_TLS_HOST} {
 	tls {$LEGACY_TLS_CERT} {$LEGACY_TLS_KEY}
+	import gcs_security_headers
 	reverse_proxy {$UPSTREAM}
 }
