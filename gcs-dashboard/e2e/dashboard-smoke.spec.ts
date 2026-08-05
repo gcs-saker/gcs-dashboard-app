@@ -36,8 +36,8 @@ test("dashboard preview supports stream, map, and operations navigation", async 
   await attachScreenshot(page, testInfo, "dashboard-preview");
 
   await page.getByRole("button", { name: "스트리밍 3 선택" }).click();
-  await expect(page.getByRole("dialog", { name: "스트리밍 3 장비 연결" })).toBeVisible();
-  await page.getByRole("button", { name: "변경 취소" }).click();
+  await expect(page.getByRole("dialog", { name: "스트리밍 3 스트림 연결" })).toBeVisible();
+  await page.getByRole("button", { name: "취소" }).click();
   await page.getByRole("button", { name: "스트리밍 3 위치 35.866900, 128.593100" }).click();
   await expect(page.getByText("지도 핀 스트림 선택됨")).toBeVisible();
   await expect(page.getByText("스트리밍 3 / AI 감지 overlay")).toBeVisible();
