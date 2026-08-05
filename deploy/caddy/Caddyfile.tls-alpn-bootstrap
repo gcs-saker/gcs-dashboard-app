@@ -23,8 +23,3 @@
 	import gcs_security_headers
 	reverse_proxy {$STAGING_UPSTREAM}
 }
-
-{$LEGACY_TLS_HOST} {
-	import gcs_security_headers
-	reverse_proxy {$UPSTREAM}
-}

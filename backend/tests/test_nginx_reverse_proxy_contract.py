@@ -64,7 +64,8 @@ def test_public_caddy_terminator_sets_security_headers_for_every_host() -> None:
     config = CADDY_TLS_CONFIG.read_text(encoding="utf-8")
 
     assert "(gcs_security_headers)" in config
-    assert config.count("import gcs_security_headers") == 3
+    assert config.count("import gcs_security_headers") == 2
+    assert "{$LEGACY_TLS_HOST}" not in config
     assert "Strict-Transport-Security" in config
     assert "Content-Security-Policy" in config
     assert "Permissions-Policy" in config
