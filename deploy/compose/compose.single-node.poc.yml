@@ -12,6 +12,12 @@ x-health-defaults: &health_defaults
   retries: 20
   start_period: 10s
 
+x-runtime-hardening: &runtime_hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 256
+
 services:
   postgres-geo:
     image: postgis/postgis:16-3.4
@@ -78,6 +84,10 @@ services:
       - media-net
 
   backend:
+    <<: *runtime_hardening
+    tmpfs: [/tmp:rw,noexec,nosuid,nodev,size=64m]
+    mem_limit: ${BACKEND_MEMORY_LIMIT:-768m}
+    cpus: ${BACKEND_CPU_LIMIT:-1.5}
     image: ${BACKEND_IMAGE:-gcs-saker-backend:arch-poc}
     build:
       context: ../../backend
@@ -136,6 +146,10 @@ services:
       - media-net
 
   auth-policy:
+    <<: *runtime_hardening
+    tmpfs: [/tmp:rw,noexec,nosuid,nodev,size=128m]
+    mem_limit: ${AUTH_POLICY_MEMORY_LIMIT:-1g}
+    cpus: ${AUTH_POLICY_CPU_LIMIT:-2.0}
     image: ${AUTH_POLICY_IMAGE:-gcs-saker-auth-policy:arch-poc}
     build:
       context: ../../services/auth-policy
@@ -181,6 +195,10 @@ services:
       - control-net
 
   media-control:
+    <<: *runtime_hardening
+    tmpfs: [/tmp:rw,noexec,nosuid,nodev,size=64m]
+    mem_limit: ${MEDIA_CONTROL_MEMORY_LIMIT:-768m}
+    cpus: ${MEDIA_CONTROL_CPU_LIMIT:-2.0}
     image: ${MEDIA_CONTROL_IMAGE:-gcs-saker-media-control:arch-poc}
     build:
       context: ../../services/media-control
@@ -318,6 +336,12 @@ services:
       - media-net
 
   dashboard:
+    <<: *runtime_hardening
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+      - /var/cache/nginx:rw,noexec,nosuid,nodev,size=16m
+    mem_limit: ${DASHBOARD_MEMORY_LIMIT:-256m}
+    cpus: ${DASHBOARD_CPU_LIMIT:-0.5}
     image: ${DASHBOARD_IMAGE:-gcs-saker-dashboard:arch-poc}
     build:
       context: ../../gcs-dashboard
@@ -349,9 +373,16 @@ services:
       - control-net
 
   edge:
-    image: nginx:1.29-alpine
+    <<: *runtime_hardening
+    image: nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6
+    user: "101:101"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+      - /var/cache/nginx:rw,noexec,nosuid,nodev,size=16m
+    mem_limit: ${EDGE_MEMORY_LIMIT:-256m}
+    cpus: ${EDGE_CPU_LIMIT:-0.5}
     ports:
-      - "${PUBLIC_HTTP_BIND_ADDR:-127.0.0.1}:${PUBLIC_HTTP_PORT:-8080}:80"
+      - "${PUBLIC_HTTP_BIND_ADDR:-127.0.0.1}:${PUBLIC_HTTP_PORT:-8080}:8080"
     volumes:
       - type: bind
         source: ../nginx/single-node.poc.conf
@@ -370,7 +401,7 @@ services:
         condition: service_started
     healthcheck:
       <<: *health_defaults
-      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1/healthz >/dev/null"]
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz >/dev/null"]
     restart: unless-stopped
     networks:
       - control-net

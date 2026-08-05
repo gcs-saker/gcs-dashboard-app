@@ -8,6 +8,10 @@ MQTT_PASSWORD_FILE="${MQTT_PASSWORD_FILE:?Set MQTT_PASSWORD_FILE to the private 
 RELEASE_DIR="${RELEASE_DIR:?Set RELEASE_DIR to an existing release evidence directory}"
 PROJECT_NAME="${COMPOSE_PROJECT_NAME:-gcs-saker}"
 export SOURCE_COMMIT="$(git -C "${ROOT}" rev-parse HEAD)"
+export BACKEND_IMAGE="gcs-saker-backend:${SOURCE_COMMIT}"
+export AUTH_POLICY_IMAGE="gcs-saker-auth-policy:${SOURCE_COMMIT}"
+export MEDIA_CONTROL_IMAGE="gcs-saker-media-control:${SOURCE_COMMIT}"
+export DASHBOARD_IMAGE="gcs-saker-dashboard:${SOURCE_COMMIT}"
 STATELESS_SERVICES=(backend auth-policy media-control dashboard edge)
 # Only services with a Compose build definition belong here. The publisher and
 # edge images are supplied by the deployment environment; passing them to
@@ -63,6 +67,14 @@ trap rollback ERR
 "${compose[@]}" build "${BUILD_SERVICES[@]}"
 "${compose[@]}" images --format json > "${RELEASE_DIR}/deployment-images.json"
 "${compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"
+for service in "${BUILD_SERVICES[@]}"; do
+  container_id="$("${compose[@]}" ps -q "${service}")"
+  actual_revision="$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "${container_id}")"
+  [[ "${actual_revision}" == "${SOURCE_COMMIT}" ]] || {
+    echo "release provenance mismatch: ${service}=${actual_revision}, expected=${SOURCE_COMMIT}" >&2
+    exit 1
+  }
+done
 for service in "${UNCHANGED_SERVICES[@]}"; do
   "${compose[@]}" ps "${service}" >/dev/null
 done
@@ -72,7 +84,7 @@ done
 # this container-internal check validates the complete application route.
 "${compose[@]}" exec -T edge \
   wget --timeout=10 --tries=1 -q -O- \
-  "${HEALTH_URL:-http://127.0.0.1/readyz}" >/dev/null
+  "${HEALTH_URL:-http://127.0.0.1:8080/readyz}" >/dev/null
 if [[ -n "${PUBLIC_TLS_HOST:-}" ]]; then
   "${ROOT}/scripts/ops/check_public_tls.sh" "${PUBLIC_TLS_HOST}" "${PUBLIC_TLS_PORT:-443}"
 fi

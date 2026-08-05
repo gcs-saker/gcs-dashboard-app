@@ -75,6 +75,23 @@ def test_public_caddy_terminator_sets_security_headers_for_every_host() -> None:
     assert "-Server" in config
 
 
+def test_public_caddy_records_audit_events_without_credentials_or_query_secrets() -> None:
+    config = CADDY_TLS_CONFIG.read_text(encoding="utf-8")
+
+    assert config.count("import gcs_audit_log") == 2
+    assert "mode 0600" in config
+    assert "roll_size 100MiB" in config
+    assert "roll_keep_for 720h" in config
+    for header in [
+        "X-Gcs-Device-Uuid",
+        "X-Gcs-Device-Credential",
+        "X-Gcs-Publish-Token",
+        "X-Publisher-Token",
+    ]:
+        assert f"request>headers>{header} delete" in config
+    assert r'request>uri regexp \\?.*$ ""' in config
+
+
 def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     config = read_config()
 
@@ -296,6 +313,12 @@ def test_operational_swagger_has_one_canonical_edge_entrypoint() -> None:
         assert "absolute_redirect off;" in swagger_location
         assert "return 308 /auth-policy/admin/api-docs/swagger;" in swagger_location
         assert "return 308 /auth-policy/admin/api-docs/openapi.yaml;" in openapi_location
+
+
+def test_reserved_operational_typos_never_fall_through_to_spa() -> None:
+    for config in [read_config(), read_single_node_config()]:
+        assert r"location ~ ^/(swagger|docs|openapi\.json|metrics)/?$" in config
+        assert 'return 404 \'{"error":"not_found","canonicalDocs":"/ops/swagger"}\';' in config
 
 
 def test_reverse_proxy_policy_doc_covers_required_endpoint_decisions() -> None:

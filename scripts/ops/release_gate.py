@@ -78,6 +78,24 @@ def validate_applied_migrations(applied_path: pathlib.Path, inventory: list[dict
             raise RuntimeError(f"Flyway checksum drift detected for V{version}")
 
 
+def application_image_inventory(commit: str) -> dict[str, str]:
+    image_variables = {
+        "backend": "BACKEND_IMAGE",
+        "auth-policy": "AUTH_POLICY_IMAGE",
+        "media-control": "MEDIA_CONTROL_IMAGE",
+        "dashboard": "DASHBOARD_IMAGE",
+    }
+    images = {}
+    for service, variable in image_variables.items():
+        reference = os.environ.get(variable, "")
+        if not reference:
+            raise RuntimeError(f"{variable} must identify the release image")
+        if "@sha256:" not in reference and not reference.endswith(f":{commit}"):
+            raise RuntimeError(f"{variable} must use a digest or the exact source commit tag")
+        images[service] = reference
+    return images
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--env-file", required=True, type=pathlib.Path)
@@ -111,6 +129,7 @@ def main() -> int:
         "sourceComposeSha256": sha256(COMPOSE),
         "environmentSha256": sha256(env_file),
         "mqttPasswordFileSha256": sha256(mqtt_file),
+        "applicationImages": application_image_inventory(commit),
         "flywayMigrations": migrations,
     }
     encoded = json.dumps(manifest, ensure_ascii=False, indent=2)

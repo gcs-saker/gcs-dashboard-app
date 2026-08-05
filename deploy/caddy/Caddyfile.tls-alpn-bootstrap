@@ -2,6 +2,27 @@
 	auto_https disable_redirects
 }
 
+(gcs_audit_log) {
+	log {
+		output file {$CADDY_ACCESS_LOG:/data/gcs-access.json} {
+			mode 0600
+			roll_size 100MiB
+			roll_keep 10
+			roll_keep_for 720h
+		}
+		format filter {
+			wrap json
+			fields {
+				request>headers>X-Gcs-Device-Uuid delete
+				request>headers>X-Gcs-Device-Credential delete
+				request>headers>X-Gcs-Publish-Token delete
+				request>headers>X-Publisher-Token delete
+				request>uri regexp \\?.*$ ""
+			}
+		}
+	}
+}
+
 (gcs_security_headers) {
 	header {
 		Strict-Transport-Security "max-age=31536000"
@@ -16,10 +37,12 @@
 
 {$PUBLIC_TLS_HOST} {
 	import gcs_security_headers
+	import gcs_audit_log
 	reverse_proxy {$UPSTREAM}
 }
 
 {$STAGING_TLS_HOST} {
 	import gcs_security_headers
+	import gcs_audit_log
 	reverse_proxy {$STAGING_UPSTREAM}
 }

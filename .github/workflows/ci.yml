@@ -269,6 +269,9 @@ jobs:
             exit 1
           fi
 
+      - name: Validate tracked text files are UTF-8
+        run: python scripts/gates/utf8_text_contract.py
+
       - name: Validate shell syntax
         run: find scripts deploy -type f -name '*.sh' -print0 | xargs -0 -r bash -n
 
