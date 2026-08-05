@@ -159,8 +159,8 @@ jobs:
           python -m ruff check .
           python -m ruff format --check .
 
-      - name: Typecheck backend core modules
-        run: python -m mypy config.py model/stream_model.py modules/streaming modules/ai_contract api/stream.py mqtt/client.py
+      - name: Typecheck all backend modules and tests
+        run: python -m mypy .
 
       - name: Run backend tests with coverage
         run: python -m pytest tests --cov=. --cov-report=term-missing

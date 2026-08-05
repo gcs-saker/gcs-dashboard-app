@@ -10,6 +10,7 @@ from core.db import Base
 from modules.ai_adapter.models import AIResultEvent
 from modules.ai_adapter.service import AIAdapterService, AIProcessorNotFoundError, AIProcessorUnavailableError
 from modules.ai_adapter.settings import AIAdapterSettings
+from modules.ai_contract.schemas import AIEndpointResponse
 
 
 def settings() -> AIAdapterSettings:
@@ -44,7 +45,7 @@ def test_adapter_sends_server_derived_stream_url_and_persists_result() -> None:
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine)()
 
-    async def run() -> object:
+    async def run() -> AIEndpointResponse:
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
             return await AIAdapterService(settings(), client).analyze(session, "raw.robot.front", "detector", "co-a")
 
