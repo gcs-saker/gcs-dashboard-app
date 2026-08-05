@@ -359,6 +359,8 @@ def test_single_node_stateful_images_and_resource_limits_are_fixed() -> None:
         assert service["mem_limit"]
         assert service["cpus"]
 
+    assert "${MEDIAMTX_IMAGE" not in services["mediamtx"]["image"]
+
 
 def test_https_edge_healthcheck_allows_temporary_self_signed_certificate() -> None:
     override = load_yaml(EDGE_HTTPS_OVERRIDE_FILE)

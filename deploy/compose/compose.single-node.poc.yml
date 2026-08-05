@@ -269,7 +269,7 @@ services:
       - media-net
 
   mediamtx:
-    image: ${MEDIAMTX_IMAGE:-bluenviron/mediamtx@sha256:32ecec42d5c716f0b85809b11b6c32f54126546ba89fc85ac57dbcf74738bb4e}
+    image: bluenviron/mediamtx@sha256:32ecec42d5c716f0b85809b11b6c32f54126546ba89fc85ac57dbcf74738bb4e
     pids_limit: 512
     mem_limit: ${MEDIAMTX_MEMORY_LIMIT:-1g}
     cpus: ${MEDIAMTX_CPU_LIMIT:-2.0}
