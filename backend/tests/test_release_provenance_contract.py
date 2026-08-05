@@ -6,6 +6,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RELEASE_GATE = REPO_ROOT / "scripts" / "ops" / "release_gate.py"
 DEPLOY_SCRIPT = REPO_ROOT / "scripts" / "ops" / "safe_stateless_deploy.sh"
+MQTT_PASSWORD_PREPARER = REPO_ROOT / "scripts" / "ops" / "prepare_mqtt_password_file.sh"
 
 
 def load_release_gate():
@@ -49,3 +50,30 @@ def test_deploy_verifies_every_rebuilt_container_revision() -> None:
     assert 'for service in "${BUILD_SERVICES[@]}"' in script
     assert "org.opencontainers.image.revision" in script
     assert "release provenance mismatch" in script
+
+
+def test_deploy_is_server01_only_and_rolls_back_with_previous_compose() -> None:
+    script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+
+    assert 'DEPLOYMENT_TARGET}" == "server01-production"' in script
+    assert 'PROJECT_NAME}" == "gcs-saker-m2-production"' in script
+    assert "com.docker.compose.project.config_files" in script
+    assert 'previous_compose=(docker compose' in script
+    assert '"${previous_compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"' in script
+    assert script.index('"${compose[@]}" build') < script.index("trap rollback ERR")
+
+
+def test_deploy_guards_stateful_container_identity() -> None:
+    script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+
+    assert "stateful-containers.before.env" in script
+    assert "stateful/external service was replaced" in script
+    assert "UNCHANGED_SERVICES=(mobile-publisher postgres-geo redis mqtt mediamtx turn-primary turn-secondary)" in script
+
+
+def test_mqtt_password_preparer_grants_only_runtime_read_acl() -> None:
+    script = MQTT_PASSWORD_PREPARER.read_text(encoding="utf-8")
+
+    assert 'chmod 600 "${password_file}"' in script
+    assert 'setfacl -m "u:${mosquitto_uid}:r--"' in script
+    assert 'grep -Fx "user:${mosquitto_uid}:r--"' in script

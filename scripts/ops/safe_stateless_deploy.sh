@@ -7,6 +7,15 @@ ENV_FILE="${ENV_FILE:?Set ENV_FILE to the private deployment environment file}"
 MQTT_PASSWORD_FILE="${MQTT_PASSWORD_FILE:?Set MQTT_PASSWORD_FILE to the private Mosquitto password file}"
 RELEASE_DIR="${RELEASE_DIR:?Set RELEASE_DIR to an existing release evidence directory}"
 PROJECT_NAME="${COMPOSE_PROJECT_NAME:-gcs-saker}"
+DEPLOYMENT_TARGET="${DEPLOYMENT_TARGET:?Set DEPLOYMENT_TARGET=server01-production}"
+[[ "${DEPLOYMENT_TARGET}" == "server01-production" ]] || {
+  echo "unsupported deployment target: ${DEPLOYMENT_TARGET}; only server01-production is managed" >&2
+  exit 2
+}
+[[ "${PROJECT_NAME}" == "gcs-saker-m2-production" ]] || {
+  echo "COMPOSE_PROJECT_NAME must be gcs-saker-m2-production" >&2
+  exit 2
+}
 export SOURCE_COMMIT="$(git -C "${ROOT}" rev-parse HEAD)"
 export BACKEND_IMAGE="gcs-saker-backend:${SOURCE_COMMIT}"
 export AUTH_POLICY_IMAGE="gcs-saker-auth-policy:${SOURCE_COMMIT}"
@@ -24,6 +33,14 @@ UNCHANGED_SERVICES=(mobile-publisher postgres-geo redis mqtt mediamtx turn-prima
 
 [[ "${RELEASE_DIR}" = /* && -d "${RELEASE_DIR}" ]] || { echo "RELEASE_DIR must be an existing absolute directory" >&2; exit 2; }
 compose=(docker compose --project-name "${PROJECT_NAME}" --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
+previous_container_id="$("${compose[@]}" ps -q backend)"
+[[ -n "${previous_container_id}" ]] || { echo "running backend container is required" >&2; exit 2; }
+previous_compose_file="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project.config_files" }}' "${previous_container_id}")"
+[[ "${previous_compose_file}" = /* && -f "${previous_compose_file}" ]] || {
+  echo "previous Compose file is not an existing absolute path: ${previous_compose_file}" >&2
+  exit 2
+}
+previous_compose=(docker compose --project-name "${PROJECT_NAME}" --env-file "${ENV_FILE}" -f "${previous_compose_file}")
 flyway_file="${RELEASE_DIR}/applied-flyway.tsv"
 if [[ -n "${PUBLIC_TLS_HOST:-}" ]]; then
   # Fail before changing any application container. A broken or self-signed
@@ -40,7 +57,9 @@ python3 "${ROOT}/scripts/ops/release_gate.py" \
   --output "${RELEASE_DIR}/release-manifest.json"
 
 previous_file="${RELEASE_DIR}/previous-images.env"
+stateful_file="${RELEASE_DIR}/stateful-containers.before.env"
 : > "${previous_file}"
+: > "${stateful_file}"
 for service in "${STATELESS_SERVICES[@]}"; do
   container_id="$("${compose[@]}" ps -q "${service}")"
   if [[ -n "${container_id}" ]]; then
@@ -48,9 +67,17 @@ for service in "${STATELESS_SERVICES[@]}"; do
     printf '%s=%s\n' "${service}" "${image_id}" >> "${previous_file}"
   fi
 done
+for service in "${UNCHANGED_SERVICES[@]}"; do
+  container_id="$("${previous_compose[@]}" ps -q "${service}")"
+  [[ -n "${container_id}" ]] || { echo "required unchanged service is absent: ${service}" >&2; exit 2; }
+  printf '%s=%s\n' "${service}" "${container_id}" >> "${stateful_file}"
+done
 
 rollback() {
-  echo "stateless deployment failed; restoring captured images" >&2
+  original_status=$?
+  trap - ERR
+  set +e
+  echo "stateless deployment failed; restoring captured images with ${previous_compose_file}" >&2
   while IFS='=' read -r service image_id; do
     [[ -n "${service}" && -n "${image_id}" ]] || continue
     docker tag "${image_id}" "gcs-saker-rollback:${service}"
@@ -59,13 +86,17 @@ rollback() {
   AUTH_POLICY_IMAGE=gcs-saker-rollback:auth-policy \
   MEDIA_CONTROL_IMAGE=gcs-saker-rollback:media-control \
   DASHBOARD_IMAGE=gcs-saker-rollback:dashboard \
-  MOBILE_PUBLISHER_IMAGE=gcs-saker-rollback:mobile-publisher \
-    "${compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"
+    "${previous_compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"
+  rollback_status=$?
+  if (( rollback_status != 0 )); then
+    echo "rollback failed; use previous Compose file: ${previous_compose_file}" >&2
+  fi
+  exit "${original_status}"
 }
-trap rollback ERR
 
 "${compose[@]}" build "${BUILD_SERVICES[@]}"
 "${compose[@]}" images --format json > "${RELEASE_DIR}/deployment-images.json"
+trap rollback ERR
 "${compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"
 for service in "${BUILD_SERVICES[@]}"; do
   container_id="$("${compose[@]}" ps -q "${service}")"
@@ -75,9 +106,13 @@ for service in "${BUILD_SERVICES[@]}"; do
     exit 1
   }
 done
-for service in "${UNCHANGED_SERVICES[@]}"; do
-  "${compose[@]}" ps "${service}" >/dev/null
-done
+while IFS='=' read -r service previous_id; do
+  current_id="$("${compose[@]}" ps -q "${service}")"
+  [[ "${current_id}" == "${previous_id}" ]] || {
+    echo "stateful/external service was replaced: ${service}" >&2
+    exit 1
+  }
+done < "${stateful_file}"
 "${compose[@]}" exec -T edge nginx -t
 # Verify through the deployed edge without assuming which host port each
 # environment publishes. Public TLS is terminated by the host reverse proxy;
