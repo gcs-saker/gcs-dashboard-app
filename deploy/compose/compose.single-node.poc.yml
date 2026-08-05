@@ -338,8 +338,8 @@ services:
   dashboard:
     <<: *runtime_hardening
     tmpfs:
-      - /tmp:rw,noexec,nosuid,nodev,size=16m
-      - /var/cache/nginx:rw,noexec,nosuid,nodev,size=16m
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+      - /var/cache/nginx:rw,noexec,nosuid,nodev,size=16m,uid=101,gid=101,mode=0755
     mem_limit: ${DASHBOARD_MEMORY_LIMIT:-256m}
     cpus: ${DASHBOARD_CPU_LIMIT:-0.5}
     image: ${DASHBOARD_IMAGE:-gcs-saker-dashboard:arch-poc}
@@ -377,8 +377,8 @@ services:
     image: nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6
     user: "101:101"
     tmpfs:
-      - /tmp:rw,noexec,nosuid,nodev,size=16m
-      - /var/cache/nginx:rw,noexec,nosuid,nodev,size=16m
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+      - /var/cache/nginx:rw,noexec,nosuid,nodev,size=16m,uid=101,gid=101,mode=0755
     mem_limit: ${EDGE_MEMORY_LIMIT:-256m}
     cpus: ${EDGE_CPU_LIMIT:-0.5}
     ports:

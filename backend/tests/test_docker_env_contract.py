@@ -342,6 +342,11 @@ def test_single_node_tmpfs_options_remain_one_mount_spec_per_service() -> None:
     assert compose["services"]["backend"]["tmpfs"] == ["/tmp:rw,noexec,nosuid,nodev,size=64m"]
     assert compose["services"]["auth-policy"]["tmpfs"] == ["/tmp:rw,noexec,nosuid,nodev,size=128m"]
     assert compose["services"]["media-control"]["tmpfs"] == ["/tmp:rw,noexec,nosuid,nodev,size=64m"]
+    for service_name in ("dashboard", "edge"):
+        assert compose["services"][service_name]["tmpfs"] == [
+            "/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777",
+            "/var/cache/nginx:rw,noexec,nosuid,nodev,size=16m,uid=101,gid=101,mode=0755",
+        ]
 
 
 def test_https_edge_healthcheck_allows_temporary_self_signed_certificate() -> None:
