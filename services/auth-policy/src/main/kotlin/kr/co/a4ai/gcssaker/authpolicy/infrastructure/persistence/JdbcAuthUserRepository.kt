@@ -65,7 +65,18 @@ class JdbcAuthUserRepository(
 
     private fun seedUsers(initialUsers: Collection<AuthUser>) {
         initialUsers.forEach { user ->
-            if (findByUsername(user.username) == null && findByEmail(user.email) == null) {
+            val existing = findByUsername(user.username)
+            if (existing != null) {
+                jdbc.update(
+                    AuthUserSql.synchronizeSeed,
+                    user.email.lowercase(),
+                    user.passwordHash,
+                    user.companyId,
+                    user.role.name,
+                    user.groupId.value,
+                    user.username,
+                )
+            } else if (findByEmail(user.email) == null) {
                 jdbc.update(
                     AuthUserSql.insertWithId,
                     user.id,
@@ -144,4 +155,9 @@ private object AuthUserSql {
         RETURNING id
     """
     const val maxId = "SELECT COALESCE(MAX(id), 0) FROM auth_users"
+    const val synchronizeSeed = """
+        UPDATE auth_users
+        SET email = ?, password_hash = ?, company_id = ?, role = ?, group_id = ?
+        WHERE username = ?
+    """
 }
