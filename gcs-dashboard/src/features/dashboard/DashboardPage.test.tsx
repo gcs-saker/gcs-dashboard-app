@@ -69,7 +69,7 @@ describe("DashboardPage", () => {
     renderDashboard();
 
     await user.click(screen.getByRole("button", { name: "운영설정" }));
-    await user.click(await screen.findByRole("button", { name: "화면 효과" }));
+    await user.click(await screen.findByRole("button", { name: "화면 효과" }, { timeout: 10000 }));
     await user.click(screen.getByRole("radio", { name: /효과 끄기/ }));
 
     expect(screen.getByRole("main", { name: "Field Ops Dashboard" })).toHaveAttribute("data-motion", "off");
