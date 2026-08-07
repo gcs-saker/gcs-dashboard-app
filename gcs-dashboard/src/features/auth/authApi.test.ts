@@ -102,7 +102,6 @@ describe("authenticatedFetch", () => {
       email: "viewer02@example.com",
       password: "strong-password",
       inviteCode: "A4AI01",
-      role: "viewer",
     });
 
     expect(fetcher).toHaveBeenCalledWith(

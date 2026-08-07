@@ -8,6 +8,7 @@ import { MotionPolicyPanel } from "./settings/MotionPolicyPanel";
 import { ProvisioningTokenPanel } from "./settings/ProvisioningTokenPanel";
 import { SettingsPolicyPanel } from "./settings/SettingsPolicyPanel";
 import { SettingsTabs } from "./settings/SettingsTabs";
+import { SignupTokenPanel } from "./settings/SignupTokenPanel";
 import { TimeSyncForm } from "./settings/TimeSyncForm";
 import { TimeSyncHeader } from "./settings/TimeSyncHeader";
 import { TimeSyncMetrics } from "./settings/TimeSyncMetrics";
@@ -71,6 +72,7 @@ export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }
         <MotionPolicyPanel motionMode={motionMode} onMotionModeChange={onMotionModeChange} />
       ) : activeTab === "provisioning" ? (
         <>
+          <SignupTokenPanel />
           <ProvisioningTokenPanel />
           <DeviceApprovalPanel />
         </>

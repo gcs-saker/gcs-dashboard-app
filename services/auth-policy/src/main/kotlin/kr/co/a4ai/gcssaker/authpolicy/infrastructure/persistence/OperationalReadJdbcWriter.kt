@@ -5,16 +5,32 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.ServerHealthSnapshotReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.StreamSessionReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.jdbc.datasource.DataSourceTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import java.sql.Timestamp
 import java.time.Instant
 
 internal class OperationalReadJdbcWriter(
-    private val jdbc: JdbcTemplate,
+    dataSource: javax.sql.DataSource,
 ) {
+    private val jdbc = JdbcTemplate(dataSource)
+    private val transactions = TransactionTemplate(DataSourceTransactionManager(dataSource))
+    private val isPostgres = dataSource.connection.use { it.metaData.databaseProductName.equals("PostgreSQL", true) }
+
     fun replaceTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel {
-        jdbc.update(OperationalReadSql.deleteTelemetryByUuid, telemetry.uuid)
-        insertTelemetry(telemetry)
-        insertTelemetryHistory(telemetry, Instant.now())
+        transactions.executeWithoutResult {
+            if (isPostgres) {
+                val insertedHistoryRows =
+                    jdbc.update(OperationalReadSql.insertTelemetryHistoryPostgres, *historyArguments(telemetry))
+                if (telemetry.eventId == null || insertedHistoryRows == 1) {
+                    jdbc.update(OperationalReadSql.upsertTelemetryPostgres, *latestArguments(telemetry))
+                }
+            } else {
+                jdbc.update(OperationalReadSql.deleteTelemetryByUuid, telemetry.uuid)
+                insertTelemetry(telemetry)
+                insertTelemetryHistory(telemetry, telemetry.observedAt ?: Instant.now())
+            }
+        }
         return telemetry
     }
 
@@ -44,6 +60,38 @@ internal class OperationalReadJdbcWriter(
             telemetry.observedAt?.let(Timestamp::from),
         )
     }
+
+    private fun latestArguments(telemetry: TelemetryReadModel): Array<Any?> = arrayOf(
+        telemetry.eventId,
+        telemetry.uuid,
+        telemetry.latitude,
+        telemetry.longitude,
+        telemetry.altitude,
+        telemetry.magneticX,
+        telemetry.magneticY,
+        telemetry.magneticZ,
+        telemetry.soc,
+        telemetry.phoneBatterySOC,
+        telemetry.velocity,
+        telemetry.totalDistance,
+        telemetry.epochTime,
+        telemetry.portDistance,
+        telemetry.groupId.value,
+        telemetry.batteryPercent,
+        telemetry.headingDeg,
+        telemetry.rollDeg,
+        telemetry.pitchDeg,
+        telemetry.yawDeg,
+        telemetry.linkQualityPercent,
+        telemetry.observedAt?.let(Timestamp::from),
+    )
+
+    private fun historyArguments(telemetry: TelemetryReadModel): Array<Any?> = arrayOf(
+        telemetry.eventId,
+        telemetry.uuid,
+        Timestamp.from(telemetry.observedAt ?: Instant.now()),
+        *latestArguments(telemetry).drop(2).toTypedArray(),
+    )
 
     fun insertTelemetryHistory(telemetry: TelemetryReadModel, recordedAt: Instant) {
         jdbc.update(

@@ -17,13 +17,13 @@ import (
 
 const testGatewayToken = "test-gateway-token"
 
-func TestExchangeAcceptsAuthorizedGatewayRequest(t *testing.T) {
+func TestExchangeNeverAcceptsWithoutDurableHandler(t *testing.T) {
 	response, err := exchangeOnce(t, gatewayRequest("req-001", true), testGatewayToken, nil)
 
 	if err != nil {
 		t.Fatalf("exchange failed: %v", err)
 	}
-	assertResponse(t, response, "req-001", GatewayAckStatusAccepted, reasonAccepted)
+	assertResponse(t, response, "req-001", GatewayAckStatusBackpressure, reasonStoreFailed)
 }
 
 func TestExchangeRejectsUnauthorizedMetadata(t *testing.T) {
@@ -84,7 +84,7 @@ func TestExchangeKeepsOneBidiStreamForMultipleGatewayMessages(t *testing.T) {
 		t.Fatalf("response count mismatch: got %d", len(responses))
 	}
 	for index, response := range responses {
-		assertResponse(t, response, []string{"req-001", "req-002", "req-003"}[index], GatewayAckStatusAccepted, reasonAccepted)
+		assertResponse(t, response, []string{"req-001", "req-002", "req-003"}[index], GatewayAckStatusBackpressure, reasonStoreFailed)
 	}
 }
 

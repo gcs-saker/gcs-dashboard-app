@@ -39,14 +39,21 @@ class AuthSessionService(
     }
 
     fun verifyAccessToken(accessToken: String): AuthenticatedPrincipal {
-        principalCache.getAccessPrincipal(accessToken)?.let { return it }
-        val principal = tokenService.verifyAccessToken(accessToken)
+        principalCache.getAccessPrincipal(accessToken)?.let { cachedPrincipal ->
+            // Cache entries are never an authority for JWT lifetime. Re-verification
+            // prevents stale Redis data from extending the signed exp claim.
+            val verified = tokenService.verifyAccessTokenWithTtl(accessToken)
+            if (verified.principal == cachedPrincipal) {
+                return cachedPrincipal
+            }
+        }
+        val verified = tokenService.verifyAccessTokenWithTtl(accessToken)
         principalCache.putAccessPrincipal(
             accessToken = accessToken,
-            principal = principal,
-            ttl = Duration.ofMinutes(tokenService.accessTokenExpiresInMinutes()),
+            principal = verified.principal,
+            ttl = verified.remainingTtl,
         )
-        return principal
+        return verified.principal
     }
 
     private fun issueTokens(principal: AuthenticatedPrincipal): IssuedTokenSet {

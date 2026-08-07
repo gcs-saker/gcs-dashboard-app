@@ -13,6 +13,7 @@ type envName string
 type runtimeEnvContract struct {
 	publicWebRTCBaseURL   envName
 	publicHLSBaseURL      envName
+	expectedPublicOrigin envName
 	defaultPublisherGroup envName
 	streamGroupMap        envName
 	publishToken          envName
@@ -46,6 +47,7 @@ type runtimeEnvContract struct {
 var runtimeEnv = runtimeEnvContract{
 	publicWebRTCBaseURL:   "MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL",
 	publicHLSBaseURL:      "MEDIA_CONTROL_PUBLIC_HLS_BASE_URL",
+	expectedPublicOrigin: "MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN",
 	defaultPublisherGroup: "MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID",
 	streamGroupMap:        "MEDIA_CONTROL_STREAM_GROUP_MAP",
 	publishToken:          "MEDIA_CONTROL_PUBLISH_TOKEN",

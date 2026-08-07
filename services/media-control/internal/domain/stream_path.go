@@ -56,9 +56,25 @@ func parseStreamPathSegments(parts []string) (ParsedStreamPath, error) {
 		return parseAIStreamPath(parts)
 	case "archive":
 		return parseArchiveStreamPath(parts)
+	case "talkback":
+		return parseTalkbackStreamPath(parts)
 	default:
-		return ParsedStreamPath{}, fmt.Errorf("stream path prefix must be one of raw, ai, archive")
+		return ParsedStreamPath{}, fmt.Errorf("stream path prefix must be one of raw, ai, archive, talkback")
 	}
+}
+
+func parseTalkbackStreamPath(parts []string) (ParsedStreamPath, error) {
+	if len(parts) != 5 || parts[1] != "raw" {
+		return ParsedStreamPath{}, fmt.Errorf("talkback stream path must match talkback/raw/{assetId}/{sensorId}/{operatorId}")
+	}
+	if err := validateSegments(parts[2:]...); err != nil {
+		return ParsedStreamPath{}, err
+	}
+	path := strings.Join(parts, "/")
+	return ParsedStreamPath{
+		Prefix: "talkback", AssetID: parts[2], SensorID: parts[3], ProcessorID: parts[4],
+		Path: path, StreamID: strings.ReplaceAll(path, "/", "."),
+	}, nil
 }
 
 func parseRawStreamPath(parts []string) (ParsedStreamPath, error) {

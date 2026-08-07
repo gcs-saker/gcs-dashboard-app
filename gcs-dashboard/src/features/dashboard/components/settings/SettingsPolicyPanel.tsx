@@ -16,7 +16,7 @@ export function SettingsPolicyPanel({ tab }: SettingsPolicyPanelProps) {
           <span>설정 묶음</span>
           <strong>{settingsTabTitle(tab)}</strong>
         </div>
-        <button type="button">변경 요청</button>
+        <span className="time-sync-view__policy-scope">관리자 정책</span>
       </header>
       {SETTINGS_POLICIES[tab].map(([label, value]) => (
         <article key={label}>

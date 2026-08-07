@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/authpolicy"
@@ -35,9 +38,18 @@ type runtimeConfig struct {
 }
 
 func loadRuntimeConfig() (runtimeConfig, error) {
+	publicWebRTCBaseURL := getenv(runtimeEnv.publicWebRTCBaseURL, runtimeDefaults.publicWebRTCBaseURL)
+	publicHLSBaseURL := getenv(runtimeEnv.publicHLSBaseURL, runtimeDefaults.publicHLSBaseURL)
+	if err := validateExpectedPublicOrigin(
+		getenv(runtimeEnv.expectedPublicOrigin, ""),
+		publicWebRTCBaseURL,
+		publicHLSBaseURL,
+	); err != nil {
+		return runtimeConfig{}, err
+	}
 	playback, err := domain.NewPlaybackURLBuilder(
-		getenv(runtimeEnv.publicWebRTCBaseURL, runtimeDefaults.publicWebRTCBaseURL),
-		getenv(runtimeEnv.publicHLSBaseURL, runtimeDefaults.publicHLSBaseURL),
+		publicWebRTCBaseURL,
+		publicHLSBaseURL,
 	)
 	if err != nil {
 		return runtimeConfig{}, err
@@ -76,4 +88,22 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		grpcToken:           getenv(runtimeEnv.grpcToken, publishToken),
 		grpcMaxPayloadBytes: getenvInt(runtimeEnv.grpcMaxPayloadBytes, runtimeDefaults.grpcMaxPayloadBytes),
 	}, nil
+}
+
+func validateExpectedPublicOrigin(expected string, publicBaseURLs ...string) error {
+	expected = strings.TrimSpace(expected)
+	if expected == "" {
+		return nil
+	}
+	expectedURL, err := url.Parse(expected)
+	if err != nil || expectedURL.Scheme == "" || expectedURL.Host == "" || expectedURL.Path != "" || expectedURL.RawQuery != "" {
+		return fmt.Errorf("MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN must be an origin without path or query")
+	}
+	for _, raw := range publicBaseURLs {
+		parsed, parseErr := url.Parse(strings.TrimSpace(raw))
+		if parseErr != nil || parsed.Scheme != expectedURL.Scheme || !strings.EqualFold(parsed.Host, expectedURL.Host) {
+			return fmt.Errorf("public media base URL origin does not match MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN")
+		}
+	}
+	return nil
 }

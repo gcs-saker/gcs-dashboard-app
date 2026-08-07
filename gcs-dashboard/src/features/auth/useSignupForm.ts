@@ -6,9 +6,6 @@ import {
   passwordMismatchMessage,
   signupErrorMessage,
 } from "./signupPresentation";
-import type { UserRole } from "./types";
-
-const DEFAULT_ROLE: UserRole = "viewer";
 
 export interface SignupFormState {
   confirmPassword: string;
@@ -17,7 +14,6 @@ export interface SignupFormState {
   inviteCode: string;
   isSubmitting: boolean;
   password: string;
-  role: UserRole;
   username: string;
 }
 
@@ -27,7 +23,6 @@ export interface SignupFormController extends SignupFormState {
   setEmail: (value: string) => void;
   setInviteCode: (value: string) => void;
   setPassword: (value: string) => void;
-  setRole: (value: UserRole) => void;
   setUsername: (value: string) => void;
 }
 
@@ -38,7 +33,6 @@ export function useSignupForm(): SignupFormController {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [inviteCode, setInviteCode] = useState("");
-  const [role, setRole] = useState<UserRole>(DEFAULT_ROLE);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,7 +47,7 @@ export function useSignupForm(): SignupFormController {
 
     setIsSubmitting(true);
     try {
-      const createdUser = await signupRequest({ username, email, password, inviteCode, role });
+      const createdUser = await signupRequest({ username, email, password, inviteCode });
       navigate(`/login?registered=1&username=${encodeURIComponent(createdUser.username)}`, {
         replace: true,
       });
@@ -62,7 +56,7 @@ export function useSignupForm(): SignupFormController {
     } finally {
       setIsSubmitting(false);
     }
-  }, [confirmPassword, email, inviteCode, navigate, password, role, username]);
+  }, [confirmPassword, email, inviteCode, navigate, password, username]);
 
   return {
     confirmPassword,
@@ -72,12 +66,10 @@ export function useSignupForm(): SignupFormController {
     inviteCode,
     isSubmitting,
     password,
-    role,
     setConfirmPassword,
     setEmail,
     setInviteCode,
     setPassword,
-    setRole,
     setUsername,
     username,
   };

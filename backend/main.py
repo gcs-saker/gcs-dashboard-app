@@ -16,7 +16,7 @@ from api.contracts import (
 )
 from config import WebSecuritySettings
 from core.security import require_role
-from core.security_contract import ROLE_OPERATOR, ROLE_VIEWER
+from core.security_contract import ROLE_ADMIN, ROLE_OPERATOR, ROLE_VIEWER
 from core.structured_logging import (
     StructuredLoggingSettings,
     configure_structured_logging,
@@ -25,6 +25,7 @@ from core.structured_logging import (
     log_request_failed,
 )
 from core.tracing import TracingSettings, configure_global_tracing, trace_fastapi_request
+from modules.ai_adapter.router import router as ai_adapter_router
 from modules.ai_contract.router import router as mock_ai_router
 from mqtt.subscriber import start_optional_telemetry_subscriber
 
@@ -146,6 +147,11 @@ app.include_router(
     prefix=RouterPrefixes.API_V1,
     tags=["AI Mock"],
     dependencies=[Depends(require_role(ROLE_OPERATOR))],
+)
+app.include_router(
+    ai_adapter_router,
+    prefix=RouterPrefixes.API_V1,
+    dependencies=[Depends(require_role(ROLE_ADMIN))],
 )
 app.include_router(telemetry.router, prefix=RouterPrefixes.TELEMETRY, tags=["Telemetry"])
 app.include_router(

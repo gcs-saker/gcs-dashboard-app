@@ -32,6 +32,7 @@ data class TelemetryHistoryResponse(
 )
 
 data class TelemetryIngestRequest(
+    val eventId: String? = null,
     val uuid: String?,
     val latitude: Double? = null,
     val longitude: Double? = null,

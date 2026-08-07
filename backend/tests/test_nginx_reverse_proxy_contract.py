@@ -5,6 +5,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 NGINX_PROXY_CONFIG = REPO_ROOT / "deploy" / "nginx" / "gcs-saker.reverse-proxy.example.conf"
 SINGLE_NODE_NGINX_CONFIG = REPO_ROOT / "deploy" / "nginx" / "single-node.poc.conf"
 NGINX_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_Nginx_HTTPS_WSS_reverse_proxy_v0.1.md"
+CADDY_TLS_CONFIG = REPO_ROOT / "deploy" / "caddy" / "Caddyfile.tls-alpn-bootstrap"
 
 
 def read_config() -> str:
@@ -59,6 +60,38 @@ def test_reverse_proxy_sets_browser_security_headers() -> None:
     assert 'add_header Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)" always;' in config
 
 
+def test_public_caddy_terminator_sets_security_headers_for_every_host() -> None:
+    config = CADDY_TLS_CONFIG.read_text(encoding="utf-8")
+
+    assert "(gcs_security_headers)" in config
+    assert config.count("import gcs_security_headers") == 2
+    assert "{$LEGACY_TLS_HOST}" not in config
+    assert "Strict-Transport-Security" in config
+    assert "Content-Security-Policy" in config
+    assert "Permissions-Policy" in config
+    assert "X-Content-Type-Options" in config
+    assert "X-Frame-Options" in config
+    assert "Referrer-Policy" in config
+    assert "-Server" in config
+
+
+def test_public_caddy_records_audit_events_without_credentials_or_query_secrets() -> None:
+    config = CADDY_TLS_CONFIG.read_text(encoding="utf-8")
+
+    assert config.count("import gcs_audit_log") == 2
+    assert "mode 0600" in config
+    assert "roll_size 100MiB" in config
+    assert "roll_keep_for 720h" in config
+    for header in [
+        "X-Gcs-Device-Uuid",
+        "X-Gcs-Device-Credential",
+        "X-Gcs-Publish-Token",
+        "X-Publisher-Token",
+    ]:
+        assert f"request>headers>{header} delete" in config
+    assert r'request>uri regexp \?.*$ ""' in config
+
+
 def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     config = read_config()
 
@@ -87,6 +120,7 @@ def test_reverse_proxy_documents_api_dashboard_and_media_routes() -> None:
     assert "location = /api/ops/events/stream" in config
     assert "location /api/ops/" in config
     assert "location /api/stream/" in config
+    assert "location /api/v1/groups" in config
     assert "location /stream/" in config
     assert "location /api/" in config
     assert "location /ws/" in config
@@ -142,7 +176,8 @@ def test_media_proxy_rewrites_public_prefixes_to_mediamtx_paths() -> None:
     assert "rewrite ^/hls/(.*)$ /$1 break;" in hls_location
     assert "proxy_pass http://$mediamtx_host:8888;" in hls_location
     assert "rewrite ^/webrtc/(.*)$ /$1 break;" in webrtc_location
-    assert "proxy_pass http://$mediamtx_host:8889;" in webrtc_location
+    assert "proxy_pass http://$mediamtx_host:8889$uri$is_args$args;" in webrtc_location
+    assert 'set $args "publisherToken=$gcs_publish_token&$args";' in webrtc_location
 
 
 def test_auth_proxy_rewrites_dashboard_api_auth_prefix_to_backend_auth_router() -> None:
@@ -256,12 +291,34 @@ def test_single_node_nginx_also_disables_unknown_legacy_fallbacks() -> None:
 def test_single_node_nginx_routes_mobile_publisher_without_replacing_dashboard() -> None:
     config = read_single_node_config()
     publisher_location = extract_location(config, "/publisher/")
+    publisher_manifest_location = extract_exact_location(config, "/publisher/manifest.webmanifest")
     root_location = extract_locations(config, "/")[-1]
 
     assert "upstream gcs_mobile_publisher" in config
     assert "server mobile-publisher:8080;" in config
     assert "proxy_pass http://$mobile_publisher_host:8080;" in publisher_location
+    assert "application/manifest+json" in publisher_manifest_location
+    assert "charset utf-8;" in publisher_manifest_location
+    assert '"start_url":"/publisher/"' in publisher_manifest_location
+    assert '"scope":"/publisher/"' in publisher_manifest_location
+    assert "no-cache" in publisher_manifest_location
     assert "proxy_pass http://$dashboard_host:3000;" in root_location
+
+
+def test_operational_swagger_has_one_canonical_edge_entrypoint() -> None:
+    for config in [read_config(), read_single_node_config()]:
+        swagger_location = extract_exact_location(config, "/ops/swagger")
+        openapi_location = extract_exact_location(config, "/ops/openapi.yaml")
+
+        assert "absolute_redirect off;" in swagger_location
+        assert "return 308 /auth-policy/admin/api-docs/swagger;" in swagger_location
+        assert "return 308 /auth-policy/admin/api-docs/openapi.yaml;" in openapi_location
+
+
+def test_reserved_operational_typos_never_fall_through_to_spa() -> None:
+    for config in [read_config(), read_single_node_config()]:
+        assert r"location ~ ^/(swagger|docs|openapi\.json|metrics)/?$" in config
+        assert 'return 404 \'{"error":"not_found","canonicalDocs":"/ops/swagger"}\';' in config
 
 
 def test_reverse_proxy_policy_doc_covers_required_endpoint_decisions() -> None:

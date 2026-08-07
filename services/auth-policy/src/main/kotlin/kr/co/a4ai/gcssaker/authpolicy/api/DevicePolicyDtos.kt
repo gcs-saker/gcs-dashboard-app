@@ -7,10 +7,7 @@ data class DevicePublishAuthorizationRequest(
     val deviceUuid: String,
     @get:JsonProperty(DevicePolicyApiFields.CREDENTIAL)
     val credential: String,
-    @get:JsonProperty(DevicePolicyApiFields.STREAM_ID)
-    val streamId: String,
-    @get:JsonProperty(DevicePolicyApiFields.PATH)
-    val path: String,
+    val sensorId: String = "",
 )
 
 data class DevicePublishAuthorizationResponse(
@@ -20,8 +17,11 @@ data class DevicePublishAuthorizationResponse(
     val streamId: String,
     @get:JsonProperty(DevicePolicyApiFields.PATH)
     val path: String,
+    val sensorId: String,
     @get:JsonProperty(DevicePolicyApiFields.PUBLISHER_GROUP_ID)
     val publisherGroupId: String,
+    val credentialVersion: Long,
+    val devicePolicyVersion: Long,
     @get:JsonProperty(DevicePolicyApiFields.REASON)
     val reason: String,
     @get:JsonProperty(DevicePolicyApiFields.POLICY_VERSION)

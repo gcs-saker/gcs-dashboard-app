@@ -17,7 +17,7 @@ class JdbcOperationalReadRepository(
     assetsByGateway: Map<String, List<AssetReadModel>>,
 ) : OperationalReadRepository {
     private val jdbc = JdbcTemplate(dataSource)
-    private val writer = OperationalReadJdbcWriter(jdbc)
+    private val writer = OperationalReadJdbcWriter(dataSource)
     private val seeder = OperationalReadSeeder(jdbc, writer)
 
     init {
@@ -33,6 +33,8 @@ class JdbcOperationalReadRepository(
             principal.groupId.value,
             principal.role.name,
             UserRole.ADMIN.name,
+            principal.role.name,
+            principal.groupId.value,
         )
 
     @Synchronized
@@ -51,6 +53,8 @@ class JdbcOperationalReadRepository(
             principal.groupId.value,
             principal.role.name,
             UserRole.ADMIN.name,
+            principal.role.name,
+            principal.groupId.value,
             limit.coerceIn(1, 500),
         )
 
@@ -62,6 +66,8 @@ class JdbcOperationalReadRepository(
             principal.groupId.value,
             principal.role.name,
             UserRole.ADMIN.name,
+            principal.role.name,
+            principal.groupId.value,
         )
 
     override fun recordServerHealthSnapshot(snapshot: ServerHealthSnapshotReadModel): ServerHealthSnapshotReadModel =
@@ -77,6 +83,8 @@ class JdbcOperationalReadRepository(
             principal.groupId.value,
             principal.role.name,
             UserRole.ADMIN.name,
+            principal.role.name,
+            principal.groupId.value,
             limit.coerceIn(1, 500),
         )
 
@@ -90,6 +98,8 @@ class JdbcOperationalReadRepository(
             principal.groupId.value,
             principal.role.name,
             UserRole.ADMIN.name,
+            principal.role.name,
+            principal.groupId.value,
         )
 
 }

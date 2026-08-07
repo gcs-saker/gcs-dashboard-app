@@ -131,7 +131,7 @@ def check_dashboard_serves_built_artifacts() -> list[str]:
     content = DASHBOARD_DOCKERFILE.read_text(encoding="utf-8")
     required_tokens = (
         "npm run build",
-        "FROM nginx:alpine",
+        "FROM nginxinc/nginx-unprivileged:1.29-alpine@sha256:",
         "COPY --from=builder /app/dist /usr/share/nginx/html",
     )
     errors = [f"Dashboard Dockerfile missing {token}" for token in required_tokens if token not in content]

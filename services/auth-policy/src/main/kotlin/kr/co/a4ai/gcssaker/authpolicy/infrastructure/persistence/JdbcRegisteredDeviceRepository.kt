@@ -38,6 +38,8 @@ class JdbcRegisteredDeviceRepository(
                 device.credentialHash,
                 device.status.name.lowercase(),
                 device.deviceType.apiValue,
+                device.credentialVersion,
+                device.policyVersion,
             )
         } else {
             jdbc.update(
@@ -47,6 +49,8 @@ class JdbcRegisteredDeviceRepository(
                 device.credentialHash,
                 device.status.name.lowercase(),
                 device.deviceType.apiValue,
+                device.credentialVersion,
+                device.policyVersion,
                 device.deviceUuid,
             )
         }
@@ -61,8 +65,10 @@ class JdbcRegisteredDeviceRepository(
                 groupId = GroupId(rs.getString(RegisteredDeviceColumns.groupId)),
                 displayName = rs.getString(RegisteredDeviceColumns.displayName),
                 credentialHash = rs.getString(RegisteredDeviceColumns.credentialHash),
-                status = RegisteredDeviceStatus.valueOf(rs.getString(RegisteredDeviceColumns.status).uppercase()),
+                status = RegisteredDeviceStatus.fromPersistence(rs.getString(RegisteredDeviceColumns.status)),
                 deviceType = DeviceType.entries.first { it.apiValue == rs.getString(RegisteredDeviceColumns.deviceType) },
+                credentialVersion = rs.getLong(RegisteredDeviceColumns.credentialVersion),
+                policyVersion = rs.getLong(RegisteredDeviceColumns.policyVersion),
             )
         }
     }
@@ -75,26 +81,28 @@ private object RegisteredDeviceColumns {
     const val credentialHash = "credential_hash"
     const val status = "status"
     const val deviceType = "device_type"
+    const val credentialVersion = "credential_version"
+    const val policyVersion = "policy_version"
 }
 
 private object RegisteredDeviceSql {
     const val selectAll = """
-        SELECT device_uuid, group_id, display_name, credential_hash, status, device_type
+        SELECT device_uuid, group_id, display_name, credential_hash, status, device_type, credential_version, policy_version
         FROM registered_devices
         ORDER BY device_uuid ASC
     """
     const val selectByUuid = """
-        SELECT device_uuid, group_id, display_name, credential_hash, status, device_type
+        SELECT device_uuid, group_id, display_name, credential_hash, status, device_type, credential_version, policy_version
         FROM registered_devices
         WHERE device_uuid = ?
     """
     const val insert = """
-        INSERT INTO registered_devices (device_uuid, group_id, display_name, credential_hash, status, device_type)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO registered_devices (device_uuid, group_id, display_name, credential_hash, status, device_type, credential_version, policy_version)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """
     const val update = """
         UPDATE registered_devices
-        SET group_id = ?, display_name = ?, credential_hash = ?, status = ?, device_type = ?, updated_at = CURRENT_TIMESTAMP
+        SET group_id = ?, display_name = ?, credential_hash = ?, status = ?, device_type = ?, credential_version = ?, policy_version = ?, updated_at = CURRENT_TIMESTAMP
         WHERE device_uuid = ?
     """
 }

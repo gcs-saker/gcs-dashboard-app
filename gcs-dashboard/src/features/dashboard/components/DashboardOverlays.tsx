@@ -26,7 +26,6 @@ export interface DashboardOverlaysProps {
   onCancelWidgetDialog: () => void;
   onCloseAssetDrawer: () => void;
   onClosePopout: () => void;
-  onConnectAddress: (address: string, displayName: string) => void;
   onConnectDevice: (device: StreamDeviceOption) => void;
   onDisconnectStream: () => void;
   onResetLayout: () => void;
@@ -52,7 +51,6 @@ export function DashboardOverlays({
   onCancelWidgetDialog,
   onCloseAssetDrawer,
   onClosePopout,
-  onConnectAddress,
   onConnectDevice,
   onDisconnectStream,
   onResetLayout,
@@ -108,7 +106,6 @@ export function DashboardOverlays({
           devices={streamDevices}
           onCancel={onCancelStreamConnection}
           onConnect={onConnectDevice}
-          onConnectAddress={onConnectAddress}
           onDisconnect={onDisconnectStream}
           stream={editingStream}
         />

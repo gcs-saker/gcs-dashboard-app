@@ -31,6 +31,9 @@ data class DeviceProvisioningTokenRecord(
     val expiresAt: Instant,
     val createdBy: String,
     val createdAt: Instant,
+    val lastUsedAt: Instant? = null,
+    val revokedAt: Instant? = null,
+    val revokedBy: String? = null,
 ) {
     init {
         require(tokenId.isNotBlank()) { DeviceProvisioningTokenContract.TOKEN_ID_REQUIRED }
@@ -57,6 +60,7 @@ interface DeviceProvisioningTokenRepository {
     fun activeCandidates(now: Instant): List<DeviceProvisioningTokenRecord>
     fun save(record: DeviceProvisioningTokenRecord): DeviceProvisioningTokenRecord
     fun consume(tokenId: String, now: Instant): Boolean
+    fun revoke(tokenId: String, revokedBy: String, now: Instant): Boolean
 }
 
 class InMemoryDeviceProvisioningTokenRepository(
@@ -86,8 +90,15 @@ class InMemoryDeviceProvisioningTokenRepository(
                 DeviceProvisioningTokenStatus.EXHAUSTED
             } else {
                 DeviceProvisioningTokenStatus.ACTIVE
-            },
+            }, lastUsedAt = now,
         )
+        return true
+    }
+
+    @Synchronized
+    override fun revoke(tokenId: String, revokedBy: String, now: Instant): Boolean {
+        val current = tokensById[tokenId]?.takeIf { it.status == DeviceProvisioningTokenStatus.ACTIVE } ?: return false
+        tokensById[tokenId] = current.copy(status = DeviceProvisioningTokenStatus.REVOKED, revokedAt = now, revokedBy = revokedBy)
         return true
     }
 }
@@ -144,6 +155,12 @@ class DeviceProvisioningTokenService(
             passwordHasher.verify(rawToken, candidate.tokenHash)
         } ?: return null
         return if (repository.consume(matched.tokenId, now)) matched.groupId else null
+    }
+
+    fun revoke(tokenId: String, revokedBy: String): Boolean {
+        require(tokenId.isNotBlank()) { DeviceProvisioningTokenContract.TOKEN_ID_REQUIRED }
+        require(revokedBy.isNotBlank()) { DeviceProvisioningTokenContract.CREATED_BY_REQUIRED }
+        return repository.revoke(tokenId, revokedBy, clock.instant())
     }
 
     private fun withRuntimeStatus(record: DeviceProvisioningTokenRecord): DeviceProvisioningTokenRecord =

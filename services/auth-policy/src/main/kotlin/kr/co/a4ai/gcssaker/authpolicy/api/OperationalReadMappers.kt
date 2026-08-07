@@ -13,6 +13,7 @@ internal fun TelemetryIngestRequest.toReadModel(principal: AuthenticatedPrincipa
     val telemetryUuid = uuid?.trim()?.takeIf { it.isNotEmpty() }
         ?: throw BadRequestApiError(OperationalReadApiErrors.UUID_REQUIRED)
     return TelemetryReadModel(
+        eventId = eventId?.trim()?.takeIf { it.isNotEmpty() },
         uuid = telemetryUuid,
         latitude = latitude ?: 0.0,
         longitude = longitude ?: 0.0,

@@ -44,6 +44,22 @@ class JdbcAuthUserRepositoryTest {
     }
 
     @Test
+    fun `jdbc repository synchronizes configured seed credentials on restart`() {
+        val dataSource = h2DataSource()
+        JdbcAuthUserRepository(
+            dataSource,
+            listOf(seedUser(1, "operator01", "operator@example.test").copy(passwordHash = "old-hash")),
+        )
+
+        val restarted = JdbcAuthUserRepository(
+            dataSource,
+            listOf(seedUser(1, "operator01", "operator@example.test").copy(passwordHash = "rotated-hash")),
+        )
+
+        assertEquals("rotated-hash", restarted.findByUsername("operator01")?.passwordHash)
+    }
+
+    @Test
     fun `l1 auth user cache avoids repeated delegate lookups`() {
         val delegate = RecordingAuthUserRepository(seedUser(1, "operator01", "operator@example.test"))
         val cached = CachedAuthUserRepository(delegate)

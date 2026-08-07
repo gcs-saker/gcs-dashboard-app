@@ -1,6 +1,8 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
 import jakarta.servlet.FilterChain
+import io.micrometer.tracing.Tracer
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -11,6 +13,7 @@ import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import java.time.Duration
+import java.lang.reflect.Proxy
 
 class RequestSecurityFiltersTest {
     @Test
@@ -67,6 +70,21 @@ class RequestSecurityFiltersTest {
         CorrelationIdFilter().doFilter(request, response, chain)
 
         assertNull(MDC.get(RequestTraceContract.MDC_CORRELATION_ID))
+    }
+
+    @Test
+    fun `tracing failure cannot replace a successful business response`() {
+        val failingTracer = Proxy.newProxyInstance(
+            Tracer::class.java.classLoader,
+            arrayOf(Tracer::class.java),
+        ) { _, _, _ -> throw NoSuchElementException("closed tracing context") } as Tracer
+        val request = MockHttpServletRequest("POST", "/policy/devices/authenticate")
+        val response = MockHttpServletResponse()
+
+        assertDoesNotThrow {
+            CorrelationIdFilter(failingTracer).doFilter(request, response, MockFilterChain())
+        }
+        assertEquals(200, response.status)
     }
 
     @Test

@@ -5,6 +5,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
+import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Bean
 import org.springframework.security.core.Authentication
@@ -23,6 +24,7 @@ object TelemetryWebSocketContract {
 
 class TelemetryWebSocketHub(
     private val objectMapper: ObjectMapper,
+    private val hierarchyRepository: OrganizationHierarchyRepository? = null,
 ) : TextWebSocketHandler(), TelemetryPublisher {
     private data class Subscriber(
         val session: WebSocketSession,
@@ -52,7 +54,9 @@ class TelemetryWebSocketHub(
     override fun publish(telemetry: TelemetryReadModel) {
         val payload = TextMessage(objectMapper.writeValueAsString(telemetry.toResponse()))
         subscribers.values.forEach { subscriber ->
-            if (subscriber.principal.role == UserRole.ADMIN || subscriber.principal.groupId == telemetry.groupId) {
+            val canViewDescendant = subscriber.principal.role == UserRole.OPERATOR &&
+                hierarchyRepository?.current()?.isAncestor(subscriber.principal.groupId, telemetry.groupId) == true
+            if (subscriber.principal.role == UserRole.ADMIN || subscriber.principal.groupId == telemetry.groupId || canViewDescendant) {
                 runCatching {
                     synchronized(subscriber.session) {
                         if (subscriber.session.isOpen) subscriber.session.sendMessage(payload)
@@ -70,8 +74,10 @@ class TelemetryWebSocketHub(
 @Configuration
 class TelemetryWebSocketBeanConfig {
     @Bean
-    fun telemetryWebSocketHub(objectMapper: ObjectMapper): TelemetryWebSocketHub =
-        TelemetryWebSocketHub(objectMapper)
+    fun telemetryWebSocketHub(
+        objectMapper: ObjectMapper,
+        hierarchyRepository: OrganizationHierarchyRepository,
+    ): TelemetryWebSocketHub = TelemetryWebSocketHub(objectMapper, hierarchyRepository)
 }
 
 @Configuration

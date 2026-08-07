@@ -24,8 +24,7 @@ class DevicePolicyController(
                 DevicePublishAuthorizationCommand(
                     deviceUuid = request.deviceUuid,
                     credential = request.credential,
-                    streamId = request.streamId,
-                    path = request.path,
+                    sensorId = request.sensorId,
                 ),
             )
         } catch (error: DevicePublishAuthorizationRejectedException) {
@@ -38,7 +37,10 @@ class DevicePolicyController(
             deviceUuid = authorization.deviceUuid,
             streamId = authorization.streamId,
             path = authorization.path,
+            sensorId = authorization.sensorId,
             publisherGroupId = authorization.publisherGroupId.value,
+            credentialVersion = authorization.credentialVersion,
+            devicePolicyVersion = authorization.devicePolicyVersion,
             reason = authorization.reason,
             policyVersion = DevicePolicyDecisionContract.POLICY_VERSION,
         )

@@ -32,7 +32,11 @@ export function AudioWaveform() {
       title="음성 파형 분석"
       description="선택 스트림 음성 수신 상태, ICE 경로, 지연/지터/손실 지표를 한 번에 봅니다."
     >
-      <AudioWaveformPanel analysis={STORY_AUDIO_ANALYSIS} selectedStream={STORY_STREAM_SLOTS.live} />
+      <AudioWaveformPanel
+        analysis={STORY_AUDIO_ANALYSIS}
+        selectedStream={STORY_STREAM_SLOTS.live}
+        talkback={{ status: "idle", errorMessage: null, hasLocalAudioTrack: false, micLevel: null, targets: [], start: async () => undefined, stop: noop }}
+      />
     </DashboardStoryShell>
   );
 }

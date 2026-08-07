@@ -204,7 +204,7 @@ def test_single_node_keeps_redis_as_default_cache_runtime() -> None:
     compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
     redis = compose["services"]["redis"]
 
-    assert redis["image"] == "redis:7.4-alpine"
+    assert redis["image"] == "redis@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99"
     assert redis["command"] == [
         "redis-server",
         "--appendonly",
@@ -257,9 +257,7 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
     assert services["media-control"]["environment"]["MEDIA_CONTROL_AUTH_MODE"] == (
         "${MEDIA_CONTROL_AUTH_MODE:-required}"
     )
-    assert services["auth-policy"]["environment"]["AUTH_POLICY_SIGNUP_INVITES"] == (
-        "${AUTH_POLICY_SIGNUP_INVITES:-A4AI01:1:co-a}"
-    )
+    assert services["auth-policy"]["environment"]["AUTH_POLICY_SIGNUP_INVITES"] == ("${AUTH_POLICY_SIGNUP_INVITES:-}")
     assert services["media-control"]["environment"]["MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID"] == (
         "${MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID:-co-a}"
     )
@@ -273,6 +271,9 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
         "${MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://localhost:8080/hls}"
     )
     assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_LISTEN_ADDR"] == ":9090"
+    assert services["media-control"]["ports"] == [
+        "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIA_CONTROL_GRPC_HOST_PORT:-9090}:9090"
+    ]
     assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_TOKEN"] == (
         "${MEDIA_CONTROL_GRPC_TOKEN:-${MEDIA_CONTROL_PUBLISH_TOKEN:?Set MEDIA_CONTROL_PUBLISH_TOKEN}}"
     )
@@ -333,6 +334,32 @@ def test_single_node_edge_depends_on_active_cutover_services() -> None:
     assert edge_depends_on["media-control"]["condition"] == "service_started"
     assert edge_depends_on["mediamtx"]["condition"] == "service_started"
     assert "backend" not in edge_depends_on
+
+
+def test_single_node_tmpfs_options_remain_one_mount_spec_per_service() -> None:
+    compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
+
+    assert compose["services"]["backend"]["tmpfs"] == ["/tmp:rw,noexec,nosuid,nodev,size=64m"]
+    assert compose["services"]["auth-policy"]["tmpfs"] == ["/tmp:rw,noexec,nosuid,nodev,size=128m"]
+    assert compose["services"]["media-control"]["tmpfs"] == ["/tmp:rw,noexec,nosuid,nodev,size=64m"]
+    for service_name in ("dashboard", "edge"):
+        assert compose["services"][service_name]["tmpfs"] == [
+            "/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777",
+            "/var/cache/nginx:rw,noexec,nosuid,nodev,size=16m,uid=101,gid=101,mode=0755",
+        ]
+
+
+def test_single_node_stateful_images_and_resource_limits_are_fixed() -> None:
+    services = load_yaml(SINGLE_NODE_COMPOSE_FILE)["services"]
+
+    for service_name in ("postgres-geo", "redis", "mqtt", "mediamtx", "turn-primary", "turn-secondary"):
+        service = services[service_name]
+        assert "@sha256:" in service["image"]
+        assert service["pids_limit"] > 0
+        assert service["mem_limit"]
+        assert service["cpus"]
+
+    assert "${MEDIAMTX_IMAGE" not in services["mediamtx"]["image"]
 
 
 def test_https_edge_healthcheck_allows_temporary_self_signed_certificate() -> None:
@@ -426,7 +453,8 @@ def test_single_node_turn_services_use_coturn_supported_runtime_flags() -> None:
 def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
     dockerfile = DASHBOARD_DOCKERFILE.read_text(encoding="utf-8")
 
-    assert "FROM node:22 AS builder" in dockerfile
+    assert "FROM node:22.18.0-bookworm-slim@sha256:" in dockerfile
+    assert "FROM nginxinc/nginx-unprivileged:1.29-alpine@sha256:" in dockerfile
     assert "ARG VITE_API_BASE_URL=/api" in dockerfile
     assert "ARG VITE_IDENTITY_API_BASE_URL=/auth-policy/auth" in dockerfile
     assert "RUN VITE_AUTH_API_BASE_URL=$VITE_IDENTITY_API_BASE_URL npm run build" in dockerfile

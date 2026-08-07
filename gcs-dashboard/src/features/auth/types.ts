@@ -10,7 +10,6 @@ export interface SignupRequest {
   email: string;
   password: string;
   inviteCode: string;
-  role: UserRole;
 }
 
 export interface SignupResponse {

@@ -22,7 +22,9 @@ def test_default_runtime_mounts_postgis_init_scripts_read_only() -> None:
     postgres = compose["services"]["postgres-geo"]
 
     assert "profiles" not in postgres
-    assert postgres["image"] == "postgis/postgis:16-3.4"
+    assert postgres["image"] == (
+        "postgis/postgis@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5"
+    )
     assert {
         "type": "bind",
         "source": "../postgres/init",

@@ -60,7 +60,11 @@ describe("SignupPage auth flow", () => {
 
     await waitFor(() => expect(window.location.pathname).toBe("/login"));
     expect(
-      await screen.findByText("viewer02 계정이 등록되었습니다. 로그인해주세요."),
+      await screen.findByText(
+        "viewer02 계정이 등록되었습니다. 로그인해주세요.",
+        {},
+        { timeout: 5_000 },
+      ),
     ).toBeInTheDocument();
     expect(globalThis.fetch).toHaveBeenCalledWith(
       AUTH_SIGNUP_URL,
@@ -72,7 +76,6 @@ describe("SignupPage auth flow", () => {
           email: "viewer02@example.com",
           password: "strong-password",
           inviteCode: "A4AI01",
-          role: "viewer",
         }),
       }),
     );

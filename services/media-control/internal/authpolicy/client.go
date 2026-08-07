@@ -19,11 +19,53 @@ const (
 	traceOperationAuthorizeStream = "media-control.auth-policy.authorize-stream"
 	authPolicyStreamAccessPath    = "/policy/streams/access"
 	authPolicyDevicePublishPath   = "/policy/devices/publish"
+	authPolicyAccountPublishPath  = "/policy/accounts/publish"
 )
 
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
+}
+
+func (c Client) AuthorizeAccountPublish(
+	ctx context.Context,
+	command domain.AccountPublishCommand,
+) (domain.DevicePublishAuthorization, error) {
+	if c.baseURL == "" {
+		return domain.DevicePublishAuthorization{}, fmt.Errorf("auth-policy base URL is not configured")
+	}
+	body, err := json.Marshal(struct {
+		SensorID string `json:"sensorId"`
+	}{SensorID: command.SensorID})
+	if err != nil {
+		return domain.DevicePublishAuthorization{}, err
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+authPolicyAccountPublishPath, bytes.NewReader(body))
+	if err != nil {
+		return domain.DevicePublishAuthorization{}, err
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
+	request.Header.Set("Authorization", command.Authorization)
+	response, err := c.httpClient.Do(request)
+	if err != nil {
+		return domain.DevicePublishAuthorization{}, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden {
+		return domain.DevicePublishAuthorization{}, domain.ErrDevicePublishAccessDenied
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return domain.DevicePublishAuthorization{}, fmt.Errorf("auth-policy account publish returned status %d", response.StatusCode)
+	}
+	var authorization domain.DevicePublishAuthorization
+	if err := json.NewDecoder(response.Body).Decode(&authorization); err != nil {
+		return domain.DevicePublishAuthorization{}, err
+	}
+	if authorization.PublisherGroupID == "" {
+		return domain.DevicePublishAuthorization{}, domain.ErrDevicePublishAccessDenied
+	}
+	return authorization, nil
 }
 
 func NewAuthorizer(mode string, baseURL string, httpClient *http.Client) (Authorizer, error) {

@@ -43,6 +43,15 @@ object AuthSecurityRouteContract {
         RouteMatcher(HttpMethod.GET, ACTUATOR_HEALTH),
         RouteMatcher(HttpMethod.GET, ACTUATOR_INFO),
         RouteMatcher(HttpMethod.GET, ACTUATOR_PROMETHEUS),
+        RouteMatcher(
+            HttpMethod.GET,
+            OperationalApiDocumentationRoutes.ROOT + OperationalApiDocumentationRoutes.SWAGGER,
+        ),
+        RouteMatcher(
+            HttpMethod.GET,
+            OperationalApiDocumentationRoutes.ROOT + OperationalApiDocumentationRoutes.INITIALIZER,
+        ),
+        RouteMatcher(HttpMethod.GET, "/webjars/swagger-ui/**"),
         RouteMatcher(HttpMethod.OPTIONS, ALL_PATHS),
         RouteMatcher(null, ERROR_PATH),
         RouteMatcher(null, AUTH_PREFIX),
@@ -51,6 +60,7 @@ object AuthSecurityRouteContract {
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.REFRESH),
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.LOGOUT),
         RouteMatcher(HttpMethod.POST, DevicePolicyApiRoutes.ROOT + DevicePolicyApiRoutes.PUBLISH),
+        RouteMatcher(HttpMethod.POST, DevicePolicyApiRoutes.ROOT + DevicePolicyApiRoutes.AUTHENTICATE),
         RouteMatcher(HttpMethod.POST, DeviceBootstrapApiRoutes.ROOT + DeviceBootstrapApiRoutes.REGISTER),
         RouteMatcher(HttpMethod.POST, DeviceBootstrapApiRoutes.EDGE_ROOT + DeviceBootstrapApiRoutes.REGISTER),
         RouteMatcher(HttpMethod.POST, "/api/v1/devices/*/telemetry"),
@@ -59,6 +69,7 @@ object AuthSecurityRouteContract {
     val ADMIN_AUTHORITY = roleAuthority(ADMIN_ROLE_NAME)
     val PROTECTED_MATCHERS = listOf(
         RouteMatcher(HttpMethod.GET, AuthApiRoutes.ROOT + AuthApiRoutes.ME),
+        RouteMatcher(null, AccountPublisherPolicyApiRoutes.ROOT + ALL_PATHS),
         RouteMatcher(null, StreamPolicyApiRoutes.ROOT + ALL_PATHS),
         RouteMatcher(null, OPS_PREFIX),
         RouteMatcher(null, TELEMETRY_PREFIX),

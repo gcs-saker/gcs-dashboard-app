@@ -11,10 +11,17 @@ data class SignupInvite(
     }
 }
 
+interface SignupInviteResolver {
+    fun findByCode(code: String): SignupInvite?
+
+    fun <T> useInvite(code: String, action: (SignupInvite) -> T): T? =
+        findByCode(code)?.let(action)
+}
+
 class SignupInvites private constructor(
     private val valuesByCode: Map<String, SignupInvite>,
-) {
-    fun findByCode(code: String): SignupInvite? = valuesByCode[code]
+) : SignupInviteResolver {
+    override fun findByCode(code: String): SignupInvite? = valuesByCode[code]
 
     fun toList(): List<SignupInvite> = valuesByCode.values.toList()
 
@@ -34,37 +41,32 @@ data class SignupCommand(
     val email: String,
     val password: String,
     val inviteCode: String,
-    val role: String,
 )
 
 class SignupRejectedException(message: String) : RuntimeException(message)
+class DuplicateAuthUserException(message: String, cause: Throwable? = null) : IllegalArgumentException(message, cause)
 
 class AuthRegistrationService(
     private val users: AuthUserRepository,
     private val passwordHasher: PasswordHasher,
-    private val invites: SignupInvites,
+    private val invites: SignupInviteResolver,
 ) {
     fun signup(command: SignupCommand): AuthUser {
         if (users.findByUsername(command.username) != null) {
-            throw SignupRejectedException("Username already registered")
+            throw DuplicateAuthUserException("Username already registered")
         }
         if (users.findByEmail(command.email) != null) {
-            throw SignupRejectedException("Email already registered")
+            throw DuplicateAuthUserException("Email already registered")
         }
-        val invite = invites.findByCode(command.inviteCode)
-            ?: throw SignupRejectedException("Invalid invite code Input")
-        val role = command.role.trim().uppercase().let {
-            runCatching { UserRole.valueOf(it) }.getOrDefault(UserRole.VIEWER)
-        }
-        return users.save(
-            AuthUser(
+        return invites.useInvite(command.inviteCode) { invite ->
+            users.save(AuthUser(
                 username = command.username,
                 email = command.email,
                 passwordHash = passwordHasher.hash(command.password),
                 companyId = invite.companyId,
-                role = role,
+                role = UserRole.VIEWER,
                 groupId = invite.groupId,
-            ),
-        )
+            ))
+        } ?: throw SignupRejectedException("Invalid invite code Input")
     }
 }

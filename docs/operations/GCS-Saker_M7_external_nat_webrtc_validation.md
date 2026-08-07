@@ -26,7 +26,7 @@ STREAM_PATH=raw/nat/smoke \
 scripts/smoke/m7_external_nat_webrtc_smoke.sh --run
 ```
 
-자체서명 인증서 환경에서는 기본값으로 `INSECURE_TLS=1`이 적용된다. 정식 인증서 전환 뒤에는 `INSECURE_TLS=0`으로 검증한다.
+기본값은 `INSECURE_TLS=0`이며 공인 CA 신뢰 체인을 검증한다. 격리된 로컬 개발 환경에서만 명시적으로 `INSECURE_TLS=1`을 사용할 수 있고, staging/production 승인 근거로는 인정하지 않는다.
 
 relay-only 검증은 다음처럼 실행한다.
 

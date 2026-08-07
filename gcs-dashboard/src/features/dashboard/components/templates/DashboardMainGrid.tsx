@@ -5,15 +5,17 @@ import type { DashboardWidgetDefinition, DashboardWidgetId } from "@dashboard/da
 import type { MapFocusViewModel } from "@dashboard/mapFocus";
 import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 import { AiResultsPanel } from "@dashboard/components/AiResultsPanel";
-import { AudioWaveformPanel } from "@dashboard/components/AudioWaveformPanel";
 import { OpsSummaryPanel } from "@dashboard/components/OpsSummaryPanel";
 import { SelectedStreamPanel } from "@dashboard/components/SelectedStreamPanel";
 import { StreamGrid } from "@dashboard/components/StreamGrid";
 import { TelemetryPanel } from "@dashboard/components/TelemetryPanel";
-import { DashboardMapWidget, type TacticalMapComponent } from "@dashboard/components/organisms/DashboardMapWidget";
+import type { TacticalMapComponent } from "@dashboard/components/organisms/DashboardMapWidget";
+import { DashboardAudioWaveformWidget } from "@dashboard/components/organisms/DashboardAudioWaveformWidget";
+import { DashboardTacticalMapWidget } from "@dashboard/components/organisms/DashboardTacticalMapWidget";
 import { RenderProfilerBoundary } from "@/features/RenderProfilerBoundary";
 import { RENDER_DIAGNOSTIC_LABELS } from "@/features/renderDiagnostics";
 import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
+import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
 interface DashboardMainGridProps {
   aiResultsWidget: DashboardWidgetDefinition;
   audioActiveStreamId: string | null;
@@ -35,6 +37,7 @@ interface DashboardMainGridProps {
   tacticalMap: TacticalMapComponent;
   tacticalMapWidget: DashboardWidgetDefinition;
   talkbackTargetStreamIds: string[];
+  talkback: TalkbackPublisherSnapshot;
   telemetryRows: TelemetryRow[];
   telemetryWidget: DashboardWidgetDefinition;
   widgetControls: (widgetId: DashboardWidgetId, title: string) => ReactNode;
@@ -44,25 +47,17 @@ export function DashboardMainGrid(props: DashboardMainGridProps) {
   return (
     <section className="ops-dashboard__grid">
       {isWidgetVisible("tactical-map") ? (
-        <DashboardErrorBoundary
-          boundaryId="panel:tactical-map"
-          description="지도 패널만 격리되었습니다. 스트림 수신과 이벤트 로그는 계속 사용할 수 있습니다."
-          resetKeys={[selectedStream.id]}
-          scope="panel"
-          title="지도"
-        >
-          <DashboardMapWidget
-            controls={widgetControls("tactical-map", "지도")}
-            mapFocus={props.mapFocus}
-            motionEnabled={props.motionEnabled}
-            onSelectStream={props.onSelectMapStream}
-            panelClass={props.panelClass}
-            selectedStream={selectedStream}
-            streams={streams}
-            tacticalMap={props.tacticalMap}
-            widget={props.tacticalMapWidget}
-          />
-        </DashboardErrorBoundary>
+        <DashboardTacticalMapWidget
+          mapFocus={props.mapFocus}
+          motionEnabled={props.motionEnabled}
+          onSelectStream={props.onSelectMapStream}
+          panelClass={props.panelClass}
+          selectedStream={selectedStream}
+          streams={streams}
+          tacticalMap={props.tacticalMap}
+          widget={props.tacticalMapWidget}
+          widgetControls={widgetControls}
+        />
       ) : null}
       {isWidgetVisible("selected-stream") ? (
         <DashboardErrorBoundary
@@ -130,11 +125,12 @@ export function DashboardMainGrid(props: DashboardMainGridProps) {
           />
         </DashboardErrorBoundary>
       ) : null}
-      <RenderProfilerBoundary id={RENDER_DIAGNOSTIC_LABELS.audioWaveformPanel}>
-        <DashboardErrorBoundary boundaryId="panel:audio-waveform" resetKeys={[selectedStream.id]} scope="panel" title="음성 파형 분석">
-          <AudioWaveformPanel analysis={props.audioAnalysis} isMotionEnabled={props.motionEnabled} selectedStream={selectedStream}/>
-        </DashboardErrorBoundary>
-      </RenderProfilerBoundary>
+      <DashboardAudioWaveformWidget
+        analysis={props.audioAnalysis}
+        isMotionEnabled={props.motionEnabled}
+        selectedStream={selectedStream}
+        talkback={props.talkback}
+      />
       {isWidgetVisible("ai-results") ? (
         <DashboardErrorBoundary boundaryId="panel:ai-results" scope="panel" title="AI 결과">
           <AiResultsPanel

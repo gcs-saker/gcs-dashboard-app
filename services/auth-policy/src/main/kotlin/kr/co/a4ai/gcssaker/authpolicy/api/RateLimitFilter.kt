@@ -23,6 +23,7 @@ object RateLimitContract {
 class RateLimitFilter(
     private val limiter: FixedWindowRateLimiter,
     private val enabled: Boolean,
+    private val clientIpResolver: ClientIpResolver = ClientIpResolver(),
 ) : OncePerRequestFilter() {
     override fun doFilterInternal(
         request: HttpServletRequest,
@@ -34,7 +35,7 @@ class RateLimitFilter(
             return
         }
 
-        val key = "${request.remoteAddr}:${request.requestURI}"
+        val key = "${clientIpResolver.resolve(request)}:${request.requestURI}"
         val decision = limiter.tryAcquire(key)
         if (decision.allowed) {
             filterChain.doFilter(request, response)
@@ -71,6 +72,7 @@ class FixedWindowRateLimiter(
     fun tryAcquire(key: String): RateLimitDecision {
         if (maxRequests <= 0) return RateLimitDecision.denied(window.seconds)
         val nowMillis = clock.millis()
+        windows.entries.removeIf { it.value.resetAtMillis <= nowMillis }
         val windowMillis = window.toMillis().coerceAtLeast(1)
         val next = windows.compute(key) { _, current ->
             if (current == null || nowMillis >= current.resetAtMillis) {

@@ -24,7 +24,7 @@ export const CctvChannelCard = memo(function CctvChannelCard({
   onSelect,
 }: CctvChannelCardProps) {
   const selectStream = useCallback(() => onSelect(stream.id), [onSelect, stream.id]);
-  const sourceLabel = stream.sourceUrl ?? stream.streamPath ?? "주소 미연결";
+  const sourceLabel = stream.streamPath ?? "스트림 미선택";
   const statusText = getDashboardStreamStatusText(stream.status);
 
   return (
@@ -56,7 +56,7 @@ export const CctvChannelCard = memo(function CctvChannelCard({
         <span>{stream.streamPath ? "REC ready" : "No path"}</span>
       </div>
       <button className="cctv-channel-card__connect" onClick={selectStream} type="button">
-        주소 연결
+        스트림 선택
       </button>
     </article>
   );

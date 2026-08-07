@@ -9,7 +9,7 @@ SMOKE_USERNAME="${SMOKE_USERNAME:-operator01}"
 SMOKE_PASSWORD="${SMOKE_PASSWORD:-correct-password}"
 SMOKE_SIGNUP_USERNAME="${SMOKE_SIGNUP_USERNAME:-m7-signup-$$}"
 SMOKE_SIGNUP_PASSWORD="${SMOKE_SIGNUP_PASSWORD:-m7-signup-pass}"
-SMOKE_SIGNUP_INVITE_CODE="${SMOKE_SIGNUP_INVITE_CODE:-A4AI01}"
+SMOKE_SIGNUP_INVITE_CODE="${SMOKE_SIGNUP_INVITE_CODE:-}"
 
 usage() {
   cat <<'EOF'
@@ -27,7 +27,7 @@ Environment:
   SMOKE_PASSWORD         Default: correct-password
   SMOKE_SIGNUP_USERNAME  Default: m7-signup-<pid>
   SMOKE_SIGNUP_PASSWORD  Default: m7-signup-pass
-  SMOKE_SIGNUP_INVITE_CODE  Default: A4AI01
+  SMOKE_SIGNUP_INVITE_CODE  Required one-time/admin-issued invite code
 EOF
 }
 
@@ -95,7 +95,11 @@ run_live() {
   export SMOKE_SIGNUP_USERNAME
   export SMOKE_SIGNUP_PASSWORD
   export SMOKE_SIGNUP_INVITE_CODE
-  signup_payload="$(python3 -c 'import json, os; username=os.environ["SMOKE_SIGNUP_USERNAME"]; print(json.dumps({"username": username, "email": username + "@example.test", "password": os.environ["SMOKE_SIGNUP_PASSWORD"], "inviteCode": os.environ["SMOKE_SIGNUP_INVITE_CODE"], "role": "viewer"}))')"
+  if [[ -z "$SMOKE_SIGNUP_INVITE_CODE" ]]; then
+    echo "SMOKE_SIGNUP_INVITE_CODE is required" >&2
+    exit 2
+  fi
+  signup_payload="$(python3 -c 'import json, os; username=os.environ["SMOKE_SIGNUP_USERNAME"]; print(json.dumps({"username": username, "email": username + "@example.test", "password": os.environ["SMOKE_SIGNUP_PASSWORD"], "inviteCode": os.environ["SMOKE_SIGNUP_INVITE_CODE"]}))')"
   signup_response="$(curl -fsS \
     -H "Content-Type: application/json" \
     -H "Origin: ${EDGE_BASE_URL}" \

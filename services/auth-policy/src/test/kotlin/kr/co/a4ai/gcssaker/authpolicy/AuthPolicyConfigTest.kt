@@ -9,6 +9,8 @@ import kr.co.a4ai.gcssaker.authpolicy.configuration.AllowedOrigins
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthPolicyConfig
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
 import kr.co.a4ai.gcssaker.authpolicy.configuration.OperationalPolicyConfig
+import kr.co.a4ai.gcssaker.authpolicy.configuration.RuntimeEnvReader
+import kr.co.a4ai.gcssaker.authpolicy.configuration.TimeSyncPolicyConfiguration
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.NoopPrincipalCache
@@ -25,6 +27,20 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class AuthPolicyConfigTest {
+    @Test
+    fun `production has no implicit static signup invite`() {
+        val invites = RuntimeEnvReader(productionEnvironment()).signupInvites()
+
+        assertTrue(invites.toList().isEmpty())
+    }
+
+    @Test
+    fun `local profile retains the documented development signup invite`() {
+        val invites = RuntimeEnvReader(localEnvironment()).signupInvites()
+
+        assertEquals("co-a", invites.findByCode("A4AI01")?.groupId?.value)
+    }
+
     @Test
     fun `runtime settings prefer auth policy env and parse csv origins`() {
         val env = StandardEnvironment()
@@ -182,7 +198,7 @@ class AuthPolicyConfigTest {
 
     @Test
     fun `local profile can use development auth defaults explicitly`() {
-        val settings = AuthRuntimeSettings.fromEnvironment(localEnvironment())
+        val settings = AuthRuntimeSettings.fromEnvironment(localEnvironment()).copy(jdbcPersistenceEnabled = false)
 
         assertEquals("local-auth-policy-secret-at-least-32-characters", settings.jwtSecret)
         assertEquals("admin-password", settings.adminPassword)
@@ -194,7 +210,7 @@ class AuthPolicyConfigTest {
     @Test
     fun `configuration wires repository and session service`() {
         val config = AuthPolicyConfig()
-        val settings = AuthRuntimeSettings.fromEnvironment(localEnvironment())
+        val settings = AuthRuntimeSettings.fromEnvironment(localEnvironment()).copy(jdbcPersistenceEnabled = false)
         val passwordHasher = config.passwordHasher()
         val repository = config.authUserRepository(settings, passwordHasher, EmptyObjectProvider())
         val tokenService = config.jwtTokenService(settings)
@@ -214,9 +230,41 @@ class AuthPolicyConfigTest {
     }
 
     @Test
+    fun `jdbc persistence fails fast when datasource is missing`() {
+        val config = AuthPolicyConfig()
+        val settings = AuthRuntimeSettings.fromEnvironment(localEnvironment()).copy(jdbcPersistenceEnabled = true)
+
+        val error = assertFailsWith<IllegalStateException> {
+            config.authUserRepository(settings, config.passwordHasher(), EmptyObjectProvider())
+        }
+
+        assertTrue(error.message.orEmpty().contains("no DataSource"))
+    }
+
+    @Test
+    fun `production cannot enable in-memory persistence`() {
+        val settings = AuthRuntimeSettings.fromEnvironment(
+            productionEnvironment(
+                "AUTH_POLICY_JWT_SECRET" to "prod-secret-at-least-32-characters",
+                "AUTH_POLICY_ADMIN_PASSWORD" to "admin-password",
+                "AUTH_POLICY_OPERATOR_PASSWORD" to "operator-password",
+                "AUTH_POLICY_SMOKE_PASSWORD" to "viewer-password",
+                "AUTH_POLICY_JDBC_PERSISTENCE_ENABLED" to "false",
+            ),
+        )
+
+        val error = assertFailsWith<IllegalStateException> {
+            val config = AuthPolicyConfig()
+            config.authUserRepository(settings, config.passwordHasher(), EmptyObjectProvider())
+        }
+
+        assertTrue(error.message.orEmpty().contains("restricted to local"))
+    }
+
+    @Test
     fun `configuration seeds operational event repository for dashboard log integration`() {
         val repository = OperationalPolicyConfig().operationalEventRepository(
-            AuthRuntimeSettings.fromEnvironment(localEnvironment()),
+            AuthRuntimeSettings.fromEnvironment(localEnvironment()).copy(jdbcPersistenceEnabled = false),
             EmptyObjectProvider(),
             EmptyObjectProvider<StringRedisTemplate>(),
             jacksonObjectMapper().findAndRegisterModules(),
@@ -247,7 +295,7 @@ class AuthPolicyConfigTest {
             ),
         )
 
-        val config = AuthPolicyConfig().timeSyncConfigRepository(env).current()
+        val config = TimeSyncPolicyConfiguration().timeSyncConfigRepository(env).current()
 
         assertEquals("10.0.0.10", config.sourceHost)
         assertEquals(123, config.sourcePort)

@@ -26,6 +26,13 @@ type DevicePublishAuthorizer interface {
 	) (domain.DevicePublishAuthorization, error)
 }
 
+type AccountPublishAuthorizer interface {
+	AuthorizeAccountPublish(
+		ctx context.Context,
+		command domain.AccountPublishCommand,
+	) (domain.DevicePublishAuthorization, error)
+}
+
 type CachedAuthorizer struct {
 	next Authorizer
 	ttl  time.Duration
@@ -97,6 +104,17 @@ func (c *CachedAuthorizer) AuthorizeDevicePublish(
 		return domain.DevicePublishAuthorization{}, domain.ErrDevicePublishAccessDenied
 	}
 	return next.AuthorizeDevicePublish(ctx, command)
+}
+
+func (c *CachedAuthorizer) AuthorizeAccountPublish(
+	ctx context.Context,
+	command domain.AccountPublishCommand,
+) (domain.DevicePublishAuthorization, error) {
+	next, ok := c.next.(AccountPublishAuthorizer)
+	if !ok {
+		return domain.DevicePublishAuthorization{}, domain.ErrDevicePublishAccessDenied
+	}
+	return next.AuthorizeAccountPublish(ctx, command)
 }
 
 func cacheKey(authorization string, target domain.StreamAccessTarget) string {

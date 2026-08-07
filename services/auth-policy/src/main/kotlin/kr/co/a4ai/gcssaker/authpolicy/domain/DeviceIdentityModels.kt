@@ -4,6 +4,16 @@ enum class RegisteredDeviceStatus {
     ACTIVE,
     PENDING,
     DISABLED,
+    ;
+
+    companion object {
+        fun fromPersistence(raw: String): RegisteredDeviceStatus =
+            when (raw.trim().uppercase()) {
+                "INACTIVE" -> DISABLED
+                else -> entries.firstOrNull { it.name == raw.trim().uppercase() }
+                    ?: throw IllegalArgumentException("unsupported registered device status")
+            }
+    }
 }
 
 enum class DeviceType(
@@ -80,6 +90,8 @@ data class RegisteredDevice(
     val deviceType: DeviceType = DeviceType.DRONE,
     val sensors: RegisteredDeviceSensors = RegisteredDeviceSensors.empty(),
     val streamPaths: RegisteredDeviceStreams = RegisteredDeviceStreams.empty(),
+    val credentialVersion: Long = 1,
+    val policyVersion: Long = 1,
 ) {
     init {
         require(deviceUuid.isNotBlank()) { "device uuid must not be blank" }
@@ -129,15 +141,17 @@ class InMemoryRegisteredDeviceRepository(
 data class DevicePublishAuthorizationCommand(
     val deviceUuid: String,
     val credential: String,
-    val streamId: String,
-    val path: String,
+    val sensorId: String,
 )
 
 data class DevicePublishAuthorization(
     val deviceUuid: String,
     val streamId: String,
     val path: String,
+    val sensorId: String,
     val publisherGroupId: GroupId,
+    val credentialVersion: Long,
+    val devicePolicyVersion: Long,
     val reason: String,
 )
 
@@ -168,15 +182,54 @@ class DevicePublishAuthorizationService(
 
     fun authorize(command: DevicePublishAuthorizationCommand): DevicePublishAuthorization {
         val device = deviceCredentials.authenticate(command.deviceUuid, command.credential)
-        val streamPath = StreamPath(command.path)
-        require(command.streamId.isNotBlank()) { "stream id must not be blank" }
+        val sensor = resolveActiveSensor(device, command.sensorId)
+        val identity = RegisteredDeviceStreamIdentity.from(device.deviceUuid, sensor.sensorId)
+        require(device.streamPaths.values.isEmpty() || device.streamPaths.values.any {
+            it.status.equals(DeviceRegistryDefaults.ACTIVE_STATUS, ignoreCase = true) &&
+                StreamPath(it.streamPath).value == identity.path
+        }) { DevicePublishAuthorizationReasons.STREAM_NOT_AUTHORIZED }
         return DevicePublishAuthorization(
             deviceUuid = device.deviceUuid,
-            streamId = command.streamId,
-            path = streamPath.value,
+            streamId = identity.streamId,
+            path = identity.path,
+            sensorId = sensor.sensorId,
             publisherGroupId = device.groupId,
+            credentialVersion = device.credentialVersion,
+            devicePolicyVersion = device.policyVersion,
             reason = DevicePublishAuthorizationReasons.DEVICE_GROUP_AUTHORIZED,
         )
+    }
+
+    private fun resolveActiveSensor(device: RegisteredDevice, requestedSensorId: String): RegisteredDeviceSensor {
+        val active = device.sensors.values.filter {
+            it.status.equals(DeviceRegistryDefaults.ACTIVE_STATUS, ignoreCase = true)
+        }
+        require(active.isNotEmpty()) { DevicePublishAuthorizationReasons.SENSOR_NOT_AUTHORIZED }
+        if (requestedSensorId.isBlank()) {
+            require(active.size == 1) { DevicePublishAuthorizationReasons.SENSOR_ID_REQUIRED }
+            return active.single()
+        }
+        return active.firstOrNull { it.sensorId == requestedSensorId.trim() }
+            ?: throw IllegalArgumentException(DevicePublishAuthorizationReasons.SENSOR_NOT_AUTHORIZED)
+    }
+}
+
+data class RegisteredDeviceStreamIdentity(val streamId: String, val path: String) {
+    companion object {
+        fun from(deviceUuid: String, sensorId: String): RegisteredDeviceStreamIdentity {
+            val safeDevice = canonicalSegment(deviceUuid, "device uuid")
+            val safeSensor = canonicalSegment(sensorId, "sensor id")
+            return RegisteredDeviceStreamIdentity(
+                streamId = "raw.$safeDevice.$safeSensor",
+                path = "raw/$safeDevice/$safeSensor",
+            )
+        }
+
+        private fun canonicalSegment(value: String, label: String): String {
+            val normalized = value.trim().lowercase()
+            require(normalized.matches(Regex("[a-z0-9][a-z0-9_-]{0,127}"))) { "$label is invalid" }
+            return normalized
+        }
     }
 }
 
@@ -184,4 +237,7 @@ object DevicePublishAuthorizationReasons {
     const val DEVICE_GROUP_AUTHORIZED = "device group authorized"
     const val AUTHENTICATION_FAILED = "device authentication failed"
     const val DEVICE_INACTIVE = "device is not active"
+    const val SENSOR_ID_REQUIRED = "sensor id is required when multiple sensors are active"
+    const val SENSOR_NOT_AUTHORIZED = "sensor is not authorized for this device"
+    const val STREAM_NOT_AUTHORIZED = "stream is not authorized for this device"
 }

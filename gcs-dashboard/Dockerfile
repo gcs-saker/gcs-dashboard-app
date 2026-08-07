@@ -1,5 +1,5 @@
 # 1단계: Build
-FROM node:22 AS builder
+FROM node:22.18.0-bookworm-slim@sha256:752ea8a2f758c34002a0461bd9f1cee4f9a3c36d48494586f60ffce1fc708e0e AS builder
 WORKDIR /app
 ARG VITE_API_BASE_URL=/api
 ARG VITE_IDENTITY_API_BASE_URL=/auth-policy/auth
@@ -28,8 +28,13 @@ COPY . .
 RUN VITE_AUTH_API_BASE_URL=$VITE_IDENTITY_API_BASE_URL npm run build
 
 # 2단계: Serve with nginx
-FROM nginx:alpine
+FROM nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6
+ARG SOURCE_COMMIT=unknown
+LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
+USER root
+RUN apk upgrade --no-cache
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf
+USER 101
 EXPOSE 3000
 CMD ["nginx", "-g", "daemon off;"]

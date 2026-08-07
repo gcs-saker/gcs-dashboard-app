@@ -69,7 +69,6 @@ function createStoryStream(
     detail: streamPath ? `${title} / ${streamPath}` : "주소 대기",
     aiModeEnabled: status === DASHBOARD_STREAM_STATUS.online,
     connectedDeviceId: streamPath ? title.split(" ")[0] : null,
-    sourceUrl: streamPath ? `/webrtc/${streamPath}/whep` : null,
     streamPath,
     geometry: {
       lat: 35.871435,

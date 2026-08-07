@@ -1,0 +1,12 @@
+services:
+  # The proprietary mobile publisher image is not part of this repository.
+  # This local-only stand-in keeps edge health checks deterministic while
+  # intentionally serving no application or credential data.
+  mobile-publisher:
+    image: nginx:1.29-alpine
+    pull_policy: missing
+    volumes:
+      - type: bind
+        source: ../nginx/mobile-publisher.dev.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true

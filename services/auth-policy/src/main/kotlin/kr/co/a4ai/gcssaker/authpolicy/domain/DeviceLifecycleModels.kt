@@ -59,6 +59,11 @@ class DeviceLifecycleService(
     fun register(command: RegisterDeviceCommand): DeviceCredentialIssue {
         val deviceUuid = uniqueDeviceUuid()
         val credential = credentialGenerator.generate()
+        val streams = if (command.streamPaths.isEmpty()) {
+            canonicalStreams(deviceUuid, command.sensors)
+        } else {
+            RegisteredDeviceStreams(command.streamPaths)
+        }
         val device = RegisteredDevice(
             deviceUuid = deviceUuid,
             groupId = GroupId(command.groupId),
@@ -67,7 +72,7 @@ class DeviceLifecycleService(
             status = RegisteredDeviceStatus.PENDING,
             deviceType = command.deviceType?.let(::parseDeviceType) ?: DeviceType.DRONE,
             sensors = RegisteredDeviceSensors(command.sensors),
-            streamPaths = RegisteredDeviceStreams(command.streamPaths),
+            streamPaths = streams,
         )
         return DeviceCredentialIssue(devices.save(device), credential)
     }
@@ -91,28 +96,48 @@ class DeviceLifecycleService(
     fun rotateCredential(deviceUuid: String): DeviceCredentialIssue {
         val device = get(deviceUuid)
         val credential = credentialGenerator.generate()
-        val updated = devices.save(device.copy(credentialHash = passwordHasher.hash(credential)))
+        val updated = devices.save(
+            device.copy(
+                credentialHash = passwordHasher.hash(credential),
+                credentialVersion = device.credentialVersion + 1,
+                policyVersion = device.policyVersion + 1,
+            ),
+        )
         return DeviceCredentialIssue(updated, credential)
     }
 
     fun update(deviceUuid: String, command: UpdateDeviceCommand): RegisteredDevice {
         val current = get(deviceUuid)
+        val updatedSensors = command.sensors?.let(::RegisteredDeviceSensors) ?: current.sensors
+        val updatedStreams = command.streamPaths?.let(::RegisteredDeviceStreams)
+            ?: if (command.sensors != null) canonicalStreams(current.deviceUuid, updatedSensors.values) else current.streamPaths
         return devices.save(
             current.copy(
                 groupId = command.groupId?.let(::GroupId) ?: current.groupId,
                 displayName = command.displayName ?: current.displayName,
                 status = command.status?.let(::parseStatus) ?: current.status,
                 deviceType = command.deviceType?.let(::parseDeviceType) ?: current.deviceType,
-                sensors = command.sensors?.let(::RegisteredDeviceSensors) ?: current.sensors,
-                streamPaths = command.streamPaths?.let(::RegisteredDeviceStreams) ?: current.streamPaths,
+                sensors = updatedSensors,
+                streamPaths = updatedStreams,
+                policyVersion = current.policyVersion + 1,
             ),
         )
     }
 
     private fun updateStatus(deviceUuid: String, status: RegisteredDeviceStatus): RegisteredDevice {
         val device = get(deviceUuid)
-        return devices.save(device.copy(status = status))
+        return devices.save(device.copy(status = status, policyVersion = device.policyVersion + 1))
     }
+
+    private fun canonicalStreams(deviceUuid: String, sensors: List<RegisteredDeviceSensor>): RegisteredDeviceStreams =
+        RegisteredDeviceStreams(
+            sensors.map { sensor ->
+                RegisteredDeviceStream(
+                    streamPath = RegisteredDeviceStreamIdentity.from(deviceUuid, sensor.sensorId).path,
+                    status = sensor.status,
+                )
+            },
+        )
 
     private fun parseStatus(status: String): RegisteredDeviceStatus =
         RegisteredDeviceStatus.entries.firstOrNull { it.name.equals(status, ignoreCase = true) }

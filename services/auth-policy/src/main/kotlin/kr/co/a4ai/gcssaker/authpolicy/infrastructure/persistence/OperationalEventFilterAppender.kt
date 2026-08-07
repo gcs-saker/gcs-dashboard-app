@@ -15,6 +15,8 @@ internal object OperationalEventFilterAppender {
         params.add(principal.groupId.value)
         params.add(principal.role.name)
         params.add(UserRole.ADMIN.name)
+        params.add(principal.role.name)
+        params.add(principal.groupId.value)
         appendSeverity(sql, params, query)
         appendTimeRange(sql, params, query)
         appendTextQuery(sql, params, query)

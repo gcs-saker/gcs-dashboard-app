@@ -17,7 +17,6 @@ import type { StreamDeviceOption } from "@dashboard/streamDevices";
 import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 
 export interface DashboardPageActionInput {
-  connectManualStreamAddress: (address: string, displayName: string) => void;
   connectStreamDeviceState: (device: StreamDeviceOption) => void;
   disconnectCurrentStreamSlotState: () => void;
   isWidgetPinned: (widgetId: DashboardWidgetId) => boolean;
@@ -73,17 +72,12 @@ export function useDashboardPageActions(input: DashboardPageActionInput) {
 
   const connectStreamDevice = useCallback((device: StreamDeviceOption): void => {
     input.connectStreamDeviceState(device);
-    input.setLayoutMessage("스트리밍 장비 연결됨");
-  }, [input]);
-
-  const connectStreamAddress = useCallback((address: string, displayName: string): void => {
-    input.connectManualStreamAddress(address, displayName);
-    input.setLayoutMessage("스트리밍 주소 연결됨");
+    input.setLayoutMessage("스트림 연결됨");
   }, [input]);
 
   const disconnectCurrentStreamSlot = useCallback((): void => {
     input.disconnectCurrentStreamSlotState();
-    input.setLayoutMessage("스트리밍 장비 연결 해제됨");
+    input.setLayoutMessage("스트림 연결 해제됨");
   }, [input]);
 
   const toggleStreamAiMode = useCallback((streamId: string): void => {
@@ -125,7 +119,6 @@ export function useDashboardPageActions(input: DashboardPageActionInput) {
     cancelStreamConnection,
     cancelWidgetDialog,
     closeAssetDrawer,
-    connectStreamAddress,
     connectStreamDevice,
     disconnectCurrentStreamSlot,
     handleSelectedPlaybackStatusChange,
@@ -137,5 +130,5 @@ export function useDashboardPageActions(input: DashboardPageActionInput) {
     toggleStreamAiMode,
     toggleTalkbackTarget,
     toggleWidgetPin,
-  }), [applyWidgetDialog, cancelStreamConnection, cancelWidgetDialog, closeAssetDrawer, connectStreamAddress, connectStreamDevice, disconnectCurrentStreamSlot, handleSelectedPlaybackStatusChange, openStreamConnection, resetLayout, selectAssetTreeStream, selectMapStream, setWidgetVisible, toggleStreamAiMode, toggleTalkbackTarget, toggleWidgetPin]);
+  }), [applyWidgetDialog, cancelStreamConnection, cancelWidgetDialog, closeAssetDrawer, connectStreamDevice, disconnectCurrentStreamSlot, handleSelectedPlaybackStatusChange, openStreamConnection, resetLayout, selectAssetTreeStream, selectMapStream, setWidgetVisible, toggleStreamAiMode, toggleTalkbackTarget, toggleWidgetPin]);
 }

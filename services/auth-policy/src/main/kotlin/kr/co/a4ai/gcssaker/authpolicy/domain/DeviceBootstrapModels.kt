@@ -54,7 +54,9 @@ class DeviceBootstrapService(
                 displayName = command.displayName,
                 deviceType = command.deviceType,
                 sensors = command.sensors,
-                streamPaths = command.streamPaths,
+                // A device may report capabilities, but it cannot authorize its own publish destinations.
+                // Canonical stream paths are assigned by an administrator when the pending device is approved.
+                streamPaths = emptyList(),
             ),
         )
     }

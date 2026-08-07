@@ -7,6 +7,11 @@ const manualChunkRules: Array<[chunkName: string, packageNames: string[]]> = [
   ["lazy-hls-light", ["hls.js"]],
 ];
 
+const sourcePath = (relativePath: string): string => {
+  const pathname = decodeURIComponent(new URL(relativePath, import.meta.url).pathname);
+  return pathname.replace(/^\/([A-Za-z]:\/)/, "$1");
+};
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "");
   const devProxyTarget = env.VITE_DEV_PROXY_TARGET || "https://a4ai.tplinkdns.com";
@@ -15,13 +20,13 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     resolve: {
       alias: {
-        "@": new URL("./src", import.meta.url).pathname,
-        "@auth": new URL("./src/features/auth", import.meta.url).pathname,
-        "@dashboard": new URL("./src/features/dashboard", import.meta.url).pathname,
-        "@features": new URL("./src/features", import.meta.url).pathname,
-        "@mocks": new URL("./src/mocks", import.meta.url).pathname,
-        "@streaming": new URL("./src/features/streaming", import.meta.url).pathname,
-        "@ui": new URL("./src/features/ui", import.meta.url).pathname
+        "@": sourcePath("./src"),
+        "@auth": sourcePath("./src/features/auth"),
+        "@dashboard": sourcePath("./src/features/dashboard"),
+        "@features": sourcePath("./src/features"),
+        "@mocks": sourcePath("./src/mocks"),
+        "@streaming": sourcePath("./src/features/streaming"),
+        "@ui": sourcePath("./src/features/ui")
       }
     },
     build: {

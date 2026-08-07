@@ -8,6 +8,7 @@ import { DashboardWidgetControls } from "@dashboard/components/molecules/Dashboa
 import { DashboardHeader, type DashboardHeaderProps } from "@dashboard/components/navigation/DashboardHeader";
 import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
 import { DashboardViewRouter, type DashboardViewRouterProps } from "./DashboardViewRouter";
+import { useWhipAudioPublisher } from "@streaming/hooks/useWhipAudioPublisher";
 
 export interface DashboardWidgetControlBindings {
   isWidgetPinned: (widgetId: DashboardWidgetId) => boolean;
@@ -17,12 +18,12 @@ export interface DashboardWidgetControlBindings {
 }
 
 export interface DashboardPageViewProps {
-  headerProps: DashboardHeaderProps;
+  headerProps: Omit<DashboardHeaderProps, "talkback">;
   motionMode: DashboardUserPreferences["motionMode"];
   notification: StreamAvailabilityNotification | null;
   onDismissNotification: () => void;
   overlayProps: Omit<DashboardOverlaysProps, "widgetControls">;
-  routerProps: Omit<DashboardViewRouterProps, "widgetControls">;
+  routerProps: Omit<DashboardViewRouterProps, "talkback" | "widgetControls">;
   widgetControls: DashboardWidgetControlBindings;
 }
 
@@ -35,6 +36,7 @@ export function DashboardPageView({
   routerProps,
   widgetControls: widgetControlBindings,
 }: DashboardPageViewProps) {
+  const talkback = useWhipAudioPublisher();
   const { isWidgetPinned, onHideWidget, onPopOutWidget, onToggleWidgetPin } = widgetControlBindings;
   const widgetControls = useCallback(
     (widgetId: DashboardWidgetId, title: string) => (
@@ -52,7 +54,7 @@ export function DashboardPageView({
 
   return (
     <main className="ops-dashboard" data-motion={motionMode} aria-label="Field Ops Dashboard">
-      <DashboardHeader {...headerProps} />
+      <DashboardHeader {...headerProps} talkback={talkback} />
 
       {notification ? <StreamNotificationToast notification={notification} onDismiss={onDismissNotification} /> : null}
 
@@ -63,7 +65,7 @@ export function DashboardPageView({
         scope="route"
         title="대시보드 화면"
       >
-        <DashboardViewRouter {...routerProps} widgetControls={widgetControls} />
+        <DashboardViewRouter {...routerProps} talkback={talkback} widgetControls={widgetControls} />
       </DashboardErrorBoundary>
       <DashboardOverlays {...overlayProps} widgetControls={widgetControls} />
     </main>

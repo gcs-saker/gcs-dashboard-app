@@ -1,32 +1,14 @@
 package kr.co.a4ai.gcssaker.authpolicy.configuration
 
-import kr.co.a4ai.gcssaker.authpolicy.domain.AuthRegistrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.CachedAuthUserRepository
-import kr.co.a4ai.gcssaker.authpolicy.domain.DevicePublishAuthorizationService
-import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceCredentialAuthenticationService
-import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceBootstrapService
-import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceLifecycleService
-import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceProvisioningTokenRepository
-import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceProvisioningTokenService
-import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
-import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryDeviceProvisioningTokenRepository
-import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOrganizationHierarchyRepository
-import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryRegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
-import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.PrincipalCache
-import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.RefreshSessionStore
-import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfigRepository
-import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncStatusService
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuthUserRepository
-import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcDeviceProvisioningTokenRepository
-import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOrganizationHierarchyRepository
-import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcRegisteredDeviceRepository
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -34,11 +16,11 @@ import org.springframework.core.env.Environment
 import java.time.Duration
 import javax.sql.DataSource
 
+/** Authentication identity and session composition only. */
 @Configuration
 class AuthPolicyConfig {
     @Bean
-    fun authRuntimeSettings(env: Environment): AuthRuntimeSettings =
-        AuthRuntimeSettings.fromEnvironment(env)
+    fun authRuntimeSettings(env: Environment): AuthRuntimeSettings = AuthRuntimeSettings.fromEnvironment(env)
 
     @Bean
     fun passwordHasher(): PasswordHasher = PasswordHasher()
@@ -59,12 +41,9 @@ class AuthPolicyConfig {
         dataSource: ObjectProvider<DataSource>,
     ): AuthUserRepository {
         val initialUsers = seedAuthUsers(settings, passwordHasher)
-        val repository = if (settings.jdbcPersistenceEnabled) {
-            dataSource.getIfAvailable()?.let { JdbcAuthUserRepository(it, initialUsers) }
-                ?: InMemoryAuthUserRepository(initialUsers)
-        } else {
-            InMemoryAuthUserRepository(initialUsers)
-        }
+        val repository = PersistenceMode.dataSource(settings, dataSource)?.let {
+            JdbcAuthUserRepository(it, initialUsers)
+        } ?: InMemoryAuthUserRepository(initialUsers)
         return if (settings.l1AuthUserCacheEnabled) CachedAuthUserRepository(repository) else repository
     }
 
@@ -75,101 +54,5 @@ class AuthPolicyConfig {
         tokenService: JwtTokenService,
         principalCache: PrincipalCache,
         refreshSessionStore: RefreshSessionStore,
-    ): AuthSessionService =
-        AuthSessionService(users, passwordHasher, tokenService, principalCache, refreshSessionStore)
-
-    @Bean
-    fun authRegistrationService(
-        users: AuthUserRepository,
-        passwordHasher: PasswordHasher,
-        settings: AuthRuntimeSettings,
-    ): AuthRegistrationService =
-        AuthRegistrationService(users, passwordHasher, settings.signupInvites)
-
-    @Bean
-    fun organizationHierarchyRepository(
-        settings: AuthRuntimeSettings,
-        dataSource: ObjectProvider<DataSource>,
-    ): OrganizationHierarchyRepository {
-        val seedUnits = seedOrganizationUnits()
-        return if (settings.jdbcPersistenceEnabled) {
-            dataSource.getIfAvailable()?.let { JdbcOrganizationHierarchyRepository(it, seedUnits) }
-                ?: InMemoryOrganizationHierarchyRepository(seedUnits)
-        } else {
-            InMemoryOrganizationHierarchyRepository(seedUnits)
-        }
-    }
-
-    @Bean
-    fun groupPolicyService(hierarchyRepository: OrganizationHierarchyRepository): GroupPolicyService =
-        GroupPolicyService(hierarchyRepository.current().units())
-
-    @Bean
-    fun registeredDeviceRepository(
-        settings: AuthRuntimeSettings,
-        dataSource: ObjectProvider<DataSource>,
-    ): RegisteredDeviceRepository =
-        if (settings.jdbcPersistenceEnabled) {
-            dataSource.getIfAvailable()?.let { JdbcRegisteredDeviceRepository(it) }
-                ?: InMemoryRegisteredDeviceRepository()
-        } else {
-            InMemoryRegisteredDeviceRepository()
-        }
-
-    @Bean
-    fun deviceCredentialAuthenticationService(
-        devices: RegisteredDeviceRepository,
-        passwordHasher: PasswordHasher,
-    ): DeviceCredentialAuthenticationService =
-        DeviceCredentialAuthenticationService(devices, passwordHasher)
-
-    @Bean
-    fun devicePublishAuthorizationService(
-        deviceCredentials: DeviceCredentialAuthenticationService,
-    ): DevicePublishAuthorizationService =
-        DevicePublishAuthorizationService(deviceCredentials)
-
-    @Bean
-    fun deviceLifecycleService(
-        devices: RegisteredDeviceRepository,
-        passwordHasher: PasswordHasher,
-    ): DeviceLifecycleService =
-        DeviceLifecycleService(devices, passwordHasher)
-
-    @Bean
-    fun deviceProvisioningTokenRepository(
-        settings: AuthRuntimeSettings,
-        dataSource: ObjectProvider<DataSource>,
-    ): DeviceProvisioningTokenRepository =
-        if (settings.jdbcPersistenceEnabled) {
-            dataSource.getIfAvailable()?.let { JdbcDeviceProvisioningTokenRepository(it) }
-                ?: InMemoryDeviceProvisioningTokenRepository()
-        } else {
-            InMemoryDeviceProvisioningTokenRepository()
-        }
-
-    @Bean
-    fun deviceProvisioningTokenService(
-        tokens: DeviceProvisioningTokenRepository,
-        passwordHasher: PasswordHasher,
-        hierarchyRepository: OrganizationHierarchyRepository,
-    ): DeviceProvisioningTokenService =
-        DeviceProvisioningTokenService(tokens, passwordHasher, hierarchyRepository)
-
-    @Bean
-    fun deviceBootstrapService(
-        lifecycle: DeviceLifecycleService,
-        settings: AuthRuntimeSettings,
-        provisioningTokens: DeviceProvisioningTokenService,
-    ): DeviceBootstrapService =
-        DeviceBootstrapService(lifecycle, settings.deviceBootstrapTokens, provisioningTokens)
-
-    @Bean
-    fun timeSyncConfigRepository(env: Environment): TimeSyncConfigRepository =
-        timeSyncConfigRepositoryFromEnvironment(env)
-
-    @Bean
-    fun timeSyncStatusService(repository: TimeSyncConfigRepository): TimeSyncStatusService =
-        TimeSyncStatusService(repository)
-
+    ): AuthSessionService = AuthSessionService(users, passwordHasher, tokenService, principalCache, refreshSessionStore)
 }

@@ -17,11 +17,14 @@ type Readiness struct {
 }
 
 func StartWithReadiness(ctx context.Context, listenAddress string, token string, maxPayloadBytes int) *Readiness {
+	return StartDeviceWithReadiness(ctx, listenAddress, NewServer(token, maxPayloadBytes))
+}
+
+func StartDeviceWithReadiness(ctx context.Context, listenAddress string, server Server) *Readiness {
 	state := &Readiness{
 		enabled: strings.TrimSpace(listenAddress) != "",
 		reason:  "starting",
 	}
-	server := NewServer(token, maxPayloadBytes)
 	go serveWithReadiness(ctx, server, listenAddress, state)
 	return state
 }

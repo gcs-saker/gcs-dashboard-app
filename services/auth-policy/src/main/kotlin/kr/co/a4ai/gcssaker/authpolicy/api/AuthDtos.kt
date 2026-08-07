@@ -17,7 +17,6 @@ data class SignupRequest(
     @field:Size(min = 8, max = 128)
     val password: String,
     val inviteCode: String,
-    val role: String = AuthRoleDefaults.SIGNUP_ROLE,
 )
 
 data class UserResponse(

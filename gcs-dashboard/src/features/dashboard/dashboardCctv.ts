@@ -34,7 +34,7 @@ export function buildCctvGridStreams(streams: DashboardStreamSlot[], gridSize: n
 export function isReceivableStream(stream: DashboardStreamSlot): boolean {
   if (stream.id.startsWith(CCTV_EMPTY_STREAM_ID_PREFIX)) return false;
   return (
-    Boolean(stream.streamPath || stream.sourceUrl) &&
+    Boolean(stream.streamPath) &&
     (stream.status === DASHBOARD_STREAM_STATUS.online ||
       stream.status === DASHBOARD_STREAM_STATUS.fallback ||
       stream.status === DASHBOARD_STREAM_STATUS.degraded ||

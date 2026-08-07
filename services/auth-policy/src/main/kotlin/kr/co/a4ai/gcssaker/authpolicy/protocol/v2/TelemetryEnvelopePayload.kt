@@ -2,6 +2,9 @@ package kr.co.a4ai.gcssaker.authpolicy.protocol.v2
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
 
 object TelemetryEnvelopeFields {
     const val EVENT_ID = 1
@@ -66,6 +69,28 @@ data class TelemetryEnvelopePayload(
     val accelMps2: TelemetryVector3 = TelemetryVector3(),
     val linkQualityPercent: Double = 0.0,
 ) {
+    fun validate(clock: Clock = Clock.systemUTC()) {
+        require(eventId.isNotBlank() && orgId.isNotBlank() && groupId.isNotBlank() && assetId.isNotBlank()) {
+            "telemetry identity is required"
+        }
+        require(observedUnixMillis > 0) { "observed time is required" }
+        require(!Instant.ofEpochMilli(observedUnixMillis).isAfter(clock.instant().plus(Duration.ofMinutes(5)))) {
+            "observed time exceeds future skew"
+        }
+        val numbers = listOf(latitude, longitude, altitudeM, headingDeg, speedMps, batteryPercent,
+            attitudeDeg.x, attitudeDeg.y, attitudeDeg.z, gyroRadPerSec.x, gyroRadPerSec.y, gyroRadPerSec.z,
+            accelMps2.x, accelMps2.y, accelMps2.z, linkQualityPercent)
+        require(numbers.all(Double::isFinite)) { "telemetry values must be finite" }
+        require(latitude in -90.0..90.0 && longitude in -180.0..180.0) { "position is outside WGS84" }
+        require(latitude != 0.0 || longitude != 0.0) { "null-island position is rejected" }
+        require(altitudeM in -500.0..20_000.0 && speedMps in 0.0..200.0) { "altitude or speed is outside contract" }
+        require(headingDeg >= 0.0 && headingDeg < 360.0) { "heading is outside contract" }
+        require(batteryPercent in 0.0..100.0 && linkQualityPercent in 0.0..100.0) { "percentage is outside contract" }
+        require(listOf(attitudeDeg.x, attitudeDeg.y, attitudeDeg.z).all { it in -360.0..360.0 }) {
+            "attitude is outside contract"
+        }
+    }
+
     fun toReadModel(): TelemetryReadModel =
         TelemetryReadModel(
             uuid = assetId,
@@ -116,7 +141,7 @@ data class TelemetryEnvelopePayload(
                 gyroRadPerSec = decoded.optionalVector3(TelemetryEnvelopeFields.GYRO_RAD_PER_SEC),
                 accelMps2 = decoded.optionalVector3(TelemetryEnvelopeFields.ACCEL_MPS2),
                 linkQualityPercent = decoded.optionalDouble(TelemetryEnvelopeFields.LINK_QUALITY_PERCENT),
-            )
+            ).also { it.validate() }
         }
 
         private fun DecodedWireMessage.optionalVector3(fieldNumber: Int): TelemetryVector3 {

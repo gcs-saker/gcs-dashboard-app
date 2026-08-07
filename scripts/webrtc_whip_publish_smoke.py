@@ -28,12 +28,15 @@ class PublishTiming:
     connected_ms: float | None
 
 
-def post_whip_offer(whip_url: str, offer_sdp: str, insecure: bool) -> str:
+def post_whip_offer(whip_url: str, offer_sdp: str, insecure: bool, publish_token: str | None = None) -> str:
     context = ssl._create_unverified_context() if insecure else None
+    headers = {"Accept": "application/sdp", "Content-Type": "application/sdp"}
+    if publish_token:
+        headers["Authorization"] = f"Bearer {publish_token}"
     request = Request(
         whip_url,
         data=offer_sdp.encode("utf-8"),
-        headers={"Accept": "application/sdp", "Content-Type": "application/sdp"},
+        headers=headers,
         method="POST",
     )
     try:
@@ -212,7 +215,7 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         if not local_description or not local_description.sdp:
             raise RuntimeError("Local WHIP offer SDP was not created")
         offer_ready_ms = (time.perf_counter() - started) * 1000
-        answer_sdp = post_whip_offer(args.whip_url, local_description.sdp, args.insecure)
+        answer_sdp = post_whip_offer(args.whip_url, local_description.sdp, args.insecure, args.publish_token)
         answer_ms = (time.perf_counter() - started) * 1000
         await peer_connection.setRemoteDescription(RTCSessionDescription(sdp=answer_sdp, type="answer"))
         if args.require_connected:
@@ -251,6 +254,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     mode.add_argument("--check", action="store_true")
     mode.add_argument("--run", action="store_true")
     parser.add_argument("--whip-url", default=DEFAULT_WHIP_URL)
+    parser.add_argument("--publish-token", default=None, help="Short-lived publish token sent as an Authorization bearer")
     parser.add_argument("--ice-server-url", default=DEFAULT_ICE_SERVER_URL)
     parser.add_argument("--ice-username", default=None)
     parser.add_argument("--ice-credential", default=None)

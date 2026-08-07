@@ -18,7 +18,6 @@ from core.security import (
     AuthenticatedUser,
     decode_refresh_token,
     get_current_user,
-    normalize_role,
 )
 from model.user_model import AuthenticatedUserResponse, TokenResponse, UserCreate, UserLogin, UserResponse
 from sql.company_sql import Company
@@ -52,7 +51,7 @@ def signup(user: UserCreate, request: Request, db: Annotated[Session, Depends(ge
         email=user.email,
         password_hash=get_password_hash(user.password),
         company_id=company_id,
-        role=normalize_role(user.role),
+        role="viewer",
     )
     db.add(new_user)
     db.commit()

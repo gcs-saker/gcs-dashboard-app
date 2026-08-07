@@ -111,12 +111,19 @@ func (s Server) withPlaybackToken(playbackURLs domain.PlaybackURLs, parsed domai
 		return playbackURLs
 	}
 	target := s.groups.TargetFor(parsed)
+	return s.withPlaybackTokenForGroup(playbackURLs, parsed, target.PublisherGroupID)
+}
+
+func (s Server) withPlaybackTokenForGroup(playbackURLs domain.PlaybackURLs, parsed domain.ParsedStreamPath, publisherGroupID string) domain.PlaybackURLs {
+	if s.publishToken == "" {
+		return playbackURLs
+	}
 	token, err := issueMediaToken(
 		s.publishToken,
 		mediaMTXActionPlayback,
 		parsed.StreamID,
 		parsed.Path,
-		target.PublisherGroupID,
+		publisherGroupID,
 		time.Now(),
 	)
 	if err != nil {

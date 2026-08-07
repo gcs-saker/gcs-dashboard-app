@@ -210,7 +210,10 @@ def test_login_rejects_invalid_credentials(auth_client: TestClient) -> None:
     assert response.json() == {"detail": "Invalid credentials"}
 
 
-def test_signup_creates_user_with_hashed_password(auth_client: TestClient, db_session: Session) -> None:
+def test_signup_hashes_password_and_ignores_client_supplied_role(
+    auth_client: TestClient,
+    db_session: Session,
+) -> None:
     response = auth_client.post(
         "/auth/signup",
         json={
@@ -218,7 +221,7 @@ def test_signup_creates_user_with_hashed_password(auth_client: TestClient, db_se
             "email": "viewer02@example.com",
             "password": "strong-password",
             "inviteCode": "A4AI01",
-            "role": "viewer",
+            "role": "admin",
         },
     )
 

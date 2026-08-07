@@ -38,16 +38,26 @@ type DevicePublishAuthorizer interface {
 	) (domain.DevicePublishAuthorization, error)
 }
 
+type AccountPublishAuthorizer interface {
+	AuthorizeAccountPublish(
+		ctx context.Context,
+		command domain.AccountPublishCommand,
+	) (domain.DevicePublishAuthorization, error)
+}
+
 type Server struct {
-	streams         StreamLister
-	ice             IceServerProvider
-	playback        domain.PlaybackURLBuilder
-	authorizer      StreamAuthorizer
-	devicePublisher DevicePublishAuthorizer
-	groups          domain.StreamGroupResolver
-	publishToken    string
-	metrics         *Metrics
-	gateway         GatewayReadiness
+	streams          StreamLister
+	ice              IceServerProvider
+	playback         domain.PlaybackURLBuilder
+	authorizer       StreamAuthorizer
+	devicePublisher  DevicePublishAuthorizer
+	accountPublisher AccountPublishAuthorizer
+	groups           domain.StreamGroupResolver
+	publishToken     string
+	metrics          *Metrics
+	gateway          GatewayReadiness
+	publishSessions  domain.PublishSessionStore
+	now              func() time.Time
 }
 
 func NewServer(
@@ -81,11 +91,22 @@ func NewServerWithMetrics(
 		groups:       groups,
 		publishToken: strings.TrimSpace(publishToken),
 		metrics:      metrics,
+		now:          time.Now,
 	}
+}
+
+func (s Server) WithPublishSessionStore(store domain.PublishSessionStore) Server {
+	s.publishSessions = store
+	return s
 }
 
 func (s Server) WithDevicePublishAuthorizer(authorizer DevicePublishAuthorizer) Server {
 	s.devicePublisher = authorizer
+	return s
+}
+
+func (s Server) WithAccountPublishAuthorizer(authorizer AccountPublishAuthorizer) Server {
+	s.accountPublisher = authorizer
 	return s
 }
 
@@ -107,12 +128,16 @@ func (s Server) Routes() http.Handler {
 	s.handle(mux, routeDashboardIceServers, s.dashboardIceServers)
 	s.handle(mux, routeDashboardStreamItemPrefix, s.dashboardStreamItem)
 	s.handle(mux, routeDashboardStreams, s.dashboardStreamList)
+	s.handle(mux, routeDevicePublishSessions, s.devicePublishSessions)
+	s.handle(mux, routeDevicePublishSessionPrefix, s.devicePublishSessions)
+	s.handle(mux, routeAccountPublishSessions, s.accountPublishSessions)
+	s.handle(mux, routeAccountPublishSessionPrefix, s.accountPublishSessions)
 	return mux
 }
 
 func (s Server) handle(mux *http.ServeMux, route string, handler http.HandlerFunc) {
 	metricRoute := route
-	if route == routeDashboardStreamItemPrefix {
+	if route == routeDashboardStreamItemPrefix || route == routeDevicePublishSessionPrefix {
 		metricRoute = routeDashboardStreamItemMetric
 	}
 	mux.Handle(

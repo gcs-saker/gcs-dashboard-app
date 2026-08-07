@@ -35,6 +35,10 @@ func main() {
 		log.Fatal(err)
 	}
 	metrics := httpapi.NewMetrics()
+	publishSessions, err := newPublishSessionStore(config)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	server := httpapi.NewServerWithMetrics(
 		newStreamLister(config, metrics),
@@ -44,15 +48,16 @@ func main() {
 		config.groupResolver,
 		config.publishToken,
 		metrics,
-	).WithDevicePublishAuthorizer(&authorizer)
+	).WithDevicePublishAuthorizer(&authorizer).
+		WithAccountPublishAuthorizer(&authorizer).
+		WithPublishSessionStore(publishSessions)
 
 	grpcContext, stopGrpc := context.WithCancel(context.Background())
 	defer stopGrpc()
-	grpcReadiness := grpcgateway.StartWithReadiness(
+	grpcReadiness := grpcgateway.StartDeviceWithReadiness(
 		grpcContext,
 		config.grpcListenAddress,
-		config.grpcToken,
-		config.grpcMaxPayloadBytes,
+		newGatewayServer(config),
 	)
 	server = server.WithGatewayReadiness(grpcReadiness)
 
