@@ -8,7 +8,6 @@ from typing import Any
 
 import yaml
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MATRIX_PATH = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_v2_completion_matrix.yml"
 SCHEMA_VERSION = "gcs-saker-v2-completion-matrix-v1"
@@ -41,7 +40,14 @@ def evaluate_matrix(matrix: dict[str, Any]) -> dict[str, Any]:
         raise V2CompletionGateError("each v2 gate must point to a unique issue")
 
     for gate in gates:
-        for field in ["id", "issue", "title", "expectedStateForV2", "currentState", "evidence"]:
+        for field in [
+            "id",
+            "issue",
+            "title",
+            "expectedStateForV2",
+            "currentState",
+            "evidence",
+        ]:
             if field not in gate:
                 raise V2CompletionGateError(f"{gate.get('id', 'unknown')} is missing {field}")
         if not gate.get("evidence"):
@@ -66,7 +72,11 @@ def evaluate_matrix(matrix: dict[str, Any]) -> dict[str, Any]:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Evaluate Saker v2 completion readiness.")
-    parser.add_argument("--json", action="store_true", help="Print machine-readable v2 completion status.")
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print machine-readable v2 completion status.",
+    )
     parser.add_argument(
         "--require-complete",
         action="store_true",

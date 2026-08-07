@@ -8,14 +8,11 @@ runtime npm install on the target appliance.
 
 from __future__ import annotations
 
-from pathlib import Path
 import sys
-
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-OFFLINE_MAP_FILES = (
-    REPO_ROOT / "gcs-dashboard" / "src" / "features" / "dashboard" / "map" / "TacticalLeafletMap.tsx",
-)
+OFFLINE_MAP_FILES = (REPO_ROOT / "gcs-dashboard" / "src" / "features" / "dashboard" / "map" / "TacticalLeafletMap.tsx",)
 
 DASHBOARD_DOCKERFILE = REPO_ROOT / "gcs-dashboard" / "Dockerfile"
 CLOSED_NETWORK_ENV = REPO_ROOT / "gcs-dashboard" / ".env.closed-network.example"
@@ -56,11 +53,7 @@ def check_closed_network_env() -> list[str]:
         "MEDIA_CONTROL_STUN_URL=stun:10.0.0.10:3478",
         "DATABASE_URL=postgresql+psycopg2://gcs_geo:replace-with-secret-outside-git@postgres-geo:5432/gcs_geo",
     )
-    errors = [
-        f".env.closed-network.example missing {value}"
-        for value in required_values
-        if value not in content
-    ]
+    errors = [f".env.closed-network.example missing {value}" for value in required_values if value not in content]
     deploy_required_values = (
         "SAKER_NETWORK_PROFILE=closed",
         "VITE_STATIC_ASSET_DELIVERY_MODE=offline-bundle",
@@ -71,9 +64,7 @@ def check_closed_network_env() -> list[str]:
         "AUTH_REFRESH_COOKIE_SAMESITE=strict",
     )
     errors.extend(
-        f"deploy closed-network env missing {value}"
-        for value in deploy_required_values
-        if value not in deploy_content
+        f"deploy closed-network env missing {value}" for value in deploy_required_values if value not in deploy_content
     )
     forbidden_values = (
         "stun:stun.l.google.com:19302",
@@ -97,27 +88,25 @@ def check_network_profile_split() -> list[str]:
         "MEDIA_CONTROL_STUN_URL=stun:a4ai.tplinkdns.com:3478",
         "MEDIA_CONTROL_TURN_MAX_HEALTHY_SERVERS=1",
     )
-    errors.extend(
-        f"public ICE env missing {value}"
-        for value in required_public_values
-        if value not in public_content
-    )
+    errors.extend(f"public ICE env missing {value}" for value in required_public_values if value not in public_content)
     required_mixed_values = (
         "SAKER_NETWORK_PROFILE=mixed",
         "VITE_STATIC_ASSET_DELIVERY_MODE=internal-cdn",
         "MEDIA_CONTROL_STUN_URL=stun:10.0.0.10:3478",
         "TIME_SYNC_MODE=public",
     )
-    errors.extend(
-        f"mixed-network env missing {value}"
-        for value in required_mixed_values
-        if value not in mixed_content
-    )
+    errors.extend(f"mixed-network env missing {value}" for value in required_mixed_values if value not in mixed_content)
     return errors
 
 
 def check_offline_map() -> list[str]:
-    forbidden_tokens = ("TileLayer", "openstreetmap", "tile.openstreetmap.org", "mapbox", "googleapis")
+    forbidden_tokens = (
+        "TileLayer",
+        "openstreetmap",
+        "tile.openstreetmap.org",
+        "mapbox",
+        "googleapis",
+    )
     errors: list[str] = []
     for path in OFFLINE_MAP_FILES:
         content = path.read_text(encoding="utf-8").lower()

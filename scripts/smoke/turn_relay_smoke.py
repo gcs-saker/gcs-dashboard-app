@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import binascii
-from dataclasses import dataclass
 import hashlib
 import hmac
 import os
@@ -13,9 +12,9 @@ import secrets
 import socket
 import struct
 import sys
+from dataclasses import dataclass
 from typing import Sequence
 from urllib.parse import parse_qs, urlparse
-
 
 MAGIC_COOKIE = 0x2112A442
 ALLOCATE_REQUEST = 0x0003
@@ -115,7 +114,11 @@ def encode_allocate_request(
         partial_body = b"".join(attributes)
         integrity_length = len(partial_body) + 24
         header = struct.pack("!HHI12s", ALLOCATE_REQUEST, integrity_length, MAGIC_COOKIE, transaction_id)
-        digest = hmac.new(long_term_key(username, realm, password), header + partial_body, hashlib.sha1).digest()
+        digest = hmac.new(
+            long_term_key(username, realm, password),
+            header + partial_body,
+            hashlib.sha1,
+        ).digest()
         attributes.append(encode_attribute(ATTR_MESSAGE_INTEGRITY, digest))
 
     body = b"".join(attributes)
@@ -231,7 +234,10 @@ def run_turn_allocate(target: TurnTarget, username: str, password: str, timeout:
             )
             if authenticated.type == ALLOCATE_SUCCESS_RESPONSE:
                 break
-            if authenticated.type == ALLOCATE_ERROR_RESPONSE and decode_error_code(get_attr(authenticated, ATTR_ERROR_CODE)) == 438:
+            if (
+                authenticated.type == ALLOCATE_ERROR_RESPONSE
+                and decode_error_code(get_attr(authenticated, ATTR_ERROR_CODE)) == 438
+            ):
                 challenge = authenticated
                 continue
             error_code = decode_error_code(get_attr(authenticated, ATTR_ERROR_CODE))
@@ -261,7 +267,11 @@ def run_static_check() -> int:
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate TURN long-term credential allocation.")
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--check", action="store_true", help="Run static parser/request contract checks.")
+    mode.add_argument(
+        "--check",
+        action="store_true",
+        help="Run static parser/request contract checks.",
+    )
     mode.add_argument("--run", action="store_true", help="Run live TURN Allocate against a server.")
     parser.add_argument("--turn-url", default=os.getenv("WEBRTC_TURN_URL", DEFAULT_TURN_URL))
     parser.add_argument("--username", default=os.getenv("WEBRTC_TURN_USERNAME"))

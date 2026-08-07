@@ -7,7 +7,6 @@ import json
 import os
 import ssl
 import statistics
-import sys
 import time
 import urllib.error
 import urllib.parse
@@ -15,7 +14,6 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-
 
 SCHEMA_VERSION = "m7-performance-benchmark-v1"
 DEFAULT_STREAM_ID = "raw.sample.front"
@@ -194,7 +192,13 @@ def measure_profile(profile: BenchmarkProfile, iterations: int, warmup: int, ins
             "auth_login",
             iterations,
             warmup,
-            lambda: json_request(opener, f"{auth_base}/login", "POST", payload=login_payload, headers=csrf_headers)[:2],
+            lambda: json_request(
+                opener,
+                f"{auth_base}/login",
+                "POST",
+                payload=login_payload,
+                headers=csrf_headers,
+            )[:2],
         ),
         measure_metric(
             "auth_refresh",
@@ -216,7 +220,9 @@ def measure_profile(profile: BenchmarkProfile, iterations: int, warmup: int, ins
                 opener,
                 graphql_base,
                 "POST",
-                payload={"query": "query { operationalEventPage(limit: 10) { events { id severity latencyMs } nextCursor } }"},
+                payload={
+                    "query": "query { operationalEventPage(limit: 10) { events { id severity latencyMs } nextCursor } }"
+                },
                 headers=auth_headers,
             )[:2],
         ),
@@ -241,7 +247,12 @@ def measure_profile(profile: BenchmarkProfile, iterations: int, warmup: int, ins
             "stream_ice_servers",
             iterations,
             warmup,
-            lambda: json_request(opener, f"{stream_base}/streams/ice-servers", "GET", headers=auth_headers)[:2],
+            lambda: json_request(
+                opener,
+                f"{stream_base}/streams/ice-servers",
+                "GET",
+                headers=auth_headers,
+            )[:2],
         ),
         measure_metric(
             "hls_manifest",
@@ -304,7 +315,11 @@ def build_check_report() -> dict[str, Any]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build comparable M7 performance benchmark results.")
-    parser.add_argument("--check", action="store_true", help="Validate benchmark schema without live HTTP calls.")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Validate benchmark schema without live HTTP calls.",
+    )
     parser.add_argument("--profile-json", type=Path, help="JSON file containing benchmark profiles.")
     parser.add_argument("--iterations", type=int, default=30)
     parser.add_argument("--warmup", type=int, default=5)

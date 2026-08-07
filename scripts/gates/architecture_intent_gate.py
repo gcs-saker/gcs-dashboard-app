@@ -9,7 +9,6 @@ from typing import Any
 
 import yaml
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 INTENT_MATRIX = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_design_intent_matrix.yml"
 RUNTIME_STATUS = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_runtime_stack_status.yml"
@@ -237,7 +236,9 @@ def main() -> int:
     if args.json:
         print(result.to_json())
     else:
-        print(f"Architecture intent gate passed: {result.checked_intents} intents, {result.checked_assertions} assertions")
+        print(
+            f"Architecture intent gate passed: {result.checked_intents} intents, {result.checked_assertions} assertions"
+        )
     return 0
 
 

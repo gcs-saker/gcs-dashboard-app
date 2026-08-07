@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
 DEFAULT_ENV_FILE = REPO_ROOT / "deploy" / "compose" / ".env.single-node.example"
@@ -218,8 +217,14 @@ POSTGIS_RUNTIME_SQL = "\n".join(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run PostGIS runtime smoke against the default docker compose database.")
-    parser.add_argument("--check", action="store_true", help="Print the stable command and SQL contract without executing docker.")
+    parser = argparse.ArgumentParser(
+        description="Run PostGIS runtime smoke against the default docker compose database."
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Print the stable command and SQL contract without executing docker.",
+    )
     parser.add_argument("--compose-file", type=Path, default=DEFAULT_COMPOSE_FILE)
     parser.add_argument("--env-file", type=Path, default=DEFAULT_ENV_FILE)
     parser.add_argument("--service", default="postgres-geo")
@@ -321,11 +326,7 @@ def summarize_plan(explain: list[dict[str, Any]]) -> dict[str, Any]:
     nodes = list(flatten_plan(root))
     node_types = [node.get("Node Type") for node in nodes]
     index_names = [node.get("Index Name") for node in nodes if node.get("Index Name")]
-    filters = " ".join(
-        str(node.get(key, ""))
-        for node in nodes
-        for key in ("Index Cond", "Filter", "Recheck Cond")
-    )
+    filters = " ".join(str(node.get(key, "")) for node in nodes for key in ("Index Cond", "Filter", "Recheck Cond"))
     return {
         "rootNode": root.get("Node Type"),
         "nodeTypes": node_types,

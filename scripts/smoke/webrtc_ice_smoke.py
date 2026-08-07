@@ -5,17 +5,16 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
 import ipaddress
 import ssl
 import sys
 import time
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlunsplit, urlsplit
+from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
-
 
 DEFAULT_WHEP_URL = "http://127.0.0.1:8889/raw/sample/front/whep"
 DEFAULT_STUN_URL = "stun:stun.l.google.com:19302"
@@ -71,12 +70,7 @@ class SdpInspection:
 
     @property
     def is_webrtc_ready(self) -> bool:
-        return (
-            self.has_ice_ufrag
-            and self.has_ice_pwd
-            and self.has_fingerprint
-            and self.candidate_count > 0
-        )
+        return self.has_ice_ufrag and self.has_ice_pwd and self.has_fingerprint and self.candidate_count > 0
 
 
 def inspect_sdp(sdp: str) -> SdpInspection:
@@ -218,25 +212,29 @@ async def collect_selected_ice_pair(peer_connection: object) -> SelectedIcePair 
 
 def extract_selected_ice_pair(stats_report: object) -> SelectedIcePair | None:
     stats = _stats_values(stats_report)
-    stats_by_id = {
-        str(stat_id): stat
-        for stat in stats
-        if (stat_id := _stat_value(stat, "id")) is not None
-    }
+    stats_by_id = {str(stat_id): stat for stat in stats if (stat_id := _stat_value(stat, "id")) is not None}
 
     selected_pair = _selected_pair_from_transport(stats, stats_by_id) or _selected_pair_from_candidates(stats)
     if selected_pair is None:
         return None
 
-    local_candidate = stats_by_id.get(str(_stat_value(selected_pair, "localCandidateId", "local_candidate_id", default="")))
-    remote_candidate = stats_by_id.get(str(_stat_value(selected_pair, "remoteCandidateId", "remote_candidate_id", default="")))
+    local_candidate = stats_by_id.get(
+        str(_stat_value(selected_pair, "localCandidateId", "local_candidate_id", default=""))
+    )
+    remote_candidate = stats_by_id.get(
+        str(_stat_value(selected_pair, "remoteCandidateId", "remote_candidate_id", default=""))
+    )
     local_type = str(_stat_value(local_candidate, "candidateType", "candidate_type", default="unknown"))
     remote_type = str(_stat_value(remote_candidate, "candidateType", "candidate_type", default="unknown"))
     protocol = str(
         _stat_value(
             selected_pair,
             "protocol",
-            default=_stat_value(local_candidate, "protocol", default=_stat_value(remote_candidate, "protocol", default="unknown")),
+            default=_stat_value(
+                local_candidate,
+                "protocol",
+                default=_stat_value(remote_candidate, "protocol", default="unknown"),
+            ),
         )
     )
     rtt_seconds = _stat_value(selected_pair, "currentRoundTripTime", "current_round_trip_time", default=None)
@@ -394,7 +392,12 @@ async def wait_for_track_frame(track_queue: asyncio.Queue[object], timeout_secon
 
 async def run_webrtc_smoke(args: argparse.Namespace) -> int:
     try:
-        from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
+        from aiortc import (
+            RTCConfiguration,
+            RTCIceServer,
+            RTCPeerConnection,
+            RTCSessionDescription,
+        )
     except ImportError as error:
         raise RuntimeError("aiortc is required for --run. Install with: python -m pip install aiortc") from error
 
@@ -603,7 +606,11 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--ice-username", default=None)
     parser.add_argument("--ice-credential", default=None)
     parser.add_argument("--timeout-seconds", type=float, default=15)
-    parser.add_argument("--insecure", action="store_true", help="Allow self-signed HTTPS WHEP endpoints.")
+    parser.add_argument(
+        "--insecure",
+        action="store_true",
+        help="Allow self-signed HTTPS WHEP endpoints.",
+    )
     parser.add_argument(
         "--require-connected",
         action="store_true",

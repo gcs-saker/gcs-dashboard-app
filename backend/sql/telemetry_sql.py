@@ -13,16 +13,16 @@ class Telemetry(Base):
     latitude = Column(Float)
     longitude = Column(Float)
     altitude = Column(Float)
-    magneticX = Column(Float)
-    magneticY = Column(Float)
-    magneticZ = Column(Float)
+    magnetic_x = Column("magneticX", Float)
+    magnetic_y = Column("magneticY", Float)
+    magnetic_z = Column("magneticZ", Float)
 
     # 배터리/속도
     soc = Column(Float)
-    phoneBatterySOC = Column(Float)
+    phone_battery_soc = Column("phoneBatterySOC", Float)
     velocity = Column(Float)
 
     # 거리/시간
-    totalDistance = Column(Float)
-    epochTime = Column(Float)  # DB에 INT(11)이므로 float/int로 받아야 안전
-    portDistance = Column(Float)
+    total_distance = Column("totalDistance", Float)
+    epoch_time = Column("epochTime", Float)
+    port_distance = Column("portDistance", Float)

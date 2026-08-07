@@ -12,7 +12,9 @@ class UserCreate(BaseModel):
     username: str = Field(min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
-    inviteCode: str
+    invite_code: str = Field(alias="inviteCode")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 # 로그인(POST /auth/login) 요청에서 사용

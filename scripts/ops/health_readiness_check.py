@@ -19,7 +19,11 @@ BACKEND_DOCKERFILE = REPO_ROOT / "backend" / "Dockerfile"
 def main() -> int:
     parser = argparse.ArgumentParser(description="Check GCS-Saker health/readiness contracts.")
     parser.add_argument("--check", action="store_true", help="Validate local docs and static contracts.")
-    parser.add_argument("--run", action="store_true", help="Probe running backend and MediaMTX endpoints.")
+    parser.add_argument(
+        "--run",
+        action="store_true",
+        help="Probe running backend and MediaMTX endpoints.",
+    )
     parser.add_argument("--backend-url", default="http://127.0.0.1:8001")
     parser.add_argument("--mediamtx-host", default="127.0.0.1")
     parser.add_argument("--mediamtx-hls-port", type=int, default=8888)
@@ -52,15 +56,39 @@ def run_static_check() -> None:
     for term in required_doc_terms:
         require(term in doc, f"missing documented term: {term}")
 
-    require("api: true" in mediamtx_config, "MediaMTX API must be enabled for internal stream discovery")
-    require("apiAddress: :9997" in mediamtx_config, "MediaMTX API must listen only inside the container network")
-    require("authInternalUsers:" in mediamtx_config, "MediaMTX API access must be constrained by internal auth policy")
-    require("172.16.0.0/12" in mediamtx_config, "MediaMTX API must allow Docker-internal backend access")
-    require("metrics: false" in mediamtx_config, "MediaMTX metrics must stay disabled by default")
+    require(
+        "api: true" in mediamtx_config,
+        "MediaMTX API must be enabled for internal stream discovery",
+    )
+    require(
+        "apiAddress: :9997" in mediamtx_config,
+        "MediaMTX API must listen only inside the container network",
+    )
+    require(
+        "authInternalUsers:" in mediamtx_config,
+        "MediaMTX API access must be constrained by internal auth policy",
+    )
+    require(
+        "172.16.0.0/12" in mediamtx_config,
+        "MediaMTX API must allow Docker-internal backend access",
+    )
+    require(
+        "metrics: false" in mediamtx_config,
+        "MediaMTX metrics must stay disabled by default",
+    )
     published_port_lines = [line.strip() for line in compose.splitlines() if line.strip().startswith("-")]
-    require(not any("9997" in line for line in published_port_lines), "MediaMTX management API port must not be published")
-    require(not any("9998" in line for line in published_port_lines), "MediaMTX metrics port must not be published")
-    require("HEALTHCHECK" in dockerfile and "/healthz" in dockerfile, "backend Dockerfile needs healthz healthcheck")
+    require(
+        not any("9997" in line for line in published_port_lines),
+        "MediaMTX management API port must not be published",
+    )
+    require(
+        not any("9998" in line for line in published_port_lines),
+        "MediaMTX metrics port must not be published",
+    )
+    require(
+        "HEALTHCHECK" in dockerfile and "/healthz" in dockerfile,
+        "backend Dockerfile needs healthz healthcheck",
+    )
 
     print("Health/readiness static check passed")
 

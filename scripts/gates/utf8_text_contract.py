@@ -8,9 +8,28 @@ import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 TEXT_SUFFIXES = {
-    ".cjs", ".conf", ".css", ".env", ".go", ".html", ".js", ".json",
-    ".jsx", ".kt", ".kts", ".md", ".mjs", ".py", ".sh", ".sql",
-    ".ts", ".tsx", ".txt", ".xml", ".yaml", ".yml",
+    ".cjs",
+    ".conf",
+    ".css",
+    ".env",
+    ".go",
+    ".html",
+    ".js",
+    ".json",
+    ".jsx",
+    ".kt",
+    ".kts",
+    ".md",
+    ".mjs",
+    ".py",
+    ".sh",
+    ".sql",
+    ".ts",
+    ".tsx",
+    ".txt",
+    ".xml",
+    ".yaml",
+    ".yml",
 }
 TEXT_NAMES = {"Caddyfile", "Dockerfile", "Makefile"}
 

@@ -9,19 +9,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_ROOT = REPO_ROOT / "backend"
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from modules.ai_contract import AI_CONTRACT_SCHEMA_VERSION, AIEndpointRequest, MockAIService  # noqa: E402
+from modules.ai_contract import (  # noqa: E402
+    AI_CONTRACT_SCHEMA_VERSION,
+    AIEndpointRequest,
+    MockAIService,
+)
 from modules.protocol_v2.ai_overlay import (  # noqa: E402
     AiOverlayEventPayload,
     dashboard_response_from_overlay_events,
     events_from_dashboard_response,
 )
-
 
 SCHEMA_VERSION = "ai-overlay-sidecar-smoke-v1"
 STREAM_ID = "raw.sample.front"

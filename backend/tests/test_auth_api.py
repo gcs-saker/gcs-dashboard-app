@@ -13,7 +13,7 @@ from core.db import Base, get_db
 from core.security import AuthSettings, create_access_token, create_refresh_token
 from main import app
 from modules.messaging.control_publisher import ControlMessagePublisher, get_control_message_publisher
-from modules.messaging.sender import MessageEnvelope, MessageSenderUnavailable
+from modules.messaging.sender import MessageEnvelope, MessageSenderUnavailableError
 from sql.company_sql import Company
 from sql.user_sql import User
 
@@ -31,7 +31,7 @@ class RecordingMessageSender:
 
 class FailingMessageSender:
     def send(self, envelope: MessageEnvelope) -> None:
-        raise MessageSenderUnavailable("gRPC gateway target is not configured")
+        raise MessageSenderUnavailableError("gRPC gateway target is not configured")
 
 
 @pytest.fixture

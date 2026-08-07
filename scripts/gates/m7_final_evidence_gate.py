@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_VERSION = "m7-final-evidence-gate-v1"
 
@@ -67,7 +66,11 @@ def build_commands() -> list[EvidenceCommand]:
             name="benchmark_schema",
             category="performance-contract",
             description="API/HLS/WebRTC/ICE path benchmark metric schema를 고정한다.",
-            command=["python3", "scripts/benchmarks/m7_performance_benchmark_matrix.py", "--check"],
+            command=[
+                "python3",
+                "scripts/benchmarks/m7_performance_benchmark_matrix.py",
+                "--check",
+            ],
         ),
         EvidenceCommand(
             name="telemetry_bulk_benchmark",
@@ -104,13 +107,21 @@ def build_commands() -> list[EvidenceCommand]:
             name="mqtt_hardened_contract",
             category="mqtt-control-plane",
             description="hardened MQTT protobuf telemetry/control profile 계약을 확인한다.",
-            command=["python3", "scripts/smoke/mqtt_hardened_profile_smoke.py", "--check"],
+            command=[
+                "python3",
+                "scripts/smoke/mqtt_hardened_profile_smoke.py",
+                "--check",
+            ],
         ),
         EvidenceCommand(
             name="m10_runtime_evidence_contract",
             category="runtime-observability",
             description="외부 NAT WebRTC와 PostGIS runtime benchmark evidence schema를 확인한다.",
-            command=["python3", "scripts/gates/m10_runtime_evidence_gate.py", "--check"],
+            command=[
+                "python3",
+                "scripts/gates/m10_runtime_evidence_gate.py",
+                "--check",
+            ],
         ),
         EvidenceCommand(
             name="closed_network_static",
@@ -224,7 +235,11 @@ def run_gate(timeout_seconds: int) -> dict[str, Any]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the M7 final benchmark and architecture evidence gate.")
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--check", action="store_true", help="Print the stable evidence command contract.")
+    mode.add_argument(
+        "--check",
+        action="store_true",
+        help="Print the stable evidence command contract.",
+    )
     mode.add_argument("--run", action="store_true", help="Run the evidence commands.")
     parser.add_argument("--timeout-seconds", type=int, default=120)
     args = parser.parse_args()

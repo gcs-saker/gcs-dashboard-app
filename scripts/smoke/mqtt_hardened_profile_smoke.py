@@ -13,7 +13,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_DIR = REPO_ROOT / "backend"
 COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
@@ -72,10 +71,23 @@ class MqttHardenedProfileConfig:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Validate the hardened MQTT protobuf telemetry profile.")
-    parser.add_argument("--check", action="store_true", help="Print the stable smoke contract without executing docker.")
-    parser.add_argument("--run", action="store_true", help="Run the hardened Mosquitto publish/subscribe smoke with docker.")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Print the stable smoke contract without executing docker.",
+    )
+    parser.add_argument(
+        "--run",
+        action="store_true",
+        help="Run the hardened Mosquitto publish/subscribe smoke with docker.",
+    )
     parser.add_argument("--compose-file", type=Path, default=COMPOSE_FILE)
-    parser.add_argument("--override-file", type=Path, default=None, help="Optional legacy compose override for compatibility checks.")
+    parser.add_argument(
+        "--override-file",
+        type=Path,
+        default=None,
+        help="Optional legacy compose override for compatibility checks.",
+    )
     parser.add_argument("--env-file", type=Path, default=ENV_FILE)
     parser.add_argument("--project-name", default=DEFAULT_PROJECT_NAME)
     return parser
@@ -210,7 +222,13 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
                 publish_topic=TELEMETRY_TOPIC,
                 payload_path=telemetry_payload,
             )
-            checks.append(assert_bytes_equal("telemetry.protobuf.roundtrip", telemetry_received.read_bytes(), telemetry_payload.read_bytes()))
+            checks.append(
+                assert_bytes_equal(
+                    "telemetry.protobuf.roundtrip",
+                    telemetry_received.read_bytes(),
+                    telemetry_payload.read_bytes(),
+                )
+            )
             checks.append(assert_telemetry_decodes(telemetry_received.read_bytes()))
 
             subscribe_and_publish(
@@ -224,7 +242,13 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
                 publish_topic=COMMAND_TOPIC,
                 payload_path=command_payload,
             )
-            checks.append(assert_bytes_equal("command.delivery.roundtrip", command_received.read_bytes(), command_payload.read_bytes()))
+            checks.append(
+                assert_bytes_equal(
+                    "command.delivery.roundtrip",
+                    command_received.read_bytes(),
+                    command_payload.read_bytes(),
+                )
+            )
 
             return {
                 **smoke_contract(config),
@@ -232,7 +256,11 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
                 "checks": checks,
             }
         finally:
-            run_checked(config.down_command(generated_env), name="compose.down", allow_failure=True)
+            run_checked(
+                config.down_command(generated_env),
+                name="compose.down",
+                allow_failure=True,
+            )
 
 
 def write_password_file(password_file: Path) -> None:
@@ -253,7 +281,10 @@ def write_password_file(password_file: Path) -> None:
         ],
         name="password.backend",
     )
-    for username, password in ((MEDIA_CONTROL_USER, MEDIA_CONTROL_PASSWORD), (DEVICE_USER, DEVICE_PASSWORD)):
+    for username, password in (
+        (MEDIA_CONTROL_USER, MEDIA_CONTROL_PASSWORD),
+        (DEVICE_USER, DEVICE_PASSWORD),
+    ):
         run_checked(
             [
                 "docker",
@@ -363,7 +394,7 @@ def subscribe_and_publish(
         config,
         "sh",
         "-lc",
-        "mosquitto_sub -h mqtt -p 1883 -u \"$MQTT_USER\" -P \"$MQTT_PASSWORD\" -t \"$MQTT_TOPIC\" -C 1 -W 8 -N > \"$MQTT_OUTPUT\"",
+        'mosquitto_sub -h mqtt -p 1883 -u "$MQTT_USER" -P "$MQTT_PASSWORD" -t "$MQTT_TOPIC" -C 1 -W 8 -N > "$MQTT_OUTPUT"',
         env={
             "MQTT_USER": subscriber_user,
             "MQTT_PASSWORD": subscriber_password,
@@ -482,7 +513,9 @@ def run_checked(
     allow_failure: bool = False,
 ) -> subprocess.CompletedProcess[bytes]:
     env = os.environ.copy()
-    env["COMPOSE_PROJECT_NAME"] = DEFAULT_PROJECT_NAME if "compose" in name else env.get("COMPOSE_PROJECT_NAME", DEFAULT_PROJECT_NAME)
+    env["COMPOSE_PROJECT_NAME"] = (
+        DEFAULT_PROJECT_NAME if "compose" in name else env.get("COMPOSE_PROJECT_NAME", DEFAULT_PROJECT_NAME)
+    )
     result = subprocess.run(command, check=False, capture_output=True, env=env)
     if check and result.returncode != 0 and not allow_failure:
         stdout = result.stdout.decode("utf-8", errors="replace")

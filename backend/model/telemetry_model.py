@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # -----------------------------
@@ -11,15 +11,17 @@ class TelemetryCreate(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     altitude: Optional[float] = None
-    magneticX: Optional[float] = None
-    magneticY: Optional[float] = None
-    magneticZ: Optional[float] = None
+    magnetic_x: Optional[float] = Field(default=None, alias="magneticX")
+    magnetic_y: Optional[float] = Field(default=None, alias="magneticY")
+    magnetic_z: Optional[float] = Field(default=None, alias="magneticZ")
     soc: Optional[str] = None
-    phoneBatterySOC: Optional[float] = None
+    phone_battery_soc: Optional[float] = Field(default=None, alias="phoneBatterySOC")
     velocity: Optional[float] = None
-    totalDistance: Optional[float] = None
-    epochTime: Optional[int] = None
-    portDistance: Optional[float] = None
+    total_distance: Optional[float] = Field(default=None, alias="totalDistance")
+    epoch_time: Optional[int] = Field(default=None, alias="epochTime")
+    port_distance: Optional[float] = Field(default=None, alias="portDistance")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class TelemetryResponse(BaseModel):
@@ -27,14 +29,14 @@ class TelemetryResponse(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     altitude: Optional[float] = None
-    magneticX: Optional[float] = None
-    magneticY: Optional[float] = None
-    magneticZ: Optional[float] = None
+    magnetic_x: Optional[float] = Field(default=None, alias="magneticX")
+    magnetic_y: Optional[float] = Field(default=None, alias="magneticY")
+    magnetic_z: Optional[float] = Field(default=None, alias="magneticZ")
     soc: Optional[str] = None
-    phoneBatterySOC: Optional[float] = None
+    phone_battery_soc: Optional[float] = Field(default=None, alias="phoneBatterySOC")
     velocity: Optional[float] = None
-    totalDistance: Optional[float] = None
-    epochTime: Optional[str] = None  # ✅ int → str 로 수정
-    portDistance: Optional[float] = None
+    total_distance: Optional[float] = Field(default=None, alias="totalDistance")
+    epoch_time: Optional[str] = Field(default=None, alias="epochTime")
+    port_distance: Optional[float] = Field(default=None, alias="portDistance")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)

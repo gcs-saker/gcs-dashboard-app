@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_VERSION = "m10-runtime-evidence-gate-v1"
 
@@ -51,12 +50,20 @@ def build_commands() -> list[GateCommand]:
         GateCommand(
             name="external_nat_contract",
             description="외부 NAT WebRTC smoke가 WHIP/WHEP, TURN, first-frame, audio/video sync metric을 출력할 수 있는지 확인한다.",
-            command=["bash", "scripts/smoke/m7_external_nat_webrtc_smoke.sh", "--check"],
+            command=[
+                "bash",
+                "scripts/smoke/m7_external_nat_webrtc_smoke.sh",
+                "--check",
+            ],
         ),
         GateCommand(
             name="performance_schema",
             description="API/HLS/WebRTC/ICE/audio-video sync benchmark metric 이름을 고정한다.",
-            command=["python3", "scripts/benchmarks/m7_performance_benchmark_matrix.py", "--check"],
+            command=[
+                "python3",
+                "scripts/benchmarks/m7_performance_benchmark_matrix.py",
+                "--check",
+            ],
         ),
         GateCommand(
             name="postgis_runtime_contract",
@@ -249,9 +256,21 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run M10 live WebRTC NAT and DB runtime evidence gate.")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true", help="Print stable runtime evidence contract.")
-    mode.add_argument("--run", action="store_true", help="Run contract checks and PostGIS runtime smoke.")
-    parser.add_argument("--external-nat-report", type=Path, help="Text report produced by m7_external_nat_webrtc_smoke.sh --run.")
-    parser.add_argument("--allow-missing-external-nat", action="store_true", help="Allow local runs to pass without live external NAT evidence.")
+    mode.add_argument(
+        "--run",
+        action="store_true",
+        help="Run contract checks and PostGIS runtime smoke.",
+    )
+    parser.add_argument(
+        "--external-nat-report",
+        type=Path,
+        help="Text report produced by m7_external_nat_webrtc_smoke.sh --run.",
+    )
+    parser.add_argument(
+        "--allow-missing-external-nat",
+        action="store_true",
+        help="Allow local runs to pass without live external NAT evidence.",
+    )
     parser.add_argument("--timeout-seconds", type=int, default=120)
     args = parser.parse_args()
     if not args.check and not args.run:

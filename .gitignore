@@ -1,5 +1,4 @@
 # Python
-__pycache__/
 **/__pycache__/
 *.py[cod]
 *$py.class
@@ -14,11 +13,15 @@ htmlcov/
 **/htmlcov/
 .mypy_cache/
 .ruff_cache/
+.hypothesis/
+.benchmarks/
+.cache/
 .tools/
 .venv/
 venv/
 backend/venv/
 pip-wheel-metadata/
+*.egg-info/
 
 # Node / frontend
 node_modules/
@@ -33,6 +36,7 @@ playwright-report/
 **/playwright-report/
 gcs-dashboard/certs/
 *.tsbuildinfo
+.eslintcache
 
 # JVM / Spring Kotlin
 .gradle/
@@ -79,6 +83,13 @@ deploy/mosquitto/passwords.local
 *.sqlite
 *.sqlite3
 *.db
+*.log
+*.pid
+*.seed
+*.tmp
+*.bak
+*.orig
+*.rej
 
 # Secrets / certificates
 *.pem
@@ -98,5 +109,12 @@ private/
 .LSOverride
 .idea/
 .vscode/
+.fleet/
 *.swp
 *.swo
+Thumbs.db
+Desktop.ini
+
+# Local agent/editor session state (repository policy belongs in AGENTS.md)
+.agents/
+.codex/

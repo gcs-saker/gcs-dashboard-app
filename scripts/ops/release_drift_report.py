@@ -8,7 +8,6 @@ import json
 import pathlib
 import sys
 
-
 COMPARABLE_FIELDS = (
     "commit",
     "composeSha256",

@@ -12,7 +12,7 @@ from modules.messaging.sender import (
     MessageEnvelope,
     MessageSenderEnv,
     MessageSenderKind,
-    MessageSenderUnavailable,
+    MessageSenderUnavailableError,
     get_message_sender,
     grpc_metadata,
 )
@@ -98,7 +98,7 @@ def test_message_sender_factory_can_select_grpc_profile(monkeypatch: pytest.Monk
     monkeypatch.delenv(MessageSenderEnv.GRPC_TARGET, raising=False)
     clear_sender_caches()
 
-    with pytest.raises(MessageSenderUnavailable, match="gRPC gateway target is not configured"):
+    with pytest.raises(MessageSenderUnavailableError, match="gRPC gateway target is not configured"):
         get_message_sender()
 
     clear_sender_caches()
@@ -123,7 +123,7 @@ def test_grpc_message_sender_sends_only_protobuf_payload() -> None:
 def test_grpc_message_sender_rejects_text_payload() -> None:
     sender = GrpcMessageSender(RecordingGrpcTransport())
 
-    with pytest.raises(MessageSenderUnavailable, match="requires protobuf payload"):
+    with pytest.raises(MessageSenderUnavailableError, match="requires protobuf payload"):
         sender.send(
             MessageEnvelope(
                 destination="robot/control/CID001",
@@ -167,7 +167,7 @@ def test_message_sender_factory_rejects_unknown_sender(monkeypatch: pytest.Monke
     monkeypatch.setenv(MessageSenderEnv.CONTROL_SENDER, "raw-socket")
     clear_sender_caches()
 
-    with pytest.raises(MessageSenderUnavailable, match="unsupported control message sender"):
+    with pytest.raises(MessageSenderUnavailableError, match="unsupported control message sender"):
         get_message_sender()
 
     clear_sender_caches()

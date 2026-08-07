@@ -11,7 +11,6 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_ROOT = REPO_ROOT / "backend"
 sys.path.insert(0, str(BACKEND_ROOT))
@@ -27,10 +26,13 @@ from core.db import Base, get_db  # noqa: E402
 from core.security import AuthSettings, create_access_token  # noqa: E402
 from main import app  # noqa: E402
 from modules.ai_contract import AI_CONTRACT_SCHEMA_VERSION  # noqa: E402
-from modules.streaming import PlaybackUrlBuilder, PlaybackUrlBuilderConfig, StreamingService  # noqa: E402
+from modules.streaming import (  # noqa: E402
+    PlaybackUrlBuilder,
+    PlaybackUrlBuilderConfig,
+    StreamingService,
+)
 from sql.company_sql import Company  # noqa: E402
 from sql.user_sql import User  # noqa: E402
-
 
 MetricCall = Callable[[TestClient], Any]
 
@@ -217,9 +219,7 @@ def seed_benchmark_user(db: Session) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Measure local Streaming Core API latency with FastAPI TestClient."
-    )
+    parser = argparse.ArgumentParser(description="Measure local Streaming Core API latency with FastAPI TestClient.")
     parser.add_argument("--iterations", type=int, default=100)
     parser.add_argument("--warmup", type=int, default=10)
     parser.add_argument("--json", action="store_true", help="Print compact JSON.")

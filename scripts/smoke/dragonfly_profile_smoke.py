@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
 DRAGONFLY_OVERRIDE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.dragonfly.override.yml"
@@ -228,8 +227,16 @@ class DragonflyProfileSmokeConfig:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Validate the DragonFly Redis-compatible cache profile.")
-    parser.add_argument("--check", action="store_true", help="Print the stable smoke contract without executing docker.")
-    parser.add_argument("--run", action="store_true", help="Run Redis and DragonFly cache contract smoke with docker.")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Print the stable smoke contract without executing docker.",
+    )
+    parser.add_argument(
+        "--run",
+        action="store_true",
+        help="Run Redis and DragonFly cache contract smoke with docker.",
+    )
     parser.add_argument("--compose-file", type=Path, default=COMPOSE_FILE)
     parser.add_argument("--override-file", type=Path, default=DRAGONFLY_OVERRIDE_FILE)
     parser.add_argument("--env-file", type=Path, default=ENV_FILE)
@@ -316,7 +323,7 @@ def run_profiles(config: DragonflyProfileSmokeConfig) -> dict[str, Any]:
         ("dragonfly", True, dragonfly_image),
     ]
     results = []
-    with filtered_env_file(config.env_file) as smoke_env_file:
+    with FilteredEnvFile(config.env_file) as smoke_env_file:
         smoke_config = DragonflyProfileSmokeConfig(
             compose_file=config.compose_file,
             override_file=config.override_file,
@@ -326,7 +333,13 @@ def run_profiles(config: DragonflyProfileSmokeConfig) -> dict[str, Any]:
         try:
             for name, include_override, image in profiles:
                 results.append(
-                    run_profile(smoke_config, name, include_override=include_override, image=image, password=password)
+                    run_profile(
+                        smoke_config,
+                        name,
+                        include_override=include_override,
+                        image=image,
+                        password=password,
+                    )
                 )
             equivalent = all(profile["passed"] for profile in results) and equivalent_check_names(results)
             return {
@@ -417,7 +430,7 @@ def compose_environment(dragonfly_image: str, project_name: str) -> dict[str, st
     return env
 
 
-class filtered_env_file:
+class FilteredEnvFile:
     def __init__(self, source: Path) -> None:
         self.source = source
         self._temporary_path: Path | None = None

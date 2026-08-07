@@ -5,16 +5,15 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from dataclasses import dataclass
 import fractions
 import ssl
 import sys
 import time
+from dataclasses import dataclass
 from typing import Sequence
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlunsplit, urlsplit
+from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
-
 
 DEFAULT_WHIP_URL = "https://a4ai.tplinkdns.com/webrtc/raw/nat/smoke/whip"
 DEFAULT_ICE_SERVER_URL = "stun:a4ai.tplinkdns.com:3478"
@@ -193,7 +192,12 @@ class SyntheticAudioTrack:  # aiortc AudioStreamTrack subclass at runtime.
 
 async def run_publish_smoke(args: argparse.Namespace) -> int:
     try:
-        from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
+        from aiortc import (
+            RTCConfiguration,
+            RTCIceServer,
+            RTCPeerConnection,
+            RTCSessionDescription,
+        )
     except ImportError as error:
         raise RuntimeError("aiortc is required for --run. Install with: python -m pip install aiortc") from error
 
@@ -263,7 +267,11 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     mode.add_argument("--check", action="store_true")
     mode.add_argument("--run", action="store_true")
     parser.add_argument("--whip-url", default=DEFAULT_WHIP_URL)
-    parser.add_argument("--publish-token", default=None, help="Short-lived publish token sent as an Authorization bearer")
+    parser.add_argument(
+        "--publish-token",
+        default=None,
+        help="Short-lived publish token sent as an Authorization bearer",
+    )
     parser.add_argument("--ice-server-url", default=DEFAULT_ICE_SERVER_URL)
     parser.add_argument("--ice-username", default=None)
     parser.add_argument("--ice-credential", default=None)

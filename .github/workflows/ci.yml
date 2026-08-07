@@ -154,8 +154,8 @@ jobs:
 
       - name: Lint and verify backend formatting
         run: |
-          python -m ruff check .
-          python -m ruff format --check .
+          python -m ruff check . ../scripts
+          python -m ruff format --check . ../scripts
 
       - name: Typecheck all backend modules and tests
         run: python -m mypy .
@@ -272,6 +272,9 @@ jobs:
 
       - name: Validate canonical script entrypoints
         run: python scripts/gates/script_entrypoint_contract.py
+
+      - name: Validate repository structure and naming
+        run: python scripts/gates/repository_hygiene_contract.py
 
       - name: Validate shell syntax
         run: find scripts deploy -type f -name '*.sh' -print0 | xargs -0 -r bash -n
