@@ -12,8 +12,8 @@ def test_telemetry_ingest_command_separates_db_payload_from_read_model_snapshot(
 
     command = TelemetryIngestCommand.from_create(payload)
 
-    assert command.db_insert_payload()["epochTime"] == 12_345
-    assert command.response_snapshot().epochTime == "00:00:12"
+    assert command.db_insert_payload()["epoch_time"] == 12_345
+    assert command.response_snapshot().epoch_time == "00:00:12"
 
 
 def test_format_epoch_millis_keeps_missing_time_nullable() -> None:
@@ -26,5 +26,5 @@ def test_telemetry_read_model_store_keeps_response_snapshots() -> None:
 
     snapshot = store.upsert(command)
 
-    assert snapshot.epochTime == "00:00:01"
+    assert snapshot.epoch_time == "00:00:01"
     assert store.list() == [snapshot]

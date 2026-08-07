@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
 DEFAULT_ENV_FILE = REPO_ROOT / "deploy" / "compose" / ".env.single-node.example"
@@ -218,8 +217,14 @@ POSTGIS_RUNTIME_SQL = "\n".join(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run PostGIS runtime smoke against the default docker compose database.")
-    parser.add_argument("--check", action="store_true", help="Print the stable command and SQL contract without executing docker.")
+    parser = argparse.ArgumentParser(
+        description="Run PostGIS runtime smoke against the default docker compose database."
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Print the stable command and SQL contract without executing docker.",
+    )
     parser.add_argument("--compose-file", type=Path, default=DEFAULT_COMPOSE_FILE)
     parser.add_argument("--env-file", type=Path, default=DEFAULT_ENV_FILE)
     parser.add_argument("--service", default="postgres-geo")
@@ -332,9 +337,15 @@ def summarize_plan(explain: list[dict[str, Any]]) -> dict[str, Any]:
         "indexNames": index_names,
         "usesSpatialCondition": "st_makeenvelope" in filters.lower() or "&&" in filters,
         "sharedHitBlocks": sum(int(node.get("Shared Hit Blocks", 0)) for node in nodes),
-        "sharedReadBlocks": sum(int(node.get("Shared Read Blocks", 0)) for node in nodes),
-        "sharedDirtiedBlocks": sum(int(node.get("Shared Dirtied Blocks", 0)) for node in nodes),
-        "sharedWrittenBlocks": sum(int(node.get("Shared Written Blocks", 0)) for node in nodes),
+        "sharedReadBlocks": sum(
+            int(node.get("Shared Read Blocks", 0)) for node in nodes
+        ),
+        "sharedDirtiedBlocks": sum(
+            int(node.get("Shared Dirtied Blocks", 0)) for node in nodes
+        ),
+        "sharedWrittenBlocks": sum(
+            int(node.get("Shared Written Blocks", 0)) for node in nodes
+        ),
         "walRecords": sum(int(node.get("WAL Records", 0)) for node in nodes),
         "walBytes": sum(int(node.get("WAL Bytes", 0)) for node in nodes),
         "executionTimeMs": explain[0].get("Execution Time"),

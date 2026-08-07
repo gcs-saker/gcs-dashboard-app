@@ -10,16 +10,26 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-HEALTH_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_health_readiness_기준_v0.1.md"
+HEALTH_DOC = (
+    REPO_ROOT / "docs" / "operations" / "GCS-Saker_health_readiness_기준_v0.1.md"
+)
 MEDIAMTX_CONFIG = REPO_ROOT / "gcs-dashboard" / "mediamtx.yml"
 COMPOSE_FILE = REPO_ROOT / "gcs-dashboard" / "docker-compose.yml"
 BACKEND_DOCKERFILE = REPO_ROOT / "backend" / "Dockerfile"
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Check GCS-Saker health/readiness contracts.")
-    parser.add_argument("--check", action="store_true", help="Validate local docs and static contracts.")
-    parser.add_argument("--run", action="store_true", help="Probe running backend and MediaMTX endpoints.")
+    parser = argparse.ArgumentParser(
+        description="Check GCS-Saker health/readiness contracts."
+    )
+    parser.add_argument(
+        "--check", action="store_true", help="Validate local docs and static contracts."
+    )
+    parser.add_argument(
+        "--run",
+        action="store_true",
+        help="Probe running backend and MediaMTX endpoints.",
+    )
     parser.add_argument("--backend-url", default="http://127.0.0.1:8001")
     parser.add_argument("--mediamtx-host", default="127.0.0.1")
     parser.add_argument("--mediamtx-hls-port", type=int, default=8888)
@@ -52,15 +62,41 @@ def run_static_check() -> None:
     for term in required_doc_terms:
         require(term in doc, f"missing documented term: {term}")
 
-    require("api: true" in mediamtx_config, "MediaMTX API must be enabled for internal stream discovery")
-    require("apiAddress: :9997" in mediamtx_config, "MediaMTX API must listen only inside the container network")
-    require("authInternalUsers:" in mediamtx_config, "MediaMTX API access must be constrained by internal auth policy")
-    require("172.16.0.0/12" in mediamtx_config, "MediaMTX API must allow Docker-internal backend access")
-    require("metrics: false" in mediamtx_config, "MediaMTX metrics must stay disabled by default")
-    published_port_lines = [line.strip() for line in compose.splitlines() if line.strip().startswith("-")]
-    require(not any("9997" in line for line in published_port_lines), "MediaMTX management API port must not be published")
-    require(not any("9998" in line for line in published_port_lines), "MediaMTX metrics port must not be published")
-    require("HEALTHCHECK" in dockerfile and "/healthz" in dockerfile, "backend Dockerfile needs healthz healthcheck")
+    require(
+        "api: true" in mediamtx_config,
+        "MediaMTX API must be enabled for internal stream discovery",
+    )
+    require(
+        "apiAddress: :9997" in mediamtx_config,
+        "MediaMTX API must listen only inside the container network",
+    )
+    require(
+        "authInternalUsers:" in mediamtx_config,
+        "MediaMTX API access must be constrained by internal auth policy",
+    )
+    require(
+        "172.16.0.0/12" in mediamtx_config,
+        "MediaMTX API must allow Docker-internal backend access",
+    )
+    require(
+        "metrics: false" in mediamtx_config,
+        "MediaMTX metrics must stay disabled by default",
+    )
+    published_port_lines = [
+        line.strip() for line in compose.splitlines() if line.strip().startswith("-")
+    ]
+    require(
+        not any("9997" in line for line in published_port_lines),
+        "MediaMTX management API port must not be published",
+    )
+    require(
+        not any("9998" in line for line in published_port_lines),
+        "MediaMTX metrics port must not be published",
+    )
+    require(
+        "HEALTHCHECK" in dockerfile and "/healthz" in dockerfile,
+        "backend Dockerfile needs healthz healthcheck",
+    )
 
     print("Health/readiness static check passed")
 
@@ -76,7 +112,9 @@ def run_live_probe(args: argparse.Namespace) -> None:
 
     if args.playback_url:
         with urlopen(Request(args.playback_url, method="GET"), timeout=5) as response:
-            require(200 <= response.status < 500, f"playback URL returned {response.status}")
+            require(
+                200 <= response.status < 500, f"playback URL returned {response.status}"
+            )
 
     print("Health/readiness live probe passed")
 

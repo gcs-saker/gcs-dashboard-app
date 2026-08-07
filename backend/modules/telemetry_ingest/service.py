@@ -34,7 +34,7 @@ class TelemetryIngestCommand:
         return TelemetryResponse(
             **{
                 **self.payload.model_dump(),
-                "epochTime": format_epoch_millis(self.payload.epochTime),
+                "epochTime": format_epoch_millis(self.payload.epoch_time),
             }
         )
 

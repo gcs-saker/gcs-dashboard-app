@@ -11,14 +11,17 @@ from typing import Any
 
 from sqlalchemy.dialects import mysql, postgresql
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_DIR = REPO_ROOT / "backend"
 sys.path.insert(0, str(BACKEND_DIR))
 
-from model.telemetry_model import TelemetryCreate
-from modules.telemetry_buffer import BufferedTelemetrySink, InMemoryTelemetryWriteBuffer, TelemetryBufferRecord
-from modules.telemetry_buffer.bulk_sql import (
+from model.telemetry_model import TelemetryCreate  # noqa: E402
+from modules.telemetry_buffer import (  # noqa: E402
+    BufferedTelemetrySink,
+    InMemoryTelemetryWriteBuffer,
+    TelemetryBufferRecord,
+)
+from modules.telemetry_buffer.bulk_sql import (  # noqa: E402
     TelemetryBulkBatch,
     build_mysql_latest_bulk_upsert,
     build_postgres_history_bulk_insert,
@@ -26,7 +29,6 @@ from modules.telemetry_buffer.bulk_sql import (
     plan_mysql_latest_bulk_write,
     plan_postgres_bulk_write,
 )
-
 
 SCHEMA_VERSION = "telemetry-bulk-flush-benchmark-v1"
 DEFAULT_RECORDS = 1_000
@@ -52,8 +54,12 @@ class BenchmarkResult:
             "batchSize": self.batch_size,
             "ingestLatencyMs": round(self.ingest_latency_ms, 3),
             "flushLatencyMs": round(self.flush_latency_ms, 3),
-            "ingestThroughputRecordsPerSec": round(self.ingest_throughput_records_per_sec, 3),
-            "flushThroughputRecordsPerSec": round(self.flush_throughput_records_per_sec, 3),
+            "ingestThroughputRecordsPerSec": round(
+                self.ingest_throughput_records_per_sec, 3
+            ),
+            "flushThroughputRecordsPerSec": round(
+                self.flush_throughput_records_per_sec, 3
+            ),
             "postgresStatementCount": self.postgres_statement_count,
             "mysqlStatementCount": self.mysql_statement_count,
             "postgresAvoidedStatementCount": self.postgres_avoided_statement_count,
@@ -170,7 +176,9 @@ def build_check_report() -> dict[str, Any]:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Measure telemetry buffer and bulk flush synthetic throughput.")
+    parser = argparse.ArgumentParser(
+        description="Measure telemetry buffer and bulk flush synthetic throughput."
+    )
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--records", type=int, default=DEFAULT_RECORDS)
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)

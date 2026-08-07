@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_VERSION = "m10-runtime-evidence-gate-v1"
 
@@ -51,12 +50,20 @@ def build_commands() -> list[GateCommand]:
         GateCommand(
             name="external_nat_contract",
             description="외부 NAT WebRTC smoke가 WHIP/WHEP, TURN, first-frame, audio/video sync metric을 출력할 수 있는지 확인한다.",
-            command=["bash", "scripts/smoke/m7_external_nat_webrtc_smoke.sh", "--check"],
+            command=[
+                "bash",
+                "scripts/smoke/m7_external_nat_webrtc_smoke.sh",
+                "--check",
+            ],
         ),
         GateCommand(
             name="performance_schema",
             description="API/HLS/WebRTC/ICE/audio-video sync benchmark metric 이름을 고정한다.",
-            command=["python3", "scripts/benchmarks/m7_performance_benchmark_matrix.py", "--check"],
+            command=[
+                "python3",
+                "scripts/benchmarks/m7_performance_benchmark_matrix.py",
+                "--check",
+            ],
         ),
         GateCommand(
             name="postgis_runtime_contract",
@@ -115,7 +122,9 @@ def run_command(command: GateCommand, timeout_seconds: int) -> dict[str, Any]:
     }
 
 
-def run_json_command(command: GateCommand, timeout_seconds: int) -> tuple[dict[str, Any], dict[str, Any] | None]:
+def run_json_command(
+    command: GateCommand, timeout_seconds: int
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
     started = time.perf_counter()
     result = subprocess.run(
         command.command,
@@ -150,16 +159,24 @@ def validate_external_nat_report(path: Path | None) -> dict[str, Any]:
             "requiredMetrics": list(EXTERNAL_NAT_REQUIRED_METRICS),
         }
     content = path.read_text(encoding="utf-8")
-    missing = [metric for metric in EXTERNAL_NAT_REQUIRED_METRICS if metric not in content]
+    missing = [
+        metric for metric in EXTERNAL_NAT_REQUIRED_METRICS if metric not in content
+    ]
     extracted = {
         "whepAnswerLatencyMs": extract_number(content, "WHEP answer latency ms"),
-        "firstVideoFrameLatencyMs": extract_number(content, "First video frame latency ms"),
+        "firstVideoFrameLatencyMs": extract_number(
+            content, "First video frame latency ms"
+        ),
         "audioVideoSyncOffsetMs": extract_number(content, "Audio/video sync offset ms"),
-        "externalNatWallLatencyMs": extract_number(content, "External NAT smoke wall latency ms"),
+        "externalNatWallLatencyMs": extract_number(
+            content, "External NAT smoke wall latency ms"
+        ),
         "directIcePathRatio": extract_number(content, "Direct ICE path ratio"),
         "relayIcePathRatio": extract_number(content, "Relay ICE path ratio"),
         "icePath": extract_text_after_colon(content, "ICE path"),
-        "relayFallbackReason": extract_text_after_colon(content, "Relay fallback reason"),
+        "relayFallbackReason": extract_text_after_colon(
+            content, "Relay fallback reason"
+        ),
     }
     return {
         "status": "validated" if not missing else "missing-metrics",
@@ -214,15 +231,20 @@ def extract_text_after_colon(content: str, label: str) -> str | None:
 
 def run_gate(args: argparse.Namespace) -> dict[str, Any]:
     contract_commands = build_commands()[:3]
-    command_results = [run_command(command, args.timeout_seconds) for command in contract_commands]
-    postgis_result, postgis_payload = run_json_command(build_commands()[3], args.timeout_seconds)
+    command_results = [
+        run_command(command, args.timeout_seconds) for command in contract_commands
+    ]
+    postgis_result, postgis_payload = run_json_command(
+        build_commands()[3], args.timeout_seconds
+    )
     postgis_validation = (
         validate_postgis_runtime(postgis_payload)
         if postgis_payload is not None
         else {
             "status": "failed",
             "passed": False,
-            "reason": postgis_result["stderrPreview"] or postgis_result["stdoutPreview"],
+            "reason": postgis_result["stderrPreview"]
+            or postgis_result["stdoutPreview"],
         }
     )
     external_nat_validation = validate_external_nat_report(args.external_nat_report)
@@ -246,12 +268,28 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run M10 live WebRTC NAT and DB runtime evidence gate.")
+    parser = argparse.ArgumentParser(
+        description="Run M10 live WebRTC NAT and DB runtime evidence gate."
+    )
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--check", action="store_true", help="Print stable runtime evidence contract.")
-    mode.add_argument("--run", action="store_true", help="Run contract checks and PostGIS runtime smoke.")
-    parser.add_argument("--external-nat-report", type=Path, help="Text report produced by m7_external_nat_webrtc_smoke.sh --run.")
-    parser.add_argument("--allow-missing-external-nat", action="store_true", help="Allow local runs to pass without live external NAT evidence.")
+    mode.add_argument(
+        "--check", action="store_true", help="Print stable runtime evidence contract."
+    )
+    mode.add_argument(
+        "--run",
+        action="store_true",
+        help="Run contract checks and PostGIS runtime smoke.",
+    )
+    parser.add_argument(
+        "--external-nat-report",
+        type=Path,
+        help="Text report produced by m7_external_nat_webrtc_smoke.sh --run.",
+    )
+    parser.add_argument(
+        "--allow-missing-external-nat",
+        action="store_true",
+        help="Allow local runs to pass without live external NAT evidence.",
+    )
     parser.add_argument("--timeout-seconds", type=int, default=120)
     args = parser.parse_args()
     if not args.check and not args.run:

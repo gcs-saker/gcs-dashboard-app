@@ -139,8 +139,8 @@ class TelemetryEnvelopePayload:
             latitude=self.latitude,
             longitude=self.longitude,
             altitude=self.altitude_m,
-            magneticX=self.heading_deg,
+            magnetic_x=self.heading_deg,
             velocity=self.speed_mps,
-            phoneBatterySOC=self.battery_percent,
-            epochTime=legacy_epoch_seconds(self.observed_unix_millis),
+            phone_battery_soc=self.battery_percent,
+            epoch_time=legacy_epoch_seconds(self.observed_unix_millis),
         )

@@ -153,14 +153,14 @@ def test_telemetry_command_snapshot_preserves_nullable_dto_fields(payload: Telem
     source_payload = payload.model_dump()
 
     for field_name, value in source_payload.items():
-        if field_name == "epochTime":
+        if field_name == "epoch_time":
             continue
         assert snapshot_payload[field_name] == value
-    if payload.epochTime is None:
-        assert snapshot.epochTime is None
+    if payload.epoch_time is None:
+        assert snapshot.epoch_time is None
     else:
-        assert isinstance(snapshot.epochTime, str)
-        assert snapshot.epochTime.count(":") == 2
+        assert isinstance(snapshot.epoch_time, str)
+        assert snapshot.epoch_time.count(":") == 2
 
 
 @PROPERTY_TEST_SETTINGS
@@ -173,4 +173,4 @@ def test_telemetry_protobuf_envelope_roundtrips_contract(payload: TelemetryEnvel
     assert legacy.uuid == payload.asset_id
     assert legacy.latitude == payload.latitude
     assert legacy.longitude == payload.longitude
-    assert legacy.phoneBatterySOC == payload.battery_percent
+    assert legacy.phone_battery_soc == payload.battery_percent

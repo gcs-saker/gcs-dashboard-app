@@ -8,9 +8,28 @@ import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 TEXT_SUFFIXES = {
-    ".cjs", ".conf", ".css", ".env", ".go", ".html", ".js", ".json",
-    ".jsx", ".kt", ".kts", ".md", ".mjs", ".py", ".sh", ".sql",
-    ".ts", ".tsx", ".txt", ".xml", ".yaml", ".yml",
+    ".cjs",
+    ".conf",
+    ".css",
+    ".env",
+    ".go",
+    ".html",
+    ".js",
+    ".json",
+    ".jsx",
+    ".kt",
+    ".kts",
+    ".md",
+    ".mjs",
+    ".py",
+    ".sh",
+    ".sql",
+    ".ts",
+    ".tsx",
+    ".txt",
+    ".xml",
+    ".yaml",
+    ".yml",
 }
 TEXT_NAMES = {"Caddyfile", "Dockerfile", "Makefile"}
 
@@ -23,7 +42,9 @@ def tracked_text_paths() -> list[pathlib.Path]:
             continue
         path = ROOT / encoded_path.decode("utf-8")
         if path.is_file() and (
-            path.suffix.lower() in TEXT_SUFFIXES or path.name in TEXT_NAMES or path.name.startswith("Caddyfile")
+            path.suffix.lower() in TEXT_SUFFIXES
+            or path.name in TEXT_NAMES
+            or path.name.startswith("Caddyfile")
         ):
             paths.append(path)
     return paths

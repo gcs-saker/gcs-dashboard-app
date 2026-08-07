@@ -131,5 +131,18 @@ done < "${stateful_file}"
 if [[ -n "${PUBLIC_TLS_HOST:-}" ]]; then
   "${ROOT}/scripts/ops/check_public_tls.sh" "${PUBLIC_TLS_HOST}" "${PUBLIC_TLS_PORT:-443}"
 fi
+# Keep the operator-facing release pointer aligned with the Compose source that
+# now owns the live containers. Updating it only after every verification has
+# passed preserves the previous pointer when rollback runs.
+runtime_root="$(dirname "$(dirname "${ROOT}")")"
+[[ "$(basename "$(dirname "${ROOT}")")" == "releases" ]] || {
+  echo "immutable source checkout must be located under <runtime>/releases" >&2
+  exit 2
+}
+ln -sfn "${ROOT}" "${runtime_root}/current"
+[[ "$(realpath "${runtime_root}/current")" == "${ROOT}" ]] || {
+  echo "failed to update active release pointer" >&2
+  exit 1
+}
 trap - ERR
 echo "stateless deployment completed; stateful and external-image services were not recreated"

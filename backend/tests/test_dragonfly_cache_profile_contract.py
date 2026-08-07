@@ -91,7 +91,7 @@ def test_dragonfly_smoke_allows_server_env_without_explicit_dragonfly_image(tmp_
         )
         == module.DEFAULT_DRAGONFLY_IMAGE
     )
-    with module.filtered_env_file(server_like_env) as smoke_env_file:
+    with module.FilteredEnvFile(server_like_env) as smoke_env_file:
         smoke_env = smoke_env_file.read_text(encoding="utf-8")
     assert "COMPOSE_PROJECT_NAME" not in smoke_env
     config = module.DragonflyProfileSmokeConfig(

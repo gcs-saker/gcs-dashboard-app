@@ -40,7 +40,7 @@ def test_mqtt_consumer_bridge_decodes_protobuf_telemetry_payload() -> None:
     assert sink.items[0].uuid == "raw.mobile.front"
     assert sink.items[0].latitude == 35.871435
     assert sink.items[0].longitude == 128.601445
-    assert sink.items[0].phoneBatterySOC == 78.0
+    assert sink.items[0].phone_battery_soc == 78.0
 
 
 def test_mqtt_consumer_bridge_can_route_telemetry_through_write_buffer() -> None:

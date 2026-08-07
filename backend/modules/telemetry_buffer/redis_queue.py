@@ -116,7 +116,7 @@ def serialize_record(record: TelemetryBufferRecord) -> str:
         {
             "key": record.key,
             "received_at": record.received_at.isoformat(),
-            "telemetry": record.telemetry.model_dump(mode="json"),
+            "telemetry": record.telemetry.model_dump(mode="json", by_alias=True),
         },
         separators=(",", ":"),
     )

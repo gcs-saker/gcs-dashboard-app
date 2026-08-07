@@ -41,7 +41,7 @@ class MessageSenderError(RuntimeError):
     pass
 
 
-class MessageSenderUnavailable(MessageSenderError):
+class MessageSenderUnavailableError(MessageSenderError):
     pass
 
 
@@ -71,7 +71,7 @@ class GrpcMessageSender:
 
     def send(self, envelope: MessageEnvelope) -> None:
         if envelope.content_type != MessageContentType.PROTOBUF or not isinstance(envelope.payload, bytes):
-            raise MessageSenderUnavailable("gRPC message sender requires protobuf payload")
+            raise MessageSenderUnavailableError("gRPC message sender requires protobuf payload")
         self._transport.send(envelope.payload)
 
 
@@ -87,9 +87,9 @@ class GrpcRawStreamTransport:
         try:
             settings = GrpcTransportSettings()
         except ValidationError as exc:
-            raise MessageSenderUnavailable(settings_error_message("grpc control sender", exc)) from exc
+            raise MessageSenderUnavailableError(settings_error_message("grpc control sender", exc)) from exc
         if not settings.target:
-            raise MessageSenderUnavailable("gRPC gateway target is not configured")
+            raise MessageSenderUnavailableError("gRPC gateway target is not configured")
         return cls(
             target=settings.target,
             method=settings.method,
@@ -101,7 +101,7 @@ class GrpcRawStreamTransport:
         try:
             import grpc
         except ImportError as exc:
-            raise MessageSenderUnavailable("grpcio is required for gRPC message sender") from exc
+            raise MessageSenderUnavailableError("grpcio is required for gRPC message sender") from exc
 
         channel = grpc.insecure_channel(self.target)
         stub = channel.stream_stream(
@@ -171,9 +171,9 @@ def get_message_sender() -> MessageSender:
     try:
         sender_kind = ControlMessageSenderSettings().sender_kind
     except ValidationError as exc:
-        raise MessageSenderUnavailable(settings_error_message("control message sender", exc)) from exc
+        raise MessageSenderUnavailableError(settings_error_message("control message sender", exc)) from exc
     if sender_kind == MessageSenderKind.MQTT:
         return MqttMessageSender()
     if sender_kind == MessageSenderKind.GRPC:
         return GrpcMessageSender()
-    raise MessageSenderUnavailable(f"unsupported control message sender: {sender_kind}")
+    raise MessageSenderUnavailableError(f"unsupported control message sender: {sender_kind}")

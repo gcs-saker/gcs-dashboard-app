@@ -48,12 +48,12 @@ class TelemetryBulkPayload:
         return cls(uuid=record.key, telemetry=record.telemetry, received_at=record.received_at)
 
     def to_latest_row(self) -> dict[str, Any]:
-        row = self.telemetry.model_dump(exclude_unset=True)
+        row = self.telemetry.model_dump(exclude_unset=True, by_alias=True)
         row[TelemetryStorageColumns.UUID] = self.uuid
         return {column: row.get(column) for column in LATEST_ROW_COLUMNS if column in row}
 
     def to_history_row(self) -> dict[str, Any]:
-        row = self.telemetry.model_dump(exclude_unset=True)
+        row = self.telemetry.model_dump(exclude_unset=True, by_alias=True)
         return {
             TelemetryStorageColumns.STREAM_UUID: self.uuid,
             TelemetryStorageColumns.LATITUDE: row.get(TelemetryStorageColumns.LATITUDE),

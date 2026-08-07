@@ -9,10 +9,8 @@ Usage:
 """
 
 import argparse
-import json
-from datetime import datetime, timedelta
+
 import requests
-from typing import List, Dict
 
 # 마일스톤 정의
 MILESTONES = [
@@ -36,7 +34,7 @@ MILESTONES = [
 - [ ] feature branch 작업 환경 검증 완료
 """,
         "state": "open",
-        "due_on": None
+        "due_on": None,
     },
     {
         "title": "M1. Streaming Core 전환",
@@ -59,7 +57,7 @@ MILESTONES = [
 - [ ] Frontend RealtimePlayer 구현 및 테스트 완료
 """,
         "state": "open",
-        "due_on": None
+        "due_on": None,
     },
     {
         "title": "M2. Server Deployment & GCS MVP",
@@ -82,7 +80,7 @@ MILESTONES = [
 - [ ] Docker Compose 운영 구조 문서 작성 완료
 """,
         "state": "open",
-        "due_on": None
+        "due_on": None,
     },
     {
         "title": "M3. Device, Telemetry & Map Foundation",
@@ -106,7 +104,7 @@ MILESTONES = [
 - [ ] 기본 알림 규칙 구현 완료
 """,
         "state": "open",
-        "due_on": None
+        "due_on": None,
     },
     {
         "title": "M4. AI Adapter, Group Permission & Control",
@@ -131,7 +129,7 @@ MILESTONES = [
 - [ ] command ACK 메커니즘 구현 완료
 """,
         "state": "open",
-        "due_on": None
+        "due_on": None,
     },
     {
         "title": "M5. TURN, Stability, Test & Final Delivery",
@@ -159,8 +157,8 @@ TURN, 장애 복구, 성능 측정, 실증 문서, 최종 납품 패키지를 �
 - [ ] 최종 납품 패키지 생성 완료
 """,
         "state": "open",
-        "due_on": None
-    }
+        "due_on": None,
+    },
 ]
 
 
@@ -168,26 +166,26 @@ def create_milestones(token: str, owner: str, repo: str) -> None:
     """마일스톤 생성"""
     headers = {
         "Authorization": f"token {token}",
-        "Accept": "application/vnd.github.v3+json"
+        "Accept": "application/vnd.github.v3+json",
     }
-    
+
     base_url = f"https://api.github.com/repos/{owner}/{repo}/milestones"
-    
+
     for i, milestone in enumerate(MILESTONES, 1):
         data = {
             "title": milestone["title"],
             "description": milestone["description"],
-            "state": milestone["state"]
+            "state": milestone["state"],
         }
-        
+
         if milestone["due_on"]:
             data["due_on"] = milestone["due_on"]
-        
+
         print(f"[{i}/{len(MILESTONES)}] 생성 중: {milestone['title']}")
-        
+
         try:
             response = requests.post(base_url, json=data, headers=headers)
-            
+
             if response.status_code == 201:
                 result = response.json()
                 print(f"  ✅ 성공! (ID: {result['number']})")
@@ -196,24 +194,30 @@ def create_milestones(token: str, owner: str, repo: str) -> None:
                 print(f"     Response: {response.text}")
         except Exception as e:
             print(f"  ❌ 오류: {str(e)}")
-    
+
     print("\n✨ 마일스톤 생성 완료!")
 
 
 def main():
     parser = argparse.ArgumentParser(description="GCS Saker Milestones Auto-Creator")
     parser.add_argument("--token", required=True, help="GitHub Personal Access Token")
-    parser.add_argument("--owner", default="gcs-saker", help="Repository owner (default: gcs-saker)")
-    parser.add_argument("--repo", default="gcs-dashboard-app", help="Repository name (default: gcs-dashboard-app)")
-    
+    parser.add_argument(
+        "--owner", default="gcs-saker", help="Repository owner (default: gcs-saker)"
+    )
+    parser.add_argument(
+        "--repo",
+        default="gcs-dashboard-app",
+        help="Repository name (default: gcs-dashboard-app)",
+    )
+
     args = parser.parse_args()
-    
-    print(f"🚀 마일스톤 생성 시작")
+
+    print("🚀 마일스톤 생성 시작")
     print(f"   Owner: {args.owner}")
     print(f"   Repo: {args.repo}")
     print(f"   마일스톤 수: {len(MILESTONES)}")
     print()
-    
+
     create_milestones(args.token, args.owner, args.repo)
 
 

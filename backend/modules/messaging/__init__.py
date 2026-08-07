@@ -7,7 +7,7 @@ from modules.messaging.sender import (
     MessageEnvelope,
     MessageSender,
     MessageSenderKind,
-    MessageSenderUnavailable,
+    MessageSenderUnavailableError,
     get_message_sender,
 )
 
@@ -17,7 +17,7 @@ __all__ = [
     "MessageEnvelope",
     "MessageSender",
     "MessageSenderKind",
-    "MessageSenderUnavailable",
+    "MessageSenderUnavailableError",
     "get_control_message_publisher",
     "get_message_sender",
 ]

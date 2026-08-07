@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from pathlib import Path
 import re
 import sys
+from pathlib import Path
 
 import yaml
 
@@ -83,7 +83,10 @@ SECRET_PATTERNS = (
 
 def main() -> int:
     compose = load_yaml(COMPOSE_FILE)
-    require(MEDIAMTX_CONFIG.is_file(), "gcs-dashboard/mediamtx.yml must be a file, not a directory")
+    require(
+        MEDIAMTX_CONFIG.is_file(),
+        "gcs-dashboard/mediamtx.yml must be a file, not a directory",
+    )
     require_services(compose)
     require_env_files(compose)
     require_env_examples()
@@ -100,18 +103,39 @@ def load_yaml(path: Path) -> dict:
 
 def require_services(compose: dict) -> None:
     services = compose.get("services", {})
-    for service_name in ("postgres", "mqtt", "backend", "mediamtx", "media-control", "nginx", "edge"):
+    for service_name in (
+        "postgres",
+        "mqtt",
+        "backend",
+        "mediamtx",
+        "media-control",
+        "nginx",
+        "edge",
+    ):
         require(service_name in services, f"missing compose service: {service_name}")
-    require("mysql" not in services, "active compose must not declare mysql service after PostgreSQL migration")
-    require("9997" not in str(services["mediamtx"].get("ports", [])), "MediaMTX API port must not be published")
-    require("9998" not in str(services["mediamtx"].get("ports", [])), "MediaMTX metrics port must not be published")
     require(
-        "${PUBLIC_HTTPS_BIND_ADDR:-0.0.0.0}:${PUBLIC_HTTPS_PORT:-443}:443" in services["edge"].get("ports", []),
+        "mysql" not in services,
+        "active compose must not declare mysql service after PostgreSQL migration",
+    )
+    require(
+        "9997" not in str(services["mediamtx"].get("ports", [])),
+        "MediaMTX API port must not be published",
+    )
+    require(
+        "9998" not in str(services["mediamtx"].get("ports", [])),
+        "MediaMTX metrics port must not be published",
+    )
+    require(
+        "${PUBLIC_HTTPS_BIND_ADDR:-0.0.0.0}:${PUBLIC_HTTPS_PORT:-443}:443"
+        in services["edge"].get("ports", []),
         "edge must publish 443",
     )
     for service_name in ("backend", "mediamtx", "nginx"):
         ports = str(services[service_name].get("ports", []))
-        require("${LOCAL_BIND_ADDR:-127.0.0.1}:" in ports, f"{service_name} direct ports must bind locally by default")
+        require(
+            "${LOCAL_BIND_ADDR:-127.0.0.1}:" in ports,
+            f"{service_name} direct ports must bind locally by default",
+        )
 
 
 def require_env_files(compose: dict) -> None:
@@ -119,7 +143,9 @@ def require_env_files(compose: dict) -> None:
     for service_name in ("postgres", "backend", "mediamtx", "media-control", "nginx"):
         env_file = services[service_name].get("env_file")
         require(env_file, f"{service_name} must declare env_file")
-        paths = {entry["path"] if isinstance(entry, dict) else entry for entry in env_file}
+        paths = {
+            entry["path"] if isinstance(entry, dict) else entry for entry in env_file
+        }
         require("./.env" in paths, f"{service_name} must read gcs-dashboard/.env")
         if service_name == "backend":
             require("../backend/.env" in paths, "backend must read backend/.env")
@@ -137,7 +163,8 @@ def require_env_examples() -> None:
                 f"{env_path.name} should document optional TURN key: {key}",
             )
         require(
-            "MEDIAMTX_API_PORT" not in content and "MEDIAMTX_METRICS_PORT" not in content,
+            "MEDIAMTX_API_PORT" not in content
+            and "MEDIAMTX_METRICS_PORT" not in content,
             f"{env_path.name} must not declare public management port variables",
         )
 
@@ -157,14 +184,19 @@ def require_env_examples() -> None:
 
     gitignore = GITIGNORE.read_text(encoding="utf-8")
     require(".env.*" in gitignore, ".gitignore must ignore concrete env variants")
-    require("!.env.*.example" in gitignore, ".gitignore must allow env example variants")
+    require(
+        "!.env.*.example" in gitignore, ".gitignore must allow env example variants"
+    )
 
 
 def require_no_hardcoded_runtime_secrets() -> None:
     for path in (DB_MODULE, MQTT_MODULE, COMPOSE_FILE):
         content = path.read_text(encoding="utf-8")
         for pattern in SECRET_PATTERNS:
-            require(pattern not in content, f"{path.relative_to(REPO_ROOT)} contains hardcoded runtime value: {pattern}")
+            require(
+                pattern not in content,
+                f"{path.relative_to(REPO_ROOT)} contains hardcoded runtime value: {pattern}",
+            )
 
 
 def require_doc() -> None:

@@ -8,21 +8,35 @@ runtime npm install on the target appliance.
 
 from __future__ import annotations
 
-from pathlib import Path
 import sys
-
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OFFLINE_MAP_FILES = (
-    REPO_ROOT / "gcs-dashboard" / "src" / "features" / "dashboard" / "map" / "TacticalLeafletMap.tsx",
+    REPO_ROOT
+    / "gcs-dashboard"
+    / "src"
+    / "features"
+    / "dashboard"
+    / "map"
+    / "TacticalLeafletMap.tsx",
 )
 
 DASHBOARD_DOCKERFILE = REPO_ROOT / "gcs-dashboard" / "Dockerfile"
 CLOSED_NETWORK_ENV = REPO_ROOT / "gcs-dashboard" / ".env.closed-network.example"
-DEPLOY_CLOSED_NETWORK_ENV = REPO_ROOT / "deploy" / "compose" / ".env.closed-network.example"
+DEPLOY_CLOSED_NETWORK_ENV = (
+    REPO_ROOT / "deploy" / "compose" / ".env.closed-network.example"
+)
 DEPLOY_PUBLIC_ICE_ENV = REPO_ROOT / "deploy" / "compose" / ".env.public-ice.example"
-DEPLOY_MIXED_NETWORK_ENV = REPO_ROOT / "deploy" / "compose" / ".env.mixed-network.example"
-RUNBOOK = REPO_ROOT / "docs" / "operations" / "GCS-Saker_Closed_Network_Profile_Runbook_v0.1.md"
+DEPLOY_MIXED_NETWORK_ENV = (
+    REPO_ROOT / "deploy" / "compose" / ".env.mixed-network.example"
+)
+RUNBOOK = (
+    REPO_ROOT
+    / "docs"
+    / "operations"
+    / "GCS-Saker_Closed_Network_Profile_Runbook_v0.1.md"
+)
 
 
 def main() -> int:
@@ -117,13 +131,21 @@ def check_network_profile_split() -> list[str]:
 
 
 def check_offline_map() -> list[str]:
-    forbidden_tokens = ("TileLayer", "openstreetmap", "tile.openstreetmap.org", "mapbox", "googleapis")
+    forbidden_tokens = (
+        "TileLayer",
+        "openstreetmap",
+        "tile.openstreetmap.org",
+        "mapbox",
+        "googleapis",
+    )
     errors: list[str] = []
     for path in OFFLINE_MAP_FILES:
         content = path.read_text(encoding="utf-8").lower()
         for token in forbidden_tokens:
             if token.lower() in content:
-                errors.append(f"{path.relative_to(REPO_ROOT)} contains external map token {token}")
+                errors.append(
+                    f"{path.relative_to(REPO_ROOT)} contains external map token {token}"
+                )
     return errors
 
 
@@ -134,7 +156,11 @@ def check_dashboard_serves_built_artifacts() -> list[str]:
         "FROM nginxinc/nginx-unprivileged:1.29-alpine@sha256:",
         "COPY --from=builder /app/dist /usr/share/nginx/html",
     )
-    errors = [f"Dashboard Dockerfile missing {token}" for token in required_tokens if token not in content]
+    errors = [
+        f"Dashboard Dockerfile missing {token}"
+        for token in required_tokens
+        if token not in content
+    ]
     return errors
 
 

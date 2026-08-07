@@ -41,7 +41,7 @@ def signup(user: UserCreate, request: Request, db: Annotated[Session, Depends(ge
 
     company_id = cast(
         int | None,
-        db.query(Company.id).filter(Company.invite_code == user.inviteCode).scalar(),
+        db.query(Company.id).filter(Company.invite_code == user.invite_code).scalar(),
     )
     if company_id is None:
         raise BadRequestApiError(AuthErrorDetails.INVALID_INVITE_CODE)

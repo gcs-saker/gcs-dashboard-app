@@ -5,17 +5,16 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
 import ipaddress
 import ssl
 import sys
 import time
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlunsplit, urlsplit
+from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
-
 
 DEFAULT_WHEP_URL = "http://127.0.0.1:8889/raw/sample/front/whep"
 DEFAULT_STUN_URL = "stun:stun.l.google.com:19302"
@@ -81,7 +80,9 @@ class SdpInspection:
 
 def inspect_sdp(sdp: str) -> SdpInspection:
     lines = [line.strip() for line in sdp.splitlines()]
-    candidates = summarize_candidates(line for line in lines if line.startswith("a=candidate:"))
+    candidates = summarize_candidates(
+        line for line in lines if line.startswith("a=candidate:")
+    )
     return SdpInspection(
         has_ice_ufrag=any(line.startswith("a=ice-ufrag:") for line in lines),
         has_ice_pwd=any(line.startswith("a=ice-pwd:") for line in lines),
@@ -156,7 +157,9 @@ def require_webrtc_sdp(sdp: str, label: str) -> SdpInspection:
         missing.append("a=candidate")
 
     if missing:
-        raise RuntimeError(f"{label} SDP is missing WebRTC ICE data: {', '.join(missing)}")
+        raise RuntimeError(
+            f"{label} SDP is missing WebRTC ICE data: {', '.join(missing)}"
+        )
 
     return inspection
 
@@ -177,7 +180,9 @@ def summarize_ice_paths(selected_pairs: Iterable[SelectedIcePair]) -> IcePathSum
     relay = sum(1 for pair in pairs if pair.path == RELAY_ICE_PATH)
     unknown = total - direct - relay
     if total == 0:
-        return IcePathSummary(total=0, direct=0, relay=0, unknown=0, direct_ratio=0.0, relay_ratio=0.0)
+        return IcePathSummary(
+            total=0, direct=0, relay=0, unknown=0, direct_ratio=0.0, relay_ratio=0.0
+        )
     return IcePathSummary(
         total=total,
         direct=direct,
@@ -197,7 +202,10 @@ def infer_relay_fallback_reason(
         return "selected_pair_unavailable"
     if selected_pair.path != RELAY_ICE_PATH:
         return None
-    if selected_pair.local_candidate_type == "relay" and selected_pair.remote_candidate_type == "relay":
+    if (
+        selected_pair.local_candidate_type == "relay"
+        and selected_pair.remote_candidate_type == "relay"
+    ):
         return "both_sides_selected_relay_candidate"
     if selected_pair.local_candidate_type == "relay":
         return "local_selected_relay_candidate"
@@ -224,22 +232,50 @@ def extract_selected_ice_pair(stats_report: object) -> SelectedIcePair | None:
         if (stat_id := _stat_value(stat, "id")) is not None
     }
 
-    selected_pair = _selected_pair_from_transport(stats, stats_by_id) or _selected_pair_from_candidates(stats)
+    selected_pair = _selected_pair_from_transport(
+        stats, stats_by_id
+    ) or _selected_pair_from_candidates(stats)
     if selected_pair is None:
         return None
 
-    local_candidate = stats_by_id.get(str(_stat_value(selected_pair, "localCandidateId", "local_candidate_id", default="")))
-    remote_candidate = stats_by_id.get(str(_stat_value(selected_pair, "remoteCandidateId", "remote_candidate_id", default="")))
-    local_type = str(_stat_value(local_candidate, "candidateType", "candidate_type", default="unknown"))
-    remote_type = str(_stat_value(remote_candidate, "candidateType", "candidate_type", default="unknown"))
+    local_candidate = stats_by_id.get(
+        str(
+            _stat_value(
+                selected_pair, "localCandidateId", "local_candidate_id", default=""
+            )
+        )
+    )
+    remote_candidate = stats_by_id.get(
+        str(
+            _stat_value(
+                selected_pair, "remoteCandidateId", "remote_candidate_id", default=""
+            )
+        )
+    )
+    local_type = str(
+        _stat_value(
+            local_candidate, "candidateType", "candidate_type", default="unknown"
+        )
+    )
+    remote_type = str(
+        _stat_value(
+            remote_candidate, "candidateType", "candidate_type", default="unknown"
+        )
+    )
     protocol = str(
         _stat_value(
             selected_pair,
             "protocol",
-            default=_stat_value(local_candidate, "protocol", default=_stat_value(remote_candidate, "protocol", default="unknown")),
+            default=_stat_value(
+                local_candidate,
+                "protocol",
+                default=_stat_value(remote_candidate, "protocol", default="unknown"),
+            ),
         )
     )
-    rtt_seconds = _stat_value(selected_pair, "currentRoundTripTime", "current_round_trip_time", default=None)
+    rtt_seconds = _stat_value(
+        selected_pair, "currentRoundTripTime", "current_round_trip_time", default=None
+    )
     rtt_ms = round(float(rtt_seconds) * 1000, 3) if rtt_seconds is not None else None
     path = classify_ice_path(local_type, remote_type)
     return SelectedIcePair(
@@ -248,7 +284,9 @@ def extract_selected_ice_pair(stats_report: object) -> SelectedIcePair | None:
         protocol=protocol,
         rtt_ms=rtt_ms,
         path=path,
-        relay_fallback_reason="selected_pair_contains_relay_candidate" if path == RELAY_ICE_PATH else None,
+        relay_fallback_reason="selected_pair_contains_relay_candidate"
+        if path == RELAY_ICE_PATH
+        else None,
     )
 
 
@@ -263,23 +301,32 @@ def _stats_values(stats_report: object) -> list[object]:
     return []
 
 
-def _selected_pair_from_transport(stats: Sequence[object], stats_by_id: Mapping[str, object]) -> object | None:
+def _selected_pair_from_transport(
+    stats: Sequence[object], stats_by_id: Mapping[str, object]
+) -> object | None:
     for stat in stats:
         if _stat_value(stat, "type") != "transport":
             continue
-        selected_pair_id = _stat_value(stat, "selectedCandidatePairId", "selected_candidate_pair_id")
+        selected_pair_id = _stat_value(
+            stat, "selectedCandidatePairId", "selected_candidate_pair_id"
+        )
         if selected_pair_id is not None and str(selected_pair_id) in stats_by_id:
             return stats_by_id[str(selected_pair_id)]
     return None
 
 
 def _selected_pair_from_candidates(stats: Sequence[object]) -> object | None:
-    candidate_pairs = [stat for stat in stats if _stat_value(stat, "type") == "candidate-pair"]
+    candidate_pairs = [
+        stat for stat in stats if _stat_value(stat, "type") == "candidate-pair"
+    ]
     for stat in candidate_pairs:
         if _stat_value(stat, "selected", default=False) is True:
             return stat
     for stat in candidate_pairs:
-        if _stat_value(stat, "nominated", default=False) is True and _stat_value(stat, "state") == "succeeded":
+        if (
+            _stat_value(stat, "nominated", default=False) is True
+            and _stat_value(stat, "state") == "succeeded"
+        ):
             return stat
     for stat in candidate_pairs:
         if _stat_value(stat, "state") == "succeeded":
@@ -319,7 +366,9 @@ def post_whep_offer(whep_url: str, offer_sdp: str, insecure: bool) -> str:
             payload = response.read().decode("utf-8")
     except HTTPError as error:
         detail = error.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"WHEP answer request failed with HTTP {error.code}: {detail}") from error
+        raise RuntimeError(
+            f"WHEP answer request failed with HTTP {error.code}: {detail}"
+        ) from error
     except URLError as error:
         raise RuntimeError(f"WHEP answer request failed: {error.reason}") from error
 
@@ -334,10 +383,14 @@ def redact_url_query(raw_url: str) -> str:
     parsed = urlsplit(raw_url)
     if not parsed.query:
         return raw_url
-    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, REDACTED_QUERY, parsed.fragment))
+    return urlunsplit(
+        (parsed.scheme, parsed.netloc, parsed.path, REDACTED_QUERY, parsed.fragment)
+    )
 
 
-async def wait_for_ice_gathering_complete(peer_connection: object, timeout_seconds: float) -> None:
+async def wait_for_ice_gathering_complete(
+    peer_connection: object, timeout_seconds: float
+) -> None:
     if getattr(peer_connection, "iceGatheringState") == "complete":
         return
 
@@ -354,7 +407,9 @@ async def wait_for_ice_gathering_complete(peer_connection: object, timeout_secon
         return
 
 
-async def wait_for_ice_connected(peer_connection: object, timeout_seconds: float) -> None:
+async def wait_for_ice_connected(
+    peer_connection: object, timeout_seconds: float
+) -> None:
     current_state = str(getattr(peer_connection, "iceConnectionState"))
     if current_state in CONNECTED_ICE_STATES:
         return
@@ -384,19 +439,30 @@ async def wait_for_ice_connected(peer_connection: object, timeout_seconds: float
 
     final_state = str(getattr(peer_connection, "iceConnectionState"))
     if final_state not in CONNECTED_ICE_STATES:
-        raise RuntimeError(f"ICE connection did not reach connected/completed: state={final_state}")
+        raise RuntimeError(
+            f"ICE connection did not reach connected/completed: state={final_state}"
+        )
 
 
-async def wait_for_track_frame(track_queue: asyncio.Queue[object], timeout_seconds: float) -> object:
+async def wait_for_track_frame(
+    track_queue: asyncio.Queue[object], timeout_seconds: float
+) -> object:
     track = await asyncio.wait_for(track_queue.get(), timeout=timeout_seconds)
     return await asyncio.wait_for(track.recv(), timeout=timeout_seconds)  # type: ignore[attr-defined]
 
 
 async def run_webrtc_smoke(args: argparse.Namespace) -> int:
     try:
-        from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
+        from aiortc import (
+            RTCConfiguration,
+            RTCIceServer,
+            RTCPeerConnection,
+            RTCSessionDescription,
+        )
     except ImportError as error:
-        raise RuntimeError("aiortc is required for --run. Install with: python -m pip install aiortc") from error
+        raise RuntimeError(
+            "aiortc is required for --run. Install with: python -m pip install aiortc"
+        ) from error
 
     peer_connection = RTCPeerConnection(
         RTCConfiguration(
@@ -435,7 +501,9 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
 
         local_inspection = require_webrtc_sdp(local_description.sdp, "local offer")
         offer_ready_elapsed_ms = (time.perf_counter() - started) * 1000
-        answer_sdp = post_whep_offer(args.whep_url, local_description.sdp, args.insecure)
+        answer_sdp = post_whep_offer(
+            args.whep_url, local_description.sdp, args.insecure
+        )
         answer_elapsed_ms = (time.perf_counter() - started) * 1000
         answer_inspection = require_webrtc_sdp(answer_sdp, "WHEP answer")
 
@@ -456,17 +524,25 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
                 protocol=selected_pair.protocol,
                 rtt_ms=selected_pair.rtt_ms,
                 path=selected_pair.path,
-                relay_fallback_reason=infer_relay_fallback_reason(selected_pair, local_inspection, answer_inspection),
+                relay_fallback_reason=infer_relay_fallback_reason(
+                    selected_pair, local_inspection, answer_inspection
+                ),
             )
-        path_summary = summarize_ice_paths([selected_pair] if selected_pair is not None else [])
+        path_summary = summarize_ice_paths(
+            [selected_pair] if selected_pair is not None else []
+        )
 
         frame = None
         first_frame_elapsed_ms = None
         first_audio_frame_elapsed_ms = None
         if args.require_video_frame:
-            video_task = asyncio.create_task(wait_for_track_frame(video_tracks, args.timeout_seconds))
+            video_task = asyncio.create_task(
+                wait_for_track_frame(video_tracks, args.timeout_seconds)
+            )
             audio_task = (
-                asyncio.create_task(wait_for_track_frame(audio_tracks, args.timeout_seconds))
+                asyncio.create_task(
+                    wait_for_track_frame(audio_tracks, args.timeout_seconds)
+                )
                 if args.measure_audio_video_sync
                 else None
             )
@@ -498,7 +574,10 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
         if frame is not None and first_frame_elapsed_ms is not None:
             print(f"First video frame latency ms: {first_frame_elapsed_ms:.1f}")
             print(f"First video frame size: {frame.width}x{frame.height}")  # type: ignore[attr-defined]
-        if first_frame_elapsed_ms is not None and first_audio_frame_elapsed_ms is not None:
+        if (
+            first_frame_elapsed_ms is not None
+            and first_audio_frame_elapsed_ms is not None
+        ):
             sync_offset_ms = abs(first_audio_frame_elapsed_ms - first_frame_elapsed_ms)
             print(f"First audio frame latency ms: {first_audio_frame_elapsed_ms:.1f}")
             print(f"Audio/video sync offset ms: {sync_offset_ms:.1f}")
@@ -521,7 +600,9 @@ def print_selected_ice_pair(selected_pair: SelectedIcePair | None) -> None:
         print("ICE path: unknown")
         print("Relay fallback reason: selected_pair_unavailable")
         return
-    rtt_ms = "unknown" if selected_pair.rtt_ms is None else f"{selected_pair.rtt_ms:.1f}"
+    rtt_ms = (
+        "unknown" if selected_pair.rtt_ms is None else f"{selected_pair.rtt_ms:.1f}"
+    )
     print(
         "Selected ICE pair: "
         f"local={selected_pair.local_candidate_type}, "
@@ -595,15 +676,25 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         description="Validate WHEP offer/answer SDP and optional ICE connected state.",
     )
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--check", action="store_true", help="Run static SDP/parser contract checks.")
-    mode.add_argument("--run", action="store_true", help="Run a live WHEP/ICE smoke test with aiortc.")
+    mode.add_argument(
+        "--check", action="store_true", help="Run static SDP/parser contract checks."
+    )
+    mode.add_argument(
+        "--run", action="store_true", help="Run a live WHEP/ICE smoke test with aiortc."
+    )
     parser.add_argument("--whep-url", default=DEFAULT_WHEP_URL)
-    parser.add_argument("--stun-url", default=None, help="Deprecated alias for --ice-server-url.")
+    parser.add_argument(
+        "--stun-url", default=None, help="Deprecated alias for --ice-server-url."
+    )
     parser.add_argument("--ice-server-url", default=None)
     parser.add_argument("--ice-username", default=None)
     parser.add_argument("--ice-credential", default=None)
     parser.add_argument("--timeout-seconds", type=float, default=15)
-    parser.add_argument("--insecure", action="store_true", help="Allow self-signed HTTPS WHEP endpoints.")
+    parser.add_argument(
+        "--insecure",
+        action="store_true",
+        help="Allow self-signed HTTPS WHEP endpoints.",
+    )
     parser.add_argument(
         "--require-connected",
         action="store_true",

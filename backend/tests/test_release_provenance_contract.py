@@ -109,6 +109,16 @@ def test_deploy_guards_stateful_container_identity() -> None:
     )
 
 
+def test_deploy_updates_active_release_pointer_only_after_verification() -> None:
+    script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+
+    pointer_update = 'ln -sfn "${ROOT}" "${runtime_root}/current"'
+    assert pointer_update in script
+    assert script.index("stateful/external service was replaced") < script.index(pointer_update)
+    assert script.rindex('check_public_tls.sh" "${PUBLIC_TLS_HOST}"') < script.index(pointer_update)
+    assert script.index(pointer_update) < script.rindex("trap - ERR")
+
+
 def test_mqtt_password_preparer_grants_only_runtime_read_acl() -> None:
     script = MQTT_PASSWORD_PREPARER.read_text(encoding="utf-8")
 

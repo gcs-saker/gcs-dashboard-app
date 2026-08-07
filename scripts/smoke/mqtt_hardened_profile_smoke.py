@@ -13,7 +13,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_DIR = REPO_ROOT / "backend"
 COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
@@ -71,11 +70,26 @@ class MqttHardenedProfileConfig:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Validate the hardened MQTT protobuf telemetry profile.")
-    parser.add_argument("--check", action="store_true", help="Print the stable smoke contract without executing docker.")
-    parser.add_argument("--run", action="store_true", help="Run the hardened Mosquitto publish/subscribe smoke with docker.")
+    parser = argparse.ArgumentParser(
+        description="Validate the hardened MQTT protobuf telemetry profile."
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Print the stable smoke contract without executing docker.",
+    )
+    parser.add_argument(
+        "--run",
+        action="store_true",
+        help="Run the hardened Mosquitto publish/subscribe smoke with docker.",
+    )
     parser.add_argument("--compose-file", type=Path, default=COMPOSE_FILE)
-    parser.add_argument("--override-file", type=Path, default=None, help="Optional legacy compose override for compatibility checks.")
+    parser.add_argument(
+        "--override-file",
+        type=Path,
+        default=None,
+        help="Optional legacy compose override for compatibility checks.",
+    )
     parser.add_argument("--env-file", type=Path, default=ENV_FILE)
     parser.add_argument("--project-name", default=DEFAULT_PROJECT_NAME)
     return parser
@@ -90,7 +104,9 @@ def smoke_contract(config: MqttHardenedProfileConfig) -> dict[str, Any]:
             "composeCommand": config.compose_command(),
             "configCommand": config.config_command(),
             "readinessCommand": config.up_command(),
-            "overrideFile": str(config.override_file) if config.override_file is not None else None,
+            "overrideFile": str(config.override_file)
+            if config.override_file is not None
+            else None,
             "runtime": CLIENT_IMAGE,
         },
         "topicNamespace": {
@@ -210,7 +226,13 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
                 publish_topic=TELEMETRY_TOPIC,
                 payload_path=telemetry_payload,
             )
-            checks.append(assert_bytes_equal("telemetry.protobuf.roundtrip", telemetry_received.read_bytes(), telemetry_payload.read_bytes()))
+            checks.append(
+                assert_bytes_equal(
+                    "telemetry.protobuf.roundtrip",
+                    telemetry_received.read_bytes(),
+                    telemetry_payload.read_bytes(),
+                )
+            )
             checks.append(assert_telemetry_decodes(telemetry_received.read_bytes()))
 
             subscribe_and_publish(
@@ -224,7 +246,13 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
                 publish_topic=COMMAND_TOPIC,
                 payload_path=command_payload,
             )
-            checks.append(assert_bytes_equal("command.delivery.roundtrip", command_received.read_bytes(), command_payload.read_bytes()))
+            checks.append(
+                assert_bytes_equal(
+                    "command.delivery.roundtrip",
+                    command_received.read_bytes(),
+                    command_payload.read_bytes(),
+                )
+            )
 
             return {
                 **smoke_contract(config),
@@ -232,7 +260,11 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
                 "checks": checks,
             }
         finally:
-            run_checked(config.down_command(generated_env), name="compose.down", allow_failure=True)
+            run_checked(
+                config.down_command(generated_env),
+                name="compose.down",
+                allow_failure=True,
+            )
 
 
 def write_password_file(password_file: Path) -> None:
@@ -253,7 +285,10 @@ def write_password_file(password_file: Path) -> None:
         ],
         name="password.backend",
     )
-    for username, password in ((MEDIA_CONTROL_USER, MEDIA_CONTROL_PASSWORD), (DEVICE_USER, DEVICE_PASSWORD)):
+    for username, password in (
+        (MEDIA_CONTROL_USER, MEDIA_CONTROL_PASSWORD),
+        (DEVICE_USER, DEVICE_PASSWORD),
+    ):
         run_checked(
             [
                 "docker",
@@ -277,7 +312,9 @@ def write_generated_env(source: Path, target: Path, password_file: Path) -> None
     for line in source.read_text(encoding="utf-8").splitlines():
         if line.startswith("COMPOSE_PROJECT_NAME="):
             continue
-        if line.startswith(("MQTT_PASSWORD=", "MQTT_PASSWORD_FILE=", "MQTT_HEALTH_PASSWORD=")):
+        if line.startswith(
+            ("MQTT_PASSWORD=", "MQTT_PASSWORD_FILE=", "MQTT_HEALTH_PASSWORD=")
+        ):
             continue
         lines.append(line)
     lines.extend(
@@ -344,7 +381,9 @@ def wait_for_mqtt(config: MqttHardenedProfileConfig) -> None:
         if result.returncode == 0:
             return
         time.sleep(1)
-    raise RuntimeError("MQTT broker did not become ready for authenticated health subscription")
+    raise RuntimeError(
+        "MQTT broker did not become ready for authenticated health subscription"
+    )
 
 
 def subscribe_and_publish(
@@ -363,7 +402,7 @@ def subscribe_and_publish(
         config,
         "sh",
         "-lc",
-        "mosquitto_sub -h mqtt -p 1883 -u \"$MQTT_USER\" -P \"$MQTT_PASSWORD\" -t \"$MQTT_TOPIC\" -C 1 -W 8 -N > \"$MQTT_OUTPUT\"",
+        'mosquitto_sub -h mqtt -p 1883 -u "$MQTT_USER" -P "$MQTT_PASSWORD" -t "$MQTT_TOPIC" -C 1 -W 8 -N > "$MQTT_OUTPUT"',
         env={
             "MQTT_USER": subscriber_user,
             "MQTT_PASSWORD": subscriber_password,
@@ -394,7 +433,9 @@ def subscribe_and_publish(
     )
     stdout, stderr = subscriber.communicate(timeout=10)
     if subscriber.returncode != 0:
-        raise RuntimeError(f"subscriber failed for {topic}: {stdout.decode()} {stderr.decode()}")
+        raise RuntimeError(
+            f"subscriber failed for {topic}: {stdout.decode()} {stderr.decode()}"
+        )
     if not output_path.exists():
         raise RuntimeError(f"subscriber did not write output for {topic}")
 
@@ -463,7 +504,11 @@ def assert_telemetry_decodes(payload: bytes) -> dict[str, Any]:
     bridge = MqttConsumerBridge(sink)
     bridge.handle_message(TELEMETRY_TOPIC, payload)
     telemetry = TelemetryEnvelopePayload.from_protobuf_wire(payload)
-    if telemetry.org_id != ORG_ID or telemetry.group_id != GROUP_ID or telemetry.asset_id != ASSET_ID:
+    if (
+        telemetry.org_id != ORG_ID
+        or telemetry.group_id != GROUP_ID
+        or telemetry.asset_id != ASSET_ID
+    ):
         raise AssertionError("decoded protobuf identity does not match MQTT topic")
     return {
         "name": "telemetry.protobuf.decode",
@@ -482,12 +527,18 @@ def run_checked(
     allow_failure: bool = False,
 ) -> subprocess.CompletedProcess[bytes]:
     env = os.environ.copy()
-    env["COMPOSE_PROJECT_NAME"] = DEFAULT_PROJECT_NAME if "compose" in name else env.get("COMPOSE_PROJECT_NAME", DEFAULT_PROJECT_NAME)
+    env["COMPOSE_PROJECT_NAME"] = (
+        DEFAULT_PROJECT_NAME
+        if "compose" in name
+        else env.get("COMPOSE_PROJECT_NAME", DEFAULT_PROJECT_NAME)
+    )
     result = subprocess.run(command, check=False, capture_output=True, env=env)
     if check and result.returncode != 0 and not allow_failure:
         stdout = result.stdout.decode("utf-8", errors="replace")
         stderr = result.stderr.decode("utf-8", errors="replace")
-        raise RuntimeError(f"{name} failed with exit {result.returncode}\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}")
+        raise RuntimeError(
+            f"{name} failed with exit {result.returncode}\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}"
+        )
     return result
 
 

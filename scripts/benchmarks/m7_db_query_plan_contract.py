@@ -6,7 +6,6 @@ import json
 from dataclasses import dataclass
 from typing import Final
 
-
 SCHEMA_VERSION: Final = "m7-db-query-plan-contract-v1"
 
 
@@ -105,7 +104,11 @@ def build_report() -> dict[str, object]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Print M7 DB query plan contract.")
-    parser.add_argument("--check", action="store_true", help="Print contract JSON without connecting to a database.")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Print contract JSON without connecting to a database.",
+    )
     return parser.parse_args()
 
 

@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_ROOT = REPO_ROOT / "backend"
 if str(BACKEND_ROOT) not in sys.path:
@@ -61,18 +60,39 @@ class GrpcRuntimeSmokeConfig:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Validate the gRPC gateway contract and expose missing runtime gates.")
-    parser.add_argument("--check", action="store_true", help="Print the stable smoke contract without executing protoc.")
-    parser.add_argument("--run", action="store_true", help="Compile the gateway descriptor contract.")
-    parser.add_argument("--skip-descriptor", action="store_true", help="Skip protoc descriptor compilation for container-only runtime smoke.")
+    parser = argparse.ArgumentParser(
+        description="Validate the gRPC gateway contract and expose missing runtime gates."
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Print the stable smoke contract without executing protoc.",
+    )
+    parser.add_argument(
+        "--run", action="store_true", help="Compile the gateway descriptor contract."
+    )
+    parser.add_argument(
+        "--skip-descriptor",
+        action="store_true",
+        help="Skip protoc descriptor compilation for container-only runtime smoke.",
+    )
     parser.add_argument("--proto-root", type=Path, default=PROTO_ROOT)
     parser.add_argument("--gateway-proto", type=Path, default=GATEWAY_PROTO)
     parser.add_argument("--descriptor-set", type=Path, default=DESCRIPTOR_SET)
     parser.add_argument("--target", default=os.getenv("CONTROL_GRPC_TARGET", ""))
-    parser.add_argument("--auth-token", default=os.getenv("CONTROL_GRPC_AUTH_TOKEN", ""))
-    parser.add_argument("--method", default=os.getenv("CONTROL_GRPC_METHOD", DEFAULT_METHOD))
+    parser.add_argument(
+        "--auth-token", default=os.getenv("CONTROL_GRPC_AUTH_TOKEN", "")
+    )
+    parser.add_argument(
+        "--method", default=os.getenv("CONTROL_GRPC_METHOD", DEFAULT_METHOD)
+    )
     parser.add_argument("--timeout-seconds", type=float, default=2.0)
-    parser.add_argument("--messages", type=int, default=3, help="Number of GatewayStreamRequest messages to send on one bidi stream.")
+    parser.add_argument(
+        "--messages",
+        type=int,
+        default=3,
+        help="Number of GatewayStreamRequest messages to send on one bidi stream.",
+    )
     return parser
 
 
@@ -121,7 +141,11 @@ def main() -> int:
     if not args.skip_descriptor:
         descriptor_result = compile_descriptor(config)
         if not descriptor_result["compiled"]:
-            print(json.dumps({**payload, "descriptor": descriptor_result}, ensure_ascii=False))
+            print(
+                json.dumps(
+                    {**payload, "descriptor": descriptor_result}, ensure_ascii=False
+                )
+            )
             return int(descriptor_result["returnCode"])
         payload["descriptor"] = descriptor_result
 
@@ -147,7 +171,9 @@ def main() -> int:
     return 0 if runtime["accepted"] else 1
 
 
-def run_exchange_smoke(target: str, method: str, auth_token: str, timeout_seconds: float, messages: int) -> dict[str, Any]:
+def run_exchange_smoke(
+    target: str, method: str, auth_token: str, timeout_seconds: float, messages: int
+) -> dict[str, Any]:
     try:
         import grpc
     except ImportError as exc:
@@ -176,13 +202,17 @@ def run_exchange_smoke(target: str, method: str, auth_token: str, timeout_second
     try:
         for response in responses:
             decoded_responses.append(GatewayStreamResponse.from_protobuf_wire(response))
-    except Exception as exc:  # pragma: no cover - exact grpc exception varies by runtime
+    except (
+        Exception
+    ) as exc:  # pragma: no cover - exact grpc exception varies by runtime
         return {
             "executed": True,
             "accepted": False,
             "reason": str(exc),
         }
-    accepted = bool(decoded_responses) and all(item.status == GatewayAckStatus.ACCEPTED for item in decoded_responses)
+    accepted = bool(decoded_responses) and all(
+        item.status == GatewayAckStatus.ACCEPTED for item in decoded_responses
+    )
     return {
         "executed": True,
         "accepted": accepted,
@@ -261,7 +291,9 @@ def gateway_payload_kinds(messages: int) -> list[str]:
         GatewayPayloadKind.STREAM_EVENT,
         GatewayPayloadKind.COMMAND_ACK,
     ]
-    return [planned_payloads[index % len(planned_payloads)] for index in range(messages)]
+    return [
+        planned_payloads[index % len(planned_payloads)] for index in range(messages)
+    ]
 
 
 def gateway_request_payload(kind: str) -> GatewayStreamRequestPayload:
