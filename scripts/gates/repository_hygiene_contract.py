@@ -57,11 +57,7 @@ def tracked_files() -> list[Path]:
         text=True,
         encoding="utf-8",
     )
-    return [
-        path
-        for line in result.stdout.splitlines()
-        if line and (path := REPOSITORY_ROOT / line).is_file()
-    ]
+    return [path for line in result.stdout.splitlines() if line and (path := REPOSITORY_ROOT / line).is_file()]
 
 
 def is_test_file(path: Path) -> bool:
@@ -87,22 +83,14 @@ def validate_python_names(paths: list[Path], errors: list[str]) -> None:
     snake_case = re.compile(r"(?:__init__|[a-z][a-z0-9_]*)\.py$")
     for path in paths:
         if path.suffix == ".py" and not snake_case.fullmatch(path.name):
-            errors.append(
-                f"Python module must use snake_case: {path.relative_to(REPOSITORY_ROOT)}"
-            )
+            errors.append(f"Python module must use snake_case: {path.relative_to(REPOSITORY_ROOT)}")
 
 
 def validate_kotlin_names(paths: list[Path], errors: list[str]) -> None:
     pascal_case = re.compile(r"[A-Z][A-Za-z0-9]*\.kt$")
     for path in paths:
-        if (
-            path.suffix == ".kt"
-            and "/src/" in path.as_posix()
-            and not pascal_case.fullmatch(path.name)
-        ):
-            errors.append(
-                f"Kotlin source file must use PascalCase: {path.relative_to(REPOSITORY_ROOT)}"
-            )
+        if path.suffix == ".kt" and "/src/" in path.as_posix() and not pascal_case.fullmatch(path.name):
+            errors.append(f"Kotlin source file must use PascalCase: {path.relative_to(REPOSITORY_ROOT)}")
 
 
 def validate_production_file_sizes(paths: list[Path], errors: list[str]) -> None:

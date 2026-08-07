@@ -12,31 +12,14 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-OFFLINE_MAP_FILES = (
-    REPO_ROOT
-    / "gcs-dashboard"
-    / "src"
-    / "features"
-    / "dashboard"
-    / "map"
-    / "TacticalLeafletMap.tsx",
-)
+OFFLINE_MAP_FILES = (REPO_ROOT / "gcs-dashboard" / "src" / "features" / "dashboard" / "map" / "TacticalLeafletMap.tsx",)
 
 DASHBOARD_DOCKERFILE = REPO_ROOT / "gcs-dashboard" / "Dockerfile"
 CLOSED_NETWORK_ENV = REPO_ROOT / "gcs-dashboard" / ".env.closed-network.example"
-DEPLOY_CLOSED_NETWORK_ENV = (
-    REPO_ROOT / "deploy" / "compose" / ".env.closed-network.example"
-)
+DEPLOY_CLOSED_NETWORK_ENV = REPO_ROOT / "deploy" / "compose" / ".env.closed-network.example"
 DEPLOY_PUBLIC_ICE_ENV = REPO_ROOT / "deploy" / "compose" / ".env.public-ice.example"
-DEPLOY_MIXED_NETWORK_ENV = (
-    REPO_ROOT / "deploy" / "compose" / ".env.mixed-network.example"
-)
-RUNBOOK = (
-    REPO_ROOT
-    / "docs"
-    / "operations"
-    / "GCS-Saker_Closed_Network_Profile_Runbook_v0.1.md"
-)
+DEPLOY_MIXED_NETWORK_ENV = REPO_ROOT / "deploy" / "compose" / ".env.mixed-network.example"
+RUNBOOK = REPO_ROOT / "docs" / "operations" / "GCS-Saker_Closed_Network_Profile_Runbook_v0.1.md"
 
 
 def main() -> int:
@@ -70,11 +53,7 @@ def check_closed_network_env() -> list[str]:
         "MEDIA_CONTROL_STUN_URL=stun:10.0.0.10:3478",
         "DATABASE_URL=postgresql+psycopg2://gcs_geo:replace-with-secret-outside-git@postgres-geo:5432/gcs_geo",
     )
-    errors = [
-        f".env.closed-network.example missing {value}"
-        for value in required_values
-        if value not in content
-    ]
+    errors = [f".env.closed-network.example missing {value}" for value in required_values if value not in content]
     deploy_required_values = (
         "SAKER_NETWORK_PROFILE=closed",
         "VITE_STATIC_ASSET_DELIVERY_MODE=offline-bundle",
@@ -85,9 +64,7 @@ def check_closed_network_env() -> list[str]:
         "AUTH_REFRESH_COOKIE_SAMESITE=strict",
     )
     errors.extend(
-        f"deploy closed-network env missing {value}"
-        for value in deploy_required_values
-        if value not in deploy_content
+        f"deploy closed-network env missing {value}" for value in deploy_required_values if value not in deploy_content
     )
     forbidden_values = (
         "stun:stun.l.google.com:19302",
@@ -111,22 +88,14 @@ def check_network_profile_split() -> list[str]:
         "MEDIA_CONTROL_STUN_URL=stun:a4ai.tplinkdns.com:3478",
         "MEDIA_CONTROL_TURN_MAX_HEALTHY_SERVERS=1",
     )
-    errors.extend(
-        f"public ICE env missing {value}"
-        for value in required_public_values
-        if value not in public_content
-    )
+    errors.extend(f"public ICE env missing {value}" for value in required_public_values if value not in public_content)
     required_mixed_values = (
         "SAKER_NETWORK_PROFILE=mixed",
         "VITE_STATIC_ASSET_DELIVERY_MODE=internal-cdn",
         "MEDIA_CONTROL_STUN_URL=stun:10.0.0.10:3478",
         "TIME_SYNC_MODE=public",
     )
-    errors.extend(
-        f"mixed-network env missing {value}"
-        for value in required_mixed_values
-        if value not in mixed_content
-    )
+    errors.extend(f"mixed-network env missing {value}" for value in required_mixed_values if value not in mixed_content)
     return errors
 
 
@@ -143,9 +112,7 @@ def check_offline_map() -> list[str]:
         content = path.read_text(encoding="utf-8").lower()
         for token in forbidden_tokens:
             if token.lower() in content:
-                errors.append(
-                    f"{path.relative_to(REPO_ROOT)} contains external map token {token}"
-                )
+                errors.append(f"{path.relative_to(REPO_ROOT)} contains external map token {token}")
     return errors
 
 
@@ -156,11 +123,7 @@ def check_dashboard_serves_built_artifacts() -> list[str]:
         "FROM nginxinc/nginx-unprivileged:1.29-alpine@sha256:",
         "COPY --from=builder /app/dist /usr/share/nginx/html",
     )
-    errors = [
-        f"Dashboard Dockerfile missing {token}"
-        for token in required_tokens
-        if token not in content
-    ]
+    errors = [f"Dashboard Dockerfile missing {token}" for token in required_tokens if token not in content]
     return errors
 
 

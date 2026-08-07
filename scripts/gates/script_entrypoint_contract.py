@@ -50,11 +50,7 @@ COMPATIBILITY_ENTRYPOINTS = {
 
 
 def _script_files() -> list[Path]:
-    return sorted(
-        path
-        for path in SCRIPTS_ROOT.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
-    )
+    return sorted(path for path in SCRIPTS_ROOT.rglob("*") if path.is_file() and "__pycache__" not in path.parts)
 
 
 def _validate_no_byte_for_byte_copies(errors: list[str]) -> None:
@@ -73,36 +69,24 @@ def _validate_compatibility_entrypoints(errors: list[str]) -> None:
         legacy_path = SCRIPTS_ROOT / legacy_name
         canonical_path = SCRIPTS_ROOT / canonical_name
         if not canonical_path.is_file():
-            errors.append(
-                f"missing canonical script: {canonical_path.relative_to(REPOSITORY_ROOT)}"
-            )
+            errors.append(f"missing canonical script: {canonical_path.relative_to(REPOSITORY_ROOT)}")
             continue
         if not legacy_path.is_file():
-            errors.append(
-                f"missing compatibility entrypoint: {legacy_path.relative_to(REPOSITORY_ROOT)}"
-            )
+            errors.append(f"missing compatibility entrypoint: {legacy_path.relative_to(REPOSITORY_ROOT)}")
             continue
 
         source = legacy_path.read_text(encoding="utf-8")
         canonical_parts = Path(canonical_name).parts
         if any(part not in source for part in canonical_parts):
-            errors.append(
-                f"entrypoint does not target {canonical_name}: scripts/{legacy_name}"
-            )
+            errors.append(f"entrypoint does not target {canonical_name}: scripts/{legacy_name}")
         if legacy_path.suffix == ".py" and "run_path(" not in source:
-            errors.append(
-                f"Python entrypoint must delegate with run_path: scripts/{legacy_name}"
-            )
+            errors.append(f"Python entrypoint must delegate with run_path: scripts/{legacy_name}")
         if legacy_path.suffix == ".sh" and "exec " not in source:
-            errors.append(
-                f"shell entrypoint must delegate with exec: scripts/{legacy_name}"
-            )
+            errors.append(f"shell entrypoint must delegate with exec: scripts/{legacy_name}")
         # Ruff may wrap a long canonical path over several lines. A wrapper is
         # still intentionally tiny; the other assertions enforce delegation.
         if len(source.splitlines()) > 20:
-            errors.append(
-                f"compatibility entrypoint contains implementation logic: scripts/{legacy_name}"
-            )
+            errors.append(f"compatibility entrypoint contains implementation logic: scripts/{legacy_name}")
 
 
 def main() -> int:

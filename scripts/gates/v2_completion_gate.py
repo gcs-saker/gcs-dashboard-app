@@ -49,9 +49,7 @@ def evaluate_matrix(matrix: dict[str, Any]) -> dict[str, Any]:
             "evidence",
         ]:
             if field not in gate:
-                raise V2CompletionGateError(
-                    f"{gate.get('id', 'unknown')} is missing {field}"
-                )
+                raise V2CompletionGateError(f"{gate.get('id', 'unknown')} is missing {field}")
         if not gate.get("evidence"):
             raise V2CompletionGateError(f"{gate['id']} must list evidence paths")
 
@@ -73,9 +71,7 @@ def evaluate_matrix(matrix: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Evaluate Saker v2 completion readiness."
-    )
+    parser = argparse.ArgumentParser(description="Evaluate Saker v2 completion readiness.")
     parser.add_argument(
         "--json",
         action="store_true",

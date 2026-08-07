@@ -29,9 +29,7 @@ class PublishTiming:
     connected_ms: float | None
 
 
-def post_whip_offer(
-    whip_url: str, offer_sdp: str, insecure: bool, publish_token: str | None = None
-) -> str:
+def post_whip_offer(whip_url: str, offer_sdp: str, insecure: bool, publish_token: str | None = None) -> str:
     context = ssl._create_unverified_context() if insecure else None
     headers = {"Accept": "application/sdp", "Content-Type": "application/sdp"}
     if publish_token:
@@ -48,9 +46,7 @@ def post_whip_offer(
             payload = response.read().decode("utf-8")
     except HTTPError as error:
         detail = error.read().decode("utf-8", errors="replace")
-        raise RuntimeError(
-            f"WHIP publish failed with HTTP {error.code}: {detail}"
-        ) from error
+        raise RuntimeError(f"WHIP publish failed with HTTP {error.code}: {detail}") from error
     except URLError as error:
         raise RuntimeError(f"WHIP publish failed: {error.reason}") from error
 
@@ -65,14 +61,10 @@ def redact_url_query(raw_url: str) -> str:
     parsed = urlsplit(raw_url)
     if not parsed.query:
         return raw_url
-    return urlunsplit(
-        (parsed.scheme, parsed.netloc, parsed.path, REDACTED_QUERY, parsed.fragment)
-    )
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, REDACTED_QUERY, parsed.fragment))
 
 
-async def wait_for_ice_gathering_complete(
-    peer_connection: object, timeout_seconds: float
-) -> None:
+async def wait_for_ice_gathering_complete(peer_connection: object, timeout_seconds: float) -> None:
     if getattr(peer_connection, "iceGatheringState") == "complete":
         return
     complete = asyncio.Event()
@@ -88,9 +80,7 @@ async def wait_for_ice_gathering_complete(
         return
 
 
-async def wait_for_ice_connected(
-    peer_connection: object, timeout_seconds: float
-) -> None:
+async def wait_for_ice_connected(peer_connection: object, timeout_seconds: float) -> None:
     if str(getattr(peer_connection, "iceConnectionState")) in CONNECTED_ICE_STATES:
         return
     connected = asyncio.Event()
@@ -209,9 +199,7 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
             RTCSessionDescription,
         )
     except ImportError as error:
-        raise RuntimeError(
-            "aiortc is required for --run. Install with: python -m pip install aiortc"
-        ) from error
+        raise RuntimeError("aiortc is required for --run. Install with: python -m pip install aiortc") from error
 
     peer_connection = RTCPeerConnection(
         RTCConfiguration(
@@ -225,11 +213,7 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         )
     )
     track = SyntheticVideoTrack(args.width, args.height, args.fps)
-    audio_track = (
-        None
-        if args.no_audio
-        else SyntheticAudioTrack(args.audio_sample_rate, args.audio_frame_duration_ms)
-    )
+    audio_track = None if args.no_audio else SyntheticAudioTrack(args.audio_sample_rate, args.audio_frame_duration_ms)
     peer_connection.addTrack(track.track)
     if audio_track is not None:
         peer_connection.addTrack(audio_track.track)
@@ -244,13 +228,9 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         if not local_description or not local_description.sdp:
             raise RuntimeError("Local WHIP offer SDP was not created")
         offer_ready_ms = (time.perf_counter() - started) * 1000
-        answer_sdp = post_whip_offer(
-            args.whip_url, local_description.sdp, args.insecure, args.publish_token
-        )
+        answer_sdp = post_whip_offer(args.whip_url, local_description.sdp, args.insecure, args.publish_token)
         answer_ms = (time.perf_counter() - started) * 1000
-        await peer_connection.setRemoteDescription(
-            RTCSessionDescription(sdp=answer_sdp, type="answer")
-        )
+        await peer_connection.setRemoteDescription(RTCSessionDescription(sdp=answer_sdp, type="answer"))
         if args.require_connected:
             await wait_for_ice_connected(peer_connection, args.timeout_seconds)
             connected_ms = (time.perf_counter() - started) * 1000
@@ -277,16 +257,12 @@ def run_static_check() -> int:
     print("WebRTC WHIP publish smoke check passed")
     print(f"Default WHIP URL: {DEFAULT_WHIP_URL}")
     print(f"Default ICE server URL: {DEFAULT_ICE_SERVER_URL}")
-    print(
-        "Live mode publishes synthetic yuv420p video and Opus audio tracks and records WHIP/ICE timing"
-    )
+    print("Live mode publishes synthetic yuv420p video and Opus audio tracks and records WHIP/ICE timing")
     return 0
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Publish synthetic WebRTC video through WHIP."
-    )
+    parser = argparse.ArgumentParser(description="Publish synthetic WebRTC video through WHIP.")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true")
     mode.add_argument("--run", action="store_true")

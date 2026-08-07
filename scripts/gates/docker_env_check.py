@@ -126,8 +126,7 @@ def require_services(compose: dict) -> None:
         "MediaMTX metrics port must not be published",
     )
     require(
-        "${PUBLIC_HTTPS_BIND_ADDR:-0.0.0.0}:${PUBLIC_HTTPS_PORT:-443}:443"
-        in services["edge"].get("ports", []),
+        "${PUBLIC_HTTPS_BIND_ADDR:-0.0.0.0}:${PUBLIC_HTTPS_PORT:-443}:443" in services["edge"].get("ports", []),
         "edge must publish 443",
     )
     for service_name in ("backend", "mediamtx", "nginx"):
@@ -143,9 +142,7 @@ def require_env_files(compose: dict) -> None:
     for service_name in ("postgres", "backend", "mediamtx", "media-control", "nginx"):
         env_file = services[service_name].get("env_file")
         require(env_file, f"{service_name} must declare env_file")
-        paths = {
-            entry["path"] if isinstance(entry, dict) else entry for entry in env_file
-        }
+        paths = {entry["path"] if isinstance(entry, dict) else entry for entry in env_file}
         require("./.env" in paths, f"{service_name} must read gcs-dashboard/.env")
         if service_name == "backend":
             require("../backend/.env" in paths, "backend must read backend/.env")
@@ -163,8 +160,7 @@ def require_env_examples() -> None:
                 f"{env_path.name} should document optional TURN key: {key}",
             )
         require(
-            "MEDIAMTX_API_PORT" not in content
-            and "MEDIAMTX_METRICS_PORT" not in content,
+            "MEDIAMTX_API_PORT" not in content and "MEDIAMTX_METRICS_PORT" not in content,
             f"{env_path.name} must not declare public management port variables",
         )
 
@@ -184,9 +180,7 @@ def require_env_examples() -> None:
 
     gitignore = GITIGNORE.read_text(encoding="utf-8")
     require(".env.*" in gitignore, ".gitignore must ignore concrete env variants")
-    require(
-        "!.env.*.example" in gitignore, ".gitignore must allow env example variants"
-    )
+    require("!.env.*.example" in gitignore, ".gitignore must allow env example variants")
 
 
 def require_no_hardcoded_runtime_secrets() -> None:

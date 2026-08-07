@@ -18,9 +18,7 @@ import architecture_intent_gate
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = REPO_ROOT / "output" / "reports" / "gcs-saker-test-report.html"
-PRINCIPLE_MATRIX = (
-    REPO_ROOT / "docs" / "architecture" / "GCS-Saker_principle_proof_matrix.yml"
-)
+PRINCIPLE_MATRIX = REPO_ROOT / "docs" / "architecture" / "GCS-Saker_principle_proof_matrix.yml"
 SCHEMA_VERSION = "gcs-saker-test-report-v1"
 
 
@@ -279,8 +277,7 @@ def evaluate_runtime_statuses(
                 subject=stack_name,
                 expected=expected_status,
                 observed=str(actual_status or "missing"),
-                evidence=next_gate
-                or "docs/architecture/GCS-Saker_runtime_stack_status.yml",
+                evidence=next_gate or "docs/architecture/GCS-Saker_runtime_stack_status.yml",
                 passed=actual_status == expected_status,
             )
         )
@@ -332,9 +329,7 @@ def evaluate_compose_profile_services(
     return rows
 
 
-def evaluate_nginx_routes(
-    routes: list[dict[str, str]], nginx: str
-) -> list[dict[str, Any]]:
+def evaluate_nginx_routes(routes: list[dict[str, str]], nginx: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for route in routes:
         route_path = route["route"]
@@ -370,24 +365,16 @@ def evaluate_assertions(
         *evaluate_evidence_paths(assertions.get("evidencePaths", [])),
         *evaluate_required_texts(assertions.get("requiredTexts", [])),
         *evaluate_forbidden_texts(assertions.get("forbiddenTexts", [])),
-        *evaluate_runtime_statuses(
-            assertions.get("runtimeStackStatuses", {}), runtime_status
-        ),
-        *evaluate_compose_active_services(
-            assertions.get("composeActiveServices", []), compose
-        ),
-        *evaluate_compose_profile_services(
-            assertions.get("composeProfileServices", {}), compose
-        ),
+        *evaluate_runtime_statuses(assertions.get("runtimeStackStatuses", {}), runtime_status),
+        *evaluate_compose_active_services(assertions.get("composeActiveServices", []), compose),
+        *evaluate_compose_profile_services(assertions.get("composeProfileServices", {}), compose),
         *evaluate_nginx_routes(assertions.get("nginxRoutes", []), nginx),
     ]
 
 
 def evaluate_intents() -> list[dict[str, Any]]:
     matrix = architecture_intent_gate.load_yaml(architecture_intent_gate.INTENT_MATRIX)
-    runtime_status = architecture_intent_gate.load_yaml(
-        architecture_intent_gate.RUNTIME_STATUS
-    )
+    runtime_status = architecture_intent_gate.load_yaml(architecture_intent_gate.RUNTIME_STATUS)
     compose = architecture_intent_gate.load_yaml(architecture_intent_gate.COMPOSE_FILE)
     nginx = architecture_intent_gate.NGINX_CONFIG.read_text(encoding="utf-8")
 
@@ -418,9 +405,7 @@ def evaluate_intents() -> list[dict[str, Any]]:
 
 def evaluate_principles() -> list[dict[str, Any]]:
     matrix = architecture_intent_gate.load_yaml(PRINCIPLE_MATRIX)
-    runtime_status = architecture_intent_gate.load_yaml(
-        architecture_intent_gate.RUNTIME_STATUS
-    )
+    runtime_status = architecture_intent_gate.load_yaml(architecture_intent_gate.RUNTIME_STATUS)
     compose = architecture_intent_gate.load_yaml(architecture_intent_gate.COMPOSE_FILE)
     nginx = architecture_intent_gate.NGINX_CONFIG.read_text(encoding="utf-8")
 
@@ -464,9 +449,7 @@ def render_html(
     principle_rows: list[dict[str, Any]] | None = None,
 ) -> str:
     principle_rows = principle_rows or []
-    generated_at = (
-        datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
-    )
+    generated_at = datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
     passed_commands = sum(1 for result in results if result.passed)
     passed_intents = sum(1 for row in intent_rows if row["passed"])
     passed_principles = sum(1 for row in principle_rows if row["passed"])
@@ -480,9 +463,7 @@ def render_html(
     command_cards = "\n".join(render_command_card(result) for result in results)
     intent_cards = "\n".join(render_intent_card(row) for row in intent_rows)
     principle_cards = "\n".join(render_principle_card(row) for row in principle_rows)
-    manual_principles = sum(
-        1 for row in principle_rows if row["proofState"] == "manual"
-    )
+    manual_principles = sum(1 for row in principle_rows if row["proofState"] == "manual")
     gap_principles = sum(1 for row in principle_rows if row["proofState"] == "gap")
 
     return f"""<!doctype html>
@@ -771,10 +752,7 @@ def render_principle_card(row: dict[str, Any]) -> str:
 
 def render_intent_card(row: dict[str, Any]) -> str:
     status = "pass" if row["passed"] else "fail"
-    stacks = "".join(
-        f'<span class="pill">{html.escape(stack)}</span>'
-        for stack in row["linkedStacks"]
-    )
+    stacks = "".join(f'<span class="pill">{html.escape(stack)}</span>' for stack in row["linkedStacks"])
     detail_rows = "\n".join(render_intent_detail(detail) for detail in row["details"])
     failed_count = sum(1 for detail in row["details"] if not detail["passed"])
     return f"""
@@ -838,11 +816,7 @@ def render_command_card(result: CommandResult) -> str:
     if not output:
         output = "No output"
     command_text = " ".join(result.command)
-    cwd = (
-        result.cwd.relative_to(REPO_ROOT)
-        if result.cwd.is_relative_to(REPO_ROOT)
-        else result.cwd
-    )
+    cwd = result.cwd.relative_to(REPO_ROOT) if result.cwd.is_relative_to(REPO_ROOT) else result.cwd
     return f"""
 <article class="card {status}">
   <div class="card-head">
@@ -872,9 +846,7 @@ def write_report(path: Path, html_content: str) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Run GCS-Saker checks and generate a browser-readable HTML report."
-    )
+    parser = argparse.ArgumentParser(description="Run GCS-Saker checks and generate a browser-readable HTML report.")
     parser.add_argument(
         "--check",
         action="store_true",
@@ -882,9 +854,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--timeout-seconds", type=int, default=300)
-    parser.add_argument(
-        "--skip-spring", action="store_true", help="Skip Spring/Gradle test command."
-    )
+    parser.add_argument("--skip-spring", action="store_true", help="Skip Spring/Gradle test command.")
     return parser
 
 
