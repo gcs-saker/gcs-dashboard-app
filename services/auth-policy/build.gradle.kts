@@ -15,6 +15,7 @@ extra["tomcat.version"] = "10.1.55"
 extra["jackson-bom.version"] = "2.21.5"
 extra["netty.version"] = "4.1.136.Final"
 extra["logback.version"] = "1.5.34"
+extra["micrometer.version"] = "1.15.12"
 
 group = "kr.co.a4ai.gcssaker"
 version = "0.1.0-poc"
