@@ -1,13 +1,13 @@
 openapi: 3.1.0
 info:
   title: GCS-Saker Operations API
-  version: "2026-08-04"
+  version: "2026-08-10"
   description: |
     운영 배포의 public edge 기준 통합 계약이다. 내부 포트, DB, Redis, MQTT 관리 포트와
     credential 원문은 문서화하거나 노출하지 않는다. Swagger UI는 조회 전용이며 실제 변경
     요청은 승인된 운영 절차와 전용 클라이언트에서 수행한다.
 servers:
-  - url: https://a4ai.tplinkdns.com
+  - url: https://a4ai.121-159-26-245.sslip.io
     description: Production edge
 tags:
   - { name: Auth }
@@ -138,7 +138,7 @@ paths:
       tags: [Device]
       summary: UUID 장비의 서버 결정 송출 세션 발급
       security: [ { deviceUuid: [], deviceCredential: [] } ]
-      requestBody: { required: false, content: { application/json: { schema: { type: object, additionalProperties: false, properties: { sensorId: { type: string } } } } } }
+      requestBody: { $ref: '#/components/requestBodies/PublishSessionBody' }
       responses: { '201': { $ref: '#/components/responses/PublishSession' }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' } }
   /api/v1/device/publish-sessions:
     post:
@@ -146,7 +146,15 @@ paths:
       summary: UUID 장비 송출 세션 canonical endpoint
       description: media-control service prefix를 장비에 노출하지 않는 권장 경로다.
       security: [ { deviceUuid: [], deviceCredential: [] } ]
-      requestBody: { required: false, content: { application/json: { schema: { type: object, additionalProperties: false, properties: { sensorId: { type: string } } } } } }
+      requestBody: { $ref: '#/components/requestBodies/PublishSessionBody' }
+      responses: { '201': { $ref: '#/components/responses/PublishSession' }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' } }
+  /media-control/api/v1/account/publish-sessions:
+    post:
+      tags: [Device]
+      summary: 로그인 계정용 server-owned 송출 세션 발급
+      description: 계정 access token으로 권한을 확인하고 opaque streamId, WHIP URL과 단기 media token을 발급한다.
+      security: [ { bearerAuth: [] } ]
+      requestBody: { $ref: '#/components/requestBodies/PublishSessionBody' }
       responses: { '201': { $ref: '#/components/responses/PublishSession' }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' } }
   /media-control/api/v1/device/publish-sessions/{sessionId}/renew:
     post: { tags: [Device], summary: renewal token 일회성 회전, parameters: [ { $ref: '#/components/parameters/SessionId' } ], responses: { '200': { $ref: '#/components/responses/PublishSessionRenewal' }, '401': { $ref: '#/components/responses/Error' } } }
@@ -185,6 +193,12 @@ components:
     SessionId: { name: sessionId, in: path, required: true, schema: { type: string } }
   requestBodies:
     JsonBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/JsonObject' } } } }
+    PublishSessionBody:
+      required: false
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PublishSessionRequest' }
+          example: { sensorId: front }
   responses:
     Json: { description: Successful JSON response, content: { application/json: { schema: { $ref: '#/components/schemas/JsonObject' } } } }
     Error: { description: Stable external error without stack trace or secret, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
@@ -193,6 +207,11 @@ components:
     PublishSessionRenewal: { description: Rotated token pair, headers: { Cache-Control: { schema: { type: string, const: no-store } } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublishSessionRenewal' } } } }
   schemas:
     JsonObject: { type: object, additionalProperties: true }
+    PublishSessionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        sensorId: { type: string, description: 등록된 sensor의 공개 식별자, example: front }
     Error: { type: object, additionalProperties: false, properties: { detail: { type: string }, code: { type: string }, traceId: { type: string } } }
     PublishSession:
       type: object
