@@ -82,7 +82,9 @@ def test_operational_swagger_exposes_sanitized_spec_and_keeps_ui_read_only() -> 
     assert "persistAuthorization: false" in initializer
     assert "request.headers.Authorization" not in initializer
     assert "window.prompt" not in initializer
+    assert 'url: "/auth-policy/admin/api-docs/openapi.yaml"' in initializer
     assert "noindex,nofollow,noarchive" in swagger
+    assert "OpenAPI 명세를 불러오는 중" not in swagger
 
 
 def test_operational_swagger_maps_device_account_and_receive_flows_without_secrets() -> None:

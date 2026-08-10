@@ -17,7 +17,7 @@ body { margin: 0; background: radial-gradient(circle at 50% -10%, #17355c 0, #07
 .flow-step { border: 1px solid #2a405d; border-radius: 16px; padding: 16px; background: #0c1a2c; }
 .flow-step__badge { display: inline-block; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 999px; padding: 4px 8px; font-size: 10px; font-weight: 900; letter-spacing: .12em; }
 .flow-step h3 { margin: 11px 0 8px; font-size: 17px; font-weight: 700; letter-spacing: -.018em; }
-.flow-step > code { display: block; color: #b9c9dd; overflow-wrap: anywhere; font-size: 12px; }
+.flow-step > code { display: block; margin-top: 2px; border-left: 2px solid color-mix(in srgb, var(--accent) 45%, #52647a); padding: 7px 9px; background: rgba(4, 13, 24, .42); color: #a8b7ca; overflow-wrap: anywhere; font-family: inherit; font-size: 12.5px; font-weight: 500; letter-spacing: -.01em; line-height: 1.45; }
 .flow-step details { margin: 14px -4px -4px; }
 .flow-step summary { cursor: pointer; display: flex; justify-content: center; color: var(--accent); list-style: none; padding: 8px; border-top: 1px solid #203550; font-size: 12px; font-weight: 800; }
 .flow-step summary::-webkit-details-marker { display: none; }
@@ -35,7 +35,7 @@ body { margin: 0; background: radial-gradient(circle at 50% -10%, #17355c 0, #07
 .swagger-section { background: #f6f8fb; color: #182433; font-family: "Pretendard Variable", Pretendard, SUIT, "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif; padding: 36px max(24px, calc((100vw - 1424px) / 2)); }
 .swagger-section > h2 { margin: 0; font-size: 28px; }
 .swagger-section > p { color: #53657b; line-height: 1.7; }
-.swagger-loading { padding: 22px 0; color: #53657b; }
+.swagger-error { margin: 24px 0; border: 1px solid #d8a4a4; border-radius: 10px; padding: 16px; background: #fff3f3; color: #922; }
 .swagger-ui, .swagger-ui .info, .swagger-ui .opblock-tag, .swagger-ui .opblock .opblock-summary-description, .swagger-ui button, .swagger-ui input, .swagger-ui select, .swagger-ui textarea { font-family: inherit; }
 @media (max-width: 980px) { .flow-grid { grid-template-columns: 1fr; } .flow-lane { max-width: 700px; width: 100%; margin: auto; } }
 @media (max-width: 520px) { .flow-guide { padding: 34px 14px 24px; } .flow-lane { padding: 14px; border-radius: 16px; } .swagger-section { padding: 28px 10px; } }

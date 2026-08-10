@@ -22,8 +22,10 @@ class OperationalApiDocumentationControllerTest {
         assertContains(styles.body.orEmpty(), ".flow-grid")
         assertContains(initializer.body.orEmpty(), "supportedSubmitMethods: []")
         assertContains(initializer.body.orEmpty(), "persistAuthorization: false")
+        assertContains(initializer.body.orEmpty(), "url: \"/auth-policy/admin/api-docs/openapi.yaml\"")
         check(!initializer.body.orEmpty().contains("window.prompt"))
         check(!initializer.body.orEmpty().contains("request.headers.Authorization"))
+        check(!swagger.body.orEmpty().contains("OpenAPI 명세를 불러오는 중"))
     }
 
     @Test

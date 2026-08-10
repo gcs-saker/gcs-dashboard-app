@@ -1,6 +1,6 @@
 window.onload = function () {
   window.ui = SwaggerUIBundle({
-    url: "./openapi.yaml",
+    url: "/auth-policy/admin/api-docs/openapi.yaml",
     dom_id: "#swagger-ui",
     deepLinking: true,
     displayRequestDuration: true,
@@ -9,6 +9,10 @@ window.onload = function () {
     persistAuthorization: false,
     tryItOutEnabled: false,
     supportedSubmitMethods: [],
+    onFailure: function () {
+      document.getElementById("swagger-ui").innerHTML =
+        '<p class="swagger-error" role="alert">OpenAPI 명세를 표시하지 못했습니다. 서버 상태를 확인해 주세요.</p>';
+    },
     presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
     layout: "StandaloneLayout"
   });
