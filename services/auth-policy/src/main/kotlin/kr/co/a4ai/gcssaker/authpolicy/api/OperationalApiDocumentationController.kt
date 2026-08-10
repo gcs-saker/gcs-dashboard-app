@@ -22,7 +22,11 @@ object OperationalApiDocumentationRoutes {
 @RequestMapping(OperationalApiDocumentationRoutes.ROOT)
 class OperationalApiDocumentationController {
     @GetMapping(OperationalApiDocumentationRoutes.SWAGGER, produces = [MediaType.TEXT_HTML_VALUE])
-    fun swagger(): ResponseEntity<String> = noStore(readResource(SWAGGER_RESOURCE), MediaType.TEXT_HTML)
+    fun swagger(): ResponseEntity<String> {
+        val openApi = readResource(OPENAPI_RESOURCE)
+        val html = readResource(SWAGGER_RESOURCE).replace(API_CATALOG_MARKER, OperationalApiCatalogRenderer.render(openApi))
+        return noStore(html, MediaType.TEXT_HTML)
+    }
 
     @GetMapping(OperationalApiDocumentationRoutes.OPENAPI, produces = ["application/yaml"])
     fun openApi(): ResponseEntity<String> = noStore(readResource(OPENAPI_RESOURCE), MediaType.parseMediaType("application/yaml"))
@@ -46,5 +50,6 @@ class OperationalApiDocumentationController {
         const val SWAGGER_RESOURCE = "openapi/gcs-saker-operations-swagger.html"
         const val INITIALIZER_RESOURCE = "openapi/gcs-saker-operations-swagger.js"
         const val FLOW_STYLES_RESOURCE = "openapi/gcs-saker-operations-flow.css"
+        const val API_CATALOG_MARKER = "<!-- OPERATIONAL_API_CATALOG -->"
     }
 }
