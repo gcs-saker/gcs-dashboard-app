@@ -86,6 +86,13 @@ def test_operational_swagger_exposes_sanitized_spec_and_keeps_ui_read_only() -> 
     assert "noindex,nofollow,noarchive" in swagger
     assert "OpenAPI 명세를 불러오는 중" not in swagger
 
+    catalog_renderer = (
+        REPO_ROOT
+        / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalApiCatalogRenderer.kt"
+    ).read_text(encoding="utf-8")
+    assert "span>별칭</span>" in catalog_renderer
+    assert 'aria-label="별칭:' in catalog_renderer
+
 
 def test_operational_swagger_maps_device_account_and_receive_flows_without_secrets() -> None:
     swagger = (

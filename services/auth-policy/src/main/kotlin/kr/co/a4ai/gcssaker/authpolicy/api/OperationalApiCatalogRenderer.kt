@@ -11,13 +11,16 @@ object OperationalApiCatalogRenderer {
             """<li>
               <span class="api-catalog__method api-catalog__method--${operation.method.lowercase()}">${operation.method}</span>
               <code>${escape(operation.path)}</code>
-              <span>${escape(operation.summary)}</span>
+              <span class="api-catalog__alias" aria-label="별칭: ${escape(operation.summary)}">${escape(operation.summary)}</span>
             </li>""".trimIndent()
         }
         return """
             <section class="api-catalog" aria-labelledby="api-catalog-title">
               <div class="api-catalog__heading">
                 <h3 id="api-catalog-title">API 빠른 목록</h3><span>${operations.size} operations</span>
+              </div>
+              <div class="api-catalog__columns" aria-hidden="true">
+                <span>METHOD</span><span>API 주소</span><span>별칭</span>
               </div>
               <ul>$cards</ul>
             </section>

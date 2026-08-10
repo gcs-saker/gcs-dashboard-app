@@ -39,14 +39,16 @@ body { margin: 0; background: radial-gradient(circle at 50% -10%, #17355c 0, #07
 .api-catalog__heading { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; border-bottom: 1px solid #e5eaf0; }
 .api-catalog__heading h3 { margin: 0; font-size: 18px; }
 .api-catalog__heading span { color: #68798e; font-size: 12px; }
+.api-catalog__columns { display: grid; grid-template-columns: 64px minmax(220px, .8fr) 1fr; gap: 12px; padding: 9px 20px; border-bottom: 1px solid #e5eaf0; background: #f7f9fc; color: #738296; font-size: 10px; font-weight: 800; letter-spacing: .08em; }
 .api-catalog ul { list-style: none; margin: 0; padding: 0; }
 .api-catalog li { display: grid; grid-template-columns: 64px minmax(220px, .8fr) 1fr; gap: 12px; align-items: center; padding: 11px 20px; border-bottom: 1px solid #edf0f4; color: #58697d; font-size: 13px; }
 .api-catalog li:last-child { border-bottom: 0; }
 .api-catalog li code { color: #314158; font-family: inherit; font-weight: 600; overflow-wrap: anywhere; }
+.api-catalog__alias { color: #596a7f; font-weight: 500; }
 .api-catalog__method { border-radius: 7px; padding: 4px 7px; color: #fff; background: #607087; text-align: center; font-size: 10px; font-weight: 800; }
 .api-catalog__method--get { background: #2878a8; } .api-catalog__method--post { background: #37845b; } .api-catalog__method--patch { background: #a06d25; } .api-catalog__method--delete { background: #a54a4a; }
 .swagger-error { margin: 24px 0; border: 1px solid #d8a4a4; border-radius: 10px; padding: 16px; background: #fff3f3; color: #922; }
 .swagger-ui, .swagger-ui .info, .swagger-ui .opblock-tag, .swagger-ui .opblock .opblock-summary-description, .swagger-ui button, .swagger-ui input, .swagger-ui select, .swagger-ui textarea { font-family: inherit; }
 @media (max-width: 980px) { .flow-grid { grid-template-columns: 1fr; } .flow-lane { max-width: 700px; width: 100%; margin: auto; } }
-@media (max-width: 520px) { .flow-guide { padding: 34px 14px 24px; } .flow-lane { padding: 14px; border-radius: 16px; } .swagger-section { padding: 28px 10px; } .api-catalog li { grid-template-columns: 58px 1fr; padding: 11px 12px; } .api-catalog li > span:last-child { grid-column: 2; } }
+@media (max-width: 520px) { .flow-guide { padding: 34px 14px 24px; } .flow-lane { padding: 14px; border-radius: 16px; } .swagger-section { padding: 28px 10px; } .api-catalog__columns { grid-template-columns: 58px 1fr; padding: 9px 12px; } .api-catalog__columns span:last-child { display: none; } .api-catalog li { grid-template-columns: 58px 1fr; padding: 11px 12px; } .api-catalog__alias { grid-column: 2; } .api-catalog__alias::before { content: "별칭 · "; color: #8290a2; font-size: 10px; font-weight: 800; } }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
