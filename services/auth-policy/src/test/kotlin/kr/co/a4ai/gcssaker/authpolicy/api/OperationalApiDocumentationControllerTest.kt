@@ -20,6 +20,8 @@ class OperationalApiDocumentationControllerTest {
         assertContains(swagger.body.orEmpty(), "관제 수신")
         assertContains(swagger.body.orEmpty(), "<details>")
         assertContains(swagger.body.orEmpty(), "API 빠른 목록")
+        assertContains(swagger.body.orEmpty(), "api-catalog__columns")
+        assertContains(swagger.body.orEmpty(), "aria-label=\"별칭:")
         assertContains(swagger.body.orEmpty(), "/auth-policy/auth/login")
         assertContains(swagger.body.orEmpty(), "operations")
         check(!swagger.body.orEmpty().contains("OPERATIONAL_API_CATALOG"))
