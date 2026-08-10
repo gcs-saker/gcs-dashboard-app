@@ -8,7 +8,7 @@ class OperationalApiDocumentationControllerTest {
     private val controller = OperationalApiDocumentationController()
 
     @Test
-    fun `serves admin-only operational swagger without enabling write requests`() {
+    fun `serves public operational swagger without enabling write requests`() {
         val swagger = controller.swagger()
         val initializer = controller.initializer()
         val styles = controller.flowStyles()
@@ -22,8 +22,8 @@ class OperationalApiDocumentationControllerTest {
         assertContains(styles.body.orEmpty(), ".flow-grid")
         assertContains(initializer.body.orEmpty(), "supportedSubmitMethods: []")
         assertContains(initializer.body.orEmpty(), "persistAuthorization: false")
-        assertContains(initializer.body.orEmpty(), "request.headers.Authorization")
-        assertContains(initializer.body.orEmpty(), "window.prompt")
+        check(!initializer.body.orEmpty().contains("window.prompt"))
+        check(!initializer.body.orEmpty().contains("request.headers.Authorization"))
     }
 
     @Test

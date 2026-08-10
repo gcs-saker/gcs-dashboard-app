@@ -49,6 +49,10 @@ object AuthSecurityRouteContract {
         ),
         RouteMatcher(
             HttpMethod.GET,
+            OperationalApiDocumentationRoutes.ROOT + OperationalApiDocumentationRoutes.OPENAPI,
+        ),
+        RouteMatcher(
+            HttpMethod.GET,
             OperationalApiDocumentationRoutes.ROOT + OperationalApiDocumentationRoutes.INITIALIZER,
         ),
         RouteMatcher(

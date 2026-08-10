@@ -60,7 +60,7 @@ def test_operational_openapi_covers_public_edge_contracts() -> None:
         assert f"  {path}:" in document, f"missing operational API path: {path}"
 
 
-def test_operational_swagger_keeps_spec_admin_only_and_ui_read_only() -> None:
+def test_operational_swagger_exposes_sanitized_spec_and_keeps_ui_read_only() -> None:
     security = AUTH_SECURITY.read_text(encoding="utf-8")
     controller = (
         REPO_ROOT
@@ -75,12 +75,13 @@ def test_operational_swagger_keeps_spec_admin_only_and_ui_read_only() -> None:
 
     assert 'private const val ADMIN_PREFIX = "/admin/**"' in security
     assert 'const val ROOT = "/admin/api-docs"' in controller
+    assert "OperationalApiDocumentationRoutes.OPENAPI" in security
     assert "OperationalApiDocumentationRoutes.INITIALIZER" in security
     assert "OperationalApiDocumentationRoutes.FLOW_STYLES" in security
     assert "supportedSubmitMethods: []" in initializer
     assert "persistAuthorization: false" in initializer
-    assert "request.headers.Authorization" in initializer
-    assert "window.prompt" in initializer
+    assert "request.headers.Authorization" not in initializer
+    assert "window.prompt" not in initializer
     assert "noindex,nofollow,noarchive" in swagger
 
 
@@ -102,6 +103,9 @@ def test_operational_swagger_maps_device_account_and_receive_flows_without_secre
     ):
         assert endpoint in swagger
     assert swagger.count("<details>") == swagger.count("</details>") == 9
+    assert "민감값" not in swagger
+    assert "device-credential" in swagger
+    assert "account-credential" in swagger
     assert "@2258703325" not in swagger
     assert "gho_" not in swagger
 
