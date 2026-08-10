@@ -11,9 +11,15 @@ class OperationalApiDocumentationControllerTest {
     fun `serves admin-only operational swagger without enabling write requests`() {
         val swagger = controller.swagger()
         val initializer = controller.initializer()
+        val styles = controller.flowStyles()
 
         assertEquals("no-store", swagger.headers.cacheControl)
         assertContains(swagger.body.orEmpty(), "noindex,nofollow,noarchive")
+        assertContains(swagger.body.orEmpty(), "장비 송신")
+        assertContains(swagger.body.orEmpty(), "계정 송신")
+        assertContains(swagger.body.orEmpty(), "관제 수신")
+        assertContains(swagger.body.orEmpty(), "<details>")
+        assertContains(styles.body.orEmpty(), ".flow-grid")
         assertContains(initializer.body.orEmpty(), "supportedSubmitMethods: []")
         assertContains(initializer.body.orEmpty(), "persistAuthorization: false")
         assertContains(initializer.body.orEmpty(), "request.headers.Authorization")
@@ -28,6 +34,7 @@ class OperationalApiDocumentationControllerTest {
         assertEquals("no-store", response.headers.cacheControl)
         assertContains(body, "openapi: 3.1.0")
         assertContains(body, "/media-control/api/v1/device/publish-sessions:")
+        assertContains(body, "/media-control/api/v1/account/publish-sessions:")
         assertContains(body, "/gcs.saker.v1.SakerGatewayService/Exchange:")
         check(!body.contains("gho_"))
         check(!body.contains("@2258703325"))

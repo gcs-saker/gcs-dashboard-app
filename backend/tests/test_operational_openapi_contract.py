@@ -42,6 +42,7 @@ PUBLIC_EDGE_PATHS = (
     "/media-control/api/v1/streams/{streamId}/publish",
     "/media-control/api/v1/streams/{streamId}/status",
     "/media-control/api/v1/device/publish-sessions",
+    "/media-control/api/v1/account/publish-sessions",
     "/api/v1/device/publish-sessions",
     "/api/v1/devices/{deviceUuid}/telemetry",
     "/gcs.saker.v1.SakerGatewayService/Exchange",
@@ -65,15 +66,44 @@ def test_operational_swagger_keeps_spec_admin_only_and_ui_read_only() -> None:
         REPO_ROOT
         / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalApiDocumentationController.kt"
     ).read_text(encoding="utf-8")
+    initializer = (
+        REPO_ROOT / "services/auth-policy/src/main/resources/openapi/gcs-saker-operations-swagger.js"
+    ).read_text(encoding="utf-8")
+    swagger = (
+        REPO_ROOT / "services/auth-policy/src/main/resources/openapi/gcs-saker-operations-swagger.html"
+    ).read_text(encoding="utf-8")
 
     assert 'private const val ADMIN_PREFIX = "/admin/**"' in security
     assert 'const val ROOT = "/admin/api-docs"' in controller
     assert "OperationalApiDocumentationRoutes.INITIALIZER" in security
-    assert "supportedSubmitMethods: []" in controller
-    assert "persistAuthorization: false" in controller
-    assert "request.headers.Authorization" in controller
-    assert "window.prompt" in controller
-    assert "noindex,nofollow,noarchive" in controller
+    assert "OperationalApiDocumentationRoutes.FLOW_STYLES" in security
+    assert "supportedSubmitMethods: []" in initializer
+    assert "persistAuthorization: false" in initializer
+    assert "request.headers.Authorization" in initializer
+    assert "window.prompt" in initializer
+    assert "noindex,nofollow,noarchive" in swagger
+
+
+def test_operational_swagger_maps_device_account_and_receive_flows_without_secrets() -> None:
+    swagger = (
+        REPO_ROOT / "services/auth-policy/src/main/resources/openapi/gcs-saker-operations-swagger.html"
+    ).read_text(encoding="utf-8")
+
+    for label in ("장비 송신", "계정 송신", "관제 수신", "Protocol", "Headers", "Body"):
+        assert label in swagger
+    for endpoint in (
+        "/api/v1/device/publish-sessions",
+        "/media-control/api/v1/account/publish-sessions",
+        "/media-control/api/v1/streams",
+        "/media-control/api/v1/streams/{streamId}/playback",
+        "/gcs.saker.v1.SakerGatewayService/Exchange",
+        "/webrtc/{server-owned-path}/whip",
+        "/webrtc/{server-owned-path}/whep",
+    ):
+        assert endpoint in swagger
+    assert swagger.count("<details>") == swagger.count("</details>") == 9
+    assert "@2258703325" not in swagger
+    assert "gho_" not in swagger
 
 
 def test_internal_authentication_and_debug_boundaries_remain_blocked_at_edge() -> None:

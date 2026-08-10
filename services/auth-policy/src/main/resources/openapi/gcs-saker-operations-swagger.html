@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>GCS-Saker 운영 API와 송수신 흐름</title>
+  <link rel="stylesheet" href="/auth-policy/webjars/swagger-ui/5.17.14/swagger-ui.css">
+  <link rel="stylesheet" href="./gcs-saker-operations-flow.css">
+</head>
+<body>
+  <main class="flow-guide" aria-labelledby="flow-title">
+    <header class="flow-guide__header">
+      <p class="flow-guide__eyebrow">GCS-SAKER · LIVE API MAP</p>
+      <h1 id="flow-title">송신부터 수신까지, 실제 API 연결 흐름</h1>
+      <p>아래 화살표를 누르면 protocol, header, body와 다음 연결을 확인할 수 있습니다. 민감값과 서버 내부 media path는 표시하지 않습니다.</p>
+    </header>
+    <section class="flow-grid" aria-label="송수신 API 흐름">
+      <article class="flow-lane flow-lane--device">
+        <header><span class="flow-lane__number">01</span><div><p>TRANSMIT</p><h2>장비 송신</h2></div></header>
+        <div class="flow-step"><span class="flow-step__badge">AUTH</span><h3>UUID 장비 세션 발급</h3><code>POST /api/v1/device/publish-sessions</code><details><summary>요청 상세</summary><div class="flow-detail"><b>Protocol</b><pre>HTTPS · HTTP/1.1+ · JSON</pre><b>Headers</b><pre>Content-Type: application/json&#10;X-GCS-Device-UUID: &lt;device-uuid · 민감값&gt;&#10;X-GCS-Device-Credential: &lt;credential · 민감값&gt;</pre><b>Body</b><pre>{ "sensorId": "front" }</pre><b>Response · 201</b><pre>sessionId, opaque streamId, publishUrl,&#10;publishToken, renewalToken, expiresAt, iceServers</pre></div></details></div>
+        <div class="flow-connector"><span>단기 publish token</span></div>
+        <div class="flow-step"><span class="flow-step__badge">MEDIA</span><h3>영상·음성 송출</h3><code>POST /webrtc/{server-owned-path}/whip</code><details><summary>요청 상세</summary><div class="flow-detail"><b>Protocol</b><pre>WHIP · WebRTC · HTTPS</pre><b>Headers</b><pre>Authorization: Bearer &lt;short-lived-publish-token&gt;&#10;Content-Type: application/sdp&#10;Accept: application/sdp</pre><b>Body</b><pre>v=0&#10;... WebRTC offer SDP ...</pre><b>주의</b><pre>publishUrl은 세션 응답값을 그대로 사용합니다.&#10;UUID와 credential은 media 요청에 넣지 않습니다.</pre></div></details></div>
+        <div class="flow-connector"><span>GPS · telemetry · geometry</span></div>
+        <div class="flow-step"><span class="flow-step__badge">DATA</span><h3>장비 데이터 교환</h3><code>/gcs.saker.v1.SakerGatewayService/Exchange</code><details><summary>요청 상세</summary><div class="flow-detail"><b>Protocol</b><pre>gRPC bidi streaming · HTTP/2 TLS · Protobuf</pre><b>Metadata headers</b><pre>x-gcs-device-uuid: &lt;device-uuid · 민감값&gt;&#10;x-gcs-device-credential: &lt;credential · 민감값&gt;</pre><b>Body</b><pre>GatewayStreamRequest {&#10;  request_id, org_id, group_id, asset_id,&#10;  telemetry { time, position, attitude_deg, ... }&#10;}</pre><b>Contract</b><pre>contracts/proto/gcs/saker/v1/gateway_service.proto</pre></div></details></div>
+      </article>
+      <article class="flow-lane flow-lane--account">
+        <header><span class="flow-lane__number">02</span><div><p>TRANSMIT</p><h2>계정 송신</h2></div></header>
+        <div class="flow-step"><span class="flow-step__badge">LOGIN</span><h3>계정 인증</h3><code>POST /auth-policy/auth/login</code><details><summary>요청 상세</summary><div class="flow-detail"><b>Protocol</b><pre>HTTPS · HTTP/1.1+ · JSON</pre><b>Headers</b><pre>Content-Type: application/json</pre><b>Body</b><pre>{&#10;  "username": "&lt;account&gt;",&#10;  "password": "&lt;password · 민감값&gt;"&#10;}</pre><b>Response</b><pre>accessToken + HttpOnly refresh cookie&#10;refresh token은 브라우저 저장소에 저장하지 않습니다.</pre></div></details></div>
+        <div class="flow-connector"><span>계정 access token</span></div>
+        <div class="flow-step"><span class="flow-step__badge">AUTH</span><h3>계정 송출 세션 발급</h3><code>POST /media-control/api/v1/account/publish-sessions</code><details><summary>요청 상세</summary><div class="flow-detail"><b>Protocol</b><pre>HTTPS · HTTP/1.1+ · JSON</pre><b>Headers</b><pre>Authorization: Bearer &lt;account-access-token&gt;&#10;Content-Type: application/json</pre><b>Body</b><pre>{ "sensorId": "front" }</pre><b>Response · 201</b><pre>opaque streamId, publishUrl,&#10;단기 publish/renewal token</pre></div></details></div>
+        <div class="flow-connector"><span>서버가 결정한 목적지</span></div>
+        <div class="flow-step"><span class="flow-step__badge">MEDIA</span><h3>카메라·마이크 송출</h3><code>POST /webrtc/{server-owned-path}/whip</code><details><summary>요청 상세</summary><div class="flow-detail"><b>Protocol</b><pre>WHIP · WebRTC · HTTPS</pre><b>Headers</b><pre>Authorization: Bearer &lt;short-lived-publish-token&gt;&#10;Content-Type: application/sdp&#10;Accept: application/sdp</pre><b>Body</b><pre>v=0&#10;... WebRTC audio/video offer SDP ...</pre><b>주의</b><pre>계정 token은 세션 발급에만 사용하고,&#10;media에는 단기 publish token만 사용합니다.</pre></div></details></div>
+      </article>
+      <article class="flow-lane flow-lane--receive">
+        <header><span class="flow-lane__number">03</span><div><p>RECEIVE</p><h2>관제 수신</h2></div></header>
+        <div class="flow-step"><span class="flow-step__badge">DISCOVER</span><h3>허용된 스트림 조회</h3><code>GET /media-control/api/v1/streams</code><details><summary>요청 상세</summary><div class="flow-detail"><b>Protocol</b><pre>HTTPS · HTTP/1.1+ · JSON</pre><b>Headers</b><pre>Authorization: Bearer &lt;account-access-token&gt;&#10;Accept: application/json</pre><b>Body</b><pre>없음</pre><b>Response</b><pre>현재 principal의 group 범위에 허용된&#10;opaque streamId 목록만 반환합니다.</pre></div></details></div>
+        <div class="flow-connector"><span>사용자가 streamId 선택</span></div>
+        <div class="flow-step"><span class="flow-step__badge">AUTHORIZE</span><h3>재생 세션 조회</h3><code>GET /media-control/api/v1/streams/{streamId}/playback</code><details><summary>요청 상세</summary><div class="flow-detail"><b>Protocol</b><pre>HTTPS · HTTP/1.1+ · JSON</pre><b>Headers</b><pre>Authorization: Bearer &lt;account-access-token&gt;&#10;Accept: application/json</pre><b>Body</b><pre>없음</pre><b>Response</b><pre>playbackUrls.webrtc (WHEP), playbackUrls.hls&#10;서버가 부여한 단기 playback token 포함</pre></div></details></div>
+        <div class="flow-connector"><span>WebRTC 우선 · HLS fallback</span></div>
+        <div class="flow-step"><span class="flow-step__badge">PLAY</span><h3>실시간 수신</h3><code>POST /webrtc/{server-owned-path}/whep</code><details><summary>요청 상세</summary><div class="flow-detail"><b>Protocol</b><pre>WHEP · WebRTC · HTTPS</pre><b>Headers</b><pre>Content-Type: application/sdp&#10;Accept: application/sdp</pre><b>Body</b><pre>v=0&#10;... WebRTC receive offer SDP ...</pre><b>Fallback</b><pre>GET /hls/{server-owned-path}/index.m3u8&#10;재생 API가 돌려준 URL을 그대로 사용합니다.</pre></div></details></div>
+      </article>
+    </section>
+    <p class="flow-guide__legend"><span>●</span> 브라우저와 장비는 주소를 조합하지 않습니다. opaque streamId를 선택하고 media URL과 token은 서버 응답에서만 받습니다.</p>
+  </main>
+  <section class="swagger-section" aria-labelledby="swagger-title"><h2 id="swagger-title">전체 운영 API</h2><p>아래 operation을 펼치면 OpenAPI schema, parameter와 response를 확인할 수 있습니다. Try it out은 비활성화되어 있습니다.</p><div id="swagger-ui"></div></section>
+  <script src="/auth-policy/webjars/swagger-ui/5.17.14/swagger-ui-bundle.js"></script>
+  <script src="/auth-policy/webjars/swagger-ui/5.17.14/swagger-ui-standalone-preset.js"></script>
+  <script src="./swagger-initializer.js"></script>
+</body>
+</html>
