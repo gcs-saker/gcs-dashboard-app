@@ -90,7 +90,7 @@ def test_operational_swagger_exposes_sanitized_spec_and_keeps_ui_read_only() -> 
         REPO_ROOT
         / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalApiCatalogRenderer.kt"
     ).read_text(encoding="utf-8")
-    assert 'span>별칭</span>' in catalog_renderer
+    assert "span>별칭</span>" in catalog_renderer
     assert 'aria-label="별칭:' in catalog_renderer
 
 
