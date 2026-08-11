@@ -16,6 +16,12 @@ vi.mock('./features/streaming/components/LocalWebcamPublisher', () => ({
   },
 }));
 
+vi.mock('./features/streaming/StreamPage', () => ({
+  StreamPage: function MockStreamPage() {
+    return <main aria-label="스트림 전용 화면">Stream view</main>;
+  },
+}));
+
 describe('App dashboard shell', () => {
   beforeEach(() => {
     storeAuthSession({
@@ -42,6 +48,8 @@ describe('App dashboard shell', () => {
     expect(screen.getByRole('heading', { name: '지오메트리 / 텔레메트리' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '운용 요약' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'AI 결과' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '스트림 화면' })).toHaveAttribute('href', '/stream');
+    expect(screen.getByRole('link', { name: '스트림 화면' })).toHaveAttribute('target', '_blank');
 
     await user.click(screen.getByRole('button', { name: '자산' }));
 
@@ -71,6 +79,25 @@ describe('App dashboard shell', () => {
     render(<App />);
 
     expect(screen.getByTestId('local-webcam-publisher')).toBeInTheDocument();
+  });
+
+  test('renders the protected stream-only page', async () => {
+    window.history.pushState({}, '', '/stream');
+
+    render(<App />);
+
+    expect(await screen.findByRole('main', { name: '스트림 전용 화면' })).toBeInTheDocument();
+  });
+
+  test('redirects unauthenticated stream-only access to login', async () => {
+    clearAuthSession();
+    window.history.pushState({}, '', '/stream');
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: '대시보드 로그인' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/login');
+    expect(window.location.search).toContain('redirect=%2Fstream');
   });
 
   test('redirects unauthenticated local webcam publisher access to login', async () => {

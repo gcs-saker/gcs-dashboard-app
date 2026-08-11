@@ -10,6 +10,7 @@ const dashboardQueryClient = createDashboardQueryClient();
 const DashboardPage = lazy(() => import("./features/dashboard/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const LoginPage = lazy(() => import("./features/auth/LoginPage").then((module) => ({ default: module.LoginPage })));
 const SignupPage = lazy(() => import("./features/auth/SignupPage").then((module) => ({ default: module.SignupPage })));
+const StreamPage = lazy(() => import("./features/streaming/StreamPage").then((module) => ({ default: module.StreamPage })));
 const LocalWebcamPublisher = lazy(() =>
   import("./features/streaming/components/LocalWebcamPublisher").then((module) => ({ default: module.LocalWebcamPublisher })),
 );
@@ -50,6 +51,14 @@ function App() {
                 element={
                   <RequireAuth>
                     <LocalWebcamPublisher />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/stream"
+                element={
+                  <RequireAuth>
+                    <StreamPage />
                   </RequireAuth>
                 }
               />
