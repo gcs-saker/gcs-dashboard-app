@@ -73,6 +73,14 @@ export function DashboardHeader({
         </div>
         <TalkbackControlPanel selectedStreamId={selectedStreamId} selectedStreamIds={talkbackTargetStreamIds} streams={streams} talkback={talkback} />
         <div className="ops-dashboard__action-group">
+          <a
+            className="ops-command-button is-primary"
+            href="/stream"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            스트림 화면
+          </a>
           <button aria-label="위젯 추가" className="ops-command-button" onClick={onOpenWidgetDialog} type="button">
             레이아웃
           </button>

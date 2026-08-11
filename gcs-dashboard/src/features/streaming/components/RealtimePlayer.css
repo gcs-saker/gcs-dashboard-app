@@ -76,10 +76,12 @@
 }
 
 .realtime-player__placeholder {
+  align-content: center;
   display: grid;
   gap: 8px;
+  grid-auto-rows: max-content;
+  justify-items: center;
   min-height: 220px;
-  place-items: center;
   padding: 16px;
   background:
     linear-gradient(rgba(190, 213, 226, 0.045) 1px, transparent 1px),
