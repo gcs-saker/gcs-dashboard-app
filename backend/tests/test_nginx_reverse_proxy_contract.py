@@ -257,6 +257,15 @@ def test_legacy_stream_prefix_is_cut_over_to_go_media_control_for_runtime_smoke(
         assert 'add_header X-GCS-Replacement-Route "/media-control/api/v1/streams" always;' in location
 
 
+def test_exact_stream_page_routes_to_dashboard_without_replacing_legacy_api_prefix() -> None:
+    for config in [read_config(), read_single_node_config()]:
+        stream_page_location = extract_exact_location(config, "/stream")
+        legacy_stream_location = extract_location(config, "/stream/")
+
+        assert "proxy_pass http://$dashboard_host:3000;" in stream_page_location
+        assert "proxy_pass http://$media_control_host:8081;" in legacy_stream_location
+
+
 def test_legacy_stream_prefix_keeps_short_runtime_timeout() -> None:
     config = read_config()
     location = extract_location(config, "/stream/")
