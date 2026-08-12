@@ -18,13 +18,18 @@
 .selected-stream__viewport {
   height: calc(100% - 46px);
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .selected-stream__viewport .realtime-player {
   aspect-ratio: auto;
   border: 0;
   height: 100%;
+  max-width: 100%;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 .selected-stream__viewport .webrtc-player__video,
@@ -46,8 +51,14 @@
 }
 
 .selected-stream__viewport .realtime-player__placeholder {
-  height: 100%;
+  bottom: 0;
+  height: auto;
+  inset-inline: 0;
   min-height: 0;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  transform: none;
 }
 
 .mode-ir {
