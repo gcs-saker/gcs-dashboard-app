@@ -4,7 +4,6 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
 import org.springframework.core.task.TaskExecutor
 import java.time.Instant
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicLong
 
 data class OperationalAuditRecord(
@@ -18,14 +17,27 @@ interface OperationalAuditSink {
     fun append(record: OperationalAuditRecord)
 }
 
-class InMemoryOperationalAuditSink : OperationalAuditSink {
-    private val records = CopyOnWriteArrayList<OperationalAuditRecord>()
+class InMemoryOperationalAuditSink(
+    private val capacity: Int = DEFAULT_CAPACITY,
+) : OperationalAuditSink {
+    private val records = ArrayDeque<OperationalAuditRecord>()
 
-    override fun append(record: OperationalAuditRecord) {
-        records.add(record)
+    init {
+        require(capacity > 0) { "operational audit capacity must be positive" }
     }
 
+    @Synchronized
+    override fun append(record: OperationalAuditRecord) {
+        if (records.size == capacity) records.removeFirst()
+        records.addLast(record)
+    }
+
+    @Synchronized
     fun snapshot(): List<OperationalAuditRecord> = records.toList()
+
+    private companion object {
+        const val DEFAULT_CAPACITY = 1_000
+    }
 }
 
 interface OperationalAuditPublisher {

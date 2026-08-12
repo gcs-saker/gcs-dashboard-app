@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { PublisherDeviceStatus } from "@streaming/publisher/publisherContracts";
 import { splitCaptureDevices } from "@streaming/publisher/publisherDeviceCatalog";
@@ -14,35 +14,37 @@ export function usePublisherMediaDevices(mediaDevices?: MediaDevices): Publisher
   const [videoInputs, setVideoInputs] = useState<MediaDeviceInfo[]>([]);
   const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
   const [deviceStatus, setDeviceStatus] = useState<PublisherDeviceStatus>("idle");
+  const mountedRef = useRef(true);
 
   const refreshMediaDevices = useCallback(async (): Promise<void> => {
     if (!mediaDevices?.enumerateDevices) {
-      setDeviceStatus("unavailable");
+      if (mountedRef.current) setDeviceStatus("unavailable");
       return;
     }
     try {
       setDeviceStatus("loading");
       const devices = await mediaDevices.enumerateDevices();
+      if (!mountedRef.current) return;
       const captureDevices = splitCaptureDevices(devices);
       setVideoInputs(captureDevices.videoInputs);
       setAudioInputs(captureDevices.audioInputs);
       setDeviceStatus("loaded");
     } catch {
-      setDeviceStatus("error");
+      if (mountedRef.current) setDeviceStatus("error");
     }
   }, [mediaDevices]);
 
   useEffect(() => {
+    mountedRef.current = true;
     void refreshMediaDevices();
-    if (!mediaDevices?.addEventListener) {
-      return undefined;
-    }
-
     const handleDeviceChange = () => {
       void refreshMediaDevices();
     };
-    mediaDevices.addEventListener("devicechange", handleDeviceChange);
-    return () => mediaDevices.removeEventListener?.("devicechange", handleDeviceChange);
+    mediaDevices?.addEventListener?.("devicechange", handleDeviceChange);
+    return () => {
+      mountedRef.current = false;
+      mediaDevices?.removeEventListener?.("devicechange", handleDeviceChange);
+    };
   }, [mediaDevices, refreshMediaDevices]);
 
   return {

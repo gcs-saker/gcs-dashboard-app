@@ -32,6 +32,8 @@ class FakeSubscriberClient:
         self.connected: tuple[str, int, int] | None = None
         self.subscriptions: list[tuple[str, int]] = []
         self.loop_started = False
+        self.loop_stopped = False
+        self.disconnected = False
         self.reconnect_delays: tuple[int, int] | None = None
         self.max_inflight: int | None = None
 
@@ -47,6 +49,12 @@ class FakeSubscriberClient:
 
     def loop_start(self) -> None:
         self.loop_started = True
+
+    def loop_stop(self) -> None:
+        self.loop_stopped = True
+
+    def disconnect(self) -> None:
+        self.disconnected = True
 
     def reconnect_delay_set(self, min_delay: int, max_delay: int) -> None:
         self.reconnect_delays = (min_delay, max_delay)
@@ -78,6 +86,10 @@ def test_build_telemetry_subscriber_connects_and_subscribes_to_v2_topic() -> Non
     assert fake_client.reconnect_delays == (1, 30)
     assert fake_client.max_inflight == 20
     assert fake_client.loop_started is True
+
+    runtime.close()
+    assert fake_client.loop_stopped is True
+    assert fake_client.disconnected is True
 
     assert fake_client.on_connect is not None
     fake_client.on_connect(fake_client, None, None, 0)

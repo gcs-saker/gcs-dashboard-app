@@ -83,13 +83,18 @@ function waitUnlessAborted(delayMs: number, signal: AbortSignal): Promise<void> 
   }
 
   return new Promise((resolve) => {
-    const timeoutId = globalThis.setTimeout(resolve, delayMs);
+    const finish = () => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    };
+    const timeoutId = globalThis.setTimeout(finish, delayMs);
+    const abort = () => {
+      globalThis.clearTimeout(timeoutId);
+      finish();
+    };
     signal.addEventListener(
       "abort",
-      () => {
-        globalThis.clearTimeout(timeoutId);
-        resolve();
-      },
+      abort,
       { once: true },
     );
   });

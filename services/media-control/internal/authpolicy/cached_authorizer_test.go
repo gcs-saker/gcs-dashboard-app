@@ -80,3 +80,20 @@ func TestCachedAuthorizerHonorsDecisionExpiresAt(t *testing.T) {
 		t.Fatalf("expected decision expiry to invalidate cache, got %d calls", next.calls)
 	}
 }
+
+func TestCachedAuthorizerBoundsDistinctAuthorizationEntries(t *testing.T) {
+	next := &countingAuthorizer{}
+	cached := NewCachedAuthorizer(next, time.Minute)
+	cached.maxEntries = 2
+	streamTarget := domain.StreamAccessTarget{StreamID: "raw.test", Path: "raw/test", PublisherGroupID: "co-a"}
+
+	for _, authorization := range []string{"Bearer one", "Bearer two", "Bearer three"} {
+		if _, err := cached.AuthorizeStream(context.Background(), authorization, streamTarget); err != nil {
+			t.Fatalf("authorize stream: %v", err)
+		}
+	}
+
+	if got := len(cached.entries); got != 2 {
+		t.Fatalf("expected bounded cache size 2, got %d", got)
+	}
+}

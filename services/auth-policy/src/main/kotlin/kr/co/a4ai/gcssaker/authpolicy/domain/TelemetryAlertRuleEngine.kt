@@ -56,6 +56,7 @@ class TelemetryAlertRuleEngine(
                 val deviceId = deviceKey.substringAfter(':')
                 appendAlert(deviceId, state.groupId, "telemetry.timeout", now)
             }
+            if (timedOut) devices.remove(deviceKey, state)
         }
     }
 
@@ -95,7 +96,8 @@ class TelemetryAlertRuleEngine(
         activeRules.put("$deviceKey:$rule", true) != true
 
     private fun setRuleState(deviceKey: String, rule: String, active: Boolean) {
-        activeRules["$deviceKey:$rule"] = active
+        val key = "$deviceKey:$rule"
+        if (active) activeRules[key] = true else activeRules.remove(key)
     }
 
     private fun TelemetryReadModel.key(): String = "${groupId.value}:$uuid"

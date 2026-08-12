@@ -38,9 +38,12 @@ type CachedAuthorizer struct {
 	ttl  time.Duration
 	now  func() time.Time
 
-	mu      sync.Mutex
-	entries map[string]cachedDecision
+	mu         sync.Mutex
+	entries    map[string]cachedDecision
+	maxEntries int
 }
+
+const defaultAuthorizationCacheMaxEntries = 4096
 
 type cachedDecision struct {
 	decision  domain.StreamAccessDecision
@@ -49,10 +52,11 @@ type cachedDecision struct {
 
 func NewCachedAuthorizer(next Authorizer, ttl time.Duration) CachedAuthorizer {
 	return CachedAuthorizer{
-		next:    next,
-		ttl:     ttl,
-		now:     time.Now,
-		entries: map[string]cachedDecision{},
+		next:       next,
+		ttl:        ttl,
+		now:        time.Now,
+		entries:    map[string]cachedDecision{},
+		maxEntries: defaultAuthorizationCacheMaxEntries,
 	}
 }
 
@@ -89,10 +93,35 @@ func (c *CachedAuthorizer) AuthorizeStream(
 	}
 	if expiresAt.After(now) {
 		c.mu.Lock()
+		c.pruneLocked(now)
+		c.evictOldestLocked()
 		c.entries[key] = cachedDecision{decision: decision, expiresAt: expiresAt}
 		c.mu.Unlock()
 	}
 	return decision, err
+}
+
+func (c *CachedAuthorizer) pruneLocked(now time.Time) {
+	for key, entry := range c.entries {
+		if !now.Before(entry.expiresAt) {
+			delete(c.entries, key)
+		}
+	}
+}
+
+func (c *CachedAuthorizer) evictOldestLocked() {
+	if c.maxEntries <= 0 || len(c.entries) < c.maxEntries {
+		return
+	}
+	var oldestKey string
+	var oldestExpiry time.Time
+	for key, entry := range c.entries {
+		if oldestKey == "" || entry.expiresAt.Before(oldestExpiry) {
+			oldestKey = key
+			oldestExpiry = entry.expiresAt
+		}
+	}
+	delete(c.entries, oldestKey)
 }
 
 func (c *CachedAuthorizer) AuthorizeDevicePublish(

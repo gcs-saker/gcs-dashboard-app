@@ -1,7 +1,8 @@
-import { describe, expect, test } from "vitest";
+import { act, renderHook } from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { AuthApiError } from "@auth/authApi";
 
-import { markOnlineStreamsDegraded, refreshStreamDevicesOnce } from "./useStreamDevicePolling";
+import { markOnlineStreamsDegraded, refreshStreamDevicesOnce, useStreamDevicePolling } from "./useStreamDevicePolling";
 import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 import type { StreamDeviceOption } from "@dashboard/streamDevices";
 
@@ -12,6 +13,32 @@ const baseStream = {
   streamPath: "raw.test.stream",
   title: "테스트",
 } satisfies Omit<DashboardStreamSlot, "status">;
+
+afterEach(() => vi.useRealTimers());
+
+describe("useStreamDevicePolling", () => {
+  test("does not overlap registry requests when a response is slow", async () => {
+    vi.useFakeTimers();
+    let resolveRequest!: (devices: StreamDeviceOption[]) => void;
+    const fetchDevices = vi.fn(() => new Promise<StreamDeviceOption[]>((resolve) => { resolveRequest = resolve; }));
+    const { unmount } = renderHook(() => useStreamDevicePolling({
+      fetchDevices,
+      preferences: { deviceAliases: {} },
+      setSelectedStreamId: vi.fn(),
+      setStreamDevices: vi.fn(),
+      setStreams: vi.fn(),
+    }));
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(fetchDevices).toHaveBeenCalledTimes(1);
+
+    resolveRequest([]);
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(3_000); });
+    expect(fetchDevices).toHaveBeenCalledTimes(2);
+    unmount();
+  });
+});
 
 describe("markOnlineStreamsDegraded", () => {
   test("marks only online streams as degraded after polling failures", () => {

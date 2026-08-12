@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import cast
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -9,7 +9,6 @@ from core.db import get_db
 from sql.mediate_sql import Gateway, GatewayAsset, UnmannedAsset
 
 router = APIRouter()
-node_store: dict[str, dict[str, Any]] = {}
 
 
 @router.get(AssetRoutes.BY_GATEWAY_UUID)

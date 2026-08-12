@@ -130,7 +130,7 @@ export function useLocalWebcamPublisherController({
 
   useEffect(() => {
     if (!streamTargets.some((target) => target.id === runtime.selectedStreamId)) runtime.setSelectedStreamId(streamTargets[0].id);
-  }, [runtime, streamTargets]);
+  }, [runtime.selectedStreamId, runtime.setSelectedStreamId, streamTargets]);
   useEffect(() => () => {
     stopGpsTelemetry();
     clearPublisherSession(runtime.sessionRefs);

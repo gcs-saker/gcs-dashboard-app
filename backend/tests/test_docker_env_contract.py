@@ -209,6 +209,14 @@ def test_single_node_keeps_redis_as_default_cache_runtime() -> None:
         "redis-server",
         "--appendonly",
         "yes",
+        "--maxmemory",
+        "${REDIS_MAXMEMORY:-384mb}",
+        "--maxmemory-policy",
+        "noeviction",
+        "--auto-aof-rewrite-percentage",
+        "100",
+        "--auto-aof-rewrite-min-size",
+        "${REDIS_AOF_REWRITE_MIN_SIZE:-64mb}",
         "--requirepass",
         "${REDIS_PASSWORD:?Set REDIS_PASSWORD}",
     ]
@@ -216,6 +224,23 @@ def test_single_node_keeps_redis_as_default_cache_runtime() -> None:
         "CMD-SHELL",
         'redis-cli -a "$${REDIS_PASSWORD}" ping | grep PONG',
     ]
+
+
+def test_single_node_bounds_container_logs_and_mobile_publisher_resources() -> None:
+    compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
+    services = compose["services"]
+
+    for service in services.values():
+        assert service["logging"]["driver"] == "json-file"
+        assert service["logging"]["options"] == {
+            "max-size": "${CONTAINER_LOG_MAX_SIZE:-10m}",
+            "max-file": "${CONTAINER_LOG_MAX_FILES:-3}",
+        }
+
+    mobile_publisher = services["mobile-publisher"]
+    assert mobile_publisher["pids_limit"] == 128
+    assert mobile_publisher["mem_limit"] == "${MOBILE_PUBLISHER_MEMORY_LIMIT:-256m}"
+    assert mobile_publisher["cpus"] == "${MOBILE_PUBLISHER_CPU_LIMIT:-0.5}"
 
 
 def test_dragonfly_override_replaces_only_cache_runtime_contract() -> None:

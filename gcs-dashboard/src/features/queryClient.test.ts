@@ -12,6 +12,7 @@ describe("queryClient", () => {
     const client = createDashboardQueryClient();
     expect(client.getDefaultOptions().queries?.staleTime).toBe(DASHBOARD_QUERY_DEFAULTS.staleTimeMs);
     expect(client.getDefaultOptions().queries?.gcTime).toBe(DASHBOARD_QUERY_DEFAULTS.gcTimeMs);
+    expect(client.getDefaultOptions().queries?.refetchIntervalInBackground).toBe(false);
     expect(client.getDefaultOptions().queries?.refetchOnWindowFocus).toBe(false);
   });
 

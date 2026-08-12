@@ -33,7 +33,12 @@ from mqtt.subscriber import start_optional_telemetry_subscriber
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     start_optional_telemetry_subscriber(app)
-    yield
+    try:
+        yield
+    finally:
+        runtime = getattr(app.state, "mqtt_v2_telemetry_subscriber", None)
+        if runtime is not None:
+            runtime.close()
 
 
 app = FastAPI(

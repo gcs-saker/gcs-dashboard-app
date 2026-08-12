@@ -29,11 +29,19 @@ class SubscribableMqttClient(Protocol):
 
     def loop_start(self) -> None: ...
 
+    def loop_stop(self) -> None: ...
+
+    def disconnect(self) -> None: ...
+
 
 @dataclass(frozen=True)
 class MqttSubscriberRuntime:
     client: SubscribableMqttClient
     topic: str
+
+    def close(self) -> None:
+        self.client.loop_stop()
+        self.client.disconnect()
 
 
 class MqttSubscriberEnv:
