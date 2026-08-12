@@ -1,5 +1,6 @@
 import { memo, useCallback } from "react";
 import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
+import { isReceivableStream } from "@dashboard/dashboardCctv";
 import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 import {
   getDashboardStreamDisplayName,
@@ -50,7 +51,7 @@ export const StreamCard = memo(function StreamCard({
         </span>
       </button>
       <div className={`stream-card__visual mode-${stream.mode.toLowerCase()}`}>
-        {stream.streamPath ? (
+        {isReceivableStream(stream) ? (
           <RealtimePlayer controls={false} muted streamId={stream.streamPath} title={`${stream.title} 미리보기`} />
         ) : (
           <>
