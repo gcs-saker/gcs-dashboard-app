@@ -33,6 +33,9 @@ export function usePublisherGpsTelemetry({
 }: UsePublisherGpsTelemetryOptions) {
   const gpsWatchIdRef = useRef<number | null>(null);
   const publishStartedAtRef = useRef<number | null>(null);
+  const pendingPositionRef = useRef<GeolocationPosition | null>(null);
+  const sendInFlightRef = useRef(false);
+  const sessionAbortRef = useRef<AbortController | null>(null);
   const [gpsStatus, setGpsStatus] = useState<PublisherGpsStatus>("idle");
   const [gpsDetail, setGpsDetail] = useState(GPS_IDLE_DETAIL);
 
@@ -41,15 +44,21 @@ export function usePublisherGpsTelemetry({
     return Math.max(0, Math.floor((Date.now() - publishStartedAtRef.current) / 1000));
   }, []);
 
-  const postGpsTelemetry = useCallback(
-    async (position: GeolocationPosition): Promise<void> => {
-      try {
+  const flushGpsTelemetry = useCallback(async (): Promise<void> => {
+    if (sendInFlightRef.current) return;
+    sendInFlightRef.current = true;
+    const sessionAbort = sessionAbortRef.current;
+    try {
+      while (pendingPositionRef.current && sessionAbort && !sessionAbort.signal.aborted) {
+        const position = pendingPositionRef.current;
+        pendingPositionRef.current = null;
         const response = await authenticatedFetch(
           apiUrl(DASHBOARD_API_ROUTES.telemetryIngest),
           {
             method: "POST",
             headers: STREAM_JSON_HEADERS,
             body: JSON.stringify(buildPublisherGpsTelemetryPayload(position, streamId, elapsedPublishSeconds())),
+            signal: sessionAbort.signal,
           },
           fetcher,
         );
@@ -57,21 +66,32 @@ export function usePublisherGpsTelemetry({
           setGpsStatus("error");
           setGpsDetail(`${GPS_SEND_FAILED_DETAIL} ${response.status}`);
         }
-      } catch (error) {
+      }
+    } catch (error) {
+      if (!sessionAbort?.signal.aborted) {
         setGpsStatus("error");
         setGpsDetail(error instanceof Error ? error.message : GPS_SEND_FAILED_DETAIL);
       }
-    },
-    [elapsedPublishSeconds, fetcher, streamId],
-  );
+    } finally {
+      sendInFlightRef.current = false;
+      if (pendingPositionRef.current && !sessionAbortRef.current?.signal.aborted) {
+        queueMicrotask(() => void flushGpsTelemetry());
+      }
+    }
+  }, [elapsedPublishSeconds, fetcher, streamId]);
+
+  const queueGpsTelemetry = useCallback((position: GeolocationPosition): void => {
+    pendingPositionRef.current = position;
+    void flushGpsTelemetry();
+  }, [flushGpsTelemetry]);
 
   const handleGpsPosition = useCallback(
     (position: GeolocationPosition): void => {
       setGpsStatus("active");
       setGpsDetail(`${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`);
-      void postGpsTelemetry(position);
+      queueGpsTelemetry(position);
     },
-    [postGpsTelemetry],
+    [queueGpsTelemetry],
   );
 
   const handleGpsError = useCallback((error: GeolocationPositionError): void => {
@@ -85,6 +105,9 @@ export function usePublisherGpsTelemetry({
     }
     gpsWatchIdRef.current = null;
     publishStartedAtRef.current = null;
+    pendingPositionRef.current = null;
+    sessionAbortRef.current?.abort();
+    sessionAbortRef.current = null;
     setGpsStatus("idle");
     setGpsDetail(GPS_IDLE_DETAIL);
   }, [geolocation]);
@@ -97,6 +120,7 @@ export function usePublisherGpsTelemetry({
     }
 
     stopGpsTelemetry();
+    sessionAbortRef.current = new AbortController();
     publishStartedAtRef.current = Date.now();
     setGpsStatus("requesting");
     setGpsDetail(GPS_PERMISSION_DETAIL);

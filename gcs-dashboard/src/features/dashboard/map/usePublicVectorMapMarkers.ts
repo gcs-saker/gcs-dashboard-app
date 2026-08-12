@@ -9,7 +9,6 @@ const MAP_POSITION_EVENTS = ["move", "zoom", "resize"] as const;
 
 export function usePublicVectorMapMarkers(
   map: L.LeafletMap | null,
-  selectedStream: DashboardStreamSlot,
   streams: DashboardStreamSlot[],
 ): StreamMarkerPosition[] {
   const [markerPositions, setMarkerPositions] = useState<StreamMarkerPosition[]>([]);
@@ -28,7 +27,7 @@ export function usePublicVectorMapMarkers(
     updateMarkerPositions();
     MAP_POSITION_EVENTS.forEach((eventName) => map.on(eventName, updateMarkerPositions));
     return () => MAP_POSITION_EVENTS.forEach((eventName) => map.off(eventName, updateMarkerPositions));
-  }, [map, selectedStream, streams]);
+  }, [map, streams]);
 
   return markerPositions;
 }

@@ -17,6 +17,7 @@ import {
 import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 
 interface UseStreamDevicePollingInput {
+  fetchDevices?: typeof fetchStreamDeviceOptions;
   onAuthFailure?: () => void;
   preferences: StreamPreferencesSnapshot;
   setSelectedStreamId: Dispatch<SetStateAction<string>>;
@@ -25,52 +26,70 @@ interface UseStreamDevicePollingInput {
 }
 
 interface RefreshStreamDevicesInput extends UseStreamDevicePollingInput {
-  fetchDevices?: typeof fetchStreamDeviceOptions;
+  isCurrent?: () => boolean;
   stopPolling?: () => void;
 }
 
 export function useStreamDevicePolling({
+  fetchDevices,
   onAuthFailure,
   preferences,
   setSelectedStreamId,
   setStreamDevices,
   setStreams,
 }: UseStreamDevicePollingInput): void {
-  const latestInput = useRef({ onAuthFailure, preferences });
-  latestInput.current = { onAuthFailure, preferences };
+  const latestInput = useRef({ fetchDevices, onAuthFailure, preferences });
+  latestInput.current = { fetchDevices, onAuthFailure, preferences };
 
   useEffect(() => {
     let isMounted = true;
     let stopped = false;
+    let inFlight = false;
     let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
     const refreshStreams = async (): Promise<void> => {
-      if (!isMounted || stopped) return;
+      if (!isMounted || stopped || inFlight || document.hidden) return;
+      inFlight = true;
       const currentInput = latestInput.current;
-      await refreshStreamDevicesOnce({
-        onAuthFailure: currentInput.onAuthFailure,
-        preferences: currentInput.preferences,
-        setSelectedStreamId,
-        setStreamDevices,
-        setStreams,
-        stopPolling: () => {
-          stopped = true;
-        },
-      });
+      try {
+        await refreshStreamDevicesOnce({
+          fetchDevices: currentInput.fetchDevices,
+          onAuthFailure: currentInput.onAuthFailure,
+          preferences: currentInput.preferences,
+          setSelectedStreamId,
+          setStreamDevices,
+          setStreams,
+          isCurrent: () => isMounted && !stopped,
+          stopPolling: () => {
+            stopped = true;
+          },
+        });
+      } finally {
+        inFlight = false;
+      }
       if (isMounted && !stopped) {
         timeoutId = globalThis.setTimeout(() => void refreshStreams(), 3000);
       }
     };
+    const handleVisibilityChange = () => {
+      if (document.hidden || stopped) return;
+      if (timeoutId !== null) globalThis.clearTimeout(timeoutId);
+      timeoutId = null;
+      void refreshStreams();
+    };
 
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     void refreshStreams();
     return () => {
       isMounted = false;
       if (timeoutId) globalThis.clearTimeout(timeoutId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [setSelectedStreamId, setStreamDevices, setStreams]);
 }
 
 export async function refreshStreamDevicesOnce({
   fetchDevices = fetchStreamDeviceOptions,
+  isCurrent = () => true,
   onAuthFailure,
   preferences,
   setSelectedStreamId,
@@ -80,6 +99,7 @@ export async function refreshStreamDevicesOnce({
 }: RefreshStreamDevicesInput): Promise<void> {
   try {
     const devices = applyStreamDeviceAliases(await fetchDevices(), preferences.deviceAliases);
+    if (!isCurrent()) return;
     setStreamDevices((current) => (areStreamDevicesEqual(current, devices) ? current : devices));
     setStreams((current) => {
       const merged = mergeStreamSlotsWithDevices(current, devices);
@@ -87,6 +107,7 @@ export async function refreshStreamDevicesOnce({
       return areStreamSlotsEqual(current, merged) ? current : merged;
     });
   } catch (error) {
+    if (!isCurrent()) return;
     if (error instanceof AuthApiError && error.status === 401) {
       stopPolling?.();
       onAuthFailure?.();

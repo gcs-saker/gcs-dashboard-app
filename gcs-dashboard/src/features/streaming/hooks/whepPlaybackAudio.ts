@@ -40,23 +40,29 @@ export function audioPlaybackDiagnostic(
 export function monitorAudioStats(peerConnection: RTCPeerConnection, dispatch: Dispatch<PlaybackAction>): () => void {
   let disposed = false;
   let previousStats = EMPTY_AUDIO_STATS;
+  let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
 
-  const update = () => {
-    if (typeof peerConnection.getStats !== "function") return;
-    void peerConnection.getStats().then((report) => {
+  const update = async (): Promise<void> => {
+    if (typeof peerConnection.getStats !== "function" || disposed) return;
+    try {
+      const report = await peerConnection.getStats();
       if (disposed) return;
       const nextStats = extractAudioStats(report);
-      if (audioStatsEqual(previousStats, nextStats)) return;
-      previousStats = nextStats;
-      dispatch({ type: "audio-stats", stats: nextStats });
-    }).catch(() => undefined);
+      if (!audioStatsEqual(previousStats, nextStats)) {
+        previousStats = nextStats;
+        dispatch({ type: "audio-stats", stats: nextStats });
+      }
+    } catch {
+      // A transient stats read must not terminate media playback monitoring.
+    } finally {
+      if (!disposed) timeoutId = globalThis.setTimeout(() => void update(), AUDIO_STATS_POLL_INTERVAL_MS);
+    }
   };
 
-  update();
-  const intervalId = globalThis.setInterval(update, AUDIO_STATS_POLL_INTERVAL_MS);
+  void update();
   return () => {
     disposed = true;
-    globalThis.clearInterval(intervalId);
+    if (timeoutId !== null) globalThis.clearTimeout(timeoutId);
     dispatch({ type: "audio-stats", stats: EMPTY_AUDIO_STATS });
   };
 }

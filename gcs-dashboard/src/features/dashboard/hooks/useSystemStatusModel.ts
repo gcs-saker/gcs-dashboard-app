@@ -5,6 +5,7 @@ import {
   dashboardRefetchInterval,
   dashboardStaleTimeForPolling,
   DASHBOARD_QUERY_POLICY,
+  withAbortSignal,
 } from "@/features/queryClient";
 import { DASHBOARD_QUERY_KEY_FACTORY } from "@/features/stateContracts";
 import {
@@ -58,7 +59,7 @@ export function useSystemStatusModel({
     memoryCache.status.checkedAt ? memoryCache.status : null,
   );
   const statusQuery = useQuery({
-    queryFn: () => fetchDashboardServerStatus(fetcher),
+    queryFn: ({ signal }) => fetchDashboardServerStatus(withAbortSignal(fetcher ?? globalThis.fetch, signal)),
     queryKey: DASHBOARD_QUERY_KEY_FACTORY.serverStatus(refreshMs, fetcher ? "custom-fetcher" : "default-fetcher"),
     initialData: memoryCache.status,
     initialDataUpdatedAt: 0,

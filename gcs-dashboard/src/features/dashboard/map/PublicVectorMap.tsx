@@ -53,7 +53,7 @@ export function PublicVectorMap({
     onUserInteraction: disableAutoFocus,
     tileConfig,
   });
-  const markerPositions = usePublicVectorMapMarkers(mapInstance, selectedStream, streams);
+  const markerPositions = usePublicVectorMapMarkers(mapInstance, streams);
 
   useEffect(() => {
     if (!autoFocusEnabled) return;
