@@ -3,6 +3,7 @@
   grid-template-rows: minmax(220px, 1fr);
   aspect-ratio: 16 / 9;
   min-height: 260px;
+  min-width: 0;
   overflow: hidden;
   position: relative;
   contain: layout paint;
@@ -77,11 +78,15 @@
 
 .realtime-player__placeholder {
   align-content: center;
+  box-sizing: border-box;
   display: grid;
   gap: 8px;
   grid-auto-rows: max-content;
   justify-items: center;
+  justify-self: stretch;
+  max-width: 100%;
   min-height: 220px;
+  min-width: 0;
   padding: 16px;
   background:
     linear-gradient(rgba(190, 213, 226, 0.045) 1px, transparent 1px),
@@ -92,6 +97,13 @@
   color: #8fc7ff;
   font-size: 13px;
   text-align: center;
+  width: 100%;
+}
+
+.realtime-player__placeholder > strong,
+.realtime-player__placeholder > span:not(.realtime-player__signal) {
+  justify-self: center;
+  margin-inline: auto;
 }
 
 .realtime-player__placeholder strong {
@@ -101,7 +113,9 @@
 
 .realtime-player__placeholder span:not(.realtime-player__signal) {
   color: #8da1af;
-  max-width: 280px;
+  box-sizing: border-box;
+  max-width: min(280px, calc(100% - 24px));
+  overflow-wrap: anywhere;
 }
 
 .realtime-player__signal {
