@@ -74,7 +74,7 @@ class FixedWindowRateLimiter(
         if (maxRequests <= 0) return RateLimitDecision.denied(window.seconds)
         val nowMillis = clock.millis()
         windows.entries.removeIf { it.value.resetAtMillis <= nowMillis }
-        if (key !in windows && windows.size >= maxTrackedKeys) {
+        if (!windows.containsKey(key) && windows.size >= maxTrackedKeys) {
             return RateLimitDecision.denied(window.seconds.coerceAtLeast(1))
         }
         val windowMillis = window.toMillis().coerceAtLeast(1)
