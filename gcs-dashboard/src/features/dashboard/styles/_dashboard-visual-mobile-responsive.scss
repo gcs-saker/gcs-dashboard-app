@@ -4,6 +4,25 @@
   }
 }
 
+@media (max-width: 1180px) {
+  .ops-dashboard__tabs {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ops-dashboard__tab-list {
+    min-width: 0;
+    overflow-x: auto;
+    width: 100%;
+  }
+
+  .ops-dashboard__actions {
+    justify-content: flex-start;
+    min-width: 0;
+    width: 100%;
+  }
+}
+
 @media (max-width: 760px) {
   .ops-dashboard {
     overflow: auto;
@@ -12,9 +31,29 @@
   .ops-dashboard__tabs {
     gap: 8px;
     min-height: 64px;
-    overflow-x: auto;
+    overflow: visible;
     padding: 10px;
     width: 100%;
+  }
+
+  .ops-dashboard__tab-list {
+    overscroll-behavior-x: contain;
+  }
+
+  .ops-dashboard__actions,
+  .ops-dashboard__action-group,
+  .talkback-panel {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .ops-dashboard__action-group,
+  .talkback-panel {
+    flex-wrap: wrap;
+  }
+
+  .ops-user-menu {
+    margin-left: auto;
   }
 
   .ops-tab {
