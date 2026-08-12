@@ -67,6 +67,7 @@ const (
 	errGrpcGatewayUnavailable        = "grpc gateway unavailable"
 	errAuthenticationRequiredMessage = "authentication required"
 	errStreamAccessDeniedMessage     = "stream access denied"
+	errAuthorizationUnavailable       = "authorization service unavailable"
 	errStreamNotRegisteredMessage    = "stream is not registered"
 	errPublisherAuthNotConfigured    = "publisher authorization is not configured"
 	errDevicePublisherAuthRequired   = "device publisher authorization is required"

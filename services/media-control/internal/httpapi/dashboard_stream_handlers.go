@@ -122,7 +122,7 @@ func (s Server) writeDashboardStreamRead(w http.ResponseWriter, r *http.Request,
 
 	stream, found, err := s.findStream(r.Context(), streamID)
 	if err != nil {
-		writeJSON(w, http.StatusBadGateway, errorPayload(err.Error()))
+		writeJSON(w, http.StatusBadGateway, errorPayload(errStreamRegistryQueryFailed))
 		return
 	}
 	if !found {

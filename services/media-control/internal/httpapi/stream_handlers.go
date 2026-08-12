@@ -7,7 +7,7 @@ import (
 func (s Server) streamList(w http.ResponseWriter, r *http.Request) {
 	streams, err := s.listStreams(r.Context())
 	if err != nil {
-		writeJSON(w, http.StatusBadGateway, errorPayload(err.Error()))
+		writeJSON(w, http.StatusBadGateway, errorPayload(errStreamRegistryQueryFailed))
 		return
 	}
 	writeJSON(w, http.StatusOK, streamListResponse{Streams: streams})
@@ -42,7 +42,7 @@ func (s Server) dashboardStreamList(w http.ResponseWriter, r *http.Request) {
 
 	streams, err := s.listStreams(r.Context())
 	if err != nil {
-		writeJSON(w, http.StatusBadGateway, errorPayload(err.Error()))
+		writeJSON(w, http.StatusBadGateway, errorPayload(errStreamRegistryQueryFailed))
 		return
 	}
 
