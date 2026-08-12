@@ -1,5 +1,6 @@
 package kr.co.a4ai.gcssaker.authpolicy
 
+import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceType
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupType
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationUnit
@@ -12,6 +13,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceStreams
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcRegisteredDeviceRepository
 import org.h2.jdbcx.JdbcDataSource
+import org.springframework.jdbc.core.JdbcTemplate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -20,6 +22,33 @@ class JdbcRegisteredDeviceRepositoryTest {
     fun `legacy inactive status maps to disabled during rolling deployment`() {
         assertEquals(RegisteredDeviceStatus.DISABLED, RegisteredDeviceStatus.fromPersistence("INACTIVE"))
         assertEquals(RegisteredDeviceStatus.ACTIVE, RegisteredDeviceStatus.fromPersistence("active"))
+    }
+
+    @Test
+    fun `jdbc repository maps legacy ground robot device type`() {
+        val dataSource = h2DataSource()
+        JdbcOrganizationHierarchyRepository(
+            dataSource,
+            listOf(OrganizationUnit(GroupId("co-a"), "A Company", GroupType.COMPANY)),
+        )
+        val repository = JdbcRegisteredDeviceRepository(dataSource)
+        JdbcTemplate(dataSource).update(
+            """
+            INSERT INTO registered_devices
+                (device_uuid, group_id, display_name, credential_hash, status, device_type)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+            DeviceRepositoryFixtures.DEVICE_UUID,
+            "co-a",
+            "Legacy Ground Robot",
+            DeviceRepositoryFixtures.CREDENTIAL_HASH,
+            "active",
+            "ground_robot",
+        )
+
+        val saved = repository.findByDeviceUuid(DeviceRepositoryFixtures.DEVICE_UUID)
+
+        assertEquals(DeviceType.ROBOT, saved?.deviceType)
     }
 
     @Test
