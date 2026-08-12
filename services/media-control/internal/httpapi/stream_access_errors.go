@@ -22,6 +22,6 @@ func (s Server) writeStreamAccessError(w http.ResponseWriter, err error) {
 		writeJSON(w, http.StatusForbidden, errorPayload(errStreamAccessDeniedMessage))
 	default:
 		s.metrics.ObserveError(metricSourceHTTP, metricResultError)
-		writeJSON(w, http.StatusBadGateway, errorPayload(err.Error()))
+		writeJSON(w, http.StatusBadGateway, errorPayload(errAuthorizationUnavailable))
 	}
 }

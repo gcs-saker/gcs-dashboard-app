@@ -483,6 +483,50 @@ func TestDashboardStreamListRequiresAuthorizationBeforeQueryingRegistry(t *testi
 	}
 }
 
+func TestDashboardStreamListDoesNotExposeInternalAuthorizationURL(t *testing.T) {
+	internalError := errors.New(`Post "http://auth-policy:8080/policy/streams/access": connection refused`)
+	server := newTestServerWithAuthorizer(
+		fakeStreams{},
+		fakeIce{},
+		fakeAuthorizer{errByStream: map[string]error{"control.stream-list": internalError}},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusBadGateway {
+		t.Fatalf("expected 502, got %d", recorder.Code)
+	}
+	if strings.Contains(recorder.Body.String(), "auth-policy:8080") || strings.Contains(recorder.Body.String(), "/policy/streams/access") {
+		t.Fatalf("response exposed internal authorization route: %s", recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), errAuthorizationUnavailable) {
+		t.Fatalf("expected sanitized authorization error, got %s", recorder.Body.String())
+	}
+}
+
+func TestDashboardStreamListDoesNotExposeInternalRegistryError(t *testing.T) {
+	server := newTestServer(
+		fakeStreams{err: errors.New(`Get "http://mediamtx:9997/v3/paths/list": connection refused`)},
+		fakeIce{},
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusBadGateway {
+		t.Fatalf("expected 502, got %d", recorder.Code)
+	}
+	if strings.Contains(recorder.Body.String(), "mediamtx:9997") || strings.Contains(recorder.Body.String(), "/v3/paths/list") {
+		t.Fatalf("response exposed internal registry route: %s", recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), errStreamRegistryQueryFailed) {
+		t.Fatalf("expected sanitized registry error, got %s", recorder.Body.String())
+	}
+}
+
 func TestDashboardPlaybackDeniesForbiddenStream(t *testing.T) {
 	path, _ := domain.NewStreamPath("raw/company-b/front")
 	server := newTestServerWithAuthorizer(
