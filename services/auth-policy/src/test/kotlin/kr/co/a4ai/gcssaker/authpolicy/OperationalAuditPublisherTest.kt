@@ -22,6 +22,17 @@ import java.util.concurrent.RejectedExecutionException
 
 class OperationalAuditPublisherTest {
     @Test
+    fun `in-memory sink evicts oldest records at capacity`() {
+        val sink = InMemoryOperationalAuditSink(capacity = 2)
+        val principal = AuthenticatedPrincipal("operator01", UserRole.OPERATOR, GroupId("co-a"))
+        repeat(3) { index ->
+            sink.append(OperationalAuditRecord(principal, OperationalEventQuery(), index, Instant.EPOCH.plusSeconds(index.toLong())))
+        }
+
+        assertEquals(listOf(1, 2), sink.snapshot().map { it.resultCount })
+    }
+
+    @Test
     fun `async audit publisher delegates post processing outside auth result calculation`() {
         val sink = InMemoryOperationalAuditSink()
         val metrics = OperationalAuditPublisherMetrics()

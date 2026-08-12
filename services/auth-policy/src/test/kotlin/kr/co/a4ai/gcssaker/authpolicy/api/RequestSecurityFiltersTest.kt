@@ -17,6 +17,19 @@ import java.lang.reflect.Proxy
 
 class RequestSecurityFiltersTest {
     @Test
+    fun `rate limiter bounds distinct tracked client keys`() {
+        val limiter = FixedWindowRateLimiter(
+            maxRequests = 10,
+            window = Duration.ofMinutes(1),
+            maxTrackedKeys = 2,
+        )
+
+        assertEquals(true, limiter.tryAcquire("client-one").allowed)
+        assertEquals(true, limiter.tryAcquire("client-two").allowed)
+        assertEquals(false, limiter.tryAcquire("client-three").allowed)
+    }
+
+    @Test
     fun `correlation id filter preserves caller supplied request id`() {
         val request = MockHttpServletRequest("GET", "/healthz").apply {
             addHeader(RequestTraceContract.CORRELATION_ID_HEADER, "trace-001")

@@ -18,12 +18,19 @@ x-runtime-hardening: &runtime_hardening
   security_opt: [no-new-privileges:true]
   pids_limit: 256
 
+x-logging-defaults: &logging_defaults
+  driver: json-file
+  options:
+    max-size: ${CONTAINER_LOG_MAX_SIZE:-10m}
+    max-file: ${CONTAINER_LOG_MAX_FILES:-3}
+
 services:
   postgres-geo:
     image: postgis/postgis@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5
     pids_limit: 256
     mem_limit: ${POSTGRES_MEMORY_LIMIT:-1g}
     cpus: ${POSTGRES_CPU_LIMIT:-1.5}
+    logging: *logging_defaults
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-gcs_geo}
       POSTGRES_USER: ${POSTGRES_USER:-gcs_geo}
@@ -46,9 +53,23 @@ services:
     pids_limit: 128
     mem_limit: ${REDIS_MEMORY_LIMIT:-512m}
     cpus: ${REDIS_CPU_LIMIT:-0.75}
+    logging: *logging_defaults
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD}"]
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - ${REDIS_MAXMEMORY:-384mb}
+      - --maxmemory-policy
+      - noeviction
+      - --auto-aof-rewrite-percentage
+      - "100"
+      - --auto-aof-rewrite-min-size
+      - ${REDIS_AOF_REWRITE_MIN_SIZE:-64mb}
+      - --requirepass
+      - ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
     volumes:
       - redis-data:/data
     healthcheck:
@@ -63,6 +84,7 @@ services:
     pids_limit: 128
     mem_limit: ${MQTT_MEMORY_LIMIT:-256m}
     cpus: ${MQTT_CPU_LIMIT:-0.5}
+    logging: *logging_defaults
     command: ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
     environment:
       MQTT_HEALTH_USERNAME: ${MQTT_HEALTH_USERNAME:?Set MQTT_HEALTH_USERNAME}
@@ -97,6 +119,7 @@ services:
     tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=64m"]
     mem_limit: ${BACKEND_MEMORY_LIMIT:-768m}
     cpus: ${BACKEND_CPU_LIMIT:-1.5}
+    logging: *logging_defaults
     image: ${BACKEND_IMAGE:-gcs-saker-backend:arch-poc}
     build:
       context: ../../backend
@@ -159,6 +182,7 @@ services:
     tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=128m"]
     mem_limit: ${AUTH_POLICY_MEMORY_LIMIT:-1g}
     cpus: ${AUTH_POLICY_CPU_LIMIT:-2.0}
+    logging: *logging_defaults
     image: ${AUTH_POLICY_IMAGE:-gcs-saker-auth-policy:arch-poc}
     build:
       context: ../../services/auth-policy
@@ -178,7 +202,7 @@ services:
       AUTH_POLICY_SMOKE_PASSWORD: ${AUTH_POLICY_SMOKE_PASSWORD:?Set AUTH_POLICY_SMOKE_PASSWORD}
       AUTH_POLICY_SIGNUP_INVITES: ${AUTH_POLICY_SIGNUP_INVITES:-}
       AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS: ${AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS:?Set AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS}
-      AUTH_POLICY_TRACING_SAMPLING_PROBABILITY: ${AUTH_POLICY_TRACING_SAMPLING_PROBABILITY:-1.0}
+      AUTH_POLICY_TRACING_SAMPLING_PROBABILITY: ${AUTH_POLICY_TRACING_SAMPLING_PROBABILITY:-0.1}
       AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED: ${AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED:-true}
       AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED: ${AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED:-true}
       SPRING_DATASOURCE_URL: ${AUTH_POLICY_DATASOURCE_URL:-jdbc:postgresql://postgres-geo:5432/${POSTGRES_DB:-gcs_geo}}
@@ -208,6 +232,7 @@ services:
     tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=64m"]
     mem_limit: ${MEDIA_CONTROL_MEMORY_LIMIT:-768m}
     cpus: ${MEDIA_CONTROL_CPU_LIMIT:-2.0}
+    logging: *logging_defaults
     image: ${MEDIA_CONTROL_IMAGE:-gcs-saker-media-control:arch-poc}
     build:
       context: ../../services/media-control
@@ -273,6 +298,7 @@ services:
     pids_limit: 512
     mem_limit: ${MEDIAMTX_MEMORY_LIMIT:-1g}
     cpus: ${MEDIAMTX_CPU_LIMIT:-2.0}
+    logging: *logging_defaults
     env_file: *service_env_files
     environment:
       MTX_WEBRTCIPSFROMINTERFACES: ${MEDIAMTX_WEBRTC_IPS_FROM_INTERFACES:-true}
@@ -298,6 +324,7 @@ services:
     pids_limit: 256
     mem_limit: ${TURN_MEMORY_LIMIT:-256m}
     cpus: ${TURN_CPU_LIMIT:-0.5}
+    logging: *logging_defaults
     env_file: *service_env_files
     entrypoint: ["turnserver"]
     command:
@@ -328,6 +355,7 @@ services:
     pids_limit: 256
     mem_limit: ${TURN_MEMORY_LIMIT:-256m}
     cpus: ${TURN_CPU_LIMIT:-0.5}
+    logging: *logging_defaults
     env_file: *service_env_files
     entrypoint: ["turnserver"]
     command:
@@ -360,6 +388,7 @@ services:
       - /var/cache/nginx:rw,noexec,nosuid,nodev,size=16m,uid=101,gid=101,mode=0755
     mem_limit: ${DASHBOARD_MEMORY_LIMIT:-256m}
     cpus: ${DASHBOARD_CPU_LIMIT:-0.5}
+    logging: *logging_defaults
     image: ${DASHBOARD_IMAGE:-gcs-saker-dashboard:arch-poc}
     build:
       context: ../../gcs-dashboard
@@ -383,6 +412,10 @@ services:
 
   mobile-publisher:
     image: ${MOBILE_PUBLISHER_IMAGE:-gcs-mobile-publisher:latest}
+    pids_limit: 128
+    mem_limit: ${MOBILE_PUBLISHER_MEMORY_LIMIT:-256m}
+    cpus: ${MOBILE_PUBLISHER_CPU_LIMIT:-0.5}
+    logging: *logging_defaults
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz >/dev/null"]
@@ -399,6 +432,7 @@ services:
       - /var/cache/nginx:rw,noexec,nosuid,nodev,size=16m,uid=101,gid=101,mode=0755
     mem_limit: ${EDGE_MEMORY_LIMIT:-256m}
     cpus: ${EDGE_CPU_LIMIT:-0.5}
+    logging: *logging_defaults
     ports:
       - "${PUBLIC_HTTP_BIND_ADDR:-127.0.0.1}:${PUBLIC_HTTP_PORT:-8080}:8080"
     volumes:

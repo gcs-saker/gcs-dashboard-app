@@ -66,6 +66,7 @@ class FixedWindowRateLimiter(
     private val maxRequests: Int,
     private val window: Duration,
     private val clock: Clock = Clock.systemUTC(),
+    private val maxTrackedKeys: Int = DEFAULT_MAX_TRACKED_KEYS,
 ) {
     private val windows = ConcurrentHashMap<String, WindowCounter>()
 
@@ -73,6 +74,9 @@ class FixedWindowRateLimiter(
         if (maxRequests <= 0) return RateLimitDecision.denied(window.seconds)
         val nowMillis = clock.millis()
         windows.entries.removeIf { it.value.resetAtMillis <= nowMillis }
+        if (key !in windows && windows.size >= maxTrackedKeys) {
+            return RateLimitDecision.denied(window.seconds.coerceAtLeast(1))
+        }
         val windowMillis = window.toMillis().coerceAtLeast(1)
         val next = windows.compute(key) { _, current ->
             if (current == null || nowMillis >= current.resetAtMillis) {
@@ -92,6 +96,10 @@ class FixedWindowRateLimiter(
         val count: Int,
         val resetAtMillis: Long,
     )
+
+    private companion object {
+        const val DEFAULT_MAX_TRACKED_KEYS = 10_000
+    }
 }
 
 data class RateLimitDecision(
