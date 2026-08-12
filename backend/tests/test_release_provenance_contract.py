@@ -105,8 +105,17 @@ def test_deploy_guards_stateful_container_identity() -> None:
     assert "stateful-containers.before.env" in script
     assert "stateful/external service was replaced" in script
     assert (
-        "UNCHANGED_SERVICES=(mobile-publisher postgres-geo redis mqtt mediamtx turn-primary turn-secondary)" in script
+        "UNCHANGED_SERVICES=(edge mobile-publisher postgres-geo redis mqtt mediamtx turn-primary turn-secondary)"
+        in script
     )
+
+
+def test_deploy_keeps_public_edge_available_during_application_rollout() -> None:
+    script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+
+    assert "STATELESS_SERVICES=(backend auth-policy media-control dashboard)" in script
+    assert "STATELESS_SERVICES=(backend auth-policy media-control dashboard edge)" not in script
+    assert "127.0.0.1:80" in script
 
 
 def test_deploy_updates_active_release_pointer_only_after_verification() -> None:

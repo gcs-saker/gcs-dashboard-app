@@ -21,7 +21,7 @@ export BACKEND_IMAGE="gcs-saker-backend:${SOURCE_COMMIT}"
 export AUTH_POLICY_IMAGE="gcs-saker-auth-policy:${SOURCE_COMMIT}"
 export MEDIA_CONTROL_IMAGE="gcs-saker-media-control:${SOURCE_COMMIT}"
 export DASHBOARD_IMAGE="gcs-saker-dashboard:${SOURCE_COMMIT}"
-STATELESS_SERVICES=(backend auth-policy media-control dashboard edge)
+STATELESS_SERVICES=(backend auth-policy media-control dashboard)
 # Only services with a Compose build definition belong here. The publisher and
 # edge images are supplied by the deployment environment; passing them to
 # `compose build` makes Compose attempt an unauthenticated registry pull.
@@ -29,7 +29,11 @@ BUILD_SERVICES=(backend auth-policy media-control dashboard)
 # The publisher is an externally supplied local image. It is verified but not
 # recreated by this source release, because there is no reproducible build
 # definition or registry artifact for it in this repository.
-UNCHANGED_SERVICES=(mobile-publisher postgres-geo redis mqtt mediamtx turn-primary turn-secondary)
+# The public edge must stay available while application containers are
+# replaced. Recreating it makes the host Caddy upstream (127.0.0.1:80)
+# disappear and turns every concurrent request into a 502. Edge configuration
+# changes use a separate, explicitly planned ingress rollout.
+UNCHANGED_SERVICES=(edge mobile-publisher postgres-geo redis mqtt mediamtx turn-primary turn-secondary)
 
 [[ "${RELEASE_DIR}" = /* && -d "${RELEASE_DIR}" ]] || { echo "RELEASE_DIR must be an existing absolute directory" >&2; exit 2; }
 root_real="$(realpath "${ROOT}")"
