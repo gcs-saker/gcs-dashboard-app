@@ -204,6 +204,7 @@ class AuthPolicyConfigTest {
         assertEquals("admin-password", settings.adminPassword)
         assertEquals("correct-password", settings.operatorPassword)
         assertEquals("m7-smoke-pass", settings.smokePassword)
+        assertEquals(120, settings.refreshTokenExpireMinutes)
         assertEquals(GroupId("co-a"), settings.deviceBootstrapTokens.groupIdFor("LOCAL-DEVICE-BOOTSTRAP"))
     }
 
