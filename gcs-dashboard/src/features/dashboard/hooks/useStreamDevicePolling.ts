@@ -1,4 +1,4 @@
-import { useEffect, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { AuthApiError } from "@auth/authApi";
 import {
   fetchStreamDeviceOptions,
@@ -36,30 +36,37 @@ export function useStreamDevicePolling({
   setStreamDevices,
   setStreams,
 }: UseStreamDevicePollingInput): void {
+  const latestInput = useRef({ onAuthFailure, preferences });
+  latestInput.current = { onAuthFailure, preferences };
+
   useEffect(() => {
     let isMounted = true;
-    let intervalId: ReturnType<typeof globalThis.setInterval> | null = null;
+    let stopped = false;
+    let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
     const refreshStreams = async (): Promise<void> => {
-      if (!isMounted) return;
+      if (!isMounted || stopped) return;
+      const currentInput = latestInput.current;
       await refreshStreamDevicesOnce({
-        onAuthFailure,
-        preferences,
+        onAuthFailure: currentInput.onAuthFailure,
+        preferences: currentInput.preferences,
         setSelectedStreamId,
         setStreamDevices,
         setStreams,
         stopPolling: () => {
-          if (intervalId) globalThis.clearInterval(intervalId);
+          stopped = true;
         },
       });
+      if (isMounted && !stopped) {
+        timeoutId = globalThis.setTimeout(() => void refreshStreams(), 3000);
+      }
     };
 
     void refreshStreams();
-    intervalId = globalThis.setInterval(() => void refreshStreams(), 3000);
     return () => {
       isMounted = false;
-      if (intervalId) globalThis.clearInterval(intervalId);
+      if (timeoutId) globalThis.clearTimeout(timeoutId);
     };
-  }, [onAuthFailure, preferences.deviceAliases, setSelectedStreamId, setStreamDevices, setStreams]);
+  }, [setSelectedStreamId, setStreamDevices, setStreams]);
 }
 
 export async function refreshStreamDevicesOnce({

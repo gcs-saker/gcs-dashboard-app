@@ -54,7 +54,7 @@ describe("config API URL helpers", () => {
     expect(buildAuthUrl("/auth-policy/auth", "/me")).toBe("/auth-policy/auth/me");
   });
 
-  test("rewrites direct localhost backend base to the dev-server proxy path on local dashboard origin", () => {
+  test("always rewrites loopback bases to edge-relative paths", () => {
     expect(normalizeLocalDevBaseUrl("http://localhost:8001", "/api")).toBe("/api");
     expect(normalizeLocalDevBaseUrl("http://127.0.0.1:8888", "/hls")).toBe("/hls");
   });

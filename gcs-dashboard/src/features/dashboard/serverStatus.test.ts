@@ -52,6 +52,24 @@ describe("serverStatus", () => {
     expect(serverHealthText(status.apiServer)).toBe("오류");
   });
 
+  test("keeps successful probes visible when one endpoint rejects", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("ok", { status: 200 }))
+      .mockResolvedValueOnce(new Response("ready", { status: 200 }))
+      .mockRejectedValueOnce(new TypeError("temporary signaling network failure"))
+      .mockResolvedValueOnce(new Response("media-ready", { status: 200 }))
+      .mockResolvedValueOnce(new Response("stream", { status: 200 }));
+
+    const status = await fetchDashboardServerStatus(fetcher as unknown as typeof fetch);
+
+    expect(status.apiServer).toBe("online");
+    expect(status.authServer).toBe("online");
+    expect(status.signalingServer).toBe("error");
+    expect(status.readiness).toBe("online");
+    expect(status.streams).toBe("online");
+  });
+
   test("does not require auth token for the operational stream status probe", async () => {
     const fetcher = vi
       .fn()

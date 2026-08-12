@@ -94,8 +94,6 @@ export function hlsStreamUrl(streamId: string): string {
 }
 
 export function normalizeLocalDevBaseUrl(configuredUrl: string, fallbackPath: string): string {
-  if (!isLocalDashboardOrigin()) return configuredUrl;
-
   try {
     const parsed = new URL(configuredUrl);
     if (["localhost", "127.0.0.1", "::1"].includes(parsed.hostname)) {
@@ -107,12 +105,6 @@ export function normalizeLocalDevBaseUrl(configuredUrl: string, fallbackPath: st
 
   return configuredUrl;
 }
-
-function isLocalDashboardOrigin(): boolean {
-  if (typeof window === "undefined") return false;
-  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
-}
-
 function parseDashboardMapProvider(provider: string): DashboardMapProvider {
   if (
     provider === "esri-satellite"

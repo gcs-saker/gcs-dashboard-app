@@ -41,5 +41,5 @@ def test_v2_completion_matrix_promotes_release_gate_to_non_blocking() -> None:
     assert matrix["releaseReadiness"] == "release-candidate"
     assert release_gate["currentState"] == "release-cutover-validated"
     assert release_gate["releaseBlocker"] is False
-    assert str(EVIDENCE_DOC.relative_to(REPO_ROOT)) in release_gate["evidence"]
-    assert str(RELEASE_NOTE.relative_to(REPO_ROOT)) in release_gate["evidence"]
+    assert EVIDENCE_DOC.relative_to(REPO_ROOT).as_posix() in release_gate["evidence"]
+    assert RELEASE_NOTE.relative_to(REPO_ROOT).as_posix() in release_gate["evidence"]
