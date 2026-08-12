@@ -63,9 +63,6 @@ export const StreamCard = memo(function StreamCard({
       </div>
       <span className="stream-card__detail">{getDashboardStreamDisplayName(stream)}</span>
       {isSelected ? <span className="stream-card__selected-link">현재 선택</span> : null}
-      <button className="stream-card__connect" onClick={selectStream} type="button">
-        스트림 선택
-      </button>
       {onToggleTalkbackTarget ? (
         <button
           aria-pressed={isTalkbackTarget}

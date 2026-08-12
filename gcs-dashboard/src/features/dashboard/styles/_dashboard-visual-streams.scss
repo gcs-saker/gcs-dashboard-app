@@ -103,12 +103,10 @@
   z-index: 2;
 }
 
-.stream-card__connect,
 .stream-card__talkback {
   transition: background-color 160ms ease, color 160ms ease;
 }
 
-.stream-card__connect:hover,
 .stream-card__talkback:hover:not(:disabled) {
   background: rgba(61, 184, 255, 0.1);
 }

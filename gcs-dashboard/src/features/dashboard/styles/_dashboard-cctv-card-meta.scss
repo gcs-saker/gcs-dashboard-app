@@ -51,21 +51,6 @@
   font-style: normal;
 }
 
-.cctv-channel-card__connect {
-  background: rgba(10, 20, 28, 0.88);
-  border: 0;
-  border-top: 1px solid rgba(94, 151, 181, 0.22);
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 0.72rem;
-  font-weight: 900;
-}
-
-.cctv-channel-card__connect:hover,
-.cctv-channel-card__connect:focus-visible {
-  color: var(--cyan);
-}
-
 .stream-grid--cctv.is-3x3 .cctv-channel-card__viewport {
   min-height: 138px;
 }

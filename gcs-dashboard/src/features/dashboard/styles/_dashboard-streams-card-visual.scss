@@ -47,7 +47,6 @@
   padding: 0 12px;
 }
 
-.stream-card__connect,
 .stream-card__talkback {
   background: rgba(10, 20, 28, 0.88);
   border: 0;
@@ -56,11 +55,6 @@
   cursor: pointer;
   font-size: 0.72rem;
   font-weight: 900;
-}
-
-.stream-card__connect:hover,
-.stream-card__connect:focus-visible {
-  color: var(--cyan);
 }
 
 .stream-card__talkback[aria-pressed="true"] {
