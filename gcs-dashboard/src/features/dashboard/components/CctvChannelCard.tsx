@@ -55,9 +55,6 @@ export const CctvChannelCard = memo(function CctvChannelCard({
         <span>RTT {stream.status === "offline" ? "-" : "42ms"}</span>
         <span>{stream.streamPath ? "REC ready" : "No path"}</span>
       </div>
-      <button className="cctv-channel-card__connect" onClick={selectStream} type="button">
-        스트림 선택
-      </button>
     </article>
   );
 });

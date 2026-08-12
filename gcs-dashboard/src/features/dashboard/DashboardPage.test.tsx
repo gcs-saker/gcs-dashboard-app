@@ -265,19 +265,19 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("heading", { name: "통합 CCTV 월" })).toBeInTheDocument();
     expect(screen.getByText(/16\s*채널 감시 레이아웃/)).toBeInTheDocument();
     expect(screen.getByText("CCTV 16")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "스트림 선택" })).toHaveLength(16);
+    expect(screen.queryByRole("button", { name: "스트림 선택" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "5x5" }));
 
     expect(screen.getByText(/25\s*채널 감시 레이아웃/)).toBeInTheDocument();
     expect(screen.getByText("CCTV 25")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "스트림 선택" })).toHaveLength(25);
+    expect(screen.queryByRole("button", { name: "스트림 선택" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "3x3" }));
 
     expect(screen.getByText(/9\s*채널 감시 레이아웃/)).toBeInTheDocument();
     expect(screen.getByText("CCTV 09")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "스트림 선택" })).toHaveLength(9);
+    expect(screen.queryByRole("button", { name: "스트림 선택" })).not.toBeInTheDocument();
   });
 
   test("opens the device change dialog from empty CCTV 5x5 channels", async () => {
