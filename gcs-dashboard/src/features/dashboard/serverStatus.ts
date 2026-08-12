@@ -30,39 +30,43 @@ export async function fetchDashboardServerStatus(
   fetcher: typeof fetch = fetch,
 ): Promise<DashboardServerStatusSnapshot> {
   const startedAt = performance.now();
-  try {
-    const [healthResponse, readyResponse, signalingResponse, signalingReadyResponse, streamResponse] = await Promise.all([
+  const [healthResult, readyResult, signalingResult, signalingReadyResult, streamResult] = await Promise.allSettled([
       probe(fetcher, BACKEND_ROOT_ROUTES.healthz),
       probe(fetcher, BACKEND_ROOT_ROUTES.readyz),
       probe(fetcher, BACKEND_ROOT_ROUTES.mediaControlHealthz),
       probe(fetcher, BACKEND_ROOT_ROUTES.mediaControlReadyz),
       probe(fetcher, BACKEND_ROOT_ROUTES.streamStatus),
     ]);
-    const latencyMs = Math.max(1, Math.round(performance.now() - startedAt));
+  const latencyMs = Math.max(1, Math.round(performance.now() - startedAt));
+  const health = probeHealth(healthResult);
+  const ready = probeHealth(readyResult);
+  const signaling = combineProbeHealth(signalingResult, signalingReadyResult);
+  const streams = probeHealth(streamResult);
 
-    return {
-      apiServer: streamResponse.ok ? healthFromLatency(latencyMs) : DASHBOARD_SERVER_HEALTH.degraded,
-      authServer: healthResponse.ok && readyResponse.ok ? DASHBOARD_SERVER_HEALTH.online : DASHBOARD_SERVER_HEALTH.degraded,
-      signalingServer:
-        signalingResponse.ok && signalingReadyResponse.ok
-          ? DASHBOARD_SERVER_HEALTH.online
-          : DASHBOARD_SERVER_HEALTH.degraded,
-      readiness: readyResponse.ok ? DASHBOARD_SERVER_HEALTH.online : DASHBOARD_SERVER_HEALTH.degraded,
-      streams: streamResponse.ok ? DASHBOARD_SERVER_HEALTH.online : DASHBOARD_SERVER_HEALTH.degraded,
-      latencyMs,
-      checkedAt: Date.now(),
-    };
-  } catch (error) {
-    return {
-      apiServer: DASHBOARD_SERVER_HEALTH.error,
-      authServer: DASHBOARD_SERVER_HEALTH.error,
-      signalingServer: DASHBOARD_SERVER_HEALTH.error,
-      readiness: DASHBOARD_SERVER_HEALTH.error,
-      streams: DASHBOARD_SERVER_HEALTH.error,
-      latencyMs: null,
-      checkedAt: Date.now(),
-    };
-  }
+  return {
+    apiServer: streams === DASHBOARD_SERVER_HEALTH.online ? healthFromLatency(latencyMs) : streams,
+    authServer: combineHealth(health, ready),
+    signalingServer: signaling,
+    readiness: ready,
+    streams,
+    latencyMs,
+    checkedAt: Date.now(),
+  };
+}
+
+function probeHealth(result: PromiseSettledResult<Response>): DashboardServerHealth {
+  if (result.status === "rejected") return DASHBOARD_SERVER_HEALTH.error;
+  return result.value.ok ? DASHBOARD_SERVER_HEALTH.online : DASHBOARD_SERVER_HEALTH.degraded;
+}
+
+function combineProbeHealth(...results: PromiseSettledResult<Response>[]): DashboardServerHealth {
+  return combineHealth(...results.map(probeHealth));
+}
+
+function combineHealth(...health: DashboardServerHealth[]): DashboardServerHealth {
+  if (health.includes(DASHBOARD_SERVER_HEALTH.error)) return DASHBOARD_SERVER_HEALTH.error;
+  if (health.includes(DASHBOARD_SERVER_HEALTH.degraded)) return DASHBOARD_SERVER_HEALTH.degraded;
+  return DASHBOARD_SERVER_HEALTH.online;
 }
 
 export function healthFromLatency(latencyMs: number): DashboardServerHealth {

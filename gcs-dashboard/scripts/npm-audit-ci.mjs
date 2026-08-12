@@ -8,15 +8,11 @@ const allowedAdvisories = new Set([
 
 const npmCli = process.env.npm_execpath;
 const audit = npmCli
-  ? spawnSync(
-      process.execPath,
-      [npmCli, "audit", "--audit-level=moderate", "--json"],
-      { encoding: "utf8" },
-    )
+  ? spawnSync(process.execPath, [npmCli, "audit", "--audit-level=moderate", "--json"], { encoding: "utf8" })
   : spawnSync(
-      "npm",
+      process.platform === "win32" ? "npm.cmd" : "npm",
       ["audit", "--audit-level=moderate", "--json"],
-      { encoding: "utf8" },
+      { encoding: "utf8", shell: process.platform === "win32" },
     );
 
 if (audit.error) {
@@ -45,13 +41,9 @@ function isAllowed(name, visiting = new Set()) {
 
   const nextVisiting = new Set(visiting);
   nextVisiting.add(name);
-  const allowed =
-    vulnerability.via.length > 0 &&
-    vulnerability.via.every((cause) =>
-      typeof cause === "string"
-        ? isAllowed(cause, nextVisiting)
-        : allowedAdvisories.has(cause.url),
-    );
+  const allowed = vulnerability.via.length > 0 && vulnerability.via.every((cause) =>
+    typeof cause === "string" ? isAllowed(cause, nextVisiting) : allowedAdvisories.has(cause.url),
+  );
 
   decisions.set(name, allowed);
   return allowed;
@@ -61,9 +53,7 @@ const blocked = Object.keys(vulnerabilities).filter((name) => !isAllowed(name));
 const allowed = Object.keys(vulnerabilities).filter((name) => isAllowed(name));
 
 if (allowed.length > 0) {
-  console.warn(
-    `적용되지 않는 RSC 전용 권고를 예외 처리했습니다: ${allowed.join(", ")}`,
-  );
+  console.warn(`사용하지 않는 RSC 전용 권고를 예외 처리했습니다: ${allowed.join(", ")}`);
 }
 
 if (blocked.length > 0) {
