@@ -66,7 +66,9 @@ class JdbcRegisteredDeviceRepository(
                 displayName = rs.getString(RegisteredDeviceColumns.displayName),
                 credentialHash = rs.getString(RegisteredDeviceColumns.credentialHash),
                 status = RegisteredDeviceStatus.fromPersistence(rs.getString(RegisteredDeviceColumns.status)),
-                deviceType = DeviceType.entries.first { it.apiValue == rs.getString(RegisteredDeviceColumns.deviceType) },
+                deviceType =
+                    DeviceType.parse(rs.getString(RegisteredDeviceColumns.deviceType))
+                        ?: throw IllegalArgumentException("unsupported registered device type"),
                 credentialVersion = rs.getLong(RegisteredDeviceColumns.credentialVersion),
                 policyVersion = rs.getLong(RegisteredDeviceColumns.policyVersion),
             )
