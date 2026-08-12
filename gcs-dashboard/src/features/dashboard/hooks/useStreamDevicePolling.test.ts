@@ -38,6 +38,26 @@ describe("useStreamDevicePolling", () => {
     expect(fetchDevices).toHaveBeenCalledTimes(2);
     unmount();
   });
+
+  test("backs off registry polling after transient failures", async () => {
+    vi.useFakeTimers();
+    const fetchDevices = vi.fn().mockRejectedValue(new Error("temporary upstream failure"));
+    const { unmount } = renderHook(() => useStreamDevicePolling({
+      fetchDevices,
+      preferences: { deviceAliases: {} },
+      setSelectedStreamId: vi.fn(),
+      setStreamDevices: vi.fn(),
+      setStreams: vi.fn(),
+    }));
+
+    await act(async () => { await Promise.resolve(); });
+    expect(fetchDevices).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_999); });
+    expect(fetchDevices).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(fetchDevices).toHaveBeenCalledTimes(2);
+    unmount();
+  });
 });
 
 describe("markOnlineStreamsDegraded", () => {

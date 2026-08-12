@@ -37,4 +37,11 @@ describe("StreamCard", () => {
     expect(screen.getByTestId("player-raw.drone-02.front")).toBeInTheDocument();
     expect(onSelect).toHaveBeenCalledWith("stream-2");
   });
+
+  test("does not request playback for an offline registry path", () => {
+    render(<StreamCard stream={{ ...STREAM, status: "offline" }} isSelected={false} onSelect={vi.fn()} />);
+
+    expect(screen.queryByTestId("player-raw.drone-02.front")).not.toBeInTheDocument();
+    expect(screen.getByText("상태: 스트림 선택 대기")).toBeInTheDocument();
+  });
 });

@@ -31,7 +31,9 @@ export function buildCctvGridStreams(streams: DashboardStreamSlot[], gridSize: n
   });
 }
 
-export function isReceivableStream(stream: DashboardStreamSlot): boolean {
+export function isReceivableStream(
+  stream: DashboardStreamSlot,
+): stream is DashboardStreamSlot & { streamPath: string } {
   if (stream.id.startsWith(CCTV_EMPTY_STREAM_ID_PREFIX)) return false;
   return (
     Boolean(stream.streamPath) &&

@@ -26,7 +26,7 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
   {
     id: "raw.sample.front",
     title: "스트리밍 1",
-    status: DASHBOARD_STREAM_STATUS.online,
+    status: DASHBOARD_STREAM_STATUS.offline,
     mode: DASHBOARD_STREAM_MODE.eo,
     detail: "전방 EO / raw.sample.front",
     connectedDeviceId: "device-drn-01-front",
@@ -46,7 +46,7 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
   {
     id: "raw.sample.thermal",
     title: "스트리밍 2",
-    status: DASHBOARD_STREAM_STATUS.fallback,
+    status: DASHBOARD_STREAM_STATUS.offline,
     mode: DASHBOARD_STREAM_MODE.ir,
     detail: "열화상 fallback / raw.sample.thermal",
     connectedDeviceId: "device-drn-02-thermal",
@@ -66,7 +66,7 @@ export const DEFAULT_DASHBOARD_STREAMS: DashboardStreamSlot[] = [
   {
     id: "raw.sample.rear",
     title: "스트리밍 3",
-    status: DASHBOARD_STREAM_STATUS.online,
+    status: DASHBOARD_STREAM_STATUS.offline,
     mode: DASHBOARD_STREAM_MODE.ai,
     detail: "AI 감지 overlay / raw.sample.rear",
     connectedDeviceId: "device-ugv-01-rear",

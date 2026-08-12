@@ -3,6 +3,7 @@ import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/rende
 import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
 import type { RealtimePlayerSnapshot } from "@streaming/types";
 import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import { isReceivableStream } from "@dashboard/dashboardCctv";
 import {
   getDashboardStreamStatusClass,
   getDashboardStreamStatusText,
@@ -56,7 +57,7 @@ export function SelectedStreamPanel({
         </span>
       </div>
       <div className={`selected-stream__viewport mode-${stream.mode.toLowerCase()}`}>
-        {stream.streamPath ? (
+        {isReceivableStream(stream) ? (
           <RealtimePlayer
             onStatusChange={(snapshot) => onPlaybackStatusChange?.(stream.id, snapshot)}
             streamId={stream.streamPath}
@@ -65,8 +66,8 @@ export function SelectedStreamPanel({
         ) : (
           <div className="selected-stream__empty">
             <span className="selected-stream__empty-kicker">NO ACTIVE STREAM</span>
-            <strong>스트림 주소를 연결하세요</strong>
-            <p>탐지된 장비 또는 직접 입력한 WHEP/HLS 경로를 선택하면 이 영역에서 수신 상태를 확인합니다.</p>
+            <strong>수신 가능한 스트림이 없습니다</strong>
+            <p>서버가 탐지한 온라인 스트림을 선택하면 이 영역에서 수신 상태를 확인합니다.</p>
           </div>
         )}
         <div className="selected-stream__meta">

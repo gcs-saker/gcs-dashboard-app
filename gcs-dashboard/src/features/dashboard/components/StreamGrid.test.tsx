@@ -6,7 +6,7 @@ import { SelectedStreamPanel } from "./SelectedStreamPanel";
 import { StreamGrid } from "./StreamGrid";
 
 describe("StreamGrid", () => {
-  test("renders stream cards with independent status badges", () => {
+  test("renders default stream slots offline until registry discovery", () => {
     render(
       <StreamGrid
         onSelectStream={() => undefined}
@@ -17,8 +17,7 @@ describe("StreamGrid", () => {
 
     expect(screen.getByRole("button", { name: "스트리밍 1 선택" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "스트리밍 4 선택" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByText("Fallback")).toBeInTheDocument();
-    expect(screen.getByText("오프라인")).toBeInTheDocument();
+    expect(screen.getAllByText("오프라인")).toHaveLength(DEFAULT_DASHBOARD_STREAMS.length);
   });
 
   test("notifies selected stream changes without owning dashboard state", async () => {
@@ -66,7 +65,7 @@ describe("StreamGrid", () => {
 
 describe("SelectedStreamPanel", () => {
   test("renders selected stream as an independent main stream widget", () => {
-    render(<SelectedStreamPanel stream={DEFAULT_DASHBOARD_STREAMS[2]} />);
+    render(<SelectedStreamPanel stream={{ ...DEFAULT_DASHBOARD_STREAMS[2], status: "online" }} />);
 
     expect(screen.getByRole("heading", { name: "선택 스트림" })).toBeInTheDocument();
     expect(screen.getByText("스트리밍 3")).toBeInTheDocument();
