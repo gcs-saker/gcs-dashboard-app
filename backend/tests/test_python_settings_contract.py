@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from core.auth_config import AUTH_JWT_SECRET, AuthConfigError, AuthSettings
+from core.auth_config import AUTH_JWT_SECRET, AUTH_REFRESH_TOKEN_EXPIRE_MINUTES, AuthConfigError, AuthSettings
 from core.db import DatabaseSettings
 from core.ice_settings import WebRtcIceSettings
 from core.settings_base import SettingsConfigurationError
@@ -30,6 +30,14 @@ def test_auth_settings_masks_secret_in_repr() -> None:
 
     assert secret not in repr(settings)
     assert settings.secret.get_secret_value() == secret
+
+
+def test_auth_settings_defaults_refresh_sessions_to_two_hours(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(AUTH_REFRESH_TOKEN_EXPIRE_MINUTES, raising=False)
+
+    settings = AuthSettings(secret="test-auth-secret-for-gcs-saker-at-least-32-characters")
+
+    assert settings.refresh_token_expire_minutes == 120
 
 
 def test_database_settings_rejects_wrong_legacy_flag_type(monkeypatch: pytest.MonkeyPatch) -> None:

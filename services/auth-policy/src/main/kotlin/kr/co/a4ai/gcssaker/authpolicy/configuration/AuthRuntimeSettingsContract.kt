@@ -66,7 +66,7 @@ object AuthRuntimeDefaults {
     const val LOCAL_SMOKE_PASSWORD = "m7-smoke-pass"
     const val JWT_ISSUER = "gcs-saker"
     const val ACCESS_TOKEN_EXPIRE_MINUTES = 30L
-    const val REFRESH_TOKEN_EXPIRE_MINUTES = 10_080L
+    const val REFRESH_TOKEN_EXPIRE_MINUTES = 120L
     const val REFRESH_COOKIE_NAME = "gcs_saker_refresh"
     const val REFRESH_COOKIE_SAME_SITE = "lax"
     const val ADMIN_USERNAME = "admin01"
