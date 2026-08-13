@@ -37,11 +37,11 @@ export function isTelemetryReadResponse(payload: unknown): payload is TelemetryR
 }
 
 function isOptionalNumber(value: unknown): boolean {
-  return value === undefined || typeof value === "number";
+  return value === undefined || value === null || typeof value === "number";
 }
 
 function isOptionalVector3(value: unknown): boolean {
-  if (value === undefined) return true;
+  if (value === undefined || value === null) return true;
   if (!value || typeof value !== "object") return false;
   const candidate = value as { x?: unknown; y?: unknown; z?: unknown };
   return (

@@ -35,6 +35,12 @@ describe("telemetryContracts", () => {
     };
 
     expect(isTelemetryReadResponse(telemetry)).toBe(true);
+    expect(isTelemetryReadResponse({
+      ...telemetry,
+      headingDeg: null,
+      linkQualityPercent: null,
+      rollDeg: null,
+    })).toBe(true);
     expect(isTelemetryHistoryResponse({ recordedAt: "2026-06-01T00:00:00Z", telemetry })).toBe(true);
     expect(isTelemetryHistoryResponse({ recordedAt: "2026-06-01T00:00:00Z", telemetry: { uuid: "bad" } })).toBe(false);
     expect(isTelemetryReadResponse({ ...telemetry, gyroRadPerSec: { x: 1, y: 2 } })).toBe(false);

@@ -52,7 +52,7 @@ export function geometryFromTelemetry(telemetry: TelemetryReadResponse): StreamD
     lat: telemetry.latitude,
     lng: telemetry.longitude,
     altitudeM: telemetry.altitude,
-    batteryPercent: telemetry.batteryPercent,
+    batteryPercent: telemetry.batteryPercent ?? undefined,
     headingDeg: telemetry.headingDeg ?? 0,
     pitchDeg: telemetry.pitchDeg ?? 0,
     rollDeg: telemetry.rollDeg ?? 0,

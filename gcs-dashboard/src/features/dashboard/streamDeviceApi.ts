@@ -17,10 +17,8 @@ import {
 } from "./telemetryContracts";
 
 export async function fetchStreamDeviceOptions(fetcher: typeof fetch = fetch): Promise<StreamDeviceOption[]> {
-  const [registry, telemetryByUuid] = await Promise.all([
-    fetchStreamRegistry(fetcher),
-    fetchTelemetryIndex(fetcher),
-  ]);
+  const registry = await fetchStreamRegistry(fetcher);
+  const telemetryByUuid = await fetchTelemetryIndex(fetcher);
   return registry.map((item) => streamDeviceFromRegistryItem(item, telemetryByUuid));
 }
 
@@ -38,8 +36,7 @@ export async function fetchTelemetryIndex(fetcher: typeof fetch = fetch): Promis
     return new Map(telemetry.map((item) => [item.uuid, item]));
   } catch (error) {
     if (isApiStatusError(error, 401)) throw new AuthApiError(401, "telemetry authentication required");
-    if (error instanceof ApiHttpError) return new Map();
-    throw error;
+    return new Map();
   }
 }
 
