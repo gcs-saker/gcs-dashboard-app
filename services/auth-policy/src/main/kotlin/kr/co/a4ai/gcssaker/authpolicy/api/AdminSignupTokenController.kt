@@ -50,6 +50,7 @@ class AdminSignupTokenController(
                 SignupRegistrationTokenIssueCommand(
                     companyId = request.companyId,
                     groupId = request.groupId,
+                    role = parseAssignableRole(request.role),
                     label = request.label,
                     ttlMinutes = request.ttlMinutes ?: 1_440,
                     maxUses = request.maxUses ?: 1,
@@ -66,11 +67,17 @@ class AdminSignupTokenController(
         principalResolver.requirePrincipal(authorization).also {
             if (it.role != UserRole.ADMIN) throw ForbiddenApiError("admin role required")
         }
+
+    private fun parseAssignableRole(value: String): UserRole =
+        runCatching { UserRole.valueOf(value.trim().uppercase()) }
+            .getOrElse { throw BadRequestApiError("signup token role must be viewer or operator") }
+            .also { if (it == UserRole.ADMIN) throw BadRequestApiError("admin signup tokens are not allowed") }
 }
 
 data class IssueSignupTokenRequest(
     val companyId: Int,
     val groupId: String,
+    val role: String = "viewer",
     val label: String,
     val ttlMinutes: Long? = null,
     val maxUses: Int? = null,
@@ -85,6 +92,7 @@ data class SignupTokenRecordResponse(
     val tokenId: String,
     val companyId: Int,
     val groupId: String,
+    val role: String,
     val label: String,
     val status: String,
     val maxUses: Int,
@@ -98,6 +106,7 @@ private fun SignupRegistrationTokenRecord.toResponse() = SignupTokenRecordRespon
     tokenId = tokenId,
     companyId = companyId,
     groupId = groupId.value,
+    role = role.name.lowercase(),
     label = label,
     status = status.name.lowercase(),
     maxUses = maxUses,

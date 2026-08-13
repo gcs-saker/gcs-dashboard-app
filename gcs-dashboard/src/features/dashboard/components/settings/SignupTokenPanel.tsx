@@ -27,6 +27,11 @@ export function SignupTokenPanel() {
           onChange={(e) => setForm({ ...form, companyId: Number(e.target.value) })} /></label>
         <label><span>그룹 ID</span><input value={form.groupId} disabled={!isAdmin || isIssuing}
           onChange={(e) => setForm({ ...form, groupId: e.target.value })} /></label>
+        <label><span>가입 권한</span><select value={form.role} disabled={!isAdmin || isIssuing}
+          onChange={(e) => setForm({ ...form, role: e.target.value as IssueSignupTokenInput["role"] })}>
+          <option value="viewer">Viewer · 조회 전용</option>
+          <option value="operator">Operator · 조회/송출/제어</option>
+        </select></label>
         <label><span>표시 이름</span><input value={form.label} disabled={!isAdmin || isIssuing}
           onChange={(e) => setForm({ ...form, label: e.target.value })} /></label>
         <label><span>만료 시간(분)</span><input type="number" min={5} max={10080} value={form.ttlMinutes}
@@ -52,7 +57,7 @@ export function SignupTokenPanel() {
       <div className="provisioning-token-panel__records">
         {isLoading ? <p>토큰 목록을 불러오는 중</p> : records.map((record) => (
           <article className="provisioning-token-panel__record" key={record.tokenId}>
-            <span>회사 {record.companyId} · {record.groupId}</span>
+            <span>회사 {record.companyId} · {record.groupId} · {record.role}</span>
             <strong>{record.label}</strong>
             <em>{record.status} · {record.usedCount}/{record.maxUses}</em>
             <small>만료 {new Date(record.expiresAt).toLocaleString()}</small>

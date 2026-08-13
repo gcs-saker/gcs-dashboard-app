@@ -4,6 +4,7 @@ data class SignupInvite(
     val code: String,
     val companyId: Int,
     val groupId: GroupId,
+    val role: UserRole = UserRole.VIEWER,
 ) {
     init {
         require(code.isNotBlank()) { "invite code must not be blank" }
@@ -64,7 +65,7 @@ class AuthRegistrationService(
                 email = command.email,
                 passwordHash = passwordHasher.hash(command.password),
                 companyId = invite.companyId,
-                role = UserRole.VIEWER,
+                role = invite.role,
                 groupId = invite.groupId,
             ))
         } ?: throw SignupRejectedException("Invalid invite code Input")

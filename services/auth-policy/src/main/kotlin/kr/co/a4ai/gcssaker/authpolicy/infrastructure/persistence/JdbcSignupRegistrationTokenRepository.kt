@@ -29,9 +29,9 @@ class JdbcSignupRegistrationTokenRepository(dataSource: DataSource) : SignupRegi
     override fun save(record: SignupRegistrationTokenRecord): SignupRegistrationTokenRecord {
         jdbc.update(
             """INSERT INTO signup_registration_tokens
-               (token_id, token_hash, company_id, group_id, label, status, max_uses, used_count, expires_at, created_by, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            record.tokenId, record.tokenHash, record.companyId, record.groupId.value, record.label,
+               (token_id, token_hash, company_id, group_id, role, label, status, max_uses, used_count, expires_at, created_by, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            record.tokenId, record.tokenHash, record.companyId, record.groupId.value, record.role.name.lowercase(), record.label,
             record.status.name.lowercase(), record.maxUses, record.usedCount, Timestamp.from(record.expiresAt), record.createdBy,
             Timestamp.from(record.createdAt),
         )
@@ -64,6 +64,7 @@ class JdbcSignupRegistrationTokenRepository(dataSource: DataSource) : SignupRegi
             tokenHash = rs.getString("token_hash"),
             companyId = rs.getInt("company_id"),
             groupId = GroupId(rs.getString("group_id")),
+            role = kr.co.a4ai.gcssaker.authpolicy.domain.UserRole.valueOf(rs.getString("role").uppercase()),
             label = rs.getString("label"),
             maxUses = rs.getInt("max_uses"),
             usedCount = rs.getInt("used_count"),

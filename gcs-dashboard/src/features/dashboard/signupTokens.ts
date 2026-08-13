@@ -1,8 +1,10 @@
-export type SignupTokenStatus = "active" | "exhausted" | "expired";
+export type SignupTokenStatus = "active" | "exhausted" | "revoked" | "expired";
+export type SignupTokenRole = "viewer" | "operator";
 
 export interface IssueSignupTokenInput {
   companyId: number;
   groupId: string;
+  role: SignupTokenRole;
   label: string;
   ttlMinutes: number;
   maxUses: number;
@@ -12,6 +14,7 @@ export interface SignupTokenRecord {
   tokenId: string;
   companyId: number;
   groupId: string;
+  role: SignupTokenRole;
   label: string;
   status: SignupTokenStatus;
   maxUses: number;
@@ -29,6 +32,7 @@ export interface SignupTokenIssue {
 export const DEFAULT_SIGNUP_TOKEN_INPUT: IssueSignupTokenInput = {
   companyId: 1,
   groupId: "co-a",
+  role: "viewer",
   label: "신규 회원 초대",
   ttlMinutes: 1440,
   maxUses: 1,
@@ -40,8 +44,9 @@ export function isSignupTokenRecord(value: unknown): value is SignupTokenRecord 
     && typeof record.tokenId === "string"
     && typeof record.companyId === "number"
     && typeof record.groupId === "string"
+    && ["viewer", "operator"].includes(record.role)
     && typeof record.label === "string"
-    && ["active", "exhausted", "expired"].includes(record.status)
+    && ["active", "exhausted", "revoked", "expired"].includes(record.status)
     && typeof record.maxUses === "number"
     && typeof record.usedCount === "number"
     && typeof record.expiresAt === "string");

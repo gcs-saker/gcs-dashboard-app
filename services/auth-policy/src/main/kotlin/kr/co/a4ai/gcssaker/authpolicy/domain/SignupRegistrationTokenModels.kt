@@ -18,6 +18,7 @@ data class SignupRegistrationTokenRecord(
     val expiresAt: Instant,
     val createdBy: String,
     val createdAt: Instant,
+    val role: UserRole = UserRole.VIEWER,
     val status: SignupRegistrationTokenStatus = SignupRegistrationTokenStatus.ACTIVE,
     val lastUsedAt: Instant? = null,
     val revokedAt: Instant? = null,
@@ -35,6 +36,7 @@ data class SignupRegistrationTokenIssueCommand(
     val ttlMinutes: Long,
     val maxUses: Int,
     val createdBy: String,
+    val role: UserRole = UserRole.VIEWER,
 )
 
 data class SignupRegistrationTokenIssue(
@@ -101,6 +103,7 @@ class SignupRegistrationTokenService(
         require(command.companyId > 0) { "company id must be positive" }
         require(command.groupId.isNotBlank()) { "group id must not be blank" }
         require(command.label.isNotBlank()) { "label must not be blank" }
+        require(command.role != UserRole.ADMIN) { "admin signup tokens are not allowed" }
         require(command.ttlMinutes in 5..10_080) { "ttl minutes must be between 5 and 10080" }
         require(command.maxUses in 1..100) { "max uses must be between 1 and 100" }
         val groupId = GroupId(command.groupId.trim())
@@ -112,6 +115,7 @@ class SignupRegistrationTokenService(
             tokenHash = passwordHasher.hash(token),
             companyId = command.companyId,
             groupId = groupId,
+            role = command.role,
             label = command.label.trim(),
             maxUses = command.maxUses,
             usedCount = 0,
@@ -138,7 +142,7 @@ class SignupRegistrationTokenService(
             passwordHasher.verify(code, it.tokenHash)
         } ?: return@execute null
         if (!repository.consume(record.tokenId, now)) return@execute null
-        action(SignupInvite(code, record.companyId, record.groupId))
+        action(SignupInvite(code, record.companyId, record.groupId, record.role))
     }
 }
 

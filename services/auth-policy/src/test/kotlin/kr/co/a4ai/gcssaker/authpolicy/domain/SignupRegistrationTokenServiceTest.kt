@@ -35,8 +35,35 @@ class SignupRegistrationTokenServiceTest {
         assertNotNull(invite)
         assertEquals(1, invite?.companyId)
         assertEquals("co-a", invite?.groupId?.value)
+        assertEquals(UserRole.VIEWER, invite?.role)
         assertNull(service.findByCode(issued.token))
         assertEquals(1, service.list().single().usedCount)
+    }
+
+    @Test
+    fun `operator token assigns operator role to signup invite`() {
+        val issued = service.issue(
+            SignupRegistrationTokenIssueCommand(
+                companyId = 1,
+                groupId = "co-a",
+                label = "mobile publisher",
+                ttlMinutes = 60,
+                maxUses = 1,
+                createdBy = "admin01",
+                role = UserRole.OPERATOR,
+            ),
+        )
+
+        assertEquals(UserRole.OPERATOR, service.findByCode(issued.token)?.role)
+    }
+
+    @Test
+    fun `admin role cannot be delegated through signup token`() {
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
+            service.issue(
+                SignupRegistrationTokenIssueCommand(1, "co-a", "admin", 60, 1, "admin01", UserRole.ADMIN),
+            )
+        }
     }
 
     @Test
