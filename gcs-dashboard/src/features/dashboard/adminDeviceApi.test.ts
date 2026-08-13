@@ -3,6 +3,7 @@ import {
   activateRegisteredDevice,
   disableRegisteredDevice,
   fetchRegisteredDevices,
+  renameRegisteredDevice,
 } from "./adminDeviceApi";
 
 describe("adminDeviceApi", () => {
@@ -15,6 +16,17 @@ describe("adminDeviceApi", () => {
     expect(fetcher).toHaveBeenCalledWith(
       "/auth-policy/admin/devices",
       expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  test("persists a device alias through the existing device metadata boundary", async () => {
+    const fetcher = vi.fn(async () => jsonResponse({ ...registeredDevice("active"), displayName: "현장 드론" }));
+
+    await expect(renameRegisteredDevice("device/01", " 현장 드론 ", fetcher)).resolves.toMatchObject({ displayName: "현장 드론" });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/auth-policy/admin/devices/device%2F01",
+      expect.objectContaining({ method: "PATCH", body: JSON.stringify({ displayName: "현장 드론" }) }),
     );
   });
 

@@ -24,7 +24,7 @@ describe("DeviceApprovalPanel", () => {
 
     renderPanel("admin");
 
-    expect(await screen.findByText("Daegu Drone 01")).toBeInTheDocument();
+    expect((await screen.findAllByText("Daegu Drone 01")).length).toBeGreaterThan(0);
     expect(screen.getByText("승인 대기 장비 1대")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "승인" }));
@@ -35,12 +35,31 @@ describe("DeviceApprovalPanel", () => {
     expect(fetcher.mock.calls.at(-1)?.[0]).toBe("/auth-policy/admin/devices/device-001/activate");
   });
 
+  test("admin assigns a persistent alias to a registered device", async () => {
+    const user = userEvent.setup();
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) =>
+      init?.method === "PATCH"
+        ? jsonResponse({ ...device("active"), displayName: "현장 드론" })
+        : jsonResponse([device("active")]),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    renderPanel("admin");
+
+    const input = await screen.findByRole("textbox", { name: "device-001 장비 별칭" });
+    await user.clear(input);
+    await user.type(input, "현장 드론");
+    await user.click(screen.getByRole("button", { name: "별칭 저장" }));
+
+    await screen.findByText("현장 드론");
+    expect(fetcher.mock.calls.at(-1)?.[0]).toBe("/auth-policy/admin/devices/device-001");
+  });
+
   test("viewer can see pending devices but cannot approve", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => jsonResponse([device("pending")])));
 
     renderPanel("viewer");
 
-    expect(await screen.findByText("Daegu Drone 01")).toBeInTheDocument();
+    expect((await screen.findAllByText("Daegu Drone 01")).length).toBeGreaterThan(0);
     expect(screen.getByText("관리자 계정으로 로그인해야 장비를 승인할 수 있습니다.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "승인" })).toBeDisabled();
   });

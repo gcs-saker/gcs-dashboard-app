@@ -1,10 +1,11 @@
+import { useState, type FormEvent } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useAdminDevices } from "@dashboard/hooks/useAdminDevices";
 import type { RegisteredDevice } from "@dashboard/adminDevices";
 
 export function DeviceApprovalPanel() {
   const { currentUser } = useAuth();
-  const { activate, disable, errorMessage, isLoading, mutatingDeviceUuid, pendingDevices, refresh } = useAdminDevices();
+  const { activate, devices, disable, errorMessage, isLoading, mutatingDeviceUuid, pendingDevices, refresh, rename } = useAdminDevices();
   const isAdmin = currentUser?.role === "admin";
 
   return (
@@ -38,7 +39,63 @@ export function DeviceApprovalPanel() {
           />
         ))}
       </div>
+      <header className="time-sync-view__policy-header provisioning-token-panel__header">
+        <div>
+          <span>그룹별 장비</span>
+          <strong>등록 장비 {devices.length}대</strong>
+        </div>
+      </header>
+      <p className="device-approval-panel__hint">별칭은 서버에 저장되어 다른 브라우저와 다음 로그인에서도 동일하게 표시됩니다.</p>
+      <div className="device-approval-panel__list">
+        {devices.map((device) => (
+          <RegisteredDeviceAliasCard
+            key={device.deviceUuid}
+            device={device}
+            isMutating={mutatingDeviceUuid === device.deviceUuid}
+            onRename={rename}
+          />
+        ))}
+      </div>
     </section>
+  );
+}
+
+interface RegisteredDeviceAliasCardProps {
+  device: RegisteredDevice;
+  isMutating: boolean;
+  onRename: (deviceUuid: string, displayName: string) => Promise<void>;
+}
+
+function RegisteredDeviceAliasCard({ device, isMutating, onRename }: RegisteredDeviceAliasCardProps) {
+  const [alias, setAlias] = useState(device.displayName);
+  const submit = (event: FormEvent): void => {
+    event.preventDefault();
+    const nextAlias = alias.trim();
+    if (nextAlias && nextAlias !== device.displayName) void onRename(device.deviceUuid, nextAlias);
+  };
+
+  return (
+    <article className="device-approval-panel__card">
+      <div>
+        <span>{device.groupId} · {device.deviceType} · {device.status}</span>
+        <strong>{device.displayName}</strong>
+        <small>{device.deviceUuid}</small>
+      </div>
+      <form className="device-approval-panel__actions" onSubmit={submit}>
+        <label>
+          <span>장비 별칭</span>
+          <input
+            aria-label={`${device.deviceUuid} 장비 별칭`}
+            maxLength={128}
+            onChange={(event) => setAlias(event.target.value)}
+            value={alias}
+          />
+        </label>
+        <button disabled={isMutating || !alias.trim() || alias.trim() === device.displayName} type="submit">
+          {isMutating ? "저장 중" : "별칭 저장"}
+        </button>
+      </form>
+    </article>
   );
 }
 

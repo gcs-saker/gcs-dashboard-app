@@ -3,6 +3,7 @@ import {
   activateRegisteredDevice,
   disableRegisteredDevice,
   fetchRegisteredDevices,
+  renameRegisteredDevice,
 } from "@dashboard/adminDeviceApi";
 import {
   pendingRegisteredDevices,
@@ -51,6 +52,15 @@ export function useAdminDevices(fetcher: typeof fetch = fetch) {
     await mutateDevice(deviceUuid, disableRegisteredDevice, fetcher, dispatch);
   }, [fetcher]);
 
+  const rename = useCallback(async (deviceUuid: string, displayName: string): Promise<void> => {
+    dispatch({ type: "mutating", deviceUuid });
+    try {
+      dispatch({ type: "mutated", device: await renameRegisteredDevice(deviceUuid, displayName, fetcher) });
+    } catch (error) {
+      dispatch({ type: "mutationFailed", message: errorMessage(error, "장비 별칭 저장 실패") });
+    }
+  }, [fetcher]);
+
   useEffect(() => {
     void refresh();
   }, [refresh]);
@@ -59,6 +69,7 @@ export function useAdminDevices(fetcher: typeof fetch = fetch) {
     ...state,
     activate,
     disable,
+    rename,
     pendingDevices: pendingRegisteredDevices(state.devices),
     refresh,
   };

@@ -32,6 +32,25 @@ export async function disableRegisteredDevice(
   return mutateRegisteredDevice(`${deviceRoute(deviceUuid)}/disable`, "registered device disable request", fetcher);
 }
 
+export async function renameRegisteredDevice(
+  deviceUuid: string,
+  displayName: string,
+  fetcher: typeof fetch = fetch,
+): Promise<RegisteredDevice> {
+  return fetchValidatedJson({
+    url: backendRootUrl(deviceRoute(deviceUuid)),
+    fetcher,
+    init: {
+      method: "PATCH",
+      headers: { ...AUTH_ACCEPT_HEADERS, "Content-Type": "application/json" },
+      body: JSON.stringify({ displayName: displayName.trim() }),
+    },
+    isPayload: isRegisteredDevice,
+    requestDescription: "registered device alias update request",
+    invalidPayloadDescription: "registered device mutation payload",
+  });
+}
+
 async function mutateRegisteredDevice(
   route: string,
   requestDescription: string,
