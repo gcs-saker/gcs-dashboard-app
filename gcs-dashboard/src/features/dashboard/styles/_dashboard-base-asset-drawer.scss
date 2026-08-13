@@ -93,13 +93,19 @@
 .asset-node__status {
   color: var(--muted);
   font-size: 0.78rem;
+  grid-column: 4;
+  justify-self: end;
+  white-space: nowrap;
 }
 
 .asset-node__detail {
   color: var(--cyan);
   font-size: 0.68rem;
   font-weight: 700;
+  grid-column: 3;
+  justify-self: end;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .asset-node__alias-form {
