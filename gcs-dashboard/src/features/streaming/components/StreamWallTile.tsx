@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
+import { StreamTelemetryOverlay } from "@streaming/components/StreamTelemetryOverlay";
 import { getStreamDisplayName } from "@streaming/streamPresentation";
 import type { StreamSlot as DashboardStreamSlot } from "@streaming/streamModel";
 
@@ -28,6 +29,8 @@ export const StreamWallTile = memo(function StreamWallTile({ index, onSelect, on
           <p>표시할 스트림을 선택하세요</p>
         </div>
       )}
+
+      <StreamTelemetryOverlay geometry={stream?.geometry} />
 
       <div className="stream-wall-tile__toolbar">
         <span className={`stream-wall-tile__status is-${stream?.status ?? "empty"}`} aria-hidden="true" />

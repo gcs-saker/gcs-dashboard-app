@@ -1,0 +1,32 @@
+.stream-telemetry-overlay {
+  backdrop-filter: blur(6px);
+  background: rgba(3, 10, 15, 0.72);
+  border: 1px solid rgba(104, 190, 211, 0.34);
+  border-radius: 5px;
+  bottom: 10px;
+  color: #d9edf3;
+  display: grid;
+  font-size: 0.68rem;
+  gap: 3px;
+  left: 10px;
+  margin: 0;
+  max-width: calc(100% - 20px);
+  padding: 7px 9px;
+  pointer-events: none;
+  position: absolute;
+  z-index: 4;
+}
+
+.stream-telemetry-overlay div { display: flex; gap: 8px; justify-content: space-between; }
+.stream-telemetry-overlay dt { color: #83a4b0; }
+.stream-telemetry-overlay dd { font-variant-numeric: tabular-nums; margin: 0; }
+
+@media (max-width: 720px) {
+  .stream-telemetry-overlay {
+    bottom: 6px;
+    font-size: 0.58rem;
+    gap: 1px;
+    left: 6px;
+    padding: 4px 6px;
+  }
+}

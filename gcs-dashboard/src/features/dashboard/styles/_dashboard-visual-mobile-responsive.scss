@@ -38,6 +38,11 @@
 
   .ops-dashboard__tab-list {
     overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .ops-dashboard__tab-list::-webkit-scrollbar {
+    display: none;
   }
 
   .ops-dashboard__actions,
@@ -58,11 +63,18 @@
 
   .ops-tab {
     min-width: 108px;
+    white-space: nowrap;
   }
 
   .ops-dashboard__grid {
     grid-template-columns: 1fr;
     padding: 6px;
+  }
+
+  .ops-dashboard__grid > * {
+    grid-column: auto;
+    grid-row: auto;
+    min-width: 0;
   }
 
   .stream-grid {

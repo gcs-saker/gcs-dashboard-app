@@ -61,6 +61,11 @@
   transform: none;
 }
 
+.selected-stream__viewport > .stream-telemetry-overlay {
+  bottom: auto;
+  top: 10px;
+}
+
 .mode-ir {
   filter: grayscale(100%);
 }

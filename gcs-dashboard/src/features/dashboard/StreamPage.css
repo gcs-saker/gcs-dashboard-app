@@ -94,6 +94,15 @@
 .stream-wall-tile__status.is-online { background: #63d8a0; box-shadow: 0 0 8px rgba(99, 216, 160, 0.55); }
 .stream-wall-tile__status.is-error, .stream-wall-tile__status.is-offline { background: #d77878; }
 .stream-wall-tile__picker { flex: 1; min-width: 0; }
+.stream-wall-tile__picker > .sr-only {
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
 .stream-wall-tile__picker select {
   appearance: none;
   background: transparent;
@@ -127,6 +136,11 @@
   .stream-view__layout { grid-column: 1 / -1; grid-row: 2; justify-self: center; margin-bottom: 8px; }
   .stream-view__user { display: none; }
   .stream-view__wall { height: auto; }
-  .stream-view__wall--2x2, .stream-view__wall--3x3 { grid-template-columns: 1fr; grid-template-rows: none; }
+  .stream-view__wall--2x2 { grid-template: repeat(2, auto) / repeat(2, minmax(0, 1fr)); }
+  .stream-view__wall--3x3 { grid-template: repeat(3, auto) / repeat(3, minmax(0, 1fr)); }
   .stream-wall-tile { aspect-ratio: 16 / 9; }
+  .stream-wall-tile__toolbar { gap: 5px; padding: 6px 7px 12px; }
+  .stream-wall-tile__picker select { font-size: 0.68rem; padding-right: 4px; width: 100%; }
+  .stream-wall-tile__ai { font-size: 0.58rem; padding: 2px 4px; }
+  .stream-wall-tile__empty p { display: none; }
 }

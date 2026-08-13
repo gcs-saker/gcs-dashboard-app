@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
 import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
+import { StreamTelemetryOverlay } from "@streaming/components/StreamTelemetryOverlay";
 import type { RealtimePlayerSnapshot } from "@streaming/types";
 import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 import { isReceivableStream } from "@dashboard/dashboardCctv";
@@ -70,6 +71,7 @@ export function SelectedStreamPanel({
             <p>서버가 탐지한 온라인 스트림을 선택하면 이 영역에서 수신 상태를 확인합니다.</p>
           </div>
         )}
+        <StreamTelemetryOverlay geometry={stream.geometry} />
         <div className="selected-stream__meta">
           <strong>{stream.title}</strong>
           <span>{getDashboardStreamDisplayName(stream)}</span>
