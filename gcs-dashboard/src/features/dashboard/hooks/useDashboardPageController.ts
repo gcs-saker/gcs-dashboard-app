@@ -13,11 +13,13 @@ import { useDashboardPanelCommands } from "./useDashboardPanelCommands";
 import { useDashboardStreams } from "./useDashboardStreams";
 import { useDashboardUserPreferences } from "./useDashboardUserPreferences";
 import { useStreamAvailabilityNotification } from "./useStreamAvailabilityNotification";
+import { useAccessibleGroupInventory } from "./useAccessibleGroupInventory";
 export function useDashboardPageController(): DashboardPageViewProps {
   useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.dashboardPageController);
   const { currentUser, handleAuthFailure, handleLogout } = useDashboardAuthNavigation();
   const ui = useDashboardLocalUiState();
   const preferencesApi = useDashboardUserPreferences(currentUser?.username);
+  const groupInventory = useAccessibleGroupInventory(currentUser?.username ?? "");
   const { motionMode } = preferencesApi.preferences;
 
   const streamState = useDashboardStreams({
@@ -29,7 +31,8 @@ export function useDashboardPageController(): DashboardPageViewProps {
     preferences: preferencesApi.preferences,
     selectedStream: streamState.selectedStream,
     streams: streamState.streams,
-  }), [preferencesApi.preferences, streamState.selectedStream, streamState.streams]);
+    groupInventory,
+  }), [groupInventory, preferencesApi.preferences, streamState.selectedStream, streamState.streams]);
   const [notification, setNotification] = useStreamAvailabilityNotification(streamState.streams);
   useDashboardChunkPreload();
   useDashboardMotionMode(motionMode);

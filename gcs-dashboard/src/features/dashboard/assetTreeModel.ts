@@ -6,5 +6,6 @@ export interface AssetTreeNode {
   label: string;
   type: AssetTreeNodeType;
   status: AssetTreeStatus;
+  detail?: string;
   children?: AssetTreeNode[];
 }

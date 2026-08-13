@@ -51,7 +51,7 @@
   align-items: center;
   display: grid;
   gap: 10px;
-  grid-template-columns: 12px 1fr auto;
+  grid-template-columns: 12px minmax(0, 1fr) auto auto;
   min-height: 34px;
 }
 
@@ -93,4 +93,11 @@
 .asset-node__status {
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.asset-node__detail {
+  color: var(--cyan);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
 }

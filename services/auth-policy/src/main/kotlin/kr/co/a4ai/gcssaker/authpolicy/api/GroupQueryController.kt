@@ -12,7 +12,14 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 data class GroupResponse(val id: String, val name: String, val type: String, val parentId: String?)
-data class GroupDeviceResponse(val deviceUuid: String, val groupId: String, val displayName: String, val status: String)
+data class GroupDeviceResponse(
+    val deviceUuid: String,
+    val groupId: String,
+    val displayName: String,
+    val deviceType: String,
+    val status: String,
+    val streamPaths: List<String>,
+)
 data class GroupDashboardResponse(
     val group: GroupResponse,
     val devices: List<GroupDeviceResponse>,
@@ -65,7 +72,14 @@ class GroupQueryController(
 
 private fun OrganizationUnit.toResponse() = GroupResponse(id.value, name, type.name.lowercase(), parentId?.value)
 private fun RegisteredDevice.toGroupResponse() =
-    GroupDeviceResponse(deviceUuid, groupId.value, displayName, status.name.lowercase())
+    GroupDeviceResponse(
+        deviceUuid = deviceUuid,
+        groupId = groupId.value,
+        displayName = displayName,
+        deviceType = deviceType.apiValue,
+        status = status.name.lowercase(),
+        streamPaths = streamPaths.values.map { it.streamPath },
+    )
 
 private fun <T> translateGroupErrors(block: () -> T): T = try {
     block()

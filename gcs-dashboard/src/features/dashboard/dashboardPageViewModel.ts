@@ -1,4 +1,6 @@
 import { DEFAULT_ASSET_TREE, mergeAssetTreeWithStreams, type AssetTreeNode } from "./assetTree";
+import { buildAccessibleAssetTree } from "./groupAssetTree";
+import type { AccessibleGroupInventory } from "./groupAssetContracts";
 import { createAudioAnalysisSnapshot, isSameAudioAnalysis } from "./dashboardAudioAnalysis";
 import { buildCctvGridStreams, getCctvGridSize, summarizeCctvStatus, type CctvStatusSummary } from "./dashboardCctv";
 import { telemetryRowsForStream, type AudioAnalysisSnapshot, type TelemetryRow } from "./dashboardPresentation";
@@ -12,6 +14,7 @@ export interface DashboardPageViewModelInput {
   preferences: DashboardUserPreferences;
   selectedStream: DashboardStreamSlot;
   streams: DashboardStreamSlot[];
+  groupInventory?: AccessibleGroupInventory;
 }
 
 export interface DashboardPageViewModel {
@@ -28,10 +31,13 @@ export function buildDashboardPageViewModel({
   preferences,
   selectedStream,
   streams,
+  groupInventory,
 }: DashboardPageViewModelInput): DashboardPageViewModel {
   const cctvGridSize = getCctvGridSize(preferences.cctvLayoutMode);
   return {
-    assetTreeRoot: mergeAssetTreeWithStreams(DEFAULT_ASSET_TREE, streams),
+    assetTreeRoot: groupInventory
+      ? buildAccessibleAssetTree(groupInventory, streams)
+      : mergeAssetTreeWithStreams(DEFAULT_ASSET_TREE, streams),
     cctvGridSize,
     cctvStatusSummary: summarizeCctvStatus(streams),
     cctvStreams: buildCctvGridStreams(streams, cctvGridSize),

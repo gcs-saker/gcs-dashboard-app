@@ -10,6 +10,7 @@ export const BACKEND_ROOT_ROUTES = Object.freeze({
   healthz: "/healthz",
   readyz: "/readyz",
   adminDevices: "/auth-policy/admin/devices",
+  groups: "/auth-policy/api/v1/groups",
   provisioningTokens: "/auth-policy/admin/provisioning-tokens",
   signupTokens: "/auth-policy/admin/signup-tokens",
   mediaControlHealthz: "/media-control/healthz",

@@ -28,6 +28,7 @@ function AssetNodeView({
       ) : (
         <span>{node.label}</span>
       )}
+      {node.detail ? <small className="asset-node__detail">{node.detail}</small> : null}
       <span className="asset-node__status">{getAssetTreeStatusText(node.status)}</span>
       {node.children?.length ? (
         <ul>
@@ -46,7 +47,7 @@ export function AssetTreePanel({ controls, onSelectStream, root }: AssetTreePane
       <div className="ops-panel__header">
         <h2 id="asset-tree-title">자산트리</h2>
         <span className="ops-panel__header-actions">
-          <span className="ops-badge is-online">LIVE</span>
+          <span className={`ops-badge is-${root.status}`}>{getAssetTreeStatusText(root.status)}</span>
           {controls}
         </span>
       </div>

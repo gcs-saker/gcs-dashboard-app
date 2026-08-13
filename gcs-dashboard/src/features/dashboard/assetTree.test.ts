@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { collectAssetTreeNodes, DEFAULT_ASSET_TREE, mergeAssetTreeWithStreams } from "./assetTree";
+import { buildAccessibleAssetTree } from "./groupAssetTree";
 
 describe("assetTree", () => {
   test("keeps assets in a hierarchical tree", () => {
@@ -39,5 +40,23 @@ describe("assetTree", () => {
     expect(nodes.find((node) => node.id === "DRN-01")).toMatchObject({
       status: "offline",
     });
+  });
+
+  test("builds the tree from accessible groups and includes devices without live streams", () => {
+    const tree = buildAccessibleAssetTree({
+      groups: [
+        { id: "root", name: "운영본부", type: "organization", parentId: null },
+        { id: "team-a", name: "A팀", type: "team", parentId: "root" },
+      ],
+      devices: [
+        { deviceUuid: "device-live", groupId: "team-a", displayName: "현장 드론", deviceType: "drone", status: "active", streamPaths: ["raw.device-live.front"] },
+        { deviceUuid: "device-idle", groupId: "team-a", displayName: "대기 로봇", deviceType: "robot", status: "active", streamPaths: [] },
+      ],
+    }, [{ streamPath: "raw.device-live.front", detail: "전방 카메라 / raw.device-live.front", status: "online" }]);
+    const nodes = collectAssetTreeNodes(tree);
+
+    expect(nodes.find((node) => node.id === "device-live")).toMatchObject({ label: "현장 드론", detail: "drone", status: "online" });
+    expect(nodes.find((node) => node.id === "device-idle")).toMatchObject({ label: "대기 로봇", detail: "robot", status: "online" });
+    expect(nodes.find((node) => node.id === "raw.device-live.front")).toMatchObject({ label: "전방 카메라", status: "online" });
   });
 });
