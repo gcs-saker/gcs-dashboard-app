@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DASHBOARD_QUERY_KEY_FACTORY } from "@features/stateContracts";
+import { registerSessionScopedCache } from "@features/sessionScopedCache";
 import {
   dashboardRefetchInterval,
   DASHBOARD_QUERY_POLICY,
@@ -21,17 +22,18 @@ const OPERATIONAL_EVENT_FILTER_HISTORY_LIMIT = 20;
 const operationalEventHistoryByFilter = new Map<string, OperationalEvent[]>();
 
 export function useOperationalEvents(
+  sessionScope: string,
   filters: OperationalEventFilters,
   fetcher: typeof fetch = fetch,
   pollIntervalMs = DASHBOARD_QUERY_POLICY.operationsRefetchMs,
 ): OperationalEventsState {
-  const filterKey = useMemo(() => JSON.stringify(filters), [filters]);
-  const queryFilters = useMemo(() => ({ ...filters }), [filterKey]);
+  const filterKey = useMemo(() => JSON.stringify([sessionScope, filters]), [filters, sessionScope]);
+  const queryFilters = useMemo(() => ({ ...filters }), [filters]);
   const [events, setEvents] = useState<OperationalEvent[]>(
     () => readOperationalEventHistory(filterKey),
   );
   const query = useQuery<OperationalEvent[]>({
-    queryKey: DASHBOARD_QUERY_KEY_FACTORY.operationalEvents(queryFilters),
+    queryKey: DASHBOARD_QUERY_KEY_FACTORY.operationalEvents(sessionScope, queryFilters),
     queryFn: ({ signal }) =>
       fetchOperationalEventPage(
         queryFilters,
@@ -88,6 +90,12 @@ export function useOperationalEvents(
     lastUpdatedAt: query.dataUpdatedAt > 0 ? query.dataUpdatedAt : null,
   };
 }
+
+export function resetOperationalEventHistory(): void {
+  operationalEventHistoryByFilter.clear();
+}
+
+registerSessionScopedCache(resetOperationalEventHistory);
 
 function readOperationalEventHistory(filterKey: string): OperationalEvent[] {
   const cached = operationalEventHistoryByFilter.get(filterKey);

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createDashboardQueryClient } from "@features/queryClient";
+import { AuthProvider } from "@auth/AuthProvider";
 import { DEFAULT_OPERATIONAL_EVENT_FILTERS, useEventLogStore } from "@dashboard/stores/useEventLogStore";
 import { EventLogView } from "./EventLogView";
 
@@ -136,7 +137,11 @@ describe("EventLogView", () => {
 
 function renderWithQueryClient(ui: ReactElement) {
   const client = createDashboardQueryClient();
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={client}>
+      <AuthProvider>{ui}</AuthProvider>
+    </QueryClientProvider>,
+  );
 }
 
 function jsonResponse(payload: unknown, status = 200): Response {

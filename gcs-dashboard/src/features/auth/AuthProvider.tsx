@@ -18,7 +18,12 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+interface AuthProviderProps {
+  children: ReactNode;
+  onSessionCleared?: () => void;
+}
+
+export function AuthProvider({ children, onSessionCleared }: AuthProviderProps) {
   const [accessToken, setAccessToken] = useState<string | null>(() => getStoredAccessToken());
   const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(() =>
     getStoredUser<AuthenticatedUser>(),
@@ -70,8 +75,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(null);
     setCurrentUser(null);
     setIsAuthReady(true);
+    onSessionCleared?.();
     void logoutRequest().catch(() => undefined);
-  }, []);
+  }, [onSessionCleared]);
 
   const login = useCallback(async (credentials: LoginRequest): Promise<void> => {
     const token = await loginRequest(credentials);

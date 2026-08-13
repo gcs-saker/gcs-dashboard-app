@@ -4,8 +4,14 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./features/auth/AuthProvider";
 import { RequireAuth } from "./features/auth/RequireAuth";
 import { createDashboardQueryClient } from "./features/queryClient";
+import { clearSessionScopedCaches } from "./features/sessionScopedCache";
 
 const dashboardQueryClient = createDashboardQueryClient();
+
+function clearDashboardSessionState(): void {
+  dashboardQueryClient.clear();
+  clearSessionScopedCaches();
+}
 
 const DashboardPage = lazy(() => import("./features/dashboard/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const LoginPage = lazy(() => import("./features/auth/LoginPage").then((module) => ({ default: module.LoginPage })));
@@ -41,7 +47,7 @@ function App() {
   return (
     <QueryClientProvider client={dashboardQueryClient}>
       <BrowserRouter>
-        <AuthProvider>
+        <AuthProvider onSessionCleared={clearDashboardSessionState}>
           <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />

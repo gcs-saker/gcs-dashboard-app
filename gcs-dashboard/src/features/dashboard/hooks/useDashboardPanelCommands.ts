@@ -11,14 +11,15 @@ interface DashboardPanelCommandsInput {
 }
 
 export function useDashboardPanelCommands({ actions, preferences, ui }: DashboardPanelCommandsInput) {
+  const { setIsAssetDrawerOpen, setIsWidgetDialogOpen, setPopoutWidgetId } = ui;
   const panelClass = useCallback(
     (baseClass: string, widgetId: DashboardWidgetId): string =>
       `${baseClass} ${preferences.isWidgetPinned(widgetId) ? "is-pinned" : ""}`,
     [preferences],
   );
-  const openAssetDrawer = useCallback(() => ui.setIsAssetDrawerOpen(true), [ui.setIsAssetDrawerOpen]);
-  const openWidgetDialog = useCallback(() => ui.setIsWidgetDialogOpen(true), [ui.setIsWidgetDialogOpen]);
-  const closePopout = useCallback(() => ui.setPopoutWidgetId(null), [ui.setPopoutWidgetId]);
+  const openAssetDrawer = useCallback(() => setIsAssetDrawerOpen(true), [setIsAssetDrawerOpen]);
+  const openWidgetDialog = useCallback(() => setIsWidgetDialogOpen(true), [setIsWidgetDialogOpen]);
+  const closePopout = useCallback(() => setPopoutWidgetId(null), [setPopoutWidgetId]);
   const hideWidget = useCallback(
     (widgetId: DashboardWidgetId) => actions.setWidgetVisible(widgetId, false),
     [actions],

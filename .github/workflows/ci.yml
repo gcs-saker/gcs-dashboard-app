@@ -231,7 +231,9 @@ jobs:
         run: npm run audit
 
       - name: Typecheck frontend
-        run: npm run typecheck
+        run: |
+          npm run lint:hooks
+          npm run typecheck
 
       - name: Run frontend tests with coverage
         run: npm run test:coverage

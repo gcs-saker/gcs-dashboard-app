@@ -17,13 +17,14 @@ interface OperationalEventMetricsState {
 }
 
 export function useOperationalEventMetrics(
+  sessionScope: string,
   filters: OperationalEventFilters,
   fetcher: typeof fetch = fetch,
   pollIntervalMs = DASHBOARD_QUERY_POLICY.operationsRefetchMs,
 ): OperationalEventMetricsState {
   const queryFilters = useMemo(() => ({ ...filters }), [filters]);
   const query = useQuery({
-    queryKey: DASHBOARD_QUERY_KEY_FACTORY.operationalEventMetrics(queryFilters),
+    queryKey: DASHBOARD_QUERY_KEY_FACTORY.operationalEventMetrics(sessionScope, queryFilters),
     queryFn: ({ signal }) =>
       fetchOperationalEventMetrics(
         queryFilters,

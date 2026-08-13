@@ -8,6 +8,7 @@ import {
   withAbortSignal,
 } from "@/features/queryClient";
 import { DASHBOARD_QUERY_KEY_FACTORY } from "@/features/stateContracts";
+import { registerSessionScopedCache } from "@/features/sessionScopedCache";
 import {
   loadSystemStatusLocalCache,
   saveSystemStatusLocalCache,
@@ -45,6 +46,8 @@ export function resetSystemStatusModelMemoryCache(): void {
     status: DEFAULT_SERVER_STATUS,
   };
 }
+
+registerSessionScopedCache(resetSystemStatusModelMemoryCache);
 
 export function useSystemStatusModel({
   fetcher,

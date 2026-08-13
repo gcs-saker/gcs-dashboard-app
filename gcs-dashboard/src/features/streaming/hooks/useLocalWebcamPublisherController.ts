@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { LOCAL_WEBCAM_STREAM_ID, LOCAL_WEBCAM_WHIP_URL } from "@/config";
 import { usePublisherGpsTelemetry } from "./usePublisherGpsTelemetry";
 import { usePublisherMediaDevices } from "./usePublisherMediaDevices";
@@ -31,6 +31,8 @@ export function useLocalWebcamPublisherController({
   geolocation = navigator.geolocation,
 }: LocalWebcamPublisherProps): LocalWebcamPublisherViewProps {
   const runtime = useLocalWebcamPublisherRuntime(streamId);
+  const publishRef = useRef<() => Promise<void>>(async () => undefined);
+  const { selectedStreamId, sessionRefs, setSelectedStreamId, statusRef } = runtime;
   const streamTargets = useMemo(() => ensureStreamTargets(DEFAULT_STREAM_TARGETS, streamId, whipUrl), [streamId, whipUrl]);
   const { audioInputs, deviceStatus, refreshMediaDevices, videoInputs } = usePublisherMediaDevices(mediaDevices);
   const selectedStreamTarget = useMemo(() => streamTargets.find((target) => target.id === runtime.selectedStreamId) ?? streamTargets[0], [runtime.selectedStreamId, streamTargets]);
@@ -61,14 +63,14 @@ export function useLocalWebcamPublisherController({
     updateStatus("reconnecting");
     runtime.reconnectTimeoutRef.current = window.setTimeout(() => {
       runtime.reconnectTimeoutRef.current = null;
-      void publish();
+      void publishRef.current();
     }, delay);
   }, [runtime, stopGpsTelemetry, updateStatus]);
 
   const handleConnectionChange = useCallback((peerConnection: RTCPeerConnection): void => {
-    if (!isPublishedConnectionDisconnected(peerConnection) || runtime.statusRef.current !== "published") return;
+    if (!isPublishedConnectionDisconnected(peerConnection) || statusRef.current !== "published") return;
     scheduleReconnect(`송출 미디어 연결이 끊겼습니다 (${peerConnection.connectionState}/${peerConnection.iceConnectionState}). 재연결을 시도합니다.`);
-  }, [scheduleReconnect]);
+  }, [scheduleReconnect, statusRef]);
 
   const startPreview = useCallback(async (): Promise<void> => {
     if (!mediaDevices?.getUserMedia) {
@@ -117,6 +119,7 @@ export function useLocalWebcamPublisherController({
       runtime.setErrorMessage(error instanceof Error ? error.message : "로컬 웹캠 송출에 실패했습니다.");
     }
   }, [clearReconnectTimer, fetcher, handleConnectionChange, peerConnectionFactory, runtime, selectedStreamTarget.id, startGpsTelemetry, stopGpsTelemetry, updateStatus]);
+  publishRef.current = publish;
 
   const resetCaptureForInputChange = useCallback((): void => {
     if (runtime.statusRef.current !== "idle") {
@@ -129,12 +132,12 @@ export function useLocalWebcamPublisherController({
   }, [runtime, stopGpsTelemetry, updateStatus]);
 
   useEffect(() => {
-    if (!streamTargets.some((target) => target.id === runtime.selectedStreamId)) runtime.setSelectedStreamId(streamTargets[0].id);
-  }, [runtime.selectedStreamId, runtime.setSelectedStreamId, streamTargets]);
+    if (!streamTargets.some((target) => target.id === selectedStreamId)) setSelectedStreamId(streamTargets[0].id);
+  }, [selectedStreamId, setSelectedStreamId, streamTargets]);
   useEffect(() => () => {
     stopGpsTelemetry();
-    clearPublisherSession(runtime.sessionRefs);
-  }, [runtime.sessionRefs, stopGpsTelemetry]);
+    clearPublisherSession(sessionRefs);
+  }, [sessionRefs, stopGpsTelemetry]);
 
   return useLocalWebcamPublisherViewProps({
     audioInputs, deviceStatus, gpsDetail, gpsStatus, onPublish: publish, onRefreshMediaDevices: refreshMediaDevices,

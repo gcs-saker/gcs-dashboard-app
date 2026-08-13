@@ -63,14 +63,16 @@ describe("dashboard state contracts", () => {
       "server-status",
       { refreshMs: 5000, fetcherMode: "default-fetcher" },
     ]);
-    expect(DASHBOARD_QUERY_KEY_FACTORY.operationalEvents({ severity: "warn" })).toEqual([
+    expect(DASHBOARD_QUERY_KEY_FACTORY.operationalEvents("operator-a", { severity: "warn" })).toEqual([
       "dashboard",
       "operational-events",
+      "operator-a",
       { severity: "warn" },
     ]);
-    expect(DASHBOARD_QUERY_KEY_FACTORY.operationalEventMetrics({ category: "network" })).toEqual([
+    expect(DASHBOARD_QUERY_KEY_FACTORY.operationalEventMetrics("operator-a", { category: "network" })).toEqual([
       "dashboard",
       "operational-event-metrics",
+      "operator-a",
       { category: "network" },
     ]);
   });

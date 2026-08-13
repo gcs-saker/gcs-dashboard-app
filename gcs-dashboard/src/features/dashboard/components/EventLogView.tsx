@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { useAuth } from "@auth/AuthProvider";
 import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
 import { buildEventLogViewModel } from "@dashboard/eventLogViewModel";
 import { useOperationalEventMetrics } from "@dashboard/hooks/useOperationalEventMetrics";
@@ -18,10 +19,12 @@ const EVENT_ROW_HEIGHT_PX = 96;
 
 export function EventLogView() {
   useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.eventLogView);
+  const { currentUser } = useAuth();
+  const sessionScope = currentUser?.username ?? "anonymous";
   const { categoryFilter, filters, selectedEventId, sourceFilter } = useEventLogFilterState();
   const { patchFilters, resetFilters, setCategoryFilter, setSelectedEventId, setSourceFilter } = useEventLogActions();
-  const { events: rawEvents, errorMessage, isLoading, lastUpdatedAt } = useOperationalEvents(filters);
-  const eventMetrics = useOperationalEventMetrics(filters);
+  const { events: rawEvents, errorMessage, isLoading, lastUpdatedAt } = useOperationalEvents(sessionScope, filters);
+  const eventMetrics = useOperationalEventMetrics(sessionScope, filters);
   const viewModel = useMemo(
     () => buildEventLogViewModel({
       rawEvents,

@@ -180,7 +180,7 @@ describe("operationalEventsApi", () => {
 
   test("parses operational event SSE messages split across chunks", () => {
     const first = parseOperationalEventSseBuffer("event: operational-event\ndata: {\"id\":\"evt-");
-    const second = parseOperationalEventSseBuffer(`${first.remaining}001\"}\n\n`);
+    const second = parseOperationalEventSseBuffer(`${first.remaining}001"}\n\n`);
 
     expect(first.messages).toEqual([]);
     expect(second.messages).toEqual([{ event: "operational-event", data: "{\"id\":\"evt-001\"}" }]);

@@ -57,8 +57,8 @@ type QueryFilter = Readonly<Record<string, unknown>>;
 export const DASHBOARD_QUERY_KEY_FACTORY = Object.freeze({
   serverStatus: (refreshMs: number, fetcherMode: "default-fetcher" | "custom-fetcher") =>
     [...DASHBOARD_QUERY_KEYS.serverStatus, { refreshMs, fetcherMode }] as const,
-  operationalEvents: (filters: QueryFilter) =>
-    [...DASHBOARD_QUERY_KEYS.operationalEvents, filters] as const,
-  operationalEventMetrics: (filters: QueryFilter) =>
-    [...DASHBOARD_QUERY_KEYS.operationalEventMetrics, filters] as const,
+  operationalEvents: (sessionScope: string, filters: QueryFilter) =>
+    [...DASHBOARD_QUERY_KEYS.operationalEvents, sessionScope, filters] as const,
+  operationalEventMetrics: (sessionScope: string, filters: QueryFilter) =>
+    [...DASHBOARD_QUERY_KEYS.operationalEventMetrics, sessionScope, filters] as const,
 } as const);
