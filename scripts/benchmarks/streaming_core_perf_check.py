@@ -141,12 +141,16 @@ def run_perf_check(iterations: int, warmup: int) -> dict[str, object]:
             login_payload = {"username": "perf-operator", "password": "perf-password"}
             login_response = client.post("/auth/login", json=login_payload)
             if login_response.status_code != 200:
-                raise RuntimeError(f"benchmark login failed with {login_response.status_code}")
+                raise RuntimeError(
+                    f"benchmark login failed with {login_response.status_code}"
+                )
             results = [
                 measure_endpoint(
                     client,
                     "auth_login_api",
-                    lambda active_client: active_client.post("/auth/login", json=login_payload),
+                    lambda active_client: active_client.post(
+                        "/auth/login", json=login_payload
+                    ),
                     iterations,
                     warmup,
                 ),
@@ -160,14 +164,18 @@ def run_perf_check(iterations: int, warmup: int) -> dict[str, object]:
                 measure_endpoint(
                     client,
                     "stream_list_api",
-                    lambda active_client: active_client.get("/api/v1/streams", headers=headers),
+                    lambda active_client: active_client.get(
+                        "/api/v1/streams", headers=headers
+                    ),
                     iterations,
                     warmup,
                 ),
                 measure_endpoint(
                     client,
                     "stream_ice_servers_api",
-                    lambda active_client: active_client.get("/api/v1/streams/ice-servers", headers=headers),
+                    lambda active_client: active_client.get(
+                        "/api/v1/streams/ice-servers", headers=headers
+                    ),
                     iterations,
                     warmup,
                 ),
@@ -219,7 +227,9 @@ def seed_benchmark_user(db: Session) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Measure local Streaming Core API latency with FastAPI TestClient.")
+    parser = argparse.ArgumentParser(
+        description="Measure local Streaming Core API latency with FastAPI TestClient."
+    )
     parser.add_argument("--iterations", type=int, default=100)
     parser.add_argument("--warmup", type=int, default=10)
     parser.add_argument("--json", action="store_true", help="Print compact JSON.")

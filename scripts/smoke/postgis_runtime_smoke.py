@@ -326,16 +326,26 @@ def summarize_plan(explain: list[dict[str, Any]]) -> dict[str, Any]:
     nodes = list(flatten_plan(root))
     node_types = [node.get("Node Type") for node in nodes]
     index_names = [node.get("Index Name") for node in nodes if node.get("Index Name")]
-    filters = " ".join(str(node.get(key, "")) for node in nodes for key in ("Index Cond", "Filter", "Recheck Cond"))
+    filters = " ".join(
+        str(node.get(key, ""))
+        for node in nodes
+        for key in ("Index Cond", "Filter", "Recheck Cond")
+    )
     return {
         "rootNode": root.get("Node Type"),
         "nodeTypes": node_types,
         "indexNames": index_names,
         "usesSpatialCondition": "st_makeenvelope" in filters.lower() or "&&" in filters,
         "sharedHitBlocks": sum(int(node.get("Shared Hit Blocks", 0)) for node in nodes),
-        "sharedReadBlocks": sum(int(node.get("Shared Read Blocks", 0)) for node in nodes),
-        "sharedDirtiedBlocks": sum(int(node.get("Shared Dirtied Blocks", 0)) for node in nodes),
-        "sharedWrittenBlocks": sum(int(node.get("Shared Written Blocks", 0)) for node in nodes),
+        "sharedReadBlocks": sum(
+            int(node.get("Shared Read Blocks", 0)) for node in nodes
+        ),
+        "sharedDirtiedBlocks": sum(
+            int(node.get("Shared Dirtied Blocks", 0)) for node in nodes
+        ),
+        "sharedWrittenBlocks": sum(
+            int(node.get("Shared Written Blocks", 0)) for node in nodes
+        ),
         "walRecords": sum(int(node.get("WAL Records", 0)) for node in nodes),
         "walBytes": sum(int(node.get("WAL Bytes", 0)) for node in nodes),
         "executionTimeMs": explain[0].get("Execution Time"),

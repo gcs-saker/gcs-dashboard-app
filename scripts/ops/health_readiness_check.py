@@ -10,15 +10,21 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-HEALTH_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_health_readiness_기준_v0.1.md"
+HEALTH_DOC = (
+    REPO_ROOT / "docs" / "operations" / "GCS-Saker_health_readiness_기준_v0.1.md"
+)
 MEDIAMTX_CONFIG = REPO_ROOT / "gcs-dashboard" / "mediamtx.yml"
 COMPOSE_FILE = REPO_ROOT / "gcs-dashboard" / "docker-compose.yml"
 BACKEND_DOCKERFILE = REPO_ROOT / "backend" / "Dockerfile"
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Check GCS-Saker health/readiness contracts.")
-    parser.add_argument("--check", action="store_true", help="Validate local docs and static contracts.")
+    parser = argparse.ArgumentParser(
+        description="Check GCS-Saker health/readiness contracts."
+    )
+    parser.add_argument(
+        "--check", action="store_true", help="Validate local docs and static contracts."
+    )
     parser.add_argument(
         "--run",
         action="store_true",
@@ -76,7 +82,9 @@ def run_static_check() -> None:
         "metrics: false" in mediamtx_config,
         "MediaMTX metrics must stay disabled by default",
     )
-    published_port_lines = [line.strip() for line in compose.splitlines() if line.strip().startswith("-")]
+    published_port_lines = [
+        line.strip() for line in compose.splitlines() if line.strip().startswith("-")
+    ]
     require(
         not any("9997" in line for line in published_port_lines),
         "MediaMTX management API port must not be published",
@@ -104,7 +112,9 @@ def run_live_probe(args: argparse.Namespace) -> None:
 
     if args.playback_url:
         with urlopen(Request(args.playback_url, method="GET"), timeout=5) as response:
-            require(200 <= response.status < 500, f"playback URL returned {response.status}")
+            require(
+                200 <= response.status < 500, f"playback URL returned {response.status}"
+            )
 
     print("Health/readiness live probe passed")
 

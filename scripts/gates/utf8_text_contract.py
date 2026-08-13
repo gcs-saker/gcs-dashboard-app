@@ -42,7 +42,9 @@ def tracked_text_paths() -> list[pathlib.Path]:
             continue
         path = ROOT / encoded_path.decode("utf-8")
         if path.is_file() and (
-            path.suffix.lower() in TEXT_SUFFIXES or path.name in TEXT_NAMES or path.name.startswith("Caddyfile")
+            path.suffix.lower() in TEXT_SUFFIXES
+            or path.name in TEXT_NAMES
+            or path.name.startswith("Caddyfile")
         ):
             paths.append(path)
     return paths

@@ -35,7 +35,9 @@ def migration_map(manifest: dict[str, object]) -> dict[str, str]:
     }
 
 
-def compare(left: dict[str, object], right: dict[str, object]) -> list[dict[str, object]]:
+def compare(
+    left: dict[str, object], right: dict[str, object]
+) -> list[dict[str, object]]:
     differences = [
         {"field": field, "left": left.get(field), "right": right.get(field)}
         for field in COMPARABLE_FIELDS

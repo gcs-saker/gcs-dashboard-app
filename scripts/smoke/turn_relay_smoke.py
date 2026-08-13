@@ -85,7 +85,9 @@ def encode_attribute(attr_type: int, value: bytes) -> bytes:
 
 
 def encode_requested_transport() -> bytes:
-    return encode_attribute(ATTR_REQUESTED_TRANSPORT, struct.pack("!Bxxx", TRANSPORT_UDP))
+    return encode_attribute(
+        ATTR_REQUESTED_TRANSPORT, struct.pack("!Bxxx", TRANSPORT_UDP)
+    )
 
 
 def long_term_key(username: str, realm: str, password: str) -> bytes:
@@ -113,7 +115,9 @@ def encode_allocate_request(
     if username and realm and nonce and password:
         partial_body = b"".join(attributes)
         integrity_length = len(partial_body) + 24
-        header = struct.pack("!HHI12s", ALLOCATE_REQUEST, integrity_length, MAGIC_COOKIE, transaction_id)
+        header = struct.pack(
+            "!HHI12s", ALLOCATE_REQUEST, integrity_length, MAGIC_COOKIE, transaction_id
+        )
         digest = hmac.new(
             long_term_key(username, realm, password),
             header + partial_body,
@@ -127,9 +131,13 @@ def encode_allocate_request(
 
 def append_fingerprint(message_type: int, transaction_id: bytes, body: bytes) -> bytes:
     length_with_fingerprint = len(body) + 8
-    header = struct.pack("!HHI12s", message_type, length_with_fingerprint, MAGIC_COOKIE, transaction_id)
+    header = struct.pack(
+        "!HHI12s", message_type, length_with_fingerprint, MAGIC_COOKIE, transaction_id
+    )
     checksum = binascii.crc32(header + body) ^ 0x5354554E
-    return header + body + encode_attribute(ATTR_FINGERPRINT, struct.pack("!I", checksum))
+    return (
+        header + body + encode_attribute(ATTR_FINGERPRINT, struct.pack("!I", checksum))
+    )
 
 
 def parse_message(payload: bytes) -> StunMessage:
@@ -147,7 +155,9 @@ def parse_message(payload: bytes) -> StunMessage:
         end = start + attr_length
         attributes.append(StunAttribute(attr_type, body[start:end]))
         offset = end + ((4 - (attr_length % 4)) % 4)
-    return StunMessage(type=message_type, transaction_id=payload[8:20], attributes=tuple(attributes))
+    return StunMessage(
+        type=message_type, transaction_id=payload[8:20], attributes=tuple(attributes)
+    )
 
 
 def get_attr(message: StunMessage, attr_type: int) -> bytes | None:
@@ -163,7 +173,9 @@ def decode_error_code(value: bytes | None) -> int | None:
     return (value[2] & 0x07) * 100 + value[3]
 
 
-def decode_xor_relayed_address(value: bytes | None, transaction_id: bytes) -> str | None:
+def decode_xor_relayed_address(
+    value: bytes | None, transaction_id: bytes
+) -> str | None:
     if not value or len(value) < 8:
         return None
     family = value[1]
@@ -190,7 +202,9 @@ class TurnConnection:
         self.client: socket.socket | None = None
 
     def __enter__(self) -> "TurnConnection":
-        sock_type = socket.SOCK_DGRAM if self.target.transport == "udp" else socket.SOCK_STREAM
+        sock_type = (
+            socket.SOCK_DGRAM if self.target.transport == "udp" else socket.SOCK_STREAM
+        )
         self.client = socket.socket(socket.AF_INET, sock_type)
         self.client.settimeout(self.timeout)
         self.client.connect((self.target.host, self.target.port))
@@ -208,11 +222,20 @@ class TurnConnection:
         return self.client.recv(2048)
 
 
-def run_turn_allocate(target: TurnTarget, username: str, password: str, timeout: float) -> str:
+def run_turn_allocate(
+    target: TurnTarget, username: str, password: str, timeout: float
+) -> str:
     with TurnConnection(target, timeout) as connection:
-        challenge = parse_message(connection.send(encode_allocate_request(secrets.token_bytes(12))))
-        if challenge.type != ALLOCATE_ERROR_RESPONSE or decode_error_code(get_attr(challenge, ATTR_ERROR_CODE)) != 401:
-            raise RuntimeError("TURN server did not return the expected long-term credential challenge")
+        challenge = parse_message(
+            connection.send(encode_allocate_request(secrets.token_bytes(12)))
+        )
+        if (
+            challenge.type != ALLOCATE_ERROR_RESPONSE
+            or decode_error_code(get_attr(challenge, ATTR_ERROR_CODE)) != 401
+        ):
+            raise RuntimeError(
+                "TURN server did not return the expected long-term credential challenge"
+            )
 
         authenticated = None
         for _ in range(3):
@@ -241,14 +264,22 @@ def run_turn_allocate(target: TurnTarget, username: str, password: str, timeout:
                 challenge = authenticated
                 continue
             error_code = decode_error_code(get_attr(authenticated, ATTR_ERROR_CODE))
-            raise RuntimeError(f"TURN allocation failed with error={error_code or 'unknown'}")
+            raise RuntimeError(
+                f"TURN allocation failed with error={error_code or 'unknown'}"
+            )
 
     if authenticated is None or authenticated.type != ALLOCATE_SUCCESS_RESPONSE:
-        raise RuntimeError("TURN allocation failed after retrying stale nonce challenges")
+        raise RuntimeError(
+            "TURN allocation failed after retrying stale nonce challenges"
+        )
 
-    relay = decode_xor_relayed_address(get_attr(authenticated, ATTR_XOR_RELAYED_ADDRESS), authenticated.transaction_id)
+    relay = decode_xor_relayed_address(
+        get_attr(authenticated, ATTR_XOR_RELAYED_ADDRESS), authenticated.transaction_id
+    )
     if not relay:
-        raise RuntimeError("TURN allocation succeeded but did not return XOR-RELAYED-ADDRESS")
+        raise RuntimeError(
+            "TURN allocation succeeded but did not return XOR-RELAYED-ADDRESS"
+        )
     return relay
 
 
@@ -256,24 +287,36 @@ def run_static_check() -> int:
     target = parse_turn_url(DEFAULT_TURN_URL)
     sample = encode_allocate_request(b"123456789012")
     message_type, _, cookie = struct.unpack("!HHI", sample[:8])
-    if target.transport != "udp" or message_type != ALLOCATE_REQUEST or cookie != MAGIC_COOKIE:
+    if (
+        target.transport != "udp"
+        or message_type != ALLOCATE_REQUEST
+        or cookie != MAGIC_COOKIE
+    ):
         raise RuntimeError("TURN smoke static contract failed")
     print("TURN relay smoke check passed")
     print(f"Default TURN URL: {DEFAULT_TURN_URL}")
-    print("Live mode verifies 401 challenge, MESSAGE-INTEGRITY, and XOR-RELAYED-ADDRESS allocation")
+    print(
+        "Live mode verifies 401 challenge, MESSAGE-INTEGRITY, and XOR-RELAYED-ADDRESS allocation"
+    )
     return 0
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Validate TURN long-term credential allocation.")
+    parser = argparse.ArgumentParser(
+        description="Validate TURN long-term credential allocation."
+    )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
         "--check",
         action="store_true",
         help="Run static parser/request contract checks.",
     )
-    mode.add_argument("--run", action="store_true", help="Run live TURN Allocate against a server.")
-    parser.add_argument("--turn-url", default=os.getenv("WEBRTC_TURN_URL", DEFAULT_TURN_URL))
+    mode.add_argument(
+        "--run", action="store_true", help="Run live TURN Allocate against a server."
+    )
+    parser.add_argument(
+        "--turn-url", default=os.getenv("WEBRTC_TURN_URL", DEFAULT_TURN_URL)
+    )
     parser.add_argument("--username", default=os.getenv("WEBRTC_TURN_USERNAME"))
     parser.add_argument("--password", default=os.getenv("WEBRTC_TURN_PASSWORD"))
     parser.add_argument("--timeout-seconds", type=float, default=5)
@@ -289,9 +332,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.check:
             return run_static_check()
         if not args.username or not args.password:
-            raise RuntimeError("WEBRTC_TURN_USERNAME and WEBRTC_TURN_PASSWORD are required for --run")
+            raise RuntimeError(
+                "WEBRTC_TURN_USERNAME and WEBRTC_TURN_PASSWORD are required for --run"
+            )
         target = parse_turn_url(args.turn_url)
-        relay = run_turn_allocate(target, args.username, args.password, args.timeout_seconds)
+        relay = run_turn_allocate(
+            target, args.username, args.password, args.timeout_seconds
+        )
         print("TURN relay smoke run passed")
         print(f"TURN URL: {args.turn_url}")
         print(f"Relay address: {relay}")

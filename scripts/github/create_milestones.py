@@ -201,7 +201,9 @@ def create_milestones(token: str, owner: str, repo: str) -> None:
 def main():
     parser = argparse.ArgumentParser(description="GCS Saker Milestones Auto-Creator")
     parser.add_argument("--token", required=True, help="GitHub Personal Access Token")
-    parser.add_argument("--owner", default="gcs-saker", help="Repository owner (default: gcs-saker)")
+    parser.add_argument(
+        "--owner", default="gcs-saker", help="Repository owner (default: gcs-saker)"
+    )
     parser.add_argument(
         "--repo",
         default="gcs-dashboard-app",

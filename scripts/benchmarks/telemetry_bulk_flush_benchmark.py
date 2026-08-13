@@ -54,8 +54,12 @@ class BenchmarkResult:
             "batchSize": self.batch_size,
             "ingestLatencyMs": round(self.ingest_latency_ms, 3),
             "flushLatencyMs": round(self.flush_latency_ms, 3),
-            "ingestThroughputRecordsPerSec": round(self.ingest_throughput_records_per_sec, 3),
-            "flushThroughputRecordsPerSec": round(self.flush_throughput_records_per_sec, 3),
+            "ingestThroughputRecordsPerSec": round(
+                self.ingest_throughput_records_per_sec, 3
+            ),
+            "flushThroughputRecordsPerSec": round(
+                self.flush_throughput_records_per_sec, 3
+            ),
             "postgresStatementCount": self.postgres_statement_count,
             "mysqlStatementCount": self.mysql_statement_count,
             "postgresAvoidedStatementCount": self.postgres_avoided_statement_count,
@@ -172,7 +176,9 @@ def build_check_report() -> dict[str, Any]:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Measure telemetry buffer and bulk flush synthetic throughput.")
+    parser = argparse.ArgumentParser(
+        description="Measure telemetry buffer and bulk flush synthetic throughput."
+    )
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--records", type=int, default=DEFAULT_RECORDS)
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
