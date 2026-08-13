@@ -3,12 +3,14 @@ import { SETTINGS_TABS, type SettingsTab } from "@dashboard/timeSyncSettingsCont
 interface SettingsTabsProps {
   activeTab: SettingsTab;
   onChangeTab: (tab: SettingsTab) => void;
+  visibleTabs?: readonly SettingsTab[];
 }
 
-export function SettingsTabs({ activeTab, onChangeTab }: SettingsTabsProps) {
+export function SettingsTabs({ activeTab, onChangeTab, visibleTabs }: SettingsTabsProps) {
+  const tabs = visibleTabs ? SETTINGS_TABS.filter((tab) => visibleTabs.includes(tab.id)) : SETTINGS_TABS;
   return (
     <nav className="time-sync-view__tabs" aria-label="운영설정 탭">
-      {SETTINGS_TABS.map((tab) => (
+      {tabs.map((tab) => (
         <button
           aria-pressed={activeTab === tab.id}
           className={activeTab === tab.id ? "is-active" : ""}

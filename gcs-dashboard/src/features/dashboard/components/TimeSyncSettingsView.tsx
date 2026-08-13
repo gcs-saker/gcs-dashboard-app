@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "@auth/AuthProvider";
+import { canManageDeviceProvisioning } from "@auth/rolePermissions";
 import { useTimeSyncStatus } from "@dashboard/hooks/useTimeSyncStatus";
 import { calculateBrowserOffsetMs, type TimeSyncConfigInput } from "@dashboard/timeSync";
 import type { MotionMode } from "@dashboard/motionPreference";
-import type { PolicySettingsTab, SettingsTab } from "@dashboard/timeSyncSettingsContracts";
+import { SETTINGS_TABS, type PolicySettingsTab, type SettingsTab } from "@dashboard/timeSyncSettingsContracts";
 import { DeviceApprovalPanel } from "./settings/DeviceApprovalPanel";
 import { MotionPolicyPanel } from "./settings/MotionPolicyPanel";
 import { ProvisioningTokenPanel } from "./settings/ProvisioningTokenPanel";
@@ -26,9 +28,17 @@ interface TimeSyncSettingsViewProps {
 }
 
 export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }: TimeSyncSettingsViewProps = {}) {
+  const { currentUser } = useAuth();
+  const canManageDevices = canManageDeviceProvisioning(currentUser?.role);
   const { errorMessage, isLoading, isSaving, lastUpdatedAt, refresh, runCheck, save, status } = useTimeSyncStatus();
   const [form, setForm] = useState<TimeSyncConfigInput>(DEFAULT_TIME_SYNC_FORM);
   const [activeTab, setActiveTab] = useState<SettingsTab>("time");
+
+  useEffect(() => {
+    if (!canManageDevices && activeTab === "provisioning") {
+      setActiveTab("time");
+    }
+  }, [activeTab, canManageDevices]);
 
   useEffect(() => {
     if (!status) return;
@@ -41,6 +51,10 @@ export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }
   }, [status]);
 
   const browserOffsetMs = useMemo(() => (status ? calculateBrowserOffsetMs(status) : 0), [status]);
+  const visibleTabs = useMemo(
+    () => SETTINGS_TABS.filter((tab) => canManageDevices || tab.id !== "provisioning").map((tab) => tab.id),
+    [canManageDevices],
+  );
   const saveCurrentForm = useCallback((): void => {
     void save(form);
   }, [form, save]);
@@ -54,7 +68,11 @@ export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }
   return (
     <section className="time-sync-view" aria-label="시간 동기화 설정">
       <TimeSyncHeader status={status} />
-      <SettingsTabs activeTab={activeTab} onChangeTab={setActiveTab} />
+      <SettingsTabs
+        activeTab={activeTab}
+        onChangeTab={setActiveTab}
+        visibleTabs={visibleTabs}
+      />
       {activeTab === "time" ? (
         <>
           <TimeSyncMetrics browserOffsetMs={browserOffsetMs} lastUpdatedAt={lastUpdatedAt} status={status} />
@@ -70,7 +88,7 @@ export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }
         </>
       ) : activeTab === "motion" ? (
         <MotionPolicyPanel motionMode={motionMode} onMotionModeChange={onMotionModeChange} />
-      ) : activeTab === "provisioning" ? (
+      ) : activeTab === "provisioning" && canManageDevices ? (
         <>
           <SignupTokenPanel />
           <ProvisioningTokenPanel />
