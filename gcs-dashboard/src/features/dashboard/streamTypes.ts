@@ -23,6 +23,7 @@ export interface DashboardStreamGeometry {
   headingDeg: number;
   pitchDeg: number;
   rollDeg: number;
+  speedMps?: number;
   yawDeg: number;
   fovDeg: number;
   source?: DashboardGeometrySource;

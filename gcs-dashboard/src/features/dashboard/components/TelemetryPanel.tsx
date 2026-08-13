@@ -8,6 +8,7 @@ import {
 import {
   formatBearing,
   formatBearingDelta,
+  formatCompassBearing,
   normalizeDegrees,
   type TelemetryRow,
 } from "@dashboard/dashboardPresentation";
@@ -29,13 +30,14 @@ export function TelemetryPanel({
 }: TelemetryPanelProps) {
   const geometry = stream.geometry;
   const streamName = getDashboardStreamDisplayName(stream);
-  const heading = geometry ? formatBearing(geometry.headingDeg) : "대기";
+  const heading = geometry ? formatCompassBearing(geometry.headingDeg) : "대기";
   const mapBearing = geometry ? formatBearing(geometry.yawDeg) : "대기";
   const bearingDelta = geometry ? formatBearingDelta(geometry.headingDeg, geometry.yawDeg) : "대기";
   const headingRotation = geometry ? `rotate(${normalizeDegrees(geometry.headingDeg)}deg)` : undefined;
   const mapRotation = geometry ? `rotate(${normalizeDegrees(geometry.yawDeg)}deg)` : undefined;
   const primaryMetrics: TelemetryRow[] = [
     ["고도", geometry ? `${geometry.altitudeM.toFixed(1)} m` : "대기"],
+    ["속도", geometry?.speedMps === undefined ? "--" : `${(geometry.speedMps * 3.6).toFixed(1)} km/h`],
     ["기체 방위", heading],
     ["지도 기준", mapBearing],
   ];

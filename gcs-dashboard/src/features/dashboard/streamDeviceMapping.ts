@@ -56,6 +56,7 @@ export function geometryFromTelemetry(telemetry: TelemetryReadResponse): StreamD
     headingDeg: telemetry.headingDeg ?? 0,
     pitchDeg: telemetry.pitchDeg ?? 0,
     rollDeg: telemetry.rollDeg ?? 0,
+    speedMps: telemetry.velocity,
     yawDeg: telemetry.yawDeg ?? 0,
     fovDeg: 60,
     source: "telemetry",
