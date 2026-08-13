@@ -124,7 +124,7 @@ describe("refreshStreamDevicesOnce", () => {
     });
 
     expect(streamDevices[0].name).toBe("별칭 단말");
-    expect(streams[1]).toMatchObject({ streamPath: "raw.mobile.front", status: "online" });
+    expect(streams[0]).toMatchObject({ streamPath: "raw.mobile.front", status: "online" });
     expect(selectedStreamId).toBe("raw.mobile.front");
   });
 

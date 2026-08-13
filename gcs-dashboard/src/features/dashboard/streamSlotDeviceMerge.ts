@@ -1,8 +1,5 @@
 import type { StreamDeviceOption } from "./streamDeviceContracts";
-import {
-  modeForMediaType,
-  shouldPreferDeviceGeometry,
-} from "./streamDeviceMapping";
+import { modeForMediaType, shouldPreferDeviceGeometry } from "./streamDeviceMapping";
 import type { DashboardStreamSlot } from "./streamTypes";
 
 export function mergeStreamSlotsWithDevices(
@@ -12,7 +9,7 @@ export function mergeStreamSlotsWithDevices(
   const devicesByStreamPath = indexDevicesByStreamPath(devices);
   const seenStreamPaths = new Set<string>();
   const nextStreams = streams.flatMap((stream) => mergeExistingStreamSlot(stream, devicesByStreamPath, seenStreamPaths));
-  return [...nextStreams, ...discoverStreamSlots(nextStreams, devices)];
+  return placeDiscoveredDevices(nextStreams, devices, devicesByStreamPath);
 }
 
 function indexDevicesByStreamPath(devices: StreamDeviceOption[]): Map<string, StreamDeviceOption> {
@@ -45,21 +42,42 @@ function mergeExistingStreamSlot(
   }];
 }
 
-function discoverStreamSlots(
+function placeDiscoveredDevices(
   existingStreams: DashboardStreamSlot[],
   devices: StreamDeviceOption[],
+  devicesByStreamPath: Map<string, StreamDeviceOption>,
 ): DashboardStreamSlot[] {
   const knownStreamPaths = new Set(existingStreams.flatMap((stream) => stream.streamPath ? [stream.streamPath] : []));
-  return devices
-    .filter((device) => !knownStreamPaths.has(device.streamPath))
-    .map((device, index): DashboardStreamSlot => ({
-      id: device.streamPath,
-      title: `스트리밍 ${existingStreams.length + index + 1}`,
-      status: device.status,
-      mode: modeForMediaType(device.mediaType),
-      detail: `${device.name} / ${device.streamPath}`,
-      connectedDeviceId: device.id,
-      streamPath: device.streamPath,
-      geometry: device.geometry,
-    }));
+  const discoveredDevices = devices.filter((device) => !knownStreamPaths.has(device.streamPath));
+  const nextStreams = [...existingStreams];
+
+  for (const device of discoveredDevices) {
+    const emptyIndex = nextStreams.findIndex((stream) => isAvailableSlot(stream, devicesByStreamPath));
+    if (emptyIndex >= 0) {
+      nextStreams[emptyIndex] = streamSlotForDevice(device, nextStreams[emptyIndex].title);
+    } else {
+      nextStreams.push(streamSlotForDevice(device, `스트리밍 ${nextStreams.length + 1}`));
+    }
+  }
+  return nextStreams;
+}
+
+function isAvailableSlot(
+  stream: DashboardStreamSlot,
+  devicesByStreamPath: Map<string, StreamDeviceOption>,
+): boolean {
+  return stream.status === "offline" && (!stream.streamPath || !devicesByStreamPath.has(stream.streamPath));
+}
+
+function streamSlotForDevice(device: StreamDeviceOption, title: string): DashboardStreamSlot {
+  return {
+    id: device.streamPath,
+    title,
+    status: device.status,
+    mode: modeForMediaType(device.mediaType),
+    detail: `${device.name} / ${device.streamPath}`,
+    connectedDeviceId: device.id,
+    streamPath: device.streamPath,
+    geometry: device.geometry,
+  };
 }

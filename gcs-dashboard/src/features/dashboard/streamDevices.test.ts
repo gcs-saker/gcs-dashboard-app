@@ -172,7 +172,7 @@ describe("streamDevices", () => {
     }
   });
 
-  test("merges newly discovered backend streams into dashboard slots", () => {
+  test("appends a discovered stream when every existing slot is occupied", () => {
     const firstDevice = MOCK_STREAM_DEVICES[0];
     const baseStreams = [
       {
@@ -202,6 +202,30 @@ describe("streamDevices", () => {
       id: "raw.drone-09.front",
       title: "스트리밍 2",
       detail: "Drone 09 Front / raw.drone-09.front",
+    });
+  });
+
+  test("keeps occupied slots stable and fills offline placeholders from slot one", () => {
+    const occupied = { ...MOCK_STREAM_DEVICES[1], status: "online" as const };
+    const discovered = {
+      ...MOCK_STREAM_DEVICES[0],
+      id: "registry-new-front",
+      name: "New Front",
+      streamPath: "raw.new.front",
+      status: "online" as const,
+    };
+
+    const merged = mergeStreamSlotsWithDevices(DEFAULT_DASHBOARD_STREAMS, [occupied, discovered]);
+
+    expect(merged).toHaveLength(DEFAULT_DASHBOARD_STREAMS.length);
+    expect(merged[0]).toMatchObject({
+      id: "raw.new.front",
+      title: DEFAULT_DASHBOARD_STREAMS[0].title,
+      status: "online",
+    });
+    expect(merged[1]).toMatchObject({
+      streamPath: occupied.streamPath,
+      title: DEFAULT_DASHBOARD_STREAMS[1].title,
     });
   });
 
