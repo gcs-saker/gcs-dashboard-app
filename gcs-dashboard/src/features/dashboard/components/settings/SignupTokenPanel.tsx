@@ -27,7 +27,7 @@ export function SignupTokenPanel() {
           onChange={(e) => setForm({ ...form, companyId: Number(e.target.value) })} /></label>
         <label><span>그룹 ID</span><input value={form.groupId} disabled={!isAdmin || isIssuing}
           onChange={(e) => setForm({ ...form, groupId: e.target.value })} /></label>
-        <label><span>가입 권한</span><select value={form.role} disabled={!isAdmin || isIssuing}
+        <label><span>가입 권한</span><select className="provisioning-token-panel__role-select" value={form.role} disabled={!isAdmin || isIssuing}
           onChange={(e) => setForm({ ...form, role: e.target.value as IssueSignupTokenInput["role"] })}>
           <option value="viewer">Viewer · 조회 전용</option>
           <option value="operator">Operator · 조회/송출/제어</option>
