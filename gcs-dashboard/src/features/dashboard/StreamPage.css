@@ -17,8 +17,37 @@
 
 .stream-view__identity { display: grid; gap: 2px; }
 .stream-view__identity strong { color: #dceaf2; font-size: 0.78rem; letter-spacing: 0.16em; }
-.stream-view__identity small, .stream-view__user { color: #788c99; font-size: 0.72rem; }
-.stream-view__header nav { align-items: center; display: flex; gap: 8px; justify-content: flex-end; }
+.stream-view__identity small { color: #788c99; font-size: 0.72rem; }
+
+.stream-view__nav { align-items: center; display: flex; gap: 7px; justify-content: flex-end; }
+.stream-view__nav-link,
+.stream-view__logout {
+  align-items: center;
+  background: rgba(18, 29, 37, 0.72);
+  border: 1px solid rgba(130, 173, 194, 0.22);
+  border-radius: 6px;
+  color: #b9ccd6;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.72rem;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 10px;
+  text-decoration: none;
+}
+.stream-view__nav-link:hover,
+.stream-view__logout:hover { background: #172630; border-color: rgba(91, 193, 211, 0.48); color: #e5f4f8; }
+.stream-view__logout { cursor: pointer; }
+.stream-view__account {
+  align-items: center;
+  border-left: 1px solid rgba(130, 173, 194, 0.18);
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 2px;
+  padding-left: 10px;
+}
+.stream-view__account-dot { background: #62d39a; border-radius: 50%; box-shadow: 0 0 7px rgba(98, 211, 154, 0.45); height: 6px; width: 6px; }
+.stream-view__user { color: #91a7b3; font-size: 0.7rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .stream-view__layout {
   background: #0d141a;
@@ -93,7 +122,30 @@
 .stream-wall-tile__status { background: #46555e; border-radius: 50%; height: 6px; width: 6px; }
 .stream-wall-tile__status.is-online { background: #63d8a0; box-shadow: 0 0 8px rgba(99, 216, 160, 0.55); }
 .stream-wall-tile__status.is-error, .stream-wall-tile__status.is-offline { background: #d77878; }
-.stream-wall-tile__picker { flex: 1; min-width: 0; }
+.stream-wall-tile__picker {
+  align-items: center;
+  background: rgba(17, 29, 37, 0.88);
+  border: 1px solid rgba(119, 164, 184, 0.28);
+  border-radius: 5px;
+  display: flex;
+  flex: 1;
+  min-height: 28px;
+  min-width: 0;
+  position: relative;
+}
+.stream-wall-tile__picker::after {
+  border-bottom: 1px solid #7f9ba9;
+  border-right: 1px solid #7f9ba9;
+  content: "";
+  height: 5px;
+  pointer-events: none;
+  position: absolute;
+  right: 9px;
+  top: 9px;
+  transform: rotate(45deg);
+  width: 5px;
+}
+.stream-wall-tile__picker:focus-within { border-color: rgba(94, 202, 220, 0.68); box-shadow: 0 0 0 2px rgba(72, 177, 199, 0.1); }
 .stream-wall-tile__picker > .sr-only {
   clip: rect(0, 0, 0, 0);
   clip-path: inset(50%);
@@ -113,7 +165,8 @@
   font-size: 0.75rem;
   max-width: 100%;
   outline: 0;
-  padding: 2px 18px 2px 0;
+  padding: 5px 26px 5px 9px;
+  width: 100%;
 }
 .stream-wall-tile__picker option { background: #101820; color: #d4e0e6; }
 
@@ -134,13 +187,17 @@
   .stream-view { height: auto; min-height: 100vh; overflow: auto; }
   .stream-view__header { grid-template-columns: 1fr auto; height: auto; min-height: 64px; }
   .stream-view__layout { grid-column: 1 / -1; grid-row: 2; justify-self: center; margin-bottom: 8px; }
-  .stream-view__user { display: none; }
+  .stream-view__account { display: none; }
+  .stream-view__nav { gap: 5px; }
+  .stream-view__nav-link, .stream-view__logout { padding: 0 8px; }
   .stream-view__wall { height: auto; }
   .stream-view__wall--2x2 { grid-template: repeat(2, auto) / repeat(2, minmax(0, 1fr)); }
   .stream-view__wall--3x3 { grid-template: repeat(3, auto) / repeat(3, minmax(0, 1fr)); }
   .stream-wall-tile { aspect-ratio: 16 / 9; }
   .stream-wall-tile__toolbar { gap: 5px; padding: 6px 7px 12px; }
-  .stream-wall-tile__picker select { font-size: 0.68rem; padding-right: 4px; width: 100%; }
+  .stream-wall-tile__picker { min-height: 25px; }
+  .stream-wall-tile__picker::after { right: 7px; top: 8px; }
+  .stream-wall-tile__picker select { font-size: 0.68rem; padding: 4px 20px 4px 6px; }
   .stream-wall-tile__ai { font-size: 0.58rem; padding: 2px 4px; }
   .stream-wall-tile__empty p { display: none; }
 }

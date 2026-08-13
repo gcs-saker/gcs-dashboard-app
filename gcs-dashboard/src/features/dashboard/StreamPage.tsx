@@ -62,10 +62,16 @@ export function StreamPage() {
             </button>
           ))}
         </div>
-        <nav aria-label="스트림 화면 메뉴">
-          <Link className="ops-command-button" to="/">대시보드</Link>
-          <span className="stream-view__user">{currentUser?.username}</span>
-          <button className="ops-command-button" onClick={handleLogout} type="button">로그아웃</button>
+        <nav className="stream-view__nav" aria-label="스트림 화면 메뉴">
+          <Link className="stream-view__nav-link" to="/">
+            <span aria-hidden="true">←</span>
+            대시보드
+          </Link>
+          <span className="stream-view__account">
+            <span className="stream-view__account-dot" aria-hidden="true" />
+            <span className="stream-view__user">{currentUser?.username}</span>
+          </span>
+          <button className="stream-view__logout" onClick={handleLogout} type="button">로그아웃</button>
         </nav>
       </header>
 
