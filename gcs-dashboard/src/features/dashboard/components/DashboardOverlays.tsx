@@ -15,6 +15,8 @@ import { WidgetPopout } from "./WidgetPopout";
 export interface DashboardOverlaysProps {
   assetTreeRoot: AssetTreeNode;
   assetTreeWidget: DashboardWidgetDefinition;
+  canRenameDevices: boolean;
+  currentUsername: string;
   editingStream: DashboardStreamSlot | null;
   isAssetDrawerOpen: boolean;
   isAssetTreeVisible: boolean;
@@ -40,6 +42,8 @@ export interface DashboardOverlaysProps {
 export function DashboardOverlays({
   assetTreeRoot,
   assetTreeWidget,
+  canRenameDevices,
+  currentUsername,
   editingStream,
   isAssetDrawerOpen,
   isAssetTreeVisible,
@@ -74,6 +78,7 @@ export function DashboardOverlays({
             style={{ minHeight: assetTreeWidget.minHeight, minWidth: assetTreeWidget.minWidth }}
           >
             <AssetTreePanel
+              canRenameDevices={canRenameDevices}
               controls={
                 <>
                   <button className="widget-icon-button" onClick={onCloseAssetDrawer} title="자산트리 닫기" type="button">
@@ -82,6 +87,7 @@ export function DashboardOverlays({
                   {widgetControls("asset-tree", "자산트리")}
                 </>
               }
+              currentUsername={currentUsername}
               onSelectStream={onSelectAssetTreeStream}
               root={assetTreeRoot}
             />

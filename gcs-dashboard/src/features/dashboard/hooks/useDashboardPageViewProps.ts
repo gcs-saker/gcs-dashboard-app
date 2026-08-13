@@ -53,6 +53,7 @@ export function useDashboardPageViewProps({
     },
     overlayProps: {
       assetTreeRoot: viewModel.assetTreeRoot, assetTreeWidget: getDashboardWidgetDefinition("asset-tree"),
+      canRenameDevices: auth.currentUser?.role === "admin", currentUsername: auth.currentUser?.username ?? "",
       editingStream: streams.editingStream, isAssetDrawerOpen: ui.isAssetDrawerOpen,
       isAssetTreeVisible: preferences.isWidgetVisible("asset-tree"), isDashboardActive: activeView === "dashboard",
       isWidgetDialogOpen: ui.isWidgetDialogOpen, layout, onApplyWidgetDialog: actions.applyWidgetDialog,
