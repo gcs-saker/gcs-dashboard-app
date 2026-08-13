@@ -51,7 +51,7 @@
   align-items: center;
   display: grid;
   gap: 10px;
-  grid-template-columns: 12px minmax(0, 1fr) auto auto;
+  grid-template-columns: 12px minmax(0, 1fr) 48px 54px;
   min-height: 34px;
 }
 
@@ -95,6 +95,7 @@
   font-size: 0.78rem;
   grid-column: 4;
   justify-self: end;
+  text-align: right;
   white-space: nowrap;
 }
 
@@ -104,6 +105,7 @@
   font-weight: 700;
   grid-column: 3;
   justify-self: end;
+  text-align: right;
   text-transform: uppercase;
   white-space: nowrap;
 }
