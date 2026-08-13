@@ -36,7 +36,7 @@ PASS/FAIL/BLOCKED/NOT_RUN - command, test count, log, or artifact
 
 ## Design Intent
 - Related design intent IDs:
-- [ ] `architecture intent gate` passed
+- [ ] `Architecture intent gate` passed
 - Runtime status wording is accurate: active/profile/contract/prototype/deferred
 - If this changes a boundary, explain the route/protocol/security impact:
 
