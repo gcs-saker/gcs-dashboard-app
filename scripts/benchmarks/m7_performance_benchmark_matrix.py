@@ -152,20 +152,14 @@ def measure_metric(
     return summarize_metric(name, samples, errors)
 
 
-def build_http_opener(
-    cookie_jar: http.cookiejar.CookieJar, insecure_tls: bool
-) -> urllib.request.OpenerDirector:
+def build_http_opener(cookie_jar: http.cookiejar.CookieJar, insecure_tls: bool) -> urllib.request.OpenerDirector:
     handlers: list[Any] = [urllib.request.HTTPCookieProcessor(cookie_jar)]
     if insecure_tls:
-        handlers.append(
-            urllib.request.HTTPSHandler(context=ssl._create_unverified_context())
-        )
+        handlers.append(urllib.request.HTTPSHandler(context=ssl._create_unverified_context()))
     return urllib.request.build_opener(*handlers)
 
 
-def measure_profile(
-    profile: BenchmarkProfile, iterations: int, warmup: int, insecure_tls: bool
-) -> dict[str, Any]:
+def measure_profile(profile: BenchmarkProfile, iterations: int, warmup: int, insecure_tls: bool) -> dict[str, Any]:
     cookie_jar = http.cookiejar.CookieJar()
     opener = build_http_opener(cookie_jar, insecure_tls)
     edge_base = profile.edge_base_url.rstrip("/")
@@ -190,9 +184,7 @@ def measure_profile(
         raise RuntimeError(f"{profile.label} login failed with {status}: {login_body}")
     access_token = login_body.get("access_token")
     if not isinstance(access_token, str) or not access_token:
-        raise RuntimeError(
-            f"{profile.label} login response did not include access_token"
-        )
+        raise RuntimeError(f"{profile.label} login response did not include access_token")
     auth_headers = {"Authorization": f"Bearer {access_token}"}
 
     metrics = [
@@ -212,17 +204,13 @@ def measure_profile(
             "auth_refresh",
             iterations,
             warmup,
-            lambda: json_request(
-                opener, f"{auth_base}/refresh", "POST", headers=csrf_headers
-            )[:2],
+            lambda: json_request(opener, f"{auth_base}/refresh", "POST", headers=csrf_headers)[:2],
         ),
         measure_metric(
             "ops_event_metrics",
             iterations,
             warmup,
-            lambda: json_request(
-                opener, f"{ops_base}/events/metrics", "GET", headers=auth_headers
-            )[:2],
+            lambda: json_request(opener, f"{ops_base}/events/metrics", "GET", headers=auth_headers)[:2],
         ),
         measure_metric(
             "ops_event_graphql_page",
@@ -242,9 +230,7 @@ def measure_profile(
             "stream_list",
             iterations,
             warmup,
-            lambda: json_request(
-                opener, f"{stream_base}/streams", "GET", headers=auth_headers
-            )[:2],
+            lambda: json_request(opener, f"{stream_base}/streams", "GET", headers=auth_headers)[:2],
         ),
         measure_metric(
             "stream_playback",
@@ -274,9 +260,7 @@ def measure_profile(
             warmup,
             lambda: timed_request(
                 opener,
-                urllib.request.Request(
-                    f"{edge_base}/hls/{profile.stream_path}/index.m3u8", method="GET"
-                ),
+                urllib.request.Request(f"{edge_base}/hls/{profile.stream_path}/index.m3u8", method="GET"),
             )[:2],
         ),
     ]
@@ -301,21 +285,15 @@ def load_profiles(path: Path) -> list[BenchmarkProfile]:
         if password is None and password_env:
             password = os.environ.get(str(password_env))
         if not password:
-            raise ValueError(
-                f"profile {item.get('label')} needs password or passwordEnv"
-            )
+            raise ValueError(f"profile {item.get('label')} needs password or passwordEnv")
         profiles.append(
             BenchmarkProfile(
                 label=str(item["label"]),
                 edge_base_url=str(item["edgeBaseUrl"]),
                 auth_base_path=str(item.get("authBasePath", "/auth-policy/auth")),
                 ops_base_path=str(item.get("opsBasePath", "/auth-policy/ops")),
-                graphql_base_path=str(
-                    item.get("graphQlBasePath", "/auth-policy/graphql")
-                ),
-                stream_base_path=str(
-                    item.get("streamBasePath", "/media-control/api/v1")
-                ),
+                graphql_base_path=str(item.get("graphQlBasePath", "/auth-policy/graphql")),
+                stream_base_path=str(item.get("streamBasePath", "/media-control/api/v1")),
                 username=str(item["username"]),
                 password=str(password),
                 stream_id=str(item.get("streamId", DEFAULT_STREAM_ID)),
@@ -336,17 +314,13 @@ def build_check_report() -> dict[str, Any]:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Build comparable M7 performance benchmark results."
-    )
+    parser = argparse.ArgumentParser(description="Build comparable M7 performance benchmark results.")
     parser.add_argument(
         "--check",
         action="store_true",
         help="Validate benchmark schema without live HTTP calls.",
     )
-    parser.add_argument(
-        "--profile-json", type=Path, help="JSON file containing benchmark profiles."
-    )
+    parser.add_argument("--profile-json", type=Path, help="JSON file containing benchmark profiles.")
     parser.add_argument("--iterations", type=int, default=30)
     parser.add_argument("--warmup", type=int, default=5)
     parser.add_argument("--output", type=Path, help="Optional JSON output path.")
@@ -377,10 +351,7 @@ def main() -> int:
         "warmup": args.warmup,
         "iceProfileLabels": list(ICE_PROFILE_LABELS),
         "tlsVerification": "disabled" if args.insecure else "system-default",
-        "profiles": [
-            measure_profile(profile, args.iterations, args.warmup, args.insecure)
-            for profile in profiles
-        ],
+        "profiles": [measure_profile(profile, args.iterations, args.warmup, args.insecure) for profile in profiles],
     }
     output = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
     if args.output:

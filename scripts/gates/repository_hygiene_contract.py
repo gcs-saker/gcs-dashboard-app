@@ -57,11 +57,7 @@ def tracked_files() -> list[Path]:
         text=True,
         encoding="utf-8",
     )
-    return [
-        path
-        for line in result.stdout.splitlines()
-        if line and (path := REPOSITORY_ROOT / line).is_file()
-    ]
+    return [path for line in result.stdout.splitlines() if line and (path := REPOSITORY_ROOT / line).is_file()]
 
 
 def is_test_file(path: Path) -> bool:
@@ -87,41 +83,26 @@ def validate_python_names(paths: list[Path], errors: list[str]) -> None:
     snake_case = re.compile(r"(?:__init__|[a-z][a-z0-9_]*)\.py$")
     for path in paths:
         if path.suffix == ".py" and not snake_case.fullmatch(path.name):
-            errors.append(
-                f"Python module must use snake_case: {path.relative_to(REPOSITORY_ROOT)}"
-            )
+            errors.append(f"Python module must use snake_case: {path.relative_to(REPOSITORY_ROOT)}")
 
 
 def validate_kotlin_names(paths: list[Path], errors: list[str]) -> None:
     pascal_case = re.compile(r"[A-Z][A-Za-z0-9]*\.kt$")
     for path in paths:
-        if (
-            path.suffix == ".kt"
-            and "/src/" in path.as_posix()
-            and not pascal_case.fullmatch(path.name)
-        ):
-            errors.append(
-                f"Kotlin source file must use PascalCase: {path.relative_to(REPOSITORY_ROOT)}"
-            )
+        if path.suffix == ".kt" and "/src/" in path.as_posix() and not pascal_case.fullmatch(path.name):
+            errors.append(f"Kotlin source file must use PascalCase: {path.relative_to(REPOSITORY_ROOT)}")
 
 
 def validate_production_file_sizes(paths: list[Path], errors: list[str]) -> None:
     for path in paths:
         relative = path.relative_to(REPOSITORY_ROOT)
-        if (
-            path.suffix not in SOURCE_SUFFIXES
-            or is_test_file(path)
-            or "generated" in relative.parts
-        ):
+        if path.suffix not in SOURCE_SUFFIXES or is_test_file(path) or "generated" in relative.parts:
             continue
         if not any(path.is_relative_to(root) for root in PRODUCTION_ROOTS):
             continue
         line_count = len(path.read_text(encoding="utf-8").splitlines())
         if line_count > MAX_PRODUCTION_LINES:
-            errors.append(
-                f"production source exceeds {MAX_PRODUCTION_LINES} lines ({line_count}): "
-                f"{relative}"
-            )
+            errors.append(f"production source exceeds {MAX_PRODUCTION_LINES} lines ({line_count}): {relative}")
 
 
 def main() -> int:

@@ -51,9 +51,7 @@ def main() -> int:
             action = "updated"
 
         db.commit()
-        print(
-            f"Smoke user {action}: username={username} role={role} inviteCode={invite_code}"
-        )
+        print(f"Smoke user {action}: username={username} role={role} inviteCode={invite_code}")
         return 0
     finally:
         db.close()

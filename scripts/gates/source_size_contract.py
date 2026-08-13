@@ -40,9 +40,7 @@ def main() -> int:
     violations = oversized_sources()
     if violations:
         for path, line_count in violations:
-            print(
-                f"{path.relative_to(REPO_ROOT)}: {line_count} lines (maximum {MAX_LINES})"
-            )
+            print(f"{path.relative_to(REPO_ROOT)}: {line_count} lines (maximum {MAX_LINES})")
         return 1
     print("production source size contract passed")
     return 0

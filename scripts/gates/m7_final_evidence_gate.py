@@ -178,9 +178,7 @@ def build_check_report() -> dict[str, Any]:
             }
             for command in commands
         ],
-        "requiredCategories": sorted(
-            {command.category for command in commands if command.required}
-        ),
+        "requiredCategories": sorted({command.category for command in commands if command.required}),
     }
 
 
@@ -235,9 +233,7 @@ def run_gate(timeout_seconds: int) -> dict[str, Any]:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Run the M7 final benchmark and architecture evidence gate."
-    )
+    parser = argparse.ArgumentParser(description="Run the M7 final benchmark and architecture evidence gate.")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
         "--check",

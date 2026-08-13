@@ -12,9 +12,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
-DRAGONFLY_OVERRIDE_FILE = (
-    REPO_ROOT / "deploy" / "compose" / "compose.dragonfly.override.yml"
-)
+DRAGONFLY_OVERRIDE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.dragonfly.override.yml"
 ENV_FILE = REPO_ROOT / "deploy" / "compose" / ".env.single-node.example"
 SCHEMA_VERSION = "dragonfly-profile-smoke-v1"
 DEFAULT_PROJECT_PREFIX = "gcs-saker-cache-profile"
@@ -228,9 +226,7 @@ class DragonflyProfileSmokeConfig:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Validate the DragonFly Redis-compatible cache profile."
-    )
+    parser = argparse.ArgumentParser(description="Validate the DragonFly Redis-compatible cache profile.")
     parser.add_argument(
         "--check",
         action="store_true",
@@ -263,26 +259,16 @@ def main() -> int:
         "profiles": [
             {
                 "name": "redis",
-                "composeCommand": config.compose_command(
-                    "redis", include_override=False
-                ),
+                "composeCommand": config.compose_command("redis", include_override=False),
                 "configCommand": config.config_command("redis", include_override=False),
-                "readinessCommand": config.readiness_command(
-                    "redis", include_override=False
-                ),
+                "readinessCommand": config.readiness_command("redis", include_override=False),
                 "runtime": "redis:7.4-alpine",
             },
             {
                 "name": "dragonfly",
-                "composeCommand": config.compose_command(
-                    "dragonfly", include_override=True
-                ),
-                "configCommand": config.config_command(
-                    "dragonfly", include_override=True
-                ),
-                "readinessCommand": config.readiness_command(
-                    "dragonfly", include_override=True
-                ),
+                "composeCommand": config.compose_command("dragonfly", include_override=True),
+                "configCommand": config.config_command("dragonfly", include_override=True),
+                "readinessCommand": config.readiness_command("dragonfly", include_override=True),
                 "runtime": "${DRAGONFLY_IMAGE}",
             },
         ],
@@ -331,9 +317,7 @@ def main() -> int:
 
 def run_profiles(config: DragonflyProfileSmokeConfig) -> dict[str, Any]:
     password = read_env_value(config.env_file, "REDIS_PASSWORD")
-    dragonfly_image = read_env_value(
-        config.env_file, "DRAGONFLY_IMAGE", default=DEFAULT_DRAGONFLY_IMAGE
-    )
+    dragonfly_image = read_env_value(config.env_file, "DRAGONFLY_IMAGE", default=DEFAULT_DRAGONFLY_IMAGE)
     profiles = [
         ("redis", False, "redis:7.4-alpine"),
         ("dragonfly", True, dragonfly_image),
@@ -357,9 +341,7 @@ def run_profiles(config: DragonflyProfileSmokeConfig) -> dict[str, Any]:
                         password=password,
                     )
                 )
-            equivalent = all(
-                profile["passed"] for profile in results
-            ) and equivalent_check_names(results)
+            equivalent = all(profile["passed"] for profile in results) and equivalent_check_names(results)
             return {
                 "schemaVersion": SCHEMA_VERSION,
                 "status": "runtime-validated" if equivalent else "failed",
@@ -438,10 +420,7 @@ def equivalent_check_names(results: list[dict[str, Any]]) -> bool:
     if not results:
         return False
     baseline = [check["name"] for check in results[0].get("checks", [])]
-    return all(
-        [check["name"] for check in result.get("checks", [])] == baseline
-        for result in results
-    )
+    return all([check["name"] for check in result.get("checks", [])] == baseline for result in results)
 
 
 def compose_environment(dragonfly_image: str, project_name: str) -> dict[str, str]:
