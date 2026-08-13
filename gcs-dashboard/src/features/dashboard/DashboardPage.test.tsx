@@ -8,6 +8,10 @@ import { clearAuthSession, storeAuthSession } from "@auth/authStorage";
 import { createDashboardQueryClient } from "@features/queryClient";
 import { DashboardPage } from "./DashboardPage";
 
+vi.mock("./hooks/useAccessibleGroupInventory", () => ({
+  useAccessibleGroupInventory: () => undefined,
+}));
+
 function renderDashboard() {
   const queryClient = createDashboardQueryClient();
 

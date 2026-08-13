@@ -1,5 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchAccessibleGroupInventory } from "@dashboard/groupAssetApi";
+import type { AccessibleGroupInventory } from "@dashboard/groupAssetContracts";
+
+const EMPTY_GROUP_INVENTORY: AccessibleGroupInventory = {
+  groups: [],
+  devices: [],
+};
 
 export function useAccessibleGroupInventory(sessionScope: string) {
   const query = useQuery({
@@ -9,5 +15,5 @@ export function useAccessibleGroupInventory(sessionScope: string) {
     refetchInterval: 30_000,
     staleTime: 15_000,
   });
-  return query.data;
+  return query.data ?? EMPTY_GROUP_INVENTORY;
 }
