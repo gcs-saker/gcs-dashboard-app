@@ -9,7 +9,17 @@ export function mergeStreamSlotsWithDevices(
   const devicesByStreamPath = indexDevicesByStreamPath(devices);
   const seenStreamPaths = new Set<string>();
   const nextStreams = streams.flatMap((stream) => mergeExistingStreamSlot(stream, devicesByStreamPath, seenStreamPaths));
-  return placeDiscoveredDevices(nextStreams, devices, devicesByStreamPath);
+  return compactActiveStreams(placeDiscoveredDevices(nextStreams, devices, devicesByStreamPath), devicesByStreamPath);
+}
+
+function compactActiveStreams(
+  streams: DashboardStreamSlot[],
+  devicesByStreamPath: Map<string, StreamDeviceOption>,
+): DashboardStreamSlot[] {
+  const active = streams.filter((stream) => stream.streamPath && devicesByStreamPath.has(stream.streamPath));
+  const inactive = streams.filter((stream) => !stream.streamPath || !devicesByStreamPath.has(stream.streamPath));
+  const ordered = [...active, ...inactive];
+  return ordered.map((stream, index) => ({ ...stream, title: streams[index]?.title ?? stream.title }));
 }
 
 function indexDevicesByStreamPath(devices: StreamDeviceOption[]): Map<string, StreamDeviceOption> {

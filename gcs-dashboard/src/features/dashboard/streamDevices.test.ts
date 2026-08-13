@@ -229,6 +229,35 @@ describe("streamDevices", () => {
     });
   });
 
+  test("compacts a previously appended live stream into the first visible slot", () => {
+    const liveDevice = {
+      ...MOCK_STREAM_DEVICES[0],
+      id: "registry-late-stream",
+      name: "Late Stream",
+      status: "online" as const,
+      streamPath: "raw.late.front",
+    };
+    const previouslyAppended = [
+      ...DEFAULT_DASHBOARD_STREAMS,
+      {
+        ...DEFAULT_DASHBOARD_STREAMS[0],
+        id: liveDevice.streamPath,
+        title: "스트리밍 5",
+        connectedDeviceId: liveDevice.id,
+        streamPath: liveDevice.streamPath,
+      },
+    ];
+
+    const merged = mergeStreamSlotsWithDevices(previouslyAppended, [liveDevice]);
+
+    expect(merged[0]).toMatchObject({
+      id: liveDevice.streamPath,
+      status: "online",
+      title: DEFAULT_DASHBOARD_STREAMS[0].title,
+    });
+    expect(merged.findIndex((stream) => stream.streamPath === liveDevice.streamPath)).toBe(0);
+  });
+
   test("updates an existing stream slot when live telemetry geometry arrives", () => {
     const liveWebcamDevice = {
       ...MOCK_STREAM_DEVICES[3],
