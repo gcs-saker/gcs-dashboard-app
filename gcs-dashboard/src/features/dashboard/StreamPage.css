@@ -128,7 +128,7 @@
   border: 1px solid rgba(119, 164, 184, 0.28);
   border-radius: 5px;
   display: flex;
-  flex: 1;
+  flex: 0 1 260px;
   min-height: 28px;
   min-width: 0;
   position: relative;
@@ -195,7 +195,7 @@
   .stream-view__wall--3x3 { grid-template: repeat(3, auto) / repeat(3, minmax(0, 1fr)); }
   .stream-wall-tile { aspect-ratio: 16 / 9; }
   .stream-wall-tile__toolbar { gap: 5px; padding: 6px 7px 12px; }
-  .stream-wall-tile__picker { min-height: 25px; }
+  .stream-wall-tile__picker { flex: 1; min-height: 25px; }
   .stream-wall-tile__picker::after { right: 7px; top: 8px; }
   .stream-wall-tile__picker select { font-size: 0.68rem; padding: 4px 20px 4px 6px; }
   .stream-wall-tile__ai { font-size: 0.58rem; padding: 2px 4px; }
