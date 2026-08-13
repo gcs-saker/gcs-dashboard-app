@@ -1,28 +1,14 @@
 package grpcgateway
 
-const (
-	requestFieldRequestID   = 1
-	requestFieldOrgID       = 2
-	requestFieldGroupID     = 3
-	requestFieldAssetID     = 4
-	requestFieldTelemetry   = 10
-	requestFieldStreamEvent = 11
-	requestFieldCommandAck  = 12
-	responseFieldResponseID = 1
-	responseFieldRequestID  = 2
-	responseFieldStatus     = 3
-	responseFieldReasonCode = 4
-	responseFieldCommand    = 10
-	responseFieldTelemetry  = 11
-)
+import sakerv1 "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
 
-type GatewayAckStatus uint64
+type GatewayAckStatus = sakerv1.GatewayAckStatus
 
 const (
-	GatewayAckStatusAccepted     GatewayAckStatus = 1
-	GatewayAckStatusRejected     GatewayAckStatus = 2
-	GatewayAckStatusBackpressure GatewayAckStatus = 3
-	GatewayAckStatusReconnect    GatewayAckStatus = 4
+	GatewayAckStatusAccepted     = sakerv1.GatewayAckStatus_GATEWAY_ACK_STATUS_ACCEPTED
+	GatewayAckStatusRejected     = sakerv1.GatewayAckStatus_GATEWAY_ACK_STATUS_REJECTED
+	GatewayAckStatusBackpressure = sakerv1.GatewayAckStatus_GATEWAY_ACK_STATUS_BACKPRESSURE
+	GatewayAckStatusReconnect    = sakerv1.GatewayAckStatus_GATEWAY_ACK_STATUS_RECONNECT
 )
 
 type GatewayPayloadKind string

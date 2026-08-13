@@ -41,75 +41,34 @@ async def lifespan(app: FastAPI):
             runtime.close()
 
 
-app = FastAPI(
-    title="GCS Backend API",
-    description="드론/로봇 제어 및 영상 처리 백엔드",
-    version="1.0.0",
-    lifespan=lifespan,
-)
-
-web_security_settings = WebSecuritySettings.from_env()
-tracing_settings = TracingSettings.from_env()
-tracer_provider = configure_global_tracing(tracing_settings)
-structured_logging_settings = StructuredLoggingSettings.from_env()
-configure_structured_logging(structured_logging_settings)
-request_logger = get_logger("python-api")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=list(web_security_settings.allowed_origins),
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=[
-        SecurityHeaderNames.AUTHORIZATION,
-        SecurityHeaderNames.CONTENT_TYPE,
-        SecurityHeaderNames.ACCEPT,
-        SecurityHeaderNames.X_GCS_CSRF,
-    ],
-)
-
-
-@app.middleware("http")
-async def add_security_headers(
-    request: Request,
-    call_next: Callable[[Request], Awaitable[Response]],
-) -> Response:
+async def add_security_headers(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
     response = await call_next(request)
+    settings: WebSecuritySettings = request.app.state.web_security_settings
     response.headers.setdefault(SecurityHeaderNames.X_CONTENT_TYPE_OPTIONS, SecurityHeaderValues.NOSNIFF)
     response.headers.setdefault(SecurityHeaderNames.X_FRAME_OPTIONS, SecurityHeaderValues.DENY)
     response.headers.setdefault(SecurityHeaderNames.REFERRER_POLICY, SecurityHeaderValues.NO_REFERRER)
     response.headers.setdefault(SecurityHeaderNames.PERMISSIONS_POLICY, SecurityHeaderValues.SELF_DEVICE_PERMISSIONS)
-    response.headers.setdefault(
-        SecurityHeaderNames.CONTENT_SECURITY_POLICY, web_security_settings.content_security_policy
-    )
+    response.headers.setdefault(SecurityHeaderNames.CONTENT_SECURITY_POLICY, settings.content_security_policy)
     mark_legacy_route(request, response)
     return response
 
 
-@app.middleware("http")
-async def add_trace_span(
-    request: Request,
-    call_next: Callable[[Request], Awaitable[Response]],
-) -> Response:
+async def add_trace_span(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
     return await trace_fastapi_request(
         request,
         call_next,
-        settings=tracing_settings,
-        provider=tracer_provider,
+        settings=request.app.state.tracing_settings,
+        provider=request.app.state.tracer_provider,
     )
 
 
-@app.middleware("http")
-async def add_structured_request_log(
-    request: Request,
-    call_next: Callable[[Request], Awaitable[Response]],
-) -> Response:
+async def add_structured_request_log(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
     try:
         response = await call_next(request)
     except Exception as exc:
-        log_request_failed(request_logger, request, exc)
+        log_request_failed(request.app.state.request_logger, request, exc)
         raise
-    log_request_completed(request_logger, request, response)
+    log_request_completed(request.app.state.request_logger, request, response)
     return response
 
 
@@ -131,58 +90,84 @@ def replacement_for_legacy_path(path: str) -> str | None:
     return None
 
 
-# 📦 API 라우터 등록
-app.include_router(auth.router, prefix=RouterPrefixes.AUTH, tags=["auth"])
-app.include_router(health.router, tags=["Health"])
-app.include_router(stream.router, prefix=RouterPrefixes.STREAM_LEGACY, tags=["Stream"])
-app.include_router(
-    stream.v1_router,
-    prefix=RouterPrefixes.API_V1,
-    tags=["Stream"],
-    dependencies=[Depends(require_role(ROLE_VIEWER))],
-)
-app.include_router(
-    map_config.router,
-    prefix=RouterPrefixes.API_V1,
-    tags=["Map"],
-    dependencies=[Depends(require_role(ROLE_VIEWER))],
-)
-app.include_router(
-    mock_ai_router,
-    prefix=RouterPrefixes.API_V1,
-    tags=["AI Mock"],
-    dependencies=[Depends(require_role(ROLE_OPERATOR))],
-)
-app.include_router(
-    ai_adapter_router,
-    prefix=RouterPrefixes.API_V1,
-    dependencies=[Depends(require_role(ROLE_ADMIN))],
-)
-app.include_router(telemetry.router, prefix=RouterPrefixes.TELEMETRY, tags=["Telemetry"])
-app.include_router(
-    control.router,
-    prefix=RouterPrefixes.CONTROL,
-    tags=["Control"],
-    dependencies=[Depends(require_role(ROLE_OPERATOR))],
-)
-app.include_router(
-    unmaned_assets.router,
-    prefix=RouterPrefixes.ASSET,
-    tags=["Asset"],
-    dependencies=[Depends(require_role(ROLE_VIEWER))],
-)
-# pp.include_router(event.router, prefix="/event", tags=["Event"])  # 옵션
-
-
-@app.get(RootRoutes.ROOT)
-def read_root():
+def read_root() -> dict[str, str]:
     return {"message": MetricsProtocol.ROOT_MESSAGE}
 
 
-@app.get(RootRoutes.METRICS, include_in_schema=False)
 def prometheus_metrics() -> Response:
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
-# 🔧 uvicorn 실행 시 진입점 예시:
-# uvicorn main:app --reload
+def register_routes(app: FastAPI) -> None:
+    app.include_router(auth.router, prefix=RouterPrefixes.AUTH, tags=["auth"])
+    app.include_router(health.router, tags=["Health"])
+    app.include_router(stream.router, prefix=RouterPrefixes.STREAM_LEGACY, tags=["Stream"])
+    app.include_router(
+        stream.v1_router,
+        prefix=RouterPrefixes.API_V1,
+        tags=["Stream"],
+        dependencies=[Depends(require_role(ROLE_VIEWER))],
+    )
+    app.include_router(
+        map_config.router, prefix=RouterPrefixes.API_V1, tags=["Map"], dependencies=[Depends(require_role(ROLE_VIEWER))]
+    )
+    app.include_router(
+        mock_ai_router,
+        prefix=RouterPrefixes.API_V1,
+        tags=["AI Mock"],
+        dependencies=[Depends(require_role(ROLE_OPERATOR))],
+    )
+    app.include_router(
+        ai_adapter_router, prefix=RouterPrefixes.API_V1, dependencies=[Depends(require_role(ROLE_ADMIN))]
+    )
+    app.include_router(telemetry.router, prefix=RouterPrefixes.TELEMETRY, tags=["Telemetry"])
+    app.include_router(
+        control.router,
+        prefix=RouterPrefixes.CONTROL,
+        tags=["Control"],
+        dependencies=[Depends(require_role(ROLE_OPERATOR))],
+    )
+    app.include_router(
+        unmaned_assets.router,
+        prefix=RouterPrefixes.ASSET,
+        tags=["Asset"],
+        dependencies=[Depends(require_role(ROLE_VIEWER))],
+    )
+    app.add_api_route(RootRoutes.ROOT, read_root, methods=["GET"])
+    app.add_api_route(RootRoutes.METRICS, prometheus_metrics, methods=["GET"], include_in_schema=False)
+
+
+def create_app() -> FastAPI:
+    application = FastAPI(
+        title="GCS Backend API",
+        description="드론/로봇 제어 및 영상 처리 백엔드",
+        version="1.0.0",
+        lifespan=lifespan,
+    )
+    web_security_settings = WebSecuritySettings.from_env()
+    tracing_settings = TracingSettings.from_env()
+    configure_structured_logging(StructuredLoggingSettings.from_env())
+    application.state.web_security_settings = web_security_settings
+    application.state.tracing_settings = tracing_settings
+    application.state.tracer_provider = configure_global_tracing(tracing_settings)
+    application.state.request_logger = get_logger("python-api")
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(web_security_settings.allowed_origins),
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=[
+            SecurityHeaderNames.AUTHORIZATION,
+            SecurityHeaderNames.CONTENT_TYPE,
+            SecurityHeaderNames.ACCEPT,
+            SecurityHeaderNames.X_GCS_CSRF,
+        ],
+    )
+    application.middleware("http")(add_security_headers)
+    application.middleware("http")(add_trace_span)
+    application.middleware("http")(add_structured_request_log)
+    register_routes(application)
+    return application
+
+
+app = create_app()

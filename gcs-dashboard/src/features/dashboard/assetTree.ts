@@ -1,13 +1,6 @@
-export type AssetTreeStatus = "online" | "warning" | "offline";
-export type AssetTreeNodeType = "root" | "group" | "device" | "stream" | "sensor";
+import type { AssetTreeNode, AssetTreeStatus } from "./assetTreeModel";
 
-export interface AssetTreeNode {
-  id: string;
-  label: string;
-  type: AssetTreeNodeType;
-  status: AssetTreeStatus;
-  children?: AssetTreeNode[];
-}
+export type { AssetTreeNode, AssetTreeNodeType, AssetTreeStatus } from "./assetTreeModel";
 
 export { DEFAULT_ASSET_TREE } from "./assetTreeDefaults";
 

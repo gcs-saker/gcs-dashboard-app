@@ -1,12 +1,15 @@
 package grpcgateway
 
-import "google.golang.org/grpc"
+import (
+	sakerv1 "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
+	"google.golang.org/grpc"
+)
 
-const (
-	serviceName        = "gcs.saker.v1.SakerGatewayService"
-	methodExchange     = "Exchange"
-	fullMethodExchange = "/gcs.saker.v1.SakerGatewayService/Exchange"
-	protoMetadata      = "gcs/saker/v1/gateway_service.proto"
+var (
+	serviceName        = sakerv1.SakerGatewayService_ServiceDesc.ServiceName
+	methodExchange     = sakerv1.SakerGatewayService_ServiceDesc.Streams[0].StreamName
+	fullMethodExchange = sakerv1.SakerGatewayService_Exchange_FullMethodName
+	protoMetadata      = sakerv1.SakerGatewayService_ServiceDesc.Metadata
 )
 
 func (s Server) Register(server *grpc.Server) {

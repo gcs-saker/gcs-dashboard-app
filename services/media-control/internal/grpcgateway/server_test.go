@@ -3,16 +3,17 @@ package grpcgateway
 import (
 	"context"
 	"net"
-	"strings"
 	"testing"
 	"time"
 
+	sakerv1 "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
+	"google.golang.org/protobuf/proto"
 )
 
 const testGatewayToken = "test-gateway-token"
@@ -113,8 +114,8 @@ func TestExchangeRoutesPlannedGatewayPayloadsToHandler(t *testing.T) {
 			if handler.requests[0].Payload.Kind != payloadKind {
 				t.Fatalf("handler payload kind mismatch: got %q want %q", handler.requests[0].Payload.Kind, payloadKind)
 			}
-			if string(handler.requests[0].Payload.Value) != string(payloadKind)+"-bytes" {
-				t.Fatalf("handler payload value mismatch: got %q", handler.requests[0].Payload.Value)
+			if len(handler.requests[0].Payload.Value) != 0 {
+				t.Fatalf("expected canonical empty protobuf payload, got %q", handler.requests[0].Payload.Value)
 			}
 		})
 	}
@@ -241,48 +242,51 @@ func gatewayRequest(requestID string, includePayload bool) []byte {
 	if includePayload {
 		return gatewayRequestOfKind(requestID, GatewayPayloadTelemetry)
 	}
-	payload := make([]byte, 0, 96)
-	payload = encodeString(payload, requestFieldRequestID, requestID)
-	payload = encodeString(payload, requestFieldOrgID, "a4ai")
-	payload = encodeString(payload, requestFieldGroupID, "co-a")
-	payload = encodeString(payload, requestFieldAssetID, "raw.mobile.front")
-	return payload
+	wire, err := proto.Marshal(&sakerv1.GatewayStreamRequest{RequestId: requestID, OrgId: "a4ai", GroupId: "co-a", AssetId: "raw.mobile.front"})
+	if err != nil {
+		panic(err)
+	}
+	return wire
 }
 
 func gatewayRequestOfKind(requestID string, payloadKind GatewayPayloadKind) []byte {
-	payload := make([]byte, 0, 96)
-	payload = encodeString(payload, requestFieldRequestID, requestID)
-	payload = encodeString(payload, requestFieldOrgID, "a4ai")
-	payload = encodeString(payload, requestFieldGroupID, "co-a")
-	payload = encodeString(payload, requestFieldAssetID, "raw.mobile.front")
-	payload = encodeString(payload, requestPayloadField(payloadKind), string(payloadKind)+"-bytes")
-	return payload
-}
-
-func requestPayloadField(kind GatewayPayloadKind) int {
-	switch kind {
+	message := &sakerv1.GatewayStreamRequest{
+		RequestId: requestID, OrgId: "a4ai", GroupId: "co-a", AssetId: "raw.mobile.front",
+	}
+	switch payloadKind {
 	case GatewayPayloadTelemetry:
-		return requestFieldTelemetry
+		message.Payload = &sakerv1.GatewayStreamRequest_Telemetry{Telemetry: &sakerv1.TelemetryEnvelope{}}
 	case GatewayPayloadStream:
-		return requestFieldStreamEvent
+		message.Payload = &sakerv1.GatewayStreamRequest_StreamEvent{StreamEvent: &sakerv1.StreamSessionEvent{}}
 	case GatewayPayloadCommandAck:
-		return requestFieldCommandAck
+		message.Payload = &sakerv1.GatewayStreamRequest_CommandAck{CommandAck: &sakerv1.CommandAck{}}
 	default:
 		panic("unsupported test gateway request payload kind")
 	}
+	wire, err := proto.Marshal(message)
+	if err != nil {
+		panic(err)
+	}
+	return wire
 }
 
 func assertResponse(t *testing.T, payload []byte, requestID string, expectedStatus GatewayAckStatus, reasonCode string) {
 	t.Helper()
-	fields := decodeResponse(t, payload)
-	if requestID != "" && string(fields.strings[responseFieldRequestID]) != requestID {
-		t.Fatalf("request id mismatch: %q", fields.strings[responseFieldRequestID])
+	response := &sakerv1.GatewayStreamResponse{}
+	if err := proto.Unmarshal(payload, response); err != nil {
+		t.Fatal(err)
 	}
-	if GatewayAckStatus(fields.varints[responseFieldStatus]) != expectedStatus {
-		t.Fatalf("status mismatch: got %d want %d", fields.varints[responseFieldStatus], expectedStatus)
+	if requestID != "" && response.GetRequestId() != requestID {
+		t.Fatalf("request id mismatch: %q", response.GetRequestId())
 	}
-	if string(fields.strings[responseFieldReasonCode]) != reasonCode {
-		t.Fatalf("reason mismatch: got %q want %q", fields.strings[responseFieldReasonCode], reasonCode)
+	if response.GetStatus() != expectedStatus {
+		t.Fatalf("status mismatch: got %d want %d", response.GetStatus(), expectedStatus)
+	}
+	if response.GetReasonCode() != reasonCode {
+		t.Fatalf("reason mismatch: got %q want %q", response.GetReasonCode(), reasonCode)
+	}
+	if response.GetResponseId() == "" {
+		t.Fatal("response id is required")
 	}
 }
 
@@ -354,11 +358,6 @@ func (h *recordingGatewayHandler) HandleGatewayRequest(_ context.Context, reques
 	}
 }
 
-type decodedResponse struct {
-	strings map[int][]byte
-	varints map[int]uint64
-}
-
 func assertReadinessEventually(t *testing.T, readiness *Readiness, expectedReady bool, expectedReason string) {
 	t.Helper()
 	deadline := time.Now().Add(time.Second)
@@ -371,46 +370,4 @@ func assertReadinessEventually(t *testing.T, readiness *Readiness, expectedReady
 	}
 	ready, reason := readiness.Ready()
 	t.Fatalf("readiness mismatch: ready=%v reason=%q", ready, reason)
-}
-
-func decodeResponse(t *testing.T, payload []byte) decodedResponse {
-	t.Helper()
-	result := decodedResponse{strings: map[int][]byte{}, varints: map[int]uint64{}}
-	cursor := 0
-	for cursor < len(payload) {
-		key, next, err := readVarint(payload, cursor)
-		if err != nil {
-			t.Fatalf("read key failed: %v", err)
-		}
-		cursor = next
-		fieldNumber := int(key >> 3)
-		wireType := int(key & 0b111)
-		switch wireType {
-		case wireTypeVarint:
-			value, next, err := readVarint(payload, cursor)
-			if err != nil {
-				t.Fatalf("read varint failed: %v", err)
-			}
-			result.varints[fieldNumber] = value
-			cursor = next
-		case wireTypeLengthDelimited:
-			length, next, err := readVarint(payload, cursor)
-			if err != nil {
-				t.Fatalf("read length failed: %v", err)
-			}
-			cursor = next
-			end := cursor + int(length)
-			if end > len(payload) {
-				t.Fatal("response length exceeds payload")
-			}
-			result.strings[fieldNumber] = append([]byte(nil), payload[cursor:end]...)
-			cursor = end
-		default:
-			t.Fatalf("unsupported wire type %d", wireType)
-		}
-	}
-	if !strings.HasPrefix(string(result.strings[responseFieldResponseID]), "grpc-") {
-		t.Fatalf("response id is not generated by grpc gateway: %q", result.strings[responseFieldResponseID])
-	}
-	return result
 }

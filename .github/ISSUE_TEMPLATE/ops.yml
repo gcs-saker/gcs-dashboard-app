@@ -1,8 +1,11 @@
 name: Operations task
 description: Track deployment, infrastructure, backup, rollback, or runbook work
-title: "[Ops]: "
+title: "[P?][Ops] "
 labels: ["type: ops"]
 body:
+  - type: markdown
+    attributes:
+      value: Production scope is Server-01 on SSH port 55121 only. Do not use Server-02/55122.
   - type: textarea
     id: objective
     attributes:
@@ -31,3 +34,17 @@ body:
     attributes:
       label: Rollback plan
       description: How do we return to the previous working state?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Completion and evidence
+      placeholder: |
+        - [ ] Backup verified when stateful services are affected
+        - [ ] Public health/readiness PASS
+        - [ ] Authorization denial PASS
+        - [ ] Container health and source revision PASS
+        - [ ] New 5xx/restart/OOM checked
+    validations:
+      required: true

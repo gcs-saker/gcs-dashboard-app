@@ -7,6 +7,7 @@ import type {
   PlaybackAction,
   PeerConnectionFactory,
   SignalingTimingRecorder,
+  WhepPlaybackSession,
 } from "./whepPlaybackContracts";
 import { messageFromUnknown, reportWhepDebug } from "./whepPlaybackDebug";
 import {
@@ -19,14 +20,7 @@ import {
   type WhepPlaybackMediaRefs,
 } from "./whepPlaybackTrack";
 
-type StopMonitor = () => void;
-
-export interface WhepPlaybackSession {
-  peerConnection: RTCPeerConnection | null;
-  stopAudioMonitor: StopMonitor | null;
-  stopAudioLevelMonitor: StopMonitor | null;
-  stopAudioStatsMonitor: StopMonitor | null;
-}
+export type { WhepPlaybackSession } from "./whepPlaybackContracts";
 
 interface StartWhepPlaybackSessionInput {
   whepUrl: string;

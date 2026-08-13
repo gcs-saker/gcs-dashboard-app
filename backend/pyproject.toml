@@ -22,6 +22,7 @@ extend-exclude = [
   ".pytest_cache",
   "__pycache__",
   "venv",
+  "gcs/saker/v1/*_pb2.py",
 ]
 
 [tool.ruff.lint]

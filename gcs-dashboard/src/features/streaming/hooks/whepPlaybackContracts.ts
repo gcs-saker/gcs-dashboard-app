@@ -4,6 +4,14 @@ import type { WHEP_PLAYBACK_ACTION } from "./whepPlaybackStateContract";
 export type PeerConnectionFactory = () => RTCPeerConnection;
 export type SignalingTimingKey = keyof WebRTCSignalingTimings;
 export type SignalingTimingRecorder = (stage: SignalingTimingKey) => void;
+type StopMonitor = () => void;
+
+export interface WhepPlaybackSession {
+  peerConnection: RTCPeerConnection | null;
+  stopAudioMonitor: StopMonitor | null;
+  stopAudioLevelMonitor: StopMonitor | null;
+  stopAudioStatsMonitor: StopMonitor | null;
+}
 
 export type PlaybackAction =
   | {

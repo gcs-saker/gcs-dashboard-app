@@ -2,9 +2,10 @@ package grpcgateway
 
 import (
 	"context"
-	"encoding/binary"
-	"math"
 	"testing"
+
+	sakerv1 "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
+	"google.golang.org/protobuf/proto"
 )
 
 type recordingTelemetryStore struct {
@@ -45,19 +46,13 @@ func TestTelemetryHandlerRejectsIdentityMismatchWithoutStore(t *testing.T) {
 }
 
 func telemetryWire(assetID string) []byte {
-	timestamp := encodeVarintField(nil, 1, 1_722_067_200_000)
-	position := appendFixed64(nil, 1, 35.8714)
-	position = appendFixed64(position, 2, 128.6014)
-	payload := encodeString(nil, 1, "event-1")
-	payload = encodeString(payload, 4, assetID)
-	payload = encodeBytes(payload, 6, timestamp)
-	payload = encodeBytes(payload, 7, position)
+	payload, err := proto.Marshal(&sakerv1.TelemetryEnvelope{
+		EventId: "event-1", AssetId: assetID,
+		Time:     &sakerv1.Timestamped{ObservedUnixMillis: 1_722_067_200_000},
+		Position: &sakerv1.GeoPoint{Latitude: 35.8714, Longitude: 128.6014},
+	})
+	if err != nil {
+		panic(err)
+	}
 	return payload
-}
-
-func appendFixed64(payload []byte, field int, value float64) []byte {
-	payload = encodeKey(payload, field, 1)
-	var buffer [8]byte
-	binary.LittleEndian.PutUint64(buffer[:], math.Float64bits(value))
-	return append(payload, buffer[:]...)
 }

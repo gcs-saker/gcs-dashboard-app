@@ -1,6 +1,6 @@
 name: Test task
 description: Define manual, automated, smoke, load, or E2E verification
-title: "[Test]: "
+title: "[P?][Test] "
 labels: ["type: test"]
 body:
   - type: textarea
@@ -35,3 +35,14 @@ body:
     attributes:
       label: Evidence
       description: Attach logs, screenshots, metrics, or command output.
+  - type: dropdown
+    id: blocked_handling
+    attributes:
+      label: External dependency handling
+      description: Missing physical equipment or access must be BLOCKED, never PASS.
+      options:
+        - No external dependency
+        - Physical equipment required
+        - External access or authority required
+    validations:
+      required: true

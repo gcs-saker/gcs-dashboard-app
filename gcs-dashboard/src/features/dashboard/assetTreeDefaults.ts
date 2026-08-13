@@ -1,4 +1,4 @@
-import type { AssetTreeNode } from "./assetTree";
+import type { AssetTreeNode } from "./assetTreeModel";
 
 export const DEFAULT_ASSET_TREE: AssetTreeNode = {
   id: "gcs-saker",

@@ -2,8 +2,7 @@ import type { Dispatch, MutableRefObject, RefObject } from "react";
 
 import { monitorAudioLevel } from "./whepAudioLevelMonitor";
 import { monitorAudioState } from "./whepPlaybackAudio";
-import type { PlaybackAction } from "./whepPlaybackContracts";
-import type { WhepPlaybackSession } from "./whepPlaybackSession";
+import type { PlaybackAction, WhepPlaybackSession } from "./whepPlaybackContracts";
 import { requestVideoPlayback } from "./whepPlaybackConnection";
 
 export interface WhepPlaybackMediaRefs {

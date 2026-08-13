@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@auth/AuthProvider";
 import { useDashboardStreams } from "@dashboard/hooks/useDashboardStreams";
-import { StreamWallTile } from "./components/StreamWallTile";
-import { reconcileStreamWallSlots, type StreamWallLayout } from "./streamWallLayout";
+import { StreamWallTile } from "@streaming/components/StreamWallTile";
+import { reconcileStreamWallSlots, type StreamWallLayout } from "@streaming/streamWallLayout";
 import "./StreamPage.css";
 
 const EMPTY_STREAM_WALL: [] = [];
