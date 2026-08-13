@@ -14,6 +14,10 @@ declare global {
   }
 }
 
+test.beforeEach(async ({ page }) => {
+  await mockOperationalPolling(page);
+});
+
 test("login mock flow reaches dashboard without real credentials", async ({ page }, testInfo) => {
   await mockLoginFlow(page);
 
@@ -40,9 +44,9 @@ test("dashboard preview supports stream, map, and operations navigation", async 
   await page.getByRole("button", { name: "스트리밍 3 선택" }).click();
   await expect(page.getByRole("dialog", { name: "스트리밍 3 스트림 연결" })).toBeVisible();
   await page.getByRole("button", { name: "취소" }).click();
-  await page.getByRole("button", { name: "스트리밍 3 위치 35.866900, 128.593100" }).click();
+  await page.getByRole("button", { name: /위치 35\.866900, 128\.593100/ }).click();
   await expect(page.getByText("지도 핀 스트림 선택됨")).toBeVisible();
-  await expect(page.getByText("스트리밍 3 / AI 감지 overlay")).toBeVisible();
+  await expect(page.getByRole("region", { name: "선택 스트림" })).toContainText("AI 감지 overlay");
 
   await page.getByRole("button", { name: "이벤트로그" }).click();
   await expect(page.getByRole("heading", { name: "이벤트 로그" })).toBeVisible();
@@ -61,12 +65,6 @@ test("dashboard preview supports stream, map, and operations navigation", async 
 });
 
 async function mockLoginFlow(page: Page): Promise<void> {
-  await page.route("**/media-control/api/v1/streams", (route) =>
-    route.fulfill({ json: [], status: 200 }),
-  );
-  await page.route("**/api/telemetry/all", (route) =>
-    route.fulfill({ json: [], status: 200 }),
-  );
   await page.route("**/auth-policy/auth/refresh", (route) =>
     route.fulfill({ json: { detail: "preview refresh disabled" }, status: 401 }),
   );
@@ -75,6 +73,15 @@ async function mockLoginFlow(page: Page): Promise<void> {
   );
   await page.route("**/auth-policy/auth/logout", (route) =>
     route.fulfill({ body: "", status: 204 }),
+  );
+}
+
+async function mockOperationalPolling(page: Page): Promise<void> {
+  await page.route("**/media-control/api/v1/streams**", (route) =>
+    route.fulfill({ json: [], status: 200 }),
+  );
+  await page.route("**/api/telemetry/all**", (route) =>
+    route.fulfill({ json: [], status: 200 }),
   );
 }
 
