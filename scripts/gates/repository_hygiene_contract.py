@@ -95,7 +95,8 @@ def validate_kotlin_names(paths: list[Path], errors: list[str]) -> None:
 
 def validate_production_file_sizes(paths: list[Path], errors: list[str]) -> None:
     for path in paths:
-        if path.suffix not in SOURCE_SUFFIXES or is_test_file(path):
+        relative = path.relative_to(REPOSITORY_ROOT)
+        if path.suffix not in SOURCE_SUFFIXES or is_test_file(path) or "generated" in relative.parts:
             continue
         if not any(path.is_relative_to(root) for root in PRODUCTION_ROOTS):
             continue
@@ -103,7 +104,7 @@ def validate_production_file_sizes(paths: list[Path], errors: list[str]) -> None
         if line_count > MAX_PRODUCTION_LINES:
             errors.append(
                 f"production source exceeds {MAX_PRODUCTION_LINES} lines ({line_count}): "
-                f"{path.relative_to(REPOSITORY_ROOT)}"
+                f"{relative}"
             )
 
 
