@@ -115,7 +115,6 @@ stacks:
     runtime:
       composeServices:
         - turn-primary
-        - turn-secondary
     evidence:
       - deploy/compose/compose.single-node.poc.yml
       - scripts/smoke/webrtc_ice_smoke.py

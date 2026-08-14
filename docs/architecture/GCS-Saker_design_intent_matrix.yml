@@ -37,9 +37,10 @@ intents:
         - postgres-geo
         - mediamtx
         - turn-primary
-        - turn-secondary
         - dashboard
         - edge
+      composeProfileServices:
+        turn-secondary: same-host-turn-redundancy
       evidencePaths:
         - deploy/compose/compose.single-node.poc.yml
         - docs/architecture/GCS-Saker_runtime_stack_status.yml

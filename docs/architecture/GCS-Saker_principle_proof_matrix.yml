@@ -384,7 +384,8 @@ principles:
         coturnPair: active
       composeActiveServices:
         - turn-primary
-        - turn-secondary
+      composeProfileServices:
+        turn-secondary: same-host-turn-redundancy
       requiredTexts:
         - path: services/media-control/internal/turn/cached_registry.go
           text: "CachedIceServerProvider"
