@@ -139,7 +139,7 @@ principles:
           text: "type StreamList struct"
         - path: services/media-control/internal/domain/ice.go
           text: "type IceServerList struct"
-        - path: services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/GroupModels.kt
+        - path: services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/groups/GroupModels.kt
           text: "class StreamRoutePolicies"
       evidencePaths:
         - services/media-control/internal/domain/stream_test.go

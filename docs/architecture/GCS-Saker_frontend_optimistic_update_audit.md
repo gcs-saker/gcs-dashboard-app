@@ -18,12 +18,12 @@
 | --- | --- | --- | --- |
 | 인증 로그인/회원가입 | `gcs-dashboard/src/features/auth/LoginPage.tsx`, `SignupPage.tsx`, `AuthProvider.tsx` | optimistic update 없음 | 제출 중 상태만 먼저 표시하고, token/user 상태는 서버 응답 이후 반영한다. |
 | 인증 API | `gcs-dashboard/src/features/auth/authApi.ts` | optimistic update 없음 | `loginRequest`, `signupRequest`, `refreshSessionRequest`는 실패 시 예외를 던지고 성공 응답 이후만 저장한다. |
-| 시간 동기화 | `gcs-dashboard/src/features/dashboard/hooks/useTimeSyncStatus.ts` | optimistic update 없음 | `saving`은 요청 중 표시이고, `saved` 상태는 `updateTimeSyncConfig` 응답 이후만 반영한다. |
-| 스트림 registry polling | `gcs-dashboard/src/features/dashboard/hooks/useDashboardStreams.ts` | optimistic update 없음 | backend registry/telemetry 응답을 병합한다. 실패 시 online stream을 degraded로 낮춘다. |
-| 직접 스트림 주소 연결 제거 | `gcs-dashboard/src/features/dashboard/streamDevices.ts`, `components/StreamDeviceConnectDialog.tsx` | 제거 완료 | 수신자는 주소를 입력하지 않고 서버가 인가해 제공한 registry stream ID만 선택한다. |
-| 이벤트 로그 | `gcs-dashboard/src/features/dashboard/hooks/useOperationalEvents.ts` | optimistic update 없음 | SSE/polling으로 받은 이벤트만 메모리 히스토리에 병합한다. mutation이 없다. |
-| 대시보드 개인 설정 | `gcs-dashboard/src/features/dashboard/hooks/useDashboardUserPreferences.ts`, `gcs-dashboard/src/features/dashboard/userPreferencesStore.ts`, `gcs-dashboard/src/features/dashboard/streamPreferences.ts` | local-first state | layout/tab/CCTV 품질과 stream alias는 사용자 브라우저 설정이다. 서버 성공으로 표시하지 않는다. |
-| Talkback 송신 | `gcs-dashboard/src/features/streaming/hooks/useWhipAudioPublisher.ts` | optimistic success 없음 | 대상은 `pending`으로 시작하고 WHIP 결과 후 `active/error`로 바뀐다. |
+| 시간 동기화 | `gcs-dashboard/src/features/dashboard/hooks/operations/useTimeSyncStatus.ts` | optimistic update 없음 | `saving`은 요청 중 표시이고, `saved` 상태는 `updateTimeSyncConfig` 응답 이후만 반영한다. |
+| 스트림 registry polling | `gcs-dashboard/src/features/dashboard/hooks/controller/useDashboardStreams.ts` | optimistic update 없음 | backend registry/telemetry 응답을 병합한다. 실패 시 online stream을 degraded로 낮춘다. |
+| 직접 스트림 주소 연결 제거 | `gcs-dashboard/src/features/dashboard/assets/streamDevices.ts`, `components/StreamDeviceConnectDialog.tsx` | 제거 완료 | 수신자는 주소를 입력하지 않고 서버가 인가해 제공한 registry stream ID만 선택한다. |
+| 이벤트 로그 | `gcs-dashboard/src/features/dashboard/hooks/operations/useOperationalEvents.ts` | optimistic update 없음 | SSE/polling으로 받은 이벤트만 메모리 히스토리에 병합한다. mutation이 없다. |
+| 대시보드 개인 설정 | `gcs-dashboard/src/features/dashboard/hooks/controller/useDashboardUserPreferences.ts`, `gcs-dashboard/src/features/dashboard/preferences/userPreferencesStore.ts`, `gcs-dashboard/src/features/dashboard/preferences/streamPreferences.ts` | local-first state | layout/tab/CCTV 품질과 stream alias는 사용자 브라우저 설정이다. 서버 성공으로 표시하지 않는다. |
+| Talkback 송신 | `gcs-dashboard/src/features/streaming/hooks/audio/useWhipAudioPublisher.ts` | optimistic success 없음 | 대상은 `pending`으로 시작하고 WHIP 결과 후 `active/error`로 바뀐다. |
 | 웹캠 송출 | `gcs-dashboard/src/features/streaming/components/LocalWebcamPublisher.tsx` | optimistic success 없음 | 단계별 pending/active/error를 표시하며, WebRTC disconnect 시 재연결 상태로 내려간다. |
 
 ## 유지해야 할 규칙

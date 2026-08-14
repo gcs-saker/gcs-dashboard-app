@@ -193,9 +193,9 @@ intents:
     rationale: "스트리밍 시스템은 HTTP 200만으로 성공을 판단할 수 없다."
     assertions:
       requiredTexts:
-        - path: gcs-dashboard/src/features/streaming/hooks/whepPlaybackStateContract.ts
+        - path: gcs-dashboard/src/features/streaming/hooks/playback/whepPlaybackStateContract.ts
           text: "first-frame"
-        - path: gcs-dashboard/src/features/streaming/hooks/whepAudioStats.ts
+        - path: gcs-dashboard/src/features/streaming/hooks/audio/whepAudioStats.ts
           text: "selectedPair"
         - path: gcs-dashboard/src/features/streaming/webrtcRuntimeEvidence.ts
           text: "buildWebRTCRuntimeEvidence"

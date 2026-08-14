@@ -237,7 +237,7 @@ stacks:
       composeService: auth-policy
     evidence:
       - services/auth-policy/src/main/resources/graphql/schema.graphqls
-      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalEventGraphQlController.kt
+      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/operations/events/OperationalEventGraphQlController.kt
       - services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalEventGraphQlControllerTest.kt
     missingRuntime:
       - "edge /graphql route"

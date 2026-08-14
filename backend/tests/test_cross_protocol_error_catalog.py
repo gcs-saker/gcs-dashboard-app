@@ -7,7 +7,8 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 def test_cross_protocol_error_catalog_matches_runtime_contracts() -> None:
     catalog = json.loads((REPOSITORY_ROOT / "contracts/errors/v1/error-catalog.json").read_text(encoding="utf-8"))
     kotlin_errors = (
-        REPOSITORY_ROOT / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/PolicyErrors.kt"
+        REPOSITORY_ROOT
+        / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/shared/PolicyErrors.kt"
     ).read_text(encoding="utf-8")
     grpc_errors = (REPOSITORY_ROOT / "services/media-control/internal/grpcgateway/request_handler.go").read_text(
         encoding="utf-8"
