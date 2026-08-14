@@ -140,6 +140,39 @@ func TestExchangeReturnsGatewayHandlerDecision(t *testing.T) {
 	assertResponse(t, response, "req-rejected", GatewayAckStatusRejected, "policy_rejected")
 }
 
+func TestExchangeEnforcesAuthenticatedDeviceGroupEndToEnd(t *testing.T) {
+	store := &recordingTelemetryStore{}
+	message := &sakerv1.GatewayStreamRequest{
+		RequestId: "request-1", GroupId: "co-b", AssetId: "device-1",
+		Payload: &sakerv1.GatewayStreamRequest_Telemetry{Telemetry: &sakerv1.TelemetryEnvelope{
+			EventId: "event-1", AssetId: "device-1",
+			Time: &sakerv1.Timestamped{ObservedUnixMillis: 1_722_067_200_000},
+			Position: &sakerv1.GeoPoint{Latitude: 35.8714, Longitude: 128.6014},
+		}},
+	}
+	wire, err := proto.Marshal(message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := exchangeOnceWithMetadata(
+		t,
+		wire,
+		metadata.Pairs(metadataDeviceUUID, "device-1", metadataDeviceCredential, "credential"),
+		func(server Server) Server {
+			server.authenticator = staticGatewayAuthenticator{identity: GatewayIdentity{DeviceUUID: "device-1", GroupID: "co-a"}}
+			server.handler = NewTelemetryHandler(store)
+			return server
+		},
+	)
+	if err != nil {
+		t.Fatalf("exchange failed: %v", err)
+	}
+	assertResponse(t, response, "request-1", GatewayAckStatusRejected, reasonIdentityMismatch)
+	if store.calls != 0 {
+		t.Fatalf("identity mismatch reached telemetry store: calls=%d", store.calls)
+	}
+}
+
 func TestStartWithReadinessReportsListeningState(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -345,6 +378,14 @@ func exchangeMany(t *testing.T, requestIDs []string, token string) ([][]byte, er
 type recordingGatewayHandler struct {
 	requests []GatewayStreamRequest
 	decision GatewayRequestDecision
+}
+
+type staticGatewayAuthenticator struct {
+	identity GatewayIdentity
+}
+
+func (a staticGatewayAuthenticator) AuthenticateGateway(context.Context, GatewayCredentials) (GatewayIdentity, error) {
+	return a.identity, nil
 }
 
 func (h *recordingGatewayHandler) HandleGatewayRequest(_ context.Context, request GatewayStreamRequest) GatewayRequestDecision {

@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/admin/signup-tokens")
+@RequestMapping(value = ["/api/v1/signup-tokens", "/admin/signup-tokens"])
 class AdminSignupTokenController(
     private val tokens: SignupRegistrationTokenService,
     private val principalResolver: BearerPrincipalResolver,
@@ -58,9 +58,7 @@ class AdminSignupTokenController(
         return try {
             val groupId = GroupId(request.groupId.trim())
             val role = parseAssignableRole(request.role)
-            if (!administrationPolicy.canIssueMemberRole(principal, groupId, role)) {
-                throw ForbiddenApiError("group management scope required")
-            }
+            translatePolicyErrors { administrationPolicy.requireGroupManagement(principal, groupId) }
             val issued = tokens.issue(
                 SignupRegistrationTokenIssueCommand(
                     companyId = request.companyId,
@@ -80,15 +78,11 @@ class AdminSignupTokenController(
 
     private fun requireAdministrator(authorization: String?) =
         principalResolver.requirePrincipal(authorization).also {
-            if (it.role != UserRole.ADMIN && it.role != UserRole.GROUP_ADMIN) {
-                throw ForbiddenApiError("administrator role required")
-            }
+            translatePolicyErrors { administrationPolicy.requireGroupManagerRole(it) }
         }
 
     private fun requireGroupManagement(principal: AuthenticatedPrincipal, groupId: GroupId) {
-        if (!administrationPolicy.canManageGroup(principal, groupId)) {
-            throw ForbiddenApiError("group management scope required")
-        }
+        translatePolicyErrors { administrationPolicy.requireGroupManagement(principal, groupId) }
     }
 
     private fun parseAssignableRole(value: String): UserRole =

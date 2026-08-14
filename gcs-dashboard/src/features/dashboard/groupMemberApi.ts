@@ -4,7 +4,7 @@ import { fetchValidatedJson } from "@features/apiClient";
 import { isGroupMember, isGroupMemberList, type GroupMember, type GroupMemberUpdate } from "./groupMembers";
 
 const groupMemberUrl = (groupId: string, suffix = "members"): string =>
-  backendRootUrl(`/auth-policy/admin/groups/${encodeURIComponent(groupId)}/${suffix}`);
+  backendRootUrl(`/auth-policy/api/v1/groups/${encodeURIComponent(groupId)}/${suffix}`);
 
 export function fetchGroupMembers(groupId: string, fetcher: typeof fetch = fetch): Promise<GroupMember[]> {
   return fetchValidatedJson({

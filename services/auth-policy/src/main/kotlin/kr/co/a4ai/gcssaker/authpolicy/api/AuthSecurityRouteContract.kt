@@ -18,7 +18,6 @@ object AuthSecurityRouteContract {
     private const val OPS_PREFIX = "/ops/**"
     private const val TELEMETRY_PREFIX = "/telemetry/**"
     private const val ASSET_PREFIX = "/asset/**"
-    private const val ADMIN_PREFIX = "/admin/**"
     private const val ROLE_PREFIX = "ROLE_"
     private const val ADMIN_ROLE_NAME = "ADMIN"
 
@@ -73,7 +72,9 @@ object AuthSecurityRouteContract {
         RouteMatcher(HttpMethod.POST, DeviceBootstrapApiRoutes.EDGE_ROOT + DeviceBootstrapApiRoutes.REGISTER),
         RouteMatcher(HttpMethod.POST, "/api/v1/devices/*/telemetry"),
     )
-    val ADMIN_MATCHERS = listOf(RouteMatcher(null, ADMIN_PREFIX))
+    // Management routes authenticate here; action/resource authorization belongs to the use case policy.
+    // Keeping role checks out of the transport filter lets ADMIN and scoped GROUP_ADMIN share one API.
+    val ADMIN_MATCHERS = emptyList<RouteMatcher>()
     val ADMIN_AUTHORITY = roleAuthority(ADMIN_ROLE_NAME)
     val PROTECTED_MATCHERS = listOf(
         RouteMatcher(HttpMethod.GET, AuthApiRoutes.ROOT + AuthApiRoutes.ME),

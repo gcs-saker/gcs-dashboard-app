@@ -6,7 +6,6 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceProvisioningTokenIssueCommand
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceProvisioningTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupAdministrationPolicy
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
-import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -17,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping(AdminProvisioningTokenApiRoutes.ROOT)
+@RequestMapping(value = [AdminProvisioningTokenApiRoutes.RESOURCE_ROOT, AdminProvisioningTokenApiRoutes.ROOT])
 class AdminProvisioningTokenController(
     private val tokens: DeviceProvisioningTokenService,
     private val principalResolver: BearerPrincipalResolver,
@@ -74,15 +73,11 @@ class AdminProvisioningTokenController(
     }
 
     private fun requireAdministrator(principal: AuthenticatedPrincipal): AuthenticatedPrincipal {
-        if (principal.role != UserRole.ADMIN && principal.role != UserRole.GROUP_ADMIN) {
-            throw ForbiddenApiError(AdminProvisioningTokenApiErrors.ADMIN_ROLE_REQUIRED)
-        }
+        translatePolicyErrors { administrationPolicy.requireGroupManagerRole(principal) }
         return principal
     }
 
     private fun requireGroupManagement(principal: AuthenticatedPrincipal, groupId: GroupId) {
-        if (!administrationPolicy.canManageGroup(principal, groupId)) {
-            throw ForbiddenApiError("group management scope required")
-        }
+        translatePolicyErrors { administrationPolicy.requireGroupManagement(principal, groupId) }
     }
 }

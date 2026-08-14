@@ -38,7 +38,7 @@ describe("ProvisioningTokenPanel", () => {
     expect(await screen.findByText("복사됨")).toBeInTheDocument();
 
     const postRequest = fetcher.mock.calls.find(([, init]) => init?.method === "POST");
-    expect(postRequest?.[0]).toBe("/auth-policy/admin/provisioning-tokens");
+    expect(postRequest?.[0]).toBe("/auth-policy/api/v1/provisioning-tokens");
     expect(JSON.parse(String(postRequest?.[1]?.body))).toEqual({
       groupId: "co-a",
       label: "현장 장비 등록",

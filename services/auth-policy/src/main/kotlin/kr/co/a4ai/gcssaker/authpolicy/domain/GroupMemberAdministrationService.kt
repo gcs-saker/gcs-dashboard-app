@@ -13,7 +13,7 @@ class GroupMemberAdministrationService(
     private val refreshSessions: RefreshSessionStore = StatelessRefreshSessionStore,
 ) {
     fun list(principal: AuthenticatedPrincipal, groupId: GroupId): List<AuthUser> {
-        require(administrationPolicy.canManageGroup(principal, groupId)) { "group member access denied" }
+        administrationPolicy.requireGroupManagement(principal, groupId)
         return users.list().filter { it.groupId == groupId }.sortedBy { it.username }
     }
 
@@ -24,16 +24,26 @@ class GroupMemberAdministrationService(
         username: String,
         command: GroupMemberUpdate,
     ): AuthUser {
-        require(administrationPolicy.canManageGroup(principal, groupId)) { "group member access denied" }
-        val current = users.findByUsername(username) ?: error("User not found")
-        require(current.groupId == groupId) { "User not found" }
-        require(current.role != UserRole.ADMIN && current.role != UserRole.GROUP_ADMIN) {
-            "administrator accounts require the replacement flow"
+        administrationPolicy.requireGroupManagement(principal, groupId)
+        val current = users.findByUsername(username)
+            ?: throw ResourceNotFoundError(PolicyErrorCodes.MEMBER_NOT_FOUND, "user not found")
+        if (current.groupId != groupId) {
+            throw ResourceNotFoundError(PolicyErrorCodes.MEMBER_NOT_FOUND, "user not found")
+        }
+        if (current.role == UserRole.ADMIN || current.role == UserRole.GROUP_ADMIN) {
+            throw StateConflictError(
+                PolicyErrorCodes.ADMINISTRATOR_REPLACEMENT_REQUIRED,
+                "administrator accounts require the replacement flow",
+            )
         }
         val nextRole = command.role ?: current.role
-        require(nextRole.canBeIssuedByGroupAdmin()) { "member role must be viewer or operator" }
+        if (!nextRole.canBeIssuedByGroupAdmin()) {
+            throw InvalidContractError(PolicyErrorCodes.MEMBER_ROLE_INVALID, "member role must be viewer or operator")
+        }
         val nextPasswordHash = command.password?.let {
-            require(it.length >= 12) { "password must be at least 12 characters" }
+            if (it.length < 12) {
+                throw InvalidContractError(PolicyErrorCodes.PASSWORD_TOO_SHORT, "password must be at least 12 characters")
+            }
             passwordHasher.hash(it)
         } ?: current.passwordHash
         return users.update(
@@ -51,7 +61,7 @@ class GroupMemberAdministrationService(
         groupId: GroupId,
         username: String,
     ): AuthUser {
-        require(principal.role == UserRole.ADMIN) { "system administrator required" }
+        administrationPolicy.requireSystemAdministrator(principal)
         val before = users.list().filter { it.groupId == groupId && it.role == UserRole.GROUP_ADMIN }.map { it.username }
         return users.replaceGroupAdmin(groupId, username).also {
             (before + username).distinct().forEach(refreshSessions::revokePrincipalSessions)

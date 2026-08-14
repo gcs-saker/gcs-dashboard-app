@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"net"
 	"strings"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/peer"
 )
 
 const (
@@ -79,9 +81,11 @@ func (s Server) serve(ctx context.Context, listenAddress string, onReady func())
 func (s Server) exchangeHandler(_ any, stream grpc.ServerStream) error {
 	credentials, credentialError := gatewayCredentials(stream.Context())
 	if s.authenticator == nil && !s.authorized(stream.Context()) {
+		logGatewaySecurity(stream.Context(), "authentication_rejected", reasonUnauthorized, 0)
 		return status.Error(codes.Unauthenticated, reasonUnauthorized)
 	}
 	if s.authenticator != nil && credentialError != nil {
+		logGatewaySecurity(stream.Context(), "authentication_rejected", reasonUnauthorized, 0)
 		return status.Error(codes.Unauthenticated, reasonUnauthorized)
 	}
 	reconnectRequested := metadataContains(stream.Context(), metadataReconnect, "true")
@@ -98,6 +102,7 @@ func (s Server) exchangeHandler(_ any, stream grpc.ServerStream) error {
 		if s.authenticator != nil {
 			identity, err := s.authenticator.AuthenticateGateway(requestContext, credentials)
 			if err != nil {
+				logGatewaySecurity(requestContext, "authentication_rejected", reasonUnauthorized, 0)
 				return status.Error(codes.Unauthenticated, reasonUnauthorized)
 			}
 			requestContext = context.WithValue(requestContext, gatewayIdentityContextKey{}, identity)
@@ -110,18 +115,32 @@ func (s Server) exchangeHandler(_ any, stream grpc.ServerStream) error {
 	}
 }
 
+func logGatewaySecurity(ctx context.Context, event string, reason string, payloadBytes int) {
+	remote := "-"
+	if remotePeer, ok := peer.FromContext(ctx); ok && remotePeer.Addr != nil {
+		remote = remotePeer.Addr.String()
+	}
+	slog.Warn("grpc_gateway_security", "event", event, "reason", reason, "method", fullMethodExchange, "remote", remote, "payloadBytes", payloadBytes)
+}
+
 func (s Server) handleRequest(ctx context.Context, request []byte, reconnectRequested bool) []byte {
 	if len(request) > s.maxPayloadBytes {
+		logGatewaySecurity(ctx, "message_rejected", reasonBackpressure, len(request))
 		return GatewayResponse("", GatewayAckStatusBackpressure, reasonBackpressure)
 	}
 	gatewayRequest, err := DecodeGatewayStreamRequest(request)
 	if err != nil {
+		logGatewaySecurity(ctx, "message_rejected", reasonMalformed, len(request))
 		return GatewayResponse("", GatewayAckStatusRejected, reasonMalformed)
 	}
 	if reconnectRequested {
 		return GatewayResponse(gatewayRequest.RequestID, GatewayAckStatusReconnect, reasonReconnect)
 	}
-	return gatewayDecisionResponse(gatewayRequest.RequestID, s.handler.HandleGatewayRequest(ctx, gatewayRequest))
+	decision := s.handler.HandleGatewayRequest(ctx, gatewayRequest)
+	if decision.Status != GatewayAckStatusAccepted {
+		logGatewaySecurity(ctx, "message_rejected", decision.ReasonCode, len(request))
+	}
+	return gatewayDecisionResponse(gatewayRequest.RequestID, decision)
 }
 
 func Start(ctx context.Context, listenAddress string, token string, maxPayloadBytes int) {

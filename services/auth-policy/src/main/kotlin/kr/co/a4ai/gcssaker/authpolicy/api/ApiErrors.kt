@@ -6,14 +6,15 @@ import org.springframework.web.server.ResponseStatusException
 sealed class ApiError(
     status: HttpStatus,
     reason: String,
+    val code: String = status.name.lowercase(),
 ) : ResponseStatusException(status, reason)
 
-class BadRequestApiError(reason: String) : ApiError(HttpStatus.BAD_REQUEST, reason)
+class BadRequestApiError(reason: String, code: String = "invalid_request") : ApiError(HttpStatus.BAD_REQUEST, reason, code)
 
-class UnauthorizedApiError(reason: String) : ApiError(HttpStatus.UNAUTHORIZED, reason)
+class UnauthorizedApiError(reason: String, code: String = "authentication_required") : ApiError(HttpStatus.UNAUTHORIZED, reason, code)
 
-class ForbiddenApiError(reason: String) : ApiError(HttpStatus.FORBIDDEN, reason)
+class ForbiddenApiError(reason: String, code: String = "permission_denied") : ApiError(HttpStatus.FORBIDDEN, reason, code)
 
-class NotFoundApiError(reason: String) : ApiError(HttpStatus.NOT_FOUND, reason)
+class NotFoundApiError(reason: String, code: String = "resource_not_found") : ApiError(HttpStatus.NOT_FOUND, reason, code)
 
-class ConflictApiError(reason: String) : ApiError(HttpStatus.CONFLICT, reason)
+class ConflictApiError(reason: String, code: String = "state_conflict") : ApiError(HttpStatus.CONFLICT, reason, code)

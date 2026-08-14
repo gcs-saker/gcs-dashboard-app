@@ -7,6 +7,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupMemberAdministrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupMemberUpdate
+import kr.co.a4ai.gcssaker.authpolicy.domain.PolicyContractError
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/admin/groups/{groupId}")
+@RequestMapping(value = ["/api/v1/groups/{groupId}", "/admin/groups/{groupId}"])
 class GroupMemberAdministrationController(
     private val members: GroupMemberAdministrationService,
     private val principalResolver: BearerPrincipalResolver,
@@ -112,6 +113,8 @@ private fun AuthUser.toMemberResponse() = GroupMemberResponse(
 
 private fun <T> translateMemberErrors(action: () -> T): T = try {
     action()
+} catch (error: PolicyContractError) {
+    throw error.toApiError()
 } catch (error: IllegalStateException) {
     if (error.message == "User not found") throw NotFoundApiError("user not found")
     throw ConflictApiError(error.message ?: "member operation failed")

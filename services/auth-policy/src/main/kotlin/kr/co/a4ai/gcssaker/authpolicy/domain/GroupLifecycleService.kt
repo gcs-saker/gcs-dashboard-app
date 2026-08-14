@@ -19,6 +19,8 @@ class GroupLifecycleService(
     private val devices: RegisteredDeviceRepository,
     private val refreshSessions: RefreshSessionStore = StatelessRefreshSessionStore,
 ) {
+    private val administrationPolicy = GroupAdministrationPolicy()
+
     fun list(principal: AuthenticatedPrincipal): List<OrganizationUnit> {
         requireSystemAdmin(principal)
         return groups.listAll()
@@ -102,6 +104,6 @@ class GroupLifecycleService(
         groups.listAll().firstOrNull { it.id == groupId } ?: error("group not found")
 
     private fun requireSystemAdmin(principal: AuthenticatedPrincipal) {
-        require(principal.role == UserRole.ADMIN) { "system administrator required" }
+        administrationPolicy.requireSystemAdministrator(principal)
     }
 }

@@ -14,7 +14,7 @@ describe("adminDeviceApi", () => {
 
     expect(devices).toHaveLength(1);
     expect(fetcher).toHaveBeenCalledWith(
-      "/auth-policy/admin/devices",
+      "/auth-policy/api/v1/devices",
       expect.objectContaining({ credentials: "include" }),
     );
   });
@@ -25,7 +25,7 @@ describe("adminDeviceApi", () => {
     await expect(renameRegisteredDevice("device/01", " 현장 드론 ", fetcher)).resolves.toMatchObject({ displayName: "현장 드론" });
 
     expect(fetcher).toHaveBeenCalledWith(
-      "/auth-policy/admin/devices/device%2F01",
+      "/auth-policy/api/v1/devices/device%2F01",
       expect.objectContaining({ method: "PATCH", body: JSON.stringify({ displayName: "현장 드론" }) }),
     );
   });
@@ -39,8 +39,8 @@ describe("adminDeviceApi", () => {
     await expect(activateRegisteredDevice("device/01", fetcher)).resolves.toMatchObject({ status: "active" });
     await expect(disableRegisteredDevice("device/01", fetcher)).resolves.toMatchObject({ status: "disabled" });
 
-    expect(fetcher.mock.calls[0][0]).toBe("/auth-policy/admin/devices/device%2F01/activate");
-    expect(fetcher.mock.calls[1][0]).toBe("/auth-policy/admin/devices/device%2F01/disable");
+    expect(fetcher.mock.calls[0][0]).toBe("/auth-policy/api/v1/devices/device%2F01/activate");
+    expect(fetcher.mock.calls[1][0]).toBe("/auth-policy/api/v1/devices/device%2F01/disable");
   });
 });
 

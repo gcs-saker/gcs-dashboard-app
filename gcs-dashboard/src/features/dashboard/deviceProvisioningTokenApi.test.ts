@@ -23,7 +23,7 @@ describe("deviceProvisioningTokenApi", () => {
 
     expect(records).toHaveLength(1);
     expect(fetcher).toHaveBeenCalledWith(
-      "/auth-policy/admin/provisioning-tokens",
+      "/auth-policy/api/v1/provisioning-tokens",
       expect.objectContaining({ credentials: "include" }),
     );
     expect(records[0]).not.toHaveProperty("token");
@@ -54,7 +54,7 @@ describe("deviceProvisioningTokenApi", () => {
 
     expect(issue.token).toBe("gcs_boot_secret");
     expect(fetcher).toHaveBeenCalledWith(
-      "/auth-policy/admin/provisioning-tokens",
+      "/auth-policy/api/v1/provisioning-tokens",
       expect.objectContaining({ method: "POST" }),
     );
   });

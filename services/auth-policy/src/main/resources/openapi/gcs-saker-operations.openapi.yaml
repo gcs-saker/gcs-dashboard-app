@@ -31,28 +31,28 @@ paths:
     get: { tags: [Auth], summary: 현재 principal과 권한 조회, responses: { '200': { $ref: '#/components/responses/Json' }, '401': { $ref: '#/components/responses/Error' } } }
   /auth-policy/auth/logout:
     post: { tags: [Auth], summary: refresh session 폐기, responses: { '204': { description: Logged out } } }
-  /auth-policy/admin/signup-tokens:
+  /auth-policy/api/v1/signup-tokens:
     get: { tags: [Admin], summary: 회원가입 토큰 이력 조회, responses: { '200': { $ref: '#/components/responses/Json' }, '403': { $ref: '#/components/responses/Error' } } }
     post: { tags: [Admin], summary: 회원가입 토큰 발급, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/OneTimeSecret' } } }
-  /auth-policy/admin/signup-tokens/{tokenId}:
+  /auth-policy/api/v1/signup-tokens/{tokenId}:
     delete: { tags: [Admin], summary: 미사용 회원가입 토큰 폐기, parameters: [ { name: tokenId, in: path, required: true, schema: { type: string } } ], responses: { '200': { description: Revoked }, '404': { $ref: '#/components/responses/Error' } } }
-  /auth-policy/admin/provisioning-tokens:
+  /auth-policy/api/v1/provisioning-tokens:
     get: { tags: [Admin], summary: 장비 provisioning 토큰 이력 조회, responses: { '200': { $ref: '#/components/responses/Json' } } }
     post: { tags: [Admin], summary: 장비 provisioning 토큰 발급, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/OneTimeSecret' } } }
-  /auth-policy/admin/provisioning-tokens/{tokenId}:
+  /auth-policy/api/v1/provisioning-tokens/{tokenId}:
     delete: { tags: [Admin], summary: 미사용 provisioning 토큰 폐기, parameters: [ { name: tokenId, in: path, required: true, schema: { type: string } } ], responses: { '200': { description: Revoked }, '404': { $ref: '#/components/responses/Error' } } }
-  /auth-policy/admin/devices:
+  /auth-policy/api/v1/devices:
     get: { tags: [Admin], summary: 등록 장비 조회, responses: { '200': { $ref: '#/components/responses/Json' } } }
     post: { tags: [Admin], summary: 장비 등록 및 credential 최초 1회 발급, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/OneTimeSecret' } } }
-  /auth-policy/admin/devices/{deviceUuid}:
+  /auth-policy/api/v1/devices/{deviceUuid}:
     parameters: [ { $ref: '#/components/parameters/DeviceUuid' } ]
     get: { tags: [Admin], summary: 등록 장비 상세, responses: { '200': { $ref: '#/components/responses/Json' }, '404': { $ref: '#/components/responses/Error' } } }
     patch: { tags: [Admin], summary: 장비 등록정보 변경, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/Json' } } }
-  /auth-policy/admin/devices/{deviceUuid}/activate:
+  /auth-policy/api/v1/devices/{deviceUuid}/activate:
     post: { tags: [Admin], summary: 장비 활성화, parameters: [ { $ref: '#/components/parameters/DeviceUuid' } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
-  /auth-policy/admin/devices/{deviceUuid}/disable:
+  /auth-policy/api/v1/devices/{deviceUuid}/disable:
     post: { tags: [Admin], summary: 장비 비활성화, parameters: [ { $ref: '#/components/parameters/DeviceUuid' } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
-  /auth-policy/admin/devices/{deviceUuid}/credential:
+  /auth-policy/api/v1/devices/{deviceUuid}/credential:
     post: { tags: [Admin], summary: credential 회전 및 원문 1회 반환, parameters: [ { $ref: '#/components/parameters/DeviceUuid' } ], responses: { '200': { $ref: '#/components/responses/OneTimeSecret' } } }
   /api/v1/groups:
     get: { tags: [Groups], summary: principal이 조회 가능한 그룹, responses: { '200': { $ref: '#/components/responses/Json' } } }
@@ -60,6 +60,12 @@ paths:
     get: { tags: [Groups], summary: 그룹 장비 조회, parameters: [ { $ref: '#/components/parameters/GroupId' } ], responses: { '200': { $ref: '#/components/responses/Json' }, '403': { $ref: '#/components/responses/Error' } } }
   /api/v1/groups/{groupId}/dashboard:
     get: { tags: [Groups], summary: 그룹 dashboard aggregate, parameters: [ { $ref: '#/components/parameters/GroupId' } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
+  /auth-policy/api/v1/groups/{groupId}/members:
+    get: { tags: [Groups], summary: 권한 범위 내 그룹 회원 조회, parameters: [ { $ref: '#/components/parameters/GroupId' } ], responses: { '200': { $ref: '#/components/responses/Json' }, '403': { $ref: '#/components/responses/Error' } } }
+  /auth-policy/api/v1/groups/{groupId}/members/{username}:
+    patch: { tags: [Groups], summary: 권한 범위 내 그룹 회원 변경, parameters: [ { $ref: '#/components/parameters/GroupId' }, { name: username, in: path, required: true, schema: { type: string } } ], requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/Json' }, '403': { $ref: '#/components/responses/Error' }, '404': { $ref: '#/components/responses/Error' }, '409': { $ref: '#/components/responses/Error' } } }
+  /auth-policy/api/v1/groups/{groupId}/administrator:
+    put: { tags: [Groups], summary: 시스템 관리자의 그룹 관리자 교체, parameters: [ { $ref: '#/components/parameters/GroupId' } ], requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/Json' }, '403': { $ref: '#/components/responses/Error' } } }
   /api/telemetry/all:
     get: { tags: [Operations], summary: 권한 범위 telemetry 조회, responses: { '200': { $ref: '#/components/responses/Json' } } }
   /api/telemetry/:

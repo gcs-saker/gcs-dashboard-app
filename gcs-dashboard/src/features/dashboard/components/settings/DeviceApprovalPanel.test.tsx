@@ -32,7 +32,7 @@ describe("DeviceApprovalPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("승인 대기중인 장비가 없습니다.")).toBeInTheDocument();
     });
-    expect(fetcher.mock.calls.at(-1)?.[0]).toBe("/auth-policy/admin/devices/device-001/activate");
+    expect(fetcher.mock.calls.at(-1)?.[0]).toBe("/auth-policy/api/v1/devices/device-001/activate");
   });
 
   test("admin assigns a persistent alias to a registered device", async () => {
@@ -51,7 +51,7 @@ describe("DeviceApprovalPanel", () => {
     await user.click(screen.getByRole("button", { name: "별칭 저장" }));
 
     await screen.findByText("현장 드론");
-    expect(fetcher.mock.calls.at(-1)?.[0]).toBe("/auth-policy/admin/devices/device-001");
+    expect(fetcher.mock.calls.at(-1)?.[0]).toBe("/auth-policy/api/v1/devices/device-001");
   });
 
   test("viewer can see pending devices but cannot approve", async () => {

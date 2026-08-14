@@ -7,7 +7,6 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.GroupAdministrationPolicy
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisterDeviceCommand
 import kr.co.a4ai.gcssaker.authpolicy.domain.UpdateDeviceCommand
-import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PatchMapping
@@ -18,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping(AdminDeviceApiRoutes.ROOT)
+@RequestMapping(value = [AdminDeviceApiRoutes.RESOURCE_ROOT, AdminDeviceApiRoutes.ROOT])
 class AdminDeviceController(
     private val lifecycle: DeviceLifecycleService,
     private val principalResolver: BearerPrincipalResolver,
@@ -139,9 +138,7 @@ class AdminDeviceController(
     }
 
     private fun requireAdministrator(principal: AuthenticatedPrincipal): AuthenticatedPrincipal {
-        if (principal.role != UserRole.ADMIN && principal.role != UserRole.GROUP_ADMIN) {
-            throw ForbiddenApiError(AdminDeviceApiErrors.ADMIN_ROLE_REQUIRED)
-        }
+        translatePolicyErrors { administrationPolicy.requireGroupManagerRole(principal) }
         return principal
     }
 
@@ -151,9 +148,7 @@ class AdminDeviceController(
     }
 
     private fun requireGroupManagement(principal: AuthenticatedPrincipal, groupId: GroupId) {
-        if (!administrationPolicy.canManageGroup(principal, groupId)) {
-            throw ForbiddenApiError("group management scope required")
-        }
+        translatePolicyErrors { administrationPolicy.requireGroupManagement(principal, groupId) }
     }
 
     private fun requestGroupId(value: String): GroupId =

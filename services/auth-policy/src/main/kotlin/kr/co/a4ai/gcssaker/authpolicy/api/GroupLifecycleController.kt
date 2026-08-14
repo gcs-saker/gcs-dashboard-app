@@ -6,6 +6,7 @@ import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.CreateGroupCommand
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupLifecycleService
+import kr.co.a4ai.gcssaker.authpolicy.domain.PolicyContractError
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupType
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationUnit
 import kr.co.a4ai.gcssaker.authpolicy.domain.UpdateGroupCommand
@@ -99,6 +100,8 @@ private fun OrganizationUnit.toManagedResponse() = ManagedGroupResponse(id.value
 
 private fun <T> translateGroupLifecycleErrors(action: () -> T): T = try {
     action()
+} catch (error: PolicyContractError) {
+    throw error.toApiError()
 } catch (error: IllegalStateException) {
     if (error.message == "group not found") throw NotFoundApiError("group not found")
     throw ConflictApiError(error.message ?: "group lifecycle conflict")
