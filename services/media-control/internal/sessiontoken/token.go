@@ -17,7 +17,7 @@ import (
 
 const TTL = 5 * time.Minute
 
-const tokenPrefix = "gcs_media_v2_"
+const Prefix = "gcs_media_v2_"
 
 var ErrInvalid = errors.New("media token is invalid")
 
@@ -119,10 +119,10 @@ func decodeVerified(secret string, token string) (Payload, error) {
 	if strings.TrimSpace(secret) == "" || strings.TrimSpace(token) == "" {
 		return Payload{}, ErrInvalid
 	}
-	if !strings.HasPrefix(token, tokenPrefix) {
+	if !strings.HasPrefix(token, Prefix) {
 		return Payload{}, ErrInvalid
 	}
-	sealed, err := base64.RawURLEncoding.DecodeString(strings.TrimPrefix(token, tokenPrefix))
+	sealed, err := base64.RawURLEncoding.DecodeString(strings.TrimPrefix(token, Prefix))
 	if err != nil {
 		return Payload{}, ErrInvalid
 	}
@@ -131,7 +131,7 @@ func decodeVerified(secret string, token string) (Payload, error) {
 		return Payload{}, ErrInvalid
 	}
 	nonce, ciphertext := sealed[:aead.NonceSize()], sealed[aead.NonceSize():]
-	payloadBytes, err := aead.Open(nil, nonce, ciphertext, []byte(tokenPrefix))
+	payloadBytes, err := aead.Open(nil, nonce, ciphertext, []byte(Prefix))
 	if err != nil {
 		return Payload{}, ErrInvalid
 	}
@@ -151,8 +151,8 @@ func encryptMediaToken(secret string, payload []byte) (string, error) {
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return "", err
 	}
-	sealed := aead.Seal(nonce, nonce, payload, []byte(tokenPrefix))
-	return tokenPrefix + base64.RawURLEncoding.EncodeToString(sealed), nil
+	sealed := aead.Seal(nonce, nonce, payload, []byte(Prefix))
+	return Prefix + base64.RawURLEncoding.EncodeToString(sealed), nil
 }
 
 func newMediaTokenAEAD(secret string) (cipher.AEAD, error) {

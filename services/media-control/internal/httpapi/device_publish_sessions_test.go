@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessiontoken"
 )
 
 func TestDevicePublishSessionUsesServerOwnedIdentityAndRotatesRenewalToken(t *testing.T) {
@@ -43,7 +44,7 @@ func TestDevicePublishSessionUsesServerOwnedIdentityAndRotatesRenewalToken(t *te
 	if created.PublishToken == "" || created.RenewalToken == "" || created.AuthorizationScheme != "Bearer" {
 		t.Fatalf("expected token pair: %#v", created)
 	}
-	if !strings.HasPrefix(created.PublishToken, mediaTokenPrefix) || strings.Contains(created.PublishToken, ".") ||
+	if !strings.HasPrefix(created.PublishToken, sessiontoken.Prefix) || strings.Contains(created.PublishToken, ".") ||
 		strings.Contains(created.PublishToken, "co-a") || strings.Contains(created.PublishToken, "device-001") {
 		t.Fatalf("publish token must be opaque: %q", created.PublishToken)
 	}

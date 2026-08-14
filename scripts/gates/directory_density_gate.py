@@ -33,9 +33,7 @@ def production_source_files(repository_root: Path):
 
 
 def density_violations(repository_root: Path) -> list[str]:
-    counts = Counter(
-        path.parent.as_posix() for path in production_source_files(repository_root)
-    )
+    counts = Counter(path.parent.as_posix() for path in production_source_files(repository_root))
     return [
         f"{directory}: {count} production files (maximum {MAX_PRODUCTION_FILES_PER_DIRECTORY})"
         for directory, count in sorted(counts.items())
