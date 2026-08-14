@@ -249,10 +249,10 @@ stacks:
     status: prototype
     issue: 419
     evidence:
-      - gcs-dashboard/src/features/streaming/webCodecsSupport.ts
-      - gcs-dashboard/src/features/streaming/webCodecsSupport.test.ts
-      - gcs-dashboard/src/features/streaming/webCodecsPipelinePlan.ts
-      - gcs-dashboard/src/features/streaming/webCodecsPipelinePlan.test.ts
+      - gcs-dashboard/src/features/streaming/runtime/webCodecsSupport.ts
+      - gcs-dashboard/src/features/streaming/runtime/webCodecsSupport.test.ts
+      - gcs-dashboard/src/features/streaming/runtime/webCodecsPipelinePlan.ts
+      - gcs-dashboard/src/features/streaming/runtime/webCodecsPipelinePlan.test.ts
     missingRuntime:
       - "worker pipeline"
       - "HLS fallback frame processing"

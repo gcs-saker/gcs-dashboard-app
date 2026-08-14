@@ -424,13 +424,13 @@ principles:
     issue: 418
     assertions:
       requiredTexts:
-        - path: gcs-dashboard/src/features/streaming/streamReconnectPolicy.ts
+        - path: gcs-dashboard/src/features/streaming/runtime/streamReconnectPolicy.ts
           text: "WebRTC connection interrupted"
-        - path: gcs-dashboard/src/features/streaming/failureSmokeScenarios.ts
+        - path: gcs-dashboard/src/features/streaming/runtime/failureSmokeScenarios.ts
           text: "reconnect"
       evidencePaths:
-        - gcs-dashboard/src/features/streaming/streamReconnectPolicy.test.ts
-        - gcs-dashboard/src/features/streaming/failureSmokeScenarios.test.ts
+        - gcs-dashboard/src/features/streaming/runtime/streamReconnectPolicy.test.ts
+        - gcs-dashboard/src/features/streaming/runtime/failureSmokeScenarios.test.ts
 
   - id: OPS-RUNTIME-001
     group: operations
