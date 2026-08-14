@@ -7,7 +7,6 @@ import type { useDashboardPageActions } from "./useDashboardPageActions";
 import type { useDashboardPanelCommands } from "./useDashboardPanelCommands";
 import type { useDashboardStreams } from "./useDashboardStreams";
 import type { useDashboardUserPreferences } from "./useDashboardUserPreferences";
-import { canManageDeviceProvisioning } from "@auth/rolePermissions";
 
 interface DashboardPageViewPropsInput {
   actions: ReturnType<typeof useDashboardPageActions>;
@@ -54,7 +53,6 @@ export function useDashboardPageViewProps({
     },
     overlayProps: {
       assetTreeRoot: viewModel.assetTreeRoot, assetTreeWidget: getDashboardWidgetDefinition("asset-tree"),
-      canRenameDevices: canManageDeviceProvisioning(auth.currentUser?.role), currentUsername: auth.currentUser?.username ?? "",
       editingStream: streams.editingStream, isAssetDrawerOpen: ui.isAssetDrawerOpen,
       isAssetTreeVisible: preferences.isWidgetVisible("asset-tree"), isDashboardActive: activeView === "dashboard",
       isWidgetDialogOpen: ui.isWidgetDialogOpen, layout, onApplyWidgetDialog: actions.applyWidgetDialog,
@@ -62,6 +60,7 @@ export function useDashboardPageViewProps({
       onCloseAssetDrawer: actions.closeAssetDrawer, onClosePopout: commands.closePopout,
       onConnectDevice: actions.connectStreamDevice, onDisconnectStream: actions.disconnectCurrentStreamSlot,
       onResetLayout: actions.resetLayout, onSelectAssetTreeStream: actions.selectAssetTreeStream,
+      onSetDeviceAlias: preferences.setStreamAlias,
       onToggleWidget: actions.setWidgetVisible, panelClass: commands.panelClass,
       popoutWidget: ui.popoutWidgetId ? getDashboardWidgetDefinition(ui.popoutWidgetId) : null,
       streamDevices: streams.streamDevices,

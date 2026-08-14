@@ -140,6 +140,54 @@ class StreamPolicyControllerTest {
     }
 
     @Test
+    fun `group admin can send talkback to descendant group`() {
+        val response = controller.access(
+            bearer(accessToken("group-admin-bn")),
+            StreamAccessRequest(
+                streamId = "raw.company-b.front",
+                path = "raw/company-b/front",
+                publisherGroupId = "co-b",
+                action = "send_talkback",
+            ),
+        )
+
+        assertTrue(response.allowed)
+        assertEquals("group admin can send descendant talkback", response.reason)
+    }
+
+    @Test
+    fun `viewer cannot send talkback in same group`() {
+        val response = controller.access(
+            bearer(accessToken("viewer-a")),
+            StreamAccessRequest(
+                streamId = "raw.sample.front",
+                path = "raw/sample/front",
+                publisherGroupId = "co-a",
+                action = "send_talkback",
+            ),
+        )
+
+        assertFalse(response.allowed)
+    }
+
+    @Test
+    fun `unknown access action is rejected`() {
+        val error = org.junit.jupiter.api.assertThrows<BadRequestApiError> {
+            controller.access(
+                bearer(accessToken("viewer-a")),
+                StreamAccessRequest(
+                    streamId = "raw.sample.front",
+                    path = "raw/sample/front",
+                    publisherGroupId = "co-a",
+                    action = "delete_stream",
+                ),
+            )
+        }
+
+        assertEquals("unsupported stream access action", error.message)
+    }
+
+    @Test
     fun `missing token is rejected`() {
         val error = org.junit.jupiter.api.assertThrows<ResponseStatusException> {
             controller.access(

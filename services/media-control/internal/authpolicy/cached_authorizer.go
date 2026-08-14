@@ -147,6 +147,6 @@ func (c *CachedAuthorizer) AuthorizeAccountPublish(
 }
 
 func cacheKey(authorization string, target domain.StreamAccessTarget) string {
-	sum := sha256.Sum256([]byte(authorization + "\x00" + target.StreamID + "\x00" + target.Path + "\x00" + target.PublisherGroupID))
+	sum := sha256.Sum256([]byte(authorization + "\x00" + target.StreamID + "\x00" + target.Path + "\x00" + target.PublisherGroupID + "\x00" + target.Action))
 	return hex.EncodeToString(sum[:])
 }

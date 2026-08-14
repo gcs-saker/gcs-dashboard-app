@@ -44,6 +44,19 @@ class GroupPolicyService(
             UserRole.ADMIN -> Permission.entries.toSet()
         }
 
+    fun canSendTalkback(principal: AuthenticatedPrincipal, targetGroupId: GroupId): StreamAccessDecision {
+        if (principal.role == UserRole.ADMIN) return StreamAccessDecision.allow("admin can send talkback")
+        if (principal.groupId == targetGroupId &&
+            (principal.role == UserRole.OPERATOR || principal.role == UserRole.GROUP_ADMIN)
+        ) {
+            return StreamAccessDecision.allow("same group talkback")
+        }
+        if (principal.role == UserRole.GROUP_ADMIN && hierarchy.isAncestor(principal.groupId, targetGroupId)) {
+            return StreamAccessDecision.allow("group admin can send descendant talkback")
+        }
+        return StreamAccessDecision.deny("talkback target is outside principal operational scope")
+    }
+
     private fun routePolicyDecision(
         principal: AuthenticatedPrincipal,
         stream: StreamSessionDescriptor,

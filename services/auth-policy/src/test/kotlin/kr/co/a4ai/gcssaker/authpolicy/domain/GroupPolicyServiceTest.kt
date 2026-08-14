@@ -50,6 +50,36 @@ class GroupPolicyServiceTest {
     }
 
     @Test
+    fun `group admin can send talkback to descendant group`() {
+        val principal = AuthenticatedPrincipal("admin-bn", UserRole.GROUP_ADMIN, battalion.id)
+
+        assertTrue(service.canSendTalkback(principal, companyB.id).allowed)
+        assertTrue(service.canSendTalkback(principal, platoonB1.id).allowed)
+    }
+
+    @Test
+    fun `operator cannot send talkback to descendant group`() {
+        val principal = AuthenticatedPrincipal("op-bn", UserRole.OPERATOR, battalion.id)
+
+        assertFalse(service.canSendTalkback(principal, companyB.id).allowed)
+    }
+
+    @Test
+    fun `viewer cannot send talkback even inside same group`() {
+        val principal = AuthenticatedPrincipal("viewer-a", UserRole.VIEWER, companyA.id)
+
+        assertFalse(service.canSendTalkback(principal, companyA.id).allowed)
+    }
+
+    @Test
+    fun `group admin cannot send talkback to sibling or ancestor group`() {
+        val principal = AuthenticatedPrincipal("admin-a", UserRole.GROUP_ADMIN, companyA.id)
+
+        assertFalse(service.canSendTalkback(principal, companyB.id).allowed)
+        assertFalse(service.canSendTalkback(principal, battalion.id).allowed)
+    }
+
+    @Test
     fun `viewer cannot view sibling group stream`() {
         val principal = AuthenticatedPrincipal("viewer-a", UserRole.VIEWER, companyA.id)
         val stream = StreamSessionDescriptor(StreamPath("raw/company-b/drone-1"), companyB.id, Instant.EPOCH)

@@ -31,14 +31,16 @@ class StreamPolicyController(
     ): StreamAccessResponse {
         val principal = principalResolver.requirePrincipal(authorization)
         val publisherGroupId = GroupId(request.publisherGroupId)
-        val decision = groupPolicy.canViewStream(
-            principal,
-            StreamSessionDescriptor(
-                path = StreamPath(request.path),
-                publisherGroupId = publisherGroupId,
-                startedAt = request.startedAt ?: Instant.EPOCH,
-            ),
+        val stream = StreamSessionDescriptor(
+            path = StreamPath(request.path),
+            publisherGroupId = publisherGroupId,
+            startedAt = request.startedAt ?: Instant.EPOCH,
         )
+        val decision = when (request.action) {
+            "view_stream" -> groupPolicy.canViewStream(principal, stream)
+            "send_talkback" -> groupPolicy.canSendTalkback(principal, publisherGroupId)
+            else -> throw BadRequestApiError("unsupported stream access action")
+        }
         securityAuditPublisher.publishStreamAccess(
             principal = principal,
             streamId = request.streamId,

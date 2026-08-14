@@ -42,8 +42,9 @@ func (f fakeGatewayReadiness) Ready() (bool, string) {
 }
 
 type fakeAuthorizer struct {
-	errByStream  map[string]error
-	observedAuth *string
+	errByStream    map[string]error
+	observedAuth   *string
+	observedTarget *domain.StreamAccessTarget
 }
 
 func (f fakeAuthorizer) AuthorizeStream(
@@ -53,6 +54,9 @@ func (f fakeAuthorizer) AuthorizeStream(
 ) (domain.StreamAccessDecision, error) {
 	if f.observedAuth != nil {
 		*f.observedAuth = authorization
+	}
+	if f.observedTarget != nil {
+		*f.observedTarget = target
 	}
 	if err, ok := f.errByStream[target.StreamID]; ok {
 		return domain.DenyStream(target.StreamID, err.Error()), err
@@ -679,7 +683,8 @@ func TestDashboardPublishUrlCanBeIssuedBeforeStreamIsRegistered(t *testing.T) {
 }
 
 func TestDashboardTalkbackPublishUsesAuthorizedShortLivedPath(t *testing.T) {
-	server := newTestServer(fakeStreams{}, fakeIce{})
+	var observedTarget domain.StreamAccessTarget
+	server := newTestServerWithAuthorizer(fakeStreams{}, fakeIce{}, fakeAuthorizer{observedTarget: &observedTarget})
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.drone-01.front/talkback-publish?operatorId=operator01", nil)
 	request.Header.Set("Authorization", "Bearer operator-token")
 	recorder := httptest.NewRecorder()
@@ -694,6 +699,9 @@ func TestDashboardTalkbackPublishUsesAuthorizedShortLivedPath(t *testing.T) {
 		t.Fatalf("unexpected talkback publish URL %v", payload.WhipURL)
 	}
 	assertMediaURLToken(t, payload.WhipURL, publisherTokenQueryKey, mediaMTXActionPublish, "talkback/raw/drone-01/front/operator01")
+	if observedTarget.Action != "send_talkback" {
+		t.Fatalf("expected send_talkback authorization action, got %q", observedTarget.Action)
+	}
 }
 
 func TestDashboardTalkbackPublishRejectsNonRawTarget(t *testing.T) {

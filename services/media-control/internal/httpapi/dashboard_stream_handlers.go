@@ -29,7 +29,7 @@ func (s Server) dashboardStreamItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) writeDashboardTalkbackPlayback(w http.ResponseWriter, r *http.Request, streamID string) {
-	parsed, talkback, publisherGroupID, ok := s.authorizeTalkbackRoute(w, r, streamID)
+	parsed, talkback, publisherGroupID, ok := s.authorizeTalkbackRoute(w, r, streamID, false)
 	if !ok {
 		return
 	}
@@ -41,21 +41,27 @@ func (s Server) writeDashboardTalkbackPlayback(w http.ResponseWriter, r *http.Re
 }
 
 func (s Server) writeDashboardTalkbackPublish(w http.ResponseWriter, r *http.Request, streamID string) {
-	_, talkback, publisherGroupID, ok := s.authorizeTalkbackRoute(w, r, streamID)
+	_, talkback, publisherGroupID, ok := s.authorizeTalkbackRoute(w, r, streamID, true)
 	if !ok {
 		return
 	}
 	s.writeStreamPublishResponseForGroup(w, talkback, publisherGroupID)
 }
 
-func (s Server) authorizeTalkbackRoute(w http.ResponseWriter, r *http.Request, streamID string) (domain.ParsedStreamPath, domain.ParsedStreamPath, string, bool) {
+func (s Server) authorizeTalkbackRoute(w http.ResponseWriter, r *http.Request, streamID string, sendsAudio bool) (domain.ParsedStreamPath, domain.ParsedStreamPath, string, bool) {
 	parsed, err := domain.ParseStreamID(streamID)
 	if err != nil || parsed.Prefix != "raw" {
 		writeJSON(w, http.StatusUnprocessableEntity, errorPayload("talkback target must be a raw stream"))
 		return domain.ParsedStreamPath{}, domain.ParsedStreamPath{}, "", false
 	}
-	if err := s.requireStreamAccess(r.Context(), r.Header.Get(authorizationHeader), parsed); err != nil {
-		s.writeStreamAccessError(w, err)
+	var accessError error
+	if sendsAudio {
+		accessError = s.requireTalkbackSendAccess(r.Context(), r.Header.Get(authorizationHeader), parsed)
+	} else {
+		accessError = s.requireStreamAccess(r.Context(), r.Header.Get(authorizationHeader), parsed)
+	}
+	if accessError != nil {
+		s.writeStreamAccessError(w, accessError)
 		return domain.ParsedStreamPath{}, domain.ParsedStreamPath{}, "", false
 	}
 	operatorID := strings.TrimSpace(r.URL.Query().Get("operatorId"))

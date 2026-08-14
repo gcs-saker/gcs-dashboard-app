@@ -9,6 +9,7 @@ data class StreamAccessRequest(
     val path: String,
     @get:JsonProperty(StreamPolicyApiFields.PUBLISHER_GROUP_ID)
     val publisherGroupId: String,
+    val action: String = "view_stream",
     val startedAt: Instant? = null,
 )
 

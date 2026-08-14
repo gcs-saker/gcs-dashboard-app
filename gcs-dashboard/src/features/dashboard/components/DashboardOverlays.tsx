@@ -15,8 +15,6 @@ import { WidgetPopout } from "./WidgetPopout";
 export interface DashboardOverlaysProps {
   assetTreeRoot: AssetTreeNode;
   assetTreeWidget: DashboardWidgetDefinition;
-  canRenameDevices: boolean;
-  currentUsername: string;
   editingStream: DashboardStreamSlot | null;
   isAssetDrawerOpen: boolean;
   isAssetTreeVisible: boolean;
@@ -32,6 +30,7 @@ export interface DashboardOverlaysProps {
   onDisconnectStream: () => void;
   onResetLayout: () => void;
   onSelectAssetTreeStream: (streamId: string) => void;
+  onSetDeviceAlias: (deviceId: string, alias: string) => void;
   onToggleWidget: (widgetId: DashboardWidgetId, visible: boolean) => void;
   panelClass: (baseClass: string, widgetId: DashboardWidgetId) => string;
   popoutWidget: DashboardWidgetDefinition | null;
@@ -42,8 +41,6 @@ export interface DashboardOverlaysProps {
 export function DashboardOverlays({
   assetTreeRoot,
   assetTreeWidget,
-  canRenameDevices,
-  currentUsername,
   editingStream,
   isAssetDrawerOpen,
   isAssetTreeVisible,
@@ -59,6 +56,7 @@ export function DashboardOverlays({
   onDisconnectStream,
   onResetLayout,
   onSelectAssetTreeStream,
+  onSetDeviceAlias,
   onToggleWidget,
   panelClass,
   popoutWidget,
@@ -78,7 +76,6 @@ export function DashboardOverlays({
             style={{ minHeight: assetTreeWidget.minHeight, minWidth: assetTreeWidget.minWidth }}
           >
             <AssetTreePanel
-              canRenameDevices={canRenameDevices}
               controls={
                 <>
                   <button className="widget-icon-button" onClick={onCloseAssetDrawer} title="자산트리 닫기" type="button">
@@ -87,8 +84,8 @@ export function DashboardOverlays({
                   {widgetControls("asset-tree", "자산트리")}
                 </>
               }
-              currentUsername={currentUsername}
               onSelectStream={onSelectAssetTreeStream}
+              onSetDeviceAlias={onSetDeviceAlias}
               root={assetTreeRoot}
             />
           </aside>
