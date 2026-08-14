@@ -31,14 +31,22 @@ class GroupPolicyServiceTest {
     }
 
     @Test
-    fun `operator can view descendant group stream`() {
-        val principal = AuthenticatedPrincipal("op-bn", UserRole.OPERATOR, battalion.id)
+    fun `group admin can view descendant group stream`() {
+        val principal = AuthenticatedPrincipal("admin-bn", UserRole.GROUP_ADMIN, battalion.id)
         val stream = StreamSessionDescriptor(StreamPath("raw/company-b/drone-1"), companyB.id, Instant.EPOCH)
 
         val decision = service.canViewStream(principal, stream)
 
         assertTrue(decision.allowed)
-        assertEquals("operator can view descendant group stream", decision.reason)
+        assertEquals("group admin can view descendant group stream", decision.reason)
+    }
+
+    @Test
+    fun `operator cannot inherit descendant stream access`() {
+        val principal = AuthenticatedPrincipal("op-bn", UserRole.OPERATOR, battalion.id)
+        val stream = StreamSessionDescriptor(StreamPath("raw/company-b/drone-1"), companyB.id, Instant.EPOCH)
+
+        assertFalse(service.canViewStream(principal, stream).allowed)
     }
 
     @Test
@@ -63,6 +71,9 @@ class GroupPolicyServiceTest {
     @Test
     fun `role permissions are explicit`() {
         assertEquals(setOf(Permission.VIEW_STREAM), service.permissionsFor(UserRole.VIEWER))
+        assertTrue(Permission.MANAGE_GROUP_MEMBERS in service.permissionsFor(UserRole.GROUP_ADMIN))
+        assertFalse(Permission.MANAGE_POLICY in service.permissionsFor(UserRole.GROUP_ADMIN))
+        assertTrue(Permission.SEND_TALKBACK in service.permissionsFor(UserRole.GROUP_ADMIN))
         assertTrue(Permission.MANAGE_POLICY in service.permissionsFor(UserRole.ADMIN))
     }
 

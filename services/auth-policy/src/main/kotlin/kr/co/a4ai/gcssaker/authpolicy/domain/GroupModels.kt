@@ -27,13 +27,20 @@ enum class GroupType {
 enum class UserRole {
     VIEWER,
     OPERATOR,
+    GROUP_ADMIN,
     ADMIN,
+    ;
+
+    fun canBeIssuedByGroupAdmin(): Boolean = this == VIEWER || this == OPERATOR
 }
 
 enum class Permission {
     VIEW_STREAM,
     PUBLISH_STREAM,
     CONTROL_ASSET,
+    SEND_TALKBACK,
+    MANAGE_GROUP_MEMBERS,
+    MANAGE_GROUP_DEVICES,
     MANAGE_POLICY,
 }
 

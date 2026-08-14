@@ -23,8 +23,8 @@ class GroupPolicyService(
         routePolicyDecision(principal, stream, Instant.now(clock))?.let {
             return it
         }
-        if (principal.role == UserRole.OPERATOR && hierarchy.isAncestor(principal.groupId, stream.publisherGroupId)) {
-            return StreamAccessDecision.allow("operator can view descendant group stream")
+        if (principal.role == UserRole.GROUP_ADMIN && hierarchy.isAncestor(principal.groupId, stream.publisherGroupId)) {
+            return StreamAccessDecision.allow("group admin can view descendant group stream")
         }
         return StreamAccessDecision.deny("stream is outside principal group scope")
     }
@@ -32,7 +32,15 @@ class GroupPolicyService(
     fun permissionsFor(role: UserRole): Set<Permission> =
         when (role) {
             UserRole.VIEWER -> setOf(Permission.VIEW_STREAM)
-            UserRole.OPERATOR -> setOf(Permission.VIEW_STREAM, Permission.PUBLISH_STREAM, Permission.CONTROL_ASSET)
+            UserRole.OPERATOR -> setOf(Permission.VIEW_STREAM, Permission.PUBLISH_STREAM, Permission.CONTROL_ASSET, Permission.SEND_TALKBACK)
+            UserRole.GROUP_ADMIN -> setOf(
+                Permission.VIEW_STREAM,
+                Permission.PUBLISH_STREAM,
+                Permission.CONTROL_ASSET,
+                Permission.SEND_TALKBACK,
+                Permission.MANAGE_GROUP_MEMBERS,
+                Permission.MANAGE_GROUP_DEVICES,
+            )
             UserRole.ADMIN -> Permission.entries.toSet()
         }
 

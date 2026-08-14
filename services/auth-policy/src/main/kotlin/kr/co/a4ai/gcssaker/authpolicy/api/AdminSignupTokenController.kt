@@ -1,5 +1,8 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupAdministrationPolicy
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupRegistrationTokenIssueCommand
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupRegistrationTokenRecord
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupRegistrationTokenService
@@ -19,13 +22,18 @@ class AdminSignupTokenController(
     private val tokens: SignupRegistrationTokenService,
     private val principalResolver: BearerPrincipalResolver,
 ) {
+    private val administrationPolicy = GroupAdministrationPolicy()
+
     @DeleteMapping("/{tokenId}")
     @RequiresBearerAuth
     fun revoke(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @PathVariable tokenId: String,
     ) {
-        val principal = requireAdmin(authorization)
+        val principal = requireAdministrator(authorization)
+        val record = tokens.list().firstOrNull { it.tokenId == tokenId }
+            ?: throw NotFoundApiError("signup token not found or inactive")
+        requireGroupManagement(principal, record.groupId)
         if (!tokens.revoke(tokenId, principal.username)) throw NotFoundApiError("signup token not found or inactive")
     }
 
@@ -34,8 +42,10 @@ class AdminSignupTokenController(
     fun list(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
     ): List<SignupTokenRecordResponse> {
-        requireAdmin(authorization)
-        return tokens.list().map { it.toResponse() }
+        val principal = requireAdministrator(authorization)
+        return tokens.list()
+            .filter { administrationPolicy.canManageGroup(principal, it.groupId) }
+            .map { it.toResponse() }
     }
 
     @PostMapping
@@ -44,13 +54,18 @@ class AdminSignupTokenController(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @RequestBody request: IssueSignupTokenRequest,
     ): SignupTokenIssueResponse {
-        val principal = requireAdmin(authorization)
+        val principal = requireAdministrator(authorization)
         return try {
+            val groupId = GroupId(request.groupId.trim())
+            val role = parseAssignableRole(request.role)
+            if (!administrationPolicy.canIssueMemberRole(principal, groupId, role)) {
+                throw ForbiddenApiError("group management scope required")
+            }
             val issued = tokens.issue(
                 SignupRegistrationTokenIssueCommand(
                     companyId = request.companyId,
-                    groupId = request.groupId,
-                    role = parseAssignableRole(request.role),
+                    groupId = groupId.value,
+                    role = role,
                     label = request.label,
                     ttlMinutes = request.ttlMinutes ?: 1_440,
                     maxUses = request.maxUses ?: 1,
@@ -63,15 +78,27 @@ class AdminSignupTokenController(
         }
     }
 
-    private fun requireAdmin(authorization: String?) =
+    private fun requireAdministrator(authorization: String?) =
         principalResolver.requirePrincipal(authorization).also {
-            if (it.role != UserRole.ADMIN) throw ForbiddenApiError("admin role required")
+            if (it.role != UserRole.ADMIN && it.role != UserRole.GROUP_ADMIN) {
+                throw ForbiddenApiError("administrator role required")
+            }
         }
+
+    private fun requireGroupManagement(principal: AuthenticatedPrincipal, groupId: GroupId) {
+        if (!administrationPolicy.canManageGroup(principal, groupId)) {
+            throw ForbiddenApiError("group management scope required")
+        }
+    }
 
     private fun parseAssignableRole(value: String): UserRole =
         runCatching { UserRole.valueOf(value.trim().uppercase()) }
             .getOrElse { throw BadRequestApiError("signup token role must be viewer or operator") }
-            .also { if (it == UserRole.ADMIN) throw BadRequestApiError("admin signup tokens are not allowed") }
+            .also {
+                if (!it.canBeIssuedByGroupAdmin()) {
+                    throw BadRequestApiError("administrator signup tokens are not allowed")
+                }
+            }
 }
 
 data class IssueSignupTokenRequest(

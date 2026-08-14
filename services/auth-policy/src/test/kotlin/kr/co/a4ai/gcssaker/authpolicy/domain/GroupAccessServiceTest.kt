@@ -24,13 +24,28 @@ class GroupAccessServiceTest {
     private val service = GroupAccessService(hierarchy, devices)
 
     @Test
-    fun `operator can view and control descendant groups but not siblings`() {
+    fun `operator can control only its own group`() {
         val operator = AuthenticatedPrincipal("operator-a", UserRole.OPERATOR, GroupId("company-a"))
 
-        assertEquals(listOf("company-a", "platoon-a"), service.visibleGroups(operator).map { it.id.value })
-        assertEquals(listOf("device-a"), service.devicesFor(operator, GroupId("platoon-a")).map { it.deviceUuid })
-        assertTrue(service.accessFor(operator, GroupId("platoon-a")).canControl)
+        assertEquals(listOf("company-a"), service.visibleGroups(operator).map { it.id.value })
+        assertTrue(service.accessFor(operator, GroupId("company-a")).canControl)
+        assertFalse(service.accessFor(operator, GroupId("platoon-a")).canView)
+        assertFalse(service.accessFor(operator, GroupId("company-a")).canManage)
         assertFailsWith<IllegalStateException> { service.devicesFor(operator, GroupId("company-b")) }
+    }
+
+    @Test
+    fun `group admin manages exact group but only operates descendants`() {
+        val groupAdmin = AuthenticatedPrincipal("company-admin", UserRole.GROUP_ADMIN, GroupId("company-a"))
+
+        assertEquals(listOf("company-a", "platoon-a"), service.visibleGroups(groupAdmin).map { it.id.value })
+        assertTrue(service.accessFor(groupAdmin, GroupId("company-a")).canManage)
+        assertTrue(service.accessFor(groupAdmin, GroupId("company-a")).canControl)
+        assertTrue(service.accessFor(groupAdmin, GroupId("platoon-a")).canView)
+        assertTrue(service.accessFor(groupAdmin, GroupId("platoon-a")).canSendTalkback)
+        assertFalse(service.accessFor(groupAdmin, GroupId("platoon-a")).canManage)
+        assertFalse(service.accessFor(groupAdmin, GroupId("platoon-a")).canControl)
+        assertFalse(service.accessFor(groupAdmin, GroupId("company-b")).canView)
     }
 
     @Test
@@ -40,6 +55,8 @@ class GroupAccessServiceTest {
         val access = service.accessFor(viewer, GroupId("company-a"))
         assertTrue(access.canView)
         assertFalse(access.canControl)
+        assertFalse(access.canManage)
+        assertFalse(access.canSendTalkback)
         assertFailsWith<IllegalStateException> { service.devicesFor(viewer, GroupId("platoon-a")) }
     }
 
@@ -49,6 +66,7 @@ class GroupAccessServiceTest {
 
         assertEquals(4, service.visibleGroups(admin).size)
         assertTrue(service.accessFor(admin, GroupId("company-b")).canControl)
+        assertTrue(service.accessFor(admin, GroupId("company-b")).canManage)
     }
 
     private fun registeredDevice(deviceUuid: String, groupId: String) = RegisteredDevice(

@@ -1,4 +1,4 @@
-export type UserRole = "viewer" | "operator" | "admin";
+export type UserRole = "viewer" | "operator" | "group_admin" | "admin";
 
 export interface LoginRequest {
   username: string;

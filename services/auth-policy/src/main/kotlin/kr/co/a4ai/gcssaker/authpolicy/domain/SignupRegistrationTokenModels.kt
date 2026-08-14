@@ -103,7 +103,7 @@ class SignupRegistrationTokenService(
         require(command.companyId > 0) { "company id must be positive" }
         require(command.groupId.isNotBlank()) { "group id must not be blank" }
         require(command.label.isNotBlank()) { "label must not be blank" }
-        require(command.role != UserRole.ADMIN) { "admin signup tokens are not allowed" }
+        require(command.role.canBeIssuedByGroupAdmin()) { "administrator signup tokens are not allowed" }
         require(command.ttlMinutes in 5..10_080) { "ttl minutes must be between 5 and 10080" }
         require(command.maxUses in 1..100) { "max uses must be between 1 and 100" }
         val groupId = GroupId(command.groupId.trim())
