@@ -116,9 +116,11 @@ data class AuthenticatedPrincipal(
     val username: String,
     val role: UserRole,
     val groupId: GroupId,
+    val securityVersion: Long = 1,
 ) {
     init {
         require(username.isNotBlank()) { "username must not be blank" }
+        require(securityVersion > 0) { "security version must be positive" }
     }
 }
 

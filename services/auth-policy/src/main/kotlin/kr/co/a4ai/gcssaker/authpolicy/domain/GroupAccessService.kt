@@ -5,6 +5,9 @@ data class GroupAccess(
     val canControl: Boolean,
     val canManage: Boolean,
     val canSendTalkback: Boolean,
+    val canPublish: Boolean,
+    val canManageMembers: Boolean,
+    val canManageDevices: Boolean,
 )
 
 class GroupAccessService(
@@ -23,7 +26,7 @@ class GroupAccessService(
 
     fun accessFor(principal: AuthenticatedPrincipal, groupId: GroupId): GroupAccess {
         val hierarchy = hierarchyRepository.current()
-        if (!hierarchy.contains(groupId)) return GroupAccess(false, false, false, false)
+        if (!hierarchy.contains(groupId)) return deniedGroupAccess()
         val isOwnGroup = principal.groupId == groupId
         val isDescendant = hierarchy.isAncestor(principal.groupId, groupId)
         val isSystemAdmin = principal.role == UserRole.ADMIN
@@ -32,10 +35,20 @@ class GroupAccessService(
         val canControl = isSystemAdmin ||
             ((principal.role == UserRole.OPERATOR || principal.role == UserRole.GROUP_ADMIN) && isOwnGroup)
         val canManage = isSystemAdmin || (principal.role == UserRole.GROUP_ADMIN && isOwnGroup)
+        val canPublish = isSystemAdmin ||
+            ((principal.role == UserRole.OPERATOR || principal.role == UserRole.GROUP_ADMIN) && isOwnGroup)
         val canSendTalkback = isSystemAdmin ||
             (principal.role == UserRole.GROUP_ADMIN && (isOwnGroup || isDescendant)) ||
             (principal.role == UserRole.OPERATOR && isOwnGroup)
-        return GroupAccess(canView, canControl, canManage, canSendTalkback)
+        return GroupAccess(
+            canView = canView,
+            canControl = canControl,
+            canManage = canManage,
+            canSendTalkback = canSendTalkback,
+            canPublish = canPublish,
+            canManageMembers = canManage,
+            canManageDevices = canManage,
+        )
     }
 
     fun group(principal: AuthenticatedPrincipal, groupId: GroupId): OrganizationUnit {
@@ -53,3 +66,13 @@ class GroupAccessService(
         const val GROUP_ACCESS_DENIED = "group access denied"
     }
 }
+
+private fun deniedGroupAccess() = GroupAccess(
+    canView = false,
+    canControl = false,
+    canManage = false,
+    canSendTalkback = false,
+    canPublish = false,
+    canManageMembers = false,
+    canManageDevices = false,
+)

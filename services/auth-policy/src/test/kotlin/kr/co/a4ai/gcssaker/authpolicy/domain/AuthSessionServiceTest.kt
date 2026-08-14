@@ -13,6 +13,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
 
 class AuthSessionServiceTest {
     private val passwordHasher = PasswordHasher()
@@ -90,6 +91,27 @@ class AuthSessionServiceTest {
 
         assertEquals(tokens.principal, principal)
         assertEquals(1, principalCache.reads)
+    }
+
+    @Test
+    fun `role mutation invalidates existing access and refresh tokens immediately`() {
+        val tokens = requireNotNull(service.login("operator01", "correct-password"))
+        val current = requireNotNull(users.findByUsername("operator01"))
+        users.update(current.copy(role = UserRole.VIEWER, securityVersion = current.securityVersion + 1))
+
+        assertFailsWith<IllegalArgumentException> { service.verifyAccessToken(tokens.accessToken) }
+        assertNull(service.refresh(tokens.refreshToken))
+    }
+
+    @Test
+    fun `disabled user cannot login or continue an existing session`() {
+        val tokens = requireNotNull(service.login("operator01", "correct-password"))
+        val current = requireNotNull(users.findByUsername("operator01"))
+        users.update(current.copy(active = false, securityVersion = current.securityVersion + 1))
+
+        assertNull(service.login("operator01", "correct-password"))
+        assertFailsWith<IllegalArgumentException> { service.verifyAccessToken(tokens.accessToken) }
+        assertNull(service.refresh(tokens.refreshToken))
     }
 
     @Test

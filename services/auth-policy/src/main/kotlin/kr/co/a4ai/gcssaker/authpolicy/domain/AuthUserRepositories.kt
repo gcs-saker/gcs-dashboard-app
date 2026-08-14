@@ -21,6 +21,28 @@ class InMemoryAuthUserRepository(users: Collection<AuthUser>) : AuthUserReposito
         usersByEmail[saved.email.lowercase()] = saved
         return saved
     }
+
+    override fun list(): List<AuthUser> = usersByUsername.values.sortedBy { it.username }
+
+    @Synchronized
+    override fun update(user: AuthUser): AuthUser {
+        val current = usersByUsername[user.username] ?: error("User not found")
+        require(current.id == user.id) { "User identity cannot change" }
+        usersByEmail.remove(current.email.lowercase())
+        usersByUsername[user.username] = user
+        usersByEmail[user.email.lowercase()] = user
+        return user
+    }
+
+    @Synchronized
+    override fun replaceGroupAdmin(groupId: GroupId, username: String): AuthUser {
+        val target = usersByUsername[username] ?: error("User not found")
+        require(target.groupId == groupId) { "User must belong to target group" }
+        usersByUsername.values
+            .filter { it.groupId == groupId && it.role == UserRole.GROUP_ADMIN && it.username != username }
+            .forEach { update(it.copy(role = UserRole.OPERATOR, securityVersion = it.securityVersion + 1)) }
+        return update(target.copy(role = UserRole.GROUP_ADMIN, active = true, securityVersion = target.securityVersion + 1))
+    }
 }
 
 class CachedAuthUserRepository(
@@ -40,6 +62,19 @@ class CachedAuthUserRepository(
     @Synchronized
     override fun save(user: AuthUser): AuthUser =
         delegate.save(user).also(::cache)
+
+    override fun list(): List<AuthUser> = delegate.list().onEach(::cache)
+
+    @Synchronized
+    override fun update(user: AuthUser): AuthUser =
+        delegate.update(user).also(::cache)
+
+    @Synchronized
+    override fun replaceGroupAdmin(groupId: GroupId, username: String): AuthUser {
+        val replaced = delegate.replaceGroupAdmin(groupId, username)
+        delegate.list().filter { it.groupId == groupId }.forEach(::cache)
+        return replaced
+    }
 
     private fun cache(user: AuthUser) {
         usersByUsername[user.username] = user

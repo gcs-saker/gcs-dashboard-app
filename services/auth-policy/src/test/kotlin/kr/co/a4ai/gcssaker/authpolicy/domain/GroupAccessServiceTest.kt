@@ -31,6 +31,7 @@ class GroupAccessServiceTest {
         assertTrue(service.accessFor(operator, GroupId("company-a")).canControl)
         assertFalse(service.accessFor(operator, GroupId("platoon-a")).canView)
         assertFalse(service.accessFor(operator, GroupId("company-a")).canManage)
+        assertTrue(service.accessFor(operator, GroupId("company-a")).canPublish)
         assertFailsWith<IllegalStateException> { service.devicesFor(operator, GroupId("company-b")) }
     }
 
@@ -44,6 +45,7 @@ class GroupAccessServiceTest {
         assertTrue(service.accessFor(groupAdmin, GroupId("platoon-a")).canView)
         assertTrue(service.accessFor(groupAdmin, GroupId("platoon-a")).canSendTalkback)
         assertFalse(service.accessFor(groupAdmin, GroupId("platoon-a")).canManage)
+        assertFalse(service.accessFor(groupAdmin, GroupId("platoon-a")).canPublish)
         assertFalse(service.accessFor(groupAdmin, GroupId("platoon-a")).canControl)
         assertFalse(service.accessFor(groupAdmin, GroupId("company-b")).canView)
     }

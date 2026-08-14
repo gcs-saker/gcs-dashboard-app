@@ -77,6 +77,7 @@ class JwtTokenService(
             .withSubject(principal.username)
             .withClaim("role", principal.role.name.lowercase())
             .withClaim("group_id", principal.groupId.value)
+            .withClaim("security_version", principal.securityVersion)
             .withClaim("token_use", tokenUse)
             .withJWTId(UUID.randomUUID().toString())
             .withIssuedAt(Date.from(now))
@@ -93,6 +94,7 @@ class JwtTokenService(
             username = decoded.subject,
             role = role,
             groupId = GroupId(groupId),
+            securityVersion = decoded.getClaim("security_version").asLong() ?: 1,
         )
     }
 }

@@ -18,6 +18,7 @@ class AuthSessionService(
 ) {
     fun login(username: String, password: String): IssuedTokenSet? {
         val user = users.findByUsername(username) ?: return null
+        if (!user.active) return null
         if (!passwordHasher.verify(password, user.passwordHash)) {
             return null
         }
@@ -31,6 +32,7 @@ class AuthSessionService(
             tokenService.verifyRefreshToken(refreshToken)
         }
         val user = users.findByUsername(principal.username) ?: return null
+        if (!user.active || user.securityVersion != principal.securityVersion) return null
         return issueTokens(user.principal())
     }
 
@@ -39,21 +41,21 @@ class AuthSessionService(
     }
 
     fun verifyAccessToken(accessToken: String): AuthenticatedPrincipal {
-        principalCache.getAccessPrincipal(accessToken)?.let { cachedPrincipal ->
-            // Cache entries are never an authority for JWT lifetime. Re-verification
-            // prevents stale Redis data from extending the signed exp claim.
-            val verified = tokenService.verifyAccessTokenWithTtl(accessToken)
-            if (verified.principal == cachedPrincipal) {
-                return cachedPrincipal
-            }
-        }
+        // Neither Redis nor the signed JWT is authoritative after a role, group, or
+        // account-state mutation. Always compare the token security version with DB state.
+        principalCache.getAccessPrincipal(accessToken)
         val verified = tokenService.verifyAccessTokenWithTtl(accessToken)
+        val currentUser = users.findByUsername(verified.principal.username)
+            ?: throw IllegalArgumentException("user is not active")
+        require(currentUser.active && currentUser.securityVersion == verified.principal.securityVersion) {
+            "access token security version is stale"
+        }
         principalCache.putAccessPrincipal(
             accessToken = accessToken,
             principal = verified.principal,
             ttl = verified.remainingTtl,
         )
-        return verified.principal
+        return currentUser.principal()
     }
 
     private fun issueTokens(principal: AuthenticatedPrincipal): IssuedTokenSet {

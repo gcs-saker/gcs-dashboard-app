@@ -25,6 +25,11 @@ data class GroupDashboardResponse(
     val devices: List<GroupDeviceResponse>,
     val canView: Boolean,
     val canControl: Boolean,
+    val canManage: Boolean,
+    val canSendTalkback: Boolean,
+    val canPublish: Boolean,
+    val canManageMembers: Boolean,
+    val canManageDevices: Boolean,
 )
 
 @RestController
@@ -65,6 +70,11 @@ class GroupQueryController(
                 devices = groups.devicesFor(principal, id).map(RegisteredDevice::toGroupResponse),
                 canView = access.canView,
                 canControl = access.canControl,
+                canManage = access.canManage,
+                canSendTalkback = access.canSendTalkback,
+                canPublish = access.canPublish,
+                canManageMembers = access.canManageMembers,
+                canManageDevices = access.canManageDevices,
             )
         }
     }

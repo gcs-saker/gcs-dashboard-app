@@ -5,6 +5,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.CachedAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupMemberAdministrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.PrincipalCache
 import kr.co.a4ai.gcssaker.authpolicy.domain.RefreshSessionStore
@@ -55,4 +56,10 @@ class AuthPolicyConfig {
         principalCache: PrincipalCache,
         refreshSessionStore: RefreshSessionStore,
     ): AuthSessionService = AuthSessionService(users, passwordHasher, tokenService, principalCache, refreshSessionStore)
+
+    @Bean
+    fun groupMemberAdministrationService(
+        users: AuthUserRepository,
+        passwordHasher: PasswordHasher,
+    ): GroupMemberAdministrationService = GroupMemberAdministrationService(users, passwordHasher)
 }
