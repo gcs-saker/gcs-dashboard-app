@@ -14,9 +14,9 @@ PUBLIC_EDGE_PATHS = (
     "/auth-policy/auth/refresh",
     "/auth-policy/auth/me",
     "/auth-policy/auth/logout",
-    "/auth-policy/admin/signup-tokens",
-    "/auth-policy/admin/provisioning-tokens",
-    "/auth-policy/admin/devices",
+    "/auth-policy/api/v1/signup-tokens",
+    "/auth-policy/api/v1/provisioning-tokens",
+    "/auth-policy/api/v1/devices",
     "/api/v1/groups",
     "/api/v1/geofences",
     "/api/telemetry/all",
@@ -73,7 +73,7 @@ def test_operational_swagger_exposes_sanitized_spec_and_keeps_ui_read_only() -> 
         REPO_ROOT / "services/auth-policy/src/main/resources/openapi/gcs-saker-operations-swagger.html"
     ).read_text(encoding="utf-8")
 
-    assert 'private const val ADMIN_PREFIX = "/admin/**"' in security
+    assert "val ADMIN_MATCHERS = emptyList<RouteMatcher>()" in security
     assert 'const val ROOT = "/admin/api-docs"' in controller
     assert "OperationalApiDocumentationRoutes.OPENAPI" in security
     assert "OperationalApiDocumentationRoutes.INITIALIZER" in security
