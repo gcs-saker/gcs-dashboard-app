@@ -34,6 +34,8 @@ enum class UserRole {
     fun canBeIssuedByGroupAdmin(): Boolean = this == VIEWER || this == OPERATOR
 }
 
+enum class GroupStatus { ACTIVE, INACTIVE }
+
 enum class Permission {
     VIEW_STREAM,
     PUBLISH_STREAM,
@@ -55,6 +57,7 @@ data class OrganizationUnit(
     val name: String,
     val type: GroupType,
     val parentId: GroupId? = null,
+    val status: GroupStatus = GroupStatus.ACTIVE,
 ) {
     init {
         require(name.isNotBlank()) { "group name must not be blank" }

@@ -74,6 +74,23 @@ class SecurityAuditEventFactory(
             streamId = streamId,
         )
 
+    fun groupManagement(
+        principal: AuthenticatedPrincipal,
+        targetGroupId: GroupId,
+        action: String,
+        target: String,
+        clientIp: String,
+        occurredAt: Instant,
+    ): OperationalEventReadModel = event(
+        principal = principal,
+        occurredAt = occurredAt,
+        eventType = SecurityAuditEventContract.EVENT_TYPE_GROUP_MANAGEMENT,
+        message = "group management: ${SecurityAuditEventContract.safeReason(action)} " +
+            "[target=${SecurityAuditEventContract.maskUsername(target)}, ip=${SecurityAuditEventContract.safeClientIp(clientIp)}]",
+        severity = SecurityAuditEventContract.SEVERITY_INFO,
+        groupId = targetGroupId,
+    )
+
     private fun event(
         principal: AuthenticatedPrincipal,
         occurredAt: Instant,
@@ -81,6 +98,7 @@ class SecurityAuditEventFactory(
         message: String,
         severity: String,
         streamId: String? = null,
+        groupId: GroupId = principal.groupId,
     ): OperationalEventReadModel =
         OperationalEventReadModel(
             id = "${SecurityAuditEventContract.ID_PREFIX}${occurredAt.toEpochMilli()}-${nextSequence()}",
@@ -94,7 +112,7 @@ class SecurityAuditEventFactory(
             connections = SecurityAuditEventContract.NO_CONNECTIONS,
             latencyMs = SecurityAuditEventContract.NO_LATENCY_MS,
             throughputMbps = SecurityAuditEventContract.NO_THROUGHPUT_MBPS,
-            groupId = principal.groupId,
+            groupId = groupId,
             streamId = streamId,
         )
 }

@@ -30,7 +30,7 @@ interface TimeSyncSettingsViewProps {
 
 export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }: TimeSyncSettingsViewProps = {}) {
   const { currentUser } = useAuth();
-  const canManageDevices = currentUser?.capabilities.canManageDevices ?? canManageDeviceProvisioning(currentUser?.role);
+  const canManageDevices = currentUser?.capabilities?.canManageDevices ?? canManageDeviceProvisioning(currentUser?.role);
   const { errorMessage, isLoading, isSaving, lastUpdatedAt, refresh, runCheck, save, status } = useTimeSyncStatus();
   const [form, setForm] = useState<TimeSyncConfigInput>(DEFAULT_TIME_SYNC_FORM);
   const [activeTab, setActiveTab] = useState<SettingsTab>("time");

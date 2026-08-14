@@ -37,11 +37,13 @@ class InMemoryAuthUserRepository(users: Collection<AuthUser>) : AuthUserReposito
     @Synchronized
     override fun replaceGroupAdmin(groupId: GroupId, username: String): AuthUser {
         val target = usersByUsername[username] ?: error("User not found")
-        require(target.groupId == groupId) { "User must belong to target group" }
+        require(target.role == UserRole.VIEWER || target.role == UserRole.OPERATOR) {
+            "Replacement must be a viewer or operator"
+        }
         usersByUsername.values
             .filter { it.groupId == groupId && it.role == UserRole.GROUP_ADMIN && it.username != username }
             .forEach { update(it.copy(role = UserRole.OPERATOR, securityVersion = it.securityVersion + 1)) }
-        return update(target.copy(role = UserRole.GROUP_ADMIN, active = true, securityVersion = target.securityVersion + 1))
+        return update(target.copy(groupId = groupId, role = UserRole.GROUP_ADMIN, active = true, securityVersion = target.securityVersion + 1))
     }
 }
 

@@ -3,12 +3,22 @@ package kr.co.a4ai.gcssaker.authpolicy.domain
 import java.time.Clock
 import java.time.Instant
 
-class GroupPolicyService(
-    groups: Collection<OrganizationUnit>,
+class GroupPolicyService private constructor(
+    private val hierarchyProvider: () -> OrganizationHierarchy,
     private val routePolicies: StreamRoutePolicies = StreamRoutePolicies.empty(),
     private val clock: Clock = Clock.systemUTC(),
 ) {
-    private val hierarchy = OrganizationHierarchy.of(groups)
+    constructor(
+        groups: Collection<OrganizationUnit>,
+        routePolicies: StreamRoutePolicies = StreamRoutePolicies.empty(),
+        clock: Clock = Clock.systemUTC(),
+    ) : this({ OrganizationHierarchy.of(groups) }, routePolicies, clock)
+
+    constructor(
+        hierarchyRepository: OrganizationHierarchyRepository,
+        routePolicies: StreamRoutePolicies = StreamRoutePolicies.empty(),
+        clock: Clock = Clock.systemUTC(),
+    ) : this(hierarchyRepository::current, routePolicies, clock)
 
     fun canViewStream(
         principal: AuthenticatedPrincipal,
@@ -23,7 +33,7 @@ class GroupPolicyService(
         routePolicyDecision(principal, stream, Instant.now(clock))?.let {
             return it
         }
-        if (principal.role == UserRole.GROUP_ADMIN && hierarchy.isAncestor(principal.groupId, stream.publisherGroupId)) {
+        if (principal.role == UserRole.GROUP_ADMIN && hierarchyProvider().isAncestor(principal.groupId, stream.publisherGroupId)) {
             return StreamAccessDecision.allow("group admin can view descendant group stream")
         }
         return StreamAccessDecision.deny("stream is outside principal group scope")
@@ -51,7 +61,7 @@ class GroupPolicyService(
         ) {
             return StreamAccessDecision.allow("same group talkback")
         }
-        if (principal.role == UserRole.GROUP_ADMIN && hierarchy.isAncestor(principal.groupId, targetGroupId)) {
+        if (principal.role == UserRole.GROUP_ADMIN && hierarchyProvider().isAncestor(principal.groupId, targetGroupId)) {
             return StreamAccessDecision.allow("group admin can send descendant talkback")
         }
         return StreamAccessDecision.deny("talkback target is outside principal operational scope")
@@ -63,6 +73,7 @@ class GroupPolicyService(
         now: Instant,
     ): StreamAccessDecision? {
         val activePolicies = routePolicies.activeFor(principal.groupId, now)
+        val hierarchy = hierarchyProvider()
 
         return activePolicies.firstNotNullOfOrNull { policy ->
             when (policy.scope) {

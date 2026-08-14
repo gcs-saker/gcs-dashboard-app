@@ -8,7 +8,7 @@ export function SignupTokenPanel() {
   const { currentUser } = useAuth();
   const { records, issuedToken, isLoading, isIssuing, errorMessage, refresh, issue, clear } = useSignupTokens();
   const [form, setForm] = useState<IssueSignupTokenInput>(DEFAULT_SIGNUP_TOKEN_INPUT);
-  const isAdmin = currentUser?.capabilities.canManageMembers ?? canManageDeviceProvisioning(currentUser?.role);
+  const isAdmin = currentUser?.capabilities?.canManageMembers ?? canManageDeviceProvisioning(currentUser?.role);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();

@@ -2,6 +2,7 @@ package kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupType
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupStatus
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchy
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationUnit
@@ -36,6 +37,35 @@ class JdbcOrganizationHierarchyRepository(
             ),
         )
 
+    override fun listAll(): List<OrganizationUnit> = jdbc.query(GroupHierarchySql.selectAllGroups) { rs, _ ->
+        OrganizationUnit(
+            id = GroupId(rs.getString(GroupHierarchyColumns.id)),
+            name = rs.getString(GroupHierarchyColumns.name),
+            type = GroupType.valueOf(rs.getString(GroupHierarchyColumns.type)),
+            parentId = rs.getString(GroupHierarchyColumns.parentId)?.let(::GroupId),
+            status = GroupStatus.valueOf(rs.getString(GroupHierarchyColumns.status).uppercase()),
+        )
+    }
+
+    override fun create(unit: OrganizationUnit): OrganizationUnit {
+        jdbc.update(
+            GroupHierarchySql.insertGroup, unit.id.value, unit.name, unit.type.name,
+            unit.parentId?.value, unit.status.name.lowercase(),
+        )
+        rebuildActiveClosure()
+        return unit
+    }
+
+    override fun update(unit: OrganizationUnit): OrganizationUnit {
+        val updated = jdbc.update(
+            GroupHierarchySql.updateGroup, unit.name, unit.type.name, unit.parentId?.value,
+            unit.status.name.lowercase(), unit.id.value,
+        )
+        check(updated == 1) { "group not found" }
+        rebuildActiveClosure()
+        return unit
+    }
+
     private fun seedMissingGroups(seedUnits: Collection<OrganizationUnit>) {
         seedUnits.forEach { unit ->
             val existing = jdbc.queryForObject(GroupHierarchySql.countGroupById, Int::class.java, unit.id.value) ?: 0
@@ -65,6 +95,15 @@ class JdbcOrganizationHierarchyRepository(
             }
         }
     }
+
+    private fun rebuildActiveClosure() {
+        val active = listAll().filter { it.status == GroupStatus.ACTIVE }
+        if (active.isEmpty()) {
+            jdbc.update(GroupHierarchySql.deleteClosure)
+        } else {
+            rebuildClosure(OrganizationHierarchy.of(active))
+        }
+    }
 }
 
 private object GroupHierarchyColumns {
@@ -72,6 +111,7 @@ private object GroupHierarchyColumns {
     const val name = "name"
     const val type = "type"
     const val parentId = "parent_id"
+    const val status = "status"
 }
 
 private object GroupHierarchyContract {
@@ -87,6 +127,9 @@ private object GroupHierarchySql {
         WHERE status = ?
         ORDER BY id
     """
+    const val selectAllGroups = """
+        SELECT id, name, type, parent_id, status FROM organization_groups ORDER BY id
+    """
     const val insertGroup = """
         INSERT INTO organization_groups (id, name, type, parent_id, status)
         VALUES (?, ?, ?, ?, ?)
@@ -94,5 +137,10 @@ private object GroupHierarchySql {
     const val insertClosure = """
         INSERT INTO organization_group_closure (ancestor_group_id, descendant_group_id, depth)
         VALUES (?, ?, ?)
+    """
+    const val updateGroup = """
+        UPDATE organization_groups
+        SET name = ?, type = ?, parent_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
     """
 }

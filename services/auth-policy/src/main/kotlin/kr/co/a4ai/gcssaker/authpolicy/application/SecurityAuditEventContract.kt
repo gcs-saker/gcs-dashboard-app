@@ -17,6 +17,7 @@ object SecurityAuditEventContract {
     const val EVENT_TYPE_REFRESH_FAILED = "auth.refresh.failed"
     const val EVENT_TYPE_STREAM_ACCESS_ALLOWED = "stream.access.allowed"
     const val EVENT_TYPE_STREAM_ACCESS_DENIED = "stream.access.denied"
+    const val EVENT_TYPE_GROUP_MANAGEMENT = "group.management"
     const val UNKNOWN_USERNAME = "unknown"
     const val UNKNOWN_GROUP_ID = "security"
     const val NO_CONNECTIONS = 0
@@ -39,6 +40,8 @@ object SecurityAuditEventContract {
 
     fun safeReason(reason: String): String =
         reason.take(160)
+
+    fun safeClientIp(clientIp: String): String = clientIp.take(64)
 
     fun streamAccessMessage(
         allowed: Boolean,

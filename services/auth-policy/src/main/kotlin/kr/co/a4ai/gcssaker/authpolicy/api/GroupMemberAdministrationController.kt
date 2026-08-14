@@ -1,5 +1,8 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
+import jakarta.servlet.http.HttpServletRequest
+import kr.co.a4ai.gcssaker.authpolicy.application.NoopSecurityAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupMemberAdministrationService
@@ -19,6 +22,8 @@ import org.springframework.web.bind.annotation.RestController
 class GroupMemberAdministrationController(
     private val members: GroupMemberAdministrationService,
     private val principalResolver: BearerPrincipalResolver,
+    private val securityAuditPublisher: SecurityAuditPublisher = NoopSecurityAuditPublisher,
+    private val clientIpResolver: ClientIpResolver = ClientIpResolver(),
 ) {
     @GetMapping("/members")
     @RequiresBearerAuth
@@ -36,17 +41,24 @@ class GroupMemberAdministrationController(
         @PathVariable groupId: String,
         @PathVariable username: String,
         @RequestBody request: UpdateGroupMemberRequest,
+        servletRequest: HttpServletRequest,
     ): GroupMemberResponse = translateMemberErrors {
+        val principal = principalResolver.requirePrincipal(authorization)
+        val targetGroupId = GroupId(groupId)
         members.update(
-            principal = principalResolver.requirePrincipal(authorization),
-            groupId = GroupId(groupId),
+            principal = principal,
+            groupId = targetGroupId,
             username = username,
             command = GroupMemberUpdate(
                 role = request.role?.let { UserRole.valueOf(it.trim().uppercase()) },
                 active = request.active,
                 password = request.password,
             ),
-        ).toMemberResponse()
+        ).also {
+            securityAuditPublisher.publishGroupManagement(
+                principal, targetGroupId, "member.update", username, clientIpResolver.resolve(servletRequest),
+            )
+        }.toMemberResponse()
     }
 
     @PutMapping("/administrator")
@@ -55,12 +67,20 @@ class GroupMemberAdministrationController(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @PathVariable groupId: String,
         @RequestBody request: ReplaceGroupAdministratorRequest,
+        servletRequest: HttpServletRequest,
     ): GroupMemberResponse = translateMemberErrors {
+        val principal = principalResolver.requirePrincipal(authorization)
+        val targetGroupId = GroupId(groupId)
         members.replaceGroupAdmin(
-            principalResolver.requirePrincipal(authorization),
-            GroupId(groupId),
+            principal,
+            targetGroupId,
             request.username,
-        ).toMemberResponse()
+        ).also {
+            securityAuditPublisher.publishGroupManagement(
+                principal, targetGroupId, "administrator.replace", request.username,
+                clientIpResolver.resolve(servletRequest),
+            )
+        }.toMemberResponse()
     }
 }
 

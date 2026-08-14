@@ -54,9 +54,11 @@ class JdbcAuthUserRepository(
     override fun replaceGroupAdmin(groupId: GroupId, username: String): AuthUser =
         transactions.execute {
             val target = findByUsername(username) ?: error("User not found")
-            require(target.groupId == groupId) { "User must belong to target group" }
+            require(target.role == UserRole.VIEWER || target.role == UserRole.OPERATOR) {
+                "Replacement must be a viewer or operator"
+            }
             jdbc.update(AuthUserSql.demoteGroupAdmin, UserRole.OPERATOR.name, groupId.value, username)
-            update(target.copy(role = UserRole.GROUP_ADMIN, active = true, securityVersion = target.securityVersion + 1))
+            update(target.copy(groupId = groupId, role = UserRole.GROUP_ADMIN, active = true, securityVersion = target.securityVersion + 1))
         } ?: error("Group administrator replacement failed")
 
     private fun insertUser(user: AuthUser): AuthUser {
