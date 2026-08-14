@@ -108,5 +108,11 @@ class JdbcAuthUserRepositoryTest {
         }
 
         override fun save(user: AuthUser): AuthUser = user
+
+        override fun list(): List<AuthUser> = listOf(user)
+
+        override fun update(user: AuthUser): AuthUser = user
+
+        override fun replaceGroupAdmin(groupId: GroupId, username: String): AuthUser = user
     }
 }
