@@ -184,7 +184,7 @@ class StreamPolicyControllerTest {
             )
         }
 
-        assertEquals("unsupported stream access action", error.message)
+        assertEquals("unsupported stream access action", error.reason)
     }
 
     @Test
