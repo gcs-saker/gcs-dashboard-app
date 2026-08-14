@@ -104,10 +104,7 @@ def test_deploy_guards_stateful_container_identity() -> None:
 
     assert "stateful-containers.before.env" in script
     assert "stateful/external service was replaced" in script
-    assert (
-        "UNCHANGED_SERVICES=(edge mobile-publisher postgres-geo redis mqtt mediamtx turn-primary)"
-        in script
-    )
+    assert "UNCHANGED_SERVICES=(edge mobile-publisher postgres-geo redis mqtt mediamtx turn-primary)" in script
 
 
 def test_deploy_keeps_public_edge_available_during_application_rollout() -> None:
