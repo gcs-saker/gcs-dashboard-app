@@ -1,4 +1,4 @@
-FROM golang:1.26.5-alpine@sha256:0178a641fbb4858c5f1b48e34bdaabe0350a330a1b1149aabd498d0699ff5fb2 AS build
+FROM golang:1.26.6-alpine@sha256:af8d6740070b8906d12eae1c3e3ea0957fb63f492051ea05e354c38ef9fe88df AS build
 WORKDIR /workspace
 COPY go.mod go.sum ./
 COPY cmd ./cmd
@@ -10,7 +10,7 @@ FROM alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6
 ARG SOURCE_COMMIT=unknown
 LABEL org.opencontainers.image.revision=$SOURCE_COMMIT \
       org.opencontainers.image.base.name="alpine:3.20" \
-      io.gcs-saker.go.version="1.26.5" \
+      io.gcs-saker.go.version="1.26.6" \
       io.gcs-saker.grpc.version="1.82.1"
 RUN adduser -D -H media
 USER media
