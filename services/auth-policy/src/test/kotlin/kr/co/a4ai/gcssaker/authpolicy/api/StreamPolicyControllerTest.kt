@@ -44,6 +44,13 @@ class StreamPolicyControllerTest {
                     role = UserRole.OPERATOR,
                     groupId = GroupId("bn-1"),
                 ),
+                AuthUser(
+                    username = "group-admin-bn",
+                    email = "group-admin@example.test",
+                    passwordHash = passwordHasher.hash("pass"),
+                    role = UserRole.GROUP_ADMIN,
+                    groupId = GroupId("bn-1"),
+                ),
             ),
         ),
         passwordHasher,
@@ -100,8 +107,8 @@ class StreamPolicyControllerTest {
     }
 
     @Test
-    fun `operator can access descendant group stream`() {
-        val token = accessToken("operator-bn")
+    fun `group admin can access descendant group stream`() {
+        val token = accessToken("group-admin-bn")
 
         val response = controller.access(
             bearer(token),
@@ -113,7 +120,23 @@ class StreamPolicyControllerTest {
         )
 
         assertTrue(response.allowed)
-        assertEquals("operator can view descendant group stream", response.reason)
+        assertEquals("group admin can view descendant group stream", response.reason)
+    }
+
+    @Test
+    fun `operator cannot access descendant group stream`() {
+        val token = accessToken("operator-bn")
+
+        val response = controller.access(
+            bearer(token),
+            StreamAccessRequest(
+                streamId = "raw.company-b.front",
+                path = "raw/company-b/front",
+                publisherGroupId = "co-b",
+            ),
+        )
+
+        assertFalse(response.allowed)
     }
 
     @Test

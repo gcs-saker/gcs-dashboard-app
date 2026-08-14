@@ -68,5 +68,5 @@ class StreamPolicyController(
 
 object StreamPolicyDecisionContract {
     const val DEFAULT_TTL_SECONDS = 2L
-    const val POLICY_VERSION = "group-policy-v1"
+    const val POLICY_VERSION = "group-policy-v2"
 }

@@ -545,7 +545,7 @@ private object ApiContractFixtures {
     const val STREAM_ACCESS_REASON_VALUE = "same group stream"
     const val PERMISSION_VIEW_STREAM_VALUE = "view_stream"
     const val STREAM_ACCESS_EXPIRES_AT_VALUE = "2026-06-25T00:00:02Z"
-    const val POLICY_VERSION_VALUE = "group-policy-v1"
+    const val POLICY_VERSION_VALUE = "group-policy-v2"
     const val PRINCIPAL_VERSION_VALUE = "operator01:co-a:operator"
     const val LATITUDE_VALUE = 35.8714
     const val LONGITUDE_VALUE = 128.6014
