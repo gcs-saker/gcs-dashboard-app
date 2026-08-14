@@ -1,0 +1,11 @@
+[Unit]
+Description=Run GCS-Saker maintenance daily
+
+[Timer]
+OnCalendar=*-*-* 03:20:00 Asia/Seoul
+RandomizedDelaySec=15m
+Persistent=true
+Unit=gcs-runtime-maintenance.service
+
+[Install]
+WantedBy=timers.target

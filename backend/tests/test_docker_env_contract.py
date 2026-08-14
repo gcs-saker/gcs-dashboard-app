@@ -221,7 +221,7 @@ def test_single_node_keeps_redis_as_default_cache_runtime() -> None:
         "--maxmemory",
         "${REDIS_MAXMEMORY:-384mb}",
         "--maxmemory-policy",
-        "noeviction",
+        "${REDIS_MAXMEMORY_POLICY:-volatile-ttl}",
         "--auto-aof-rewrite-percentage",
         "100",
         "--auto-aof-rewrite-min-size",
@@ -321,8 +321,10 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
         "${MEDIA_CONTROL_TURN_PRIMARY_URL:-turn:localhost:3478?transport=udp}"
     )
     assert services["media-control"]["environment"]["MEDIA_CONTROL_TURN_SECONDARY_URL"] == (
-        "${MEDIA_CONTROL_TURN_SECONDARY_URL:-turn:localhost:3479?transport=udp}"
+        "${MEDIA_CONTROL_TURN_SECONDARY_URL:-}"
     )
+    assert services["turn-secondary"]["profiles"] == ["same-host-turn-redundancy"]
+    assert "turn-secondary" not in services["media-control"]["depends_on"]
     assert services["media-control"]["environment"]["GOGC"] == "${MEDIA_CONTROL_GOGC:-100}"
     assert services["media-control"]["environment"]["GOMEMLIMIT"] == "${MEDIA_CONTROL_GOMEMLIMIT:-512MiB}"
 

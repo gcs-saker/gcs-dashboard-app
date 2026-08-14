@@ -33,7 +33,7 @@ BUILD_SERVICES=(backend auth-policy media-control dashboard)
 # replaced. Recreating it makes the host Caddy upstream (127.0.0.1:80)
 # disappear and turns every concurrent request into a 502. Edge configuration
 # changes use a separate, explicitly planned ingress rollout.
-UNCHANGED_SERVICES=(edge mobile-publisher postgres-geo redis mqtt mediamtx turn-primary turn-secondary)
+UNCHANGED_SERVICES=(edge mobile-publisher postgres-geo redis mqtt mediamtx turn-primary)
 
 [[ "${RELEASE_DIR}" = /* && -d "${RELEASE_DIR}" ]] || { echo "RELEASE_DIR must be an existing absolute directory" >&2; exit 2; }
 root_real="$(realpath "${ROOT}")"

@@ -505,6 +505,9 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
             sync_offset_ms = abs(first_audio_frame_elapsed_ms - first_frame_elapsed_ms)
             print(f"First audio frame latency ms: {first_audio_frame_elapsed_ms:.1f}")
             print(f"Audio/video sync offset ms: {sync_offset_ms:.1f}")
+        if args.hold_seconds > 0:
+            await asyncio.sleep(args.hold_seconds)
+            print(f"Connected hold seconds: {args.hold_seconds:.1f}")
         return 0
     finally:
         await peer_connection.close()
@@ -607,6 +610,12 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--ice-credential", default=None)
     parser.add_argument("--timeout-seconds", type=float, default=15)
     parser.add_argument(
+        "--hold-seconds",
+        type=float,
+        default=0,
+        help="Keep the connected peer alive after validation for load testing.",
+    )
+    parser.add_argument(
         "--insecure",
         action="store_true",
         help="Allow self-signed HTTPS WHEP endpoints.",
@@ -628,6 +637,8 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     )
     args = parser.parse_args(argv)
     args.ice_server_url = args.ice_server_url or args.stun_url or DEFAULT_STUN_URL
+    if args.hold_seconds < 0:
+        parser.error("--hold-seconds must be >= 0")
     if args.measure_audio_video_sync:
         args.require_connected = True
         args.require_video_frame = True

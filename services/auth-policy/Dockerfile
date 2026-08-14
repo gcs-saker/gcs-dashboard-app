@@ -10,10 +10,7 @@ ARG SOURCE_COMMIT=unknown
 LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
 WORKDIR /app
 COPY --from=build /workspace/build/libs/*.jar /app/auth-policy.jar
-RUN apt-get update \
-    && apt-get upgrade -y --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -f /usr/bin/pebble \
+RUN rm -f /usr/bin/pebble \
     && groupadd --system --gid 10002 gcs \
     && useradd --system --uid 10002 --gid gcs --home /app --shell /usr/sbin/nologin gcs \
     && chown -R gcs:gcs /app

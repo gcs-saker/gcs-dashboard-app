@@ -16,7 +16,7 @@ expected_commit="${EXPECTED_COMMIT:?Set EXPECTED_COMMIT to the deployed source c
 
 compose=(docker compose --project-name "${project_name}" --env-file "${env_file}" -f "${compose_file}")
 application_services=(backend auth-policy media-control dashboard)
-required_services=(postgres-geo redis mqtt mediamtx turn-primary turn-secondary mobile-publisher edge)
+required_services=(postgres-geo redis mqtt mediamtx turn-primary mobile-publisher edge)
 
 curl --fail --silent --show-error --max-time 15 "${public_origin}/healthz" >/dev/null
 curl --fail --silent --show-error --max-time 15 "${public_origin}/readyz" >/dev/null

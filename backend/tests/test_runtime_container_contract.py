@@ -87,6 +87,8 @@ def test_single_node_stateful_images_and_resource_limits_are_fixed() -> None:
         assert service["mem_limit"]
         assert service["cpus"]
 
+    assert services["turn-secondary"]["profiles"] == ["same-host-turn-redundancy"]
+
     assert "${MEDIAMTX_IMAGE" not in services["mediamtx"]["image"]
 
 
