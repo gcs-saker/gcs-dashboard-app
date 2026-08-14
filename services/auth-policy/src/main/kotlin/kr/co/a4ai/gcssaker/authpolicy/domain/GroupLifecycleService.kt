@@ -17,6 +17,7 @@ class GroupLifecycleService(
     private val groups: OrganizationHierarchyRepository,
     private val users: AuthUserRepository,
     private val devices: RegisteredDeviceRepository,
+    private val refreshSessions: RefreshSessionStore = StatelessRefreshSessionStore,
 ) {
     fun list(principal: AuthenticatedPrincipal): List<OrganizationUnit> {
         requireSystemAdmin(principal)
@@ -91,7 +92,10 @@ class GroupLifecycleService(
         val hierarchy = runCatching { groups.current() }.getOrNull()
         users.list()
             .filter { it.groupId == groupId || hierarchy?.isAncestor(groupId, it.groupId) == true }
-            .forEach { users.update(it.copy(securityVersion = it.securityVersion + 1)) }
+            .forEach {
+                users.update(it.copy(securityVersion = it.securityVersion + 1))
+                refreshSessions.revokePrincipalSessions(it.username)
+            }
     }
 
     private fun requireGroup(groupId: GroupId): OrganizationUnit =

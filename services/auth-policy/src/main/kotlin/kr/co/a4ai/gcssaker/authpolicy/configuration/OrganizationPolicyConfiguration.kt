@@ -4,6 +4,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.GroupAccessService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupLifecycleService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.RefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceRepository
@@ -42,5 +43,6 @@ class OrganizationPolicyConfiguration {
         hierarchyRepository: OrganizationHierarchyRepository,
         users: AuthUserRepository,
         registeredDevices: RegisteredDeviceRepository,
-    ): GroupLifecycleService = GroupLifecycleService(hierarchyRepository, users, registeredDevices)
+        refreshSessionStore: RefreshSessionStore,
+    ): GroupLifecycleService = GroupLifecycleService(hierarchyRepository, users, registeredDevices, refreshSessionStore)
 }

@@ -12,7 +12,7 @@ class GroupPolicyService private constructor(
         groups: Collection<OrganizationUnit>,
         routePolicies: StreamRoutePolicies = StreamRoutePolicies.empty(),
         clock: Clock = Clock.systemUTC(),
-    ) : this({ OrganizationHierarchy.of(groups) }, routePolicies, clock)
+    ) : this(validatedHierarchyProvider(groups), routePolicies, clock)
 
     constructor(
         hierarchyRepository: OrganizationHierarchyRepository,
@@ -96,6 +96,13 @@ class GroupPolicyService private constructor(
                         null
                     }
             }
+        }
+    }
+
+    companion object {
+        private fun validatedHierarchyProvider(groups: Collection<OrganizationUnit>): () -> OrganizationHierarchy {
+            val hierarchy = OrganizationHierarchy.of(groups)
+            return { hierarchy }
         }
     }
 }

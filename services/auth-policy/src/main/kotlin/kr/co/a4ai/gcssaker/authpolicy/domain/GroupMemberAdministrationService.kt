@@ -10,6 +10,7 @@ class GroupMemberAdministrationService(
     private val users: AuthUserRepository,
     private val passwordHasher: PasswordHasher,
     private val administrationPolicy: GroupAdministrationPolicy = GroupAdministrationPolicy(),
+    private val refreshSessions: RefreshSessionStore = StatelessRefreshSessionStore,
 ) {
     fun list(principal: AuthenticatedPrincipal, groupId: GroupId): List<AuthUser> {
         require(administrationPolicy.canManageGroup(principal, groupId)) { "group member access denied" }
@@ -42,7 +43,7 @@ class GroupMemberAdministrationService(
                 passwordHash = nextPasswordHash,
                 securityVersion = current.securityVersion + 1,
             ),
-        )
+        ).also { refreshSessions.revokePrincipalSessions(username) }
     }
 
     fun replaceGroupAdmin(
@@ -51,6 +52,9 @@ class GroupMemberAdministrationService(
         username: String,
     ): AuthUser {
         require(principal.role == UserRole.ADMIN) { "system administrator required" }
-        return users.replaceGroupAdmin(groupId, username)
+        val before = users.list().filter { it.groupId == groupId && it.role == UserRole.GROUP_ADMIN }.map { it.username }
+        return users.replaceGroupAdmin(groupId, username).also {
+            (before + username).distinct().forEach(refreshSessions::revokePrincipalSessions)
+        }
     }
 }

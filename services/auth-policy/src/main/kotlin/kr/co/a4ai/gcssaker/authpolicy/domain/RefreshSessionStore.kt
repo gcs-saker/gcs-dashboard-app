@@ -8,6 +8,7 @@ interface RefreshSessionStore {
     fun putRefreshSession(refreshToken: String, principal: AuthenticatedPrincipal, ttl: Duration)
     fun consumeRefreshSession(refreshToken: String): AuthenticatedPrincipal?
     fun revokeRefreshSession(refreshToken: String)
+    fun revokePrincipalSessions(username: String) = Unit
 }
 
 object StatelessRefreshSessionStore : RefreshSessionStore {

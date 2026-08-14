@@ -61,5 +61,8 @@ class AuthPolicyConfig {
     fun groupMemberAdministrationService(
         users: AuthUserRepository,
         passwordHasher: PasswordHasher,
-    ): GroupMemberAdministrationService = GroupMemberAdministrationService(users, passwordHasher)
+        refreshSessionStore: RefreshSessionStore,
+    ): GroupMemberAdministrationService = GroupMemberAdministrationService(
+        users, passwordHasher, refreshSessions = refreshSessionStore,
+    )
 }

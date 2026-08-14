@@ -35,11 +35,11 @@ class RedisPrincipalCache(
         keyPrefix + sha256(accessToken)
 
     private fun encode(principal: AuthenticatedPrincipal): String =
-        listOf(principal.username, principal.role.name, principal.groupId.value).joinToString("\t")
+        listOf(principal.username, principal.role.name, principal.groupId.value, principal.securityVersion).joinToString("\t")
 
     private fun decode(value: String): AuthenticatedPrincipal? {
         val parts = value.split("\t")
-        if (parts.size != 3) {
+        if (parts.size !in 3..4) {
             return null
         }
         val role = runCatching { UserRole.valueOf(parts[1]) }.getOrNull() ?: return null
@@ -47,6 +47,7 @@ class RedisPrincipalCache(
             username = parts[0],
             role = role,
             groupId = GroupId(parts[2]),
+            securityVersion = parts.getOrNull(3)?.toLongOrNull() ?: 1,
         )
     }
 
