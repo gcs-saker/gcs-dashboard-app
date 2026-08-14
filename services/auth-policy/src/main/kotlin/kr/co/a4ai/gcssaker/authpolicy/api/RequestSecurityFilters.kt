@@ -134,7 +134,7 @@ class ApiAccessLogFilter(
     ): ApiAccessRecord =
         ApiAccessRecord(
             method = method,
-            path = requestURI,
+            path = ApiPathSanitizer.sanitize(requestURI),
             status = response.status,
             durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt),
             correlationId = attributeOrUnknown(RequestTraceContract.CORRELATION_ID_ATTRIBUTE),
@@ -145,4 +145,27 @@ class ApiAccessLogFilter(
     private fun HttpServletRequest.attributeOrUnknown(name: String): String =
         getAttribute(name)?.toString()?.takeIf { it.isNotBlank() }
             ?: ApiAccessLogContract.UNKNOWN_VALUE
+}
+
+object ApiPathSanitizer {
+    private val dynamicParents = setOf(
+        "devices", "members", "groups", "streams", "signup-tokens", "provisioning-tokens",
+    )
+
+    fun sanitize(path: String): String {
+        var redactNext = false
+        return path.split('/').joinToString("/") { segment ->
+            when {
+                redactNext && segment.isNotBlank() -> {
+                    redactNext = false
+                    ":id"
+                }
+                segment in dynamicParents -> {
+                    redactNext = true
+                    segment
+                }
+                else -> segment
+            }
+        }
+    }
 }

@@ -5,6 +5,9 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupType
+import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOrganizationHierarchyRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationUnit
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentCaptor
@@ -49,9 +52,32 @@ class TelemetryWebSocketHubTest {
         assertEquals(0, hub.connectionCount())
     }
 
-    private fun session(id: String, groupId: GroupId): WebSocketSession {
+    @Test
+    fun `group admin receives descendant telemetry while operator and sibling do not`() {
+        val root = OrganizationUnit(GroupId("root"), "Root", GroupType.BATTALION)
+        val child = OrganizationUnit(GroupId("child"), "Child", GroupType.COMPANY, root.id)
+        val sibling = OrganizationUnit(GroupId("sibling"), "Sibling", GroupType.COMPANY, root.id)
+        val scopedHub = TelemetryWebSocketHub(
+            objectMapper,
+            InMemoryOrganizationHierarchyRepository(listOf(root, child, sibling)),
+        )
+        val groupAdmin = session("group-admin", root.id, UserRole.GROUP_ADMIN)
+        val operator = session("operator", root.id, UserRole.OPERATOR)
+        val siblingViewer = session("sibling", sibling.id, UserRole.VIEWER)
+        scopedHub.afterConnectionEstablished(groupAdmin)
+        scopedHub.afterConnectionEstablished(operator)
+        scopedHub.afterConnectionEstablished(siblingViewer)
+
+        scopedHub.publish(telemetry(child.id))
+
+        Mockito.verify(groupAdmin).sendMessage(Mockito.any())
+        Mockito.verify(operator, Mockito.never()).sendMessage(Mockito.any())
+        Mockito.verify(siblingViewer, Mockito.never()).sendMessage(Mockito.any())
+    }
+
+    private fun session(id: String, groupId: GroupId, role: UserRole = UserRole.VIEWER): WebSocketSession {
         val session = Mockito.mock(WebSocketSession::class.java)
-        val principal = AuthenticatedPrincipal("viewer-$id", UserRole.VIEWER, groupId)
+        val principal = AuthenticatedPrincipal("viewer-$id", role, groupId)
         Mockito.`when`(session.id).thenReturn(id)
         Mockito.`when`(session.isOpen).thenReturn(true)
         Mockito.`when`(session.principal).thenReturn(UsernamePasswordAuthenticationToken(principal, null, emptyList()))

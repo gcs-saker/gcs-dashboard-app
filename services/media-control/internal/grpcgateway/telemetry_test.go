@@ -45,6 +45,19 @@ func TestTelemetryHandlerRejectsIdentityMismatchWithoutStore(t *testing.T) {
 	}
 }
 
+func TestTelemetryHandlerRejectsAuthenticatedGroupMismatchWithoutStore(t *testing.T) {
+	store := &recordingTelemetryStore{}
+	handler := NewTelemetryHandler(store)
+	ctx := context.WithValue(context.Background(), gatewayIdentityContextKey{}, GatewayIdentity{DeviceUUID: "device-1", GroupID: "co-a"})
+	request := GatewayStreamRequest{GroupID: "co-b", AssetID: "device-1", Payload: GatewayStreamRequestPayload{Kind: GatewayPayloadTelemetry, Value: telemetryWire("device-1")}}
+
+	decision := handler.HandleGatewayRequest(ctx, request)
+
+	if decision.Status != GatewayAckStatusRejected || decision.ReasonCode != reasonIdentityMismatch || store.calls != 0 {
+		t.Fatalf("unexpected decision %+v calls=%d", decision, store.calls)
+	}
+}
+
 func telemetryWire(assetID string) []byte {
 	payload, err := proto.Marshal(&sakerv1.TelemetryEnvelope{
 		EventId: "event-1", AssetId: assetID,

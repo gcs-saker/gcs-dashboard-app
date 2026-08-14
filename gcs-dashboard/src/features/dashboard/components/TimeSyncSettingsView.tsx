@@ -15,6 +15,7 @@ import { TimeSyncForm } from "./settings/TimeSyncForm";
 import { TimeSyncHeader } from "./settings/TimeSyncHeader";
 import { TimeSyncMetrics } from "./settings/TimeSyncMetrics";
 import { GroupMemberPanel } from "./settings/GroupMemberPanel";
+import { GroupLifecyclePanel } from "./settings/GroupLifecyclePanel";
 
 const DEFAULT_TIME_SYNC_FORM: TimeSyncConfigInput = {
   mode: "public",
@@ -96,7 +97,10 @@ export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }
           <DeviceApprovalPanel />
         </>
       ) : activeTab === "account" && canManageDevices ? (
-        <GroupMemberPanel />
+        <>
+          {currentUser?.role === "admin" ? <GroupLifecyclePanel /> : null}
+          <GroupMemberPanel />
+        </>
       ) : (
         <SettingsPolicyPanel tab={activeTab as PolicySettingsTab} />
       )}

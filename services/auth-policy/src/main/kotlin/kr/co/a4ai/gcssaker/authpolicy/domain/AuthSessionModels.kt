@@ -15,10 +15,11 @@ class AuthSessionService(
     private val tokenService: JwtTokenService,
     private val principalCache: PrincipalCache = NoopPrincipalCache,
     private val refreshSessions: RefreshSessionStore = StatelessRefreshSessionStore,
+    private val hierarchyRepository: OrganizationHierarchyRepository? = null,
 ) {
     fun login(username: String, password: String): IssuedTokenSet? {
         val user = users.findByUsername(username) ?: return null
-        if (!user.active) return null
+        if (!user.active || !isGroupActive(user.groupId)) return null
         if (!passwordHasher.verify(password, user.passwordHash)) {
             return null
         }
@@ -32,7 +33,7 @@ class AuthSessionService(
             tokenService.verifyRefreshToken(refreshToken)
         }
         val user = users.findByUsername(principal.username) ?: return null
-        if (!user.active || user.securityVersion != principal.securityVersion) return null
+        if (!user.active || !isGroupActive(user.groupId) || user.securityVersion != principal.securityVersion) return null
         return issueTokens(user.principal())
     }
 
@@ -47,7 +48,7 @@ class AuthSessionService(
         val verified = tokenService.verifyAccessTokenWithTtl(accessToken)
         val currentUser = users.findByUsername(verified.principal.username)
             ?: throw IllegalArgumentException("user is not active")
-        require(currentUser.active && currentUser.securityVersion == verified.principal.securityVersion) {
+        require(currentUser.active && isGroupActive(currentUser.groupId) && currentUser.securityVersion == verified.principal.securityVersion) {
             "access token security version is stale"
         }
         principalCache.putAccessPrincipal(
@@ -78,4 +79,9 @@ class AuthSessionService(
             principal = principal,
         )
     }
+
+    private fun isGroupActive(groupId: GroupId): Boolean =
+        hierarchyRepository?.let { repository ->
+            runCatching { repository.current().contains(groupId) }.getOrDefault(false)
+        } ?: true
 }

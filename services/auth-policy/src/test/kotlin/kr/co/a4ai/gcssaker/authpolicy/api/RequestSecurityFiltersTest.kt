@@ -157,6 +157,19 @@ class RequestSecurityFiltersTest {
         assertEquals("203.0.113.20", sink.records.single().remoteAddress)
     }
 
+    @Test
+    fun `api access log redacts device and member identifiers while retaining route shape`() {
+        val sink = RecordingApiAccessLogSink()
+        val request = MockHttpServletRequest("PATCH", "/auth-policy/admin/groups/co-a/members/operator01").apply {
+            remoteAddr = "203.0.113.20"
+        }
+
+        ApiAccessLogFilter(sink).doFilter(request, MockHttpServletResponse(), MockFilterChain())
+
+        assertEquals("/auth-policy/admin/groups/:id/members/:id", sink.records.single().path)
+        assertTrue("operator01" !in sink.records.single().path)
+    }
+
     private fun authRequest(): MockHttpServletRequest =
         MockHttpServletRequest("POST", RateLimitContract.LOGIN_PATH).apply {
             remoteAddr = "203.0.113.10"

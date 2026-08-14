@@ -115,6 +115,21 @@ class AuthSessionServiceTest {
     }
 
     @Test
+    fun `inactive group prevents login and existing token use`() {
+        val activeGroup = OrganizationUnit(GroupId("co-a"), "A", GroupType.COMPANY)
+        val hierarchy = InMemoryOrganizationHierarchyRepository(listOf(activeGroup))
+        val scopedService = AuthSessionService(
+            users, passwordHasher, tokenService, principalCache, refreshSessions, hierarchy,
+        )
+        val tokens = requireNotNull(scopedService.login("operator01", "correct-password"))
+        hierarchy.update(activeGroup.copy(status = GroupStatus.INACTIVE))
+
+        assertNull(scopedService.login("operator01", "correct-password"))
+        assertFailsWith<IllegalArgumentException> { scopedService.verifyAccessToken(tokens.accessToken) }
+        assertNull(scopedService.refresh(tokens.refreshToken))
+    }
+
+    @Test
     fun `user repository save is synchronized for concurrent duplicate username writes`() {
         val repository: AuthUserRepository = InMemoryAuthUserRepository(emptyList())
         val executor = Executors.newFixedThreadPool(2)

@@ -54,6 +54,7 @@ class SecurityAuditEventFactory(
         allowed: Boolean,
         reason: String,
         occurredAt: Instant,
+        action: String = "view_stream",
     ): OperationalEventReadModel =
         event(
             principal = principal,
@@ -63,7 +64,8 @@ class SecurityAuditEventFactory(
             } else {
                 SecurityAuditEventContract.EVENT_TYPE_STREAM_ACCESS_DENIED
             },
-            message = SecurityAuditEventContract.streamAccessMessage(
+            message = "[action=${SecurityAuditEventContract.safeReason(action)}] " +
+                SecurityAuditEventContract.streamAccessMessage(
                 allowed = allowed,
                 streamId = streamId,
                 viewerGroupId = principal.groupId,

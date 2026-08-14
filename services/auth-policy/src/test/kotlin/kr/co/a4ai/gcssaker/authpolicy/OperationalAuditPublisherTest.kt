@@ -14,6 +14,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.core.task.SyncTaskExecutor
 import org.springframework.core.task.TaskExecutor
@@ -135,6 +136,25 @@ class OperationalAuditPublisherTest {
         assertEquals(SecurityAuditEventContract.EVENT_TYPE_STREAM_ACCESS_ALLOWED, event.eventType)
         assertEquals(true, event.message.contains("viewerGroup=co-a"))
         assertEquals(true, event.message.contains("publisherGroup=co-b"))
+    }
+
+    @Test
+    fun `security audit distinguishes talkback and records trusted client ip for management`() {
+        val repository = InMemoryOperationalEventRepository(emptyList())
+        val publisher = RepositorySecurityAuditPublisher(repository) { Instant.parse("2026-06-01T00:00:00Z") }
+
+        publisher.publishStreamAction(
+            OperationalAuditFixtures.principal, "raw.company-b.front", GroupId("co-b"),
+            "send_talkback", true, "same group talkback",
+        )
+        publisher.publishGroupManagement(
+            OperationalAuditFixtures.principal, GroupId("co-a"), "member.update", "operator02", "203.0.113.20",
+        )
+
+        val events = repository.eventsFor(OperationalAuditFixtures.principal, OperationalEventQuery())
+        assertTrue(events.any { it.message.contains("action=send_talkback") })
+        assertTrue(events.any { it.message.contains("ip=203.0.113.20") })
+        assertTrue(events.none { it.message.contains("operator02") })
     }
 
     private object OperationalAuditFixtures {

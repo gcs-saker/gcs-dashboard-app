@@ -54,7 +54,7 @@ class TelemetryWebSocketHub(
     override fun publish(telemetry: TelemetryReadModel) {
         val payload = TextMessage(objectMapper.writeValueAsString(telemetry.toResponse()))
         subscribers.values.forEach { subscriber ->
-            val canViewDescendant = subscriber.principal.role == UserRole.OPERATOR &&
+            val canViewDescendant = subscriber.principal.role == UserRole.GROUP_ADMIN &&
                 hierarchyRepository?.current()?.isAncestor(subscriber.principal.groupId, telemetry.groupId) == true
             if (subscriber.principal.role == UserRole.ADMIN || subscriber.principal.groupId == telemetry.groupId || canViewDescendant) {
                 runCatching {

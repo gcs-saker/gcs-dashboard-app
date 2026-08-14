@@ -9,6 +9,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.GroupMemberAdministrationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.PrincipalCache
 import kr.co.a4ai.gcssaker.authpolicy.domain.RefreshSessionStore
+import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuthUserRepository
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.context.annotation.Bean
@@ -55,7 +56,11 @@ class AuthPolicyConfig {
         tokenService: JwtTokenService,
         principalCache: PrincipalCache,
         refreshSessionStore: RefreshSessionStore,
-    ): AuthSessionService = AuthSessionService(users, passwordHasher, tokenService, principalCache, refreshSessionStore)
+        hierarchyRepository: ObjectProvider<OrganizationHierarchyRepository>,
+    ): AuthSessionService = AuthSessionService(
+        users, passwordHasher, tokenService, principalCache, refreshSessionStore,
+        hierarchyRepository.getIfAvailable(),
+    )
 
     @Bean
     fun groupMemberAdministrationService(
