@@ -3,6 +3,8 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceLifecycleService
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceNotFoundException
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupAdministrationPolicy
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisterDeviceCommand
 import kr.co.a4ai.gcssaker.authpolicy.domain.UpdateDeviceCommand
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
@@ -21,13 +23,17 @@ class AdminDeviceController(
     private val lifecycle: DeviceLifecycleService,
     private val principalResolver: BearerPrincipalResolver,
 ) {
+    private val administrationPolicy = GroupAdministrationPolicy()
+
     @GetMapping
     @RequiresBearerAuth
     fun list(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
     ): List<RegisteredDeviceResponse> {
-        requireAdmin(principalResolver.requirePrincipal(authorization))
-        return lifecycle.list().map { it.toAdminResponse() }
+        val principal = requireAdministrator(principalResolver.requirePrincipal(authorization))
+        return lifecycle.list()
+            .filter { administrationPolicy.canManageGroup(principal, it.groupId) }
+            .map { it.toAdminResponse() }
     }
 
     @GetMapping(AdminDeviceApiRoutes.DEVICE)
@@ -36,8 +42,10 @@ class AdminDeviceController(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @PathVariable deviceUuid: String,
     ): RegisteredDeviceResponse {
-        requireAdmin(principalResolver.requirePrincipal(authorization))
-        return deviceOrNotFound { lifecycle.get(deviceUuid) }.toAdminResponse()
+        val principal = requireAdministrator(principalResolver.requirePrincipal(authorization))
+        val device = deviceOrNotFound { lifecycle.get(deviceUuid) }
+        requireGroupManagement(principal, device.groupId)
+        return device.toAdminResponse()
     }
 
     @PostMapping
@@ -46,7 +54,8 @@ class AdminDeviceController(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @RequestBody request: RegisterDeviceRequest,
     ): DeviceCredentialIssueResponse {
-        requireAdmin(principalResolver.requirePrincipal(authorization))
+        val principal = requireAdministrator(principalResolver.requirePrincipal(authorization))
+        requireGroupManagement(principal, requestGroupId(request.groupId))
         return try {
             lifecycle.register(
                 RegisterDeviceCommand(
@@ -69,7 +78,10 @@ class AdminDeviceController(
         @PathVariable deviceUuid: String,
         @RequestBody request: UpdateDeviceRequest,
     ): RegisteredDeviceResponse {
-        requireAdmin(principalResolver.requirePrincipal(authorization))
+        val principal = requireAdministrator(principalResolver.requirePrincipal(authorization))
+        val current = deviceOrNotFound { lifecycle.get(deviceUuid) }
+        requireGroupManagement(principal, current.groupId)
+        request.groupId?.let { requireGroupManagement(principal, requestGroupId(it)) }
         return try {
             deviceOrNotFound {
                 lifecycle.update(
@@ -95,7 +107,8 @@ class AdminDeviceController(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @PathVariable deviceUuid: String,
     ): RegisteredDeviceResponse {
-        requireAdmin(principalResolver.requirePrincipal(authorization))
+        val principal = requireAdministrator(principalResolver.requirePrincipal(authorization))
+        requireDeviceManagement(principal, deviceUuid)
         return deviceOrNotFound { lifecycle.activate(deviceUuid) }.toAdminResponse()
     }
 
@@ -105,7 +118,8 @@ class AdminDeviceController(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @PathVariable deviceUuid: String,
     ): RegisteredDeviceResponse {
-        requireAdmin(principalResolver.requirePrincipal(authorization))
+        val principal = requireAdministrator(principalResolver.requirePrincipal(authorization))
+        requireDeviceManagement(principal, deviceUuid)
         return deviceOrNotFound { lifecycle.disable(deviceUuid) }.toAdminResponse()
     }
 
@@ -115,7 +129,8 @@ class AdminDeviceController(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @PathVariable deviceUuid: String,
     ): DeviceCredentialIssueResponse {
-        requireAdmin(principalResolver.requirePrincipal(authorization))
+        val principal = requireAdministrator(principalResolver.requirePrincipal(authorization))
+        requireDeviceManagement(principal, deviceUuid)
         return try {
             lifecycle.rotateCredential(deviceUuid).toAdminResponse()
         } catch (_: DeviceNotFoundException) {
@@ -123,11 +138,30 @@ class AdminDeviceController(
         }
     }
 
-    private fun requireAdmin(principal: AuthenticatedPrincipal) {
-        if (principal.role != UserRole.ADMIN) {
+    private fun requireAdministrator(principal: AuthenticatedPrincipal): AuthenticatedPrincipal {
+        if (principal.role != UserRole.ADMIN && principal.role != UserRole.GROUP_ADMIN) {
             throw ForbiddenApiError(AdminDeviceApiErrors.ADMIN_ROLE_REQUIRED)
         }
+        return principal
     }
+
+    private fun requireDeviceManagement(principal: AuthenticatedPrincipal, deviceUuid: String) {
+        val device = deviceOrNotFound { lifecycle.get(deviceUuid) }
+        requireGroupManagement(principal, device.groupId)
+    }
+
+    private fun requireGroupManagement(principal: AuthenticatedPrincipal, groupId: GroupId) {
+        if (!administrationPolicy.canManageGroup(principal, groupId)) {
+            throw ForbiddenApiError("group management scope required")
+        }
+    }
+
+    private fun requestGroupId(value: String): GroupId =
+        try {
+            GroupId(value.trim())
+        } catch (error: IllegalArgumentException) {
+            throw BadRequestApiError(error.message ?: AdminDeviceApiErrors.INVALID_DEVICE_REQUEST)
+        }
 
     private fun <T> deviceOrNotFound(action: () -> T): T =
         try {

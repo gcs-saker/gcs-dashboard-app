@@ -7,6 +7,7 @@ import type { useDashboardPageActions } from "./useDashboardPageActions";
 import type { useDashboardPanelCommands } from "./useDashboardPanelCommands";
 import type { useDashboardStreams } from "./useDashboardStreams";
 import type { useDashboardUserPreferences } from "./useDashboardUserPreferences";
+import { canManageDeviceProvisioning } from "@auth/rolePermissions";
 
 interface DashboardPageViewPropsInput {
   actions: ReturnType<typeof useDashboardPageActions>;
@@ -53,7 +54,7 @@ export function useDashboardPageViewProps({
     },
     overlayProps: {
       assetTreeRoot: viewModel.assetTreeRoot, assetTreeWidget: getDashboardWidgetDefinition("asset-tree"),
-      canRenameDevices: auth.currentUser?.role === "admin", currentUsername: auth.currentUser?.username ?? "",
+      canRenameDevices: canManageDeviceProvisioning(auth.currentUser?.role), currentUsername: auth.currentUser?.username ?? "",
       editingStream: streams.editingStream, isAssetDrawerOpen: ui.isAssetDrawerOpen,
       isAssetTreeVisible: preferences.isWidgetVisible("asset-tree"), isDashboardActive: activeView === "dashboard",
       isWidgetDialogOpen: ui.isWidgetDialogOpen, layout, onApplyWidgetDialog: actions.applyWidgetDialog,

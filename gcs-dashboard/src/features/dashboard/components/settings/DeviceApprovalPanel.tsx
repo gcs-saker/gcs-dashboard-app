@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { canManageDeviceProvisioning } from "@auth/rolePermissions";
 import { useAdminDevices } from "@dashboard/hooks/useAdminDevices";
 import type { RegisteredDevice } from "@dashboard/adminDevices";
 
 export function DeviceApprovalPanel() {
   const { currentUser } = useAuth();
   const { activate, devices, disable, errorMessage, isLoading, mutatingDeviceUuid, pendingDevices, refresh, rename } = useAdminDevices();
-  const isAdmin = currentUser?.role === "admin";
+  const isAdmin = canManageDeviceProvisioning(currentUser?.role);
 
   return (
     <section className="time-sync-view__policy device-approval-panel" aria-label="승인 대기 장비">

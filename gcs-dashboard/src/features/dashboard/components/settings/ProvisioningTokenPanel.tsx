@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { canManageDeviceProvisioning } from "@auth/rolePermissions";
 import { useProvisioningTokens } from "@dashboard/hooks/useProvisioningTokens";
 import {
   DEFAULT_PROVISIONING_TOKEN_INPUT,
@@ -21,7 +22,7 @@ export function ProvisioningTokenPanel() {
     useProvisioningTokens();
   const [form, setForm] = useState<IssueProvisioningTokenInput>(DEFAULT_PROVISIONING_TOKEN_INPUT);
   const [copyStatus, setCopyStatus] = useState<TokenCopyStatus>("idle");
-  const isAdmin = currentUser?.role === "admin";
+  const isAdmin = canManageDeviceProvisioning(currentUser?.role);
 
   const submit = useCallback((event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

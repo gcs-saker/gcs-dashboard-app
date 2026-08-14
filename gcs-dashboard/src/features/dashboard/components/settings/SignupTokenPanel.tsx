@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { canManageDeviceProvisioning } from "@auth/rolePermissions";
 import { useSignupTokens } from "@dashboard/hooks/useSignupTokens";
 import { DEFAULT_SIGNUP_TOKEN_INPUT, type IssueSignupTokenInput } from "@dashboard/signupTokens";
 
@@ -7,7 +8,7 @@ export function SignupTokenPanel() {
   const { currentUser } = useAuth();
   const { records, issuedToken, isLoading, isIssuing, errorMessage, refresh, issue, clear } = useSignupTokens();
   const [form, setForm] = useState<IssueSignupTokenInput>(DEFAULT_SIGNUP_TOKEN_INPUT);
-  const isAdmin = currentUser?.role === "admin";
+  const isAdmin = canManageDeviceProvisioning(currentUser?.role);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();

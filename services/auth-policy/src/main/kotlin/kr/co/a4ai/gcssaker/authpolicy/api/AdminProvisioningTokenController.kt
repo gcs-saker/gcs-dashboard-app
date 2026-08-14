@@ -4,6 +4,8 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceProvisioningTokenContract
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceProvisioningTokenIssueCommand
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceProvisioningTokenService
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupAdministrationPolicy
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -20,6 +22,8 @@ class AdminProvisioningTokenController(
     private val tokens: DeviceProvisioningTokenService,
     private val principalResolver: BearerPrincipalResolver,
 ) {
+    private val administrationPolicy = GroupAdministrationPolicy()
+
     @DeleteMapping("/{tokenId}")
     @RequiresBearerAuth
     fun revoke(
@@ -27,7 +31,10 @@ class AdminProvisioningTokenController(
         @PathVariable tokenId: String,
     ) {
         val principal = principalResolver.requirePrincipal(authorization)
-        requireAdmin(principal)
+        requireAdministrator(principal)
+        val record = tokens.list().firstOrNull { it.tokenId == tokenId }
+            ?: throw NotFoundApiError("provisioning token not found or inactive")
+        requireGroupManagement(principal, record.groupId)
         if (!tokens.revoke(tokenId, principal.username)) throw NotFoundApiError("provisioning token not found or inactive")
     }
 
@@ -36,8 +43,10 @@ class AdminProvisioningTokenController(
     fun list(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
     ): List<ProvisioningTokenRecordResponse> {
-        requireAdmin(principalResolver.requirePrincipal(authorization))
-        return tokens.list().map { it.toApiResponse() }
+        val principal = requireAdministrator(principalResolver.requirePrincipal(authorization))
+        return tokens.list()
+            .filter { administrationPolicy.canManageGroup(principal, it.groupId) }
+            .map { it.toApiResponse() }
     }
 
     @PostMapping
@@ -47,8 +56,9 @@ class AdminProvisioningTokenController(
         @RequestBody request: IssueProvisioningTokenRequest,
     ): ProvisioningTokenIssueResponse {
         val principal = principalResolver.requirePrincipal(authorization)
-        requireAdmin(principal)
+        requireAdministrator(principal)
         return try {
+            requireGroupManagement(principal, GroupId(request.groupId.trim()))
             tokens.issue(
                 DeviceProvisioningTokenIssueCommand(
                     groupId = request.groupId,
@@ -63,9 +73,16 @@ class AdminProvisioningTokenController(
         }
     }
 
-    private fun requireAdmin(principal: AuthenticatedPrincipal) {
-        if (principal.role != UserRole.ADMIN) {
+    private fun requireAdministrator(principal: AuthenticatedPrincipal): AuthenticatedPrincipal {
+        if (principal.role != UserRole.ADMIN && principal.role != UserRole.GROUP_ADMIN) {
             throw ForbiddenApiError(AdminProvisioningTokenApiErrors.ADMIN_ROLE_REQUIRED)
+        }
+        return principal
+    }
+
+    private fun requireGroupManagement(principal: AuthenticatedPrincipal, groupId: GroupId) {
+        if (!administrationPolicy.canManageGroup(principal, groupId)) {
+            throw ForbiddenApiError("group management scope required")
         }
     }
 }
