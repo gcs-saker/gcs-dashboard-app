@@ -4,7 +4,7 @@ import {
   DASHBOARD_STREAM_STATUS,
 } from "@/features/stateContracts";
 
-import type { StreamSlot as DashboardStreamSlot } from "@streaming/streamModel";
+import type { StreamSlot as DashboardStreamSlot } from "@streaming/layout/streamModel";
 
 export const CCTV_EMPTY_STREAM_ID_PREFIX = "cctv-empty-";
 

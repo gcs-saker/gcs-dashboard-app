@@ -1,75 +1,18 @@
-from collections.abc import Callable, Generator
+from collections.abc import Callable
 from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy import event
+from sqlalchemy.orm import Session
 
-from api.auth import get_password_hash
-from api.contracts import AuthProtocol
-from core.db import Base, get_db
 from core.security import AuthSettings, create_access_token, create_refresh_token
 from main import app
-from modules.messaging.control_publisher import ControlMessagePublisher, get_control_message_publisher
-from modules.messaging.sender import MessageEnvelope, MessageSenderUnavailableError
-from sql.company_sql import Company
 from sql.user_sql import User
-
-TEST_AUTH_SECRET = "test-auth-secret-for-gcs-saker-at-least-32-characters"
-TEST_CSRF_HEADERS = {AuthProtocol.CSRF_HEADER_NAME: AuthProtocol.CSRF_HEADER_VALUE}
-
-
-class RecordingMessageSender:
-    def __init__(self, published: list[tuple[str, str | bytes]]) -> None:
-        self._published = published
-
-    def send(self, envelope: MessageEnvelope) -> None:
-        self._published.append((envelope.destination, envelope.payload))
-
-
-class FailingMessageSender:
-    def send(self, envelope: MessageEnvelope) -> None:
-        raise MessageSenderUnavailableError("gRPC gateway target is not configured")
-
-
-@pytest.fixture
-def db_session() -> Generator[Session, None, None]:
-    engine = create_engine(
-        "sqlite+pysqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base.metadata.create_all(bind=engine)
-    db = testing_session_local()
-    db.add(Company(id=1, companyname="A4AI", invite_code="A4AI01"))
-    db.add(
-        User(
-            username="operator01",
-            email="operator01@example.com",
-            password_hash=get_password_hash("correct-password"),
-            company_id=1,
-            role="operator",
-        )
-    )
-    db.commit()
-    yield db
-    db.close()
-    Base.metadata.drop_all(bind=engine)
-    engine.dispose()
-
-
-@pytest.fixture
-def auth_client(db_session: Session) -> Generator[TestClient, None, None]:
-    def override_get_db() -> Generator[Session, None, None]:
-        yield db_session
-
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as client:
-        yield client
-    app.dependency_overrides.clear()
+from tests.auth_api_fixtures import (
+    TEST_AUTH_SECRET,
+    TEST_CSRF_HEADERS,
+)
 
 
 def test_login_issues_access_token_and_me_returns_claims(auth_client: TestClient) -> None:
@@ -377,120 +320,3 @@ def test_auth_me_reports_missing_invalid_and_expired_tokens(
         valid_response = client.get("/auth/me", headers=auth_headers("viewer01", "viewer"))
         assert valid_response.status_code == 200
         assert valid_response.json() == {"username": "viewer01", "role": "viewer"}
-
-
-def test_stream_api_requires_authentication_and_accepts_viewer_token(
-    auth_headers: Callable[[str, str], dict[str, str]],
-) -> None:
-    with TestClient(app) as client:
-        missing_response = client.get("/api/v1/streams")
-        assert missing_response.status_code == 401
-
-        viewer_response = client.get("/api/v1/streams", headers=auth_headers("viewer01", "viewer"))
-        assert viewer_response.status_code == 200
-        assert viewer_response.json()[0]["streamId"] == "raw.sample.front"
-
-
-def test_control_api_requires_operator_role(
-    auth_headers: Callable[[str, str], dict[str, str]],
-) -> None:
-    published: list[tuple[str, str | bytes]] = []
-    app.dependency_overrides[get_control_message_publisher] = lambda: ControlMessagePublisher(
-        RecordingMessageSender(published)
-    )
-
-    with TestClient(app) as client:
-        viewer_response = client.post(
-            "/control/",
-            json={"cid": "CID001", "direction": "stop"},
-            headers=auth_headers("viewer01", "viewer"),
-        )
-        assert viewer_response.status_code == 403
-        assert viewer_response.json() == {"detail": "operator role required"}
-
-        operator_response = client.post(
-            "/control/",
-            json={"cid": "CID001", "direction": "stop"},
-            headers=auth_headers("operator01", "operator"),
-        )
-        assert operator_response.status_code == 200
-        assert operator_response.json()["status"] == "sent"
-        assert published == [("robot/control/CID001", "stop")]
-
-    app.dependency_overrides.pop(get_control_message_publisher, None)
-
-
-def test_control_api_can_publish_protobuf_v2_command_payload(
-    auth_headers: Callable[[str, str], dict[str, str]],
-) -> None:
-    published: list[tuple[str, str | bytes]] = []
-    app.dependency_overrides[get_control_message_publisher] = lambda: ControlMessagePublisher(
-        RecordingMessageSender(published)
-    )
-
-    with TestClient(app) as client:
-        response = client.post(
-            "/control/",
-            json={
-                "cid": "CID001",
-                "direction": "stop",
-                "payload_format": "protobuf",
-                "org_id": "a4ai",
-                "group_id": "co-a",
-                "stream_id": "raw.mobile.front",
-            },
-            headers=auth_headers("operator01", "operator"),
-        )
-
-    assert response.status_code == 200
-    assert response.json()["topic"] == "gcs/a4ai/co-a/CID001/command"
-    assert len(published) == 1
-    assert published[0][0] == "gcs/a4ai/co-a/CID001/command"
-    assert isinstance(published[0][1], bytes)
-    app.dependency_overrides.pop(get_control_message_publisher, None)
-
-
-def test_control_api_returns_503_when_selected_sender_is_unavailable(
-    auth_headers: Callable[[str, str], dict[str, str]],
-) -> None:
-    app.dependency_overrides[get_control_message_publisher] = lambda: ControlMessagePublisher(FailingMessageSender())
-
-    with TestClient(app) as client:
-        response = client.post(
-            "/control/",
-            json={"cid": "CID001", "direction": "stop"},
-            headers=auth_headers("operator01", "operator"),
-        )
-
-    assert response.status_code == 503
-    assert response.json() == {"detail": "gRPC gateway target is not configured"}
-    app.dependency_overrides.pop(get_control_message_publisher, None)
-
-
-@pytest.mark.parametrize(
-    "payload",
-    [
-        {"cid": "CID001", "direction": "stop; rm -rf /"},
-        {"cid": "../CID001", "direction": "stop"},
-        {"cid": "CID001/../../x", "direction": "stop"},
-    ],
-)
-def test_control_api_rejects_untrusted_command_payloads(
-    auth_headers: Callable[[str, str], dict[str, str]],
-    payload: dict[str, str],
-) -> None:
-    published: list[tuple[str, str | bytes]] = []
-    app.dependency_overrides[get_control_message_publisher] = lambda: ControlMessagePublisher(
-        RecordingMessageSender(published)
-    )
-
-    with TestClient(app) as client:
-        response = client.post(
-            "/control/",
-            json=payload,
-            headers=auth_headers("operator01", "operator"),
-        )
-
-    assert response.status_code == 422
-    assert published == []
-    app.dependency_overrides.pop(get_control_message_publisher, None)

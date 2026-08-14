@@ -1,5 +1,5 @@
 import { DASHBOARD_STREAM_STATUS, type DashboardStreamStatus } from "@/features/stateContracts";
-import type { StreamSlot } from "./streamModel";
+import type { StreamSlot } from "@streaming/layout/streamModel";
 
 export function getStreamStatusText(status: DashboardStreamStatus): string {
   switch (status) {

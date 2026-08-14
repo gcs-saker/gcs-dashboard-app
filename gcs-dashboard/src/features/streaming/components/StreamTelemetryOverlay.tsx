@@ -1,4 +1,4 @@
-import type { StreamGeometry } from "@streaming/streamModel";
+import type { StreamGeometry } from "@streaming/layout/streamModel";
 import "./StreamTelemetryOverlay.css";
 
 interface StreamTelemetryOverlayProps {

@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@auth/AuthProvider";
 import { useDashboardStreams } from "@dashboard/hooks/controller/useDashboardStreams";
 import { StreamWallTile } from "@streaming/components/StreamWallTile";
-import { reconcileStreamWallSlots, type StreamWallLayout } from "@streaming/streamWallLayout";
+import { reconcileStreamWallSlots, type StreamWallLayout } from "@streaming/layout/streamWallLayout";
 import "./StreamPage.css";
 
 const EMPTY_STREAM_WALL: [] = [];

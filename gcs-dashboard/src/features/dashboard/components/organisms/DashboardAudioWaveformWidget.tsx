@@ -4,7 +4,7 @@ import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
 import { AudioWaveformPanel } from "@dashboard/components/AudioWaveformPanel";
 import type { AudioAnalysisSnapshot } from "@dashboard/layout/dashboardPresentation";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
-import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
+import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
 
 interface DashboardAudioWaveformWidgetProps {
   analysis: AudioAnalysisSnapshot | null;

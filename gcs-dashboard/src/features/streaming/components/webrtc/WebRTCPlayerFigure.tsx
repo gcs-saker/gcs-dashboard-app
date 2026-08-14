@@ -3,7 +3,7 @@ import type { RefObject } from "react";
 import {
   audioDiagnosticLabel,
   WEBRTC_STATUS_LABELS,
-} from "@streaming/webrtcPlayerPresentation";
+} from "@streaming/presentation/webrtcPlayerPresentation";
 import type { WebRTCPlaybackSnapshot } from "@streaming/types";
 
 interface WebRTCPlayerFigureProps extends WebRTCPlaybackSnapshot {

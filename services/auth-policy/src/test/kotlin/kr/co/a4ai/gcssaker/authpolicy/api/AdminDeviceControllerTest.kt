@@ -5,7 +5,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceLifecycleService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
-import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryRegisteredDeviceRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.devices.InMemoryRegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceStatus

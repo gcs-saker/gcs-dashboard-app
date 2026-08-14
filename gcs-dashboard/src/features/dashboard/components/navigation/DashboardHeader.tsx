@@ -2,7 +2,7 @@ import { TalkbackControlPanel } from "@dashboard/components/TalkbackControlPanel
 import type { AuthenticatedUser } from "@auth/types";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import type { DashboardView } from "@dashboard/preferences/userPreferences";
-import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
+import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
 
 export interface DashboardHeaderProps {
   activeView: DashboardView;

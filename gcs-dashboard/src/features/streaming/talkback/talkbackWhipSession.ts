@@ -1,6 +1,6 @@
-import { fetchAuthorizedTalkbackSession } from "./publisher/publisherApi";
-import { waitForIceGatheringComplete } from "./publisher/publisherWebRtc";
-import { SDP_OFFER_HEADERS } from "./streamingProtocolHeaders";
+import { fetchAuthorizedTalkbackSession } from "@streaming/publisher/publisherApi";
+import { waitForIceGatheringComplete } from "@streaming/publisher/publisherWebRtc";
+import { SDP_OFFER_HEADERS } from "@streaming/protocol/streamingProtocolHeaders";
 import type {
   TalkbackPeerConnectionFactory,
   TalkbackTargetState,

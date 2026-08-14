@@ -1,8 +1,8 @@
 import { memo } from "react";
 import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
 import { StreamTelemetryOverlay } from "@streaming/components/StreamTelemetryOverlay";
-import { getStreamDisplayName } from "@streaming/streamPresentation";
-import type { StreamSlot as DashboardStreamSlot } from "@streaming/streamModel";
+import { getStreamDisplayName } from "@streaming/presentation/streamPresentation";
+import type { StreamSlot as DashboardStreamSlot } from "@streaming/layout/streamModel";
 
 interface StreamWallTileProps {
   readonly index: number;

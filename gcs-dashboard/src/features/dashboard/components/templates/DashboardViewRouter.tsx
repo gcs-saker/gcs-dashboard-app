@@ -12,7 +12,7 @@ import { SystemStatusPanel } from "@dashboard/components/SystemStatusPanel";
 import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
 import { DashboardMainGrid } from "./DashboardMainGrid";
 import { EventLogView, TacticalLeafletMap, TimeSyncSettingsView } from "@dashboard/layout/dashboardLazyViews";
-import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
+import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
 
 export interface DashboardViewRouterProps {
   activeView: DashboardView;

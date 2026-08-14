@@ -1,18 +1,18 @@
 import { useCallback, useRef, useState } from "react";
 
 import { WEBRTC_ICE_SERVERS } from "@/config";
-import { loadWebRtcIceServers } from "@streaming/iceServers";
+import { loadWebRtcIceServers } from "@streaming/protocol/iceServers";
 import {
   TALKBACK_AUDIO_CONSTRAINTS,
   type TalkbackPublisherSnapshot,
   type TalkbackPublisherStatus,
   type TalkbackTargetState,
   type UseWhipAudioPublisherOptions,
-} from "@streaming/talkbackPublisherContracts";
-import { monitorLocalMicLevel } from "@streaming/talkbackMicLevel";
-import { publishTalkbackTarget } from "@streaming/talkbackWhipSession";
+} from "@streaming/talkback/talkbackPublisherContracts";
+import { monitorLocalMicLevel } from "@streaming/talkback/talkbackMicLevel";
+import { publishTalkbackTarget } from "@streaming/talkback/talkbackWhipSession";
 
-export type { UseWhipAudioPublisherOptions } from "@streaming/talkbackPublisherContracts";
+export type { UseWhipAudioPublisherOptions } from "@streaming/talkback/talkbackPublisherContracts";
 
 export function useWhipAudioPublisher({
   mediaDevices = navigator.mediaDevices,

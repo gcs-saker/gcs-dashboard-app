@@ -7,7 +7,7 @@ import {
   shouldSkipWebRTCRetryAfterRelayFailure,
   shouldFallbackAfterWebRTCRetry,
 } from "./streamReconnectPolicy";
-import type { WebRTCPlaybackSnapshot } from "./types";
+import type { WebRTCPlaybackSnapshot } from "@streaming/types";
 
 describe("streamReconnectPolicy", () => {
   test("returns bounded WebRTC retry delays", () => {

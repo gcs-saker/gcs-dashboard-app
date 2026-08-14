@@ -1,4 +1,4 @@
-import type { WebRTCPlaybackSnapshot } from "./types";
+import type { WebRTCPlaybackSnapshot } from "@streaming/types";
 
 export type WebRTCIcePath = "direct" | "relay" | "unknown";
 

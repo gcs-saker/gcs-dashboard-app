@@ -1,4 +1,4 @@
-import type { StreamSlot as DashboardStreamSlot } from "@streaming/streamModel";
+import type { StreamSlot as DashboardStreamSlot } from "@streaming/layout/streamModel";
 
 export type StreamWallLayout = "2x2" | "3x3";
 

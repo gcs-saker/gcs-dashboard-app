@@ -1,4 +1,4 @@
-import type { WebRTCPlaybackSnapshot } from "./types";
+import type { WebRTCPlaybackSnapshot } from "@streaming/types";
 
 export const DEFAULT_WEBRTC_RECONNECT_DELAYS_MS = [500, 1000] as const;
 

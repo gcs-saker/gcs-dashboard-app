@@ -15,7 +15,7 @@ import { DashboardTacticalMapWidget } from "@dashboard/components/organisms/Dash
 import { RenderProfilerBoundary } from "@/features/RenderProfilerBoundary";
 import { RENDER_DIAGNOSTIC_LABELS } from "@/features/renderDiagnostics";
 import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
-import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
+import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
 interface DashboardMainGridProps {
   aiResultsWidget: DashboardWidgetDefinition;
   audioActiveStreamId: string | null;

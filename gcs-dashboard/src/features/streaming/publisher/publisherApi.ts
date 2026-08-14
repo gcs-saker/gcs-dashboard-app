@@ -1,7 +1,7 @@
 import { streamApiV1Url } from "@/config";
 import { STREAM_API_ROUTES } from "@/features/apiRoutes";
 import { authenticatedFetch } from "@auth/authApi";
-import { STREAM_JSON_ACCEPT_HEADERS } from "@streaming/streamingProtocolHeaders";
+import { STREAM_JSON_ACCEPT_HEADERS } from "@streaming/protocol/streamingProtocolHeaders";
 
 export interface AuthorizedPublishSession {
   iceServers: RTCIceServer[];

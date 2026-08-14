@@ -1,4 +1,4 @@
-import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
+import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import {
   buildTalkbackSelectionViewModel,

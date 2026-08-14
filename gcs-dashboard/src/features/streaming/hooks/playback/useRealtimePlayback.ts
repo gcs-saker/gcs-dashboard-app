@@ -1,6 +1,6 @@
 import { useEffect, useReducer } from "react";
 
-import { DEFAULT_WEBRTC_RECONNECT_DELAYS_MS } from "@streaming/streamReconnectPolicy";
+import { DEFAULT_WEBRTC_RECONNECT_DELAYS_MS } from "@streaming/runtime/streamReconnectPolicy";
 import { fetchPlaybackWithReadyRetry } from "@streaming/hooks/playback/realtimePlaybackApi";
 import {
   initialRealtimePlaybackState,

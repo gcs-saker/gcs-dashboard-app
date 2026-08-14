@@ -7,7 +7,7 @@ import type {
 import {
   getNextWebRTCRetryDelay,
   shouldFallbackAfterWebRTCRetry,
-} from "@streaming/streamReconnectPolicy";
+} from "@streaming/runtime/streamReconnectPolicy";
 import { normalizeBrowserMediaUrl, normalizePlaybackResponse } from "@streaming/hooks/playback/realtimePlaybackUrls";
 
 export type RealtimePlaybackAction =

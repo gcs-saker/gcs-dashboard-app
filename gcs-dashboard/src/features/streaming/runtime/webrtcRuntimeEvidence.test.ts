@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { buildWebRTCRuntimeEvidence } from "./webrtcRuntimeEvidence";
-import type { WebRTCPlaybackSnapshot } from "./types";
+import type { WebRTCPlaybackSnapshot } from "@streaming/types";
 
 describe("webrtcRuntimeEvidence", () => {
   test("classifies successful STUN/direct playback with first frame timing", () => {

@@ -1,6 +1,6 @@
 import type { SignalingTimingRecorder } from "@streaming/hooks/playback/whepPlaybackContracts";
 import { reportWhepDebug } from "@streaming/hooks/playback/whepPlaybackDebug";
-import { SDP_OFFER_HEADERS } from "@streaming/streamingProtocolHeaders";
+import { SDP_OFFER_HEADERS } from "@streaming/protocol/streamingProtocolHeaders";
 
 const WHEP_READY_RETRY_STATUS_CODES: ReadonlySet<number> = new Set([404, 409, 425, 503]);
 const WHEP_READY_RETRY_DELAYS_MS = [500, 1_000, 2_000] as const;

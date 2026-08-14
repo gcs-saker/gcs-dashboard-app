@@ -1,7 +1,7 @@
 import type { Dispatch } from "react";
 
 import { WEBRTC_ICE_SERVERS } from "@/config";
-import { loadWebRtcIceServers } from "@streaming/iceServers";
+import { loadWebRtcIceServers } from "@streaming/protocol/iceServers";
 import { monitorAudioStats } from "@streaming/hooks/audio/whepPlaybackAudio";
 import type {
   PlaybackAction,

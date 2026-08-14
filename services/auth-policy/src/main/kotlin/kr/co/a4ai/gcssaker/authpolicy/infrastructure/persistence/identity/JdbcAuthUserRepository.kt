@@ -13,17 +13,10 @@ import javax.sql.DataSource
 
 class JdbcAuthUserRepository(
     dataSource: DataSource,
-    initialUsers: Collection<AuthUser>,
 ) : AuthUserRepository {
     private val jdbc = JdbcTemplate(dataSource)
     private val transactions = TransactionTemplate(org.springframework.jdbc.datasource.DataSourceTransactionManager(dataSource))
     private val isPostgres = dataSource.connection.use { it.metaData.databaseProductName.equals("PostgreSQL", true) }
-
-    init {
-        AuthPolicySchema.ensure(dataSource)
-        ensurePostgresIdentity(dataSource)
-        seedUsers(initialUsers)
-    }
 
     override fun findByUsername(username: String): AuthUser? =
         jdbc.query(AuthUserSql.selectByUsername, authUserRowMapper, username).firstOrNull()
@@ -89,46 +82,6 @@ class JdbcAuthUserRepository(
         return user.copy(id = generatedId)
     }
 
-    private fun seedUsers(initialUsers: Collection<AuthUser>) {
-        initialUsers.forEach { user ->
-            val existing = findByUsername(user.username)
-            if (existing != null) {
-                jdbc.update(
-                    AuthUserSql.synchronizeSeed,
-                    user.email.lowercase(),
-                    user.passwordHash,
-                    user.companyId,
-                    user.role.name,
-                    user.groupId.value, user.active, user.securityVersion,
-                    user.username,
-                )
-            } else if (findByEmail(user.email) == null) {
-                jdbc.update(
-                    AuthUserSql.insertWithId,
-                    user.id,
-                    user.username,
-                    user.email.lowercase(),
-                    user.passwordHash,
-                    user.companyId,
-                    user.role.name,
-                    user.groupId.value, user.active, user.securityVersion,
-                )
-            }
-        }
-    }
-
-    private fun ensurePostgresIdentity(dataSource: DataSource) {
-        dataSource.connection.use { connection ->
-            if (!connection.metaData.databaseProductName.equals("PostgreSQL", ignoreCase = true)) return
-            connection.createStatement().use { statement ->
-                statement.execute(
-                    "SELECT setval(pg_get_serial_sequence('auth_users', 'id'), " +
-                        "COALESCE((SELECT MAX(id) FROM auth_users), 1), EXISTS (SELECT 1 FROM auth_users))",
-                )
-            }
-        }
-    }
-
     private companion object {
         val authUserRowMapper = RowMapper<AuthUser> { rs, _ ->
             AuthUser(
@@ -143,12 +96,6 @@ class JdbcAuthUserRepository(
                 securityVersion = rs.getLong(AuthUserColumns.securityVersion),
             )
         }
-    }
-}
-
-object AuthPolicySchema {
-    fun ensure(dataSource: DataSource) {
-        AuthPolicyJdbcMigrations.ensure(dataSource)
     }
 }
 
@@ -185,11 +132,6 @@ private object AuthUserSql {
         RETURNING id
     """
     const val maxId = "SELECT COALESCE(MAX(id), 0) FROM auth_users"
-    const val synchronizeSeed = """
-        UPDATE auth_users
-        SET email = ?, password_hash = ?, company_id = ?, role = ?, group_id = ?, active = ?, security_version = ?
-        WHERE username = ?
-    """
     const val selectAll = """
         SELECT id, username, email, password_hash, company_id, role, group_id, active, security_version
         FROM auth_users ORDER BY username

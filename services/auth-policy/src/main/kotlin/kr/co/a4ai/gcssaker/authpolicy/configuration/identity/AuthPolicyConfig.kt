@@ -11,6 +11,8 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.PrincipalCache
 import kr.co.a4ai.gcssaker.authpolicy.domain.RefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.AuthPolicyDatabaseInitializer
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.AuthUserSeeder
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -43,8 +45,13 @@ class AuthPolicyConfig {
         dataSource: ObjectProvider<DataSource>,
     ): AuthUserRepository {
         val initialUsers = seedAuthUsers(settings, passwordHasher)
-        val repository = PersistenceMode.dataSource(settings, dataSource)?.let {
-            JdbcAuthUserRepository(it, initialUsers)
+        val repository = PersistenceMode.dataSource(settings, dataSource)?.let { source ->
+            val initializer = AuthPolicyDatabaseInitializer(source)
+            initializer.initializeSchema()
+            val jdbcRepository = JdbcAuthUserRepository(source)
+            AuthUserSeeder().synchronize(jdbcRepository, initialUsers)
+            initializer.alignGeneratedIdentity()
+            jdbcRepository
         } ?: InMemoryAuthUserRepository(initialUsers)
         return if (settings.l1AuthUserCacheEnabled) CachedAuthUserRepository(repository) else repository
     }

@@ -5,6 +5,7 @@ import pytest
 from core.security import AuthSettings, create_access_token
 
 TEST_AUTH_SECRET = "test-auth-secret-for-gcs-saker-at-least-32-characters"
+pytest_plugins = ("tests.auth_api_fixtures",)
 
 
 @pytest.fixture(autouse=True)

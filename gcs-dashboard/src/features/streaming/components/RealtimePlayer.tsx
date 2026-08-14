@@ -6,8 +6,8 @@ import {
   describeWebRTCFailure,
   isRecoverableWebRTCFailure,
   shouldSkipWebRTCRetryAfterRelayFailure,
-} from "@streaming/streamReconnectPolicy";
-import { buildWebRTCRuntimeEvidence } from "@streaming/webrtcRuntimeEvidence";
+} from "@streaming/runtime/streamReconnectPolicy";
+import { buildWebRTCRuntimeEvidence } from "@streaming/runtime/webrtcRuntimeEvidence";
 import { HLSFallbackPlayer } from "./HLSFallbackPlayer";
 import "./RealtimePlayer.css";
 import { RealtimePlayerPlaceholder } from "./realtime/RealtimePlayerPlaceholder";

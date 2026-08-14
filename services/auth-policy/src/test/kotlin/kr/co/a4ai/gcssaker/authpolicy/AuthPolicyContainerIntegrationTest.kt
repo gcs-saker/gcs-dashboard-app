@@ -7,6 +7,8 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.AuthPolicyDatabaseInitializer
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.AuthUserSeeder
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisPrincipalCache
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisRefreshSessionStore
@@ -31,7 +33,11 @@ class AuthPolicyContainerIntegrationTest {
     @Test
     fun `postgres container applies flyway migration and persists auth policy rows`() {
         val dataSource = postgresDataSource()
-        val authUsers = JdbcAuthUserRepository(dataSource, listOf(seedUser()))
+        val initializer = AuthPolicyDatabaseInitializer(dataSource)
+        initializer.initializeSchema()
+        val authUsers = JdbcAuthUserRepository(dataSource)
+        AuthUserSeeder().synchronize(authUsers, listOf(seedUser()))
+        initializer.alignGeneratedIdentity()
         val events = JdbcOperationalEventRepository(dataSource, emptyList())
 
         assertNotNull(authUsers.findByUsername(ContainerIntegrationContract.OPERATOR_USERNAME))

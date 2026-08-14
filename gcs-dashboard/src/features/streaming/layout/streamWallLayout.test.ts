@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StreamSlot as DashboardStreamSlot } from "@streaming/streamModel";
+import type { StreamSlot as DashboardStreamSlot } from "@streaming/layout/streamModel";
 import { reconcileStreamWallSlots } from "./streamWallLayout";
 
 const streams = ["alpha", "bravo", "charlie", "delta", "echo"].map((id) => ({ id })) as DashboardStreamSlot[];

@@ -8,7 +8,7 @@ import {
   type PublisherGpsTelemetryPayload,
 } from "@streaming/publisher/publisherGpsTelemetry";
 import type { PublisherGpsStatus } from "@streaming/publisher/publisherContracts";
-import { STREAM_JSON_HEADERS } from "@streaming/streamingProtocolHeaders";
+import { STREAM_JSON_HEADERS } from "@streaming/protocol/streamingProtocolHeaders";
 
 const GPS_IDLE_DETAIL = "GPS 대기";
 const GPS_UNSUPPORTED_DETAIL = "이 브라우저에서는 GPS 위치를 지원하지 않습니다.";

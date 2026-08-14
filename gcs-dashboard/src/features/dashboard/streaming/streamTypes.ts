@@ -1,5 +1,5 @@
 import type { DashboardGeometrySource, DashboardStreamMode, DashboardStreamStatus } from "@/features/stateContracts";
-import type { StreamGeometry, StreamSlot } from "@streaming/streamModel";
+import type { StreamGeometry, StreamSlot } from "@streaming/layout/streamModel";
 
 export type { DashboardGeometrySource, DashboardStreamMode, DashboardStreamStatus };
 export type DashboardStreamGeometry = StreamGeometry;

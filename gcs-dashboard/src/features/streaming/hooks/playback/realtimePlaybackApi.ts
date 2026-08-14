@@ -1,7 +1,7 @@
 import { streamApiV1Url } from "@/config";
 import { authenticatedFetch } from "@auth/authApi";
 import type { StreamPlaybackResponse, StreamPlaybackUrls, StreamRuntimeStatus } from "@streaming/types";
-import { STREAM_JSON_ACCEPT_HEADERS } from "@streaming/streamingProtocolHeaders";
+import { STREAM_JSON_ACCEPT_HEADERS } from "@streaming/protocol/streamingProtocolHeaders";
 
 const PLAYBACK_READY_RETRY_STATUS = Object.freeze(new Set([404, 409, 425, 503]));
 

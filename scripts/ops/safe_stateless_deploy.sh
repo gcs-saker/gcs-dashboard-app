@@ -149,4 +149,7 @@ ln -sfn "${ROOT}" "${runtime_root}/current"
   exit 1
 }
 trap - ERR
+if [[ "${DOCKER_RETENTION_ENABLED:-1}" == "1" ]]; then
+  bash "${ROOT}/scripts/ops/prune_deployment_artifacts.sh"
+fi
 echo "stateless deployment completed; stateful and external-image services were not recreated"

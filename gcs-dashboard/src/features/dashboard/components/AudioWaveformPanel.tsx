@@ -10,7 +10,7 @@ import {
   type AudioAnalysisSnapshot,
 } from "@dashboard/layout/dashboardPresentation";
 import { useRafNumber } from "@/features/shared/hooks/useRafNumber";
-import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
+import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
 
 interface AudioWaveformPanelProps {
   analysis: AudioAnalysisSnapshot | null;

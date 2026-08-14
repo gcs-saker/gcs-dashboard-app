@@ -2,7 +2,7 @@ import type {
   WebRTCAudioPlaybackState,
   WebRTCIceCandidateStats,
   WebRTCPlaybackStatus,
-} from "./types";
+} from "@streaming/types";
 
 export const WEBRTC_STATUS_LABELS: Record<WebRTCPlaybackStatus, string> = {
   idle: "idle",

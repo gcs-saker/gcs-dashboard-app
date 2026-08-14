@@ -7,7 +7,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceProvisioningTokenRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceProvisioningTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.DevicePublishAuthorizationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryDeviceProvisioningTokenRepository
-import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryRegisteredDeviceRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.devices.InMemoryRegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceRepository

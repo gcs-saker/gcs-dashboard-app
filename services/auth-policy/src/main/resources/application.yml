@@ -9,6 +9,8 @@ spring:
     locations: classpath:db/migration,classpath:db/{vendor}-migration
     baseline-on-migrate: true
     baseline-version: 0
+  jpa:
+    open-in-view: false
 
 server:
   shutdown: graceful

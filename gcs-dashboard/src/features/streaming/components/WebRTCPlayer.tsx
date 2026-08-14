@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { WebRTCPlayerFigure } from "./webrtc/WebRTCPlayerFigure";
 import { useWhepPlayback } from "@streaming/hooks/playback/useWhepPlayback";
-import { EMPTY_ICE_CANDIDATE_STATS } from "@streaming/webrtcPlayerPresentation";
+import { EMPTY_ICE_CANDIDATE_STATS } from "@streaming/presentation/webrtcPlayerPresentation";
 import type { WebRTCPlayerProps } from "@streaming/types";
 import "./WebRTCPlayer.css";
 
