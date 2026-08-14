@@ -1,14 +1,14 @@
 import { useCallback } from "react";
-import type { DashboardWidgetId } from "@dashboard/dashboardLayout";
-import type { StreamAvailabilityNotification } from "@dashboard/hooks/useStreamAvailabilityNotification";
-import type { DashboardUserPreferences } from "@dashboard/userPreferences";
+import type { DashboardWidgetId } from "@dashboard/layout/dashboardLayout";
+import type { StreamAvailabilityNotification } from "@dashboard/hooks/shared/useStreamAvailabilityNotification";
+import type { DashboardUserPreferences } from "@dashboard/preferences/userPreferences";
 import { DashboardOverlays, type DashboardOverlaysProps } from "@dashboard/components/DashboardOverlays";
 import { StreamNotificationToast } from "@dashboard/components/atoms/StreamNotificationToast";
 import { DashboardWidgetControls } from "@dashboard/components/molecules/DashboardWidgetControls";
 import { DashboardHeader, type DashboardHeaderProps } from "@dashboard/components/navigation/DashboardHeader";
 import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
 import { DashboardViewRouter, type DashboardViewRouterProps } from "./DashboardViewRouter";
-import { useWhipAudioPublisher } from "@streaming/hooks/useWhipAudioPublisher";
+import { useWhipAudioPublisher } from "@streaming/hooks/audio/useWhipAudioPublisher";
 
 export interface DashboardWidgetControlBindings {
   isWidgetPinned: (widgetId: DashboardWidgetId) => boolean;

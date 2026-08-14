@@ -3,14 +3,14 @@ import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/rende
 import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
 import { StreamTelemetryOverlay } from "@streaming/components/StreamTelemetryOverlay";
 import type { RealtimePlayerSnapshot } from "@streaming/types";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
-import { isReceivableStream } from "@dashboard/dashboardCctv";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
+import { isReceivableStream } from "@dashboard/streaming/dashboardCctv";
 import {
   getDashboardStreamStatusClass,
   getDashboardStreamStatusText,
   getDashboardStreamDisplayName,
   SELECTED_STREAM_WIDGET,
-} from "@dashboard/streamTypes";
+} from "@dashboard/streaming/streamTypes";
 
 interface SelectedStreamPanelProps {
   stream: DashboardStreamSlot;

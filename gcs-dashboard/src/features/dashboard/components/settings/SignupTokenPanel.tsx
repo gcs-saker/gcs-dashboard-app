@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { canManageDeviceProvisioning } from "@auth/rolePermissions";
-import { useSignupTokens } from "@dashboard/hooks/useSignupTokens";
-import { DEFAULT_SIGNUP_TOKEN_INPUT, type IssueSignupTokenInput } from "@dashboard/signupTokens";
+import { useSignupTokens } from "@dashboard/hooks/devices/useSignupTokens";
+import { DEFAULT_SIGNUP_TOKEN_INPUT, type IssueSignupTokenInput } from "@dashboard/devices/signupTokens";
 
 export function SignupTokenPanel() {
   const { currentUser } = useAuth();

@@ -1,6 +1,6 @@
 import type { StoryDefault } from "@ladle/react";
 
-import "@/features/dashboard/DashboardPage.scss";
+import "@dashboard/layout/DashboardPage.scss";
 import "@streaming/components/RealtimePlayer.css";
 import { RealtimePlayerPlaceholder } from "@streaming/components/realtime/RealtimePlayerPlaceholder";
 import { StreamCard } from "@dashboard/components/StreamCard";

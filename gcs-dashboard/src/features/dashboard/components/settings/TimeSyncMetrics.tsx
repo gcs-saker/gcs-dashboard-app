@@ -1,4 +1,4 @@
-import type { TimeSyncStatus } from "@dashboard/timeSync";
+import type { TimeSyncStatus } from "@dashboard/operations/timeSync";
 
 interface TimeSyncMetricsProps {
   browserOffsetMs: number;

@@ -1,6 +1,6 @@
-@use "./dashboard-visual-streams";
-@use "./dashboard-visual-cctv-shell";
-@use "./dashboard-visual-events-system-time";
-@use "./dashboard-visual-header-summary";
-@use "./dashboard-visual-deep-panels";
-@use "./dashboard-visual-responsive";
+@use "./visual/dashboard-visual-streams";
+@use "./visual/dashboard-visual-cctv-shell";
+@use "./visual/dashboard-visual-events-system-time";
+@use "./visual/dashboard-visual-header-summary";
+@use "./visual/dashboard-visual-deep-panels";
+@use "./visual/dashboard-visual-responsive";

@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 import { DASHBOARD_QUERY_POLICY } from "@/features/queryClient";
 import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
-import { useSystemStatusModel } from "@dashboard/hooks/useSystemStatusModel";
+import { useSystemStatusModel } from "@dashboard/hooks/operations/useSystemStatusModel";
 import { SystemImpactPanel } from "./system-status/SystemImpactPanel";
 import { SystemRttPanel } from "./system-status/SystemRttPanel";
 import { SystemRunbookPanel } from "./system-status/SystemRunbookPanel";

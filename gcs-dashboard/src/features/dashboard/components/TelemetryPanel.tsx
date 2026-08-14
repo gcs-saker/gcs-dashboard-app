@@ -1,16 +1,16 @@
 import type { ReactNode } from "react";
-import type { DashboardWidgetDefinition } from "@dashboard/dashboardLayout";
+import type { DashboardWidgetDefinition } from "@dashboard/layout/dashboardLayout";
 import {
   getDashboardStreamDisplayName,
   getDashboardStreamStatusText,
   type DashboardStreamSlot,
-} from "@dashboard/streamTypes";
+} from "@dashboard/streaming/streamTypes";
 import {
   formatBearing,
   formatBearingDelta,
   normalizeDegrees,
   type TelemetryRow,
-} from "@dashboard/dashboardPresentation";
+} from "@dashboard/layout/dashboardPresentation";
 
 interface TelemetryPanelProps {
   controls: ReactNode;

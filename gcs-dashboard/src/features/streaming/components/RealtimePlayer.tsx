@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { useRealtimePlayback } from "@streaming/hooks/useRealtimePlayback";
+import { useRealtimePlayback } from "@streaming/hooks/playback/useRealtimePlayback";
 import type { RealtimePlayerProps } from "@streaming/types";
 import {
   describeWebRTCFailure,

@@ -1,6 +1,6 @@
 import { memo, useMemo, type CSSProperties } from "react";
 import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import {
   buildAudioWaveformBars,
   formatPlaybackMode,
@@ -8,8 +8,8 @@ import {
   getLatencyTone,
   getPacketLossTone,
   type AudioAnalysisSnapshot,
-} from "@dashboard/dashboardPresentation";
-import { useRafNumber } from "@dashboard/hooks/useRafNumber";
+} from "@dashboard/layout/dashboardPresentation";
+import { useRafNumber } from "@/features/shared/hooks/useRafNumber";
 import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
 
 interface AudioWaveformPanelProps {

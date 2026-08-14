@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 
-import { useHlsFallbackPlayback } from "@streaming/hooks/useHlsFallbackPlayback";
+import { useHlsFallbackPlayback } from "@streaming/hooks/playback/useHlsFallbackPlayback";
 import type { HLSFallbackPlayerProps } from "@streaming/types";
 import { detectWebCodecsCapability } from "@streaming/webCodecsSupport";
 import "./HLSFallbackPlayer.css";

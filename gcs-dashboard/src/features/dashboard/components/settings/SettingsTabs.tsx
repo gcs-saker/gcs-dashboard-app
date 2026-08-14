@@ -1,4 +1,4 @@
-import { SETTINGS_TABS, type SettingsTab } from "@dashboard/timeSyncSettingsContracts";
+import { SETTINGS_TABS, type SettingsTab } from "@dashboard/operations/timeSyncSettingsContracts";
 
 interface SettingsTabsProps {
   activeTab: SettingsTab;

@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 
-import type { OperationalEvent } from "@dashboard/operationalEvents";
+import type { OperationalEvent } from "@dashboard/operations/operationalEvents";
 import { EventLogDetailPanel } from "./EventLogDetailPanel";
 import { EventLogNetworkPanel, formatNetworkFlowTime } from "./EventLogNetworkPanel";
 import { TimelineEventRow } from "./TimelineEventRow";

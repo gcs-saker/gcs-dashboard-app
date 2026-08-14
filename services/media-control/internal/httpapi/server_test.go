@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessiontoken"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 )
@@ -828,7 +829,7 @@ func TestMediaMTXPublishAuthRejectsMissingPublisherToken(t *testing.T) {
 
 func TestMediaMTXPublishAuthAcceptsValidPublisherToken(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
-	token, err := issueMediaToken("test-publish-token", mediaMTXActionPublish, "raw.local.webcam", "raw/local/webcam", "co-a", time.Now())
+	token, err := sessiontoken.Issue("test-publish-token", mediaMTXActionPublish, "raw.local.webcam", "raw/local/webcam", "co-a", time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -867,7 +868,7 @@ func TestMediaMTXPlaybackAuthRejectsMissingPlaybackToken(t *testing.T) {
 
 func TestMediaMTXPlaybackAuthAcceptsIssuedPlaybackToken(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
-	token, err := issueMediaToken("test-publish-token", mediaMTXActionPlayback, "raw.local.webcam", "raw/local/webcam", "co-a", time.Now())
+	token, err := sessiontoken.Issue("test-publish-token", mediaMTXActionPlayback, "raw.local.webcam", "raw/local/webcam", "co-a", time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -887,24 +888,24 @@ func TestMediaMTXPlaybackAuthAcceptsIssuedPlaybackToken(t *testing.T) {
 
 func TestMediaTokenRejectsWrongStreamAndExpiredToken(t *testing.T) {
 	now := time.Unix(1_700_000_000, 0)
-	token, err := issueMediaToken("test-publish-token", mediaMTXActionPlayback, "raw.local.webcam", "raw/local/webcam", "co-a", now)
+	token, err := sessiontoken.Issue("test-publish-token", mediaMTXActionPlayback, "raw.local.webcam", "raw/local/webcam", "co-a", now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := validateMediaToken("test-publish-token", token, mediaMTXActionPlayback, "raw.other.webcam", "raw/other/webcam", "co-a", now); err == nil {
+	if err := sessiontoken.Validate("test-publish-token", token, mediaMTXActionPlayback, "raw.other.webcam", "raw/other/webcam", "co-a", now); err == nil {
 		t.Fatal("expected wrong stream path to be rejected")
 	}
-	if err := validateMediaToken("test-publish-token", token, mediaMTXActionPlayback, "raw.local.webcam", "raw/local/webcam", "co-b", now); err == nil {
+	if err := sessiontoken.Validate("test-publish-token", token, mediaMTXActionPlayback, "raw.local.webcam", "raw/local/webcam", "co-b", now); err == nil {
 		t.Fatal("expected wrong group id to be rejected")
 	}
-	if err := validateMediaToken("test-publish-token", token, mediaMTXActionPlayback, "raw.local.webcam", "raw/local/webcam", "co-a", now.Add(mediaTokenTTL+time.Second)); err == nil {
+	if err := sessiontoken.Validate("test-publish-token", token, mediaMTXActionPlayback, "raw.local.webcam", "raw/local/webcam", "co-a", now.Add(sessiontoken.TTL+time.Second)); err == nil {
 		t.Fatal("expected expired token to be rejected")
 	}
 }
 
 func TestMediaMTXPublishAuthRejectsTokenIssuedForDifferentPath(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
-	token, err := issueMediaToken("test-publish-token", mediaMTXActionPublish, "raw.company-c.front", "raw/company-c/front", "co-device", time.Now())
+	token, err := sessiontoken.Issue("test-publish-token", mediaMTXActionPublish, "raw.company-c.front", "raw/company-c/front", "co-device", time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -924,7 +925,7 @@ func TestMediaMTXPublishAuthRejectsTokenIssuedForDifferentPath(t *testing.T) {
 
 func TestMediaMTXPublishAuthAcceptsSignedDeviceGroupClaim(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
-	token, err := issueMediaToken("test-publish-token", mediaMTXActionPublish, "raw.company-b.front", "raw/company-b/front", "co-device", time.Now())
+	token, err := sessiontoken.Issue("test-publish-token", mediaMTXActionPublish, "raw.company-b.front", "raw/company-b/front", "co-device", time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -994,7 +995,7 @@ func assertMediaURLTokenForGroup(
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := validateMediaToken("test-publish-token", token, action, streamPathParts.StreamID, streamPath, groupID, time.Now()); err != nil {
+	if err := sessiontoken.Validate("test-publish-token", token, action, streamPathParts.StreamID, streamPath, groupID, time.Now()); err != nil {
 		t.Fatalf("expected valid media token in %s: %v", rawURL, err)
 	}
 }

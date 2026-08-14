@@ -1,6 +1,6 @@
-import { EVENT_CATEGORY_LABELS } from "@dashboard/eventLogPresentation";
-import type { EventCategorySummary } from "@dashboard/eventLogPresentation";
-import type { OperationalEvent, OperationalEventCategory } from "@dashboard/operationalEvents";
+import { EVENT_CATEGORY_LABELS } from "@dashboard/operations/eventLogPresentation";
+import type { EventCategorySummary } from "@dashboard/operations/eventLogPresentation";
+import type { OperationalEvent, OperationalEventCategory } from "@dashboard/operations/operationalEvents";
 
 interface EventLogNetworkPanelProps {
   categoryFilter: "all" | OperationalEventCategory;

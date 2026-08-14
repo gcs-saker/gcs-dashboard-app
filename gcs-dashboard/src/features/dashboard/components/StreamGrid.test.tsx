@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
-import { DEFAULT_DASHBOARD_STREAMS, type DashboardStreamSlot } from "@dashboard/streamTypes";
+import { DEFAULT_DASHBOARD_STREAMS, type DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import { SelectedStreamPanel } from "./SelectedStreamPanel";
 import { StreamGrid } from "./StreamGrid";
 

@@ -1,0 +1,27 @@
+@use "../shared/dashboard-tokens";
+@use "../shared/dashboard-shared";
+
+.ops-dashboard {
+  @include dashboard-tokens.dashboard-theme;
+  background:
+    linear-gradient(180deg, rgba(12, 32, 42, 0.6), transparent 180px),
+    linear-gradient(90deg, rgba(23, 58, 50, 0.26), transparent 38%, rgba(58, 48, 85, 0.14)),
+    var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  font-optical-sizing: auto;
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  overflow: hidden;
+  text-rendering: geometricPrecision;
+}
+
+.ops-dashboard *,
+.ops-dashboard *::before,
+.ops-dashboard *::after {
+  box-sizing: border-box;
+}
+

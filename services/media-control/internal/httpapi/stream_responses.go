@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessiontoken"
 )
 
 func (s Server) streamDescriptorResponse(stream domain.StreamDescriptor) (streamDescriptorResponse, error) {
@@ -73,7 +74,7 @@ func (s Server) writeStreamPublishResponseForGroup(
 		return
 	}
 	playbackURLs := s.playback.Build(parsed)
-	token, err := issueMediaToken(
+	token, err := sessiontoken.Issue(
 		s.publishToken,
 		mediaMTXActionPublish,
 		parsed.StreamID,
@@ -118,7 +119,7 @@ func (s Server) withPlaybackTokenForGroup(playbackURLs domain.PlaybackURLs, pars
 	if s.publishToken == "" {
 		return playbackURLs
 	}
-	token, err := issueMediaToken(
+	token, err := sessiontoken.Issue(
 		s.publishToken,
 		mediaMTXActionPlayback,
 		parsed.StreamID,

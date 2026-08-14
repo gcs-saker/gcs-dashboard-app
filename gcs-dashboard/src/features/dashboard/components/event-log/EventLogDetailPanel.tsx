@@ -4,8 +4,8 @@ import {
   diagnoseOperationalEventImpact,
   EVENT_CATEGORY_LABELS,
   formatOperationalEventPayload,
-} from "@dashboard/eventLogPresentation";
-import type { OperationalEvent, OperationalEventCategory } from "@dashboard/operationalEvents";
+} from "@dashboard/operations/eventLogPresentation";
+import type { OperationalEvent, OperationalEventCategory } from "@dashboard/operations/operationalEvents";
 
 interface EventLogDetailPanelProps {
   event: OperationalEvent | null;

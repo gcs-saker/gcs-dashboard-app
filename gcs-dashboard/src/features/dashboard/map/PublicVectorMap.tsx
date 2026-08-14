@@ -3,7 +3,7 @@ import "leaflet/dist/leaflet.css";
 
 import type { DashboardMapConfig } from "@/config";
 import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import {
   coordinateSourceLabel,
   DEFAULT_MAP_CENTER,

@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { timeSyncModeLabel, type TimeSyncConfigInput, type TimeSyncMode } from "@dashboard/timeSync";
+import { timeSyncModeLabel, type TimeSyncConfigInput, type TimeSyncMode } from "@dashboard/operations/timeSync";
 
 interface TimeSyncFormProps {
   form: TimeSyncConfigInput;

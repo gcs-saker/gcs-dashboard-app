@@ -1,5 +1,5 @@
-import type { OperationalEvent, OperationalEventMetrics, OperationalEventTimeBucket } from "@/features/dashboard/operationalEvents";
-import type { StreamRegistryResponse, TelemetryReadResponse } from "@/features/dashboard/streamDevices";
+import type { OperationalEvent, OperationalEventMetrics, OperationalEventTimeBucket } from "@dashboard/operations/operationalEvents";
+import type { StreamRegistryResponse, TelemetryReadResponse } from "@dashboard/assets/streamDevices";
 import type { TokenResponse } from "@/features/auth/types";
 import type { DashboardMapConfig } from "@/config";
 

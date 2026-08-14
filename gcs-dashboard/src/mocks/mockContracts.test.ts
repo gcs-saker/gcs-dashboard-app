@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { isStreamRegistryResponse } from "@dashboard/streamDeviceContracts";
-import { isTelemetryReadResponse } from "@dashboard/telemetryContracts";
+import { isStreamRegistryResponse } from "@dashboard/assets/streamDeviceContracts";
+import { isTelemetryReadResponse } from "@dashboard/streaming/telemetryContracts";
 import {
   MOCK_OPERATIONAL_BUCKETS,
   MOCK_OPERATIONAL_EVENTS,

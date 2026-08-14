@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { OperationalEventCategory, OperationalEventFilters } from "@dashboard/operationalEvents";
+import type { OperationalEventCategory, OperationalEventFilters } from "@dashboard/operations/operationalEvents";
 
 export const DEFAULT_OPERATIONAL_EVENT_FILTERS: OperationalEventFilters = Object.freeze({
   query: "",

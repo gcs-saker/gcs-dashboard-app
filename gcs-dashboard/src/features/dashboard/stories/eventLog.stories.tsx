@@ -1,6 +1,6 @@
 import type { StoryDefault } from "@ladle/react";
 
-import "@/features/dashboard/DashboardPage.scss";
+import "@dashboard/layout/DashboardPage.scss";
 import { EventLogMetricCard } from "@dashboard/components/event-log/EventLogMetricCard";
 import { TimelineEventRow } from "@dashboard/components/event-log/TimelineEventRow";
 import { STORY_OPERATIONAL_EVENTS } from "./dashboardStoryFixtures";

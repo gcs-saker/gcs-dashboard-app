@@ -1,4 +1,4 @@
-import { timeSyncHealthLabel, type TimeSyncStatus } from "@dashboard/timeSync";
+import { timeSyncHealthLabel, type TimeSyncStatus } from "@dashboard/operations/timeSync";
 
 interface TimeSyncHeaderProps {
   status: TimeSyncStatus | null;

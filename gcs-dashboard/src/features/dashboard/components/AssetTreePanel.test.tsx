@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
-import type { AssetTreeNode } from "@dashboard/assetTree";
+import type { AssetTreeNode } from "@dashboard/assets/assetTree";
 import { AssetTreePanel } from "./AssetTreePanel";
 
 describe("AssetTreePanel", () => {

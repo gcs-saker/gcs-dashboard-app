@@ -2,7 +2,7 @@ import {
   SETTINGS_POLICIES,
   settingsTabTitle,
   type PolicySettingsTab,
-} from "@dashboard/timeSyncSettingsContracts";
+} from "@dashboard/operations/timeSyncSettingsContracts";
 
 interface SettingsPolicyPanelProps {
   tab: PolicySettingsTab;

@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { TimeSyncSettingsView } from "./TimeSyncSettingsView";
-import { SETTINGS_TABS } from "@dashboard/timeSyncSettingsContracts";
+import { SETTINGS_TABS } from "@dashboard/operations/timeSyncSettingsContracts";
 import type { UserRole } from "@auth/types";
 
 const authState = vi.hoisted(() => ({ role: "viewer" as UserRole }));

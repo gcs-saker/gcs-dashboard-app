@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { DashboardWidgetDefinition } from "@dashboard/dashboardLayout";
+import type { DashboardWidgetDefinition } from "@dashboard/layout/dashboardLayout";
 
 interface AiResultsPanelProps {
   controls: ReactNode;

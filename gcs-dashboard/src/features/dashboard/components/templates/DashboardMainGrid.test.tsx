@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { DASHBOARD_WIDGET_REGISTRY } from "@dashboard/dashboardLayout";
-import { getMapFocusForStream } from "@dashboard/mapFocus";
-import { DEFAULT_DASHBOARD_STREAMS } from "@dashboard/streamTypes";
+import { DASHBOARD_WIDGET_REGISTRY } from "@dashboard/layout/dashboardLayout";
+import { getMapFocusForStream } from "@dashboard/layout/mapFocus";
+import { DEFAULT_DASHBOARD_STREAMS } from "@dashboard/streaming/streamTypes";
 import { DashboardMainGrid } from "./DashboardMainGrid";
 
 function BrokenMap(): never {

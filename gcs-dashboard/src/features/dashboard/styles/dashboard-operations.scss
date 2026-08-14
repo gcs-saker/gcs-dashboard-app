@@ -1,7 +1,7 @@
-@use "./dashboard-operations-status";
-@use "./dashboard-operations-summary";
-@use "./dashboard-operations-telemetry";
-@use "./dashboard-operations-audio";
-@use "./dashboard-operations-ai";
-@use "./dashboard-operations-widgets";
-@use "./dashboard-operations-stream-connect";
+@use "./operations/dashboard-operations-status";
+@use "./operations/dashboard-operations-summary";
+@use "./operations/dashboard-operations-telemetry";
+@use "./operations/dashboard-operations-audio";
+@use "./operations/dashboard-operations-ai";
+@use "./operations/dashboard-operations-widgets";
+@use "./operations/dashboard-operations-stream-connect";

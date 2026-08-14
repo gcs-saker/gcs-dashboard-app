@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
-import type { AssetTreeNode } from "@dashboard/assetTree";
+import type { AssetTreeNode } from "@dashboard/assets/assetTree";
 import type {
   DashboardLayoutItem,
   DashboardWidgetDefinition,
   DashboardWidgetId,
-} from "@dashboard/dashboardLayout";
-import type { StreamDeviceOption } from "@dashboard/streamDevices";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+} from "@dashboard/layout/dashboardLayout";
+import type { StreamDeviceOption } from "@dashboard/assets/streamDevices";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import { AssetTreePanel } from "./AssetTreePanel";
 import { StreamDeviceConnectDialog } from "./StreamDeviceConnectDialog";
 import { WidgetAddDialog } from "./WidgetAddDialog";

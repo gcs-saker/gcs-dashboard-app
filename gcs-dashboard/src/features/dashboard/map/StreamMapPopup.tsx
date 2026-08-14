@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
-import { getDashboardStreamStatusText } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
+import { getDashboardStreamStatusText } from "@dashboard/streaming/streamTypes";
 import { coordinateSourceLabel, coordinateText } from "./mapContracts";
 
 interface StreamMapPopupProps {

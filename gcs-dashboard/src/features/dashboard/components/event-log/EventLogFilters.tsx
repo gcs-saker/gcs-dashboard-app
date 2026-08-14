@@ -1,5 +1,5 @@
-import { EVENT_CATEGORY_LABELS, EVENT_SEVERITY_LABELS } from "@dashboard/eventLogPresentation";
-import type { OperationalEventCategory, OperationalEventFilters } from "@dashboard/operationalEvents";
+import { EVENT_CATEGORY_LABELS, EVENT_SEVERITY_LABELS } from "@dashboard/operations/eventLogPresentation";
+import type { OperationalEventCategory, OperationalEventFilters } from "@dashboard/operations/operationalEvents";
 
 const EVENT_FILTER_LABELS = Object.freeze({
   query: "내용",

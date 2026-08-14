@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { canManageDeviceProvisioning } from "@auth/rolePermissions";
-import { useAdminDevices } from "@dashboard/hooks/useAdminDevices";
-import type { RegisteredDevice } from "@dashboard/adminDevices";
+import { useAdminDevices } from "@dashboard/hooks/devices/useAdminDevices";
+import type { RegisteredDevice } from "@dashboard/devices/adminDevices";
 
 export function DeviceApprovalPanel() {
   const { currentUser } = useAuth();

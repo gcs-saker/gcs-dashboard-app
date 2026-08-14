@@ -1,11 +1,11 @@
 import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import {
   buildTalkbackSelectionViewModel,
   formatTalkbackMicLevel,
   isTalkbackActive,
   talkbackStatusText,
-} from "@dashboard/talkbackPresentation";
+} from "@dashboard/streaming/talkbackPresentation";
 
 interface TalkbackControlPanelProps {
   selectedStreamId: string;

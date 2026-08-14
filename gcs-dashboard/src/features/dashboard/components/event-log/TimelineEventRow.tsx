@@ -1,7 +1,7 @@
 import { memo } from "react";
 
-import { EVENT_CATEGORY_LABELS } from "@dashboard/eventLogPresentation";
-import type { OperationalEvent } from "@dashboard/operationalEvents";
+import { EVENT_CATEGORY_LABELS } from "@dashboard/operations/eventLogPresentation";
+import type { OperationalEvent } from "@dashboard/operations/operationalEvents";
 
 interface TimelineEventRowProps {
   event: OperationalEvent;

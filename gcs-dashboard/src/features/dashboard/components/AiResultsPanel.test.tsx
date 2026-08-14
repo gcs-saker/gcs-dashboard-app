@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
-import { getDashboardWidgetDefinition } from "@dashboard/dashboardLayout";
+import { getDashboardWidgetDefinition } from "@dashboard/layout/dashboardLayout";
 import { AiResultsPanel } from "./AiResultsPanel";
 
 describe("AiResultsPanel", () => {

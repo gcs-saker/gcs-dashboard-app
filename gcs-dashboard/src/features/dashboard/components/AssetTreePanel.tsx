@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import type { AssetTreeNode } from "@dashboard/assetTree";
-import { getAssetTreeStatusText } from "@dashboard/assetTree";
+import type { AssetTreeNode } from "@dashboard/assets/assetTree";
+import { getAssetTreeStatusText } from "@dashboard/assets/assetTree";
 
 interface AssetTreePanelProps {
   controls?: ReactNode;

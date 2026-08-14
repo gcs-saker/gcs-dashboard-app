@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import {
   coordinateSourceLabel,
   coordinateText,

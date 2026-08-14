@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@auth/AuthProvider";
 import { canManageDeviceProvisioning } from "@auth/rolePermissions";
-import { useTimeSyncStatus } from "@dashboard/hooks/useTimeSyncStatus";
-import { calculateBrowserOffsetMs, type TimeSyncConfigInput } from "@dashboard/timeSync";
-import type { MotionMode } from "@dashboard/motionPreference";
-import { SETTINGS_TABS, type PolicySettingsTab, type SettingsTab } from "@dashboard/timeSyncSettingsContracts";
+import { useTimeSyncStatus } from "@dashboard/hooks/operations/useTimeSyncStatus";
+import { calculateBrowserOffsetMs, type TimeSyncConfigInput } from "@dashboard/operations/timeSync";
+import type { MotionMode } from "@dashboard/preferences/motionPreference";
+import { SETTINGS_TABS, type PolicySettingsTab, type SettingsTab } from "@dashboard/operations/timeSyncSettingsContracts";
 import { DeviceApprovalPanel } from "./settings/DeviceApprovalPanel";
 import { MotionPolicyPanel } from "./settings/MotionPolicyPanel";
 import { ProvisioningTokenPanel } from "./settings/ProvisioningTokenPanel";

@@ -1,7 +1,7 @@
 import { Suspense, type ComponentType, type ReactNode } from "react";
-import type { DashboardWidgetDefinition, DashboardWidgetId } from "@dashboard/dashboardLayout";
-import type { MapFocusViewModel } from "@dashboard/mapFocus";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardWidgetDefinition, DashboardWidgetId } from "@dashboard/layout/dashboardLayout";
+import type { MapFocusViewModel } from "@dashboard/layout/mapFocus";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 
 export type TacticalMapComponent = ComponentType<{
   isMotionEnabled?: boolean;

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { FALLBACK_MAP_CONFIG } from "@/config";
 import type { DashboardMapConfig } from "@/config";
 import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import { OfflineTacticalMap } from "./OfflineTacticalMap";
 import { PublicVectorMap } from "./PublicVectorMap";
 import { fetchMapConfig } from "./mapConfig";

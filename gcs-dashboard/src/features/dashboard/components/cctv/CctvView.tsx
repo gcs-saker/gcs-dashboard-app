@@ -1,12 +1,12 @@
 import { CctvChannelCard } from "@dashboard/components/CctvChannelCard";
 import { StreamGrid } from "@dashboard/components/StreamGrid";
-import type { CctvStatusSummary } from "@dashboard/dashboardCctv";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { CctvStatusSummary } from "@dashboard/streaming/dashboardCctv";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import {
   CCTV_LAYOUT_MODE_OPTIONS,
   CCTV_QUALITY_MODE_OPTIONS,
   type CctvLayoutMode,
-} from "@dashboard/userPreferences";
+} from "@dashboard/preferences/userPreferences";
 import type { CctvQualityMode } from "@dashboard/components/CctvChannelCard";
 
 interface CctvViewProps {

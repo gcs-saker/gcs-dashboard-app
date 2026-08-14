@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { HLSFallbackPlayerProps, WebRTCPlayerProps } from "@streaming/types";
-import { normalizeBrowserMediaUrl } from "@streaming/hooks/realtimePlaybackUrls";
+import { normalizeBrowserMediaUrl } from "@streaming/hooks/playback/realtimePlaybackUrls";
 import { RealtimePlayer } from "./RealtimePlayer";
 
 const emptyAudioStats = {

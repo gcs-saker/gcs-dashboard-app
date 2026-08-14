@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { changeManagedGroupStatus, createManagedGroup, fetchManagedGroups, updateManagedGroup } from "@dashboard/managedGroupApi";
-import type { ManagedGroup } from "@dashboard/managedGroups";
+import { changeManagedGroupStatus, createManagedGroup, fetchManagedGroups, updateManagedGroup } from "@dashboard/groups/managedGroupApi";
+import type { ManagedGroup } from "@dashboard/groups/managedGroups";
 
 export function GroupLifecyclePanel() {
   const [groups, setGroups] = useState<ManagedGroup[]>([]);

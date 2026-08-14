@@ -2,7 +2,7 @@ import { memo } from "react";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_DASHBOARD_STREAMS, type DashboardStreamSlot } from "@dashboard/streamTypes";
+import { DEFAULT_DASHBOARD_STREAMS, type DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import { DASHBOARD_STREAM_STATUS } from "@/features/stateContracts";
 import { StreamGrid } from "./StreamGrid";
 

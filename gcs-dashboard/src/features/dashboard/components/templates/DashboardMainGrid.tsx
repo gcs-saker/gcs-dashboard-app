@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import type { RealtimePlayerSnapshot } from "@streaming/types";
-import type { AudioAnalysisSnapshot, TelemetryRow } from "@dashboard/dashboardPresentation";
-import type { DashboardWidgetDefinition, DashboardWidgetId } from "@dashboard/dashboardLayout";
-import type { MapFocusViewModel } from "@dashboard/mapFocus";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { AudioAnalysisSnapshot, TelemetryRow } from "@dashboard/layout/dashboardPresentation";
+import type { DashboardWidgetDefinition, DashboardWidgetId } from "@dashboard/layout/dashboardLayout";
+import type { MapFocusViewModel } from "@dashboard/layout/mapFocus";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import { AiResultsPanel } from "@dashboard/components/AiResultsPanel";
 import { OpsSummaryPanel } from "@dashboard/components/OpsSummaryPanel";
 import { SelectedStreamPanel } from "@dashboard/components/SelectedStreamPanel";

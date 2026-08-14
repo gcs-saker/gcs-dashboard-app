@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import type { DashboardWidgetDefinition } from "@dashboard/dashboardLayout";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
-import type { AudioAnalysisSnapshot } from "@dashboard/dashboardPresentation";
-import { buildOpsSummaryViewModel } from "@dashboard/opsSummaryViewModel";
+import type { DashboardWidgetDefinition } from "@dashboard/layout/dashboardLayout";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
+import type { AudioAnalysisSnapshot } from "@dashboard/layout/dashboardPresentation";
+import { buildOpsSummaryViewModel } from "@dashboard/operations/opsSummaryViewModel";
 
 interface OpsSummaryPanelProps {
   audioAnalysis: AudioAnalysisSnapshot | null;

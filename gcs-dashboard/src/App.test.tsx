@@ -16,7 +16,7 @@ vi.mock('./features/streaming/components/LocalWebcamPublisher', () => ({
   },
 }));
 
-vi.mock('./features/dashboard/StreamPage', () => ({
+vi.mock('./features/dashboard/layout/StreamPage', () => ({
   StreamPage: function MockStreamPage() {
     return <main aria-label="스트림 전용 화면">Stream view</main>;
   },

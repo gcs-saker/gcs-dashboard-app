@@ -2,8 +2,8 @@ import { RenderProfilerBoundary } from "@/features/RenderProfilerBoundary";
 import { RENDER_DIAGNOSTIC_LABELS } from "@/features/renderDiagnostics";
 import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
 import { AudioWaveformPanel } from "@dashboard/components/AudioWaveformPanel";
-import type { AudioAnalysisSnapshot } from "@dashboard/dashboardPresentation";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { AudioAnalysisSnapshot } from "@dashboard/layout/dashboardPresentation";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
 
 interface DashboardAudioWaveformWidgetProps {

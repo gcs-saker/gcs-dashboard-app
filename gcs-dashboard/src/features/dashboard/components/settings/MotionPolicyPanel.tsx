@@ -3,7 +3,7 @@ import {
   MOTION_MODE_LABELS,
   MOTION_MODES,
   type MotionMode,
-} from "@dashboard/motionPreference";
+} from "@dashboard/preferences/motionPreference";
 
 interface MotionPolicyPanelProps {
   motionMode: MotionMode;

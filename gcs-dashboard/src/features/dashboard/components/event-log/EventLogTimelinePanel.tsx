@@ -1,7 +1,7 @@
 import type { CSSProperties, UIEventHandler } from "react";
-import { EVENT_SEVERITY_LABELS } from "@dashboard/eventLogPresentation";
-import type { OperationalEvent, OperationalEventFilters } from "@dashboard/operationalEvents";
-import type { VirtualListRange } from "@dashboard/hooks/useVirtualList";
+import { EVENT_SEVERITY_LABELS } from "@dashboard/operations/eventLogPresentation";
+import type { OperationalEvent, OperationalEventFilters } from "@dashboard/operations/operationalEvents";
+import type { VirtualListRange } from "@/features/shared/hooks/useVirtualList";
 import { TimelineEventRow } from "./TimelineEventRow";
 
 interface EventLogTimelinePanelProps {

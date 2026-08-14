@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessiontoken"
 )
 
 const (
@@ -134,7 +135,7 @@ func (s Server) issuePublishSession(
 		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
 		return
 	}
-	publishToken, err := issueDeviceMediaToken(s.publishToken, session, mustOpaqueToken("jti_"), now)
+	publishToken, err := sessiontoken.IssueDevice(s.publishToken, session, mustOpaqueToken("jti_"), now)
 	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
 		return
@@ -186,7 +187,7 @@ func (s Server) renewDevicePublishSession(w http.ResponseWriter, r *http.Request
 		writeJSON(w, http.StatusUnauthorized, errorPayload(errPublishSessionRenewalDenied))
 		return
 	}
-	publishToken, err := issueDeviceMediaToken(s.publishToken, session, mustOpaqueToken("jti_"), now)
+	publishToken, err := sessiontoken.IssueDevice(s.publishToken, session, mustOpaqueToken("jti_"), now)
 	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
 		return
@@ -220,7 +221,7 @@ func (s Server) endDevicePublishSession(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s Server) validateActivePublishSession(payload mediaTokenPayload, now time.Time) bool {
+func (s Server) validateActivePublishSession(payload sessiontoken.Payload, now time.Time) bool {
 	if payload.SessionID == "" {
 		return true
 	} // Legacy token compatibility during migration.

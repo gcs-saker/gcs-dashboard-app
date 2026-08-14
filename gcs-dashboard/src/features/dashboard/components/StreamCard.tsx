@@ -1,12 +1,12 @@
 import { memo, useCallback } from "react";
 import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
-import { isReceivableStream } from "@dashboard/dashboardCctv";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import { isReceivableStream } from "@dashboard/streaming/dashboardCctv";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import {
   getDashboardStreamDisplayName,
   getDashboardStreamStatusClass,
   getDashboardStreamStatusText,
-} from "@dashboard/streamTypes";
+} from "@dashboard/streaming/streamTypes";
 
 interface StreamCardProps {
   stream: DashboardStreamSlot;

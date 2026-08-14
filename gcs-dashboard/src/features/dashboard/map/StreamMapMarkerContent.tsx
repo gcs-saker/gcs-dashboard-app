@@ -1,5 +1,5 @@
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
-import { getDashboardStreamStatusText } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
+import { getDashboardStreamStatusText } from "@dashboard/streaming/streamTypes";
 
 interface StreamMapMarkerContentProps {
   stream: DashboardStreamSlot;

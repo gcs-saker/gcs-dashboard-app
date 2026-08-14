@@ -1,10 +1,10 @@
 import { useEffect, useMemo } from "react";
 import { useAuth } from "@auth/AuthProvider";
 import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
-import { buildEventLogViewModel } from "@dashboard/eventLogViewModel";
-import { useOperationalEventMetrics } from "@dashboard/hooks/useOperationalEventMetrics";
-import { useOperationalEvents } from "@dashboard/hooks/useOperationalEvents";
-import { useVirtualList } from "@dashboard/hooks/useVirtualList";
+import { buildEventLogViewModel } from "@dashboard/operations/eventLogViewModel";
+import { useOperationalEventMetrics } from "@dashboard/hooks/operations/useOperationalEventMetrics";
+import { useOperationalEvents } from "@dashboard/hooks/operations/useOperationalEvents";
+import { useVirtualList } from "@/features/shared/hooks/useVirtualList";
 import { useEventLogActions, useEventLogFilterState } from "@dashboard/stores/useEventLogStore";
 import { EventLogDetailPanel } from "./event-log/EventLogDetailPanel";
 import { EventLogFilters } from "./event-log/EventLogFilters";

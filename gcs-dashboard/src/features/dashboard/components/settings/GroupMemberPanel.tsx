@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@auth/AuthProvider";
-import { fetchAccessibleGroupInventory } from "@dashboard/groupAssetApi";
-import { fetchManagedGroups } from "@dashboard/managedGroupApi";
-import { fetchGroupMembers, replaceGroupAdministrator, updateGroupMember } from "@dashboard/groupMemberApi";
-import type { GroupMember } from "@dashboard/groupMembers";
+import { fetchAccessibleGroupInventory } from "@dashboard/assets/groupAssetApi";
+import { fetchManagedGroups } from "@dashboard/groups/managedGroupApi";
+import { fetchGroupMembers, replaceGroupAdministrator, updateGroupMember } from "@dashboard/groups/groupMemberApi";
+import type { GroupMember } from "@dashboard/groups/groupMembers";
 
 export function GroupMemberPanel() {
   const { currentUser } = useAuth();

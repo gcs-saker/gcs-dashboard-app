@@ -1,4 +1,4 @@
-import type { DashboardWidgetId } from "@dashboard/dashboardLayout";
+import type { DashboardWidgetId } from "@dashboard/layout/dashboardLayout";
 import { WidgetHeaderActions } from "@dashboard/components/WidgetHeaderActions";
 
 export interface DashboardWidgetControlsProps {

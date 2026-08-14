@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { useWhepPlayback } from "@streaming/hooks/useWhepPlayback";
+import { useWhepPlayback } from "@streaming/hooks/playback/useWhepPlayback";
 import { fetchAuthorizedTalkbackPlayback } from "@streaming/publisher/publisherApi";
 
 interface TalkbackAudioReceiverProps {

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { canManageDeviceProvisioning } from "@auth/rolePermissions";
-import { useProvisioningTokens } from "@dashboard/hooks/useProvisioningTokens";
+import { useProvisioningTokens } from "@dashboard/hooks/devices/useProvisioningTokens";
 import {
   DEFAULT_PROVISIONING_TOKEN_INPUT,
   type IssueProvisioningTokenInput,
   type ProvisioningTokenRecord,
-} from "@dashboard/deviceProvisioningTokens";
+} from "@dashboard/devices/deviceProvisioningTokens";
 
 type TokenCopyStatus = "idle" | "copied" | "failed";
 
