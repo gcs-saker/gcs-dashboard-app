@@ -143,7 +143,7 @@ func TestExchangeReturnsGatewayHandlerDecision(t *testing.T) {
 func TestExchangeEnforcesAuthenticatedDeviceGroupEndToEnd(t *testing.T) {
 	store := &recordingTelemetryStore{}
 	message := &sakerv1.GatewayStreamRequest{
-		RequestId: "request-1", GroupId: "co-b", AssetId: "device-1",
+		RequestId: "request-1", OrgId: "a4ai", GroupId: "co-b", AssetId: "device-1",
 		Payload: &sakerv1.GatewayStreamRequest_Telemetry{Telemetry: &sakerv1.TelemetryEnvelope{
 			EventId: "event-1", AssetId: "device-1",
 			Time: &sakerv1.Timestamped{ObservedUnixMillis: 1_722_067_200_000},
