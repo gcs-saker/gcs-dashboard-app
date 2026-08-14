@@ -10,6 +10,21 @@ data class GroupAccess(
     val canManageDevices: Boolean,
 )
 
+fun ownGroupAccess(principal: AuthenticatedPrincipal): GroupAccess {
+    val canOperate = principal.role == UserRole.ADMIN || principal.role == UserRole.OPERATOR ||
+        principal.role == UserRole.GROUP_ADMIN
+    val canManage = principal.role == UserRole.ADMIN || principal.role == UserRole.GROUP_ADMIN
+    return GroupAccess(
+        canView = true,
+        canControl = canOperate,
+        canManage = canManage,
+        canSendTalkback = canOperate,
+        canPublish = canOperate,
+        canManageMembers = canManage,
+        canManageDevices = canManage,
+    )
+}
+
 class GroupAccessService(
     private val hierarchyRepository: OrganizationHierarchyRepository,
     private val devices: RegisteredDeviceRepository,

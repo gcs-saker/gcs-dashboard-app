@@ -22,7 +22,7 @@ export function ProvisioningTokenPanel() {
     useProvisioningTokens();
   const [form, setForm] = useState<IssueProvisioningTokenInput>(DEFAULT_PROVISIONING_TOKEN_INPUT);
   const [copyStatus, setCopyStatus] = useState<TokenCopyStatus>("idle");
-  const isAdmin = canManageDeviceProvisioning(currentUser?.role);
+  const isAdmin = currentUser?.capabilities.canManageDevices ?? canManageDeviceProvisioning(currentUser?.role);
 
   const submit = useCallback((event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

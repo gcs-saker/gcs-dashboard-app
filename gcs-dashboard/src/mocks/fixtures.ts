@@ -9,6 +9,12 @@ export const MOCK_OPERATOR_TOKEN: TokenResponse = Object.freeze({
   expires_in_minutes: 30,
   username: "operator01",
   role: "operator",
+  group_id: "co-a",
+  securityVersion: 1,
+  capabilities: {
+    canView: true, canControl: true, canManage: false, canSendTalkback: true,
+    canPublish: true, canManageMembers: false, canManageDevices: false,
+  },
 });
 
 export const MOCK_STREAM_REGISTRY: readonly StreamRegistryResponse[] = Object.freeze([

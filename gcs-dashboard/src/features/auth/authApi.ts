@@ -119,6 +119,12 @@ export function persistTokenResponse(token: TokenResponse): void {
   storeAuthSession({
     accessToken: token.access_token,
     expiresAt: new Date(Date.now() + token.expires_in_minutes * 60_000).toISOString(),
-    user: { username: token.username, role: token.role },
+    user: {
+      username: token.username,
+      role: token.role,
+      groupId: token.group_id,
+      securityVersion: token.securityVersion,
+      capabilities: token.capabilities,
+    },
   });
 }

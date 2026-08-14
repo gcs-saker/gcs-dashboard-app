@@ -49,7 +49,7 @@ export function AuthProvider({ children, onSessionCleared }: AuthProviderProps) 
     void refreshSessionRequest()
       .then((token) => {
         if (disposed) return;
-        const user = { username: token.username, role: token.role };
+        const user = tokenUser(token);
         setAccessToken(token.access_token);
         setCurrentUser(user);
       })
@@ -81,7 +81,7 @@ export function AuthProvider({ children, onSessionCleared }: AuthProviderProps) 
 
   const login = useCallback(async (credentials: LoginRequest): Promise<void> => {
     const token = await loginRequest(credentials);
-    const user = { username: token.username, role: token.role };
+    const user = tokenUser(token);
     persistTokenResponse(token);
     didRequestLogoutRef.current = false;
     setAccessToken(token.access_token);
@@ -102,6 +102,16 @@ export function AuthProvider({ children, onSessionCleared }: AuthProviderProps) 
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+function tokenUser(token: Awaited<ReturnType<typeof loginRequest>>): AuthenticatedUser {
+  return {
+    username: token.username,
+    role: token.role,
+    groupId: token.group_id,
+    securityVersion: token.securityVersion,
+    capabilities: token.capabilities,
+  };
 }
 
 export function useAuth(): AuthContextValue {

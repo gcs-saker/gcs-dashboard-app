@@ -17,7 +17,13 @@ vi.mock("./authApi", () => ({
 vi.mock("./authStorage", () => ({
   clearAuthSession: vi.fn(),
   getStoredAccessToken: () => "access-token",
-  getStoredUser: () => ({ username: "operator-a", role: "operator" }),
+  getStoredUser: () => ({
+    username: "operator-a", role: "operator", groupId: "co-a", securityVersion: 1,
+    capabilities: {
+      canView: true, canControl: true, canManage: false, canSendTalkback: true,
+      canPublish: true, canManageMembers: false, canManageDevices: false,
+    },
+  }),
 }));
 
 function LogoutProbe() {

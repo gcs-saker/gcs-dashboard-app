@@ -3,6 +3,7 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
+import kr.co.a4ai.gcssaker.authpolicy.domain.ownGroupAccess
 import org.springframework.http.CacheControl
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
@@ -26,6 +27,9 @@ internal class AuthResponseFactory(private val settings: AuthRuntimeSettings) {
                     expiresInMinutes = expiresInMinutes,
                     username = principal.username,
                     role = principal.role.name.lowercase(),
+                    groupId = principal.groupId.value,
+                    securityVersion = principal.securityVersion,
+                    capabilities = principal.toCapabilitiesResponse(),
                 ),
             )
 
@@ -67,4 +71,17 @@ internal class AuthResponseFactory(private val settings: AuthRuntimeSettings) {
             .path(AuthCookieContract.PATH)
             .maxAge(Duration.ZERO)
             .build()
+}
+
+internal fun AuthenticatedPrincipal.toCapabilitiesResponse(): GroupCapabilitiesResponse {
+    val access = ownGroupAccess(this)
+    return GroupCapabilitiesResponse(
+        canView = access.canView,
+        canControl = access.canControl,
+        canManage = access.canManage,
+        canSendTalkback = access.canSendTalkback,
+        canPublish = access.canPublish,
+        canManageMembers = access.canManageMembers,
+        canManageDevices = access.canManageDevices,
+    )
 }

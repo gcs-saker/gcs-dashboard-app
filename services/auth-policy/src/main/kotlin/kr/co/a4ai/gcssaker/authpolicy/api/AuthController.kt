@@ -110,7 +110,13 @@ class AuthController(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
     ): CurrentUserResponse {
         val principal = requestGuard.requireCurrentPrincipal(authorization)
-        return CurrentUserResponse(username = principal.username, role = principal.role.name.lowercase())
+        return CurrentUserResponse(
+            username = principal.username,
+            role = principal.role.name.lowercase(),
+            groupId = principal.groupId.value,
+            securityVersion = principal.securityVersion,
+            capabilities = principal.toCapabilitiesResponse(),
+        )
     }
 
     @PostMapping(AuthApiRoutes.LOGOUT)

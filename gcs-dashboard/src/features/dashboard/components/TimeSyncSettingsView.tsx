@@ -14,6 +14,7 @@ import { SignupTokenPanel } from "./settings/SignupTokenPanel";
 import { TimeSyncForm } from "./settings/TimeSyncForm";
 import { TimeSyncHeader } from "./settings/TimeSyncHeader";
 import { TimeSyncMetrics } from "./settings/TimeSyncMetrics";
+import { GroupMemberPanel } from "./settings/GroupMemberPanel";
 
 const DEFAULT_TIME_SYNC_FORM: TimeSyncConfigInput = {
   mode: "public",
@@ -29,7 +30,7 @@ interface TimeSyncSettingsViewProps {
 
 export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }: TimeSyncSettingsViewProps = {}) {
   const { currentUser } = useAuth();
-  const canManageDevices = canManageDeviceProvisioning(currentUser?.role);
+  const canManageDevices = currentUser?.capabilities.canManageDevices ?? canManageDeviceProvisioning(currentUser?.role);
   const { errorMessage, isLoading, isSaving, lastUpdatedAt, refresh, runCheck, save, status } = useTimeSyncStatus();
   const [form, setForm] = useState<TimeSyncConfigInput>(DEFAULT_TIME_SYNC_FORM);
   const [activeTab, setActiveTab] = useState<SettingsTab>("time");
@@ -94,6 +95,8 @@ export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }
           <ProvisioningTokenPanel />
           <DeviceApprovalPanel />
         </>
+      ) : activeTab === "account" && canManageDevices ? (
+        <GroupMemberPanel />
       ) : (
         <SettingsPolicyPanel tab={activeTab as PolicySettingsTab} />
       )}

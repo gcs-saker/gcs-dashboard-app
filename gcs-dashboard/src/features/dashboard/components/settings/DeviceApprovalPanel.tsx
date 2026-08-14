@@ -7,7 +7,7 @@ import type { RegisteredDevice } from "@dashboard/adminDevices";
 export function DeviceApprovalPanel() {
   const { currentUser } = useAuth();
   const { activate, devices, disable, errorMessage, isLoading, mutatingDeviceUuid, pendingDevices, refresh, rename } = useAdminDevices();
-  const isAdmin = canManageDeviceProvisioning(currentUser?.role);
+  const isAdmin = currentUser?.capabilities.canManageDevices ?? canManageDeviceProvisioning(currentUser?.role);
 
   return (
     <section className="time-sync-view__policy device-approval-panel" aria-label="승인 대기 장비">

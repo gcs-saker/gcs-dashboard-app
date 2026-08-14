@@ -37,9 +37,26 @@ data class TokenResponse(
     val expiresInMinutes: Long,
     val username: String,
     val role: String,
+    @get:JsonProperty("group_id")
+    val groupId: String,
+    val securityVersion: Long,
+    val capabilities: GroupCapabilitiesResponse,
 )
 
 data class CurrentUserResponse(
     val username: String,
     val role: String,
+    val groupId: String,
+    val securityVersion: Long,
+    val capabilities: GroupCapabilitiesResponse,
+)
+
+data class GroupCapabilitiesResponse(
+    val canView: Boolean,
+    val canControl: Boolean,
+    val canManage: Boolean,
+    val canSendTalkback: Boolean,
+    val canPublish: Boolean,
+    val canManageMembers: Boolean,
+    val canManageDevices: Boolean,
 )

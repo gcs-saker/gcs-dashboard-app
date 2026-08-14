@@ -145,6 +145,9 @@ class ApiContractTest {
                 expiresInMinutes = ApiContractFixtures.EXPIRES_IN_MINUTES_VALUE,
                 username = ApiContractFixtures.USERNAME_VALUE,
                 role = ApiContractFixtures.ROLE_VALUE,
+                groupId = "co-a",
+                securityVersion = 1,
+                capabilities = GroupCapabilitiesResponse(true, true, false, true, true, false, false),
             ),
         )
 
