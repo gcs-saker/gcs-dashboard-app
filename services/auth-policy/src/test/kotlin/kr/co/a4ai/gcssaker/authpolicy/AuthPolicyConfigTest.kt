@@ -221,6 +221,7 @@ class AuthPolicyConfigTest {
             tokenService,
             NoopPrincipalCache,
             StatelessRefreshSessionStore,
+            EmptyObjectProvider(),
         )
 
         assertNotNull(repository.findByUsername("admin01"))
