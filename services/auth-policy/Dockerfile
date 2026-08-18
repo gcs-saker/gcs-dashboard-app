@@ -5,14 +5,13 @@ COPY gradle ./gradle
 COPY src ./src
 RUN gradle --no-daemon clean bootJar
 
-FROM eclipse-temurin:21-jre@sha256:8cef5fc7bebe421363ab543a2f4db5caf7d119d8db67d56b0f56c485d2de4d55
+FROM bellsoft/liberica-runtime-container@sha256:9f40ba2e62588e78433db1faddaf0e3bf712edf12fc8837c4ef9df652a01896d
 ARG SOURCE_COMMIT=unknown
 LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
 WORKDIR /app
 COPY --from=build /workspace/build/libs/*.jar /app/auth-policy.jar
-RUN rm -f /usr/bin/pebble \
-    && groupadd --system --gid 10002 gcs \
-    && useradd --system --uid 10002 --gid gcs --home /app --shell /usr/sbin/nologin gcs \
+RUN addgroup -S -g 10002 gcs \
+    && adduser -S -D -H -u 10002 -G gcs -s /sbin/nologin gcs \
     && chown -R gcs:gcs /app
 USER 10002:10002
 EXPOSE 8080
