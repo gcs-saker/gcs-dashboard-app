@@ -5,10 +5,8 @@ import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@features/render
 import type { DashboardPageViewProps } from "@dashboard/components/templates/DashboardPageView";
 import { getDashboardWidgetDefinition, setDashboardWidgetVisible, type DashboardWidgetId } from "@dashboard/dashboardLayout";
 import { buildDashboardPageViewModel } from "@dashboard/dashboardPageViewModel";
-import { useDashboardChunkPreload } from "./useDashboardChunkPreload";
-import { useDashboardLocalUiState } from "./useDashboardLocalUiState";
-import { useDashboardMotionMode } from "./useDashboardMotionMode";
-import { useDashboardPageActionInput } from "./useDashboardPageActionInput";
+import { useDashboardChunkPreload } from "./useDashboardChunkPreload"; import { useDashboardLocalUiState } from "./useDashboardLocalUiState";
+import { useDashboardMotionMode } from "./useDashboardMotionMode"; import { useDashboardPageActionInput } from "./useDashboardPageActionInput";
 import { useDashboardPageActions } from "./useDashboardPageActions";
 import { useDashboardStreams } from "./useDashboardStreams";
 import { useDashboardUserPreferences } from "./useDashboardUserPreferences";
