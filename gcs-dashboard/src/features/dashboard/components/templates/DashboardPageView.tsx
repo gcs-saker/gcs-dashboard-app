@@ -9,7 +9,6 @@ import { DashboardWidgetControls } from "@dashboard/components/molecules/Dashboa
 import { DashboardHeader, type DashboardHeaderProps } from "@dashboard/components/navigation/DashboardHeader";
 import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
 import { DashboardViewRouter, type DashboardViewRouterProps } from "./DashboardViewRouter";
-import { StreamReceiverView } from "./StreamReceiverView";
 import { useWhipAudioPublisher } from "@streaming/hooks/useWhipAudioPublisher";
 
 export interface DashboardWidgetControlBindings {
@@ -60,15 +59,9 @@ export function DashboardPageView({
 
   return (
     <main className="ops-dashboard" data-motion={motionMode} data-route-mode={routeMode} aria-label="Field Ops Dashboard">
-      {routeMode === "receiver" ? (
-        <StreamReceiverView
-          currentUsername={headerProps.currentUser?.username ?? "수신 사용자"}
-          onLogout={headerProps.onLogout}
-          receiver={{ ...routerProps, talkback, widgetControls }}
-        />
-      ) : <DashboardHeader {...headerProps} talkback={talkback} />}
+      <DashboardHeader {...headerProps} talkback={talkback} />
 
-      {routeMode !== "receiver" && notification ? (
+      {notification ? (
         <StreamNotificationToast
           notification={notification}
           onDismiss={onDismissNotification}
@@ -76,7 +69,7 @@ export function DashboardPageView({
         />
       ) : null}
 
-      {routeMode !== "receiver" ? <DashboardErrorBoundary
+      <DashboardErrorBoundary
         boundaryId={`dashboard-route:${routerProps.activeView}`}
         description="현재 화면만 격리되었습니다. 상단 메뉴로 다른 화면을 열거나 다시 시도할 수 있습니다."
         resetKeys={[routerProps.activeView]}
@@ -84,8 +77,8 @@ export function DashboardPageView({
         title="대시보드 화면"
       >
         <DashboardViewRouter {...routerProps} talkback={talkback} widgetControls={widgetControls} />
-      </DashboardErrorBoundary> : null}
-      {routeMode !== "receiver" ? <DashboardOverlays {...overlayProps} widgetControls={widgetControls} /> : null}
+      </DashboardErrorBoundary>
+      <DashboardOverlays {...overlayProps} widgetControls={widgetControls} />
     </main>
   );
 }

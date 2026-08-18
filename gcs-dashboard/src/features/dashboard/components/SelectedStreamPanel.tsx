@@ -17,7 +17,6 @@ interface SelectedStreamPanelProps {
   isPinned?: boolean;
   onPlaybackStatusChange?: (streamId: string, snapshot: RealtimePlayerSnapshot) => void;
   onToggleAiMode?: (streamId: string) => void;
-  showAiControl?: boolean;
 }
 
 export function SelectedStreamPanel({
@@ -27,7 +26,6 @@ export function SelectedStreamPanel({
   isPinned = false,
   onPlaybackStatusChange,
   onToggleAiMode,
-  showAiControl = true,
 }: SelectedStreamPanelProps) {
   useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.selectedStreamPanel);
   return (
@@ -46,14 +44,14 @@ export function SelectedStreamPanel({
           <span className={`ops-badge ${getDashboardStreamStatusClass(stream.status)}`}>
             {getDashboardStreamStatusText(stream.status)}
           </span>
-          {showAiControl ? <button
+          <button
             aria-pressed={Boolean(stream.aiModeEnabled)}
             className={`ops-command-button stream-ai-toggle ${stream.aiModeEnabled ? "is-active" : ""}`}
             onClick={() => onToggleAiMode?.(stream.id)}
             type="button"
           >
             AI 모드
-          </button> : null}
+          </button>
           {controls}
         </span>
       </div>
