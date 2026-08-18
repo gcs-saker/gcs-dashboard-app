@@ -84,9 +84,13 @@
 }
 
 .stream-card__topline {
+  background: linear-gradient(180deg, rgba(3, 10, 15, 0.94), rgba(3, 10, 15, 0.58), transparent);
+  border-bottom: 0;
   display: grid;
   gap: 8px;
   grid-template-columns: minmax(0, 1fr) auto auto;
+  min-height: 38px;
+  padding-inline: 10px;
 }
 
 .stream-card__topline strong {
@@ -97,7 +101,7 @@
 }
 
 .stream-card__visual-status {
-  bottom: 10px;
+  bottom: 36px;
   left: 10px;
   position: absolute;
   z-index: 2;
