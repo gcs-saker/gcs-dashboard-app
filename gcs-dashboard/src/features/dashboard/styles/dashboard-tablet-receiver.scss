@@ -1,0 +1,69 @@
+@media (min-width: 761px) and (max-width: 1366px) {
+  .ops-dashboard__grid {
+    grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.55fr);
+    grid-template-rows: minmax(420px, 58vh) minmax(260px, auto) minmax(300px, auto);
+  }
+
+  .selected-stream {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-height: 420px;
+  }
+
+  .stream-grid {
+    grid-column: 1;
+    grid-row: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .telemetry-panel {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .tactical-map {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .ops-summary {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .audio-waveform,
+  .ai-panel {
+    grid-column: 1 / -1;
+  }
+
+  .ops-dashboard[data-route-mode="receiver"] .ops-dashboard__grid {
+    grid-template-rows: minmax(480px, 68vh) minmax(250px, 32vh);
+    min-height: calc(100dvh - 84px);
+  }
+
+  .ops-dashboard[data-route-mode="receiver"] .selected-stream {
+    min-height: 480px;
+  }
+
+  .ops-dashboard[data-route-mode="receiver"] .tactical-map,
+  .ops-dashboard[data-route-mode="receiver"] .ops-summary,
+  .ops-dashboard[data-route-mode="receiver"] .audio-waveform,
+  .ops-dashboard[data-route-mode="receiver"] .ai-panel {
+    display: none;
+  }
+
+  .ops-dashboard[data-route-mode="receiver"] .stream-grid,
+  .ops-dashboard[data-route-mode="receiver"] .telemetry-panel {
+    min-height: 250px;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1024px) {
+  .ops-dashboard[data-route-mode="receiver"] .ops-dashboard__grid {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+
+  .ops-dashboard[data-route-mode="receiver"] .stream-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import type { DashboardWidgetId } from "@dashboard/dashboardLayout";
 import type { StreamAvailabilityNotification } from "@dashboard/hooks/useStreamAvailabilityNotification";
 import type { DashboardUserPreferences } from "@dashboard/userPreferences";
+import type { DashboardRouteMode } from "@dashboard/dashboardRouteMode";
 import { DashboardOverlays, type DashboardOverlaysProps } from "@dashboard/components/DashboardOverlays";
 import { StreamNotificationToast } from "@dashboard/components/atoms/StreamNotificationToast";
 import { DashboardWidgetControls } from "@dashboard/components/molecules/DashboardWidgetControls";
@@ -23,6 +24,7 @@ export interface DashboardPageViewProps {
   notification: StreamAvailabilityNotification | null;
   onDismissNotification: () => void;
   onOpenNotification: (streamId: string) => void;
+  routeMode: DashboardRouteMode;
   overlayProps: Omit<DashboardOverlaysProps, "widgetControls">;
   routerProps: Omit<DashboardViewRouterProps, "talkback" | "widgetControls">;
   widgetControls: DashboardWidgetControlBindings;
@@ -34,6 +36,7 @@ export function DashboardPageView({
   notification,
   onDismissNotification,
   onOpenNotification,
+  routeMode,
   overlayProps,
   routerProps,
   widgetControls: widgetControlBindings,
@@ -55,7 +58,7 @@ export function DashboardPageView({
   );
 
   return (
-    <main className="ops-dashboard" data-motion={motionMode} aria-label="Field Ops Dashboard">
+    <main className="ops-dashboard" data-motion={motionMode} data-route-mode={routeMode} aria-label="Field Ops Dashboard">
       <DashboardHeader {...headerProps} talkback={talkback} />
 
       {notification ? (

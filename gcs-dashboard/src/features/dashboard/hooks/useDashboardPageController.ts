@@ -1,14 +1,12 @@
 import { useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@auth/AuthProvider";
-import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@features/renderDiagnostics";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@auth/AuthProvider"; import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@features/renderDiagnostics";
 import type { DashboardPageViewProps } from "@dashboard/components/templates/DashboardPageView";
 import { getDashboardWidgetDefinition, setDashboardWidgetVisible, type DashboardWidgetId } from "@dashboard/dashboardLayout";
-import { buildDashboardPageViewModel } from "@dashboard/dashboardPageViewModel";
+import { buildDashboardPageViewModel } from "@dashboard/dashboardPageViewModel"; import { dashboardRouteMode } from "@dashboard/dashboardRouteMode";
 import { useDashboardChunkPreload } from "./useDashboardChunkPreload"; import { useDashboardLocalUiState } from "./useDashboardLocalUiState";
 import { useDashboardMotionMode } from "./useDashboardMotionMode"; import { useDashboardPageActionInput } from "./useDashboardPageActionInput";
-import { useDashboardPageActions } from "./useDashboardPageActions";
-import { useDashboardStreams } from "./useDashboardStreams";
+import { useDashboardPageActions } from "./useDashboardPageActions"; import { useDashboardStreams } from "./useDashboardStreams";
 import { useDashboardUserPreferences } from "./useDashboardUserPreferences";
 import { useStreamAvailabilityNotification } from "./useStreamAvailabilityNotification";
 export function useDashboardPageController(): DashboardPageViewProps {
@@ -18,6 +16,8 @@ export function useDashboardPageController(): DashboardPageViewProps {
   const ui = useDashboardLocalUiState();
   const preferencesApi = useDashboardUserPreferences(currentUser?.username);
   const { activeView, cctvLayoutMode, cctvQualityMode, layout, motionMode } = preferencesApi.preferences;
+  const routeMode = dashboardRouteMode(useLocation().pathname);
+  const effectiveActiveView = routeMode === "receiver" ? "dashboard" : activeView;
   const handleAuthFailure = useCallback((): void => {
     logout();
     navigate("/login?reason=session-expired", { replace: true });
@@ -34,10 +34,10 @@ export function useDashboardPageController(): DashboardPageViewProps {
   }), [preferencesApi.preferences, streamState.selectedStream, streamState.streams]);
   const revealDetectedStream = useCallback((streamId: string): void => {
     streamState.selectStream(streamId);
-    if (activeView === "dashboard") {
+    if (effectiveActiveView === "dashboard") {
       preferencesApi.setLayout((current) => setDashboardWidgetVisible(current, "selected-stream", true));
     }
-  }, [activeView, preferencesApi.setLayout, streamState.selectStream]);
+  }, [effectiveActiveView, preferencesApi.setLayout, streamState.selectStream]);
   const [notification, setNotification] = useStreamAvailabilityNotification(streamState.streams, revealDetectedStream);
   useDashboardChunkPreload();
   useDashboardMotionMode(motionMode);
@@ -64,7 +64,7 @@ export function useDashboardPageController(): DashboardPageViewProps {
   const hideWidget = useCallback((widgetId: DashboardWidgetId): void => actions.setWidgetVisible(widgetId, false), [actions]);
   return {
     headerProps: {
-      activeView,
+      activeView: effectiveActiveView,
       currentUser,
       isAssetDrawerOpen: ui.isAssetDrawerOpen,
       layoutMessage: ui.layoutMessage,
@@ -78,11 +78,12 @@ export function useDashboardPageController(): DashboardPageViewProps {
       talkbackTargetStreamIds: ui.talkbackTargetStreamIds,
     },
     motionMode,
+    routeMode,
     notification,
     onDismissNotification: dismissNotification,
     onOpenNotification: openNotification,
     routerProps: {
-      activeView,
+      activeView: effectiveActiveView,
       aiResultsWidget: getDashboardWidgetDefinition("ai-results"),
       audioActiveStreamId: ui.audioActiveStreamId,
       audioAnalysis: ui.audioAnalysis,
@@ -121,7 +122,7 @@ export function useDashboardPageController(): DashboardPageViewProps {
       editingStream: streamState.editingStream,
       isAssetDrawerOpen: ui.isAssetDrawerOpen,
       isAssetTreeVisible: preferencesApi.isWidgetVisible("asset-tree"),
-      isDashboardActive: activeView === "dashboard",
+      isDashboardActive: effectiveActiveView === "dashboard",
       isWidgetDialogOpen: ui.isWidgetDialogOpen,
       layout,
       onApplyWidgetDialog: actions.applyWidgetDialog,
