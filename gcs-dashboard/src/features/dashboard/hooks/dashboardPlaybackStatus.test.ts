@@ -13,7 +13,7 @@ function snapshot(overrides: Partial<RealtimePlayerSnapshot>): RealtimePlayerSna
 
 describe("dashboard playback status", () => {
   test("only confirms online after a WebRTC first frame", () => {
-    expect(dashboardStatusFromPlaybackSnapshot(snapshot({ mode: "webrtc", streamStatus: "online" }))).toBe("reconnecting");
+    expect(dashboardStatusFromPlaybackSnapshot(snapshot({ mode: "webrtc", streamStatus: "online" }))).toBeNull();
     expect(dashboardStatusFromPlaybackSnapshot(snapshot({
       mode: "webrtc",
       streamStatus: "online",

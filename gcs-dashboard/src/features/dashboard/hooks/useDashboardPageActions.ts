@@ -89,7 +89,8 @@ export function useDashboardPageActions(input: DashboardPageActionInput) {
   const handleSelectedPlaybackStatusChange = useCallback((streamId: string, snapshot: RealtimePlayerSnapshot): void => {
     input.setAudioAnalysis((current) => nextAudioAnalysisState(current, streamId, snapshot, input.streams));
     input.setAudioActiveStreamId((currentStreamId) => nextAudioActiveStreamId(currentStreamId, streamId, snapshot));
-    input.updateStreamRuntimeStatus(streamId, dashboardStatusFromPlaybackSnapshot(snapshot));
+    const dashboardStatus = dashboardStatusFromPlaybackSnapshot(snapshot);
+    if (dashboardStatus) input.updateStreamRuntimeStatus(streamId, dashboardStatus);
   }, [input]);
 
   const toggleTalkbackTarget = useCallback((streamPath: string): void => {
@@ -135,12 +136,13 @@ export function useDashboardPageActions(input: DashboardPageActionInput) {
   }), [applyWidgetDialog, cancelStreamConnection, cancelWidgetDialog, closeAssetDrawer, connectStreamDevice, disconnectCurrentStreamSlot, handleSelectedPlaybackStatusChange, openStreamConnection, resetLayout, selectAssetTreeStream, selectMapStream, setWidgetVisible, toggleStreamAiMode, toggleTalkbackTarget, toggleWidgetPin]);
 }
 
-export function dashboardStatusFromPlaybackSnapshot(snapshot: RealtimePlayerSnapshot): DashboardStreamStatus {
+export function dashboardStatusFromPlaybackSnapshot(snapshot: RealtimePlayerSnapshot): DashboardStreamStatus | null {
   if (snapshot.mode === "webrtc" && snapshot.webrtcFirstFrameLatencyMs !== null && snapshot.webrtcFirstFrameLatencyMs !== undefined) {
     return "online";
   }
   if (snapshot.mode === "error") return "error";
   if (snapshot.mode === "offline" || snapshot.streamStatus === "offline") return "offline";
   if (snapshot.mode === "hls") return "fallback";
+  if (snapshot.mode === "webrtc") return null;
   return "reconnecting";
 }
