@@ -92,6 +92,14 @@
     flex-wrap: nowrap;
   }
 
+  .ops-dashboard__actions .ops-command-button,
+  .ops-dashboard__actions .ops-user-chip,
+  .ops-dashboard__actions .ops-layout-status {
+    font-size: 0.72rem;
+    padding-inline: 7px;
+    white-space: nowrap;
+  }
+
   .ops-dashboard[data-route-mode="receiver"] .ops-dashboard__grid {
     grid-template-columns: minmax(0, 1fr) 300px;
   }
