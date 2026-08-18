@@ -31,8 +31,11 @@ export const StreamWallTile = memo(function StreamWallTile({ index, onSelect, on
       <div className="stream-wall-tile__toolbar">
         <span className={`stream-wall-tile__status is-${stream?.status ?? "empty"}`} aria-hidden="true" />
         <label className="stream-wall-tile__picker">
-          <span className="sr-only">{index + 1}번 화면 스트림 선택</span>
-          <select value={stream?.id ?? ""} onChange={(event) => onSelect(index, event.target.value || null)}>
+          <select
+            aria-label={`${index + 1}번 화면 스트림 선택`}
+            value={stream?.id ?? ""}
+            onChange={(event) => onSelect(index, event.target.value || null)}
+          >
             <option value="">스트림 선택</option>
             {streams.map((option) => (
               <option key={option.id} value={option.id}>{getDashboardStreamDisplayName(option)}</option>

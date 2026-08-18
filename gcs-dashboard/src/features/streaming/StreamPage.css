@@ -93,19 +93,47 @@
 .stream-wall-tile__status { background: #46555e; border-radius: 50%; height: 6px; width: 6px; }
 .stream-wall-tile__status.is-online { background: #63d8a0; box-shadow: 0 0 8px rgba(99, 216, 160, 0.55); }
 .stream-wall-tile__status.is-error, .stream-wall-tile__status.is-offline { background: #d77878; }
-.stream-wall-tile__picker { flex: 1; min-width: 0; }
+.stream-wall-tile__picker {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.stream-wall-tile__picker::after {
+  border-bottom: 1px solid #78909d;
+  border-right: 1px solid #78909d;
+  content: "";
+  height: 5px;
+  pointer-events: none;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-65%) rotate(45deg);
+  width: 5px;
+}
+
 .stream-wall-tile__picker select {
   appearance: none;
-  background: transparent;
-  border: 0;
-  color: #d4e0e6;
+  background: rgba(16, 27, 35, 0.82);
+  border: 1px solid rgba(126, 164, 184, 0.24);
+  border-radius: 6px;
+  color: #dce9ef;
   cursor: pointer;
+  display: block;
   font: inherit;
   font-size: 0.75rem;
-  max-width: 100%;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
   outline: 0;
-  padding: 2px 18px 2px 0;
+  padding: 6px 28px 6px 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
 }
+.stream-wall-tile__picker select:hover { border-color: rgba(111, 193, 218, 0.5); }
+.stream-wall-tile__picker select:focus-visible { border-color: #61bdd6; box-shadow: 0 0 0 2px rgba(97, 189, 214, 0.18); }
 .stream-wall-tile__picker option { background: #101820; color: #d4e0e6; }
 
 .stream-wall-tile__ai {
