@@ -26,7 +26,7 @@ export const TimelineEventRow = memo(function TimelineEventRow({
       <strong>{event.source}</strong>
       <em>{event.severity.toUpperCase()}</em>
       <p>{event.message}</p>
-      <small>{EVENT_CATEGORY_LABELS[event.category]} · RTT {event.latencyMs} ms · 연결 {event.connections}</small>
+      <small>{EVENT_CATEGORY_LABELS[event.category]}</small>
     </button>
   );
 });

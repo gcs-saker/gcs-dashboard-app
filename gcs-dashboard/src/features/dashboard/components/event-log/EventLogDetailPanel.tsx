@@ -27,18 +27,31 @@ export function EventLogDetailPanel({ event, onCategoryFilterChange, onSourceFil
             <button onClick={() => onSourceFilterChange(event.source)} type="button">이 서버만 보기</button>
             <button onClick={() => onCategoryFilterChange(event.category)} type="button">이 분류만 보기</button>
           </div>
-          <EventLogDiagnosis event={event} />
-          <EventLogDetailFields event={event} />
-          <section className="event-log-view__raw" aria-label="운영 이벤트 원문">
-            <span>운영 이벤트 원문</span>
-            <pre>{formatOperationalEventPayload(event)}</pre>
-          </section>
+          <EventLogCoreFields event={event} />
+          <details className="event-log-view__advanced-detail">
+            <summary>진단 및 기술 정보</summary>
+            <EventLogDiagnosis event={event} />
+            <EventLogDetailFields event={event} />
+            <section className="event-log-view__raw" aria-label="운영 이벤트 원문">
+              <span>운영 이벤트 원문</span>
+              <pre>{formatOperationalEventPayload(event)}</pre>
+            </section>
+          </details>
         </>
       ) : (
         <p>표시할 이벤트가 없습니다.</p>
       )}
     </aside>
   );
+}
+
+function EventLogCoreFields({ event }: { event: OperationalEvent }) {
+  const rows = [
+    ["시간", new Date(event.occurredAt).toLocaleString("ko-KR")],
+    ["출처", event.source],
+    ["분류", EVENT_CATEGORY_LABELS[event.category]],
+  ];
+  return <dl className="event-log-view__core-fields">{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
 }
 
 function EventLogDiagnosis({ event }: { event: OperationalEvent }) {
@@ -53,9 +66,6 @@ function EventLogDiagnosis({ event }: { event: OperationalEvent }) {
 
 function EventLogDetailFields({ event }: { event: OperationalEvent }) {
   const rows = [
-    ["시간", new Date(event.occurredAt).toLocaleString("ko-KR")],
-    ["출처", event.source],
-    ["분류", EVENT_CATEGORY_LABELS[event.category]],
     ["이벤트 타입", event.eventType ?? "미지정"],
     ["서비스", event.sourceService ?? "미지정"],
     ["스트림", event.streamId ?? "미지정"],

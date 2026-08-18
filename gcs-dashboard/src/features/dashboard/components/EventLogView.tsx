@@ -66,17 +66,20 @@ export function EventLogView() {
       />
       <EventLogIncidentStrip incidents={viewModel.currentIncidents} />
       <EventLogQuickFilters activeFilterText={viewModel.activeFilterText} filters={filters} onPatchFilters={patchFilters} onResetFilters={resetFilters} />
-      <EventLogFilters
-        categoryFilter={categoryFilter}
-        filters={filters}
-        onCategoryFilterChange={setCategoryFilter}
-        onPatchFilters={patchFilters}
-        onSourceFilterChange={setSourceFilter}
-        sourceFilter={sourceFilter}
-        sourceOptions={viewModel.sourceOptions}
-      />
+      <details className="event-log-view__advanced-filters">
+        <summary>상세 필터</summary>
+        <EventLogFilters
+          categoryFilter={categoryFilter}
+          filters={filters}
+          onCategoryFilterChange={setCategoryFilter}
+          onPatchFilters={patchFilters}
+          onSourceFilterChange={setSourceFilter}
+          sourceFilter={sourceFilter}
+          sourceOptions={viewModel.sourceOptions}
+        />
+      </details>
       {errorMessage || eventMetrics.errorMessage ? (
-        <p className="event-log-view__error" role="alert">{errorMessage ?? eventMetrics.errorMessage}</p>
+        <p className="event-log-view__error" role="alert">운영 지표를 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.</p>
       ) : null}
       <div className="event-log-view__workspace">
         <EventLogNetworkPanel

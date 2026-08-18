@@ -13,6 +13,28 @@
   gap: 4px;
 }
 
+.event-log-view__advanced-filters {
+  background: rgba(4, 14, 21, 0.52);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+}
+
+.event-log-view__advanced-filters > summary,
+.event-log-view__advanced-detail > summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 900;
+  list-style-position: inside;
+  padding: 8px 10px;
+}
+
+.event-log-view__advanced-filters .event-log-view__filters {
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--line-soft);
+}
+
 .event-log-view__error {
   border: 1px solid rgba(255, 108, 93, 0.56);
   color: #ffb0a6;

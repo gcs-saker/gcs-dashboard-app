@@ -45,6 +45,20 @@
   padding: 0 14px;
 }
 
+.event-log-view__advanced-detail {
+  border-top: 1px solid var(--line-soft);
+}
+
+.event-log-view__advanced-detail[open] > summary {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.event-log-view__advanced-detail > .event-log-view__diagnosis,
+.event-log-view__advanced-detail > dl,
+.event-log-view__advanced-detail > .event-log-view__raw {
+  margin-top: 10px;
+}
+
 .event-log-view__detail dl {
   display: grid;
   gap: 8px;

@@ -59,6 +59,7 @@ describe("event log panels", () => {
     );
 
     expect(screen.getByText("TURN fallback 감지")).toBeInTheDocument();
+    expect(screen.getByText("진단 및 기술 정보").closest("details")).not.toHaveAttribute("open");
     expect(screen.getByText("원인 후보")).toBeInTheDocument();
     expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("icePath=relay");
 
@@ -114,7 +115,8 @@ describe("event log panels", () => {
 
     const row = screen.getByRole("option", { selected: true });
     expect(row).toHaveTextContent("Signaling 서버");
-    expect(row).toHaveTextContent("Network · RTT 420 ms · 연결 3");
+    expect(row).toHaveTextContent("Network");
+    expect(row).not.toHaveTextContent("RTT 420 ms");
 
     await user.click(row);
 

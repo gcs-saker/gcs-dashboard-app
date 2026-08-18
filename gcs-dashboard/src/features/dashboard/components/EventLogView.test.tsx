@@ -90,6 +90,7 @@ describe("EventLogView", () => {
     renderWithQueryClient(<EventLogView />);
 
     expect(screen.getByLabelText("이벤트로그")).toBeInTheDocument();
+    expect(screen.getByText("상세 필터").closest("details")).not.toHaveAttribute("open");
     expect(screen.getByLabelText("시간대별 네트워크 지표")).toBeInTheDocument();
     expect(screen.getByText("운영 이벤트 타임라인")).toBeInTheDocument();
     expect(screen.getByText("이벤트 상세")).toBeInTheDocument();
