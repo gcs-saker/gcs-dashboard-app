@@ -20,21 +20,26 @@ import {
 import { useStreamDevicePolling } from "./useStreamDevicePolling";
 
 interface UseDashboardStreamsOptions {
+  readonly initialStreams?: readonly DashboardStreamSlot[];
   readonly onAuthFailure?: () => void;
   readonly onStreamDeviceAliasChange?: (deviceId: string, alias: string) => void;
   readonly streamPreferences?: StreamPreferencesSnapshot;
 }
 
 export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
-  const { onAuthFailure, onStreamDeviceAliasChange, streamPreferences } = options;
+  const { initialStreams, onAuthFailure, onStreamDeviceAliasChange, streamPreferences } = options;
   const preferences = streamPreferences ?? EMPTY_STREAM_PREFERENCES;
-  const [streams, setStreams] = useState(() => DEFAULT_DASHBOARD_STREAMS);
+  const [streams, setStreams] = useState<DashboardStreamSlot[]>(() =>
+    initialStreams ? [...initialStreams] : DEFAULT_DASHBOARD_STREAMS,
+  );
   const [streamDevices, setStreamDevices] = useState<StreamDeviceOption[]>(() =>
     import.meta.env.MODE === "test"
       ? applyStreamDeviceAliases(MOCK_STREAM_DEVICES, preferences.deviceAliases)
       : [],
   );
-  const [selectedStreamId, setSelectedStreamId] = useState(DEFAULT_DASHBOARD_STREAMS[0].id);
+  const [selectedStreamId, setSelectedStreamId] = useState(
+    initialStreams?.[0]?.id ?? DEFAULT_DASHBOARD_STREAMS[0].id,
+  );
   const [editingStreamId, setEditingStreamId] = useState<string | null>(null);
 
   const selectedStream = useMemo(
