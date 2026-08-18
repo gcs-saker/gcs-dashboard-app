@@ -1,4 +1,4 @@
-import { memo, useMemo, type CSSProperties } from "react";
+import { memo, type CSSProperties } from "react";
 import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import {
@@ -9,7 +9,7 @@ import {
   getPacketLossTone,
   type AudioAnalysisSnapshot,
 } from "@dashboard/layout/dashboardPresentation";
-import { useRafNumber } from "@/features/shared/hooks/useRafNumber";
+import { useAudioWaveformHistory } from "@dashboard/hooks/useAudioWaveformHistory";
 import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
 
 interface AudioWaveformPanelProps {
@@ -31,12 +31,12 @@ export const AudioWaveformPanel = memo(function AudioWaveformPanel({
   const hasTrack = Boolean(analysis?.hasAudioTrack);
   const isMicActive = talkback.hasLocalAudioTrack;
   const audioLevel = isMicActive ? talkback.micLevel : analysis?.audioLevel ?? null;
-  const displayLevel = audioLevel ?? (isActive || isMicActive ? 0.18 : null);
-  const rafAudioLevel = useRafNumber(audioLevel ?? 0, isActive && isMotionEnabled);
-  const bars = useMemo(
-    () => buildAudioWaveformBars(displayLevel === null ? null : audioLevel === null ? displayLevel : rafAudioLevel, isActive || hasTrack),
-    [audioLevel, displayLevel, hasTrack, isActive, rafAudioLevel],
-  );
+  const waveformHistory = useAudioWaveformHistory({
+    audioLevel,
+    isSignalPresent: isMotionEnabled && (isActive || hasTrack || isMicActive),
+    sourceId: isMicActive ? "operator-microphone" : selectedStream.id,
+  });
+  const bars = isMotionEnabled ? waveformHistory : buildAudioWaveformBars(audioLevel, isActive || hasTrack || isMicActive);
   const sourceName = isMicActive ? "관제 마이크" : analysis?.title ?? selectedStream.title;
   const modeText = isMicActive ? "송신 음성" : analysis ? formatPlaybackMode(analysis.mode, analysis.streamStatus) : "대기";
   const latencyText = analysis?.firstFrameLatencyMs !== null && analysis?.firstFrameLatencyMs !== undefined ? `${analysis.firstFrameLatencyMs} ms` : "대기";

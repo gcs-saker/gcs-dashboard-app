@@ -77,7 +77,7 @@ export function WebRTCPlayerFigure({
         controls={controls}
         className="webrtc-player__video"
       />
-      <figcaption className="webrtc-player__overlay">
+      {controls ? <figcaption className="webrtc-player__overlay">
         <span
           className={`webrtc-player__status webrtc-player__status--${status}`}
           role="status"
@@ -101,7 +101,7 @@ export function WebRTCPlayerFigure({
           {audioDiagnosticLabel(audioPlaybackState)}
         </span>
         {errorMessage ? <span className="webrtc-player__error">{errorMessage}</span> : null}
-      </figcaption>
+      </figcaption> : null}
     </figure>
   );
 }

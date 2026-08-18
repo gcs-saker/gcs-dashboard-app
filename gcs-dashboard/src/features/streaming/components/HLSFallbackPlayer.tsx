@@ -65,7 +65,7 @@ export function HLSFallbackPlayer({
         poster={poster}
         className="hls-fallback-player__video"
       />
-      <figcaption className="hls-fallback-player__overlay">
+      {controls ? <figcaption className="hls-fallback-player__overlay">
         <span
           className={`hls-fallback-player__status hls-fallback-player__status--${status}`}
           role="status"
@@ -81,7 +81,7 @@ export function HLSFallbackPlayer({
           WebCodecs: {webCodecs.supported ? "ready" : "fallback"}
         </span>
         {errorMessage ? <span className="hls-fallback-player__error">{errorMessage}</span> : null}
-      </figcaption>
+      </figcaption> : null}
     </figure>
   );
 }

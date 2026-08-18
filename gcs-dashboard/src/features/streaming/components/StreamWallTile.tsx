@@ -18,7 +18,7 @@ export const StreamWallTile = memo(function StreamWallTile({ index, onSelect, on
       {stream?.streamPath ? (
         <RealtimePlayer
           className="stream-wall-tile__player"
-          controls
+          controls={false}
           muted={index !== 0}
           streamId={stream.streamPath}
           title={getStreamDisplayName(stream)}

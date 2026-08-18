@@ -19,6 +19,7 @@ export function RealtimePlayer({
   className,
   muted = false,
   controls = true,
+  showDiagnostics = false,
   fetcher,
   reconnectDelaysMs,
   playbackReadyRetryDelaysMs,
@@ -48,14 +49,14 @@ export function RealtimePlayer({
 
   return (
     <section className={["realtime-player", className].filter(Boolean).join(" ")} aria-label={title}>
-      <header className="realtime-player__header">
+      {showDiagnostics ? <header className="realtime-player__header">
         <span className={`realtime-player__badge realtime-player__badge--${streamStatus}`}>
           {streamStatus}
         </span>
         <span className="realtime-player__latency">저지연</span>
         <span className="realtime-player__stream">{streamId}</span>
         <span className="realtime-player__mode">mode: {mode}</span>
-      </header>
+      </header> : null}
 
       {mode === "loading" ? <RealtimePlayerPlaceholder mode="loading" /> : null}
 

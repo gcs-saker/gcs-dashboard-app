@@ -46,7 +46,7 @@
   border: 1px solid var(--line-soft);
   border-radius: 6px;
   display: flex;
-  gap: 4px;
+  gap: 2px;
   min-height: 44px;
   overflow: hidden;
   padding: 10px 12px;
@@ -58,8 +58,8 @@
   box-shadow: 0 0 12px rgba(86, 211, 124, 0.22);
   flex: 1 1 0;
   height: var(--bar-height);
-  min-width: 3px;
-  transition: height 220ms ease;
+  min-width: 2px;
+  transition: height 120ms linear;
 }
 
 .audio-waveform:not(.has-audio) .audio-waveform__scope span {

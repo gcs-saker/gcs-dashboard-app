@@ -173,7 +173,7 @@ describe("RealtimePlayer", () => {
       }),
     );
 
-    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} />);
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} showDiagnostics />);
 
     expect(screen.getByRole("status")).toHaveTextContent("스트림 신호 확인 중");
     await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
@@ -392,7 +392,7 @@ describe("RealtimePlayer", () => {
   test("contains malformed playback payloads inside the realtime player", async () => {
     const fetcher = vi.fn(async () => jsonResponse({ access_token: "unexpected-auth-payload" }));
 
-    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} />);
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} showDiagnostics />);
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("수신 경로 오류");
@@ -407,7 +407,7 @@ describe("RealtimePlayer", () => {
       throw new Error("Failed to fetch");
     });
 
-    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} />);
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} showDiagnostics />);
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("수신 경로 오류");

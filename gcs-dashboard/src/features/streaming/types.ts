@@ -141,6 +141,7 @@ export interface RealtimePlayerProps {
   className?: string;
   muted?: boolean;
   controls?: boolean;
+  showDiagnostics?: boolean;
   fetcher?: typeof fetch;
   reconnectDelaysMs?: readonly number[];
   playbackReadyRetryDelaysMs?: readonly number[];

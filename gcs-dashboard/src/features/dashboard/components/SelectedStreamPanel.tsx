@@ -60,6 +60,7 @@ export function SelectedStreamPanel({
       <div className={`selected-stream__viewport mode-${stream.mode.toLowerCase()}`}>
         {isReceivableStream(stream) ? (
           <RealtimePlayer
+            controls={false}
             onStatusChange={(snapshot) => onPlaybackStatusChange?.(stream.id, snapshot)}
             streamId={stream.streamPath}
             title={stream.title}
