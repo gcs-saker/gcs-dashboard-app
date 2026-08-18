@@ -116,6 +116,21 @@
   white-space: nowrap;
 }
 
+.telemetry-panel__identity-context {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.telemetry-panel__identity-context > span {
+  flex: 0 0 auto;
+}
+
+.telemetry-panel__identity-context small {
+  min-width: 0;
+}
+
 .ops-summary__state {
   border: 1px solid var(--line-soft);
   border-radius: 999px;

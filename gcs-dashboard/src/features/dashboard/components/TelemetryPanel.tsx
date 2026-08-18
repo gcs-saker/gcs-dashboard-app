@@ -56,10 +56,12 @@ export function TelemetryPanel({
       </div>
       <div className="telemetry-panel__body">
         <div className="telemetry-panel__identity">
-          <span>선택 스트림</span>
+          <span className="telemetry-panel__identity-context">
+            <span>선택 스트림</span>
+            <small>{telemetryFreshness === "fresh" ? "실시간 텔레메트리" : telemetryFreshness === "stale" ? "마지막 수신값" : "텔레메트리 대기"}</small>
+          </span>
           <strong>{streamName}</strong>
           <em className={`ops-summary__state is-${stream.status}`}>{getDashboardStreamStatusText(stream.status)}</em>
-          <small>{telemetryFreshness === "fresh" ? "실시간 텔레메트리" : telemetryFreshness === "stale" ? "마지막 수신값" : "텔레메트리 대기"}</small>
         </div>
         <div className="telemetry-compass" aria-label="기체 방위와 지도 기준 방위">
           <div className="telemetry-compass__dial">
