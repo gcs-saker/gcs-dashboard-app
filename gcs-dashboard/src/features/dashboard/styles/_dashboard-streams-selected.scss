@@ -27,6 +27,10 @@
   min-height: 0;
 }
 
+.selected-stream__viewport .realtime-player__header {
+  display: none;
+}
+
 .selected-stream__viewport .webrtc-player__video,
 .selected-stream__viewport .hls-fallback-player video {
   object-fit: cover;
