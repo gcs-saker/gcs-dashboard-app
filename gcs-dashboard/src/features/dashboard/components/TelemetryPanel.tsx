@@ -51,7 +51,7 @@ export function TelemetryPanel({
       style={{ minHeight: widget.minHeight, minWidth: widget.minWidth }}
     >
       <div className="ops-panel__header">
-        <h2 id="telemetry-title">지오메트리 / 텔레메트리</h2>
+        <h2 id="telemetry-title" title="지오메트리 / 텔레메트리">텔레메트리</h2>
         {controls}
       </div>
       <div className="telemetry-panel__body">
