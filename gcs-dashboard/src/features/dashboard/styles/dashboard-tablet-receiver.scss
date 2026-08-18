@@ -89,7 +89,8 @@
   }
 
   .ops-dashboard__actions {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    justify-content: space-between;
   }
 
   .ops-dashboard__actions .ops-command-button,
