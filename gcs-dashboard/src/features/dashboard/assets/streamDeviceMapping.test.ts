@@ -18,7 +18,7 @@ describe("streamDeviceMapping", () => {
   test("normalizes registry status for dashboard state", () => {
     expect(dashboardStatusFromRegistryStatus("online")).toBe("online");
     expect(dashboardStatusFromRegistryStatus("offline")).toBe("offline");
-    expect(dashboardStatusFromRegistryStatus("registered")).toBe("degraded");
+    expect(dashboardStatusFromRegistryStatus("registered")).toBe("offline");
     expect(dashboardStatusFromRegistryStatus("unknown")).toBe("degraded");
   });
 

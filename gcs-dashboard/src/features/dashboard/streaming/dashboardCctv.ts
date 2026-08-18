@@ -39,7 +39,6 @@ export function isReceivableStream(
     Boolean(stream.streamPath) &&
     (stream.status === DASHBOARD_STREAM_STATUS.online ||
       stream.status === DASHBOARD_STREAM_STATUS.fallback ||
-      stream.status === DASHBOARD_STREAM_STATUS.degraded ||
       stream.status === DASHBOARD_STREAM_STATUS.reconnecting)
   );
 }

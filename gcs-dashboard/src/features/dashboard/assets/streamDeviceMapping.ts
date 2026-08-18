@@ -69,6 +69,7 @@ export function dashboardStatusFromRegistryStatus(status: StreamRegistryResponse
     case "offline":
       return "offline";
     case "registered":
+      return "offline";
     case "unknown":
       return "degraded";
   }

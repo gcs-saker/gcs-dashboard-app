@@ -38,6 +38,10 @@ describe("dashboardCctv", () => {
     expect(isReceivableStream({ ...liveStream, status: DASHBOARD_STREAM_STATUS.offline })).toBe(false);
   });
 
+  it("does not restart playback while registry state is degraded", () => {
+    expect(isReceivableStream({ ...liveStream, status: DASHBOARD_STREAM_STATUS.degraded })).toBe(false);
+  });
+
   it("summarizes CCTV stream status without leaking UI counting logic into the page", () => {
     expect(summarizeCctvStatus([
       liveStream,
