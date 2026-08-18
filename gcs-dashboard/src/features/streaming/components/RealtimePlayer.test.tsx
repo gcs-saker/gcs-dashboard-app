@@ -20,9 +20,9 @@ const emptyAudioStats = {
 };
 
 vi.mock("./WebRTCPlayer", () => ({
-  WebRTCPlayer: function MockWebRTCPlayer({ whepUrl, streamId, onStatusChange }: WebRTCPlayerProps) {
+  WebRTCPlayer: function MockWebRTCPlayer({ controls, showDiagnostics, whepUrl, streamId, onStatusChange }: WebRTCPlayerProps) {
     return (
-      <div data-testid="webrtc-player">
+      <div data-controls={String(controls)} data-diagnostics={String(showDiagnostics)} data-testid="webrtc-player">
         <span>webrtc:{whepUrl}</span>
         <span>stream:{streamId}</span>
         <button
@@ -187,6 +187,22 @@ describe("RealtimePlayer", () => {
     );
     expect(screen.getByText("webrtc:https://media.example.test/raw/sample/front/whep")).toBeInTheDocument();
     expect(screen.getByText("online")).toBeInTheDocument();
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-controls", "true");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-diagnostics", "true");
+  });
+
+  test("keeps browser controls independent from diagnostic overlays", async () => {
+    const fetcher = vi.fn(async () => jsonResponse({
+      streamId: "raw.sample.front",
+      status: "online",
+      playbackUrls: { webrtc: "https://media.example.test/raw/sample/front/whep", hls: null },
+    }));
+
+    render(<RealtimePlayer controls={false} streamId="raw.sample.front" fetcher={fetcher} />);
+
+    await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-controls", "false");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-diagnostics", "false");
   });
 
   test("forwards ICE route metrics for TURN load diagnostics", async () => {

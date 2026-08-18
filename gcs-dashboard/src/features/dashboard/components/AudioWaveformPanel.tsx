@@ -30,13 +30,14 @@ export const AudioWaveformPanel = memo(function AudioWaveformPanel({
   const isActive = Boolean(analysis?.isAudioActive);
   const hasTrack = Boolean(analysis?.hasAudioTrack);
   const isMicActive = talkback.hasLocalAudioTrack;
+  const hasAudioSignal = isActive || hasTrack || isMicActive;
   const audioLevel = isMicActive ? talkback.micLevel : analysis?.audioLevel ?? null;
   const waveformHistory = useAudioWaveformHistory({
     audioLevel,
-    isSignalPresent: isMotionEnabled && (isActive || hasTrack || isMicActive),
+    isSignalPresent: isMotionEnabled && hasAudioSignal,
     sourceId: isMicActive ? "operator-microphone" : selectedStream.id,
   });
-  const bars = isMotionEnabled ? waveformHistory : buildAudioWaveformBars(audioLevel, isActive || hasTrack || isMicActive);
+  const bars = isMotionEnabled ? waveformHistory : buildAudioWaveformBars(audioLevel, hasAudioSignal);
   const sourceName = isMicActive ? "관제 마이크" : analysis?.title ?? selectedStream.title;
   const modeText = isMicActive ? "송신 음성" : analysis ? formatPlaybackMode(analysis.mode, analysis.streamStatus) : "대기";
   const latencyText = analysis?.firstFrameLatencyMs !== null && analysis?.firstFrameLatencyMs !== undefined ? `${analysis.firstFrameLatencyMs} ms` : "대기";
@@ -54,7 +55,7 @@ export const AudioWaveformPanel = memo(function AudioWaveformPanel({
   const scopeText = isMicActive ? "마이크 송신 레벨" : isSelectedAnalysis ? "선택 스트림 품질" : analysis ? "최근 음성 수신" : "선택 스트림 품질";
 
   return (
-    <section aria-labelledby="audio-waveform-title" className={`ops-panel audio-waveform ${isActive ? "has-audio" : ""}`}>
+    <section aria-labelledby="audio-waveform-title" className={`ops-panel audio-waveform ${hasAudioSignal ? "has-audio" : ""}`}>
       <div className="ops-panel__header">
         <h2 id="audio-waveform-title">음성 파형 분석</h2>
         <span className="ops-panel__header-actions">

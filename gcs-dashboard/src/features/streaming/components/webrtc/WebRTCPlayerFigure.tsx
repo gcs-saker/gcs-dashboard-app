@@ -10,6 +10,7 @@ interface WebRTCPlayerFigureProps extends WebRTCPlaybackSnapshot {
   autoPlay: boolean;
   muted: boolean;
   controls: boolean;
+  showDiagnostics: boolean;
   className?: string;
   streamId?: string;
   title: string;
@@ -20,6 +21,7 @@ export function WebRTCPlayerFigure({
   autoPlay,
   muted,
   controls,
+  showDiagnostics,
   className,
   streamId,
   title,
@@ -77,7 +79,7 @@ export function WebRTCPlayerFigure({
         controls={controls}
         className="webrtc-player__video"
       />
-      {controls ? <figcaption className="webrtc-player__overlay">
+      {showDiagnostics ? <figcaption className="webrtc-player__overlay">
         <span
           className={`webrtc-player__status webrtc-player__status--${status}`}
           role="status"

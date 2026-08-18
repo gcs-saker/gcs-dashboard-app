@@ -20,6 +20,7 @@ export function WebRTCPlayer({
   autoPlay = true,
   muted = false,
   controls = true,
+  showDiagnostics = true,
   className,
   onStatusChange,
 }: WebRTCPlayerProps) {
@@ -87,6 +88,7 @@ export function WebRTCPlayer({
       className={className}
       connectionState={connectionState}
       controls={controls}
+      showDiagnostics={showDiagnostics}
       errorMessage={errorMessage}
       firstFrameLatencyMs={firstFrameLatencyMs}
       hasAudioTrack={hasAudioTrack}

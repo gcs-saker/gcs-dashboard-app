@@ -25,6 +25,7 @@ export function HLSFallbackPlayer({
   autoPlay = true,
   muted = true,
   controls = true,
+  showDiagnostics = true,
   preload = "none",
   latencyMode = "stable",
   poster,
@@ -65,7 +66,7 @@ export function HLSFallbackPlayer({
         poster={poster}
         className="hls-fallback-player__video"
       />
-      {controls ? <figcaption className="hls-fallback-player__overlay">
+      {showDiagnostics ? <figcaption className="hls-fallback-player__overlay">
         <span
           className={`hls-fallback-player__status hls-fallback-player__status--${status}`}
           role="status"

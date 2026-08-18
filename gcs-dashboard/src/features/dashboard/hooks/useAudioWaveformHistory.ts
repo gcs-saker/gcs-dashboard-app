@@ -17,18 +17,22 @@ export function useAudioWaveformHistory({
   sourceId,
   sampleCount = DEFAULT_SAMPLE_COUNT,
 }: AudioWaveformHistoryOptions): number[] {
-  const [samples, setSamples] = useState(() => quietSamples(sampleCount));
+  const normalizedSampleCount = normalizeSampleCount(sampleCount);
+  const [samples, setSamples] = useState(() => quietSamples(normalizedSampleCount));
   const audioLevelRef = useRef(audioLevel);
   const tickRef = useRef(0);
+  const sourceRef = useRef({ sampleCount: normalizedSampleCount, sourceId });
 
   useEffect(() => {
     audioLevelRef.current = audioLevel;
   }, [audioLevel]);
 
   useEffect(() => {
+    if (sourceRef.current.sourceId === sourceId && sourceRef.current.sampleCount === normalizedSampleCount) return;
+    sourceRef.current = { sampleCount: normalizedSampleCount, sourceId };
     tickRef.current = 0;
-    setSamples(quietSamples(sampleCount));
-  }, [sampleCount, sourceId]);
+    setSamples(quietSamples(normalizedSampleCount));
+  }, [normalizedSampleCount, sourceId]);
 
   const hasResidualSignal = samples.some((sample) => sample > BAR_FLOOR + 0.5);
 
@@ -68,4 +72,8 @@ function appendSample(samples: number[], next: number): number[] {
 
 function quietSamples(sampleCount: number): number[] {
   return Array.from({ length: sampleCount }, () => BAR_FLOOR);
+}
+
+function normalizeSampleCount(sampleCount: number): number {
+  return Number.isFinite(sampleCount) ? Math.max(1, Math.floor(sampleCount)) : DEFAULT_SAMPLE_COUNT;
 }

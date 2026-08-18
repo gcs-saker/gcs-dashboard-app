@@ -60,6 +60,7 @@ export interface WebRTCPlayerProps {
   autoPlay?: boolean;
   muted?: boolean;
   controls?: boolean;
+  showDiagnostics?: boolean;
   className?: string;
   onStatusChange?: (snapshot: WebRTCPlaybackSnapshot) => void;
 }
@@ -87,6 +88,7 @@ export interface HLSFallbackPlayerProps {
   autoPlay?: boolean;
   muted?: boolean;
   controls?: boolean;
+  showDiagnostics?: boolean;
   preload?: HTMLVideoElement["preload"];
   latencyMode?: HLSLatencyMode;
   poster?: string;

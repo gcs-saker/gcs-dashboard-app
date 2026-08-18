@@ -69,6 +69,7 @@ export function RealtimePlayer({
           isOnline={isOnline}
           muted={muted}
           controls={controls}
+          showDiagnostics={showDiagnostics}
           onStatusChange={(snapshot) => {
             const evidence = buildWebRTCRuntimeEvidence(snapshot);
             onStatusChange?.({
@@ -125,6 +126,7 @@ export function RealtimePlayer({
           latencyMode="stable"
           muted={muted}
           controls={controls}
+          showDiagnostics={showDiagnostics}
         />
       ) : null}
 

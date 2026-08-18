@@ -37,4 +37,15 @@ describe("useAudioWaveformHistory", () => {
     rerender({ sourceId: "stream-2" });
     expect(result.current).toEqual(Array.from({ length: 5 }, () => 4));
   });
+
+  test("normalizes invalid sample counts to a safe bounded history", () => {
+    const { result, rerender } = renderHook(
+      ({ sampleCount }) => useAudioWaveformHistory({ audioLevel: null, isSignalPresent: false, sourceId: "stream-1", sampleCount }),
+      { initialProps: { sampleCount: 0 } },
+    );
+
+    expect(result.current).toEqual([4]);
+    rerender({ sampleCount: Number.NaN });
+    expect(result.current).toHaveLength(48);
+  });
 });
