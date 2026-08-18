@@ -1,5 +1,6 @@
 export {
   fetchStreamDeviceOptions,
+  createTelemetryObservationTracker,
   fetchTelemetryHistory,
   fetchTelemetryIndex,
 } from "./streamDeviceApi";

@@ -104,7 +104,7 @@ describe("streamDeviceMapping", () => {
     });
   });
 
-  test("keeps registry fallback geometry when mobile coordinates are unavailable", () => {
+  test("does not invent registry geometry when mobile coordinates are unavailable", () => {
     const device = streamDeviceFromRegistryItem(
       {
         streamId: "raw.mobile.front",
@@ -124,7 +124,7 @@ describe("streamDeviceMapping", () => {
       }]]),
     );
 
-    expect(device.geometry).toMatchObject({ source: "registry", altitudeM: 0 });
+    expect(device.geometry).toBeNull();
   });
 
   test("keeps fallback geometry in the Daegu operating area", () => {

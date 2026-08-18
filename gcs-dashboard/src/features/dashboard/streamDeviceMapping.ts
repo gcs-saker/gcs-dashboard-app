@@ -10,6 +10,7 @@ import {
   type StreamRegistryResponse,
   type TelemetryReadResponse,
 } from "./streamDeviceContracts";
+import { telemetryFreshnessFromObservedAt } from "./telemetryFreshness";
 
 export function modeForMediaType(mediaType: StreamDeviceOption["mediaType"]): DashboardStreamMode {
   switch (mediaType) {
@@ -39,14 +40,12 @@ export function streamDeviceFromRegistryItem(
     streamPath: item.streamId,
     status: dashboardStatusFromRegistryStatus(item.status),
     mediaType,
-    geometry: telemetry && hasTelemetryPosition(telemetry)
-      ? geometryFromTelemetry(telemetry)
-      : defaultGeometryForStream(item.streamId, "registry"),
+    geometry: telemetry && hasTelemetryPosition(telemetry) ? geometryFromTelemetry(telemetry) : null,
   };
 }
 
-export function shouldPreferDeviceGeometry(geometry: StreamDeviceGeometry): boolean {
-  return geometry.source === "telemetry" || geometry.source === "device";
+export function shouldPreferDeviceGeometry(geometry: StreamDeviceGeometry | null): boolean {
+  return geometry?.source === "telemetry" || geometry?.source === "device";
 }
 
 export function geometryFromTelemetry(telemetry: TelemetryReadResponse): StreamDeviceGeometry {
@@ -60,7 +59,9 @@ export function geometryFromTelemetry(telemetry: TelemetryReadResponse): StreamD
     rollDeg: telemetry.rollDeg ?? 0,
     yawDeg: telemetry.yawDeg ?? 0,
     fovDeg: 60,
+    observedAt: telemetry.observedAt ?? new Date().toISOString(),
     source: "telemetry",
+    telemetryStatus: telemetryFreshnessFromObservedAt(telemetry.observedAt ?? new Date().toISOString()),
   };
 }
 
@@ -92,7 +93,7 @@ export function defaultGeometryForStream(
   source: DashboardGeometrySource = "mock",
 ): StreamDeviceGeometry {
   const knownDevice = MOCK_STREAM_DEVICES.find((device) => device.streamPath === streamId);
-  if (knownDevice) return { ...knownDevice.geometry, source };
+  if (knownDevice?.geometry) return { ...knownDevice.geometry, source };
   return {
     lat: 35.871435,
     lng: 128.601445,

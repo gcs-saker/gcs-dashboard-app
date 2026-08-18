@@ -12,6 +12,7 @@ import {
   type StatusTile,
   type StatusTone,
 } from "./dashboardPresentation";
+import { telemetryFreshnessForStream } from "./telemetryFreshness";
 
 export interface OpsSummaryViewModel {
   readonly focusDetail: string;
@@ -32,24 +33,26 @@ export function buildOpsSummaryViewModel(
   talkbackTargetCount: number,
 ): OpsSummaryViewModel {
   const selectedStatusText = getDashboardStreamStatusText(selectedStream.status);
-  const gpsText = selectedStream.geometry ? "좌표 수신" : "좌표 대기";
+  const telemetryFreshness = telemetryFreshnessForStream(selectedStream);
+  const hasTelemetry = telemetryFreshness !== "unavailable" && Boolean(selectedStream.geometry);
+  const gpsText = telemetryFreshness === "fresh" ? "좌표 수신" : telemetryFreshness === "stale" ? "마지막 좌표" : "좌표 대기";
   const audioText = audioAnalysis?.streamId === selectedStream.id && audioAnalysis.isAudioActive ? "음성 수신" : "음성 대기";
 
   return {
-    focusDetail: selectedStream.geometry
+    focusDetail: hasTelemetry && selectedStream.geometry
       ? `고도 ${selectedStream.geometry.altitudeM.toFixed(1)}m · 방위 ${formatBearing(selectedStream.geometry.headingDeg)}`
       : "GPS 수신 후 지도와 동기화됩니다.",
-    focusTitle: selectedStream.geometry
+    focusTitle: hasTelemetry && selectedStream.geometry
       ? `${selectedStream.geometry.lat.toFixed(5)}, ${selectedStream.geometry.lng.toFixed(5)}`
       : "좌표 대기",
     missionText: missionTextForStatus(selectedStream.status),
     missionTone: missionToneForStatus(selectedStream.status),
     recentEvents: buildRecentEvents(selectedStream, audioAnalysis),
     selectedStatusText,
-    statusNotes: buildStatusNotes(selectedStream, audioAnalysis, selectedStatusText),
+    statusNotes: buildStatusNotes(selectedStream, audioAnalysis, selectedStatusText, telemetryFreshness),
     statusTiles: [
       { label: "스트림", value: `${streamCount}개`, tone: "info" },
-      { label: "GPS", value: gpsText, tone: selectedStream.geometry ? "good" : "muted" },
+      { label: "GPS", value: gpsText, tone: telemetryFreshness === "fresh" ? "good" : telemetryFreshness === "stale" ? "warning" : "muted" },
       { label: "오디오", value: audioText, tone: audioText === "음성 수신" ? "good" : "muted" },
       { label: "Talkback", value: talkbackTargetCount ? `${talkbackTargetCount} 대상` : "대기", tone: talkbackTargetCount ? "info" : "muted" },
     ],
@@ -61,10 +64,11 @@ function buildStatusNotes(
   selectedStream: DashboardStreamSlot,
   audioAnalysis: AudioAnalysisSnapshot | null,
   selectedStatusText: string,
+  telemetryFreshness: ReturnType<typeof telemetryFreshnessForStream>,
 ): StatusNote[] {
   const icePathNote = formatIcePathNote(audioAnalysis);
   return [
-    { label: selectedStream.geometry ? "GPS 정상" : "GPS 대기", tone: selectedStream.geometry ? "good" : "muted" },
+    { label: telemetryFreshness === "fresh" ? "GPS 정상" : telemetryFreshness === "stale" ? "GPS 갱신 대기" : "GPS 대기", tone: telemetryFreshness === "fresh" ? "good" : telemetryFreshness === "stale" ? "warning" : "muted" },
     {
       label: icePathNote ?? (selectedStream.status === "online" ? "WebRTC 경로 확인 중" : selectedStatusText),
       tone: audioAnalysis?.localCandidateType === "relay" ? "warning" : missionToneForStatus(selectedStream.status),

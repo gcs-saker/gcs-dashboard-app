@@ -11,7 +11,7 @@ export interface StreamDeviceOption {
   streamPath: string;
   status: DashboardStreamStatus;
   mediaType: "eo" | "ir" | "ai" | "map";
-  geometry: StreamDeviceGeometry;
+  geometry: StreamDeviceGeometry | null;
 }
 
 export interface StreamRegistryResponse {
@@ -31,6 +31,7 @@ export interface TelemetryReadResponse {
   altitude: number | null;
   velocity: number | null;
   epochTime: string;
+  observedAt?: string;
   headingDeg?: number;
   batteryPercent?: number;
   rollDeg?: number;

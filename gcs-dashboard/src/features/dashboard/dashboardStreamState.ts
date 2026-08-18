@@ -30,16 +30,18 @@ function isSameStreamDevice(device: StreamDeviceOption, nextDevice: StreamDevice
     device.mediaType === nextDevice.mediaType &&
     device.status === nextDevice.status &&
     device.streamPath === nextDevice.streamPath &&
-    device.geometry.lat === nextDevice.geometry.lat &&
-    device.geometry.lng === nextDevice.geometry.lng &&
-    device.geometry.altitudeM === nextDevice.geometry.altitudeM &&
-    device.geometry.batteryPercent === nextDevice.geometry.batteryPercent &&
-    device.geometry.headingDeg === nextDevice.geometry.headingDeg &&
-    device.geometry.pitchDeg === nextDevice.geometry.pitchDeg &&
-    device.geometry.rollDeg === nextDevice.geometry.rollDeg &&
-    device.geometry.yawDeg === nextDevice.geometry.yawDeg &&
-    device.geometry.fovDeg === nextDevice.geometry.fovDeg &&
-    device.geometry.source === nextDevice.geometry.source
+    device.geometry?.lat === nextDevice.geometry?.lat &&
+    device.geometry?.lng === nextDevice.geometry?.lng &&
+    device.geometry?.altitudeM === nextDevice.geometry?.altitudeM &&
+    device.geometry?.batteryPercent === nextDevice.geometry?.batteryPercent &&
+    device.geometry?.headingDeg === nextDevice.geometry?.headingDeg &&
+    device.geometry?.pitchDeg === nextDevice.geometry?.pitchDeg &&
+    device.geometry?.rollDeg === nextDevice.geometry?.rollDeg &&
+    device.geometry?.yawDeg === nextDevice.geometry?.yawDeg &&
+    device.geometry?.fovDeg === nextDevice.geometry?.fovDeg &&
+    device.geometry?.observedAt === nextDevice.geometry?.observedAt &&
+    device.geometry?.telemetryStatus === nextDevice.geometry?.telemetryStatus &&
+    device.geometry?.source === nextDevice.geometry?.source
   );
 }
 
@@ -62,6 +64,8 @@ function isSameStreamSlot(stream: DashboardStreamSlot, nextStream: DashboardStre
     stream.geometry?.rollDeg === nextStream.geometry?.rollDeg &&
     stream.geometry?.yawDeg === nextStream.geometry?.yawDeg &&
     stream.geometry?.fovDeg === nextStream.geometry?.fovDeg &&
+    stream.geometry?.observedAt === nextStream.geometry?.observedAt &&
+    stream.geometry?.telemetryStatus === nextStream.geometry?.telemetryStatus &&
     stream.geometry?.source === nextStream.geometry?.source
   );
 }

@@ -3,6 +3,7 @@ import { AuthApiError } from "@auth/authApi";
 import { DEFAULT_DASHBOARD_STREAMS } from "./streamTypes";
 import {
   connectDeviceToStreamSlot,
+  createTelemetryObservationTracker,
   disconnectStreamSlot,
   buildTelemetryHistoryPath,
   fetchTelemetryHistory,
@@ -14,6 +15,29 @@ import {
 } from "./streamDevices";
 
 describe("streamDevices", () => {
+  test("tracks when a device epoch value last changed instead of treating uptime as wall-clock time", () => {
+    const tracker = createTelemetryObservationTracker();
+    const telemetry = new Map([["mobile-1", {
+      uuid: "mobile-1",
+      latitude: 35.9,
+      longitude: 128.6,
+      altitude: 10,
+      velocity: 0,
+      epochTime: "00:00:12",
+    }]]);
+
+    const first = tracker.observe(telemetry, new Date("2026-08-18T06:00:00.000Z"));
+    const unchanged = tracker.observe(telemetry, new Date("2026-08-18T06:00:20.000Z"));
+    const changed = tracker.observe(new Map([["mobile-1", {
+      ...telemetry.get("mobile-1")!,
+      epochTime: "00:00:15",
+    }]]), new Date("2026-08-18T06:00:21.000Z"));
+
+    expect(first.get("mobile-1")?.observedAt).toBe("2026-08-18T06:00:00.000Z");
+    expect(unchanged.get("mobile-1")?.observedAt).toBe("2026-08-18T06:00:00.000Z");
+    expect(changed.get("mobile-1")?.observedAt).toBe("2026-08-18T06:00:21.000Z");
+  });
+
   test("connects a registry device to a stream slot", () => {
     const connected = connectDeviceToStreamSlot(DEFAULT_DASHBOARD_STREAMS[3], MOCK_STREAM_DEVICES[0]);
 
@@ -87,7 +111,7 @@ describe("streamDevices", () => {
     });
   });
 
-  test("keeps registry streams visible when telemetry validation fails", async () => {
+  test("keeps registry streams visible without inventing telemetry coordinates", async () => {
     const fetcher = vi.fn()
       .mockResolvedValueOnce(Response.json([{
         streamId: "raw.mobile.front",
@@ -105,7 +129,7 @@ describe("streamDevices", () => {
     expect(devices[0]).toMatchObject({
       streamPath: "raw.mobile.front",
       status: "reconnecting",
-      geometry: { source: "registry" },
+      geometry: null,
     });
   });
 
@@ -231,7 +255,7 @@ describe("streamDevices", () => {
       ...MOCK_STREAM_DEVICES[3],
       status: "online" as const,
       geometry: {
-        ...MOCK_STREAM_DEVICES[3].geometry,
+        ...MOCK_STREAM_DEVICES[3].geometry!,
         lat: 35.91,
         lng: 128.63,
         altitudeM: 30,

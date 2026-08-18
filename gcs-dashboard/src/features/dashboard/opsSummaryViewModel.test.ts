@@ -46,6 +46,7 @@ describe("opsSummaryViewModel", () => {
         pitchDeg: 0,
         rollDeg: 0,
         source: "telemetry",
+        telemetryStatus: "fresh",
         yawDeg: 7,
       },
     }, BASE_AUDIO, 4, 2);
@@ -53,9 +54,32 @@ describe("opsSummaryViewModel", () => {
     expect(viewModel.missionText).toBe("실시간 운용 가능");
     expect(viewModel.missionTone).toBe("good");
     expect(viewModel.focusTitle).toBe("35.87143, 128.60144");
+    expect(viewModel.statusTiles).toContainEqual({ label: "GPS", value: "좌표 수신", tone: "good" });
     expect(viewModel.statusTiles).toContainEqual({ label: "오디오", value: "음성 수신", tone: "good" });
     expect(viewModel.statusNotes.map((note) => note.label)).toContain("ICE srflx->host/UDP");
     expect(viewModel.recentEvents.map((event) => event.label)).toContain("재생 경로 WebRTC");
+  });
+
+  test("labels stale selected-stream telemetry as the last known coordinate", () => {
+    const viewModel = buildOpsSummaryViewModel({
+      ...BASE_STREAM,
+      status: DASHBOARD_STREAM_STATUS.offline,
+      geometry: {
+        altitudeM: 34.2,
+        fovDeg: 72,
+        headingDeg: 7,
+        lat: 35.87143,
+        lng: 128.60144,
+        pitchDeg: 0,
+        rollDeg: 0,
+        source: "telemetry",
+        telemetryStatus: "fresh",
+        yawDeg: 7,
+      },
+    }, null, 1, 0);
+
+    expect(viewModel.statusTiles).toContainEqual({ label: "GPS", value: "마지막 좌표", tone: "warning" });
+    expect(viewModel.statusNotes.map((note) => note.label)).toContain("GPS 갱신 대기");
   });
 
   test("builds offline stream summary without audio or GPS assumptions", () => {

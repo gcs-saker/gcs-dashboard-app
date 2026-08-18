@@ -18,9 +18,46 @@ import {
 
 export async function fetchStreamDeviceOptions(fetcher: typeof fetch = fetch): Promise<StreamDeviceOption[]> {
   const registry = await fetchStreamRegistry(fetcher);
-  const telemetryByUuid = await fetchTelemetryIndex(fetcher).catch(() => new Map<string, TelemetryReadResponse>());
+  const telemetryByUuid = await fetchTelemetryIndex(fetcher)
+    .then((telemetry) => telemetryObservationTracker.observe(telemetry))
+    .catch(() => new Map<string, TelemetryReadResponse>());
   return registry.map((item) => streamDeviceFromRegistryItem(item, telemetryByUuid));
 }
+
+interface TelemetryObservation {
+  readonly epochTime: string;
+  readonly lastChangedAt: string;
+}
+
+export interface TelemetryObservationTracker {
+  observe(telemetryByUuid: ReadonlyMap<string, TelemetryReadResponse>, now?: Date): Map<string, TelemetryReadResponse>;
+}
+
+class InMemoryTelemetryObservationTracker implements TelemetryObservationTracker {
+  private readonly observations = new Map<string, TelemetryObservation>();
+
+  observe(
+    telemetryByUuid: ReadonlyMap<string, TelemetryReadResponse>,
+    now = new Date(),
+  ): Map<string, TelemetryReadResponse> {
+    const observed = new Map<string, TelemetryReadResponse>();
+    for (const [uuid, telemetry] of telemetryByUuid) {
+      const previous = this.observations.get(uuid);
+      const lastChangedAt = !previous || previous.epochTime !== telemetry.epochTime
+        ? now.toISOString()
+        : previous.lastChangedAt;
+      this.observations.set(uuid, { epochTime: telemetry.epochTime, lastChangedAt });
+      observed.set(uuid, { ...telemetry, observedAt: lastChangedAt });
+    }
+    return observed;
+  }
+}
+
+export function createTelemetryObservationTracker(): TelemetryObservationTracker {
+  return new InMemoryTelemetryObservationTracker();
+}
+
+const telemetryObservationTracker = createTelemetryObservationTracker();
 
 async function fetchStreamRegistry(fetcher: typeof fetch): Promise<StreamRegistryResponse[]> {
   try {

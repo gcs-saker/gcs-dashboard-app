@@ -25,7 +25,9 @@ export interface DashboardStreamGeometry {
   rollDeg: number;
   yawDeg: number;
   fovDeg: number;
+  observedAt?: string;
   source?: DashboardGeometrySource;
+  telemetryStatus?: "fresh" | "stale";
 }
 
 export interface DashboardStreamSlot {

@@ -11,6 +11,7 @@ import {
   normalizeDegrees,
   type TelemetryRow,
 } from "@dashboard/dashboardPresentation";
+import { telemetryFreshnessForStream } from "@dashboard/telemetryFreshness";
 
 interface TelemetryPanelProps {
   controls: ReactNode;
@@ -28,14 +29,16 @@ export function TelemetryPanel({
   widget,
 }: TelemetryPanelProps) {
   const geometry = stream.geometry;
+  const telemetryFreshness = telemetryFreshnessForStream(stream);
+  const displayGeometry = telemetryFreshness === "unavailable" ? null : geometry;
   const streamName = getDashboardStreamDisplayName(stream);
-  const heading = geometry ? formatBearing(geometry.headingDeg) : "대기";
-  const mapBearing = geometry ? formatBearing(geometry.yawDeg) : "대기";
-  const bearingDelta = geometry ? formatBearingDelta(geometry.headingDeg, geometry.yawDeg) : "대기";
-  const headingRotation = geometry ? `rotate(${normalizeDegrees(geometry.headingDeg)}deg)` : undefined;
-  const mapRotation = geometry ? `rotate(${normalizeDegrees(geometry.yawDeg)}deg)` : undefined;
+  const heading = displayGeometry ? formatBearing(displayGeometry.headingDeg) : "대기";
+  const mapBearing = displayGeometry ? formatBearing(displayGeometry.yawDeg) : "대기";
+  const bearingDelta = displayGeometry ? formatBearingDelta(displayGeometry.headingDeg, displayGeometry.yawDeg) : "대기";
+  const headingRotation = displayGeometry ? `rotate(${normalizeDegrees(displayGeometry.headingDeg)}deg)` : undefined;
+  const mapRotation = displayGeometry ? `rotate(${normalizeDegrees(displayGeometry.yawDeg)}deg)` : undefined;
   const primaryMetrics: TelemetryRow[] = [
-    ["고도", geometry ? `${geometry.altitudeM.toFixed(1)} m` : "대기"],
+    ["고도", displayGeometry ? `${displayGeometry.altitudeM.toFixed(1)} m` : "대기"],
     ["기체 방위", heading],
     ["지도 기준", mapBearing],
   ];
@@ -56,6 +59,7 @@ export function TelemetryPanel({
           <span>선택 스트림</span>
           <strong>{streamName}</strong>
           <em className={`ops-summary__state is-${stream.status}`}>{getDashboardStreamStatusText(stream.status)}</em>
+          <small>{telemetryFreshness === "fresh" ? "실시간 텔레메트리" : telemetryFreshness === "stale" ? "마지막 수신값" : "텔레메트리 대기"}</small>
         </div>
         <div className="telemetry-compass" aria-label="기체 방위와 지도 기준 방위">
           <div className="telemetry-compass__dial">
