@@ -34,6 +34,7 @@ export function extractAudioStats(report: RTCStatsReport): WebRTCAudioStats {
 
   return {
     audioLevel: numberStat(inboundAudio, "audioLevel"),
+    waveform: [],
     jitterMs: secondsToMs(numberStat(inboundAudio, "jitter")),
     jitterBufferDelayMs: roundNullable(averageJitterBufferDelayMs),
     packetsLost: numberStat(inboundAudio, "packetsLost"),
@@ -50,6 +51,7 @@ export function extractAudioStats(report: RTCStatsReport): WebRTCAudioStats {
 export function audioStatsEqual(left: WebRTCAudioStats, right: WebRTCAudioStats): boolean {
   return (
     left.audioLevel === right.audioLevel &&
+    waveformEqual(left.waveform, right.waveform) &&
     left.jitterMs === right.jitterMs &&
     left.jitterBufferDelayMs === right.jitterBufferDelayMs &&
     left.packetsLost === right.packetsLost &&
@@ -61,6 +63,12 @@ export function audioStatsEqual(left: WebRTCAudioStats, right: WebRTCAudioStats)
     left.transportProtocol === right.transportProtocol &&
     left.relayFallbackReason === right.relayFallbackReason
   );
+}
+
+function waveformEqual(left: readonly number[] | undefined, right: readonly number[] | undefined): boolean {
+  const leftValues = left ?? [];
+  const rightValues = right ?? [];
+  return leftValues.length === rightValues.length && leftValues.every((value, index) => value === rightValues[index]);
 }
 
 function candidateFromStats(

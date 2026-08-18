@@ -56,6 +56,7 @@ export interface AudioAnalysisSnapshot {
   hasAudioTrack: boolean;
   isAudioActive: boolean;
   audioLevel: number | null;
+  audioWaveform: readonly number[];
   firstFrameLatencyMs: number | null;
   whepResponseMs: number | null;
   jitterMs: number | null;
@@ -76,15 +77,14 @@ export interface StatusTile extends StatusNote {
   value: string;
 }
 
-export function buildAudioWaveformBars(audioLevel: number | null, isActive: boolean): number[] {
-  if (!isActive || audioLevel === null) {
+export function buildAudioWaveformBars(waveform: readonly number[] | null, hasTrack: boolean): number[] {
+  if (!hasTrack || !waveform?.length) {
     return Array.from({ length: 28 }, () => 4);
   }
-  const normalizedLevel = Math.min(1, Math.max(0, audioLevel));
-  const baseHeight = 12 + normalizedLevel * 76;
   return Array.from({ length: 28 }, (_, index) => {
-    const phase = Math.sin(index * 0.86) * 0.26 + Math.cos(index * 0.43) * 0.18;
-    return Math.max(6, Math.min(94, baseHeight * (0.72 + phase)));
+    const sourceIndex = Math.min(waveform.length - 1, Math.floor(index * waveform.length / 28));
+    const amplitude = Math.min(1, Math.max(0, waveform[sourceIndex] ?? 0));
+    return Math.max(4, Math.round(amplitude * 96));
   });
 }
 

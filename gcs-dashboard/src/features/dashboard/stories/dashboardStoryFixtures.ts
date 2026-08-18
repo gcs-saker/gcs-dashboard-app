@@ -30,6 +30,7 @@ export const STORY_AUDIO_ANALYSIS: AudioAnalysisSnapshot = Object.freeze({
   hasAudioTrack: true,
   isAudioActive: true,
   audioLevel: 0.42,
+  audioWaveform: [0.08, 0.22, 0.48, 0.31, 0.12],
   firstFrameLatencyMs: 126,
   whepResponseMs: 42,
   jitterMs: 18,

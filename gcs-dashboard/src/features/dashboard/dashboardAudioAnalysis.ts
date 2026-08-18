@@ -16,6 +16,7 @@ export function createAudioAnalysisSnapshot(
     hasAudioTrack: Boolean(snapshot.hasAudioTrack),
     isAudioActive: Boolean(snapshot.isAudioActive),
     audioLevel: snapshot.audioLevel ?? null,
+    audioWaveform: snapshot.audioWaveform ?? [],
     firstFrameLatencyMs: snapshot.webrtcFirstFrameLatencyMs ?? null,
     whepResponseMs: snapshot.webrtcWhepResponseMs ?? null,
     jitterMs: snapshot.audioJitterMs ?? null,
@@ -40,6 +41,7 @@ export function isSameAudioAnalysis(
     current.hasAudioTrack === next.hasAudioTrack &&
     current.isAudioActive === next.isAudioActive &&
     current.audioLevel === next.audioLevel &&
+    waveformEqual(current.audioWaveform, next.audioWaveform) &&
     current.firstFrameLatencyMs === next.firstFrameLatencyMs &&
     current.whepResponseMs === next.whepResponseMs &&
     current.jitterMs === next.jitterMs &&
@@ -50,4 +52,8 @@ export function isSameAudioAnalysis(
     current.iceTransportProtocol === next.iceTransportProtocol &&
     current.relayFallbackReason === next.relayFallbackReason
   );
+}
+
+function waveformEqual(left: readonly number[], right: readonly number[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }

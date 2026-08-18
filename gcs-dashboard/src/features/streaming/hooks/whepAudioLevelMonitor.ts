@@ -3,6 +3,7 @@ import type { Dispatch } from "react";
 import {
   AUDIO_ANALYSIS_FFT_SIZE,
   AUDIO_ANALYSIS_UPDATE_INTERVAL_MS,
+  calculateAudioWaveform,
   calculateRmsAudioLevel,
   shouldEmitAudioLevel,
 } from "./whepAudioLevel";
@@ -11,7 +12,7 @@ import type { PlaybackAction } from "./whepPlaybackContracts";
 export function monitorAudioLevel(stream: MediaStream, dispatch: Dispatch<PlaybackAction>): () => void {
   const audioTracks = typeof stream.getAudioTracks === "function" ? stream.getAudioTracks() : [];
   if (audioTracks.length === 0) {
-    dispatch({ type: "audio-level", audioLevel: null });
+    dispatch({ type: "audio-level", audioLevel: null, waveform: [] });
     return () => undefined;
   }
 
@@ -23,10 +24,10 @@ export function monitorAudioLevel(stream: MediaStream, dispatch: Dispatch<Playba
   let lastEmittedLevel: number | null = null;
   let lastSampledAt = 0;
 
-  const emitLevel = (audioLevel: number | null) => {
-    if (!shouldEmitAudioLevel(lastEmittedLevel, audioLevel)) return;
+  const emitLevel = (audioLevel: number | null, waveform: readonly number[]) => {
+    if (!shouldEmitAudioLevel(lastEmittedLevel, audioLevel) && audioLevel === null) return;
     lastEmittedLevel = audioLevel;
-    dispatch({ type: "audio-level", audioLevel });
+    dispatch({ type: "audio-level", audioLevel, waveform });
   };
 
   const sampleAudioLevel = (sampledAt: number) => {
@@ -35,7 +36,7 @@ export function monitorAudioLevel(stream: MediaStream, dispatch: Dispatch<Playba
     if (sampledAt - lastSampledAt < AUDIO_ANALYSIS_UPDATE_INTERVAL_MS) return;
     lastSampledAt = sampledAt;
     audioContext.analyserNode.getByteTimeDomainData(audioContext.sampleBuffer);
-    emitLevel(calculateRmsAudioLevel(audioContext.sampleBuffer));
+    emitLevel(calculateRmsAudioLevel(audioContext.sampleBuffer), calculateAudioWaveform(audioContext.sampleBuffer));
   };
 
   void audioContext.context.resume?.().catch(() => undefined);
@@ -49,7 +50,7 @@ export function monitorAudioLevel(stream: MediaStream, dispatch: Dispatch<Playba
     audioContext.sourceNode.disconnect();
     audioContext.analyserNode.disconnect();
     void audioContext.context.close?.().catch(() => undefined);
-    dispatch({ type: "audio-level", audioLevel: null });
+    dispatch({ type: "audio-level", audioLevel: null, waveform: [] });
   };
 }
 
@@ -66,7 +67,7 @@ function createAudioAnalysisContext(
 ): AudioAnalysisContext | null {
   const AudioContextConstructor = resolveAudioContextConstructor();
   if (!AudioContextConstructor) {
-    dispatch({ type: "audio-level", audioLevel: null });
+    dispatch({ type: "audio-level", audioLevel: null, waveform: [] });
     return null;
   }
 
@@ -84,7 +85,7 @@ function createAudioAnalysisContext(
       sampleBuffer: new Uint8Array(analyserNode.fftSize),
     };
   } catch {
-    dispatch({ type: "audio-level", audioLevel: null });
+    dispatch({ type: "audio-level", audioLevel: null, waveform: [] });
     return null;
   }
 }

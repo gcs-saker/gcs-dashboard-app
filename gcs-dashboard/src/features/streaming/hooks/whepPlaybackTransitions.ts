@@ -83,7 +83,7 @@ export function toAudioLevelState(
   state: WebRTCPlaybackSnapshot,
   action: Extract<PlaybackAction, { type: "audio-level" }>,
 ): WebRTCPlaybackSnapshot {
-  return mergeAudioStats(state, { audioLevel: action.audioLevel });
+  return mergeAudioStats(state, { audioLevel: action.audioLevel, waveform: action.waveform });
 }
 
 export function toAudioStatsState(
@@ -93,6 +93,7 @@ export function toAudioStatsState(
   return mergeAudioStats(state, {
     ...action.stats,
     audioLevel: action.stats.audioLevel ?? state.audioStats.audioLevel,
+    waveform: state.audioStats.waveform ?? [],
   });
 }
 

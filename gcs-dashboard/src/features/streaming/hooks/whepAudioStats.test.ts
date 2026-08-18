@@ -40,6 +40,7 @@ describe("whepAudioStats", () => {
 
     expect(extractAudioStats(report)).toEqual({
       audioLevel: 0.32,
+      waveform: [],
       jitterMs: 14,
       jitterBufferDelayMs: 30,
       packetsLost: 2,

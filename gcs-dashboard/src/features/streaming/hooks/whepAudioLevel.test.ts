@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { calculateRmsAudioLevel, shouldEmitAudioLevel } from "./whepAudioLevel";
+import { calculateAudioWaveform, calculateRmsAudioLevel, shouldEmitAudioLevel } from "./whepAudioLevel";
 
 describe("whepAudioLevel", () => {
   test("normalizes silence to zero", () => {
@@ -11,6 +11,13 @@ describe("whepAudioLevel", () => {
   test("calculates bounded RMS audio level for visible waveform rendering", () => {
     expect(calculateRmsAudioLevel([0, 255, 128, 128])).toBe(1);
     expect(calculateRmsAudioLevel([120, 136, 128, 128])).toBe(0.18);
+  });
+
+  test("downsamples actual PCM amplitudes into waveform bins", () => {
+    const waveform = calculateAudioWaveform([128, 128, 160, 96, 255, 0, 128, 128], 4);
+
+    expect(waveform).toEqual([0, 1, 1, 0]);
+    expect(calculateAudioWaveform([], 3)).toEqual([0, 0, 0]);
   });
 
   test("filters tiny level changes to prevent noisy re-renders", () => {

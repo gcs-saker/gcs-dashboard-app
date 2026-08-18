@@ -75,14 +75,16 @@ describe("dashboardPresentation", () => {
     expect(getPacketLossTone(4)).toBe("danger");
   });
 
-  it("builds deterministic quiet waveform bars and bounded active bars", () => {
+  it("renders measured PCM waveform bins without generating a synthetic pattern", () => {
     expect(buildAudioWaveformBars(null, false)).toEqual(Array.from({ length: 28 }, () => 4));
 
-    const activeBars = buildAudioWaveformBars(0.5, true);
+    const measuredWaveform = Array.from({ length: 28 }, (_, index) => index / 27);
+    const activeBars = buildAudioWaveformBars(measuredWaveform, true);
 
     expect(activeBars).toHaveLength(28);
-    expect(Math.min(...activeBars)).toBeGreaterThanOrEqual(6);
-    expect(Math.max(...activeBars)).toBeLessThanOrEqual(94);
+    expect(activeBars[0]).toBe(4);
+    expect(activeBars[27]).toBe(96);
+    expect(activeBars).toEqual([...activeBars].sort((left, right) => left - right));
   });
 
   it("formats playback mode labels for primary and fallback stream paths", () => {

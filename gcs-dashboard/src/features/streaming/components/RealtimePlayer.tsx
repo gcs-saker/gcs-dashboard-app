@@ -82,6 +82,7 @@ export function RealtimePlayer({
               audioPlaybackState: snapshot.audioPlaybackState,
               audioDiagnosticMessage: snapshot.audioDiagnosticMessage,
               audioLevel: snapshot.audioStats.audioLevel,
+              audioWaveform: snapshot.audioStats.waveform,
               webrtcFirstFrameLatencyMs: snapshot.firstFrameLatencyMs,
               webrtcWhepResponseMs: snapshot.signalingTimings.whepResponseMs,
               audioJitterMs: snapshot.audioStats.jitterMs,

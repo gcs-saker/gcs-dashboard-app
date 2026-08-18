@@ -32,7 +32,7 @@ export type PlaybackAction =
   | { type: typeof WHEP_PLAYBACK_ACTION.firstFrame; latencyMs: number }
   | { type: typeof WHEP_PLAYBACK_ACTION.audioState; hasAudioTrack: boolean; isAudioActive: boolean }
   | { type: typeof WHEP_PLAYBACK_ACTION.audioPlayback; blocked: boolean }
-  | { type: typeof WHEP_PLAYBACK_ACTION.audioLevel; audioLevel: number | null }
+  | { type: typeof WHEP_PLAYBACK_ACTION.audioLevel; audioLevel: number | null; waveform: readonly number[] }
   | { type: typeof WHEP_PLAYBACK_ACTION.audioStats; stats: WebRTCAudioStats }
   | { type: typeof WHEP_PLAYBACK_ACTION.iceCandidate; candidate: RTCIceCandidate }
   | { type: typeof WHEP_PLAYBACK_ACTION.signalingTiming; stage: SignalingTimingKey; latencyMs: number };
@@ -48,6 +48,7 @@ export const EMPTY_SIGNALING_TIMINGS: WebRTCSignalingTimings = {
 
 export const EMPTY_AUDIO_STATS: WebRTCAudioStats = {
   audioLevel: null,
+  waveform: [],
   jitterMs: null,
   jitterBufferDelayMs: null,
   packetsLost: null,

@@ -67,6 +67,7 @@ describe("whepPlaybackReducer", () => {
     expect(playbackReducer(initialPlaybackState, {
       type: "audio-level",
       audioLevel: initialPlaybackState.audioStats.audioLevel,
+      waveform: [],
     })).toBe(initialPlaybackState);
   });
 });

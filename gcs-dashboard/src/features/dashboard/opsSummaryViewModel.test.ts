@@ -15,6 +15,7 @@ const BASE_STREAM: DashboardStreamSlot = {
 
 const BASE_AUDIO: AudioAnalysisSnapshot = {
   audioLevel: 0.4,
+  audioWaveform: [0.1, 0.4, 0.2],
   firstFrameLatencyMs: 80,
   hasAudioTrack: true,
   iceRoundTripTimeMs: 30,
