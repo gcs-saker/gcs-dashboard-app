@@ -18,6 +18,7 @@ export function monitorAudioLevel(stream: MediaStream, dispatch: Dispatch<Playba
 
   const audioContext = createAudioAnalysisContext(stream, dispatch);
   if (!audioContext) return () => undefined;
+  const removeResumeListeners = resumeAudioContextOnInteraction(audioContext.context);
 
   let disposed = false;
   let animationFrameId: number | null = null;
@@ -49,8 +50,23 @@ export function monitorAudioLevel(stream: MediaStream, dispatch: Dispatch<Playba
     }
     audioContext.sourceNode.disconnect();
     audioContext.analyserNode.disconnect();
+    removeResumeListeners();
     void audioContext.context.close?.().catch(() => undefined);
     dispatch({ type: "audio-level", audioLevel: null, waveform: [] });
+  };
+}
+
+function resumeAudioContextOnInteraction(context: AudioContext): () => void {
+  const resume = (): void => {
+    if (context.state === "suspended") void context.resume().catch(() => undefined);
+  };
+  resume();
+  if (typeof document === "undefined") return () => undefined;
+  document.addEventListener("pointerdown", resume, { passive: true });
+  document.addEventListener("keydown", resume);
+  return () => {
+    document.removeEventListener("pointerdown", resume);
+    document.removeEventListener("keydown", resume);
   };
 }
 

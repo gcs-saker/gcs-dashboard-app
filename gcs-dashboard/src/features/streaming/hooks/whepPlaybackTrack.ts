@@ -19,20 +19,23 @@ export function createWhepTrackHandler(
   return (event) => {
     if (!refs.videoRef.current) return;
 
-    const stream = event.streams[0] ?? ensureRemoteStream(refs.remoteStreamRef, event.track);
+    const stream = mergeRemoteTrack(refs.remoteStreamRef, event.streams[0], event.track);
     replaceAudioMonitors(stream, session, dispatch);
     refs.videoRef.current.srcObject = stream;
     requestVideoPlayback(refs.videoRef.current, dispatch);
   };
 }
 
-function ensureRemoteStream(
+function mergeRemoteTrack(
   remoteStreamRef: MutableRefObject<MediaStream | null>,
+  eventStream: MediaStream | undefined,
   track: MediaStreamTrack,
 ): MediaStream {
-  if (!remoteStreamRef.current) {
-    remoteStreamRef.current = new MediaStream();
+  if (eventStream) {
+    remoteStreamRef.current = eventStream;
+    return eventStream;
   }
+  if (!remoteStreamRef.current) remoteStreamRef.current = new MediaStream();
   remoteStreamRef.current.addTrack(track);
   return remoteStreamRef.current;
 }

@@ -36,12 +36,31 @@ export function streamDeviceFromRegistryItem(
     telemetryByUuid.get(item.assetId);
   return {
     id: `registry-${item.streamId}`,
-    name: item.displayName ?? `${item.assetId} ${item.sensorId}`,
+    name: safeRegistryDisplayName(item),
     streamPath: item.streamId,
     status: dashboardStatusFromRegistryStatus(item.status),
     mediaType,
     geometry: telemetry && hasTelemetryPosition(telemetry) ? geometryFromTelemetry(telemetry) : null,
   };
+}
+
+export function safeRegistryDisplayName(item: StreamRegistryResponse): string {
+  const displayName = item.displayName?.trim();
+  const containsInternalAddress = Boolean(displayName && (
+    displayName.includes(item.streamId) ||
+    displayName.includes(item.path) ||
+    /readers|session/i.test(displayName)
+  ));
+  if (displayName && !containsInternalAddress) return displayName;
+  return sensorLabel(item.sensorId);
+}
+
+function sensorLabel(sensorId: string): string {
+  const normalized = sensorId.toLowerCase();
+  if (normalized.includes("rear") || normalized.includes("back")) return "후면 카메라";
+  if (normalized.includes("thermal") || normalized === "ir") return "열화상 카메라";
+  if (normalized.includes("front") || normalized.includes("camera")) return "전면 카메라";
+  return "송출 카메라";
 }
 
 export function shouldPreferDeviceGeometry(geometry: StreamDeviceGeometry | null): boolean {

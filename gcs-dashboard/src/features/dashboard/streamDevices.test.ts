@@ -246,8 +246,22 @@ describe("streamDevices", () => {
     expect(merged[1]).toMatchObject({
       id: "registry-raw.drone-09.front",
       title: "스트리밍 2",
-      detail: "Drone 09 Front / raw.drone-09.front",
+      detail: "Drone 09 Front",
     });
+  });
+
+  test("fills the first empty dashboard slot before appending a fifth stream", () => {
+    const liveDevice = { ...MOCK_STREAM_DEVICES[3], status: "online" as const };
+
+    const merged = mergeStreamSlotsWithDevices(DEFAULT_DASHBOARD_STREAMS, [liveDevice]);
+
+    expect(merged).toHaveLength(DEFAULT_DASHBOARD_STREAMS.length);
+    expect(merged[0]).toMatchObject({
+      id: liveDevice.id,
+      title: "스트리밍 1",
+      streamPath: liveDevice.streamPath,
+    });
+    expect(merged.some((stream) => stream.title === "스트리밍 5")).toBe(false);
   });
 
   test("updates an existing stream slot when live telemetry geometry arrives", () => {

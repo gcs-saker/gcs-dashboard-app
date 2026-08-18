@@ -70,6 +70,21 @@ describe("streamDeviceMapping", () => {
     });
   });
 
+  test("replaces internal MediaMTX addresses with a safe camera label", () => {
+    const device = streamDeviceFromRegistryItem({
+      streamId: "raw.device-pub.front",
+      path: "raw/device-pub/front",
+      prefix: "raw",
+      assetId: "device-pub",
+      sensorId: "front",
+      status: "online",
+      displayName: "raw.device-pub.front (webRTCSession, readers 1)",
+    });
+
+    expect(device.name).toBe("전면 카메라");
+    expect(device.name).not.toContain("raw.device");
+  });
+
   test("uses device UUID telemetry through the registry asset ID", () => {
     const deviceUuid = "61519988-afea-4096-a10a-816569a8dfd2";
     const device = streamDeviceFromRegistryItem(

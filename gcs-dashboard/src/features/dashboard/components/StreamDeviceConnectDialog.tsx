@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import { getDashboardStreamStatusText, type DashboardStreamSlot } from "@dashboard/streamTypes";
 import type { StreamDeviceOption } from "@dashboard/streamDevices";
 
 interface StreamDeviceConnectDialogProps {
@@ -65,7 +65,7 @@ export function StreamDeviceConnectDialog({
             >
               <span>
                 <strong>{device.name}</strong>
-                <small>{device.mediaType.toUpperCase()} · {device.streamPath}</small>
+                <small>{device.mediaType.toUpperCase()} · {getDashboardStreamStatusText(device.status)}</small>
               </span>
               <span className="ops-badge is-online">수신 중</span>
             </button>

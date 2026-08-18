@@ -12,7 +12,7 @@ export function mergeStreamSlotsWithDevices(
   const devicesByStreamPath = indexDevicesByStreamPath(devices);
   const seenStreamPaths = new Set<string>();
   const nextStreams = streams.flatMap((stream) => mergeExistingStreamSlot(stream, devicesByStreamPath, seenStreamPaths));
-  return [...nextStreams, ...discoverStreamSlots(nextStreams, devices)];
+  return discoverStreamSlots(nextStreams, devices);
 }
 
 function indexDevicesByStreamPath(devices: StreamDeviceOption[]): Map<string, StreamDeviceOption> {
@@ -38,7 +38,7 @@ function mergeExistingStreamSlot(
   return [{
     ...stream,
     connectedDeviceId: stream.connectedDeviceId ?? device.id,
-    detail: `${device.name} / ${device.streamPath}`,
+    detail: device.name,
     mode: modeForMediaType(device.mediaType),
     status: device.status,
     geometry: shouldPreferDeviceGeometry(device.geometry) ? device.geometry : null,
@@ -50,16 +50,23 @@ function discoverStreamSlots(
   devices: StreamDeviceOption[],
 ): DashboardStreamSlot[] {
   const knownStreamPaths = new Set(existingStreams.flatMap((stream) => stream.streamPath ? [stream.streamPath] : []));
-  return devices
-    .filter((device) => !knownStreamPaths.has(device.streamPath))
-    .map((device, index): DashboardStreamSlot => ({
+  const nextStreams = [...existingStreams];
+  for (const device of devices.filter((candidate) => !knownStreamPaths.has(candidate.streamPath))) {
+    const emptySlotIndex = nextStreams.findIndex((stream) => !stream.streamPath);
+    const slot = emptySlotIndex >= 0 ? nextStreams[emptySlotIndex] : null;
+    const connectedStream: DashboardStreamSlot = {
       id: device.id,
-      title: `스트리밍 ${existingStreams.length + index + 1}`,
+      title: slot?.title ?? `스트리밍 ${nextStreams.length + 1}`,
       status: device.status,
       mode: modeForMediaType(device.mediaType),
-      detail: `${device.name} / ${device.streamPath}`,
+      detail: device.name,
       connectedDeviceId: device.id,
       streamPath: device.streamPath,
       geometry: device.geometry,
-    }));
+    };
+    if (emptySlotIndex >= 0) nextStreams[emptySlotIndex] = connectedStream;
+    else nextStreams.push(connectedStream);
+    knownStreamPaths.add(device.streamPath);
+  }
+  return nextStreams;
 }

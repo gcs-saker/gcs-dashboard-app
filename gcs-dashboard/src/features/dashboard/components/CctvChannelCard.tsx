@@ -24,7 +24,7 @@ export const CctvChannelCard = memo(function CctvChannelCard({
   onSelect,
 }: CctvChannelCardProps) {
   const selectStream = useCallback(() => onSelect(stream.id), [onSelect, stream.id]);
-  const sourceLabel = stream.streamPath ?? "스트림 미선택";
+  const sourceLabel = stream.streamPath ? getDashboardStreamDisplayName(stream) : "스트림 미선택";
   const statusText = getDashboardStreamStatusText(stream.status);
 
   return (
