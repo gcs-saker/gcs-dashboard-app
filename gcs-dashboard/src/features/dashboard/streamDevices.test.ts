@@ -77,13 +77,35 @@ describe("streamDevices", () => {
       id: "registry-raw.drone-07.front",
       name: "Drone 07 Front",
       streamPath: "raw.drone-07.front",
-      status: "online",
+      status: "reconnecting",
       geometry: {
         lat: 35.8842,
         lng: 128.6123,
         altitudeM: 81,
         source: "telemetry",
       },
+    });
+  });
+
+  test("keeps registry streams visible when telemetry validation fails", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(Response.json([{
+        streamId: "raw.mobile.front",
+        path: "raw/mobile/front",
+        prefix: "raw",
+        assetId: "mobile-device",
+        sensorId: "front",
+        status: "online",
+      }]))
+      .mockResolvedValueOnce(Response.json([{ uuid: "mobile-device" }]));
+
+    const devices = await fetchStreamDeviceOptions(fetcher as unknown as typeof fetch);
+
+    expect(devices).toHaveLength(1);
+    expect(devices[0]).toMatchObject({
+      streamPath: "raw.mobile.front",
+      status: "reconnecting",
+      geometry: { source: "registry" },
     });
   });
 
@@ -139,7 +161,6 @@ describe("streamDevices", () => {
   test("surfaces stream registry 401 as an auth failure", async () => {
     const fetcher = vi.fn()
       .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
-      .mockResolvedValueOnce(Response.json([]))
       .mockResolvedValueOnce(new Response("refresh unauthorized", { status: 401 }));
 
     await expect(fetchStreamDeviceOptions(fetcher as unknown as typeof fetch)).rejects.toMatchObject({
@@ -199,7 +220,7 @@ describe("streamDevices", () => {
 
     expect(merged).toHaveLength(2);
     expect(merged[1]).toMatchObject({
-      id: "raw.drone-09.front",
+      id: "registry-raw.drone-09.front",
       title: "스트리밍 2",
       detail: "Drone 09 Front / raw.drone-09.front",
     });
@@ -261,10 +282,10 @@ describe("streamDevices", () => {
     };
     const merged = mergeStreamSlotsWithDevices(DEFAULT_DASHBOARD_STREAMS, [liveWebcamDevice]);
 
-    expect(preferredSelectedStreamId("raw.sample.front", merged, [liveWebcamDevice])).toBe("raw.local.webcam");
+    expect(preferredSelectedStreamId("raw.sample.front", merged, [liveWebcamDevice])).toBe("device-local-webcam");
   });
 
-  test("keeps the current selection when that stream is online in the registry", () => {
+  test("keeps the current live device selection when that stream remains online", () => {
     const liveSampleDevice = {
       ...MOCK_STREAM_DEVICES[0],
       status: "online" as const,
@@ -273,9 +294,10 @@ describe("streamDevices", () => {
       ...MOCK_STREAM_DEVICES[3],
       status: "online" as const,
     };
+    const merged = mergeStreamSlotsWithDevices(DEFAULT_DASHBOARD_STREAMS, [liveSampleDevice, liveWebcamDevice]);
 
     expect(
-      preferredSelectedStreamId("raw.sample.front", DEFAULT_DASHBOARD_STREAMS, [liveSampleDevice, liveWebcamDevice]),
-    ).toBe("raw.sample.front");
+      preferredSelectedStreamId("device-drn-01-front", merged, [liveSampleDevice, liveWebcamDevice]),
+    ).toBe("device-drn-01-front");
   });
 });

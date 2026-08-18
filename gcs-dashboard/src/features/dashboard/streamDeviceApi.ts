@@ -17,10 +17,8 @@ import {
 } from "./telemetryContracts";
 
 export async function fetchStreamDeviceOptions(fetcher: typeof fetch = fetch): Promise<StreamDeviceOption[]> {
-  const [registry, telemetryByUuid] = await Promise.all([
-    fetchStreamRegistry(fetcher),
-    fetchTelemetryIndex(fetcher),
-  ]);
+  const registry = await fetchStreamRegistry(fetcher);
+  const telemetryByUuid = await fetchTelemetryIndex(fetcher).catch(() => new Map<string, TelemetryReadResponse>());
   return registry.map((item) => streamDeviceFromRegistryItem(item, telemetryByUuid));
 }
 

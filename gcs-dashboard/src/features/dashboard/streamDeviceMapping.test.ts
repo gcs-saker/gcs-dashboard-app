@@ -16,7 +16,7 @@ describe("streamDeviceMapping", () => {
   });
 
   test("normalizes registry status for dashboard state", () => {
-    expect(dashboardStatusFromRegistryStatus("online")).toBe("online");
+    expect(dashboardStatusFromRegistryStatus("online")).toBe("reconnecting");
     expect(dashboardStatusFromRegistryStatus("offline")).toBe("offline");
     expect(dashboardStatusFromRegistryStatus("registered")).toBe("degraded");
     expect(dashboardStatusFromRegistryStatus("unknown")).toBe("degraded");
@@ -55,7 +55,7 @@ describe("streamDeviceMapping", () => {
 
     expect(device).toMatchObject({
       id: "registry-raw.drone-07.front",
-      status: "online",
+      status: "reconnecting",
       mediaType: "eo",
       geometry: {
         lat: 35.8842,
@@ -102,6 +102,29 @@ describe("streamDeviceMapping", () => {
       altitudeM: 50,
       source: "telemetry",
     });
+  });
+
+  test("keeps registry fallback geometry when mobile coordinates are unavailable", () => {
+    const device = streamDeviceFromRegistryItem(
+      {
+        streamId: "raw.mobile.front",
+        path: "raw/mobile/front",
+        prefix: "raw",
+        assetId: "mobile-device",
+        sensorId: "front",
+        status: "online",
+      },
+      new Map([["mobile-device", {
+        uuid: "mobile-device",
+        latitude: null,
+        longitude: null,
+        altitude: null,
+        velocity: null,
+        epochTime: "00:00:10",
+      }]]),
+    );
+
+    expect(device.geometry).toMatchObject({ source: "registry", altitudeM: 0 });
   });
 
   test("keeps fallback geometry in the Daegu operating area", () => {

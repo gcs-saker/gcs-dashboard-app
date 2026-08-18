@@ -78,7 +78,7 @@ describe("refreshStreamDevicesOnce", () => {
 
     expect(streamDevices[0].name).toBe("별칭 단말");
     expect(streams[1]).toMatchObject({ streamPath: "raw.mobile.front", status: "online" });
-    expect(selectedStreamId).toBe("raw.mobile.front");
+    expect(selectedStreamId).toBe("device-1");
   });
 
   test("stops polling and reports auth failure on 401", async () => {

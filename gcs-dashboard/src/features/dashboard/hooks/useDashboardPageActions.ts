@@ -14,7 +14,7 @@ import {
   toggleStringSetItem,
 } from "@dashboard/dashboardPageViewModel";
 import type { StreamDeviceOption } from "@dashboard/streamDevices";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot, DashboardStreamStatus } from "@dashboard/streamTypes";
 
 export interface DashboardPageActionInput {
   connectStreamDeviceState: (device: StreamDeviceOption) => void;
@@ -34,6 +34,7 @@ export interface DashboardPageActionInput {
   setTalkbackTargetStreamIds: Dispatch<SetStateAction<string[]>>;
   streams: DashboardStreamSlot[];
   toggleStreamAiModeState: (streamId: string) => void;
+  updateStreamRuntimeStatus: (streamId: string, status: DashboardStreamStatus) => void;
 }
 
 export function useDashboardPageActions(input: DashboardPageActionInput) {
@@ -88,6 +89,7 @@ export function useDashboardPageActions(input: DashboardPageActionInput) {
   const handleSelectedPlaybackStatusChange = useCallback((streamId: string, snapshot: RealtimePlayerSnapshot): void => {
     input.setAudioAnalysis((current) => nextAudioAnalysisState(current, streamId, snapshot, input.streams));
     input.setAudioActiveStreamId((currentStreamId) => nextAudioActiveStreamId(currentStreamId, streamId, snapshot));
+    input.updateStreamRuntimeStatus(streamId, dashboardStatusFromPlaybackSnapshot(snapshot));
   }, [input]);
 
   const toggleTalkbackTarget = useCallback((streamPath: string): void => {
@@ -131,4 +133,14 @@ export function useDashboardPageActions(input: DashboardPageActionInput) {
     toggleTalkbackTarget,
     toggleWidgetPin,
   }), [applyWidgetDialog, cancelStreamConnection, cancelWidgetDialog, closeAssetDrawer, connectStreamDevice, disconnectCurrentStreamSlot, handleSelectedPlaybackStatusChange, openStreamConnection, resetLayout, selectAssetTreeStream, selectMapStream, setWidgetVisible, toggleStreamAiMode, toggleTalkbackTarget, toggleWidgetPin]);
+}
+
+export function dashboardStatusFromPlaybackSnapshot(snapshot: RealtimePlayerSnapshot): DashboardStreamStatus {
+  if (snapshot.mode === "webrtc" && snapshot.webrtcFirstFrameLatencyMs !== null && snapshot.webrtcFirstFrameLatencyMs !== undefined) {
+    return "online";
+  }
+  if (snapshot.mode === "error") return "error";
+  if (snapshot.mode === "offline" || snapshot.streamStatus === "offline") return "offline";
+  if (snapshot.mode === "hls") return "fallback";
+  return "reconnecting";
 }

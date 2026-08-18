@@ -53,7 +53,7 @@ function discoverStreamSlots(
   return devices
     .filter((device) => !knownStreamPaths.has(device.streamPath))
     .map((device, index): DashboardStreamSlot => ({
-      id: device.streamPath,
+      id: device.id,
       title: `스트리밍 ${existingStreams.length + index + 1}`,
       status: device.status,
       mode: modeForMediaType(device.mediaType),

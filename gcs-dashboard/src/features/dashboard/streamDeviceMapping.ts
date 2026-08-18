@@ -39,7 +39,9 @@ export function streamDeviceFromRegistryItem(
     streamPath: item.streamId,
     status: dashboardStatusFromRegistryStatus(item.status),
     mediaType,
-    geometry: telemetry ? geometryFromTelemetry(telemetry) : defaultGeometryForStream(item.streamId, "registry"),
+    geometry: telemetry && hasTelemetryPosition(telemetry)
+      ? geometryFromTelemetry(telemetry)
+      : defaultGeometryForStream(item.streamId, "registry"),
   };
 }
 
@@ -49,9 +51,9 @@ export function shouldPreferDeviceGeometry(geometry: StreamDeviceGeometry): bool
 
 export function geometryFromTelemetry(telemetry: TelemetryReadResponse): StreamDeviceGeometry {
   return {
-    lat: telemetry.latitude,
-    lng: telemetry.longitude,
-    altitudeM: telemetry.altitude,
+    lat: telemetry.latitude ?? 0,
+    lng: telemetry.longitude ?? 0,
+    altitudeM: telemetry.altitude ?? 0,
     batteryPercent: telemetry.batteryPercent,
     headingDeg: telemetry.headingDeg ?? 0,
     pitchDeg: telemetry.pitchDeg ?? 0,
@@ -65,13 +67,17 @@ export function geometryFromTelemetry(telemetry: TelemetryReadResponse): StreamD
 export function dashboardStatusFromRegistryStatus(status: StreamRegistryResponse["status"]): DashboardStreamStatus {
   switch (status) {
     case "online":
-      return "online";
+      return "reconnecting";
     case "offline":
       return "offline";
     case "registered":
     case "unknown":
       return "degraded";
   }
+}
+
+function hasTelemetryPosition(telemetry: TelemetryReadResponse): boolean {
+  return typeof telemetry.latitude === "number" && typeof telemetry.longitude === "number";
 }
 
 export function mediaTypeFromStreamPath(streamPath: string): StreamDeviceOption["mediaType"] {

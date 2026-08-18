@@ -2,8 +2,13 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import { DEFAULT_DASHBOARD_STREAMS, type DashboardStreamSlot } from "@dashboard/streamTypes";
+import { connectDeviceToStreamSlot, MOCK_STREAM_DEVICES } from "@dashboard/streamDevices";
 import { SelectedStreamPanel } from "./SelectedStreamPanel";
 import { StreamGrid } from "./StreamGrid";
+
+const CONNECTED_TEST_STREAMS = DEFAULT_DASHBOARD_STREAMS.map((stream, index) => (
+  connectDeviceToStreamSlot(stream, MOCK_STREAM_DEVICES[index])
+));
 
 describe("StreamGrid", () => {
   test("renders stream cards with independent status badges", () => {
@@ -11,7 +16,7 @@ describe("StreamGrid", () => {
       <StreamGrid
         onSelectStream={() => undefined}
         selectedStreamId="raw.sample.front"
-        streams={DEFAULT_DASHBOARD_STREAMS}
+        streams={CONNECTED_TEST_STREAMS}
       />,
     );
 
@@ -29,7 +34,7 @@ describe("StreamGrid", () => {
       <StreamGrid
         onSelectStream={onSelectStream}
         selectedStreamId="raw.sample.front"
-        streams={DEFAULT_DASHBOARD_STREAMS}
+        streams={CONNECTED_TEST_STREAMS}
       />,
     );
 
@@ -53,7 +58,7 @@ describe("StreamGrid", () => {
         onSelectStream={() => undefined}
         renderCard={(stream) => <BrokenCard {...stream} />}
         selectedStreamId="raw.sample.front"
-        streams={DEFAULT_DASHBOARD_STREAMS}
+        streams={CONNECTED_TEST_STREAMS}
       />,
     );
 
@@ -66,11 +71,11 @@ describe("StreamGrid", () => {
 
 describe("SelectedStreamPanel", () => {
   test("renders selected stream as an independent main stream widget", () => {
-    render(<SelectedStreamPanel stream={DEFAULT_DASHBOARD_STREAMS[2]} />);
+    render(<SelectedStreamPanel stream={CONNECTED_TEST_STREAMS[2]} />);
 
     expect(screen.getByRole("heading", { name: "선택 스트림" })).toBeInTheDocument();
     expect(screen.getByText("스트리밍 3")).toBeInTheDocument();
-    expect(screen.getByText("AI 감지 overlay")).toBeInTheDocument();
+    expect(screen.getAllByText("UGV-01 후방 AI")).not.toHaveLength(0);
   });
 
   test("marks the stream card that is receiving audio", () => {
@@ -79,7 +84,7 @@ describe("SelectedStreamPanel", () => {
         audioActiveStreamId="raw.sample.front"
         onSelectStream={() => undefined}
         selectedStreamId="raw.sample.front"
-        streams={DEFAULT_DASHBOARD_STREAMS}
+        streams={CONNECTED_TEST_STREAMS}
       />,
     );
 
@@ -97,7 +102,7 @@ describe("SelectedStreamPanel", () => {
         onSelectStream={onSelectStream}
         onToggleTalkbackTarget={onToggleTalkbackTarget}
         selectedStreamId="raw.sample.front"
-        streams={DEFAULT_DASHBOARD_STREAMS}
+        streams={CONNECTED_TEST_STREAMS}
         talkbackTargetStreamIds={["raw.sample.rear"]}
       />,
     );

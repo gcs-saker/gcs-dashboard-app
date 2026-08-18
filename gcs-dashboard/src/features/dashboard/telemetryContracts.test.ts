@@ -38,5 +38,12 @@ describe("telemetryContracts", () => {
     expect(isTelemetryHistoryResponse({ recordedAt: "2026-06-01T00:00:00Z", telemetry })).toBe(true);
     expect(isTelemetryHistoryResponse({ recordedAt: "2026-06-01T00:00:00Z", telemetry: { uuid: "bad" } })).toBe(false);
     expect(isTelemetryReadResponse({ ...telemetry, gyroRadPerSec: { x: 1, y: 2 } })).toBe(false);
+    expect(isTelemetryReadResponse({
+      ...telemetry,
+      latitude: null,
+      longitude: null,
+      altitude: null,
+      velocity: null,
+    })).toBe(true);
   });
 });

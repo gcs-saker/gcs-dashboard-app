@@ -26,10 +26,10 @@ export interface StreamRegistryResponse {
 
 export interface TelemetryReadResponse {
   uuid: string;
-  latitude: number;
-  longitude: number;
-  altitude: number;
-  velocity: number;
+  latitude: number | null;
+  longitude: number | null;
+  altitude: number | null;
+  velocity: number | null;
   epochTime: string;
   headingDeg?: number;
   batteryPercent?: number;

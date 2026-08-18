@@ -3,11 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@auth/AuthProvider";
 import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@features/renderDiagnostics";
 import type { DashboardPageViewProps } from "@dashboard/components/templates/DashboardPageView";
-import {
-  getDashboardWidgetDefinition,
-  setDashboardWidgetVisible,
-  type DashboardWidgetId,
-} from "@dashboard/dashboardLayout";
+import { getDashboardWidgetDefinition, setDashboardWidgetVisible, type DashboardWidgetId } from "@dashboard/dashboardLayout";
 import { buildDashboardPageViewModel } from "@dashboard/dashboardPageViewModel";
 import { useDashboardChunkPreload } from "./useDashboardChunkPreload";
 import { useDashboardLocalUiState } from "./useDashboardLocalUiState";
@@ -24,7 +20,6 @@ export function useDashboardPageController(): DashboardPageViewProps {
   const ui = useDashboardLocalUiState();
   const preferencesApi = useDashboardUserPreferences(currentUser?.username);
   const { activeView, cctvLayoutMode, cctvQualityMode, layout, motionMode } = preferencesApi.preferences;
-
   const handleAuthFailure = useCallback((): void => {
     logout();
     navigate("/login?reason=session-expired", { replace: true });
@@ -48,7 +43,6 @@ export function useDashboardPageController(): DashboardPageViewProps {
   const [notification, setNotification] = useStreamAvailabilityNotification(streamState.streams, revealDetectedStream);
   useDashboardChunkPreload();
   useDashboardMotionMode(motionMode);
-
   const panelClass = useCallback(
     (baseClass: string, widgetId: DashboardWidgetId): string => `${baseClass} ${preferencesApi.isWidgetPinned(widgetId) ? "is-pinned" : ""}`,
     [preferencesApi],
@@ -70,7 +64,6 @@ export function useDashboardPageController(): DashboardPageViewProps {
   const actionInput = useDashboardPageActionInput(preferencesApi, streamState, ui);
   const actions = useDashboardPageActions(actionInput);
   const hideWidget = useCallback((widgetId: DashboardWidgetId): void => actions.setWidgetVisible(widgetId, false), [actions]);
-
   return {
     headerProps: {
       activeView,

@@ -45,5 +45,5 @@ export function preferredSelectedStreamId(
     devices.find((device) => device.streamPath === LOCAL_WEBCAM_STREAM_ID) ??
     devices[0];
 
-  return streams.find((stream) => stream.streamPath === preferredDevice.streamPath)?.id ?? preferredDevice.streamPath;
+  return streams.find((stream) => stream.streamPath === preferredDevice.streamPath)?.id ?? preferredDevice.id;
 }

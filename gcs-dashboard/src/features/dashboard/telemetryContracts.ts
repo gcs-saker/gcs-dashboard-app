@@ -20,10 +20,10 @@ export function isTelemetryReadResponse(payload: unknown): payload is TelemetryR
   const candidate = payload as Partial<TelemetryReadResponse>;
   return (
     typeof candidate.uuid === "string" &&
-    typeof candidate.latitude === "number" &&
-    typeof candidate.longitude === "number" &&
-    typeof candidate.altitude === "number" &&
-    typeof candidate.velocity === "number" &&
+    isNullableNumber(candidate.latitude) &&
+    isNullableNumber(candidate.longitude) &&
+    isNullableNumber(candidate.altitude) &&
+    isNullableNumber(candidate.velocity) &&
     typeof candidate.epochTime === "string" &&
     isOptionalNumber(candidate.headingDeg) &&
     isOptionalNumber(candidate.batteryPercent) &&
@@ -34,6 +34,10 @@ export function isTelemetryReadResponse(payload: unknown): payload is TelemetryR
     isOptionalVector3(candidate.accelMps2) &&
     isOptionalNumber(candidate.linkQualityPercent)
   );
+}
+
+function isNullableNumber(value: unknown): boolean {
+  return value === null || typeof value === "number";
 }
 
 function isOptionalNumber(value: unknown): boolean {

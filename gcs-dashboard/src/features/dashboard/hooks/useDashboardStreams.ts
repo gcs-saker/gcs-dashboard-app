@@ -93,6 +93,12 @@ export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
     );
   }, []);
 
+  const updateStreamRuntimeStatus = useCallback((streamId: string, status: DashboardStreamSlot["status"]): void => {
+    setStreams((current) => current.map((stream) => (
+      stream.id === streamId ? { ...stream, status } : stream
+    )));
+  }, []);
+
   return {
     connectStreamDevice,
     disconnectCurrentStreamSlot,
@@ -105,5 +111,6 @@ export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
     streamDevices,
     streams,
     toggleStreamAiMode,
+    updateStreamRuntimeStatus,
   };
 }

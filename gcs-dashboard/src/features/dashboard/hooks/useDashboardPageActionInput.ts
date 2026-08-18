@@ -31,6 +31,7 @@ export function useDashboardPageActionInput(
     setTalkbackTargetStreamIds: ui.setTalkbackTargetStreamIds,
     streams: streamState.streams,
     toggleStreamAiModeState: streamState.toggleStreamAiMode,
+    updateStreamRuntimeStatus: streamState.updateStreamRuntimeStatus,
   }), [
     preferencesApi.isWidgetPinned,
     preferencesApi.resetWidgetLayout,
@@ -42,6 +43,7 @@ export function useDashboardPageActionInput(
     streamState.setEditingStreamId,
     streamState.streams,
     streamState.toggleStreamAiMode,
+    streamState.updateStreamRuntimeStatus,
     ui.setAudioActiveStreamId,
     ui.setAudioAnalysis,
     ui.setIsAssetDrawerOpen,
