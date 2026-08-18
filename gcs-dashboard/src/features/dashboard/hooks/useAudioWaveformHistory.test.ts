@@ -38,6 +38,18 @@ describe("useAudioWaveformHistory", () => {
     expect(result.current).toEqual(Array.from({ length: 5 }, () => 4));
   });
 
+  test("shows a low transport waveform when an audio track has no measurable level", () => {
+    const { result } = renderHook(() => useAudioWaveformHistory({
+      audioLevel: null,
+      isSignalPresent: true,
+      sourceId: "stream-1",
+      sampleCount: 6,
+    }));
+
+    act(() => vi.advanceTimersByTime(360));
+    expect(result.current.some((sample) => sample > 4)).toBe(true);
+  });
+
   test("normalizes invalid sample counts to a safe bounded history", () => {
     const { result, rerender } = renderHook(
       ({ sampleCount }) => useAudioWaveformHistory({ audioLevel: null, isSignalPresent: false, sourceId: "stream-1", sampleCount }),

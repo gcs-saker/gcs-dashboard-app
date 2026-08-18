@@ -58,7 +58,9 @@ function nextAmplitude(
   const previous = samples.at(-1) ?? BAR_FLOOR;
   const normalizedLevel = audioLevel === null ? null : Math.min(1, Math.max(0, audioLevel));
   const target = normalizedLevel === null
-    ? Math.max(BAR_FLOOR, previous * (isSignalPresent ? 0.94 : 0.76))
+    ? isSignalPresent
+      ? 14 + (Math.sin(tickRef.current * 1.3) + 1) * 5
+      : Math.max(BAR_FLOOR, previous * 0.76)
     : 8 + normalizedLevel * 86;
   const smoothed = previous + (target - previous) * 0.58;
   const variation = normalizedLevel === null ? 1 : 0.9 + Math.sin(tickRef.current * 1.7) * 0.1;
