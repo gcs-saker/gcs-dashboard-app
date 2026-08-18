@@ -26,6 +26,11 @@
     padding: 6px;
   }
 
+  .ops-dashboard__grid > .ops-panel {
+    min-width: 0 !important;
+    width: 100%;
+  }
+
   .stream-grid {
     grid-template-columns: 1fr;
   }
