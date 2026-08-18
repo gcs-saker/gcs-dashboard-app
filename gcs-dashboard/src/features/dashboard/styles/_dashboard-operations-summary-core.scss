@@ -20,6 +20,7 @@
   gap: 4px;
   min-height: 72px;
   padding: 10px;
+  padding-right: 88px;
   position: relative;
 }
 
@@ -101,6 +102,15 @@
   color: #e9f4fb;
   font-size: 1.02rem;
   font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.telemetry-panel__identity small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

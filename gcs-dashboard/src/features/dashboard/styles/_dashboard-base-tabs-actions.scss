@@ -24,6 +24,11 @@
   gap: 8px;
 }
 
+.widget-actions {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
 .ops-dashboard__tab-list {
   flex-wrap: nowrap;
 }

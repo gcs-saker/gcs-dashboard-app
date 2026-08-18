@@ -37,6 +37,7 @@
   background: linear-gradient(90deg, rgba(61, 184, 255, 0.08), transparent 54%);
   border-bottom: 1px solid rgba(94, 151, 181, 0.3);
   display: flex;
+  gap: 8px;
   justify-content: space-between;
   min-height: 46px;
   padding: 0 14px;
@@ -44,9 +45,14 @@
 
 .ops-panel__header h2 {
   color: var(--heading);
+  flex: 1 1 auto;
   font-size: 1rem;
   letter-spacing: 0;
   margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .selected-stream__heading {
