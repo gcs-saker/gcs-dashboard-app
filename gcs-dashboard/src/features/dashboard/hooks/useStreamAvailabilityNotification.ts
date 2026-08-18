@@ -5,10 +5,12 @@ import type { DashboardStreamSlot } from "@dashboard/streamTypes";
 export interface StreamAvailabilityNotification {
   id: string;
   message: string;
+  streamId: string;
 }
 
 export function useStreamAvailabilityNotification(
   streams: DashboardStreamSlot[],
+  onStreamAvailable?: (streamId: string) => void,
 ): [StreamAvailabilityNotification | null, (notification: StreamAvailabilityNotification | null) => void] {
   const [streamNotification, setStreamNotification] = useState<StreamAvailabilityNotification | null>(null);
   const knownAvailableStreamIdsRef = useRef<Set<string> | null>(null);
@@ -23,13 +25,15 @@ export function useStreamAvailabilityNotification(
 
     const addedStream = availableStreams.find((stream) => !knownAvailableStreamIdsRef.current?.has(stream.id));
     if (addedStream) {
+      onStreamAvailable?.(addedStream.id);
       setStreamNotification({
         id: `${addedStream.id}-${Date.now()}`,
         message: `수신 가능한 스트림 감지: ${addedStream.title}`,
+        streamId: addedStream.id,
       });
     }
     knownAvailableStreamIdsRef.current = availableStreamIds;
-  }, [streams]);
+  }, [onStreamAvailable, streams]);
 
   useEffect(() => {
     if (!streamNotification) return;

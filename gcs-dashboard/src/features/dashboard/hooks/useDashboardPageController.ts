@@ -3,7 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@auth/AuthProvider";
 import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@features/renderDiagnostics";
 import type { DashboardPageViewProps } from "@dashboard/components/templates/DashboardPageView";
-import { getDashboardWidgetDefinition, type DashboardWidgetId } from "@dashboard/dashboardLayout";
+import {
+  getDashboardWidgetDefinition,
+  setDashboardWidgetVisible,
+  type DashboardWidgetId,
+} from "@dashboard/dashboardLayout";
 import { buildDashboardPageViewModel } from "@dashboard/dashboardPageViewModel";
 import { useDashboardChunkPreload } from "./useDashboardChunkPreload";
 import { useDashboardLocalUiState } from "./useDashboardLocalUiState";
@@ -35,7 +39,13 @@ export function useDashboardPageController(): DashboardPageViewProps {
     selectedStream: streamState.selectedStream,
     streams: streamState.streams,
   }), [preferencesApi.preferences, streamState.selectedStream, streamState.streams]);
-  const [notification, setNotification] = useStreamAvailabilityNotification(streamState.streams);
+  const revealDetectedStream = useCallback((streamId: string): void => {
+    streamState.selectStream(streamId);
+    if (activeView === "dashboard") {
+      preferencesApi.setLayout((current) => setDashboardWidgetVisible(current, "selected-stream", true));
+    }
+  }, [activeView, preferencesApi.setLayout, streamState.selectStream]);
+  const [notification, setNotification] = useStreamAvailabilityNotification(streamState.streams, revealDetectedStream);
   useDashboardChunkPreload();
   useDashboardMotionMode(motionMode);
 
@@ -50,6 +60,12 @@ export function useDashboardPageController(): DashboardPageViewProps {
   const openAssetDrawer = useCallback((): void => ui.setIsAssetDrawerOpen(true), [ui.setIsAssetDrawerOpen]);
   const openWidgetDialog = useCallback((): void => ui.setIsWidgetDialogOpen(true), [ui.setIsWidgetDialogOpen]);
   const dismissNotification = useCallback((): void => setNotification(null), [setNotification]);
+  const openNotification = useCallback((streamId: string): void => {
+    streamState.selectStream(streamId);
+    preferencesApi.setActiveView("dashboard");
+    preferencesApi.setLayout((current) => setDashboardWidgetVisible(current, "selected-stream", true));
+    setNotification(null);
+  }, [preferencesApi.setActiveView, preferencesApi.setLayout, setNotification, streamState.selectStream]);
   const closePopout = useCallback((): void => ui.setPopoutWidgetId(null), [ui.setPopoutWidgetId]);
   const actionInput = useDashboardPageActionInput(preferencesApi, streamState, ui);
   const actions = useDashboardPageActions(actionInput);
@@ -73,6 +89,7 @@ export function useDashboardPageController(): DashboardPageViewProps {
     motionMode,
     notification,
     onDismissNotification: dismissNotification,
+    onOpenNotification: openNotification,
     routerProps: {
       activeView,
       aiResultsWidget: getDashboardWidgetDefinition("ai-results"),

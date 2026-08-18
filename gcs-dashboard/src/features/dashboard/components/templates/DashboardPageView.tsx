@@ -22,6 +22,7 @@ export interface DashboardPageViewProps {
   motionMode: DashboardUserPreferences["motionMode"];
   notification: StreamAvailabilityNotification | null;
   onDismissNotification: () => void;
+  onOpenNotification: (streamId: string) => void;
   overlayProps: Omit<DashboardOverlaysProps, "widgetControls">;
   routerProps: Omit<DashboardViewRouterProps, "talkback" | "widgetControls">;
   widgetControls: DashboardWidgetControlBindings;
@@ -32,6 +33,7 @@ export function DashboardPageView({
   motionMode,
   notification,
   onDismissNotification,
+  onOpenNotification,
   overlayProps,
   routerProps,
   widgetControls: widgetControlBindings,
@@ -56,7 +58,13 @@ export function DashboardPageView({
     <main className="ops-dashboard" data-motion={motionMode} aria-label="Field Ops Dashboard">
       <DashboardHeader {...headerProps} talkback={talkback} />
 
-      {notification ? <StreamNotificationToast notification={notification} onDismiss={onDismissNotification} /> : null}
+      {notification ? (
+        <StreamNotificationToast
+          notification={notification}
+          onDismiss={onDismissNotification}
+          onOpen={onOpenNotification}
+        />
+      ) : null}
 
       <DashboardErrorBoundary
         boundaryId={`dashboard-route:${routerProps.activeView}`}

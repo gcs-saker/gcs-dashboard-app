@@ -57,6 +57,17 @@
   font-size: 0.84rem;
 }
 
+.ops-stream-toast__dismiss {
+  background: rgba(3, 10, 15, 0.94);
+  border: 1px solid rgba(149, 160, 168, 0.42);
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  justify-self: end;
+  padding: 4px 8px;
+  pointer-events: auto;
+}
+
 .ops-command-button:hover,
 .widget-icon-button:hover,
 .stream-card:hover,
