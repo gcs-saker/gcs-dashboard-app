@@ -2,6 +2,7 @@ import type {
   DashboardStreamGeometry,
   DashboardStreamStatus,
 } from "@dashboard/streaming/streamTypes";
+import { isNullableString, isString, matchesPayloadSchema, type PayloadSchema } from "@/features/payloadValidation";
 
 export type StreamDeviceGeometry = DashboardStreamGeometry;
 
@@ -52,22 +53,23 @@ export interface TelemetryHistoryResponse {
   telemetry: TelemetryReadResponse;
 }
 
+const STREAM_REGISTRY_STATUSES = new Set<unknown>(["registered", "online", "offline", "unknown"]);
+const STREAM_REGISTRY_SCHEMA: PayloadSchema = {
+  streamId: isString,
+  path: isString,
+  status: isStreamRegistryStatus,
+  displayName: (value) => value === undefined || isNullableString(value),
+  prefix: isString,
+  assetId: isString,
+  sensorId: isString,
+};
+
 export function isStreamRegistryResponse(payload: unknown): payload is StreamRegistryResponse {
-  if (!payload || typeof payload !== "object") return false;
-  const candidate = payload as Partial<StreamRegistryResponse>;
-  return (
-    typeof candidate.streamId === "string" &&
-    typeof candidate.path === "string" &&
-    isStreamRegistryStatus(candidate.status) &&
-    (typeof candidate.displayName === "string" || candidate.displayName === null || candidate.displayName === undefined) &&
-    typeof candidate.prefix === "string" &&
-    typeof candidate.assetId === "string" &&
-    typeof candidate.sensorId === "string"
-  );
+  return matchesPayloadSchema(payload, STREAM_REGISTRY_SCHEMA);
 }
 
 function isStreamRegistryStatus(value: unknown): value is StreamRegistryResponse["status"] {
-  return value === "registered" || value === "online" || value === "offline" || value === "unknown";
+  return STREAM_REGISTRY_STATUSES.has(value);
 }
 
 export const MOCK_STREAM_DEVICES: StreamDeviceOption[] = [

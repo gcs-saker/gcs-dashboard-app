@@ -1,4 +1,5 @@
 import { memo, useCallback } from "react";
+import { haveEqualFields } from "@/features/valueEquality";
 import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
 import { isReceivableStream } from "@dashboard/streaming/dashboardCctv";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
@@ -16,6 +17,13 @@ interface StreamCardProps {
   onSelect: (streamId: string) => void;
   onToggleTalkbackTarget?: (streamPath: string) => void;
 }
+
+const STREAM_CARD_PROP_FIELDS: readonly (keyof Omit<StreamCardProps, "stream">)[] = [
+  "isSelected", "hasAudioActivity", "isTalkbackTarget", "onSelect", "onToggleTalkbackTarget",
+];
+const STREAM_CARD_STREAM_FIELDS: readonly (keyof DashboardStreamSlot)[] = [
+  "id", "title", "status", "mode", "detail", "connectedDeviceId", "streamPath", "aiModeEnabled",
+];
 
 export const StreamCard = memo(function StreamCard({
   stream,
@@ -80,19 +88,6 @@ export const StreamCard = memo(function StreamCard({
 }, areStreamCardPropsEqual);
 
 function areStreamCardPropsEqual(previous: StreamCardProps, next: StreamCardProps): boolean {
-  return (
-    previous.stream.id === next.stream.id &&
-    previous.stream.title === next.stream.title &&
-    previous.stream.status === next.stream.status &&
-    previous.stream.mode === next.stream.mode &&
-    previous.stream.detail === next.stream.detail &&
-    previous.stream.connectedDeviceId === next.stream.connectedDeviceId &&
-    previous.stream.streamPath === next.stream.streamPath &&
-    previous.stream.aiModeEnabled === next.stream.aiModeEnabled &&
-    previous.isSelected === next.isSelected &&
-    previous.hasAudioActivity === next.hasAudioActivity &&
-    previous.isTalkbackTarget === next.isTalkbackTarget &&
-    previous.onSelect === next.onSelect &&
-    previous.onToggleTalkbackTarget === next.onToggleTalkbackTarget
-  );
+  return haveEqualFields(previous, next, STREAM_CARD_PROP_FIELDS) &&
+    haveEqualFields(previous.stream, next.stream, STREAM_CARD_STREAM_FIELDS);
 }

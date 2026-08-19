@@ -1,41 +1,20 @@
 import type { WebRTCAudioStats } from "@streaming/types";
+import { haveEqualFields } from "@/features/valueEquality";
+
+const AUDIO_STATS_FIELDS: readonly (keyof WebRTCAudioStats)[] = [
+  "audioLevel", "jitterMs", "jitterBufferDelayMs", "packetsLost", "packetsReceived", "concealedSamples",
+  "roundTripTimeMs", "localCandidateType", "remoteCandidateType", "transportProtocol", "relayFallbackReason",
+];
 
 export function extractAudioStats(report: RTCStatsReport): WebRTCAudioStats {
-  let inboundAudio: Record<string, unknown> | null = null;
-  let selectedPair: Record<string, unknown> | null = null;
-  const statsById = new Map<string, Record<string, unknown>>();
-
-  report.forEach((stat) => {
-    const candidate = stat as unknown as Record<string, unknown>;
-    const id = typeof candidate.id === "string" ? candidate.id : null;
-    if (id) statsById.set(id, candidate);
-    if (
-      candidate.type === "inbound-rtp" &&
-      (candidate.kind === "audio" || candidate.mediaType === "audio")
-    ) {
-      inboundAudio = candidate;
-    }
-    if (
-      candidate.type === "candidate-pair" &&
-      (candidate.selected === true || candidate.nominated === true || candidate.state === "succeeded")
-    ) {
-      selectedPair = candidate;
-    }
-  });
-
+  const { inboundAudio, selectedPair, statsById } = indexAudioStats(report);
   const localCandidate = candidateFromStats(statsById, selectedPair, "localCandidateId");
   const remoteCandidate = candidateFromStats(statsById, selectedPair, "remoteCandidateId");
-  const emittedCount = numberStat(inboundAudio, "jitterBufferEmittedCount");
-  const totalJitterBufferDelay = numberStat(inboundAudio, "jitterBufferDelay");
-  const averageJitterBufferDelayMs =
-    emittedCount !== null && emittedCount > 0 && totalJitterBufferDelay !== null
-      ? totalJitterBufferDelay * 1000 / emittedCount
-      : null;
 
   return {
     audioLevel: numberStat(inboundAudio, "audioLevel"),
     jitterMs: secondsToMs(numberStat(inboundAudio, "jitter")),
-    jitterBufferDelayMs: roundNullable(averageJitterBufferDelayMs),
+    jitterBufferDelayMs: averageJitterBufferDelay(inboundAudio),
     packetsLost: numberStat(inboundAudio, "packetsLost"),
     packetsReceived: numberStat(inboundAudio, "packetsReceived"),
     concealedSamples: numberStat(inboundAudio, "concealedSamples"),
@@ -47,20 +26,37 @@ export function extractAudioStats(report: RTCStatsReport): WebRTCAudioStats {
   };
 }
 
+function indexAudioStats(report: RTCStatsReport) {
+  let inboundAudio: Record<string, unknown> | null = null;
+  let selectedPair: Record<string, unknown> | null = null;
+  const statsById = new Map<string, Record<string, unknown>>();
+  report.forEach((stat) => {
+    const candidate = stat as unknown as Record<string, unknown>;
+    const id = typeof candidate.id === "string" ? candidate.id : null;
+    if (id) statsById.set(id, candidate);
+    if (isInboundAudio(candidate)) inboundAudio = candidate;
+    if (isSelectedPair(candidate)) selectedPair = candidate;
+  });
+  return { inboundAudio, selectedPair, statsById };
+}
+
+function isInboundAudio(candidate: Record<string, unknown>): boolean {
+  return candidate.type === "inbound-rtp" && (candidate.kind === "audio" || candidate.mediaType === "audio");
+}
+
+function isSelectedPair(candidate: Record<string, unknown>): boolean {
+  return candidate.type === "candidate-pair" &&
+    (candidate.selected === true || candidate.nominated === true || candidate.state === "succeeded");
+}
+
+function averageJitterBufferDelay(inboundAudio: Record<string, unknown> | null): number | null {
+  const emitted = numberStat(inboundAudio, "jitterBufferEmittedCount");
+  const delay = numberStat(inboundAudio, "jitterBufferDelay");
+  return emitted !== null && emitted > 0 && delay !== null ? roundNullable(delay * 1000 / emitted) : null;
+}
+
 export function audioStatsEqual(left: WebRTCAudioStats, right: WebRTCAudioStats): boolean {
-  return (
-    left.audioLevel === right.audioLevel &&
-    left.jitterMs === right.jitterMs &&
-    left.jitterBufferDelayMs === right.jitterBufferDelayMs &&
-    left.packetsLost === right.packetsLost &&
-    left.packetsReceived === right.packetsReceived &&
-    left.concealedSamples === right.concealedSamples &&
-    left.roundTripTimeMs === right.roundTripTimeMs &&
-    left.localCandidateType === right.localCandidateType &&
-    left.remoteCandidateType === right.remoteCandidateType &&
-    left.transportProtocol === right.transportProtocol &&
-    left.relayFallbackReason === right.relayFallbackReason
-  );
+  return haveEqualFields(left, right, AUDIO_STATS_FIELDS);
 }
 
 function candidateFromStats(
