@@ -5,8 +5,8 @@ import { useProvisioningTokens } from "@dashboard/hooks/devices/useProvisioningT
 import {
   DEFAULT_PROVISIONING_TOKEN_INPUT,
   type IssueProvisioningTokenInput,
-  type ProvisioningTokenRecord,
 } from "@dashboard/devices/deviceProvisioningTokens";
+import { ProvisioningTokenRecordCard } from "./ProvisioningTokenRecordCard";
 
 type TokenCopyStatus = "idle" | "copied" | "failed";
 
@@ -127,7 +127,8 @@ function ProvisioningTokenForm({ form, isAdmin, isIssuing, setForm, submit }: {
 function IssuedProvisioningToken({ copyStatus, onClear, onCopy, token }: {
   copyStatus: TokenCopyStatus; onClear: () => void; onCopy: () => Promise<void>; token: string;
 }) {
-  return <article className="provisioning-token-panel__issued">
+  return (
+    <article className="provisioning-token-panel__issued">
           <span>이번 응답에서만 보이는 토큰</span>
           <button
             aria-label="발급된 provisioning token 복사"
@@ -139,17 +140,6 @@ function IssuedProvisioningToken({ copyStatus, onClear, onCopy, token }: {
             <small>{TOKEN_COPY_STATUS_LABELS[copyStatus]}</small>
           </button>
           <button type="button" onClick={onClear}>확인 후 숨기기</button>
-        </article>
-  ;
-}
-
-function ProvisioningTokenRecordCard({ record }: { record: ProvisioningTokenRecord }) {
-  return (
-    <article className="provisioning-token-panel__record">
-      <span>{record.groupId}</span>
-      <strong>{record.label}</strong>
-      <em>{record.status} · {record.usedCount}/{record.maxUses}</em>
-      <small>만료 {new Date(record.expiresAt).toLocaleString()}</small>
     </article>
   );
 }

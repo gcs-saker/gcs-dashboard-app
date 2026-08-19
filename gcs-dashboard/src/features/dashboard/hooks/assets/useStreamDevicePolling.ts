@@ -15,6 +15,8 @@ import {
   type StreamPreferencesSnapshot,
 } from "@dashboard/preferences/streamPreferences";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
+import { markOnlineStreamsDegraded, shouldSkipStreamRefresh } from "./streamPollingPolicy";
+export { markOnlineStreamsDegraded } from "./streamPollingPolicy";
 
 interface UseStreamDevicePollingInput {
   fetchDevices?: typeof fetchStreamDeviceOptions;
@@ -62,7 +64,7 @@ function startPollingLoop(latestInput: MutableRefObject<PollingSnapshot>, setter
     let consecutiveFailures = 0;
     let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
     const refreshStreams = async (): Promise<void> => {
-      if (shouldSkipRefresh(isMounted, stopped, inFlight, document.hidden)) return;
+      if (shouldSkipStreamRefresh(isMounted, stopped, inFlight, document.hidden)) return;
       inFlight = true;
       const currentInput = latestInput.current;
       try {
@@ -104,10 +106,6 @@ function startPollingLoop(latestInput: MutableRefObject<PollingSnapshot>, setter
     };
 }
 
-function shouldSkipRefresh(isMounted: boolean, stopped: boolean, inFlight: boolean, hidden: boolean): boolean {
-  return !isMounted || stopped || inFlight || hidden;
-}
-
 export async function refreshStreamDevicesOnce({
   fetchDevices = fetchStreamDeviceOptions,
   isCurrent = () => true,
@@ -138,14 +136,4 @@ export async function refreshStreamDevicesOnce({
     return false;
   }
   return true;
-}
-
-export function markOnlineStreamsDegraded(streams: DashboardStreamSlot[]): DashboardStreamSlot[] {
-  let hasChanged = false;
-  const nextStreams = streams.map((stream) => {
-    if (stream.status !== "online") return stream;
-    hasChanged = true;
-    return { ...stream, status: "degraded" as const };
-  });
-  return hasChanged ? nextStreams : streams;
 }

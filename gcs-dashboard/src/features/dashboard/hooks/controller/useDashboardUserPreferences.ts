@@ -1,12 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState,
+  type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import type { CctvQualityMode } from "@dashboard/components/CctvChannelCard";
 import type { DashboardLayoutItem, DashboardWidgetId } from "@dashboard/layout/dashboardLayout";
 import type { MotionMode } from "@dashboard/preferences/motionPreference";
 import { setStreamDeviceAlias } from "@dashboard/preferences/streamPreferences";
-import {
-  loadStreamDeviceAliases,
-  saveStreamDeviceAliases,
-} from "@dashboard/assets/streamAliasRepository";
+import { loadStreamDeviceAliases, saveStreamDeviceAliases } from "@dashboard/assets/streamAliasRepository";
 import { mergeDashboardPreferencesWithStreamAliases } from "@dashboard/preferences/dashboardPreferenceMerge";
 import { useDebouncedPreferenceWriter } from "@/features/shared/hooks/useDebouncedPreferenceWriter";
 import {
@@ -44,6 +42,18 @@ export function useDashboardUserPreferences(username: string | null | undefined)
     };
   }, [userPreferenceKey]);
 
+  const actions = usePreferenceActions(preferences, setPreferencesState, mutationRevisionRef,
+    schedulePreferenceSave, userPreferenceKey);
+  return { preferences, ...actions };
+}
+
+function usePreferenceActions(
+  preferences: DashboardUserPreferences,
+  setPreferencesState: Dispatch<SetStateAction<DashboardUserPreferences>>,
+  mutationRevisionRef: MutableRefObject<number>,
+  schedulePreferenceSave: ReturnType<typeof useDebouncedPreferenceWriter>["schedulePreferenceSave"],
+  userPreferenceKey: string,
+) {
   const updatePreferences = useCallback(
     (updater: (current: DashboardUserPreferences) => DashboardUserPreferences): void => {
       setPreferencesState((current) => {
@@ -53,9 +63,18 @@ export function useDashboardUserPreferences(username: string | null | undefined)
         return next;
       });
     },
-    [schedulePreferenceSave, userPreferenceKey],
+    [mutationRevisionRef, schedulePreferenceSave, setPreferencesState, userPreferenceKey],
   );
+  return { ...useSimplePreferenceSetters(updatePreferences),
+    ...useLayoutPreferenceActions(updatePreferences),
+    ...useStreamAliasAction(updatePreferences, userPreferenceKey),
+    ...useWidgetPreferenceQueries(preferences),
+  };
+}
 
+type PreferenceUpdater = (updater: (current: DashboardUserPreferences) => DashboardUserPreferences) => void;
+
+function useSimplePreferenceSetters(updatePreferences: PreferenceUpdater) {
   const setActiveView = useCallback(
     (activeView: DashboardView): void => updatePreferences((current) => ({ ...current, activeView })),
     [updatePreferences],
@@ -76,6 +95,10 @@ export function useDashboardUserPreferences(username: string | null | undefined)
     [updatePreferences],
   );
 
+  return { setActiveView, setCctvLayoutMode, setCctvQualityMode, setMotionMode };
+}
+
+function useLayoutPreferenceActions(updatePreferences: PreferenceUpdater) {
   const setLayout = useCallback(
     (layoutOrUpdater: LayoutUpdater): void =>
       updatePreferences((current) => {
@@ -87,6 +110,15 @@ export function useDashboardUserPreferences(username: string | null | undefined)
     [updatePreferences],
   );
 
+  const resetWidgetLayout = useCallback(
+    (layout: readonly DashboardLayoutItem[]): void =>
+      updatePreferences((current) => ({ ...current, layout: [...layout] })),
+    [updatePreferences],
+  );
+  return { resetWidgetLayout, setLayout };
+}
+
+function useStreamAliasAction(updatePreferences: PreferenceUpdater, userPreferenceKey: string) {
   const setStreamAlias = useCallback(
     (deviceId: string, alias: string): void =>
       updatePreferences((current) => {
@@ -97,12 +129,10 @@ export function useDashboardUserPreferences(username: string | null | undefined)
     [updatePreferences, userPreferenceKey],
   );
 
-  const resetWidgetLayout = useCallback(
-    (layout: readonly DashboardLayoutItem[]): void =>
-      updatePreferences((current) => ({ ...current, layout: [...layout] })),
-    [updatePreferences],
-  );
+  return { setStreamAlias };
+}
 
+function useWidgetPreferenceQueries(preferences: DashboardUserPreferences) {
   const isWidgetPinned = useCallback(
     (widgetId: DashboardWidgetId): boolean => preferences.layout.find((item) => item.id === widgetId)?.pinned ?? false,
     [preferences.layout],
@@ -113,16 +143,5 @@ export function useDashboardUserPreferences(username: string | null | undefined)
     [preferences.layout],
   );
 
-  return {
-    isWidgetPinned,
-    isWidgetVisible,
-    preferences,
-    resetWidgetLayout,
-    setActiveView,
-    setCctvLayoutMode,
-    setCctvQualityMode,
-    setLayout,
-    setMotionMode,
-    setStreamAlias,
-  };
+  return { isWidgetPinned, isWidgetVisible };
 }

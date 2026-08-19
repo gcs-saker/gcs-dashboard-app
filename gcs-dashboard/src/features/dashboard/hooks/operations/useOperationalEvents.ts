@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DASHBOARD_QUERY_KEY_FACTORY } from "@features/stateContracts";
 import { registerSessionScopedCache } from "@features/sessionScopedCache";
@@ -57,11 +57,27 @@ export function useOperationalEvents(
     });
   }, [filterKey, query.data]);
 
+  useOperationalEventSubscription(queryFilters, fetcher, filterKey, setEvents);
+
+  return {
+    events,
+    errorMessage: query.error instanceof Error ? query.error.message : null,
+    isLoading: query.isLoading || query.isFetching,
+    lastUpdatedAt: query.dataUpdatedAt > 0 ? query.dataUpdatedAt : null,
+  };
+}
+
+function useOperationalEventSubscription(
+  filters: OperationalEventFilters,
+  fetcher: typeof fetch,
+  filterKey: string,
+  setEvents: Dispatch<SetStateAction<OperationalEvent[]>>,
+): void {
   useEffect(() => {
-    if (typeof ReadableStream === "undefined") return;
+    if (typeof ReadableStream === "undefined") return undefined;
     const controller = new AbortController();
     consumeOperationalEventStream(
-      queryFilters,
+      filters,
       {
         onEvent: (event) => {
           setEvents((current) => {
@@ -81,14 +97,7 @@ export function useOperationalEvents(
       }
     });
     return () => controller.abort();
-  }, [fetcher, filterKey, queryFilters]);
-
-  return {
-    events,
-    errorMessage: query.error instanceof Error ? query.error.message : null,
-    isLoading: query.isLoading || query.isFetching,
-    lastUpdatedAt: query.dataUpdatedAt > 0 ? query.dataUpdatedAt : null,
-  };
+  }, [fetcher, filterKey, filters, setEvents]);
 }
 
 export function resetOperationalEventHistory(): void {
