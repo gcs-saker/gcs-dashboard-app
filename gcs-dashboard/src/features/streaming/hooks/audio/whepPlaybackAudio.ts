@@ -78,12 +78,7 @@ export function monitorAudioState(stream: MediaStream, dispatch: Dispatch<Playba
     pendingInactiveTimer = null;
   };
   const emit = (next: { hasAudioTrack: boolean; isAudioActive: boolean }) => {
-    if (
-      lastEmitted.hasAudioTrack === next.hasAudioTrack &&
-      lastEmitted.isAudioActive === next.isAudioActive
-    ) {
-      return;
-    }
+    if (sameAudioState(lastEmitted, next)) return;
     lastEmitted = next;
     dispatch({ type: "audio-state", ...next });
   };
@@ -96,7 +91,7 @@ export function monitorAudioState(stream: MediaStream, dispatch: Dispatch<Playba
   };
   const update = () => {
     const next = readAudioState();
-    if (next.isAudioActive || !next.hasAudioTrack) {
+    if (shouldEmitImmediately(next)) {
       clearPendingInactive();
       emit(next);
       return;
@@ -132,4 +127,15 @@ export function monitorAudioState(stream: MediaStream, dispatch: Dispatch<Playba
     }
     dispatch({ type: "audio-state", hasAudioTrack: false, isAudioActive: false });
   };
+}
+
+function sameAudioState(
+  left: { hasAudioTrack: boolean; isAudioActive: boolean },
+  right: { hasAudioTrack: boolean; isAudioActive: boolean },
+): boolean {
+  return left.hasAudioTrack === right.hasAudioTrack && left.isAudioActive === right.isAudioActive;
+}
+
+function shouldEmitImmediately(state: { hasAudioTrack: boolean; isAudioActive: boolean }): boolean {
+  return state.isAudioActive || !state.hasAudioTrack;
 }

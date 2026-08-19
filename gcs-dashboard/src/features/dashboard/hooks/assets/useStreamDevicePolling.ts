@@ -51,7 +51,7 @@ export function useStreamDevicePolling({
     let consecutiveFailures = 0;
     let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
     const refreshStreams = async (): Promise<void> => {
-      if (!isMounted || stopped || inFlight || document.hidden) return;
+      if (shouldSkipRefresh(isMounted, stopped, inFlight, document.hidden)) return;
       inFlight = true;
       const currentInput = latestInput.current;
       try {
@@ -94,6 +94,10 @@ export function useStreamDevicePolling({
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [setSelectedStreamId, setStreamDevices, setStreams]);
+}
+
+function shouldSkipRefresh(isMounted: boolean, stopped: boolean, inFlight: boolean, hidden: boolean): boolean {
+  return !isMounted || stopped || inFlight || hidden;
 }
 
 export async function refreshStreamDevicesOnce({

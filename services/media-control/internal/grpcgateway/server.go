@@ -10,8 +10,8 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -79,14 +79,9 @@ func (s Server) serve(ctx context.Context, listenAddress string, onReady func())
 }
 
 func (s Server) exchangeHandler(_ any, stream grpc.ServerStream) error {
-	credentials, credentialError := gatewayCredentials(stream.Context())
-	if s.authenticator == nil && !s.authorized(stream.Context()) {
-		logGatewaySecurity(stream.Context(), "authentication_rejected", reasonUnauthorized, 0)
-		return status.Error(codes.Unauthenticated, reasonUnauthorized)
-	}
-	if s.authenticator != nil && credentialError != nil {
-		logGatewaySecurity(stream.Context(), "authentication_rejected", reasonUnauthorized, 0)
-		return status.Error(codes.Unauthenticated, reasonUnauthorized)
+	credentials, err := s.exchangeCredentials(stream.Context())
+	if err != nil {
+		return err
 	}
 	reconnectRequested := metadataContains(stream.Context(), metadataReconnect, "true")
 	for {
@@ -98,21 +93,39 @@ func (s Server) exchangeHandler(_ any, stream grpc.ServerStream) error {
 		if err != nil {
 			return err
 		}
-		requestContext := stream.Context()
-		if s.authenticator != nil {
-			identity, err := s.authenticator.AuthenticateGateway(requestContext, credentials)
-			if err != nil {
-				logGatewaySecurity(requestContext, "authentication_rejected", reasonUnauthorized, 0)
-				return status.Error(codes.Unauthenticated, reasonUnauthorized)
-			}
-			requestContext = context.WithValue(requestContext, gatewayIdentityContextKey{}, identity)
-			requestContext = context.WithValue(requestContext, gatewayCredentialsContextKey{}, credentials)
+		requestContext, err := s.authenticatedRequestContext(stream.Context(), credentials)
+		if err != nil {
+			return err
 		}
 		response := s.handleRequest(requestContext, request, reconnectRequested)
 		if err := stream.SendMsg(response); err != nil {
 			return err
 		}
 	}
+}
+
+func (s Server) exchangeCredentials(ctx context.Context) (GatewayCredentials, error) {
+	credentials, credentialError := gatewayCredentials(ctx)
+	legacyRejected := s.authenticator == nil && !s.authorized(ctx)
+	credentialRejected := s.authenticator != nil && credentialError != nil
+	if legacyRejected || credentialRejected {
+		logGatewaySecurity(ctx, "authentication_rejected", reasonUnauthorized, 0)
+		return GatewayCredentials{}, status.Error(codes.Unauthenticated, reasonUnauthorized)
+	}
+	return credentials, nil
+}
+
+func (s Server) authenticatedRequestContext(ctx context.Context, credentials GatewayCredentials) (context.Context, error) {
+	if s.authenticator == nil {
+		return ctx, nil
+	}
+	identity, err := s.authenticator.AuthenticateGateway(ctx, credentials)
+	if err != nil {
+		logGatewaySecurity(ctx, "authentication_rejected", reasonUnauthorized, 0)
+		return nil, status.Error(codes.Unauthenticated, reasonUnauthorized)
+	}
+	ctx = context.WithValue(ctx, gatewayIdentityContextKey{}, identity)
+	return context.WithValue(ctx, gatewayCredentialsContextKey{}, credentials), nil
 }
 
 func logGatewaySecurity(ctx context.Context, event string, reason string, payloadBytes int) {

@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useAuth } from "@auth/AuthProvider";
 import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
 import { buildEventLogViewModel } from "@dashboard/operations/eventLogViewModel";
 import { useOperationalEventMetrics } from "@dashboard/hooks/operations/useOperationalEventMetrics";
 import { useOperationalEvents } from "@dashboard/hooks/operations/useOperationalEvents";
+import { useEventSelectionSync } from "@dashboard/hooks/operations/useEventSelectionSync";
 import { useVirtualList } from "@/features/shared/hooks/useVirtualList";
 import { useEventLogActions, useEventLogFilterState } from "@dashboard/stores/useEventLogStore";
 import { EventLogDetailPanel } from "./event-log/EventLogDetailPanel";
@@ -47,15 +48,7 @@ export function EventLogView() {
   );
   const mergedLastUpdatedAt = latestTimestamp(lastUpdatedAt, eventMetrics.lastUpdatedAt);
 
-  useEffect(() => {
-    if (!selectedEventId && viewModel.events[0]) {
-      setSelectedEventId(viewModel.events[0].id);
-      return;
-    }
-    if (selectedEventId && viewModel.events.every((event) => event.id !== selectedEventId)) {
-      setSelectedEventId(viewModel.events[0]?.id ?? null);
-    }
-  }, [selectedEventId, setSelectedEventId, viewModel.events]);
+  useEventSelectionSync(viewModel.events, selectedEventId, setSelectedEventId);
 
   return (
     <section className="event-log-view" aria-label="이벤트로그">
