@@ -3,6 +3,7 @@ package kr.co.a4ai.gcssaker.authpolicy
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalReadRepository
+import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -59,6 +60,70 @@ class JdbcFlywayMigrationTest {
         assertEquals(7, geometryMigration)
         assertEquals(8, relationCount)
         assertTrue(jdbc.queryForObject("SELECT COUNT(*) FROM telemetry_latest", Int::class.java)!! > 0)
+    }
+
+    @Test
+    fun `migration backfills publish metadata only for legacy active drones`() {
+        val dataSource = h2DataSource()
+        Flyway.configure()
+            .dataSource(dataSource)
+            .locations("classpath:db/migration")
+            .target("13")
+            .load()
+            .migrate()
+        val jdbc = JdbcTemplate(dataSource)
+        jdbc.update(
+            "INSERT INTO organization_groups (id, name, type) VALUES (?, ?, ?)",
+            "co-a",
+            "A Company",
+            "company",
+        )
+        insertLegacyDevice(jdbc, "legacy-drone-001", "ACTIVE", "drone")
+        insertLegacyDevice(jdbc, "pending-drone-001", "PENDING", "drone")
+        insertLegacyDevice(jdbc, "active-robot-001", "ACTIVE", "robot")
+
+        Flyway.configure()
+            .dataSource(dataSource)
+            .locations("classpath:db/migration")
+            .load()
+            .migrate()
+
+        assertEquals(
+            1,
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM registered_device_sensors WHERE device_uuid = ? AND sensor_id = 'front' AND sensor_type = 'camera' AND status = 'active'",
+                Int::class.java,
+                "legacy-drone-001",
+            ),
+        )
+        assertEquals(
+            1,
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM registered_device_streams WHERE device_uuid = ? AND stream_path = 'raw/legacy-drone-001/front' AND kind = 'webrtc' AND status = 'active'",
+                Int::class.java,
+                "legacy-drone-001",
+            ),
+        )
+        assertEquals(
+            0,
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM registered_device_sensors WHERE device_uuid IN ('pending-drone-001', 'active-robot-001')",
+                Int::class.java,
+            ),
+        )
+    }
+
+    private fun insertLegacyDevice(jdbc: JdbcTemplate, deviceUuid: String, status: String, deviceType: String) {
+        jdbc.update(
+            """
+            INSERT INTO registered_devices (device_uuid, group_id, display_name, credential_hash, status, device_type)
+            VALUES (?, 'co-a', ?, 'legacy-hash', ?, ?)
+            """.trimIndent(),
+            deviceUuid,
+            deviceUuid,
+            status,
+            deviceType,
+        )
     }
 
     private fun h2DataSource(): DriverManagerDataSource =

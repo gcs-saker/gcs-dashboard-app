@@ -79,6 +79,31 @@ class DeviceLifecycleServiceTest {
     }
 
     @Test
+    fun `activate rejects device without an active sensor`() {
+        service.register(DeviceLifecycleFixtures.registerCommand().copy(sensors = emptyList(), streamPaths = emptyList()))
+
+        val error = assertFailsWith<IllegalArgumentException> {
+            service.activate(DeviceLifecycleFixtures.DEVICE_UUID)
+        }
+
+        assertEquals(DeviceLifecycleContract.ACTIVE_SENSOR_REQUIRED, error.message)
+        assertEquals(RegisteredDeviceStatus.PENDING, service.get(DeviceLifecycleFixtures.DEVICE_UUID).status)
+    }
+
+    @Test
+    fun `update rejects removing every sensor from an active device`() {
+        service.register(DeviceLifecycleFixtures.registerCommand())
+        service.activate(DeviceLifecycleFixtures.DEVICE_UUID)
+
+        val error = assertFailsWith<IllegalArgumentException> {
+            service.update(DeviceLifecycleFixtures.DEVICE_UUID, UpdateDeviceCommand(sensors = emptyList()))
+        }
+
+        assertEquals(DeviceLifecycleContract.ACTIVE_SENSOR_REQUIRED, error.message)
+        assertEquals(1, service.get(DeviceLifecycleFixtures.DEVICE_UUID).sensors.values.size)
+    }
+
+    @Test
     fun `list get and update registered device metadata`() {
         service.register(DeviceLifecycleFixtures.registerCommand())
 
