@@ -22,8 +22,8 @@ export function isNumber(value: unknown): value is number {
   return typeof value === "number";
 }
 
-export function isOptionalNumber(value: unknown): value is number | undefined {
-  return value === undefined || isNumber(value);
+export function isOptionalNumber(value: unknown): value is number | null | undefined {
+  return value === undefined || value === null || isNumber(value);
 }
 
 export function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {

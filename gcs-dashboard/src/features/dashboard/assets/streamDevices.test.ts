@@ -158,6 +158,36 @@ describe("streamDevices", () => {
     );
   });
 
+  test("keeps online stream discovery available when optional telemetry is malformed", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(Response.json([{
+        streamId: "raw.robot.front", path: "raw/robot/front", prefix: "raw",
+        assetId: "robot", sensorId: "front", status: "online", displayName: "Robot Front",
+      }]))
+      .mockResolvedValueOnce(Response.json([{
+        uuid: "raw.robot.front", latitude: 35.8, longitude: 128.6, altitude: 10,
+        velocity: 0, epochTime: "00:00:01", headingDeg: "invalid",
+      }]));
+
+    const devices = await fetchStreamDeviceOptions(fetcher as unknown as typeof fetch);
+
+    expect(devices).toHaveLength(1);
+    expect(devices[0]).toMatchObject({ streamPath: "raw.robot.front", status: "online" });
+    expect(devices[0].geometry.source).toBe("registry");
+  });
+
+  test("still propagates telemetry authentication failures", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(Response.json([]))
+      .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
+      .mockResolvedValueOnce(new Response("refresh unauthorized", { status: 401 }));
+
+    await expect(fetchStreamDeviceOptions(fetcher as unknown as typeof fetch)).rejects.toMatchObject({
+      status: 401,
+      name: "AuthApiError",
+    } satisfies Partial<AuthApiError>);
+  });
+
   test("keeps default and mock stream coordinates in the Daegu operating area", () => {
     const geometries = [
       ...DEFAULT_DASHBOARD_STREAMS.map((stream) => stream.geometry),

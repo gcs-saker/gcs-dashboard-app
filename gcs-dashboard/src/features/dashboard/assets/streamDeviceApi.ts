@@ -19,9 +19,18 @@ import {
 export async function fetchStreamDeviceOptions(fetcher: typeof fetch = fetch): Promise<StreamDeviceOption[]> {
   const [registry, telemetryByUuid] = await Promise.all([
     fetchStreamRegistry(fetcher),
-    fetchTelemetryIndex(fetcher),
+    fetchTelemetryIndexWithoutBlockingStreams(fetcher),
   ]);
   return registry.map((item) => streamDeviceFromRegistryItem(item, telemetryByUuid));
+}
+
+async function fetchTelemetryIndexWithoutBlockingStreams(fetcher: typeof fetch): Promise<Map<string, TelemetryReadResponse>> {
+  try {
+    return await fetchTelemetryIndex(fetcher);
+  } catch (error) {
+    if (error instanceof AuthApiError) throw error;
+    return new Map();
+  }
 }
 
 async function fetchStreamRegistry(fetcher: typeof fetch): Promise<StreamRegistryResponse[]> {
