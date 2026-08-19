@@ -24,7 +24,6 @@ describe("useStreamDevicePolling", () => {
     const { unmount } = renderHook(() => useStreamDevicePolling({
       fetchDevices,
       preferences: { deviceAliases: {} },
-      setSelectedStreamId: vi.fn(),
       setStreamDevices: vi.fn(),
       setStreams: vi.fn(),
     }));
@@ -45,7 +44,6 @@ describe("useStreamDevicePolling", () => {
     const { unmount } = renderHook(() => useStreamDevicePolling({
       fetchDevices,
       preferences: { deviceAliases: {} },
-      setSelectedStreamId: vi.fn(),
       setStreamDevices: vi.fn(),
       setStreams: vi.fn(),
     }));
@@ -86,10 +84,9 @@ describe("markOnlineStreamsDegraded", () => {
 });
 
 describe("refreshStreamDevicesOnce", () => {
-  test("merges fetched devices and updates selected stream through state updaters", async () => {
+  test("merges fetched devices without nesting a selected-stream update inside the stream updater", async () => {
     let streams: DashboardStreamSlot[] = [{ ...baseStream, id: "slot-1", status: "offline", streamPath: null }];
     let streamDevices: StreamDeviceOption[] = [];
-    let selectedStreamId = "slot-1";
     const device: StreamDeviceOption = {
       geometry: {
         altitudeM: 0,
@@ -112,9 +109,6 @@ describe("refreshStreamDevicesOnce", () => {
     await refreshStreamDevicesOnce({
       fetchDevices: async () => [device],
       preferences: { deviceAliases: { "device-1": "별칭 단말" } },
-      setSelectedStreamId: (updater) => {
-        selectedStreamId = typeof updater === "function" ? updater(selectedStreamId) : updater;
-      },
       setStreamDevices: (updater) => {
         streamDevices = typeof updater === "function" ? updater(streamDevices) : updater;
       },
@@ -125,7 +119,6 @@ describe("refreshStreamDevicesOnce", () => {
 
     expect(streamDevices[0].name).toBe("별칭 단말");
     expect(streams[0]).toMatchObject({ streamPath: "raw.mobile.front", status: "online" });
-    expect(selectedStreamId).toBe("raw.mobile.front");
   });
 
   test("stops polling and reports auth failure on 401", async () => {
@@ -141,7 +134,6 @@ describe("refreshStreamDevicesOnce", () => {
         authFailed = true;
       },
       preferences: { deviceAliases: {} },
-      setSelectedStreamId: () => undefined,
       setStreamDevices: () => undefined,
       setStreams: (updater) => {
         streams = typeof updater === "function" ? updater(streams) : updater;

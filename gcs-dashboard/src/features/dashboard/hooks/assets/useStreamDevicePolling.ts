@@ -3,7 +3,6 @@ import { AuthApiError } from "@auth/authApi";
 import {
   fetchStreamDeviceOptions,
   mergeStreamSlotsWithDevices,
-  preferredSelectedStreamId,
   type StreamDeviceOption,
 } from "@dashboard/assets/streamDevices";
 import {
@@ -22,7 +21,6 @@ interface UseStreamDevicePollingInput {
   fetchDevices?: typeof fetchStreamDeviceOptions;
   onAuthFailure?: () => void;
   preferences: StreamPreferencesSnapshot;
-  setSelectedStreamId: Dispatch<SetStateAction<string>>;
   setStreamDevices: Dispatch<SetStateAction<StreamDeviceOption[]>>;
   setStreams: Dispatch<SetStateAction<DashboardStreamSlot[]>>;
 }
@@ -39,23 +37,19 @@ export function useStreamDevicePolling({
   fetchDevices,
   onAuthFailure,
   preferences,
-  setSelectedStreamId,
   setStreamDevices,
   setStreams,
 }: UseStreamDevicePollingInput): void {
   const latestInput = useRef({ fetchDevices, onAuthFailure, preferences });
   latestInput.current = { fetchDevices, onAuthFailure, preferences };
   useEffect(
-    () => startPollingLoop(latestInput, { setSelectedStreamId, setStreamDevices, setStreams }),
-    [setSelectedStreamId, setStreamDevices, setStreams],
+    () => startPollingLoop(latestInput, { setStreamDevices, setStreams }),
+    [setStreamDevices, setStreams],
   );
 }
 
 type PollingSnapshot = Pick<UseStreamDevicePollingInput, "fetchDevices" | "onAuthFailure" | "preferences">;
-type PollingSetters = Pick<
-  UseStreamDevicePollingInput,
-  "setSelectedStreamId" | "setStreamDevices" | "setStreams"
->;
+type PollingSetters = Pick<UseStreamDevicePollingInput, "setStreamDevices" | "setStreams">;
 
 function startPollingLoop(latestInput: MutableRefObject<PollingSnapshot>, setters: PollingSetters): () => void {
     let isMounted = true;
@@ -111,7 +105,6 @@ export async function refreshStreamDevicesOnce({
   isCurrent = () => true,
   onAuthFailure,
   preferences,
-  setSelectedStreamId,
   setStreamDevices,
   setStreams,
   stopPolling,
@@ -122,7 +115,6 @@ export async function refreshStreamDevicesOnce({
     setStreamDevices((current) => (areStreamDevicesEqual(current, devices) ? current : devices));
     setStreams((current) => {
       const merged = mergeStreamSlotsWithDevices(current, devices);
-      setSelectedStreamId((currentSelectedId) => preferredSelectedStreamId(currentSelectedId, merged, devices));
       return areStreamSlotsEqual(current, merged) ? current : merged;
     });
   } catch (error) {

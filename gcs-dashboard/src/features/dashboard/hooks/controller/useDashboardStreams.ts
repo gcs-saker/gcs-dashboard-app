@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import {
   connectDeviceToStreamSlot,
   disconnectStreamSlot,
   MOCK_STREAM_DEVICES,
+  preferredSelectedStreamId,
   type StreamDeviceOption,
 } from "@dashboard/assets/streamDevices";
 import {
@@ -37,6 +38,8 @@ export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
   );
   const [selectedStreamId, setSelectedStreamId] = useState(initialStreams?.[0]?.id ?? DEFAULT_DASHBOARD_STREAMS[0].id);
   const [editingStreamId, setEditingStreamId] = useState<string | null>(null);
+  const streamsRef = useRef(streams);
+  streamsRef.current = streams;
 
   const selectedStream = useMemo(
     () => streams.find((stream) => stream.id === selectedStreamId) ?? streams[0],
@@ -47,7 +50,10 @@ export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
     [editingStreamId, streams],
   );
 
-  useStreamDevicePolling({ onAuthFailure, preferences, setSelectedStreamId, setStreamDevices, setStreams });
+  useStreamDevicePolling({ onAuthFailure, preferences, setStreamDevices, setStreams });
+  useEffect(() => {
+    setSelectedStreamId((current) => preferredSelectedStreamId(current, streamsRef.current, streamDevices));
+  }, [streamDevices]);
   const actions = useDashboardStreamActions({ editingStreamId, onStreamDeviceAliasChange,
     setEditingStreamId, setSelectedStreamId, setStreams });
 
