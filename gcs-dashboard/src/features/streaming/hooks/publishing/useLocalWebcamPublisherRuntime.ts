@@ -54,3 +54,5 @@ export function useLocalWebcamPublisherRuntime(streamId: string) {
     videoRef,
   };
 }
+
+export type LocalWebcamPublisherRuntime = ReturnType<typeof useLocalWebcamPublisherRuntime>;
