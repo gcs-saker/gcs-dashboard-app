@@ -5,6 +5,13 @@ import { DEFAULT_DASHBOARD_STREAMS, type DashboardStreamSlot } from "@dashboard/
 import { SelectedStreamPanel } from "./SelectedStreamPanel";
 import { StreamGrid } from "./StreamGrid";
 
+function BrokenCard(stream: DashboardStreamSlot) {
+  if (stream.id === "raw.sample.thermal") {
+    throw new Error("mock stream card failure");
+  }
+  return <button type="button">{stream.title}</button>;
+}
+
 describe("StreamGrid", () => {
   test("renders default stream slots offline until registry discovery", () => {
     render(
@@ -39,13 +46,6 @@ describe("StreamGrid", () => {
 
   test("contains a broken stream card without collapsing the grid", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-
-    function BrokenCard(stream: DashboardStreamSlot) {
-      if (stream.id === "raw.sample.thermal") {
-        throw new Error("mock stream card failure");
-      }
-      return <button type="button">{stream.title}</button>;
-    }
 
     render(
       <StreamGrid

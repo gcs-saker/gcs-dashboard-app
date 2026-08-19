@@ -24,7 +24,8 @@ export function optimizeIceServerOrder(servers: RTCIceServer[]): RTCIceServer[] 
   return [
     ...stunServers,
     ...otherServers,
-    ...relayServers.sort(compareRelayPreference).slice(0, MAX_RELAY_ICE_SERVERS),
+    // oxlint-disable-next-line unicorn/no-array-sort -- The ES2022 browser target requires sorting an owned copy.
+    ...relayServers.slice().sort(compareRelayPreference).slice(0, MAX_RELAY_ICE_SERVERS),
   ];
 }
 

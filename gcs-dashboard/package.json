@@ -46,6 +46,7 @@
     "start": "vite --host 0.0.0.0",
     "dev": "vite --host 0.0.0.0",
     "lint:hooks": "oxlint --react-plugin --deny-warnings -D react/exhaustive-deps -D react/rules-of-hooks src",
+    "lint:quality": "oxlint --deny-warnings -D correctness -D suspicious src",
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",

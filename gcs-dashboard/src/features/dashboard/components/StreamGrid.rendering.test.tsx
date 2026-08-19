@@ -19,17 +19,18 @@ const ProbeStreamCard = memo(function ProbeStreamCard({
   return <button aria-pressed={isSelected} type="button">{stream.title}</button>;
 });
 
+const renderProbeCard = (stream: DashboardStreamSlot, isSelected: boolean) => (
+  <ProbeStreamCard isSelected={isSelected} stream={stream} />
+);
+
 describe("StreamGrid rendering contract", () => {
   it("re-renders only the stream card whose status payload changed", () => {
     renderCounts.clear();
     const streams = DEFAULT_DASHBOARD_STREAMS.slice(0, 3);
-    const renderCard = (stream: DashboardStreamSlot, isSelected: boolean) => (
-      <ProbeStreamCard isSelected={isSelected} stream={stream} />
-    );
     const { rerender } = render(
       <StreamGrid
         onSelectStream={() => undefined}
-        renderCard={renderCard}
+        renderCard={renderProbeCard}
         selectedStreamId={streams[0].id}
         streams={streams}
       />,
@@ -43,7 +44,7 @@ describe("StreamGrid rendering contract", () => {
     rerender(
       <StreamGrid
         onSelectStream={() => undefined}
-        renderCard={renderCard}
+        renderCard={renderProbeCard}
         selectedStreamId={streams[0].id}
         streams={nextStreams}
       />,

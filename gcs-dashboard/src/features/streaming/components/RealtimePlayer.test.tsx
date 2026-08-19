@@ -138,6 +138,7 @@ vi.mock("./WebRTCPlayer", () => ({
 }));
 
 vi.mock("./HLSFallbackPlayer", () => ({
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- Vitest requires this component inside its hoisted mock factory.
   HLSFallbackPlayer: function MockHLSFallbackPlayer({
     hlsUrl,
     streamId,

@@ -16,6 +16,13 @@ PRODUCTION_ROOTS = (
 )
 SOURCE_SUFFIXES = {".go", ".kt", ".py", ".ts", ".tsx"}
 MAX_PRODUCTION_LINES = 350
+REQUIRED_AGREEMENTS = (
+    REPOSITORY_ROOT / "AGENTS.md",
+    REPOSITORY_ROOT / "backend" / "AGENTS.md",
+    REPOSITORY_ROOT / "gcs-dashboard" / "AGENTS.md",
+    REPOSITORY_ROOT / "services" / "auth-policy" / "AGENTS.md",
+    REPOSITORY_ROOT / "services" / "media-control" / "AGENTS.md",
+)
 FORBIDDEN_TRACKED_PARTS = {
     ".agents",
     ".benchmarks",
@@ -112,8 +119,9 @@ def main() -> int:
     validate_python_names(paths, errors)
     validate_kotlin_names(paths, errors)
     validate_production_file_sizes(paths, errors)
-    if not (REPOSITORY_ROOT / "AGENTS.md").is_file():
-        errors.append("AGENTS.md is required at the repository root")
+    for agreement in REQUIRED_AGREEMENTS:
+        if not agreement.is_file():
+            errors.append(f"required code agreement is missing: {agreement.relative_to(REPOSITORY_ROOT)}")
     if errors:
         for error in errors:
             print(f"ERROR: {error}")

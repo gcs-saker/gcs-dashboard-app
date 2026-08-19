@@ -129,6 +129,7 @@ function mergeOperationalEvents(
     byId.set(event.id, event);
   }
   return Array.from(byId.values())
+    // oxlint-disable-next-line unicorn/no-array-sort -- The ES2022 browser target requires sorting an owned copy.
     .sort((left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime())
     .slice(0, OPERATIONAL_EVENT_HISTORY_LIMIT);
 }

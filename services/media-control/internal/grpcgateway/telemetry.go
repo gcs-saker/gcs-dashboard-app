@@ -62,13 +62,33 @@ func (h TelemetryHandler) HandleGatewayRequest(ctx context.Context, request Gate
 }
 
 func ValidateTelemetry(v Telemetry, now time.Time) error {
+	validators := []func(Telemetry, time.Time) error{
+		validateTelemetryIdentityAndTime,
+		validateFiniteTelemetryValues,
+		validateTelemetryPosition,
+		validateTelemetryMotion,
+		validateTelemetrySignal,
+		validateTelemetryAttitude,
+	}
+	for _, validate := range validators {
+		if err := validate(v, now); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateTelemetryIdentityAndTime(v Telemetry, now time.Time) error {
 	if strings.TrimSpace(v.EventID) == "" || strings.TrimSpace(v.AssetID) == "" || v.ObservedUnixMillis <= 0 {
 		return fmt.Errorf("required identity or time missing")
 	}
-	observed := time.UnixMilli(v.ObservedUnixMillis)
-	if observed.After(now.Add(5 * time.Minute)) {
+	if time.UnixMilli(v.ObservedUnixMillis).After(now.Add(5 * time.Minute)) {
 		return fmt.Errorf("observed time exceeds future skew")
 	}
+	return nil
+}
+
+func validateFiniteTelemetryValues(v Telemetry, _ time.Time) error {
 	values := []float64{v.Latitude, v.Longitude, v.AltitudeM, v.HeadingDeg, v.SpeedMPS,
 		v.BatteryPercent, v.RollDeg, v.PitchDeg, v.YawDeg, v.LinkQualityPercent}
 	for _, value := range values {
@@ -76,19 +96,35 @@ func ValidateTelemetry(v Telemetry, now time.Time) error {
 			return fmt.Errorf("non-finite telemetry")
 		}
 	}
+	return nil
+}
+
+func validateTelemetryPosition(v Telemetry, _ time.Time) error {
 	if v.Latitude < -90 || v.Latitude > 90 || v.Longitude < -180 || v.Longitude > 180 {
 		return fmt.Errorf("position outside WGS84")
 	}
 	if v.Latitude == 0 && v.Longitude == 0 {
 		return fmt.Errorf("null-island position rejected")
 	}
+	return nil
+}
+
+func validateTelemetryMotion(v Telemetry, _ time.Time) error {
 	if v.AltitudeM < -500 || v.AltitudeM > 20000 || v.SpeedMPS < 0 || v.SpeedMPS > 200 {
 		return fmt.Errorf("altitude or speed outside contract")
 	}
+	return nil
+}
+
+func validateTelemetrySignal(v Telemetry, _ time.Time) error {
 	if v.HeadingDeg < 0 || v.HeadingDeg >= 360 || v.BatteryPercent < 0 || v.BatteryPercent > 100 ||
 		v.LinkQualityPercent < 0 || v.LinkQualityPercent > 100 {
 		return fmt.Errorf("heading or percentage outside contract")
 	}
+	return nil
+}
+
+func validateTelemetryAttitude(v Telemetry, _ time.Time) error {
 	for _, angle := range []float64{v.RollDeg, v.PitchDeg, v.YawDeg} {
 		if angle < -360 || angle > 360 {
 			return fmt.Errorf("attitude outside contract")

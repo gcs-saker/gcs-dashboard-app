@@ -59,10 +59,12 @@ export function buildEventLogViewModel(input: EventLogViewModelInput): EventLogV
       .slice(0, CURRENT_INCIDENT_LIMIT),
     directCandidateCount: icePathCount(input.metrics, ["host", "srflx"]),
     events,
+    // oxlint-disable-next-line unicorn/no-array-reverse -- The ES2022 browser target reverses an owned copy.
     networkFlowEvents: events.slice(0, NETWORK_FLOW_EVENT_LIMIT).reverse(),
     peakThroughput: Math.max(1, summary.peakThroughputMbps),
     relayCount: icePathCount(input.metrics, ["relay"]),
     selectedEvent: events.find((event) => event.id === input.selectedEventId) ?? events[0] ?? null,
+    // oxlint-disable-next-line unicorn/no-array-sort -- The ES2022 browser target sorts a newly owned array.
     sourceOptions: Array.from(new Set(input.rawEvents.map((event) => event.source))).sort(),
     streamSessionCount: input.metrics?.streamSessions.length ?? 0,
     summary,

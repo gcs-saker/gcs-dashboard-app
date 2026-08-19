@@ -31,6 +31,7 @@ describe("useEventLogStore selectors", () => {
   test("exposes stable action selectors without leaking full store shape", () => {
     const { result } = renderHook(() => useEventLogActions());
 
+    // oxlint-disable-next-line unicorn/no-array-sort -- The ES2022 test target sorts a newly owned key array.
     expect(Object.keys(result.current).sort()).toEqual([
       "patchFilters",
       "resetFilters",

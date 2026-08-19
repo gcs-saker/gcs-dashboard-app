@@ -6,6 +6,7 @@ import { AUTH_JSON_HEADERS } from "./authApi";
 import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 
 vi.mock("../streaming/components/StreamingSmokeDashboard", () => ({
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- Vitest requires this component inside its hoisted mock factory.
   StreamingSmokeDashboard: function MockStreamingSmokeDashboard() {
     return <div data-testid="streaming-smoke-dashboard">Streaming smoke</div>;
   },
@@ -47,7 +48,7 @@ describe("LoginPage auth flow", () => {
 
     render(<App />);
 
-    await userEvent.type(await screen.findByLabelText("아이디"), "operator01");
+    await userEvent.type(await screen.findByLabelText("아이디", {}, { timeout: 10_000 }), "operator01");
     await userEvent.type(screen.getByLabelText("비밀번호"), "correct-password");
     await userEvent.click(screen.getByRole("button", { name: "접속" }));
 

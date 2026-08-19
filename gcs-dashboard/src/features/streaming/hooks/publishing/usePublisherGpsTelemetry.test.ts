@@ -32,6 +32,30 @@ describe("usePublisherGpsTelemetry", () => {
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
     expect(JSON.parse(String(fetcher.mock.calls[1][1]?.body)).latitude).toBe(35.3);
   });
+
+  it("aborts the active request and ignores late positions after telemetry stops", () => {
+    let watchCallback: PositionCallback | null = null;
+    const fetcher = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) => new Promise<Response>(() => undefined));
+    const geolocation = {
+      clearWatch: vi.fn(),
+      getCurrentPosition: vi.fn(),
+      watchPosition: vi.fn((success: PositionCallback) => {
+        watchCallback = success;
+        return 9;
+      }),
+    } as unknown as Geolocation;
+    const { result } = renderHook(() => usePublisherGpsTelemetry({ fetcher, geolocation, streamId: "opaque-stream" }));
+
+    act(() => result.current.startGpsTelemetry());
+    act(() => watchCallback?.(position(35.4)));
+    const requestSignal = fetcher.mock.calls[0][1]?.signal;
+    act(() => result.current.stopGpsTelemetry());
+    act(() => watchCallback?.(position(35.5)));
+
+    expect(requestSignal?.aborted).toBe(true);
+    expect(geolocation.clearWatch).toHaveBeenCalledWith(9);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
 });
 
 function position(latitude: number): GeolocationPosition {

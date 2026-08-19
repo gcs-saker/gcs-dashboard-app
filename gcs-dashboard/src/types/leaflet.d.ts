@@ -39,7 +39,7 @@ declare module "leaflet" {
     },
   ): TileLayer;
 
-  export class Control {
-    static Attribution: new (options?: { position?: string; prefix?: false | string }) => unknown;
-  }
+  export const Control: {
+    Attribution: new (options?: { position?: string; prefix?: false | string }) => unknown;
+  };
 }

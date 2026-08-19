@@ -5,18 +5,21 @@ import App from './App';
 import { clearAuthSession, storeAuthSession } from './features/auth/authStorage';
 
 vi.mock('./features/streaming/components/StreamingSmokeDashboard', () => ({
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- Vitest requires this component inside its hoisted mock factory.
   StreamingSmokeDashboard: function MockStreamingSmokeDashboard() {
     return <div data-testid="streaming-smoke-dashboard">Streaming smoke</div>;
   },
 }));
 
 vi.mock('./features/streaming/components/LocalWebcamPublisher', () => ({
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- Vitest requires this component inside its hoisted mock factory.
   LocalWebcamPublisher: function MockLocalWebcamPublisher() {
     return <div data-testid="local-webcam-publisher">Local webcam publisher</div>;
   },
 }));
 
 vi.mock('./features/dashboard/layout/StreamPage', () => ({
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- Vitest requires this component inside its hoisted mock factory.
   StreamPage: function MockStreamPage() {
     return <main aria-label="스트림 전용 화면">Stream view</main>;
   },

@@ -233,6 +233,7 @@ jobs:
       - name: Typecheck frontend
         run: |
           npm run lint:hooks
+          npm run lint:quality
           npm run typecheck
 
       - name: Run frontend tests with coverage
@@ -286,6 +287,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Reject CRLF in Linux runtime files
         run: |
@@ -302,6 +305,19 @@ jobs:
 
       - name: Validate repository structure and naming
         run: python scripts/gates/repository_hygiene_contract.py
+
+      - name: Reject critical security and resource anti-patterns
+        run: python scripts/gates/critical_code_contract.py
+
+      - name: Prevent code quality baseline growth
+        env:
+          QUALITY_REFERENCE_REF: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+        run: |
+          if [ -n "$QUALITY_REFERENCE_REF" ] && [ "$QUALITY_REFERENCE_REF" != "0000000000000000000000000000000000000000" ]; then
+            python scripts/gates/code_quality_baseline.py --check --reference-ref "$QUALITY_REFERENCE_REF"
+          else
+            python scripts/gates/code_quality_baseline.py --check
+          fi
 
       - name: Validate shell syntax
         run: find scripts deploy -type f -name '*.sh' -print0 | xargs -0 -r bash -n

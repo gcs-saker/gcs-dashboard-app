@@ -53,6 +53,7 @@ export async function openIndexedDbStore(config: IndexedDbStoreConfig): Promise<
   if (typeof indexedDB === "undefined") return null;
   return new Promise((resolve) => {
     const request = indexedDB.open(config.dbName, config.version);
+    // oxlint-disable-next-line unicorn/prefer-add-event-listener -- IDB request handler slots are single-owner and broadly supported.
     request.onerror = () => resolve(null);
     request.onupgradeneeded = () => {
       const database = request.result;
@@ -73,6 +74,7 @@ function requestIndexedDbRecord<T>(
   return new Promise((resolve) => {
     const transaction = database.transaction(storeName, mode);
     const request = requestFactory(transaction.objectStore(storeName));
+    // oxlint-disable-next-line unicorn/prefer-add-event-listener -- IDB request handler slots are single-owner and broadly supported.
     request.onerror = () => resolve(null);
     request.onsuccess = () => resolve(request.result ?? null);
   });

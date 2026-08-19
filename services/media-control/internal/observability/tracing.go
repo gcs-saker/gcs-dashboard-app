@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
@@ -23,6 +24,7 @@ const (
 	TraceExporterNone   = "none"
 	TraceExporterStdout = "stdout"
 	defaultServiceName  = "gcs-saker-media-control"
+	defaultHTTPTimeout  = 3 * time.Second
 )
 
 type ShutdownFunc func(context.Context) error
@@ -72,7 +74,7 @@ func InstallTracing(exporterName string, serviceName string, writer io.Writer) (
 
 func InstrumentHTTPClient(client *http.Client, operation string) *http.Client {
 	if client == nil {
-		client = &http.Client{}
+		client = &http.Client{Timeout: defaultHTTPTimeout}
 	}
 	clone := *client
 	clone.Transport = otelhttp.NewTransport(

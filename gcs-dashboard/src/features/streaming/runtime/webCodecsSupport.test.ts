@@ -2,12 +2,16 @@ import { describe, expect, test } from "vitest";
 
 import { detectWebCodecsCapability } from "./webCodecsSupport";
 
+function MockVideoDecoder() {}
+function MockVideoFrame() {}
+function MockOffscreenCanvas() {}
+
 describe("webCodecsSupport", () => {
   test("reports ready when VideoDecoder and VideoFrame are available", () => {
     const capability = detectWebCodecsCapability({
-      VideoDecoder: function VideoDecoder() {},
-      VideoFrame: function VideoFrame() {},
-      OffscreenCanvas: function OffscreenCanvas() {},
+      VideoDecoder: MockVideoDecoder,
+      VideoFrame: MockVideoFrame,
+      OffscreenCanvas: MockOffscreenCanvas,
     });
 
     expect(capability).toEqual({
@@ -21,7 +25,7 @@ describe("webCodecsSupport", () => {
 
   test("reports fallback reason when decoder is unavailable", () => {
     const capability = detectWebCodecsCapability({
-      VideoFrame: function VideoFrame() {},
+      VideoFrame: MockVideoFrame,
     });
 
     expect(capability.supported).toBe(false);
@@ -30,7 +34,7 @@ describe("webCodecsSupport", () => {
 
   test("reports fallback reason when frame API is unavailable", () => {
     const capability = detectWebCodecsCapability({
-      VideoDecoder: function VideoDecoder() {},
+      VideoDecoder: MockVideoDecoder,
     });
 
     expect(capability.supported).toBe(false);
