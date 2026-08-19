@@ -70,24 +70,18 @@ export function EventLogFilters(props: EventLogFiltersProps) {
           ))}
         </select>
       </label>
-      <label>
-        <span>시작</span>
-        <input
-          aria-label={EVENT_FILTER_LABELS.from}
-          onChange={(event) => props.onPatchFilters({ from: event.target.value })}
-          type="datetime-local"
-          value={props.filters.from}
-        />
-      </label>
-      <label>
-        <span>종료</span>
-        <input
-          aria-label={EVENT_FILTER_LABELS.to}
-          onChange={(event) => props.onPatchFilters({ to: event.target.value })}
-          type="datetime-local"
-          value={props.filters.to}
-        />
-      </label>
+      <EventTimeFilters filters={props.filters} onPatchFilters={props.onPatchFilters} />
     </div>
   );
+}
+
+function EventTimeFilters({ filters, onPatchFilters }: Pick<EventLogFiltersProps, "filters" | "onPatchFilters">) {
+  return <>
+    <label><span>시작</span><input aria-label={EVENT_FILTER_LABELS.from}
+      onChange={(event) => onPatchFilters({ from: event.target.value })}
+      type="datetime-local" value={filters.from} /></label>
+    <label><span>종료</span><input aria-label={EVENT_FILTER_LABELS.to}
+      onChange={(event) => onPatchFilters({ to: event.target.value })}
+      type="datetime-local" value={filters.to} /></label>
+  </>;
 }

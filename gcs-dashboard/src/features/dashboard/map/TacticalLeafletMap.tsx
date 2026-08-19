@@ -22,6 +22,25 @@ export function TacticalLeafletMap({
   streams,
 }: TacticalLeafletMapProps) {
   useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.tacticalLeafletMap);
+  const map = useTacticalMapState(onSelectStream);
+
+  if (!map.useOfflineMap) {
+    return (
+      <PublicVectorMap activeStreamId={map.activeStreamId} autoFocusEnabled={map.autoFocusEnabled}
+        isMotionEnabled={isMotionEnabled} mapConfig={map.mapConfig} onAutoFocusChange={map.setAutoFocusEnabled}
+        onStreamMarkerSelect={map.handleStreamMarkerSelect} onStreamPopupClose={map.handlePopupClose}
+        selectedStream={selectedStream} streams={streams} onMapError={map.handleMapError} />
+    );
+  }
+  return (
+    <OfflineTacticalMap autoFocusEnabled={map.autoFocusEnabled} onAutoFocusChange={map.setAutoFocusEnabled}
+      activeStreamId={map.activeStreamId} onStreamMarkerSelect={map.handleStreamMarkerSelect}
+      onStreamPopupClose={map.handlePopupClose} fallbackNotice={map.mapFallbackNotice}
+      selectedStream={selectedStream} streams={streams} />
+  );
+}
+
+function useTacticalMapState(onSelectStream?: (streamId: string) => void) {
   const [activeStreamId, setActiveStreamId] = useState<string | null>(null);
   const [autoFocusEnabled, setAutoFocusEnabled] = useState(true);
   const [mapConfig, setMapConfig] = useState<DashboardMapConfig>(FALLBACK_MAP_CONFIG);
@@ -50,33 +69,6 @@ export function TacticalLeafletMap({
     };
   }, []);
 
-  if (!useOfflineMap) {
-    return (
-      <PublicVectorMap
-        activeStreamId={activeStreamId}
-        autoFocusEnabled={autoFocusEnabled}
-        isMotionEnabled={isMotionEnabled}
-        mapConfig={mapConfig}
-        onAutoFocusChange={setAutoFocusEnabled}
-        onStreamMarkerSelect={handleStreamMarkerSelect}
-        onStreamPopupClose={handlePopupClose}
-        selectedStream={selectedStream}
-        streams={streams}
-        onMapError={handleMapError}
-      />
-    );
-  }
-
-  return (
-    <OfflineTacticalMap
-      autoFocusEnabled={autoFocusEnabled}
-      onAutoFocusChange={setAutoFocusEnabled}
-      activeStreamId={activeStreamId}
-      onStreamMarkerSelect={handleStreamMarkerSelect}
-      onStreamPopupClose={handlePopupClose}
-      fallbackNotice={mapFallbackNotice}
-      selectedStream={selectedStream}
-      streams={streams}
-    />
-  );
+  return { activeStreamId, autoFocusEnabled, handleMapError, handlePopupClose, handleStreamMarkerSelect,
+    mapConfig, mapFallbackNotice, setAutoFocusEnabled, useOfflineMap } as const;
 }

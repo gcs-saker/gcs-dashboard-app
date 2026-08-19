@@ -49,27 +49,7 @@ export function StreamDeviceConnectDialog({
               />
             </label>
           </div>
-          <div className="stream-connect-dialog__section-title">
-            <span>현재 수신 가능한 스트림</span>
-            <strong>{availableStreams.length}개</strong>
-          </div>
-          {availableStreams.length === 0 ? (
-            <p className="stream-connect-dialog__empty">현재 들어오고 있는 스트림이 없습니다.</p>
-          ) : null}
-          {availableStreams.map((device) => (
-            <button
-              className="widget-dialog__item stream-connect-dialog__device"
-              key={device.id}
-              onClick={() => connectStream(device)}
-              type="button"
-            >
-              <span>
-                <strong>{device.name}</strong>
-                <small>{device.mediaType.toUpperCase()} · {device.streamPath}</small>
-              </span>
-              <span className="ops-badge is-online">수신 중</span>
-            </button>
-          ))}
+          <AvailableStreamList devices={availableStreams} onConnect={connectStream} />
         </div>
 
         <footer className="widget-dialog__footer">
@@ -80,4 +60,23 @@ export function StreamDeviceConnectDialog({
       </section>
     </div>
   );
+}
+
+function AvailableStreamList({ devices, onConnect }: {
+  devices: StreamDeviceOption[];
+  onConnect: (device: StreamDeviceOption) => void;
+}) {
+  return <>
+    <div className="stream-connect-dialog__section-title">
+      <span>현재 수신 가능한 스트림</span><strong>{devices.length}개</strong>
+    </div>
+    {devices.length === 0 ? <p className="stream-connect-dialog__empty">현재 들어오고 있는 스트림이 없습니다.</p> : null}
+    {devices.map((device) => (
+      <button className="widget-dialog__item stream-connect-dialog__device" key={device.id}
+        onClick={() => onConnect(device)} type="button">
+        <span><strong>{device.name}</strong><small>{device.mediaType.toUpperCase()} · {device.streamPath}</small></span>
+        <span className="ops-badge is-online">수신 중</span>
+      </button>
+    ))}
+  </>;
 }

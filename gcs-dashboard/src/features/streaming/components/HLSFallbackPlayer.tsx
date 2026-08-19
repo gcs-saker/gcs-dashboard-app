@@ -66,7 +66,21 @@ export function HLSFallbackPlayer({
         poster={poster}
         className="hls-fallback-player__video"
       />
-      {showDiagnostics ? <figcaption className="hls-fallback-player__overlay">
+      {showDiagnostics ? <HlsDiagnostics {...{ activeLatencyMode, errorMessage, fallbackReason, mode, status, streamId, webCodecs }} /> : null}
+    </figure>
+  );
+}
+
+function HlsDiagnostics({ activeLatencyMode, errorMessage, fallbackReason, mode, status, streamId, webCodecs }: {
+  activeLatencyMode: keyof typeof latencyModeLabel;
+  errorMessage: string | null;
+  fallbackReason: string;
+  mode: string;
+  status: keyof typeof statusLabel;
+  streamId?: string;
+  webCodecs: ReturnType<typeof detectWebCodecsCapability>;
+}) {
+  return <figcaption className="hls-fallback-player__overlay">
         <span
           className={`hls-fallback-player__status hls-fallback-player__status--${status}`}
           role="status"
@@ -82,9 +96,7 @@ export function HLSFallbackPlayer({
           WebCodecs: {webCodecs.supported ? "ready" : "fallback"}
         </span>
         {errorMessage ? <span className="hls-fallback-player__error">{errorMessage}</span> : null}
-      </figcaption> : null}
-    </figure>
-  );
+  </figcaption>;
 }
 
 export default HLSFallbackPlayer;
