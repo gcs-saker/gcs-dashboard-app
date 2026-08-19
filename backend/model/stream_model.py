@@ -91,7 +91,9 @@ def _parse_ai_stream(parts: list[str]) -> StreamPath:
 def _parse_archive_stream(parts: list[str]) -> StreamPath:
     _require_segment_count(parts, 4, "archive/{assetId}/{sensorId}/{date}")
     asset_id, sensor_id = _validate_named_segments(parts[1], parts[2])
-    return StreamPath(prefix="archive", asset_id=asset_id, sensor_id=sensor_id, archive_date=_validate_archive_date(parts[3]))
+    return StreamPath(
+        prefix="archive", asset_id=asset_id, sensor_id=sensor_id, archive_date=_validate_archive_date(parts[3])
+    )
 
 
 def validate_stream_id(stream_id: str) -> StreamPath:
