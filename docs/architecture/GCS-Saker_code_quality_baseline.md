@@ -18,12 +18,12 @@ The cross-language complexity value is a conservative control-flow estimate. Pyt
 | Language | Functions | Over 60 lines | Complexity over 10 |
 | --- | ---: | ---: | ---: |
 | Python | 461 | 0 | 1 |
-| TypeScript/TSX | 670 | 37 | 13 |
+| TypeScript/TSX | 673 | 37 | 9 |
 | Kotlin | 451 | 4 | 0 |
 | Go | 277 | 0 | 6 |
-| **Total** | **1,859** | **41** | **20** |
+| **Total** | **1,862** | **41** | **16** |
 
-Current maxima are 126 lines and complexity 16. The initial strict frontend Oxlint trial reported 25 findings. Production correctness findings were fixed and unavoidable hoisted Vitest factories received local documented suppressions; the strict profile now reports zero findings and runs in CI.
+Current maxima are 126 lines and complexity 13. The initial strict frontend Oxlint trial reported 25 findings. Production correctness findings were fixed and unavoidable hoisted Vitest factories received local documented suppressions; the strict profile now reports zero findings and runs in CI.
 
 ## Highest-priority hotspots
 
@@ -40,7 +40,7 @@ The critical pattern scan initially found two cases:
 1. A health boundary that intentionally converted dependency failure to an explicit error health result. The detector was narrowed so surfaced failure is not treated as hidden failure.
 2. A nil Go HTTP client fallback without a timeout. The fallback now receives a bounded three-second timeout and a regression test.
 
-After correction, the critical contract reports zero violations across 647 production files. Refactoring batches split gRPC telemetry validation, GPS send lifecycle, WebRTC diagnostics, hierarchical group policy, REST/telemetry payload schemas, and stream equality predicates. Together they reduced long functions from 43 to 41, complex functions from 29 to 20, and global maximum complexity from 27 to 16.
+After correction, the critical contract reports zero violations across 647 production files. Refactoring batches split gRPC telemetry validation, GPS send lifecycle, WebRTC diagnostics, hierarchical group policy, REST/telemetry schemas, equality predicates, audio analysis, time-sync validation, and WHEP lifecycle/media reducers. Together they reduced long functions from 43 to 41, complex functions from 29 to 16, and global maximum complexity from 27 to 13.
 
 ## Reduction policy
 

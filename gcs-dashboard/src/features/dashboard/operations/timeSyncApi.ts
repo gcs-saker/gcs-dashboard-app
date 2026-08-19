@@ -1,10 +1,33 @@
 import { apiUrl } from "@/config";
 import { DASHBOARD_API_ROUTES } from "@/features/apiRoutes";
 import { fetchValidatedJson } from "@features/apiClient";
+import {
+  isNullableString,
+  isNumber,
+  isString,
+  matchesPayloadSchema,
+  type PayloadSchema,
+} from "@/features/payloadValidation";
 import type { TimeSyncConfigInput, TimeSyncHealth, TimeSyncMode, TimeSyncStatus } from "@dashboard/operations/timeSync";
 
 const TIME_SYNC_REQUEST_DESCRIPTION = "Time sync request";
 const TIME_SYNC_RESPONSE_DESCRIPTION = "Time sync response";
+const TIME_SYNC_MODES = new Set<unknown>(["public", "closed_network", "manual"]);
+const TIME_SYNC_HEALTH = new Set<unknown>(["ok", "warn", "error"]);
+const TIME_SYNC_STATUS_SCHEMA: PayloadSchema = {
+  mode: isMode,
+  sourceHost: isNullableString,
+  sourcePort: isNumber,
+  driftWarnMs: isNumber,
+  updatedAt: isString,
+  updatedBy: isString,
+  serverTime: isString,
+  monotonicMs: isNumber,
+  timezone: isString,
+  checkedAt: isString,
+  health: isHealth,
+  message: isString,
+};
 
 export async function fetchTimeSyncStatus(fetcher: typeof fetch = fetch): Promise<TimeSyncStatus> {
   return fetchTimeSyncJson(apiUrl(DASHBOARD_API_ROUTES.timeSyncStatus), fetcher);
@@ -50,28 +73,13 @@ function fetchTimeSyncJson(
 }
 
 function isTimeSyncStatus(payload: unknown): payload is TimeSyncStatus {
-  if (!payload || typeof payload !== "object") return false;
-  const candidate = payload as Partial<TimeSyncStatus>;
-  return (
-    isMode(candidate.mode) &&
-    (typeof candidate.sourceHost === "string" || candidate.sourceHost === null) &&
-    typeof candidate.sourcePort === "number" &&
-    typeof candidate.driftWarnMs === "number" &&
-    typeof candidate.updatedAt === "string" &&
-    typeof candidate.updatedBy === "string" &&
-    typeof candidate.serverTime === "string" &&
-    typeof candidate.monotonicMs === "number" &&
-    typeof candidate.timezone === "string" &&
-    typeof candidate.checkedAt === "string" &&
-    isHealth(candidate.health) &&
-    typeof candidate.message === "string"
-  );
+  return matchesPayloadSchema(payload, TIME_SYNC_STATUS_SCHEMA);
 }
 
 function isMode(value: unknown): value is TimeSyncMode {
-  return value === "public" || value === "closed_network" || value === "manual";
+  return TIME_SYNC_MODES.has(value);
 }
 
 function isHealth(value: unknown): value is TimeSyncHealth {
-  return value === "ok" || value === "warn" || value === "error";
+  return TIME_SYNC_HEALTH.has(value);
 }

@@ -40,9 +40,39 @@ export const initialPlaybackState: WebRTCPlaybackSnapshot = {
   iceCandidateStats: EMPTY_ICE_CANDIDATE_STATS,
 };
 
+type LifecyclePlaybackAction = Extract<PlaybackAction, {
+  type:
+    | typeof WHEP_PLAYBACK_ACTION.loading
+    | typeof WHEP_PLAYBACK_ACTION.playing
+    | typeof WHEP_PLAYBACK_ACTION.offline
+    | typeof WHEP_PLAYBACK_ACTION.unsupported
+    | typeof WHEP_PLAYBACK_ACTION.error
+    | typeof WHEP_PLAYBACK_ACTION.connection;
+}>;
+type MediaPlaybackAction = Exclude<PlaybackAction, LifecyclePlaybackAction>;
+const LIFECYCLE_ACTIONS = new Set<PlaybackAction["type"]>([
+  WHEP_PLAYBACK_ACTION.loading,
+  WHEP_PLAYBACK_ACTION.playing,
+  WHEP_PLAYBACK_ACTION.offline,
+  WHEP_PLAYBACK_ACTION.unsupported,
+  WHEP_PLAYBACK_ACTION.error,
+  WHEP_PLAYBACK_ACTION.connection,
+]);
+
 export function playbackReducer(
   state: WebRTCPlaybackSnapshot,
   action: PlaybackAction,
+): WebRTCPlaybackSnapshot {
+  return isLifecycleAction(action) ? reduceLifecycleAction(state, action) : reduceMediaAction(state, action);
+}
+
+function isLifecycleAction(action: PlaybackAction): action is LifecyclePlaybackAction {
+  return LIFECYCLE_ACTIONS.has(action.type);
+}
+
+function reduceLifecycleAction(
+  state: WebRTCPlaybackSnapshot,
+  action: LifecyclePlaybackAction,
 ): WebRTCPlaybackSnapshot {
   switch (action.type) {
     case WHEP_PLAYBACK_ACTION.loading:
@@ -76,6 +106,14 @@ export function playbackReducer(
       return toErrorState(state, action);
     case WHEP_PLAYBACK_ACTION.connection:
       return toConnectionState(state, action);
+  }
+}
+
+function reduceMediaAction(
+  state: WebRTCPlaybackSnapshot,
+  action: MediaPlaybackAction,
+): WebRTCPlaybackSnapshot {
+  switch (action.type) {
     case WHEP_PLAYBACK_ACTION.firstFrame:
       return {
         ...state,

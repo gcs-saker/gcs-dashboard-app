@@ -1,4 +1,5 @@
 import type { StreamDeviceGeometry, StreamDeviceOption } from "@dashboard/assets/streamDeviceContracts";
+import { haveEqualFields } from "@/features/valueEquality";
 import {
   CCTV_EMPTY_STREAM_ID_PREFIX,
   createEmptyCctvStreamSlot,
@@ -39,10 +40,6 @@ function isSameStreamDevice(device: StreamDeviceOption, nextDevice: StreamDevice
 function isSameStreamSlot(stream: DashboardStreamSlot, nextStream: DashboardStreamSlot): boolean {
   return haveEqualFields(stream, nextStream, STREAM_SLOT_FIELDS) &&
     isSameGeometry(stream.geometry, nextStream.geometry);
-}
-
-function haveEqualFields<T>(left: T, right: T, fields: readonly (keyof T)[]): boolean {
-  return fields.every((field) => left[field] === right[field]);
 }
 
 function isSameGeometry(
