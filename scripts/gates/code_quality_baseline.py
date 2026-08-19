@@ -54,7 +54,9 @@ def production_sources() -> list[Path]:
 
 def is_test_source(path: Path) -> bool:
     return (
-        "tests" in path.parts
+        path.name == "setupTests.ts"
+        or path.name == "setupTests.tsx"
+        or "tests" in path.parts
         or "test" in path.parts
         or ".test." in path.name
         or "_test." in path.name
@@ -125,7 +127,7 @@ def scan_braced_language(path: Path, text: str, language: str) -> list[FunctionM
             index += 1
             continue
         name = next(group for group in match.groups() if group)
-        end = find_braced_end(lines, index)
+        end = find_kotlin_function_end(lines, index) if language == "kotlin" else find_braced_end(lines, index)
         if end is None:
             index += 1
             continue
@@ -134,6 +136,24 @@ def scan_braced_language(path: Path, text: str, language: str) -> list[FunctionM
         metrics.append(build_metric(path, language, name, occurrences[name], index + 1, body, lexical_complexity(body)))
         index = end + 1
     return metrics
+
+
+def find_kotlin_function_end(lines: list[str], start: int) -> int | None:
+    paren_depth = 0
+    expression_body = False
+    for index in range(start, len(lines)):
+        line = strip_strings_and_comments(lines[index])
+        if not expression_body and "{" in line:
+            return find_braced_end(lines, start)
+        if not expression_body and re.search(r"(?<![=!<>])=(?!=)", line):
+            expression_body = True
+        paren_depth += line.count("(") + line.count("[")
+        paren_depth -= line.count(")") + line.count("]")
+        if expression_body and paren_depth <= 0:
+            next_line = lines[index + 1].lstrip() if index + 1 < len(lines) else ""
+            if not next_line.startswith("."):
+                return index
+    return None
 
 
 def find_braced_end(lines: list[str], start: int) -> int | None:
