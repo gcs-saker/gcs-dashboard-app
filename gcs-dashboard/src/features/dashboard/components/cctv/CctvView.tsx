@@ -40,23 +40,43 @@ export function CctvView({
 }: CctvViewProps) {
   return (
     <section className="ops-dashboard__placeholder-view cctv-view" aria-label="CCTV">
-      <div className="cctv-view__header">
+      <CctvHeader {...{ cctvGridSize, cctvLayoutMode, cctvQualityMode, cctvStatusSummary, onSetLayoutMode, onSetQualityMode }} />
+      <StreamGrid
+        audioActiveStreamId={audioActiveStreamId}
+        className={`stream-grid--cctv is-${cctvGridSize}x${cctvGridSize} is-${cctvQualityMode}`}
+        onSelectStream={onSelectStream}
+        onToggleTalkbackTarget={onToggleTalkbackTarget}
+        renderCard={(stream, isSelected) => (
+          <CctvChannelCard hasAudioActivity={stream.id === audioActiveStreamId} isSelected={isSelected}
+            onSelect={onSelectStream} qualityMode={cctvQualityMode} stream={stream} />
+        )}
+        selectedStreamId={selectedStreamId}
+        talkbackTargetStreamIds={talkbackTargetStreamIds}
+        streams={cctvStreams}
+      />
+    </section>
+  );
+}
+
+function CctvHeader(props: Pick<CctvViewProps, "cctvGridSize" | "cctvLayoutMode" | "cctvQualityMode" | "cctvStatusSummary" | "onSetLayoutMode" | "onSetQualityMode">) {
+  return (
+    <div className="cctv-view__header">
         <div>
           <h2>통합 CCTV 월</h2>
-          <span>{cctvGridSize * cctvGridSize}채널 감시 레이아웃 · {cctvQualityMode === "preview" ? "저화질 Preview" : "고화질 확인"}</span>
+          <span>{props.cctvGridSize ** 2}채널 감시 레이아웃 · {props.cctvQualityMode === "preview" ? "저화질 Preview" : "고화질 확인"}</span>
         </div>
         <div className="cctv-view__summary" aria-label="CCTV 운영 요약">
-          <span>LIVE {cctvStatusSummary.online}</span>
-          <span>FALLBACK {cctvStatusSummary.fallback}</span>
-          <span>OFFLINE {cctvStatusSummary.offline}</span>
+          <span>LIVE {props.cctvStatusSummary.online}</span>
+          <span>FALLBACK {props.cctvStatusSummary.fallback}</span>
+          <span>OFFLINE {props.cctvStatusSummary.offline}</span>
         </div>
         <div className="cctv-view__controls" aria-label="CCTV 보기 설정">
           {CCTV_LAYOUT_MODE_OPTIONS.map((mode) => (
             <button
-              aria-pressed={cctvLayoutMode === mode}
-              className={cctvLayoutMode === mode ? "is-active" : ""}
+              aria-pressed={props.cctvLayoutMode === mode}
+              className={props.cctvLayoutMode === mode ? "is-active" : ""}
               key={mode}
-              onClick={() => onSetLayoutMode(mode)}
+              onClick={() => props.onSetLayoutMode(mode)}
               type="button"
             >
               {mode === "auto" ? "Auto" : mode}
@@ -64,35 +84,16 @@ export function CctvView({
           ))}
           {CCTV_QUALITY_MODE_OPTIONS.map((mode) => (
             <button
-              aria-pressed={cctvQualityMode === mode}
-              className={cctvQualityMode === mode ? "is-active" : ""}
+              aria-pressed={props.cctvQualityMode === mode}
+              className={props.cctvQualityMode === mode ? "is-active" : ""}
               key={mode}
-              onClick={() => onSetQualityMode(mode)}
+              onClick={() => props.onSetQualityMode(mode)}
               type="button"
             >
               {mode === "preview" ? "저화질" : "고화질"}
             </button>
           ))}
         </div>
-      </div>
-      <StreamGrid
-        audioActiveStreamId={audioActiveStreamId}
-        className={`stream-grid--cctv is-${cctvGridSize}x${cctvGridSize} is-${cctvQualityMode}`}
-        onSelectStream={onSelectStream}
-        onToggleTalkbackTarget={onToggleTalkbackTarget}
-        renderCard={(stream, isSelected) => (
-          <CctvChannelCard
-            hasAudioActivity={stream.id === audioActiveStreamId}
-            isSelected={isSelected}
-            onSelect={onSelectStream}
-            qualityMode={cctvQualityMode}
-            stream={stream}
-          />
-        )}
-        selectedStreamId={selectedStreamId}
-        talkbackTargetStreamIds={talkbackTargetStreamIds}
-        streams={cctvStreams}
-      />
-    </section>
+    </div>
   );
 }

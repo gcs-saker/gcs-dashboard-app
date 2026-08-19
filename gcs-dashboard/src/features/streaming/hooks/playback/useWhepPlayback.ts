@@ -1,8 +1,8 @@
 import { useEffect, useReducer, useRef } from "react";
-import type { RefObject } from "react";
+import type { Dispatch, RefObject } from "react";
 
 import type { WebRTCPlaybackSnapshot } from "@streaming/types";
-import type { PeerConnectionFactory, SignalingTimingRecorder } from "@streaming/hooks/playback/whepPlaybackContracts";
+import type { PeerConnectionFactory, PlaybackAction, SignalingTimingRecorder } from "@streaming/hooks/playback/whepPlaybackContracts";
 import { initialPlaybackState, playbackReducer } from "@streaming/hooks/playback/whepPlaybackReducer";
 import {
   createWhepPlaybackSession,
@@ -20,6 +20,15 @@ interface UseWhepPlaybackOptions {
   isOnline?: boolean;
   peerConnectionFactory?: PeerConnectionFactory;
   fetcher?: typeof fetch;
+}
+
+interface ActiveWhepSessionInput {
+  dispatch: Dispatch<PlaybackAction>;
+  fetcher: typeof fetch;
+  peerConnectionFactory?: PeerConnectionFactory;
+  remoteStreamRef: RefObject<MediaStream | null>;
+  videoRef: RefObject<HTMLVideoElement | null>;
+  whepUrl: string;
 }
 
 export function useWhepPlayback({
@@ -43,55 +52,48 @@ export function useWhepPlayback({
       return;
     }
 
-    const resolvedWhepUrl = whepUrl;
-    const abortController = new AbortController();
-    const session = createWhepPlaybackSession();
-    let disposed = false;
-    const startedAt = performance.now();
-    const recordTiming: SignalingTimingRecorder = (stage) => {
-      if (disposed || abortController.signal.aborted) return;
-      dispatch({ type: WHEP_PLAYBACK_ACTION.signalingTiming, stage, latencyMs: performance.now() - startedAt });
-    };
-
-    const videoElement = videoRef.current;
-    const handleFirstFrame = () => {
-      if (disposed || abortController.signal.aborted) return;
-      dispatch({ type: WHEP_PLAYBACK_ACTION.firstFrame, latencyMs: performance.now() - startedAt });
-    };
-    videoElement?.addEventListener("loadeddata", handleFirstFrame, { once: true });
-
-    dispatch({
-      type: WHEP_PLAYBACK_ACTION.loading,
-      connectionState: WHEP_CONNECTION_STATE.new,
-      iceConnectionState: WHEP_CONNECTION_STATE.new,
-    });
-
-    void startWhepPlaybackSession({
-      whepUrl: resolvedWhepUrl,
-      fetcher,
-      peerConnectionFactory,
-      dispatch,
-      signal: abortController.signal,
-      recordTiming,
-      refs: { videoRef, remoteStreamRef },
-      session,
-    }).catch((error) => {
-      if (disposed || abortController.signal.aborted) return;
-      dispatch({
-        type: WHEP_PLAYBACK_ACTION.error,
-        message: error instanceof Error ? error.message : WHEP_PLAYBACK_MESSAGE.failed,
-        connectionState: session.peerConnection?.connectionState,
-        iceConnectionState: session.peerConnection?.iceConnectionState,
-      });
-    });
-
-    return () => {
-      disposed = true;
-      abortController.abort();
-      stopWhepPlaybackSession(session, { videoRef, remoteStreamRef });
-      videoElement?.removeEventListener("loadeddata", handleFirstFrame);
-    };
+    return startActiveWhepSession({ dispatch, fetcher, peerConnectionFactory, remoteStreamRef, videoRef, whepUrl });
   }, [fetcher, isOnline, peerConnectionFactory, whepUrl]);
 
   return { ...snapshot, videoRef };
+}
+
+function startActiveWhepSession(input: ActiveWhepSessionInput): () => void {
+  const abortController = new AbortController();
+  const session = createWhepPlaybackSession();
+  let disposed = false;
+  const startedAt = performance.now();
+  const active = () => !disposed && !abortController.signal.aborted;
+  const recordTiming: SignalingTimingRecorder = (stage) => {
+    if (active()) input.dispatch({ type: WHEP_PLAYBACK_ACTION.signalingTiming, stage, latencyMs: performance.now() - startedAt });
+  };
+  const videoElement = input.videoRef.current;
+  const handleFirstFrame = () => {
+    if (active()) input.dispatch({ type: WHEP_PLAYBACK_ACTION.firstFrame, latencyMs: performance.now() - startedAt });
+  };
+  videoElement?.addEventListener("loadeddata", handleFirstFrame, { once: true });
+  input.dispatch({
+    type: WHEP_PLAYBACK_ACTION.loading,
+    connectionState: WHEP_CONNECTION_STATE.new,
+    iceConnectionState: WHEP_CONNECTION_STATE.new,
+  });
+  void startWhepPlaybackSession({
+    whepUrl: input.whepUrl, fetcher: input.fetcher, peerConnectionFactory: input.peerConnectionFactory,
+    dispatch: input.dispatch, signal: abortController.signal, recordTiming,
+    refs: { videoRef: input.videoRef, remoteStreamRef: input.remoteStreamRef }, session,
+  }).catch((error) => {
+    if (!active()) return;
+    input.dispatch({
+      type: WHEP_PLAYBACK_ACTION.error,
+      message: error instanceof Error ? error.message : WHEP_PLAYBACK_MESSAGE.failed,
+      connectionState: session.peerConnection?.connectionState,
+      iceConnectionState: session.peerConnection?.iceConnectionState,
+    });
+  });
+  return () => {
+    disposed = true;
+    abortController.abort();
+    stopWhepPlaybackSession(session, { videoRef: input.videoRef, remoteStreamRef: input.remoteStreamRef });
+    videoElement?.removeEventListener("loadeddata", handleFirstFrame);
+  };
 }

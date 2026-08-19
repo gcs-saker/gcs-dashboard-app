@@ -16,7 +16,18 @@ export function SignupFormView({ form }: SignupFormViewProps) {
           <h1>회원가입</h1>
         </div>
 
-        <SignupTextField
+        <SignupFields form={form} />
+        {form.errorMessage ? <p className="auth-login__error">{form.errorMessage}</p> : null}
+        <button disabled={form.isSubmitting} type="submit">{form.isSubmitting ? "등록 중" : "가입"}</button>
+        <p className="auth-login__footer"><Link to="/login">로그인으로 돌아가기</Link></p>
+      </form>
+    </main>
+  );
+}
+
+function SignupFields({ form }: SignupFormViewProps) {
+  return <>
+    <SignupTextField
           autoComplete="username"
           label="아이디"
           minLength={3}
@@ -59,16 +70,7 @@ export function SignupFormView({ form }: SignupFormViewProps) {
           type="text"
           value={form.inviteCode}
         />
-        {form.errorMessage ? <p className="auth-login__error">{form.errorMessage}</p> : null}
-        <button disabled={form.isSubmitting} type="submit">
-          {form.isSubmitting ? "등록 중" : "가입"}
-        </button>
-        <p className="auth-login__footer">
-          <Link to="/login">로그인으로 돌아가기</Link>
-        </p>
-      </form>
-    </main>
-  );
+  </>;
 }
 
 interface SignupTextFieldProps {

@@ -67,19 +67,27 @@ export function useVirtualList({
     overscan,
   });
 
-  const range = ((): VirtualListRange => {
-    const visibleCount = Math.ceil((viewport.height || itemHeight * VirtualListContract.INITIAL_VISIBLE_ROWS) / itemHeight);
-    const startIndex = Math.max(0, Math.floor(viewport.scrollTop / itemHeight) - overscan);
-    const endIndex = Math.min(itemCount, startIndex + visibleCount + overscan * 2);
-    return {
-      endIndex,
-      offsetTop: startIndex * itemHeight,
-      startIndex,
-      totalHeight: virtualizer.getTotalSize(),
-    };
-  })();
+  const range = virtualRange(viewport, itemCount, itemHeight, overscan, virtualizer.getTotalSize());
 
   return { containerRef, onScroll, range };
+}
+
+function virtualRange(
+  viewport: { height: number; scrollTop: number },
+  itemCount: number,
+  itemHeight: number,
+  overscan: number,
+  totalHeight: number,
+): VirtualListRange {
+  const fallbackHeight = itemHeight * VirtualListContract.INITIAL_VISIBLE_ROWS;
+  const visibleCount = Math.ceil((viewport.height || fallbackHeight) / itemHeight);
+  const startIndex = Math.max(0, Math.floor(viewport.scrollTop / itemHeight) - overscan);
+  return {
+    endIndex: Math.min(itemCount, startIndex + visibleCount + overscan * 2),
+    offsetTop: startIndex * itemHeight,
+    startIndex,
+    totalHeight,
+  };
 }
 
 const VirtualListContract = {

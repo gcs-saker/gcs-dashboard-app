@@ -1,4 +1,4 @@
-import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import { AuthApiError } from "@auth/authApi";
 import {
   fetchStreamDeviceOptions,
@@ -43,8 +43,19 @@ export function useStreamDevicePolling({
 }: UseStreamDevicePollingInput): void {
   const latestInput = useRef({ fetchDevices, onAuthFailure, preferences });
   latestInput.current = { fetchDevices, onAuthFailure, preferences };
+  useEffect(
+    () => startPollingLoop(latestInput, { setSelectedStreamId, setStreamDevices, setStreams }),
+    [setSelectedStreamId, setStreamDevices, setStreams],
+  );
+}
 
-  useEffect(() => {
+type PollingSnapshot = Pick<UseStreamDevicePollingInput, "fetchDevices" | "onAuthFailure" | "preferences">;
+type PollingSetters = Pick<
+  UseStreamDevicePollingInput,
+  "setSelectedStreamId" | "setStreamDevices" | "setStreams"
+>;
+
+function startPollingLoop(latestInput: MutableRefObject<PollingSnapshot>, setters: PollingSetters): () => void {
     let isMounted = true;
     let stopped = false;
     let inFlight = false;
@@ -59,9 +70,7 @@ export function useStreamDevicePolling({
           fetchDevices: currentInput.fetchDevices,
           onAuthFailure: currentInput.onAuthFailure,
           preferences: currentInput.preferences,
-          setSelectedStreamId,
-          setStreamDevices,
-          setStreams,
+          ...setters,
           isCurrent: () => isMounted && !stopped,
           stopPolling: () => {
             stopped = true;
@@ -93,7 +102,6 @@ export function useStreamDevicePolling({
       if (timeoutId) globalThis.clearTimeout(timeoutId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [setSelectedStreamId, setStreamDevices, setStreams]);
 }
 
 function shouldSkipRefresh(isMounted: boolean, stopped: boolean, inFlight: boolean, hidden: boolean): boolean {

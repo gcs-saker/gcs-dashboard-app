@@ -51,26 +51,55 @@ export function TelemetryPanel({
         <h2 id="telemetry-title">지오메트리 / 텔레메트리</h2>
         {controls}
       </div>
-      <div className="telemetry-panel__body">
+      <TelemetryBody
+        bearingDelta={bearingDelta}
+        heading={heading}
+        headingRotation={headingRotation}
+        mapBearing={mapBearing}
+        mapRotation={mapRotation}
+        primaryMetrics={primaryMetrics}
+        rows={rows}
+        stream={stream}
+        streamName={streamName}
+      />
+    </section>
+  );
+}
+
+interface TelemetryBodyProps {
+  bearingDelta: string;
+  heading: string;
+  headingRotation?: string;
+  mapBearing: string;
+  mapRotation?: string;
+  primaryMetrics: TelemetryRow[];
+  rows: TelemetryRow[];
+  stream: DashboardStreamSlot;
+  streamName: string;
+}
+
+function TelemetryBody(props: TelemetryBodyProps) {
+  return (
+    <div className="telemetry-panel__body">
         <div className="telemetry-panel__identity">
           <span>선택 스트림</span>
-          <strong>{streamName}</strong>
-          <em className={`ops-summary__state is-${stream.status}`}>{getDashboardStreamStatusText(stream.status)}</em>
+          <strong>{props.streamName}</strong>
+          <em className={`ops-summary__state is-${props.stream.status}`}>{getDashboardStreamStatusText(props.stream.status)}</em>
         </div>
         <div className="telemetry-compass" aria-label="기체 방위와 지도 기준 방위">
           <div className="telemetry-compass__dial">
             <span className="telemetry-compass__north">N</span>
-            <span className="telemetry-compass__needle" style={{ transform: headingRotation }} />
-            <span className="telemetry-compass__map-bearing" style={{ transform: mapRotation }} />
+            <span className="telemetry-compass__needle" style={{ transform: props.headingRotation }} />
+            <span className="telemetry-compass__map-bearing" style={{ transform: props.mapRotation }} />
           </div>
           <div className="telemetry-compass__legend">
-            <span>기체 {heading}</span>
-            <span>지도 {mapBearing}</span>
-            <strong>차이 {bearingDelta}</strong>
+            <span>기체 {props.heading}</span>
+            <span>지도 {props.mapBearing}</span>
+            <strong>차이 {props.bearingDelta}</strong>
           </div>
         </div>
         <dl className="telemetry-panel__metrics">
-          {primaryMetrics.map(([label, value]) => (
+          {props.primaryMetrics.map(([label, value]) => (
             <div key={label}>
               <dt>{label}</dt>
               <dd>{value}</dd>
@@ -78,14 +107,13 @@ export function TelemetryPanel({
           ))}
         </dl>
         <dl className="telemetry-panel__details">
-          {rows.map(([label, value]) => (
+          {props.rows.map(([label, value]) => (
             <div key={label}>
               <dt>{label}</dt>
               <dd>{value}</dd>
             </div>
           ))}
         </dl>
-      </div>
-    </section>
+    </div>
   );
 }

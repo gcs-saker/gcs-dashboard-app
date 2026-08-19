@@ -34,7 +34,20 @@ export function OpsSummaryPanel({
         <h2 id="ops-summary-title">운용 요약</h2>
         {controls}
       </div>
-      <div className="ops-summary__body">
+      <OpsSummaryBody selectedStream={selectedStream} viewModel={viewModel} />
+    </section>
+  );
+}
+
+function OpsSummaryBody({
+  selectedStream,
+  viewModel,
+}: {
+  selectedStream: DashboardStreamSlot;
+  viewModel: ReturnType<typeof buildOpsSummaryViewModel>;
+}) {
+  return (
+    <div className="ops-summary__body">
         <div className={`ops-summary__mission is-${viewModel.missionTone}`}>
           <span>현재 운용 상태</span>
           <strong>{viewModel.missionText}</strong>
@@ -73,7 +86,6 @@ export function OpsSummaryPanel({
             ))}
           </ul>
         </div>
-      </div>
-    </section>
+    </div>
   );
 }

@@ -111,21 +111,28 @@ export function monitorAudioState(stream: MediaStream, dispatch: Dispatch<Playba
 
   update();
   const intervalId = globalThis.setInterval(update, AUDIO_STATE_POLL_INTERVAL_MS);
-  for (const track of audioTracks) {
-    track.addEventListener?.("mute", update);
-    track.addEventListener?.("unmute", update);
-    track.addEventListener?.("ended", update);
-  }
+  const removeTrackListeners = listenToAudioTracks(audioTracks, update);
 
   return () => {
     clearPendingInactive();
     globalThis.clearInterval(intervalId);
-    for (const track of audioTracks) {
-      track.removeEventListener?.("mute", update);
-      track.removeEventListener?.("unmute", update);
-      track.removeEventListener?.("ended", update);
-    }
+    removeTrackListeners();
     dispatch({ type: "audio-state", hasAudioTrack: false, isAudioActive: false });
+  };
+}
+
+function listenToAudioTracks(tracks: readonly MediaStreamTrack[], listener: () => void): () => void {
+  for (const track of tracks) {
+    track.addEventListener?.("mute", listener);
+    track.addEventListener?.("unmute", listener);
+    track.addEventListener?.("ended", listener);
+  }
+  return () => {
+    for (const track of tracks) {
+      track.removeEventListener?.("mute", listener);
+      track.removeEventListener?.("unmute", listener);
+      track.removeEventListener?.("ended", listener);
+    }
   };
 }
 

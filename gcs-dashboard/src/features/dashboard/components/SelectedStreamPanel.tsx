@@ -37,26 +37,7 @@ export function SelectedStreamPanel({
       data-widget-id={SELECTED_STREAM_WIDGET.id}
       style={{ minHeight: SELECTED_STREAM_WIDGET.minHeight }}
     >
-      <div className="ops-panel__header">
-        <span className="selected-stream__heading">
-          <h2 id="selected-stream-title">선택 스트림</h2>
-          <span>{stream.title} / {getDashboardStreamDisplayName(stream)}</span>
-        </span>
-        <span className="ops-panel__header-actions">
-          <span className={`ops-badge ${getDashboardStreamStatusClass(stream.status)}`}>
-            {getDashboardStreamStatusText(stream.status)}
-          </span>
-          <button
-            aria-pressed={Boolean(stream.aiModeEnabled)}
-            className={`ops-command-button stream-ai-toggle ${stream.aiModeEnabled ? "is-active" : ""}`}
-            onClick={() => onToggleAiMode?.(stream.id)}
-            type="button"
-          >
-            AI 모드
-          </button>
-          {controls}
-        </span>
-      </div>
+      <SelectedStreamHeader controls={controls} onToggleAiMode={onToggleAiMode} stream={stream} />
       <div className={`selected-stream__viewport mode-${stream.mode.toLowerCase()}`}>
         {isReceivableStream(stream) ? (
           <RealtimePlayer
@@ -81,5 +62,32 @@ export function SelectedStreamPanel({
         </div>
       </div>
     </section>
+  );
+}
+
+function SelectedStreamHeader({
+  controls,
+  onToggleAiMode,
+  stream,
+}: Pick<SelectedStreamPanelProps, "controls" | "onToggleAiMode" | "stream">) {
+  return (
+    <div className="ops-panel__header">
+      <span className="selected-stream__heading">
+        <h2 id="selected-stream-title">선택 스트림</h2>
+        <span>{stream.title} / {getDashboardStreamDisplayName(stream)}</span>
+      </span>
+      <span className="ops-panel__header-actions">
+        <span className={`ops-badge ${getDashboardStreamStatusClass(stream.status)}`}>
+          {getDashboardStreamStatusText(stream.status)}
+        </span>
+        <button
+          aria-pressed={Boolean(stream.aiModeEnabled)}
+          className={`ops-command-button stream-ai-toggle ${stream.aiModeEnabled ? "is-active" : ""}`}
+          onClick={() => onToggleAiMode?.(stream.id)}
+          type="button"
+        >AI 모드</button>
+        {controls}
+      </span>
+    </div>
   );
 }

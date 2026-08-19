@@ -45,18 +45,7 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   return (
     <header className="ops-dashboard__tabs" aria-label="주요 탭">
-      <nav className="ops-dashboard__tab-list">
-        {DASHBOARD_TABS.map((tab) => (
-          <button
-            className={`ops-tab ${activeView === tab.id ? "is-active" : ""}`}
-            key={tab.id}
-            onClick={() => onChangeView(tab.id)}
-            type="button"
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      <DashboardTabs activeView={activeView} onChangeView={onChangeView} />
       <div className="ops-dashboard__actions">
         <div className="ops-dashboard__action-group">
           <button
@@ -94,5 +83,20 @@ export function DashboardHeader({
         </details>
       </div>
     </header>
+  );
+}
+
+function DashboardTabs({ activeView, onChangeView }: Pick<DashboardHeaderProps, "activeView" | "onChangeView">) {
+  return (
+    <nav className="ops-dashboard__tab-list">
+      {DASHBOARD_TABS.map((tab) => (
+        <button
+          className={`ops-tab ${activeView === tab.id ? "is-active" : ""}`}
+          key={tab.id}
+          onClick={() => onChangeView(tab.id)}
+          type="button"
+        >{tab.label}</button>
+      ))}
+    </nav>
   );
 }
