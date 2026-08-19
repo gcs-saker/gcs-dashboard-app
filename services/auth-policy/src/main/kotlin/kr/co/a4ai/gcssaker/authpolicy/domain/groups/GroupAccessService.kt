@@ -42,28 +42,10 @@ class GroupAccessService(
     fun accessFor(principal: AuthenticatedPrincipal, groupId: GroupId): GroupAccess {
         val hierarchy = hierarchyRepository.current()
         if (!hierarchy.contains(groupId)) return deniedGroupAccess()
-        val isOwnGroup = principal.groupId == groupId
-        val isDescendant = hierarchy.isAncestor(principal.groupId, groupId)
-        val isSystemAdmin = principal.role == UserRole.ADMIN
-        val hasDescendantOperations = principal.role == UserRole.GROUP_ADMIN && isDescendant
-        val canView = isSystemAdmin || isOwnGroup || hasDescendantOperations
-        val canControl = isSystemAdmin ||
-            ((principal.role == UserRole.OPERATOR || principal.role == UserRole.GROUP_ADMIN) && isOwnGroup)
-        val canManage = isSystemAdmin || (principal.role == UserRole.GROUP_ADMIN && isOwnGroup)
-        val canPublish = isSystemAdmin ||
-            ((principal.role == UserRole.OPERATOR || principal.role == UserRole.GROUP_ADMIN) && isOwnGroup)
-        val canSendTalkback = isSystemAdmin ||
-            (principal.role == UserRole.GROUP_ADMIN && (isOwnGroup || isDescendant)) ||
-            (principal.role == UserRole.OPERATOR && isOwnGroup)
-        return GroupAccess(
-            canView = canView,
-            canControl = canControl,
-            canManage = canManage,
-            canSendTalkback = canSendTalkback,
-            canPublish = canPublish,
-            canManageMembers = canManage,
-            canManageDevices = canManage,
-        )
+        if (principal.role == UserRole.ADMIN || principal.groupId == groupId) return ownGroupAccess(principal)
+        val isGroupAdminDescendant = principal.role == UserRole.GROUP_ADMIN &&
+            hierarchy.isAncestor(principal.groupId, groupId)
+        return if (isGroupAdminDescendant) descendantGroupAdminAccess() else deniedGroupAccess()
     }
 
     fun group(principal: AuthenticatedPrincipal, groupId: GroupId): OrganizationUnit {
@@ -87,6 +69,16 @@ private fun deniedGroupAccess() = GroupAccess(
     canControl = false,
     canManage = false,
     canSendTalkback = false,
+    canPublish = false,
+    canManageMembers = false,
+    canManageDevices = false,
+)
+
+private fun descendantGroupAdminAccess() = GroupAccess(
+    canView = true,
+    canControl = false,
+    canManage = false,
+    canSendTalkback = true,
     canPublish = false,
     canManageMembers = false,
     canManageDevices = false,
