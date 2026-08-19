@@ -18,19 +18,17 @@ The cross-language complexity value is a conservative control-flow estimate. Pyt
 | Language | Functions | Over 60 lines | Complexity over 10 |
 | --- | ---: | ---: | ---: |
 | Python | 461 | 0 | 1 |
-| TypeScript/TSX | 664 | 37 | 18 |
+| TypeScript/TSX | 670 | 37 | 13 |
 | Kotlin | 451 | 4 | 0 |
 | Go | 277 | 0 | 6 |
-| **Total** | **1,853** | **41** | **25** |
+| **Total** | **1,859** | **41** | **20** |
 
-Current maxima are 126 lines and complexity 18. The initial strict frontend Oxlint trial reported 25 findings. Production correctness findings were fixed and unavoidable hoisted Vitest factories received local documented suppressions; the strict profile now reports zero findings and runs in CI.
+Current maxima are 126 lines and complexity 16. The initial strict frontend Oxlint trial reported 25 findings. Production correctness findings were fixed and unavoidable hoisted Vitest factories received local documented suppressions; the strict profile now reports zero findings and runs in CI.
 
 ## Highest-priority hotspots
 
 | Priority | Function | Reason |
 | --- | --- | --- |
-| P1 | Runtime payload guard functions | Complexity 15–18 in untrusted REST/telemetry/event input validation |
-| P1 | `usePublisherGpsTelemetry` | 109 lines and complexity 15 around continuous mobile telemetry I/O |
 | P1 | `useLocalWebcamPublisherController` | 123 lines and complexity 13 around media resource ownership |
 | P2 | `AuthRuntimeSettingsReader.fromEnvironment` | 126-line configuration mapper |
 | P2 | Dashboard and streaming view functions | Most of the 39 TypeScript length violations are presentation decomposition work |
@@ -42,7 +40,7 @@ The critical pattern scan initially found two cases:
 1. A health boundary that intentionally converted dependency failure to an explicit error health result. The detector was narrowed so surfaced failure is not treated as hidden failure.
 2. A nil Go HTTP client fallback without a timeout. The fallback now receives a bounded three-second timeout and a regression test.
 
-After correction, the critical contract reports zero violations across 647 production files. Refactoring batches split gRPC telemetry validation, GPS send lifecycle, WebRTC diagnostic presentation, and hierarchical group policy decisions. Together they reduced long functions from 43 to 41, complex functions from 29 to 25, and global maximum complexity from 27 to 18.
+After correction, the critical contract reports zero violations across 647 production files. Refactoring batches split gRPC telemetry validation, GPS send lifecycle, WebRTC diagnostics, hierarchical group policy, REST/telemetry payload schemas, and stream equality predicates. Together they reduced long functions from 43 to 41, complex functions from 29 to 20, and global maximum complexity from 27 to 16.
 
 ## Reduction policy
 
