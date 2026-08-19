@@ -7,6 +7,7 @@ import { useOperationalEvents } from "@dashboard/hooks/operations/useOperational
 import { useEventSelectionSync } from "@dashboard/hooks/operations/useEventSelectionSync";
 import { useVirtualList } from "@/features/shared/hooks/useVirtualList";
 import { useEventLogActions, useEventLogFilterState } from "@dashboard/stores/useEventLogStore";
+import type { OperationalEventCategory, OperationalEventFilters } from "@dashboard/operations/operationalEvents";
 import { EventLogDetailPanel } from "./event-log/EventLogDetailPanel";
 import { EventLogFilters } from "./event-log/EventLogFilters";
 import { EventLogHero } from "./event-log/EventLogHero";
@@ -37,40 +38,15 @@ export function EventLogView() {
     }),
     [categoryFilter, eventMetrics.metrics, filters, rawEvents, selectedEventId, sourceFilter],
   );
-  const { containerRef, onScroll, range } = useVirtualList({
-    itemCount: viewModel.events.length,
-    itemHeight: EVENT_ROW_HEIGHT_PX,
-    overscan: 5,
-  });
-  const visibleTimelineEvents = useMemo(
-    () => viewModel.events.slice(range.startIndex, range.endIndex),
-    [range.endIndex, range.startIndex, viewModel.events],
-  );
+  const { containerRef, onScroll, range, visibleTimelineEvents } = useEventTimelineWindow(viewModel.events);
   const mergedLastUpdatedAt = latestTimestamp(lastUpdatedAt, eventMetrics.lastUpdatedAt);
 
   useEventSelectionSync(viewModel.events, selectedEventId, setSelectedEventId);
 
   return (
     <section className="event-log-view" aria-label="이벤트로그">
-      <EventLogHero isLoading={isLoading || eventMetrics.isLoading} lastUpdatedAt={mergedLastUpdatedAt} />
-      <EventLogSummaryStrip
-        directCandidateCount={viewModel.directCandidateCount}
-        relayCount={viewModel.relayCount}
-        streamSessionCount={viewModel.streamSessionCount}
-        summary={viewModel.summary}
-        throughputLabel={viewModel.throughputLabel}
-      />
-      <EventLogIncidentStrip incidents={viewModel.currentIncidents} />
-      <EventLogQuickFilters activeFilterText={viewModel.activeFilterText} filters={filters} onPatchFilters={patchFilters} onResetFilters={resetFilters} />
-      <EventLogFilters
-        categoryFilter={categoryFilter}
-        filters={filters}
-        onCategoryFilterChange={setCategoryFilter}
-        onPatchFilters={patchFilters}
-        onSourceFilterChange={setSourceFilter}
-        sourceFilter={sourceFilter}
-        sourceOptions={viewModel.sourceOptions}
-      />
+      <EventLogOverview {...{ categoryFilter, filters, mergedLastUpdatedAt, patchFilters, resetFilters,
+        setCategoryFilter, setSourceFilter, sourceFilter, viewModel }} isLoading={isLoading || eventMetrics.isLoading} />
       {errorMessage || eventMetrics.errorMessage ? (
         <p className="event-log-view__error" role="alert">{errorMessage ?? eventMetrics.errorMessage}</p>
       ) : null}
@@ -98,6 +74,49 @@ export function EventLogView() {
       </div>
     </section>
   );
+}
+
+function useEventTimelineWindow(events: ReturnType<typeof buildEventLogViewModel>["events"]) {
+  const { containerRef, onScroll, range } = useVirtualList({
+    itemCount: events.length,
+    itemHeight: EVENT_ROW_HEIGHT_PX,
+    overscan: 5,
+  });
+  const visibleTimelineEvents = useMemo(
+    () => events.slice(range.startIndex, range.endIndex),
+    [events, range.endIndex, range.startIndex],
+  );
+  return { containerRef, onScroll, range, visibleTimelineEvents } as const;
+}
+
+interface EventLogOverviewProps {
+  categoryFilter: "all" | OperationalEventCategory;
+  filters: OperationalEventFilters;
+  isLoading: boolean;
+  mergedLastUpdatedAt: number | null;
+  patchFilters: (filters: Partial<OperationalEventFilters>) => void;
+  resetFilters: () => void;
+  setCategoryFilter: (category: "all" | OperationalEventCategory) => void;
+  setSourceFilter: (source: string) => void;
+  sourceFilter: string;
+  viewModel: ReturnType<typeof buildEventLogViewModel>;
+}
+
+function EventLogOverview(props: EventLogOverviewProps) {
+  const { viewModel } = props;
+  return <>
+    <EventLogHero isLoading={props.isLoading} lastUpdatedAt={props.mergedLastUpdatedAt} />
+    <EventLogSummaryStrip directCandidateCount={viewModel.directCandidateCount} relayCount={viewModel.relayCount}
+      streamSessionCount={viewModel.streamSessionCount} summary={viewModel.summary}
+      throughputLabel={viewModel.throughputLabel} />
+    <EventLogIncidentStrip incidents={viewModel.currentIncidents} />
+    <EventLogQuickFilters activeFilterText={viewModel.activeFilterText} filters={props.filters}
+      onPatchFilters={props.patchFilters} onResetFilters={props.resetFilters} />
+    <EventLogFilters categoryFilter={props.categoryFilter} filters={props.filters}
+      onCategoryFilterChange={props.setCategoryFilter} onPatchFilters={props.patchFilters}
+      onSourceFilterChange={props.setSourceFilter} sourceFilter={props.sourceFilter}
+      sourceOptions={viewModel.sourceOptions} />
+  </>;
 }
 
 function latestTimestamp(first: number | null, second: number | null): number | null {

@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
+  type Dispatch, type MutableRefObject, type ReactNode, type SetStateAction } from "react";
 import { loginRequest, logoutRequest, persistTokenResponse, refreshSessionRequest } from "./authApi";
 import {
   clearAuthSession,
@@ -30,7 +31,40 @@ export function AuthProvider({ children, onSessionCleared }: AuthProviderProps) 
   );
   const [isAuthReady, setIsAuthReady] = useState<boolean>(() => Boolean(getStoredAccessToken()));
   const didRequestLogoutRef = useRef(false);
+  useSessionRefresh(accessToken, didRequestLogoutRef, setAccessToken, setCurrentUser, setIsAuthReady);
 
+  const logout = useCallback((): void => {
+    didRequestLogoutRef.current = true;
+    clearAuthSession();
+    setAccessToken(null);
+    setCurrentUser(null);
+    setIsAuthReady(true);
+    onSessionCleared?.();
+    void logoutRequest().catch(() => undefined);
+  }, [onSessionCleared]);
+
+  const login = useCallback(async (credentials: LoginRequest): Promise<void> => {
+    const token = await loginRequest(credentials);
+    persistTokenResponse(token);
+    didRequestLogoutRef.current = false;
+    setAccessToken(token.access_token);
+    setCurrentUser(tokenUser(token));
+    setIsAuthReady(true);
+  }, []);
+
+  const value = useMemo<AuthContextValue>(() => ({ accessToken, currentUser,
+    isAuthenticated: Boolean(accessToken), isAuthReady, login, logout,
+  }), [accessToken, currentUser, isAuthReady, login, logout]);
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+function useSessionRefresh(
+  accessToken: string | null,
+  didRequestLogoutRef: MutableRefObject<boolean>,
+  setAccessToken: Dispatch<SetStateAction<string | null>>,
+  setCurrentUser: Dispatch<SetStateAction<AuthenticatedUser | null>>,
+  setIsAuthReady: Dispatch<SetStateAction<boolean>>,
+): void {
   useEffect(() => {
     let disposed = false;
     if (accessToken) {
@@ -67,41 +101,8 @@ export function AuthProvider({ children, onSessionCleared }: AuthProviderProps) 
     return () => {
       disposed = true;
     };
-  }, [accessToken]);
+  }, [accessToken, didRequestLogoutRef, setAccessToken, setCurrentUser, setIsAuthReady]);
 
-  const logout = useCallback((): void => {
-    didRequestLogoutRef.current = true;
-    clearAuthSession();
-    setAccessToken(null);
-    setCurrentUser(null);
-    setIsAuthReady(true);
-    onSessionCleared?.();
-    void logoutRequest().catch(() => undefined);
-  }, [onSessionCleared]);
-
-  const login = useCallback(async (credentials: LoginRequest): Promise<void> => {
-    const token = await loginRequest(credentials);
-    const user = tokenUser(token);
-    persistTokenResponse(token);
-    didRequestLogoutRef.current = false;
-    setAccessToken(token.access_token);
-    setCurrentUser(user);
-    setIsAuthReady(true);
-  }, []);
-
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      accessToken,
-      currentUser,
-      isAuthenticated: Boolean(accessToken),
-      isAuthReady,
-      login,
-      logout,
-    }),
-    [accessToken, currentUser, isAuthReady, login, logout],
-  );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 function tokenUser(token: Awaited<ReturnType<typeof loginRequest>>): AuthenticatedUser {

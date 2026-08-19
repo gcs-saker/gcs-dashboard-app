@@ -45,17 +45,36 @@ export function StreamPage() {
 
   return (
     <main className="stream-view" aria-label="스트림 전용 화면">
-      <header className="stream-view__header">
+      <StreamPageHeader currentUsername={currentUser?.username} layout={layout} onLayoutChange={setLayout}
+        onLogout={handleLogout} streamCount={streams.length} />
+      <section className={`stream-view__wall stream-view__wall--${layout}`}>
+        {slotStreamIds.map((streamId, index) => (
+          <StreamWallTile index={index} key={index} onSelect={assignStream} onToggleAi={toggleStreamAiMode}
+            stream={streamId ? streamsById.get(streamId) ?? null : null} streams={streams} />
+        ))}
+      </section>
+    </main>
+  );
+}
+
+function StreamPageHeader({ currentUsername, layout, onLayoutChange, onLogout, streamCount }: {
+  currentUsername?: string;
+  layout: StreamWallLayout;
+  onLayoutChange: (layout: StreamWallLayout) => void;
+  onLogout: () => void;
+  streamCount: number;
+}) {
+  return <header className="stream-view__header">
         <span className="stream-view__identity">
           <strong>STREAM VIEW</strong>
-          <small>{streams.length}개 스트림 사용 가능</small>
+          <small>{streamCount}개 스트림 사용 가능</small>
         </span>
         <div className="stream-view__layout" role="group" aria-label="화면 분할">
           {(["2x2", "3x3"] as const).map((option) => (
             <button
               aria-pressed={layout === option}
               key={option}
-              onClick={() => setLayout(option)}
+              onClick={() => onLayoutChange(option)}
               type="button"
             >
               {option === "2x2" ? "2 × 2" : "3 × 3"}
@@ -69,24 +88,9 @@ export function StreamPage() {
           </Link>
           <span className="stream-view__account">
             <span className="stream-view__account-dot" aria-hidden="true" />
-            <span className="stream-view__user">{currentUser?.username}</span>
+            <span className="stream-view__user">{currentUsername}</span>
           </span>
-          <button className="stream-view__logout" onClick={handleLogout} type="button">로그아웃</button>
+          <button className="stream-view__logout" onClick={onLogout} type="button">로그아웃</button>
         </nav>
-      </header>
-
-      <section className={`stream-view__wall stream-view__wall--${layout}`}>
-        {slotStreamIds.map((streamId, index) => (
-          <StreamWallTile
-            index={index}
-            key={index}
-            onSelect={assignStream}
-            onToggleAi={toggleStreamAiMode}
-            stream={streamId ? streamsById.get(streamId) ?? null : null}
-            streams={streams}
-          />
-        ))}
-      </section>
-    </main>
-  );
+      </header>;
 }

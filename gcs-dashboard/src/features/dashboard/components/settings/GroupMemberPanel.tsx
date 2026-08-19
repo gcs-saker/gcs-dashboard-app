@@ -59,41 +59,58 @@ export function GroupMemberPanel() {
     }
   };
 
+  return <GroupMemberPanelView {...{ administratorCandidate, appoint, currentUser, error, groupId, groups,
+    members, mutate, refresh, setAdministratorCandidate, setGroupId }} />;
+}
+
+function GroupMemberPanelView(props: {
+  administratorCandidate: string;
+  appoint: (username: string) => Promise<void>;
+  currentUser: ReturnType<typeof useAuth>["currentUser"];
+  error: string;
+  groupId: string;
+  groups: Array<{ id: string; name: string }>;
+  members: GroupMember[];
+  mutate: (member: GroupMember, update: { role?: "viewer" | "operator"; active?: boolean; password?: string }) => Promise<void>;
+  refresh: () => Promise<void>;
+  setAdministratorCandidate: (value: string) => void;
+  setGroupId: (value: string) => void;
+}) {
   return (
     <section className="time-sync-view__policy device-approval-panel" aria-label="그룹 회원 관리">
       <header className="time-sync-view__policy-header provisioning-token-panel__header">
         <div><span>계층 권한</span><strong>그룹 회원 관리</strong></div>
-        <button type="button" onClick={() => void refresh()}>새로고침</button>
+        <button type="button" onClick={() => void props.refresh()}>새로고침</button>
       </header>
       <label>
         <span>관리 그룹</span>
-        <select value={groupId} onChange={(event) => setGroupId(event.target.value)}>
-          {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+        <select value={props.groupId} onChange={(event) => props.setGroupId(event.target.value)}>
+          {props.groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
         </select>
       </label>
-      {currentUser?.role === "admin" ? (
+      {props.currentUser?.role === "admin" ? (
         <div className="device-approval-panel__actions">
           <input
             aria-label="새 그룹 관리자 사용자명"
-            onChange={(event) => setAdministratorCandidate(event.target.value)}
+            onChange={(event) => props.setAdministratorCandidate(event.target.value)}
             placeholder="기존 viewer/operator 사용자명"
-            value={administratorCandidate}
+            value={props.administratorCandidate}
           />
-          <button disabled={!administratorCandidate.trim()} type="button" onClick={() => void appoint(administratorCandidate.trim()).then(() => setAdministratorCandidate(""))}>
+          <button disabled={!props.administratorCandidate.trim()} type="button" onClick={() => void props.appoint(props.administratorCandidate.trim()).then(() => props.setAdministratorCandidate(""))}>
             그룹 관리자 지정 또는 교체
           </button>
         </div>
       ) : null}
-      {error ? <p className="time-sync-view__error" role="alert">{error}</p> : null}
+      {props.error ? <p className="time-sync-view__error" role="alert">{props.error}</p> : null}
       <div className="device-approval-panel__list">
-        {members.map((member) => (
+        {props.members.map((member) => (
           <article className="device-approval-panel__card" key={member.username}>
             <div><span>{member.role} · {member.active ? "활성" : "비활성"}</span><strong>{member.username}</strong><small>{member.email}</small></div>
             <MemberActions
-              canAppoint={currentUser?.role === "admin"}
+              canAppoint={props.currentUser?.role === "admin"}
               member={member}
-              onAppoint={appoint}
-              onUpdate={mutate}
+              onAppoint={props.appoint}
+              onUpdate={props.mutate}
             />
           </article>
         ))}

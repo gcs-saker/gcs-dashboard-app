@@ -75,36 +75,54 @@ export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }
         onChangeTab={setActiveTab}
         visibleTabs={visibleTabs}
       />
-      {activeTab === "time" ? (
+      <SettingsTabContent {...{ activeTab, browserOffsetMs, canManageDevices, currentUser, form, isLoading,
+        isSaving, lastUpdatedAt, motionMode, onMotionModeChange, refreshStatus, runSyncCheck,
+        saveCurrentForm, setForm, status }} />
+      {errorMessage ? <p className="time-sync-view__error" role="alert">{errorMessage}</p> : null}
+    </section>
+  );
+}
+
+function SettingsTabContent(props: {
+  activeTab: SettingsTab;
+  browserOffsetMs: number;
+  canManageDevices: boolean;
+  currentUser: ReturnType<typeof useAuth>["currentUser"];
+  form: TimeSyncConfigInput;
+  isLoading: boolean;
+  isSaving: boolean;
+  lastUpdatedAt: number | null;
+  motionMode: MotionMode;
+  onMotionModeChange?: (mode: MotionMode) => void;
+  refreshStatus: () => void;
+  runSyncCheck: () => void;
+  saveCurrentForm: () => void;
+  setForm: (form: TimeSyncConfigInput) => void;
+  status: ReturnType<typeof useTimeSyncStatus>["status"];
+}) {
+  return props.activeTab === "time" ? (
         <>
-          <TimeSyncMetrics browserOffsetMs={browserOffsetMs} lastUpdatedAt={lastUpdatedAt} status={status} />
+          <TimeSyncMetrics browserOffsetMs={props.browserOffsetMs} lastUpdatedAt={props.lastUpdatedAt} status={props.status} />
           <TimeSyncForm
-            form={form}
-            isLoading={isLoading}
-            isSaving={isSaving}
-            onChangeForm={setForm}
-            onRefresh={refreshStatus}
-            onRunCheck={runSyncCheck}
-            onSubmit={saveCurrentForm}
+            form={props.form} isLoading={props.isLoading} isSaving={props.isSaving}
+            onChangeForm={props.setForm} onRefresh={props.refreshStatus}
+            onRunCheck={props.runSyncCheck} onSubmit={props.saveCurrentForm}
           />
         </>
-      ) : activeTab === "motion" ? (
-        <MotionPolicyPanel motionMode={motionMode} onMotionModeChange={onMotionModeChange} />
-      ) : activeTab === "provisioning" && canManageDevices ? (
+      ) : props.activeTab === "motion" ? (
+        <MotionPolicyPanel motionMode={props.motionMode} onMotionModeChange={props.onMotionModeChange} />
+      ) : props.activeTab === "provisioning" && props.canManageDevices ? (
         <>
           <SignupTokenPanel />
           <ProvisioningTokenPanel />
           <DeviceApprovalPanel />
         </>
-      ) : activeTab === "account" && canManageDevices ? (
+      ) : props.activeTab === "account" && props.canManageDevices ? (
         <>
-          {currentUser?.role === "admin" ? <GroupLifecyclePanel /> : null}
+          {props.currentUser?.role === "admin" ? <GroupLifecyclePanel /> : null}
           <GroupMemberPanel />
         </>
       ) : (
-        <SettingsPolicyPanel tab={activeTab as PolicySettingsTab} />
-      )}
-      {errorMessage ? <p className="time-sync-view__error" role="alert">{errorMessage}</p> : null}
-    </section>
-  );
+        <SettingsPolicyPanel tab={props.activeTab as PolicySettingsTab} />
+      );
 }

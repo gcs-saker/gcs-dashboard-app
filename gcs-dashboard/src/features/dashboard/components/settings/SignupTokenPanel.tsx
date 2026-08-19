@@ -55,16 +55,20 @@ export function SignupTokenPanel() {
           <button type="button" onClick={clear}>확인 후 숨기기</button>
         </article>
       ) : null}
-      <div className="provisioning-token-panel__records">
-        {isLoading ? <p>토큰 목록을 불러오는 중</p> : records.map((record) => (
-          <article className="provisioning-token-panel__record" key={record.tokenId}>
-            <span>회사 {record.companyId} · {record.groupId} · {record.role}</span>
-            <strong>{record.label}</strong>
-            <em>{record.status} · {record.usedCount}/{record.maxUses}</em>
-            <small>만료 {new Date(record.expiresAt).toLocaleString()}</small>
-          </article>
-        ))}
-      </div>
+      <SignupTokenRecords isLoading={isLoading} records={records} />
     </section>
   );
+}
+
+function SignupTokenRecords({ isLoading, records }: Pick<ReturnType<typeof useSignupTokens>, "isLoading" | "records">) {
+  return <div className="provisioning-token-panel__records">
+    {isLoading ? <p>토큰 목록을 불러오는 중</p> : records.map((record) => (
+      <article className="provisioning-token-panel__record" key={record.tokenId}>
+        <span>회사 {record.companyId} · {record.groupId} · {record.role}</span>
+        <strong>{record.label}</strong>
+        <em>{record.status} · {record.usedCount}/{record.maxUses}</em>
+        <small>만료 {new Date(record.expiresAt).toLocaleString()}</small>
+      </article>
+    ))}
+  </div>;
 }
