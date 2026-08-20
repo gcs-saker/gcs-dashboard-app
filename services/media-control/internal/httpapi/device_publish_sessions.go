@@ -94,7 +94,14 @@ func (s Server) createDevicePublishSession(w http.ResponseWriter, r *http.Reques
 	})
 	if err != nil {
 		s.auditDeviceSession(r, "publish_session_denied", deviceUUID, "denied")
-		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
+		switch {
+		case errors.Is(err, domain.ErrDevicePublishAccessDenied):
+			writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
+		case errors.Is(err, domain.ErrDevicePublishPolicyInvalid):
+			writeJSON(w, http.StatusBadRequest, errorPayload(errPublishSessionInvalid))
+		default:
+			writeJSON(w, http.StatusBadGateway, errorPayload(errAuthorizationUnavailable))
+		}
 		return
 	}
 	s.issuePublishSession(w, r, authorization, deviceUUID)

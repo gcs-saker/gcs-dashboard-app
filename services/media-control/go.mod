@@ -1,6 +1,6 @@
 module github.com/gcs-saker/gcs-dashboard-app/services/media-control
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/redis/go-redis/v9 v9.7.3

@@ -124,6 +124,23 @@ func TestClientRejectsDeniedDevicePublish(t *testing.T) {
 	}
 }
 
+func TestClientDistinguishesInvalidDevicePublishPolicy(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, server.Client())
+	_, err := client.AuthorizeDevicePublish(
+		context.Background(),
+		domain.DevicePublishCommand{DeviceUUID: "device-001", Credential: "secret", SensorID: "unknown"},
+	)
+
+	if err != domain.ErrDevicePublishPolicyInvalid {
+		t.Fatalf("expected invalid device publish policy, got %v", err)
+	}
+}
+
 func TestNewAuthorizerRequiresAuthPolicyBaseURLByDefault(t *testing.T) {
 	_, err := NewAuthorizer("", "", nil)
 
