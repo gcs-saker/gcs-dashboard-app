@@ -148,26 +148,15 @@ func (c Client) AuthorizeDevicePublish(
 	ctx context.Context,
 	command domain.DevicePublishCommand,
 ) (domain.DevicePublishAuthorization, error) {
-	if c.baseURL == "" {
-		return domain.DevicePublishAuthorization{}, fmt.Errorf("auth-policy base URL is not configured")
-	}
-	body, err := json.Marshal(command)
-	if err != nil {
-		return domain.DevicePublishAuthorization{}, err
-	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+authPolicyDevicePublishPath, bytes.NewReader(body))
-	if err != nil {
-		return domain.DevicePublishAuthorization{}, err
-	}
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("Accept", "application/json")
-
-	response, err := c.httpClient.Do(request)
+	response, err := c.postJSON(ctx, authPolicyDevicePublishPath, command, "")
 	if err != nil {
 		return domain.DevicePublishAuthorization{}, err
 	}
 	defer response.Body.Close()
+	return decodeDevicePublishAuthorization(response)
+}
 
+func decodeDevicePublishAuthorization(response *http.Response) (domain.DevicePublishAuthorization, error) {
 	if response.StatusCode == http.StatusForbidden {
 		return domain.DevicePublishAuthorization{}, domain.ErrDevicePublishAccessDenied
 	}
