@@ -93,6 +93,11 @@ green_backend="gcs-green-${short_commit}-backend"
 green_dashboard="gcs-green-${short_commit}-dashboard"
 green_containers=("${green_auth}" "${green_media}" "${green_backend}" "${green_dashboard}")
 edge_container="$(${previous_compose[@]} ps -q edge)"
+edge_config_source="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/etc/nginx/nginx.conf"}}{{.Source}}{{end}}{{end}}' "${edge_container}")"
+[[ "${edge_config_source}" = /* && -f "${edge_config_source}" ]] || {
+  echo "edge nginx bind source is unavailable" >&2
+  exit 2
+}
 docker cp "${edge_container}:/etc/nginx/nginx.conf" "${canonical_edge_config}"
 edge_uses_green=0
 official_replace_started=0
@@ -100,6 +105,7 @@ deployment_complete=0
 probe_pid=""
 probe_stop_file="${RELEASE_DIR}/availability-probe.stop"
 probe_output="${RELEASE_DIR}/availability-probe.tsv"
+probe_address=""
 
 wait_container_healthy() {
   local container="$1" status=""
@@ -147,13 +153,13 @@ render_green_edge_config() {
 }
 
 reload_edge_config() {
-  local config="$1" target="/tmp/$(basename "$1")"
+  local config="$1"
   local master old_workers
   master="$(docker exec "${edge_container}" sh -c 'cat /tmp/nginx.pid')"
   old_workers="$(docker exec "${edge_container}" sh -c "cat /proc/${master}/task/${master}/children")"
-  docker exec -i "${edge_container}" sh -c "umask 077; tee '${target}' >/dev/null" < "${config}"
-  docker exec "${edge_container}" nginx -t -c "${target}"
-  docker exec "${edge_container}" nginx -s reload -c "${target}"
+  cp "${config}" "${edge_config_source}"
+  docker exec "${edge_container}" nginx -t
+  docker exec "${edge_container}" nginx -s reload
   wait_edge_workers_drained "${old_workers}"
 }
 
@@ -173,12 +179,14 @@ wait_edge_workers_drained() {
 
 start_availability_probe() {
   [[ -n "${PUBLIC_TLS_HOST:-}" ]] || return 0
+  probe_address="$(getent ahostsv4 "${PUBLIC_TLS_HOST}" | awk 'NR == 1 { print $1 }')"
+  [[ -n "${probe_address}" ]] || { echo "public probe address did not resolve" >&2; return 1; }
   rm -f "${probe_stop_file}"
   : > "${probe_output}"
   (
     while [[ ! -e "${probe_stop_file}" ]]; do
-      health="$(curl -ksS --max-time 2 -o /dev/null -w '%{http_code}' "https://${PUBLIC_TLS_HOST}:${PUBLIC_TLS_PORT:-443}/healthz" || true)"
-      ready="$(curl -ksS --max-time 2 -o /dev/null -w '%{http_code}' "https://${PUBLIC_TLS_HOST}:${PUBLIC_TLS_PORT:-443}/readyz" || true)"
+      health="$(curl -ksS --resolve "${PUBLIC_TLS_HOST}:${PUBLIC_TLS_PORT:-443}:${probe_address}" --max-time 2 -o /dev/null -w '%{http_code}' "https://${PUBLIC_TLS_HOST}:${PUBLIC_TLS_PORT:-443}/healthz" || true)"
+      ready="$(curl -ksS --resolve "${PUBLIC_TLS_HOST}:${PUBLIC_TLS_PORT:-443}:${probe_address}" --max-time 2 -o /dev/null -w '%{http_code}' "https://${PUBLIC_TLS_HOST}:${PUBLIC_TLS_PORT:-443}/readyz" || true)"
       printf '%s\t%s\t%s\n' "$(date -u +%FT%T.%3NZ)" "${health}" "${ready}" >> "${probe_output}"
       sleep 0.2
     done
@@ -235,7 +243,7 @@ rollback() {
     rollback_status=$?
     wait_official_services
   fi
-  if (( edge_uses_green == 1 )); then
+  if (( edge_uses_green == 1 )) || ! cmp -s "${canonical_edge_config}" "${edge_config_source}"; then
     reload_edge_config "${canonical_edge_config}"
   fi
   remove_green_containers
@@ -283,6 +291,7 @@ done < "${stateful_file}"
 reload_edge_config "${canonical_edge_config}"
 stop_availability_probe
 assert_availability_probe
+cmp -s "${canonical_edge_config}" "${edge_config_source}"
 edge_uses_green=0
 remove_green_containers
 "${compose[@]}" exec -T edge nginx -t
