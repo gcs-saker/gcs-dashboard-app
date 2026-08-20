@@ -112,6 +112,24 @@ def validate_production_file_sizes(paths: list[Path], errors: list[str]) -> None
             errors.append(f"production source exceeds {MAX_PRODUCTION_LINES} lines ({line_count}): {relative}")
 
 
+def validate_unique_flyway_versions(paths: list[Path], errors: list[str]) -> None:
+    versions: dict[int, Path] = {}
+    for path in paths:
+        relative = path.relative_to(REPOSITORY_ROOT)
+        if "db" not in relative.parts or not path.name.endswith(".sql"):
+            continue
+        match = re.fullmatch(r"V(\d+)__.+\.sql", path.name)
+        if not match:
+            continue
+        version = int(match.group(1))
+        if previous := versions.get(version):
+            errors.append(
+                f"duplicate Flyway version V{version}: {previous.relative_to(REPOSITORY_ROOT)} and {relative}"
+            )
+        else:
+            versions[version] = path
+
+
 def main() -> int:
     errors: list[str] = []
     paths = tracked_files()
@@ -119,6 +137,7 @@ def main() -> int:
     validate_python_names(paths, errors)
     validate_kotlin_names(paths, errors)
     validate_production_file_sizes(paths, errors)
+    validate_unique_flyway_versions(paths, errors)
     for agreement in REQUIRED_AGREEMENTS:
         if not agreement.is_file():
             errors.append(f"required code agreement is missing: {agreement.relative_to(REPOSITORY_ROOT)}")
