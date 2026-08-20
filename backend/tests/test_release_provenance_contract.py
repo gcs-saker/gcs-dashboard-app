@@ -115,6 +115,27 @@ def test_deploy_keeps_public_edge_available_during_application_rollout() -> None
     assert "127.0.0.1:80" in script
 
 
+def test_deploy_routes_to_healthy_green_before_replacing_official_services() -> None:
+    script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+
+    green_start = script.index("start_green_containers\n")
+    green_switch = script.index('reload_edge_config "${green_edge_config}"')
+    official_replace = script.index(
+        '"${compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"',
+        green_switch,
+    )
+    official_wait = script.index("wait_official_services", official_replace)
+    canonical_switch = script.index(
+        'reload_edge_config "${canonical_edge_config}"',
+        official_wait,
+    )
+    green_cleanup = script.index("remove_green_containers", canonical_switch)
+
+    assert green_start < green_switch < official_replace
+    assert official_replace < official_wait < canonical_switch < green_cleanup
+    assert "assert_availability_probe" in script
+
+
 def test_deploy_updates_active_release_pointer_only_after_verification() -> None:
     script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
 
