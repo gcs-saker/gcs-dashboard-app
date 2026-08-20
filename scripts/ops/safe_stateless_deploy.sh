@@ -141,7 +141,7 @@ render_green_edge_config() {
 
 reload_edge_config() {
   local config="$1" target="/tmp/$(basename "$1")"
-  docker cp "${config}" "${edge_container}:${target}"
+  docker exec -i "${edge_container}" sh -c "umask 077; tee '${target}' >/dev/null" < "${config}"
   docker exec "${edge_container}" nginx -t -c "${target}"
   docker exec "${edge_container}" nginx -s reload -c "${target}"
 }

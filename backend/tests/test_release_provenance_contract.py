@@ -134,6 +134,8 @@ def test_deploy_routes_to_healthy_green_before_replacing_official_services() -> 
     assert green_start < green_switch < official_replace
     assert official_replace < official_wait < canonical_switch < green_cleanup
     assert "assert_availability_probe" in script
+    assert "docker exec -i" in script
+    assert "tee '${target}'" in script
 
 
 def test_deploy_updates_active_release_pointer_only_after_verification() -> None:
