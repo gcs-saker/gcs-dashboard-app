@@ -5,17 +5,15 @@ COPY gradle ./gradle
 COPY src ./src
 RUN gradle --no-daemon clean bootJar
 
-FROM eclipse-temurin:21-jre@sha256:8cef5fc7bebe421363ab543a2f4db5caf7d119d8db67d56b0f56c485d2de4d55
+FROM amazoncorretto:21-alpine@sha256:58c1d555f4ff3be0cfe90d3b4d1762bde080b57afbb71d48657b9d22748cad5b
 ARG SOURCE_COMMIT=unknown
-LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
+LABEL org.opencontainers.image.revision=$SOURCE_COMMIT \
+      org.opencontainers.image.base.name="amazoncorretto:21-alpine"
 WORKDIR /app
 COPY --from=build /workspace/build/libs/*.jar /app/auth-policy.jar
-RUN apt-get update \
-    && apt-get upgrade -y --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -f /usr/bin/pebble \
-    && groupadd --system --gid 10002 gcs \
-    && useradd --system --uid 10002 --gid gcs --home /app --shell /usr/sbin/nologin gcs \
+RUN apk upgrade --no-cache \
+    && addgroup -S -g 10002 gcs \
+    && adduser -S -D -H -u 10002 -G gcs -h /app -s /sbin/nologin gcs \
     && chown -R gcs:gcs /app
 USER 10002:10002
 EXPOSE 8080
