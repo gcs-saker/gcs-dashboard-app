@@ -4,30 +4,23 @@ FROM registered_devices devices
 WHERE LOWER(TRIM(devices.status)) = 'active'
   AND LOWER(TRIM(devices.device_type)) = 'drone'
   AND NOT EXISTS (
-      SELECT 1
-      FROM registered_device_sensors sensors
+      SELECT 1 FROM registered_device_sensors sensors
       WHERE sensors.device_uuid = devices.device_uuid
   );
 
 INSERT INTO registered_device_streams (device_uuid, stream_path, kind, status)
-SELECT
-    devices.device_uuid,
-    'raw/' || LOWER(TRIM(devices.device_uuid)) || '/front',
-    'webrtc',
-    'active'
+SELECT devices.device_uuid, 'raw/' || LOWER(TRIM(devices.device_uuid)) || '/front', 'webrtc', 'active'
 FROM registered_devices devices
 WHERE LOWER(TRIM(devices.status)) = 'active'
   AND LOWER(TRIM(devices.device_type)) = 'drone'
   AND EXISTS (
-      SELECT 1
-      FROM registered_device_sensors sensors
+      SELECT 1 FROM registered_device_sensors sensors
       WHERE sensors.device_uuid = devices.device_uuid
         AND sensors.sensor_id = 'front'
         AND LOWER(TRIM(sensors.status)) = 'active'
   )
   AND NOT EXISTS (
-      SELECT 1
-      FROM registered_device_streams streams
+      SELECT 1 FROM registered_device_streams streams
       WHERE streams.device_uuid = devices.device_uuid
         AND streams.stream_path = 'raw/' || LOWER(TRIM(devices.device_uuid)) || '/front'
   );
