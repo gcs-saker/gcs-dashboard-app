@@ -119,6 +119,13 @@ wait_official_services() {
     container="$(${compose[@]} ps -q "${service}")"
     [[ -n "${container}" ]] && wait_container_healthy "${container}" || return 1
   done
+  local auth_container="$(${compose[@]} ps -q auth-policy)"
+  for _ in $(seq 1 30); do
+    docker exec "${auth_container}" wget -q -O- http://127.0.0.1:8080/readyz >/dev/null && return 0
+    sleep 1
+  done
+  echo "official auth-policy did not become ready" >&2
+  return 1
 }
 
 remove_green_containers() {
@@ -141,9 +148,27 @@ render_green_edge_config() {
 
 reload_edge_config() {
   local config="$1" target="/tmp/$(basename "$1")"
+  local master old_workers
+  master="$(docker exec "${edge_container}" sh -c 'cat /tmp/nginx.pid')"
+  old_workers="$(docker exec "${edge_container}" sh -c "cat /proc/${master}/task/${master}/children")"
   docker exec -i "${edge_container}" sh -c "umask 077; tee '${target}' >/dev/null" < "${config}"
   docker exec "${edge_container}" nginx -t -c "${target}"
   docker exec "${edge_container}" nginx -s reload -c "${target}"
+  wait_edge_workers_drained "${old_workers}"
+}
+
+wait_edge_workers_drained() {
+  local workers="$1" worker active
+  for _ in $(seq 1 150); do
+    active=0
+    for worker in ${workers}; do
+      docker exec "${edge_container}" sh -c "test ! -d /proc/${worker}" || active=1
+    done
+    (( active == 0 )) && return 0
+    sleep 0.2
+  done
+  echo "previous edge workers did not drain" >&2
+  return 1
 }
 
 start_availability_probe() {
@@ -193,6 +218,9 @@ rollback() {
   set +e
   stop_availability_probe
   rollback_status=0
+  if (( official_replace_started == 1 && edge_uses_green == 1 )); then
+    reload_edge_config "${green_edge_config}"
+  fi
   if (( official_replace_started == 1 )); then
     echo "stateless deployment failed; restoring captured images with ${previous_compose_file}" >&2
     while IFS='=' read -r service image_id; do
@@ -233,6 +261,7 @@ render_green_edge_config "${green_edge_config}"
 reload_edge_config "${green_edge_config}"
 edge_uses_green=1
 "${compose[@]}" exec -T edge wget --timeout=10 --tries=1 -q -O- http://127.0.0.1:8080/readyz >/dev/null
+assert_availability_probe
 official_replace_started=1
 "${compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"
 wait_official_services
@@ -252,11 +281,10 @@ while IFS='=' read -r service previous_id; do
   }
 done < "${stateful_file}"
 reload_edge_config "${canonical_edge_config}"
-edge_uses_green=0
-sleep 2
-remove_green_containers
 stop_availability_probe
 assert_availability_probe
+edge_uses_green=0
+remove_green_containers
 "${compose[@]}" exec -T edge nginx -t
 # Verify through the deployed edge without assuming which host port each
 # environment publishes. Public TLS is terminated by the host reverse proxy;

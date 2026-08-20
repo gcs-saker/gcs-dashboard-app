@@ -119,7 +119,7 @@ def test_deploy_routes_to_healthy_green_before_replacing_official_services() -> 
     script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
 
     green_start = script.index("start_green_containers\n")
-    green_switch = script.index('reload_edge_config "${green_edge_config}"')
+    green_switch = script.index('reload_edge_config "${green_edge_config}"', green_start)
     official_replace = script.index(
         '"${compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"',
         green_switch,
@@ -136,6 +136,8 @@ def test_deploy_routes_to_healthy_green_before_replacing_official_services() -> 
     assert "assert_availability_probe" in script
     assert "docker exec -i" in script
     assert "tee '${target}'" in script
+    assert "wait_edge_workers_drained" in script
+    assert "official auth-policy did not become ready" in script
 
 
 def test_deploy_updates_active_release_pointer_only_after_verification() -> None:
