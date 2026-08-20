@@ -1,9 +1,7 @@
 import type { Dispatch } from "react";
-
 import type { WebRTCPlaybackSnapshot } from "@streaming/types";
-import { audioStatsEqual, extractAudioStats } from "@streaming/hooks/audio/whepAudioStats";
+import { audioStatsEqual, extractAudioStatsWithEnergy, type AudioEnergySample } from "@streaming/hooks/audio/whepAudioStats";
 import { EMPTY_AUDIO_STATS, type PlaybackAction } from "@streaming/hooks/playback/whepPlaybackContracts";
-
 const AUDIO_STATE_POLL_INTERVAL_MS = 500;
 const AUDIO_INACTIVE_HOLD_MS = 1200;
 const AUDIO_STATS_POLL_INTERVAL_MS = 1000;
@@ -40,6 +38,7 @@ export function audioPlaybackDiagnostic(
 export function monitorAudioStats(peerConnection: RTCPeerConnection, dispatch: Dispatch<PlaybackAction>): () => void {
   let disposed = false;
   let previousStats = EMPTY_AUDIO_STATS;
+  let previousEnergySample: AudioEnergySample | null = null;
   let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
 
   const update = async (): Promise<void> => {
@@ -47,7 +46,9 @@ export function monitorAudioStats(peerConnection: RTCPeerConnection, dispatch: D
     try {
       const report = await peerConnection.getStats();
       if (disposed) return;
-      const nextStats = extractAudioStats(report);
+      const extracted = extractAudioStatsWithEnergy(report, previousEnergySample);
+      const nextStats = extracted.stats;
+      previousEnergySample = extracted.sample;
       if (!audioStatsEqual(previousStats, nextStats)) {
         previousStats = nextStats;
         dispatch({ type: "audio-stats", stats: nextStats });

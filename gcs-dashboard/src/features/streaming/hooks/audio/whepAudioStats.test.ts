@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import { EMPTY_AUDIO_STATS } from "@streaming/hooks/playback/whepPlaybackContracts";
-import { audioStatsEqual, extractAudioStats } from "@streaming/hooks/audio/whepAudioStats";
+import {
+  audioStatsEqual,
+  calculateAudioEnergyLevel,
+  extractAudioEnergySample,
+  extractAudioStats,
+} from "@streaming/hooks/audio/whepAudioStats";
 
 function statsReport(entries: Array<Record<string, unknown>>): RTCStatsReport {
   return {
@@ -55,6 +60,25 @@ describe("whepAudioStats", () => {
 
   test("falls back to empty nullable stats when the report has no audio data", () => {
     expect(extractAudioStats(statsReport([]))).toEqual(EMPTY_AUDIO_STATS);
+  });
+
+  test("derives an RMS level from cumulative inbound audio energy", () => {
+    const previous = extractAudioEnergySample(statsReport([{
+      type: "inbound-rtp", kind: "audio", totalAudioEnergy: 2, totalSamplesDuration: 10,
+    }]));
+    const current = extractAudioEnergySample(statsReport([{
+      type: "inbound-rtp", kind: "audio", totalAudioEnergy: 2.25, totalSamplesDuration: 11,
+    }]));
+
+    expect(calculateAudioEnergyLevel(previous, current)).toBe(0.5);
+  });
+
+  test("rejects missing or reset cumulative audio energy", () => {
+    expect(calculateAudioEnergyLevel(null, null)).toBeNull();
+    expect(calculateAudioEnergyLevel(
+      { totalAudioEnergy: 2, totalSamplesDuration: 10 },
+      { totalAudioEnergy: 1, totalSamplesDuration: 11 },
+    )).toBeNull();
   });
 
   test("classifies relay fallback reasons from candidate type combinations", () => {

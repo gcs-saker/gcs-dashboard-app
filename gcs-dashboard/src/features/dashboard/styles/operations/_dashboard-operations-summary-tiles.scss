@@ -1,4 +1,5 @@
 .ops-summary__tiles,
+.ops-summary__telemetry,
 .telemetry-panel__metrics,
 .telemetry-panel__details {
   display: grid;
@@ -10,7 +11,12 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.ops-summary__telemetry {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .ops-summary__tiles div,
+.ops-summary__telemetry div,
 .telemetry-panel__metrics div {
   background:
     linear-gradient(180deg, rgba(61, 184, 255, 0.08), rgba(4, 14, 21, 0.32)),
@@ -25,26 +31,31 @@
 }
 
 .ops-summary__tiles div.is-good,
+.ops-summary__telemetry div.is-good,
 .audio-waveform dl div.is-good {
   border-color: rgba(86, 211, 124, 0.44);
 }
 
 .ops-summary__tiles div.is-warning,
+.ops-summary__telemetry div.is-warning,
 .audio-waveform dl div.is-warning {
   border-color: rgba(243, 200, 77, 0.44);
 }
 
 .ops-summary__tiles div.is-danger,
+.ops-summary__telemetry div.is-danger,
 .audio-waveform dl div.is-danger {
   border-color: rgba(228, 93, 83, 0.44);
 }
 
 .ops-summary__tiles div.is-info,
+.ops-summary__telemetry div.is-info,
 .audio-waveform dl div.is-info {
   border-color: rgba(61, 184, 255, 0.42);
 }
 
 .ops-summary__tiles dd,
+.ops-summary__telemetry dd,
 .telemetry-panel__metrics dd {
   color: #e9f4fb;
   font-size: 0.92rem;

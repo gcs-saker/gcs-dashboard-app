@@ -26,6 +26,43 @@ export function extractAudioStats(report: RTCStatsReport): WebRTCAudioStats {
   };
 }
 
+export interface AudioEnergySample {
+  readonly totalAudioEnergy: number;
+  readonly totalSamplesDuration: number;
+}
+
+export function extractAudioEnergySample(report: RTCStatsReport): AudioEnergySample | null {
+  const { inboundAudio } = indexAudioStats(report);
+  const totalAudioEnergy = numberStat(inboundAudio, "totalAudioEnergy");
+  const totalSamplesDuration = numberStat(inboundAudio, "totalSamplesDuration");
+  return totalAudioEnergy === null || totalSamplesDuration === null
+    ? null
+    : { totalAudioEnergy, totalSamplesDuration };
+}
+
+export function calculateAudioEnergyLevel(
+  previous: AudioEnergySample | null,
+  current: AudioEnergySample | null,
+): number | null {
+  if (!previous || !current) return null;
+  const energyDelta = current.totalAudioEnergy - previous.totalAudioEnergy;
+  const durationDelta = current.totalSamplesDuration - previous.totalSamplesDuration;
+  if (energyDelta < 0 || durationDelta <= 0) return null;
+  return Math.min(1, Math.sqrt(energyDelta / durationDelta));
+}
+
+export function extractAudioStatsWithEnergy(
+  report: RTCStatsReport,
+  previous: AudioEnergySample | null,
+): { stats: WebRTCAudioStats; sample: AudioEnergySample | null } {
+  const sample = extractAudioEnergySample(report);
+  const stats = extractAudioStats(report);
+  return {
+    sample,
+    stats: { ...stats, audioLevel: stats.audioLevel ?? calculateAudioEnergyLevel(previous, sample) },
+  };
+}
+
 function indexAudioStats(report: RTCStatsReport) {
   let inboundAudio: Record<string, unknown> | null = null;
   let selectedPair: Record<string, unknown> | null = null;

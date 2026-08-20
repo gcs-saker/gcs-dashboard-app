@@ -62,6 +62,14 @@ function OpsSummaryBody({
           <strong>{viewModel.focusTitle}</strong>
           <span>{viewModel.focusDetail}</span>
         </div>
+        <dl className="ops-summary__telemetry" aria-label="선택 스트림 텔레메트리">
+          {viewModel.telemetryTiles.map((tile) => (
+            <div className={`is-${tile.tone}`} key={tile.label}>
+              <dt>{tile.label}</dt>
+              <dd>{tile.value}</dd>
+            </div>
+          ))}
+        </dl>
         <dl className="ops-summary__tiles">
           {viewModel.statusTiles.map((tile) => (
             <div className={`is-${tile.tone}`} key={tile.label}>

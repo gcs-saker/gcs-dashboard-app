@@ -85,6 +85,23 @@ export function formatSignedDegree(value: number): string {
   return `${rounded > 0 ? "+" : ""}${rounded}deg`;
 }
 
+export function formatTelemetryCoordinate(geometry: NonNullable<DashboardStreamSlot["geometry"]>): string {
+  return `${geometry.lat.toFixed(5)}, ${geometry.lng.toFixed(5)}`;
+}
+
+export function formatTelemetryBattery(geometry: NonNullable<DashboardStreamSlot["geometry"]>): string {
+  return geometry.batteryPercent === undefined ? "대기" : `${Math.round(geometry.batteryPercent)}%`;
+}
+
+export function formatTelemetryAttitude(geometry: NonNullable<DashboardStreamSlot["geometry"]>): string {
+  return `R ${degreeSymbol(geometry.rollDeg)} · P ${degreeSymbol(geometry.pitchDeg)} · Y ${degreeSymbol(geometry.yawDeg)}`;
+}
+
+function degreeSymbol(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  return `${rounded}°`;
+}
+
 export function formatBearingDelta(headingDeg: number, mapBearingDeg: number): string {
   const delta = ((headingDeg - mapBearingDeg + 540) % 360) - 180;
   return formatSignedDegree(delta);

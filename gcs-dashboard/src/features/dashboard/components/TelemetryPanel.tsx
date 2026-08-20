@@ -8,6 +8,9 @@ import {
 import {
   formatBearing,
   formatBearingDelta,
+  formatTelemetryAttitude,
+  formatTelemetryBattery,
+  formatTelemetryCoordinate,
   normalizeDegrees,
   type TelemetryRow,
 } from "@dashboard/layout/dashboardPresentation";
@@ -35,9 +38,10 @@ export function TelemetryPanel({
   const headingRotation = geometry ? `rotate(${normalizeDegrees(geometry.headingDeg)}deg)` : undefined;
   const mapRotation = geometry ? `rotate(${normalizeDegrees(geometry.yawDeg)}deg)` : undefined;
   const primaryMetrics: TelemetryRow[] = [
+    ["좌표", geometry ? formatTelemetryCoordinate(geometry) : "대기"],
     ["고도", geometry ? `${geometry.altitudeM.toFixed(1)} m` : "대기"],
-    ["기체 방위", heading],
-    ["지도 기준", mapBearing],
+    ["배터리", geometry ? formatTelemetryBattery(geometry) : "대기"],
+    ["자세", geometry ? formatTelemetryAttitude(geometry) : "대기"],
   ];
 
   return (

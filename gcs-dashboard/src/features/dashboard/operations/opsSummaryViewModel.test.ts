@@ -38,21 +38,29 @@ describe("opsSummaryViewModel", () => {
       ...BASE_STREAM,
       aiModeEnabled: true,
       geometry: {
-        altitudeM: 34.2,
+        altitudeM: 85.4,
+        batteryPercent: 79,
         fovDeg: 72,
-        headingDeg: 7,
-        lat: 35.87143,
-        lng: 128.60144,
-        pitchDeg: 0,
-        rollDeg: 0,
+        headingDeg: 325,
+        lat: 36.11995,
+        lng: 128.36337,
+        pitchDeg: 43.8,
+        rollDeg: 18.9,
         source: "telemetry",
-        yawDeg: 7,
+        yawDeg: 194,
       },
     }, BASE_AUDIO, 4, 2);
 
     expect(viewModel.missionText).toBe("실시간 운용 가능");
     expect(viewModel.missionTone).toBe("good");
-    expect(viewModel.focusTitle).toBe("35.87143, 128.60144");
+    expect(viewModel.focusTitle).toBe("36.11995, 128.36337");
+    expect(viewModel.focusDetail).toContain("배터리 79%");
+    expect(viewModel.telemetryTiles).toEqual([
+      { label: "좌표", value: "36.11995, 128.36337", tone: "good" },
+      { label: "고도", value: "85.4 m", tone: "info" },
+      { label: "배터리", value: "79%", tone: "good" },
+      { label: "자세", value: "R 18.9° · P 43.8° · Y 194°", tone: "info" },
+    ]);
     expect(viewModel.statusTiles).toContainEqual({ label: "오디오", value: "음성 수신", tone: "good" });
     expect(viewModel.statusNotes.map((note) => note.label)).toContain("ICE srflx->host/UDP");
     expect(viewModel.recentEvents.map((event) => event.label)).toContain("재생 경로 WebRTC");
@@ -68,6 +76,7 @@ describe("opsSummaryViewModel", () => {
     expect(viewModel.missionTone).toBe("danger");
     expect(viewModel.focusTitle).toBe("좌표 대기");
     expect(viewModel.statusTiles).toContainEqual({ label: "GPS", value: "좌표 대기", tone: "muted" });
+    expect(viewModel.telemetryTiles.every((tile) => tile.value === "대기")).toBe(true);
     expect(viewModel.statusNotes.map((note) => note.label)).toContain("음성 분석 대기");
   });
 });

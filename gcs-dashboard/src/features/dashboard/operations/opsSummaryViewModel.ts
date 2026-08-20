@@ -5,6 +5,9 @@ import {
 } from "@dashboard/streaming/streamTypes";
 import {
   formatBearing,
+  formatTelemetryAttitude,
+  formatTelemetryBattery,
+  formatTelemetryCoordinate,
   formatPlaybackMode,
   getJitterTone,
   type AudioAnalysisSnapshot,
@@ -22,6 +25,7 @@ export interface OpsSummaryViewModel {
   readonly selectedStatusText: string;
   readonly statusNotes: StatusNote[];
   readonly statusTiles: StatusTile[];
+  readonly telemetryTiles: StatusTile[];
   readonly streamDisplayName: string;
 }
 
@@ -37,7 +41,7 @@ export function buildOpsSummaryViewModel(
 
   return {
     focusDetail: selectedStream.geometry
-      ? `고도 ${selectedStream.geometry.altitudeM.toFixed(1)}m · 방위 ${formatBearing(selectedStream.geometry.headingDeg)}`
+      ? `고도 ${selectedStream.geometry.altitudeM.toFixed(1)}m · 방위 ${formatBearing(selectedStream.geometry.headingDeg)} · 배터리 ${formatTelemetryBattery(selectedStream.geometry)}`
       : "GPS 수신 후 지도와 동기화됩니다.",
     focusTitle: selectedStream.geometry
       ? `${selectedStream.geometry.lat.toFixed(5)}, ${selectedStream.geometry.lng.toFixed(5)}`
@@ -53,8 +57,22 @@ export function buildOpsSummaryViewModel(
       { label: "오디오", value: audioText, tone: audioText === "음성 수신" ? "good" : "muted" },
       { label: "Talkback", value: talkbackTargetCount ? `${talkbackTargetCount} 대상` : "대기", tone: talkbackTargetCount ? "info" : "muted" },
     ],
+    telemetryTiles: buildTelemetryTiles(selectedStream),
     streamDisplayName: getDashboardStreamDisplayName(selectedStream),
   };
+}
+
+function buildTelemetryTiles(selectedStream: DashboardStreamSlot): StatusTile[] {
+  const geometry = selectedStream.geometry;
+  if (!geometry) {
+    return ["좌표", "고도", "배터리", "자세"].map((label) => ({ label, value: "대기", tone: "muted" }));
+  }
+  return [
+    { label: "좌표", value: formatTelemetryCoordinate(geometry), tone: "good" },
+    { label: "고도", value: `${geometry.altitudeM.toFixed(1)} m`, tone: "info" },
+    { label: "배터리", value: formatTelemetryBattery(geometry), tone: geometry.batteryPercent === undefined ? "muted" : "good" },
+    { label: "자세", value: formatTelemetryAttitude(geometry), tone: "info" },
+  ];
 }
 
 function buildStatusNotes(
