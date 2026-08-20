@@ -94,7 +94,7 @@ def test_deploy_is_server01_only_and_rolls_back_with_previous_compose() -> None:
     assert "com.docker.compose.project.config_files" in script
     assert "previous_compose=(docker compose" in script
     assert '"${previous_compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"' in script
-    assert script.index('"${compose[@]}" build') < script.index("trap rollback ERR")
+    assert script.index('"${compose[@]}" build') < script.index("trap on_exit EXIT")
     assert "RELEASE_DIR must be outside the immutable source checkout" in script
     assert script.index("release_dir_real") < script.index("flyway_file=")
 
@@ -143,7 +143,7 @@ def test_deploy_updates_active_release_pointer_only_after_verification() -> None
     assert pointer_update in script
     assert script.index("stateful/external service was replaced") < script.index(pointer_update)
     assert script.rindex('check_public_tls.sh" "${PUBLIC_TLS_HOST}"') < script.index(pointer_update)
-    assert script.index(pointer_update) < script.rindex("trap - ERR")
+    assert script.index(pointer_update) < script.rindex("trap - EXIT")
 
 
 def test_mqtt_password_preparer_grants_only_runtime_read_acl() -> None:

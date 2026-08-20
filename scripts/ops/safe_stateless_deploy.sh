@@ -95,6 +95,8 @@ green_containers=("${green_auth}" "${green_media}" "${green_backend}" "${green_d
 edge_container="$(${previous_compose[@]} ps -q edge)"
 docker cp "${edge_container}:/etc/nginx/nginx.conf" "${canonical_edge_config}"
 edge_uses_green=0
+official_replace_started=0
+deployment_complete=0
 probe_pid=""
 probe_stop_file="${RELEASE_DIR}/availability-probe.stop"
 probe_output="${RELEASE_DIR}/availability-probe.tsv"
@@ -129,10 +131,10 @@ remove_green_containers() {
 render_green_edge_config() {
   local output="$1"
   sed \
-    -e "s/set \\$dashboard_host dashboard;/set \\$dashboard_host ${green_dashboard};/" \
-    -e "s/set \\$backend_host backend;/set \\$backend_host ${green_backend};/" \
-    -e "s/set \\$auth_policy_host auth-policy;/set \\$auth_policy_host ${green_auth};/" \
-    -e "s/set \\$media_control_host media-control;/set \\$media_control_host ${green_media};/" \
+    -e 's/set \$dashboard_host dashboard;/set \$dashboard_host '"${green_dashboard}"';/' \
+    -e 's/set \$backend_host backend;/set \$backend_host '"${green_backend}"';/' \
+    -e 's/set \$auth_policy_host auth-policy;/set \$auth_policy_host '"${green_auth}"';/' \
+    -e 's/set \$media_control_host media-control;/set \$media_control_host '"${green_media}"';/' \
     -e "s/server media-control:9090;/server ${green_media}:9090;/" \
     "${canonical_edge_config}" > "${output}"
 }
@@ -186,22 +188,25 @@ start_green_containers() {
 }
 
 rollback() {
-  original_status=$?
-  trap - ERR
+  original_status="${1:-$?}"
+  trap - ERR EXIT
   set +e
   stop_availability_probe
-  echo "stateless deployment failed; restoring captured images with ${previous_compose_file}" >&2
-  while IFS='=' read -r service image_id; do
-    [[ -n "${service}" && -n "${image_id}" ]] || continue
-    docker tag "${image_id}" "gcs-saker-rollback:${service}"
-  done < "${previous_file}"
-  BACKEND_IMAGE=gcs-saker-rollback:backend \
-  AUTH_POLICY_IMAGE=gcs-saker-rollback:auth-policy \
-  MEDIA_CONTROL_IMAGE=gcs-saker-rollback:media-control \
-  DASHBOARD_IMAGE=gcs-saker-rollback:dashboard \
-    "${previous_compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"
-  rollback_status=$?
-  wait_official_services
+  rollback_status=0
+  if (( official_replace_started == 1 )); then
+    echo "stateless deployment failed; restoring captured images with ${previous_compose_file}" >&2
+    while IFS='=' read -r service image_id; do
+      [[ -n "${service}" && -n "${image_id}" ]] || continue
+      docker tag "${image_id}" "gcs-saker-rollback:${service}"
+    done < "${previous_file}"
+    BACKEND_IMAGE=gcs-saker-rollback:backend \
+    AUTH_POLICY_IMAGE=gcs-saker-rollback:auth-policy \
+    MEDIA_CONTROL_IMAGE=gcs-saker-rollback:media-control \
+    DASHBOARD_IMAGE=gcs-saker-rollback:dashboard \
+      "${previous_compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"
+    rollback_status=$?
+    wait_official_services
+  fi
   if (( edge_uses_green == 1 )); then
     reload_edge_config "${canonical_edge_config}"
   fi
@@ -212,9 +217,15 @@ rollback() {
   exit "${original_status}"
 }
 
+on_exit() {
+  local status=$?
+  (( deployment_complete == 1 )) && return
+  rollback "${status}"
+}
+
 "${compose[@]}" build "${BUILD_SERVICES[@]}"
 "${compose[@]}" images --format json > "${RELEASE_DIR}/deployment-images.json"
-trap rollback ERR
+trap on_exit EXIT
 start_availability_probe
 start_green_containers
 green_edge_config="${RELEASE_DIR}/edge-nginx.green.conf"
@@ -222,6 +233,7 @@ render_green_edge_config "${green_edge_config}"
 reload_edge_config "${green_edge_config}"
 edge_uses_green=1
 "${compose[@]}" exec -T edge wget --timeout=10 --tries=1 -q -O- http://127.0.0.1:8080/readyz >/dev/null
+official_replace_started=1
 "${compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"
 wait_official_services
 for service in "${BUILD_SERVICES[@]}"; do
@@ -268,7 +280,8 @@ ln -sfn "${ROOT}" "${runtime_root}/current"
   echo "failed to update active release pointer" >&2
   exit 1
 }
-trap - ERR
+deployment_complete=1
+trap - EXIT
 if [[ "${DOCKER_RETENTION_ENABLED:-1}" == "1" ]]; then
   bash "${ROOT}/scripts/ops/prune_deployment_artifacts.sh"
 fi
