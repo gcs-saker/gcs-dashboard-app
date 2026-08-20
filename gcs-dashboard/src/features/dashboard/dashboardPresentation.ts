@@ -3,6 +3,8 @@ import type { DashboardStreamSlot } from "./streamTypes";
 export {
   formatBearing,
   formatBearingDelta,
+  formatCompassBearing,
+  formatSpeed,
   formatSignedDegree,
   geometrySourceLabel,
   normalizeDegrees,

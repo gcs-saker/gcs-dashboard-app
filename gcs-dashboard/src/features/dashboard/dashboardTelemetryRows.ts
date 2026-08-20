@@ -42,10 +42,11 @@ class DashboardTelemetryRowsBuilder extends StreamTelemetryRowsBuilder {
       ["위도", geometry.lat.toFixed(6)],
       ["경도", geometry.lng.toFixed(6)],
       ["고도", `${geometry.altitudeM.toFixed(1)} m`],
-      ["기체 방위", formatBearing(geometry.headingDeg)],
+      ["기체 방위", formatCompassBearing(geometry.headingDeg)],
       ["지도 기준", formatBearing(geometry.yawDeg)],
       ["방위 차이", formatBearingDelta(geometry.headingDeg, geometry.yawDeg)],
       ["피치 / 롤", `${formatSignedDegree(geometry.pitchDeg)} / ${formatSignedDegree(geometry.rollDeg)}`],
+      ["속도", formatSpeed(geometry.speedMps)],
       ["FOV", `${geometry.fovDeg}deg`],
       ["좌표소스", geometrySourceLabel(geometry.source)],
     ];
@@ -80,9 +81,20 @@ export function formatBearing(value: number): string {
   return `${Math.round(normalizeDegrees(value)).toString().padStart(3, "0")}deg`;
 }
 
+export function formatCompassBearing(value: number): string {
+  const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const;
+  const normalized = normalizeDegrees(value);
+  const direction = directions[Math.round(normalized / 45) % directions.length];
+  return `${formatBearing(normalized)} (${direction})`;
+}
+
 export function formatSignedDegree(value: number): string {
   const rounded = Math.round(value * 10) / 10;
   return `${rounded > 0 ? "+" : ""}${rounded}deg`;
+}
+
+export function formatSpeed(speedMps: number | undefined): string {
+  return speedMps === undefined ? "--" : `${(speedMps * 3.6).toFixed(1)} km/h`;
 }
 
 export function formatBearingDelta(headingDeg: number, mapBearingDeg: number): string {

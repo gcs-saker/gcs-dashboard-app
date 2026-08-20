@@ -64,6 +64,7 @@ describe("streamDeviceMapping", () => {
         headingDeg: 127,
         pitchDeg: -2,
         rollDeg: 3,
+        speedMps: 3,
         yawDeg: 126,
         source: "telemetry",
       },

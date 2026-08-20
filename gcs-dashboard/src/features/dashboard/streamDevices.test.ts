@@ -109,6 +109,25 @@ describe("streamDevices", () => {
     });
   });
 
+  test("keeps stream discovery available when telemetry validation fails", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(Response.json([{
+        streamId: "raw.device.pub_opaque",
+        path: "raw/device/pub_opaque",
+        prefix: "raw",
+        assetId: "device",
+        sensorId: "pub_opaque",
+        status: "online",
+        displayName: null,
+      }]))
+      .mockResolvedValueOnce(Response.json([{ uuid: "malformed" }]));
+
+    const devices = await fetchStreamDeviceOptions(fetcher as unknown as typeof fetch);
+
+    expect(devices).toHaveLength(1);
+    expect(devices[0]).toMatchObject({ streamPath: "raw.device.pub_opaque", status: "online" });
+  });
+
   test("fetches telemetry history for selected stream paths", async () => {
     const fetcher = vi.fn().mockResolvedValue(
       Response.json([
@@ -139,7 +158,6 @@ describe("streamDevices", () => {
   test("surfaces stream registry 401 as an auth failure", async () => {
     const fetcher = vi.fn()
       .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
-      .mockResolvedValueOnce(Response.json([]))
       .mockResolvedValueOnce(new Response("refresh unauthorized", { status: 401 }));
 
     await expect(fetchStreamDeviceOptions(fetcher as unknown as typeof fetch)).rejects.toMatchObject({

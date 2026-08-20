@@ -53,6 +53,7 @@ describe("dashboardPresentation", () => {
         lng: 128.601445,
         pitchDeg: 1.24,
         rollDeg: -2.16,
+        speedMps: 4.5,
         source: "telemetry",
         yawDeg: 7,
       },
@@ -60,7 +61,8 @@ describe("dashboardPresentation", () => {
 
     expect(rows).toContainEqual(["위도", "35.871435"]);
     expect(rows).toContainEqual(["고도", "13.3 m"]);
-    expect(rows).toContainEqual(["기체 방위", "012deg"]);
+    expect(rows).toContainEqual(["속도", "16.2 km/h"]);
+    expect(rows).toContainEqual(["기체 방위", "012deg (N)"]);
     expect(rows).toContainEqual(["방위 차이", "+5deg"]);
     expect(rows).toContainEqual(["좌표소스", "GPS 텔레메트리"]);
   });
