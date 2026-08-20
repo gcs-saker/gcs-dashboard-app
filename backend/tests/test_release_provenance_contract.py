@@ -137,7 +137,7 @@ def test_deploy_routes_to_healthy_green_before_replacing_official_services() -> 
     assert "edge_config_source=" in script
     assert 'cp "${config}" "${edge_config_source}"' in script
     assert "cmp -s" in script
-    assert 'curl -ksS --resolve' in script
+    assert "curl -ksS --resolve" in script
     assert "wait_edge_workers_drained" in script
     assert "official auth-policy did not become ready" in script
 
