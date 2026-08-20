@@ -10,6 +10,10 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
+import org.springframework.validation.annotation.Validated
+import org.springframework.web.bind.annotation.RequestParam
 
 data class GroupResponse(val id: String, val name: String, val type: String, val parentId: String?)
 data class GroupDeviceResponse(
@@ -34,15 +38,20 @@ data class GroupDashboardResponse(
 
 @RestController
 @RequestMapping("/api/v1/groups")
+@Validated
 class GroupQueryController(
     private val groups: GroupAccessService,
     private val principalResolver: BearerPrincipalResolver,
 ) {
     @GetMapping
     @RequiresBearerAuth
-    fun list(@RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorization: String?): List<GroupResponse> {
+    fun list(
+        @RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
+        @RequestParam(defaultValue = "200") @Min(1) @Max(500) limit: Int = 200,
+        @RequestParam(defaultValue = "0") @Min(0) offset: Int = 0,
+    ): List<GroupResponse> {
         val principal = principalResolver.requirePrincipal(authorization)
-        return groups.visibleGroups(principal).map(OrganizationUnit::toResponse)
+        return groups.visibleGroups(principal).drop(offset).take(limit).map(OrganizationUnit::toResponse)
     }
 
     @GetMapping("/{groupId}/devices")
@@ -50,9 +59,13 @@ class GroupQueryController(
     fun devices(
         @RequestHeader(HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
         @PathVariable groupId: String,
+        @RequestParam(defaultValue = "200") @Min(1) @Max(500) limit: Int = 200,
+        @RequestParam(defaultValue = "0") @Min(0) offset: Int = 0,
     ): List<GroupDeviceResponse> {
         val principal = principalResolver.requirePrincipal(authorization)
-        return translateGroupErrors { groups.devicesFor(principal, GroupId(groupId)).map(RegisteredDevice::toGroupResponse) }
+        return translateGroupErrors {
+            groups.devicesFor(principal, GroupId(groupId)).drop(offset).take(limit).map(RegisteredDevice::toGroupResponse)
+        }
     }
 
     @GetMapping("/{groupId}/dashboard")

@@ -46,7 +46,7 @@ data class Geofence(
 
 interface GeofenceRepository {
     fun save(geofence: Geofence): Geofence
-    fun findVisible(principal: AuthenticatedPrincipal): List<Geofence>
+    fun findVisible(principal: AuthenticatedPrincipal, limit: Int = 200, offset: Int = 0): List<Geofence>
     fun findEnabled(groupId: GroupId): List<Geofence>
     fun delete(id: String, principal: AuthenticatedPrincipal): Boolean
 }
@@ -56,8 +56,9 @@ class InMemoryGeofenceRepository : GeofenceRepository {
 
     override fun save(geofence: Geofence): Geofence = geofence.also { geofences[it.id] = it }
 
-    override fun findVisible(principal: AuthenticatedPrincipal): List<Geofence> =
-        geofences.values.filter { principal.role == UserRole.ADMIN || it.groupId == principal.groupId }.sortedBy { it.name }
+    override fun findVisible(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<Geofence> =
+        geofences.values.filter { principal.role == UserRole.ADMIN || it.groupId == principal.groupId }
+            .sortedBy { it.name }.drop(offset).take(limit)
 
     override fun findEnabled(groupId: GroupId): List<Geofence> =
         geofences.values.filter { it.enabled && it.groupId == groupId }

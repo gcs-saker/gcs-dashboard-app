@@ -136,6 +136,9 @@ class OperationalAuditPublisherTest {
         assertEquals(SecurityAuditEventContract.EVENT_TYPE_STREAM_ACCESS_ALLOWED, event.eventType)
         assertEquals(true, event.message.contains("viewerGroup=co-a"))
         assertEquals(true, event.message.contains("publisherGroup=co-b"))
+        assertEquals(true, event.message.contains("stream=redacted"))
+        assertEquals(false, event.message.contains("raw.company-b.front"))
+        assertEquals(null, event.streamId)
     }
 
     @Test

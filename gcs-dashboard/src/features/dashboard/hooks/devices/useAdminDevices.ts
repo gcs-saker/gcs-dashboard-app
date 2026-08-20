@@ -47,11 +47,9 @@ export function useAdminDevices(fetcher: typeof fetch = fetch) {
   const activate = useCallback(async (deviceUuid: string): Promise<void> => {
     await mutateDevice(deviceUuid, activateRegisteredDevice, fetcher, dispatch);
   }, [fetcher]);
-
   const disable = useCallback(async (deviceUuid: string): Promise<void> => {
     await mutateDevice(deviceUuid, disableRegisteredDevice, fetcher, dispatch);
   }, [fetcher]);
-
   const rename = useCallback(async (deviceUuid: string, displayName: string): Promise<void> => {
     dispatch({ type: "mutating", deviceUuid });
     try {
@@ -60,7 +58,6 @@ export function useAdminDevices(fetcher: typeof fetch = fetch) {
       dispatch({ type: "mutationFailed", message: errorMessage(error, "장비 별칭 저장 실패") });
     }
   }, [fetcher]);
-
   useEffect(() => {
     void refresh();
   }, [refresh]);

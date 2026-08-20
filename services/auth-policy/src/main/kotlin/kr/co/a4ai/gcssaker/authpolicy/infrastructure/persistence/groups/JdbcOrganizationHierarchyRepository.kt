@@ -7,6 +7,9 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchy
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationUnit
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.jdbc.datasource.DataSourceTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
+import org.springframework.transaction.TransactionDefinition
 import javax.sql.DataSource
 
 class JdbcOrganizationHierarchyRepository(
@@ -14,11 +17,16 @@ class JdbcOrganizationHierarchyRepository(
     seedUnits: Collection<OrganizationUnit>,
 ) : OrganizationHierarchyRepository {
     private val jdbc = JdbcTemplate(dataSource)
+    private val transactions = TransactionTemplate(DataSourceTransactionManager(dataSource)).apply {
+        isolationLevel = TransactionDefinition.ISOLATION_SERIALIZABLE
+    }
 
     init {
         AuthPolicyJdbcMigrations.ensure(dataSource)
-        seedMissingGroups(seedUnits)
-        rebuildClosure(current())
+        transactions.executeWithoutResult {
+            seedMissingGroups(seedUnits)
+            rebuildClosure(current())
+        }
     }
 
     override fun current(): OrganizationHierarchy =
@@ -47,24 +55,26 @@ class JdbcOrganizationHierarchyRepository(
         )
     }
 
-    override fun create(unit: OrganizationUnit): OrganizationUnit {
-        jdbc.update(
-            GroupHierarchySql.insertGroup, unit.id.value, unit.name, unit.type.name,
-            unit.parentId?.value, unit.status.name.lowercase(),
-        )
-        rebuildActiveClosure()
-        return unit
-    }
+    override fun create(unit: OrganizationUnit): OrganizationUnit =
+        transactions.execute {
+            jdbc.update(
+                GroupHierarchySql.insertGroup, unit.id.value, unit.name, unit.type.name,
+                unit.parentId?.value, unit.status.name.lowercase(),
+            )
+            rebuildActiveClosure()
+            unit
+        } ?: error("group creation transaction returned no result")
 
-    override fun update(unit: OrganizationUnit): OrganizationUnit {
-        val updated = jdbc.update(
-            GroupHierarchySql.updateGroup, unit.name, unit.type.name, unit.parentId?.value,
-            unit.status.name.lowercase(), unit.id.value,
-        )
-        check(updated == 1) { "group not found" }
-        rebuildActiveClosure()
-        return unit
-    }
+    override fun update(unit: OrganizationUnit): OrganizationUnit =
+        transactions.execute {
+            val updated = jdbc.update(
+                GroupHierarchySql.updateGroup, unit.name, unit.type.name, unit.parentId?.value,
+                unit.status.name.lowercase(), unit.id.value,
+            )
+            check(updated == 1) { "group not found" }
+            rebuildActiveClosure()
+            unit
+        } ?: error("group update transaction returned no result")
 
     private fun seedMissingGroups(seedUnits: Collection<OrganizationUnit>) {
         seedUnits.forEach { unit ->

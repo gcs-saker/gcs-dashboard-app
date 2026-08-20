@@ -1,5 +1,6 @@
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
+from time import perf_counter
 
 from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +28,7 @@ from core.structured_logging import (
 from core.tracing import TracingSettings, configure_global_tracing, trace_fastapi_request
 from modules.ai_adapter.router import router as ai_adapter_router
 from modules.ai_contract.router import router as mock_ai_router
+from modules.telemetry_ingest import TelemetryReadModelStore
 from mqtt.subscriber import start_optional_telemetry_subscriber
 
 
@@ -63,13 +65,18 @@ async def add_trace_span(request: Request, call_next: Callable[[Request], Awaita
 
 
 async def add_structured_request_log(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    started_at = perf_counter()
     try:
         response = await call_next(request)
     except Exception as exc:
-        log_request_failed(request.app.state.request_logger, request, exc)
+        log_request_failed(request.app.state.request_logger, request, exc, elapsed_millis(started_at))
         raise
-    log_request_completed(request.app.state.request_logger, request, response)
+    log_request_completed(request.app.state.request_logger, request, response, elapsed_millis(started_at))
     return response
+
+
+def elapsed_millis(started_at: float) -> int:
+    return round((perf_counter() - started_at) * 1000)
 
 
 def mark_legacy_route(request: Request, response: Response) -> None:
@@ -151,6 +158,7 @@ def create_app() -> FastAPI:
     application.state.tracing_settings = tracing_settings
     application.state.tracer_provider = configure_global_tracing(tracing_settings)
     application.state.request_logger = get_logger("python-api")
+    application.state.telemetry_read_model_store = TelemetryReadModelStore()
     application.add_middleware(
         CORSMiddleware,
         allow_origins=list(web_security_settings.allowed_origins),

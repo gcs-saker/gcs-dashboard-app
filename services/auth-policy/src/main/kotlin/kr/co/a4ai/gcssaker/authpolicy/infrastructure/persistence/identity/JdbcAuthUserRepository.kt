@@ -34,6 +34,9 @@ class JdbcAuthUserRepository(
 
     override fun list(): List<AuthUser> = jdbc.query(AuthUserSql.selectAll, authUserRowMapper)
 
+    override fun listByGroup(groupId: GroupId, limit: Int, offset: Int): List<AuthUser> =
+        jdbc.query(AuthUserSql.selectByGroup, authUserRowMapper, groupId.value, limit, offset)
+
     override fun update(user: AuthUser): AuthUser {
         val updated = jdbc.update(
             AuthUserSql.update,
@@ -135,6 +138,10 @@ private object AuthUserSql {
     const val selectAll = """
         SELECT id, username, email, password_hash, company_id, role, group_id, active, security_version
         FROM auth_users ORDER BY username
+    """
+    const val selectByGroup = """
+        SELECT id, username, email, password_hash, company_id, role, group_id, active, security_version
+        FROM auth_users WHERE group_id = ? ORDER BY username LIMIT ? OFFSET ?
     """
     const val update = """
         UPDATE auth_users

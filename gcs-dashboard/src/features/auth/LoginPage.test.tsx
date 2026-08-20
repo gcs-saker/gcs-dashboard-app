@@ -21,6 +21,12 @@ describe("LoginPage auth flow", () => {
     expires_in_minutes: 30,
     username: "operator01",
     role: "operator",
+    group_id: "co-a",
+    securityVersion: 1,
+    capabilities: {
+      canView: true, canControl: true, canManage: false, canSendTalkback: true,
+      canPublish: true, canManageMembers: false, canManageDevices: false,
+    },
   } as const;
 
   function mockRefreshMissingThenLogin(loginResponse: Response): void {
@@ -109,7 +115,10 @@ describe("LoginPage auth flow", () => {
     storeAuthSession({
       accessToken: "active-token",
       expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
-      user: { username: "operator01", role: "operator" },
+      user: {
+        username: "operator01", role: "operator", groupId: "co-a", securityVersion: 1,
+        capabilities: ISSUED_TOKEN_RESPONSE.capabilities,
+      },
     });
     window.history.pushState({}, "", "/login");
 

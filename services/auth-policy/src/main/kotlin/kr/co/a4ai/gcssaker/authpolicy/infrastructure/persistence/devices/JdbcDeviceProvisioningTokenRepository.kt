@@ -19,13 +19,16 @@ class JdbcDeviceProvisioningTokenRepository(
         AuthPolicyJdbcMigrations.ensure(dataSource)
     }
 
-    override fun list(): List<DeviceProvisioningTokenRecord> {
+    override fun list(limit: Int, offset: Int): List<DeviceProvisioningTokenRecord> {
         jdbc.update(DeviceProvisioningTokenSql.markExpired, DeviceProvisioningTokenStatus.EXPIRED.apiValue())
-        return jdbc.query(DeviceProvisioningTokenSql.selectAll, rowMapper)
+        return jdbc.query(DeviceProvisioningTokenSql.selectPage, rowMapper, limit, offset)
     }
 
-    override fun activeCandidates(now: Instant): List<DeviceProvisioningTokenRecord> =
-        jdbc.query(DeviceProvisioningTokenSql.selectActiveCandidates, rowMapper, Timestamp.from(now))
+    override fun findByTokenId(tokenId: String): DeviceProvisioningTokenRecord? =
+        jdbc.query(DeviceProvisioningTokenSql.selectById, rowMapper, tokenId).firstOrNull()
+
+    override fun activeCandidates(now: Instant, limit: Int): List<DeviceProvisioningTokenRecord> =
+        jdbc.query(DeviceProvisioningTokenSql.selectActiveCandidates, rowMapper, Timestamp.from(now), limit)
 
     @Synchronized
     override fun save(record: DeviceProvisioningTokenRecord): DeviceProvisioningTokenRecord {
@@ -107,11 +110,16 @@ private object DeviceProvisioningTokenColumns {
 }
 
 private object DeviceProvisioningTokenSql {
-    const val selectAll = """
+    const val selectPage = """
         SELECT token_id, token_hash, group_id, label, status, max_uses, used_count, expires_at, created_by, created_at,
                last_used_at, revoked_at, revoked_by
         FROM device_provisioning_tokens
-        ORDER BY created_at DESC, token_id ASC
+        ORDER BY created_at DESC, token_id ASC LIMIT ? OFFSET ?
+    """
+    const val selectById = """
+        SELECT token_id, token_hash, group_id, label, status, max_uses, used_count, expires_at, created_by, created_at,
+               last_used_at, revoked_at, revoked_by
+        FROM device_provisioning_tokens WHERE token_id = ?
     """
     const val selectActiveCandidates = """
         SELECT token_id, token_hash, group_id, label, status, max_uses, used_count, expires_at, created_by, created_at,
@@ -120,7 +128,7 @@ private object DeviceProvisioningTokenSql {
         WHERE status = 'active'
           AND used_count < max_uses
           AND expires_at > ?
-        ORDER BY created_at DESC, token_id ASC
+        ORDER BY created_at DESC, token_id ASC LIMIT ?
     """
     const val insert = """
         INSERT INTO device_provisioning_tokens (

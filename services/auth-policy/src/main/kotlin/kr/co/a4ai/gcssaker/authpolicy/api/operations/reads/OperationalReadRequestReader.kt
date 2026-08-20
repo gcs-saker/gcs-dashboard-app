@@ -10,4 +10,6 @@ internal class OperationalReadRequestReader(
 
     fun boundedLimit(limit: Int?): Int =
         OperationalReadQueryPolicy.normalizeLimit(limit)
+
+    fun boundedOffset(offset: Int?): Int = OperationalReadQueryPolicy.normalizeOffset(offset)
 }

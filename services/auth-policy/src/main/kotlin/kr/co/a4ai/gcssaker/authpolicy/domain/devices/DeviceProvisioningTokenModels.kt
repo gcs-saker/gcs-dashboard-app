@@ -56,8 +56,9 @@ enum class DeviceProvisioningTokenStatus {
 }
 
 interface DeviceProvisioningTokenRepository {
-    fun list(): List<DeviceProvisioningTokenRecord>
-    fun activeCandidates(now: Instant): List<DeviceProvisioningTokenRecord>
+    fun list(limit: Int = 200, offset: Int = 0): List<DeviceProvisioningTokenRecord>
+    fun findByTokenId(tokenId: String): DeviceProvisioningTokenRecord?
+    fun activeCandidates(now: Instant, limit: Int = 1_000): List<DeviceProvisioningTokenRecord>
     fun save(record: DeviceProvisioningTokenRecord): DeviceProvisioningTokenRecord
     fun consume(tokenId: String, now: Instant): Boolean
     fun revoke(tokenId: String, revokedBy: String, now: Instant): Boolean
@@ -68,11 +69,13 @@ class InMemoryDeviceProvisioningTokenRepository(
 ) : DeviceProvisioningTokenRepository {
     private val tokensById = initialTokens.associateBy { it.tokenId }.toMutableMap()
 
-    override fun list(): List<DeviceProvisioningTokenRecord> =
-        tokensById.values.sortedByDescending { it.createdAt }
+    override fun list(limit: Int, offset: Int): List<DeviceProvisioningTokenRecord> =
+        tokensById.values.sortedByDescending { it.createdAt }.drop(offset).take(limit)
 
-    override fun activeCandidates(now: Instant): List<DeviceProvisioningTokenRecord> =
-        tokensById.values.filter { it.activeAt(now) }
+    override fun findByTokenId(tokenId: String): DeviceProvisioningTokenRecord? = tokensById[tokenId]
+
+    override fun activeCandidates(now: Instant, limit: Int): List<DeviceProvisioningTokenRecord> =
+        tokensById.values.asSequence().filter { it.activeAt(now) }.take(limit).toList()
 
     @Synchronized
     override fun save(record: DeviceProvisioningTokenRecord): DeviceProvisioningTokenRecord {
@@ -143,8 +146,11 @@ class DeviceProvisioningTokenService(
         return DeviceProvisioningTokenIssue(repository.save(record), token)
     }
 
-    fun list(): List<DeviceProvisioningTokenRecord> =
-        repository.list().map { withRuntimeStatus(it) }
+    fun list(limit: Int = 200, offset: Int = 0): List<DeviceProvisioningTokenRecord> =
+        repository.list(limit, offset).map { withRuntimeStatus(it) }
+
+    fun find(tokenId: String): DeviceProvisioningTokenRecord? =
+        repository.findByTokenId(tokenId)?.let(::withRuntimeStatus)
 
     fun consume(rawToken: String): GroupId? {
         if (rawToken.isBlank()) {

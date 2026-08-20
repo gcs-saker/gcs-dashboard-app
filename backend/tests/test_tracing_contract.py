@@ -84,7 +84,6 @@ def test_ai_sidecar_span_uses_metadata_only() -> None:
     exporter, provider = tracing_fixture()
 
     with trace_ai_sidecar_call(
-        stream_id="raw.sample.front",
         schema_version="ai.detection.v1alpha1",
         provider=provider,
     ):
@@ -94,6 +93,6 @@ def test_ai_sidecar_span_uses_metadata_only() -> None:
     attributes = span.attributes or {}
     assert span.name == "ai.sidecar.detect"
     assert attributes[TraceAttributeNames.COMPONENT] == "ai-sidecar"
-    assert attributes[TraceAttributeNames.STREAM_ID] == "raw.sample.front"
     assert attributes[TraceAttributeNames.SCHEMA_VERSION] == "ai.detection.v1alpha1"
+    assert all("stream" not in key.lower() for key in attributes)
     assert all("payload" not in key.lower() for key in attributes)

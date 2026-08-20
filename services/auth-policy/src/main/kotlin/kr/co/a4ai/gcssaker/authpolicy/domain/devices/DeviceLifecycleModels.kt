@@ -50,8 +50,10 @@ class DeviceLifecycleService(
     private val credentialGenerator: DeviceCredentialGenerator = DeviceCredentialGenerator(),
     private val uuidGenerator: () -> String = { UUID.randomUUID().toString() },
 ) {
-    fun list(): List<RegisteredDevice> =
-        devices.list()
+    fun list(limit: Int = 200, offset: Int = 0): List<RegisteredDevice> = devices.list(limit, offset)
+
+    fun listByGroup(groupId: GroupId, limit: Int = 200, offset: Int = 0): List<RegisteredDevice> =
+        devices.listByGroup(groupId, limit, offset)
 
     fun get(deviceUuid: String): RegisteredDevice =
         devices.findByDeviceUuid(deviceUuid) ?: throw DeviceNotFoundException(deviceUuid)

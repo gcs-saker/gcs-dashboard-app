@@ -73,7 +73,7 @@ class SecurityAuditEventFactory(
                 reason = reason,
             ),
             severity = if (allowed) SecurityAuditEventContract.SEVERITY_INFO else SecurityAuditEventContract.SEVERITY_WARN,
-            streamId = streamId,
+            streamId = null,
         )
 
     fun groupManagement(

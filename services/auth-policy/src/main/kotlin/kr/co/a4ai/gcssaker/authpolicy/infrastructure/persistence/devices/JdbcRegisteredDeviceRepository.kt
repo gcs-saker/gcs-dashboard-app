@@ -6,7 +6,9 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDevice
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceStatus
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.jdbc.datasource.DataSourceTransactionManager
 import org.springframework.jdbc.core.RowMapper
+import org.springframework.transaction.support.TransactionTemplate
 import javax.sql.DataSource
 
 class JdbcRegisteredDeviceRepository(
@@ -14,6 +16,7 @@ class JdbcRegisteredDeviceRepository(
 ) : RegisteredDeviceRepository {
     private val jdbc = JdbcTemplate(dataSource)
     private val metadata = JdbcRegisteredDeviceMetadataDao(jdbc)
+    private val transactions = TransactionTemplate(DataSourceTransactionManager(dataSource))
 
     init {
         AuthPolicyJdbcMigrations.ensure(dataSource)
@@ -24,38 +27,56 @@ class JdbcRegisteredDeviceRepository(
             .firstOrNull()
             ?.let { metadata.attach(listOf(it)).first() }
 
-    override fun list(): List<RegisteredDevice> =
-        metadata.attach(jdbc.query(RegisteredDeviceSql.selectAll, rowMapper))
+    override fun list(limit: Int, offset: Int): List<RegisteredDevice> =
+        metadata.attach(jdbc.query(RegisteredDeviceSql.selectPage, rowMapper, limit, offset))
+
+    override fun listByGroup(groupId: GroupId, limit: Int, offset: Int): List<RegisteredDevice> =
+        metadata.attach(jdbc.query(RegisteredDeviceSql.selectPageByGroup, rowMapper, groupId.value, limit, offset))
+
+    override fun hasActiveInGroup(groupId: GroupId): Boolean =
+        jdbc.queryForObject(
+            RegisteredDeviceSql.countActiveByGroup, Int::class.java,
+            groupId.value, RegisteredDeviceStatus.ACTIVE.name.lowercase(),
+        ) != 0
 
     @Synchronized
-    override fun save(device: RegisteredDevice): RegisteredDevice {
-        if (findByDeviceUuid(device.deviceUuid) == null) {
-            jdbc.update(
-                RegisteredDeviceSql.insert,
-                device.deviceUuid,
-                device.groupId.value,
-                device.displayName,
-                device.credentialHash,
-                device.status.name.lowercase(),
-                device.deviceType.apiValue,
-                device.credentialVersion,
-                device.policyVersion,
-            )
-        } else {
-            jdbc.update(
-                RegisteredDeviceSql.update,
-                device.groupId.value,
-                device.displayName,
-                device.credentialHash,
-                device.status.name.lowercase(),
-                device.deviceType.apiValue,
-                device.credentialVersion,
-                device.policyVersion,
-                device.deviceUuid,
-            )
-        }
-        metadata.replace(device)
-        return device
+    override fun save(device: RegisteredDevice): RegisteredDevice =
+        transactions.execute {
+            if (findByDeviceUuid(device.deviceUuid) == null) {
+                insert(device)
+            } else {
+                update(device)
+            }
+            metadata.replace(device)
+            device
+        } ?: error("device save transaction returned no result")
+
+    private fun insert(device: RegisteredDevice) {
+        jdbc.update(
+            RegisteredDeviceSql.insert,
+            device.deviceUuid,
+            device.groupId.value,
+            device.displayName,
+            device.credentialHash,
+            device.status.name.lowercase(),
+            device.deviceType.apiValue,
+            device.credentialVersion,
+            device.policyVersion,
+        )
+    }
+
+    private fun update(device: RegisteredDevice) {
+        jdbc.update(
+            RegisteredDeviceSql.update,
+            device.groupId.value,
+            device.displayName,
+            device.credentialHash,
+            device.status.name.lowercase(),
+            device.deviceType.apiValue,
+            device.credentialVersion,
+            device.policyVersion,
+            device.deviceUuid,
+        )
     }
 
     private companion object {
@@ -88,11 +109,17 @@ private object RegisteredDeviceColumns {
 }
 
 private object RegisteredDeviceSql {
-    const val selectAll = """
+    const val selectPage = """
         SELECT device_uuid, group_id, display_name, credential_hash, status, device_type, credential_version, policy_version
         FROM registered_devices
-        ORDER BY device_uuid ASC
+        ORDER BY device_uuid ASC LIMIT ? OFFSET ?
     """
+    const val selectPageByGroup = """
+        SELECT device_uuid, group_id, display_name, credential_hash, status, device_type, credential_version, policy_version
+        FROM registered_devices WHERE group_id = ?
+        ORDER BY device_uuid ASC LIMIT ? OFFSET ?
+    """
+    const val countActiveByGroup = "SELECT COUNT(*) FROM registered_devices WHERE group_id = ? AND status = ?"
     const val selectByUuid = """
         SELECT device_uuid, group_id, display_name, credential_hash, status, device_type, credential_version, policy_version
         FROM registered_devices

@@ -41,13 +41,16 @@ func (l CachedStreamLister) loadCached(ctx context.Context) ([]domain.StreamDesc
 }
 
 func (l CachedStreamLister) store(ctx context.Context, streams domain.StreamList) {
-	l.storeStreamList(ctx, streams)
-	l.presence.Store(ctx, streams)
+	listErr := l.storeStreamList(ctx, streams)
+	presenceErr := l.presence.Store(ctx, streams)
+	if listErr != nil || presenceErr != nil {
+		l.observe(CacheResultDegraded)
+	}
 }
 
-func (l CachedStreamLister) storeStreamList(ctx context.Context, streams domain.StreamList) {
+func (l CachedStreamLister) storeStreamList(ctx context.Context, streams domain.StreamList) error {
 	if !l.listCacheEnabled() {
-		return
+		return nil
 	}
 	ctx, span := tracer.Start(ctx, "streamcache.set")
 	defer span.End()
@@ -55,11 +58,13 @@ func (l CachedStreamLister) storeStreamList(ctx context.Context, streams domain.
 	payload, err := encodeStreamList(streams)
 	if err != nil {
 		span.SetStatus(codes.Error, "cache payload encode failed")
-		return
+		return err
 	}
 	if err := l.cache.Set(ctx, l.listKey, payload, l.listTTL); err != nil {
 		span.SetStatus(codes.Error, "cache set failed")
+		return err
 	}
+	return nil
 }
 
 func (l CachedStreamLister) listCacheEnabled() bool {

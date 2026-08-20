@@ -101,12 +101,12 @@ def publish_control_command(
 ) -> None:
     logger.info(
         "mqtt_publish_requested",
-        destination=topic,
+        destination_channel=mqtt_destination_channel(topic),
         payload_kind=mqtt_payload_kind(message),
         payload_bytes=mqtt_payload_size(message),
     )
     mqtt_client = client or get_mqtt_client()
-    with trace_mqtt_publish(topic=topic):
+    with trace_mqtt_publish(destination_channel=mqtt_destination_channel(topic)):
         result = mqtt_client.publish(topic, message)
     rc = getattr(result, "rc", 0)
     if rc:
@@ -123,3 +123,8 @@ def mqtt_payload_size(message: MqttPayload) -> int:
     if isinstance(message, bytes):
         return len(message)
     return len(message.encode("utf-8"))
+
+
+def mqtt_destination_channel(topic: str) -> str:
+    channel = topic.rsplit("/", maxsplit=1)[-1].strip()
+    return channel if channel in {"command", "telemetry", "status", "command_ack"} else "unknown"

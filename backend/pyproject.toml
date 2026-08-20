@@ -5,7 +5,7 @@ requires-python = ">=3.12,<3.13"
 
 [tool.mypy]
 python_version = "3.12"
-ignore_missing_imports = true
+ignore_missing_imports = false
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
@@ -29,9 +29,7 @@ extend-exclude = [
 select = ["C90", "E4", "E7", "E9", "F", "I"]
 
 [tool.ruff.lint.mccabe]
-# The repository target is 10. Fifteen is the initial enforced ceiling so the
-# existing baseline cannot grow while the remaining smoke workflow is split.
-max-complexity = 15
+max-complexity = 10
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]

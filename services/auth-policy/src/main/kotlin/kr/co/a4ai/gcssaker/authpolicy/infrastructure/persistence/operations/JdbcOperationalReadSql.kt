@@ -10,7 +10,7 @@ internal object OperationalReadSql {
             SELECT 1 FROM organization_group_closure c
             WHERE c.ancestor_group_id = ? AND c.descendant_group_id = telemetry_latest.group_id
         )))
-        ORDER BY uuid
+        ORDER BY uuid LIMIT ? OFFSET ?
     """
     const val selectAssetsByGateway = """
         SELECT id, cid, uuid, company_id, type, name, description, image_url,
@@ -20,7 +20,7 @@ internal object OperationalReadSql {
             SELECT 1 FROM organization_group_closure c
             WHERE c.ancestor_group_id = ? AND c.descendant_group_id = gateway_assets.group_id
         )))
-        ORDER BY uuid
+        ORDER BY uuid LIMIT ? OFFSET ?
     """
     const val selectTelemetryHistory = """
         SELECT uuid, recorded_at, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
@@ -51,7 +51,7 @@ internal object OperationalReadSql {
             SELECT 1 FROM organization_group_closure c
             WHERE c.ancestor_group_id = ? AND c.descendant_group_id = operational_stream_session_latest.group_id
         )))
-        ORDER BY last_heartbeat_at DESC, stream_id
+        ORDER BY last_heartbeat_at DESC, stream_id LIMIT ? OFFSET ?
     """
     const val deleteTelemetryByUuid = "DELETE FROM telemetry_latest WHERE uuid = ?"
     const val existsTelemetry = "SELECT COUNT(1) FROM telemetry_latest WHERE uuid = ?"

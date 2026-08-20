@@ -40,9 +40,12 @@ class OperationalReadController(
     @RequiresBearerAuth
     fun telemetryAll(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestParam(required = false) limit: Int? = null,
+        @RequestParam(required = false) offset: Int? = null,
     ): List<TelemetryReadResponse> {
         val principal = requestReader.principal(authorization)
-        return repository.telemetryFor(principal).map { it.toResponse() }
+        return repository.telemetryFor(principal, requestReader.boundedLimit(limit), requestReader.boundedOffset(offset))
+            .map { it.toResponse() }
     }
 
     @PostMapping(OperationalReadApiRoutes.TELEMETRY_INGEST)
@@ -106,9 +109,13 @@ class OperationalReadController(
     fun assetsForGateway(
         @PathVariable gatewayUuid: String,
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestParam(required = false) limit: Int? = null,
+        @RequestParam(required = false) offset: Int? = null,
     ): List<AssetReadResponse> {
         val principal = requestReader.principal(authorization)
-        return repository.assetsForGateway(principal, gatewayUuid).map { it.toResponse() }
+        return repository.assetsForGateway(
+            principal, gatewayUuid, requestReader.boundedLimit(limit), requestReader.boundedOffset(offset),
+        ).map { it.toResponse() }
     }
 
     @PostMapping(OperationalReadApiRoutes.SERVER_HEALTH_SNAPSHOTS)
@@ -145,9 +152,12 @@ class OperationalReadController(
     @RequiresBearerAuth
     fun streamSessions(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestParam(required = false) limit: Int? = null,
+        @RequestParam(required = false) offset: Int? = null,
     ): List<StreamSessionResponse> {
         val principal = requestReader.principal(authorization)
-        return repository.streamSessionsFor(principal).map { it.toResponse() }
+        return repository.streamSessionsFor(principal, requestReader.boundedLimit(limit), requestReader.boundedOffset(offset))
+            .map { it.toResponse() }
     }
 
     @GetMapping(OperationalReadApiRoutes.STREAM_SESSIONS_STREAM, produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
@@ -160,7 +170,7 @@ class OperationalReadController(
             repeat(streamPolicy.pollCount) { index ->
                 output.writeOperationalReadSseEvent(
                     OperationalReadStreamContract.EVENT_STREAM_SESSIONS,
-                    repository.streamSessionsFor(principal).map { it.toResponse() },
+                    repository.streamSessionsFor(principal, limit = 200).map { it.toResponse() },
                     objectMapper,
                 )
                 output.writeOperationalReadSseEvent(

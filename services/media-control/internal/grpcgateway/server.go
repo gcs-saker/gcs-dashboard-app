@@ -7,16 +7,19 @@ import (
 	"log/slog"
 	"net"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/observability"
 )
 
 const (
 	defaultMaxPayloadBytes = 64 * 1024
 	reasonUnauthorized     = "unauthorized_gateway_metadata"
+	gracefulStopTimeout    = 5 * time.Second
 )
 
 type Server struct {
@@ -24,12 +27,22 @@ type Server struct {
 	maxPayloadBytes int
 	handler         GatewayRequestHandler
 	authenticator   GatewayAuthenticator
+	metrics         GatewayMetrics
+}
+
+type GatewayMetrics interface {
+	ObserveGateway(status string, reason string, elapsed time.Duration)
 }
 
 func NewDeviceServer(authenticator GatewayAuthenticator, maxPayloadBytes int, handler GatewayRequestHandler) Server {
 	server := NewServerWithHandler("", maxPayloadBytes, handler)
 	server.authenticator = authenticator
 	return server
+}
+
+func (s Server) WithMetrics(metrics GatewayMetrics) Server {
+	s.metrics = metrics
+	return s
 }
 
 func NewServer(token string, maxPayloadBytes int) Server {
@@ -64,10 +77,7 @@ func (s Server) serve(ctx context.Context, listenAddress string, onReady func())
 	}
 	server := grpc.NewServer()
 	s.Register(server)
-	go func() {
-		<-ctx.Done()
-		server.GracefulStop()
-	}()
+	go stopServerWhenCancelled(ctx, server)
 	if onReady != nil {
 		onReady()
 	}
@@ -76,6 +86,22 @@ func (s Server) serve(ctx context.Context, listenAddress string, onReady func())
 		return nil
 	}
 	return err
+}
+
+func stopServerWhenCancelled(ctx context.Context, server *grpc.Server) {
+	<-ctx.Done()
+	stopped := make(chan struct{})
+	go func() {
+		server.GracefulStop()
+		close(stopped)
+	}()
+	timer := time.NewTimer(gracefulStopTimeout)
+	defer timer.Stop()
+	select {
+	case <-stopped:
+	case <-timer.C:
+		server.Stop()
+	}
 }
 
 func (s Server) exchangeHandler(_ any, stream grpc.ServerStream) error {
@@ -129,34 +155,54 @@ func (s Server) authenticatedRequestContext(ctx context.Context, credentials Gat
 }
 
 func logGatewaySecurity(ctx context.Context, event string, reason string, payloadBytes int) {
-	remote := "-"
-	if remotePeer, ok := peer.FromContext(ctx); ok && remotePeer.Addr != nil {
-		remote = remotePeer.Addr.String()
-	}
-	slog.Warn("grpc_gateway_security", "event", event, "reason", reason, "method", fullMethodExchange, "remote", remote, "payloadBytes", payloadBytes)
+	traceID := observability.TraceIDFromContext(ctx)
+	slog.Warn(
+		"grpc_gateway_security", "event", event, "reason", reason, "method", fullMethodExchange,
+		"traceId", traceID, "peerSource", "trusted_edge_required", "payloadBytes", payloadBytes,
+	)
 }
 
 func (s Server) handleRequest(ctx context.Context, request []byte, reconnectRequested bool) []byte {
+	started := time.Now()
 	if len(request) > s.maxPayloadBytes {
+		s.observeGateway(GatewayAckStatusBackpressure, reasonBackpressure, started)
 		logGatewaySecurity(ctx, "message_rejected", reasonBackpressure, len(request))
 		return GatewayResponse("", GatewayAckStatusBackpressure, reasonBackpressure)
 	}
 	gatewayRequest, err := DecodeGatewayStreamRequest(request)
 	if err != nil {
+		s.observeGateway(GatewayAckStatusRejected, reasonMalformed, started)
 		logGatewaySecurity(ctx, "message_rejected", reasonMalformed, len(request))
 		return GatewayResponse("", GatewayAckStatusRejected, reasonMalformed)
 	}
 	if reconnectRequested {
+		s.observeGateway(GatewayAckStatusReconnect, reasonReconnect, started)
 		return GatewayResponse(gatewayRequest.RequestID, GatewayAckStatusReconnect, reasonReconnect)
 	}
 	decision := s.handler.HandleGatewayRequest(ctx, gatewayRequest)
+	s.observeGateway(decision.Status, decision.ReasonCode, started)
 	if decision.Status != GatewayAckStatusAccepted {
 		logGatewaySecurity(ctx, "message_rejected", decision.ReasonCode, len(request))
 	}
 	return gatewayDecisionResponse(gatewayRequest.RequestID, decision)
 }
 
+func (s Server) observeGateway(status GatewayAckStatus, reason string, started time.Time) {
+	if s.metrics != nil {
+		s.metrics.ObserveGateway(status.String(), gatewayMetricReason(reason), time.Since(started))
+	}
+}
+
+func gatewayMetricReason(reason string) string {
+	switch reason {
+	case reasonAccepted, reasonMalformed, reasonSemanticInvalid, reasonBackpressure,
+		reasonReconnect, reasonStoreFailed, reasonIdentityMismatch, reasonUnauthorized:
+		return reason
+	default:
+		return "other"
+	}
+}
+
 func Start(ctx context.Context, listenAddress string, token string, maxPayloadBytes int) {
-	state := StartWithReadiness(ctx, listenAddress, token, maxPayloadBytes)
-	_ = state
+	StartWithReadiness(ctx, listenAddress, token, maxPayloadBytes)
 }

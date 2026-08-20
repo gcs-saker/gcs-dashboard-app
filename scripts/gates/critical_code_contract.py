@@ -18,7 +18,10 @@ SOURCE_ROOTS = (
 )
 SOURCE_SUFFIXES = {".go", ".kt", ".py", ".ts", ".tsx"}
 EXCLUDED_PARTS = {"__pycache__", "generated", "node_modules", "test", "tests"}
-SENSITIVE_NAME = r"(?:credential|password|secret|bearer|authorization|cookie|refresh_token|access_token|publish_token|playback_token)"
+SENSITIVE_NAME = (
+    r"(?:credential|password|secret|bearer|authorization|cookie|refresh_token|access_token|publish_token|"
+    r"playback_token|uuid|device_uuid|stream_id)"
+)
 LOG_CALL = r"(?:log|logger)\.(?:trace|debug|info|warn|warning|error|exception|critical)"
 
 
@@ -53,21 +56,43 @@ def scan_python(path: Path, text: str) -> list[Violation]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and is_unbounded_python_http_call(node):
             violations.append(
-                Violation(path, node.lineno, "PY_HTTP_NO_TIMEOUT", "package-level HTTP call has no explicit timeout")
+                Violation(
+                    path,
+                    node.lineno,
+                    "PY_HTTP_NO_TIMEOUT",
+                    "package-level HTTP call has no explicit timeout",
+                )
             )
         if not isinstance(node, ast.ExceptHandler):
             continue
         if node.type is None:
-            violations.append(Violation(path, node.lineno, "PY_BARE_EXCEPT", "bare except hides the failure class"))
+            violations.append(
+                Violation(
+                    path,
+                    node.lineno,
+                    "PY_BARE_EXCEPT",
+                    "bare except hides the failure class",
+                )
+            )
         if len(node.body) == 1 and isinstance(node.body[0], (ast.Pass, ast.Expr)):
             expression = node.body[0]
             if isinstance(expression, ast.Pass) or (isinstance(expression, ast.Expr) and expression.value is Ellipsis):
                 violations.append(
-                    Violation(path, node.lineno, "PY_EMPTY_EXCEPT", "exception handler discards the failure")
+                    Violation(
+                        path,
+                        node.lineno,
+                        "PY_EMPTY_EXCEPT",
+                        "exception handler discards the failure",
+                    )
                 )
         if is_broad_exception(node.type) and handler_returns_plausible_default(node.body):
             violations.append(
-                Violation(path, node.lineno, "PY_SWALLOWED_EXCEPTION", "broad exception becomes a success-like default")
+                Violation(
+                    path,
+                    node.lineno,
+                    "PY_SWALLOWED_EXCEPTION",
+                    "broad exception becomes a success-like default",
+                )
             )
     return violations
 
@@ -115,7 +140,11 @@ def scan_text(path: Path, text: str) -> list[Violation]:
             re.compile(r"catch\s*(?:\([^)]*\))?\s*\{\s*\}", re.MULTILINE),
             "empty catch discards the failure",
         ),
-        ("GO_HTTP_NO_TIMEOUT", re.compile(r"(?:&\s*)?http\.Client\s*\{\s*\}"), "Go HTTP client has no timeout"),
+        (
+            "GO_HTTP_NO_TIMEOUT",
+            re.compile(r"(?:&\s*)?http\.Client\s*\{\s*\}"),
+            "Go HTTP client has no timeout",
+        ),
         (
             "GO_PACKAGE_HTTP_CALL",
             re.compile(r"\bhttp\.(?:Get|Post|PostForm|Head)\s*\("),
@@ -126,7 +155,11 @@ def scan_text(path: Path, text: str) -> list[Violation]:
             re.compile(r"\btime\.Tick\s*\("),
             "time.Tick cannot be stopped; own a time.NewTicker lifecycle",
         ),
-        ("KOTLIN_GLOBAL_SCOPE", re.compile(r"\bGlobalScope\s*\."), "global coroutine scope has no bounded owner"),
+        (
+            "KOTLIN_GLOBAL_SCOPE",
+            re.compile(r"\bGlobalScope\s*\."),
+            "global coroutine scope has no bounded owner",
+        ),
         (
             "SENSITIVE_LOG_INTERPOLATION",
             re.compile(

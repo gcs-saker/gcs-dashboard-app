@@ -14,16 +14,20 @@ class JdbcSignupRegistrationTokenRepository(dataSource: DataSource) : SignupRegi
 
     init { AuthPolicyJdbcMigrations.ensure(dataSource) }
 
-    override fun list(): List<SignupRegistrationTokenRecord> {
+    override fun list(limit: Int, offset: Int): List<SignupRegistrationTokenRecord> {
         jdbc.update("UPDATE signup_registration_tokens SET status = 'expired', updated_at = CURRENT_TIMESTAMP WHERE status = 'active' AND expires_at <= CURRENT_TIMESTAMP")
-        return jdbc.query("SELECT * FROM signup_registration_tokens ORDER BY created_at DESC", rowMapper)
+        return jdbc.query("SELECT * FROM signup_registration_tokens ORDER BY created_at DESC LIMIT ? OFFSET ?", rowMapper, limit, offset)
     }
 
-    override fun activeCandidates(now: Instant): List<SignupRegistrationTokenRecord> =
+    override fun findByTokenId(tokenId: String): SignupRegistrationTokenRecord? =
+        jdbc.query("SELECT * FROM signup_registration_tokens WHERE token_id = ?", rowMapper, tokenId).firstOrNull()
+
+    override fun activeCandidates(now: Instant, limit: Int): List<SignupRegistrationTokenRecord> =
         jdbc.query(
-            "SELECT * FROM signup_registration_tokens WHERE status = 'active' AND used_count < max_uses AND expires_at > ? ORDER BY created_at DESC",
+            "SELECT * FROM signup_registration_tokens WHERE status = 'active' AND used_count < max_uses AND expires_at > ? ORDER BY created_at DESC LIMIT ?",
             rowMapper,
             Timestamp.from(now),
+            limit,
         )
 
     override fun save(record: SignupRegistrationTokenRecord): SignupRegistrationTokenRecord {

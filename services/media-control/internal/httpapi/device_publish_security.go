@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"hash"
 	"log"
 	"net"
 	"net/http"
@@ -29,16 +30,13 @@ func mustOpaqueToken(prefix string) string {
 
 func (s Server) hashRenewalToken(token string) []byte {
 	mac := hmac.New(sha256.New, []byte(s.publishToken))
-	_, _ = mac.Write([]byte(token))
+	writeHash(mac, token)
 	return mac.Sum(nil)
 }
 
 func opaqueDeviceStreamIdentity(secret, deviceUUID, sensorID string) (string, string) {
 	mac := hmac.New(sha256.New, []byte(secret))
-	_, _ = mac.Write([]byte("gcs-saker/device-stream/v1\x00"))
-	_, _ = mac.Write([]byte(deviceUUID))
-	_, _ = mac.Write([]byte("\x00"))
-	_, _ = mac.Write([]byte(sensorID))
+	writeHash(mac, "gcs-saker/device-stream/v1\x00", deviceUUID, "\x00", sensorID)
 	handle := "pub_" + base64.RawURLEncoding.EncodeToString(mac.Sum(nil)[:20])
 	return "raw.device." + handle, "raw/device/" + handle
 }
@@ -52,36 +50,46 @@ func bearerToken(value string) string {
 }
 
 func (s Server) auditDeviceSession(r *http.Request, event, deviceUUID, result string) {
-	ip := clientIP(r)
+	ip, ipSource := clientIP(r)
 	mac := hmac.New(sha256.New, []byte(s.publishToken))
-	_, _ = mac.Write([]byte(ip))
+	writeHash(mac, ip)
 	ipFingerprint := base64.RawURLEncoding.EncodeToString(mac.Sum(nil)[:12])
-	log.Printf("security_audit event=%s result=%s device=%s client_ip_hash=%s", event, result, maskDeviceUUID(deviceUUID), ipFingerprint)
+	log.Printf(
+		"security_audit event=%s result=%s device=%s client_ip_hash=%s client_ip_source=%s",
+		event, result, privateDeviceReference(deviceUUID), ipFingerprint, ipSource,
+	)
 }
 
-func clientIP(r *http.Request) string {
+func clientIP(r *http.Request) (string, string) {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		host = r.RemoteAddr
 	}
 	peer := net.ParseIP(strings.TrimSpace(host))
-	if peer != nil && (peer.IsLoopback() || peer.IsPrivate()) {
+	if peer != nil && peer.IsLoopback() {
 		if first, _, ok := strings.Cut(r.Header.Get(forwardedForHeader), ","); ok || strings.TrimSpace(first) != "" {
 			if parsed := net.ParseIP(strings.TrimSpace(first)); parsed != nil {
-				return parsed.String()
+				return parsed.String(), "loopback_edge"
 			}
 		}
 	}
 	if peer == nil {
-		return "unknown"
+		return "unknown", "invalid_direct_peer"
 	}
-	return peer.String()
+	return peer.String(), "direct_peer"
 }
 
-func maskDeviceUUID(value string) string {
-	value = strings.TrimSpace(value)
-	if len(value) < 8 {
-		return "redacted"
+func privateDeviceReference(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "unknown"
 	}
-	return value[:8] + "-redacted"
+	return "redacted"
+}
+
+func writeHash(destination hash.Hash, values ...string) {
+	for _, value := range values {
+		if _, err := destination.Write([]byte(value)); err != nil {
+			panic("hash write contract failed")
+		}
+	}
 }

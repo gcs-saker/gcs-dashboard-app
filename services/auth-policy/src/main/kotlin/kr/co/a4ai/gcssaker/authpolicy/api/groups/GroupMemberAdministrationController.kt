@@ -17,8 +17,13 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
+import org.springframework.validation.annotation.Validated
+import org.springframework.web.bind.annotation.RequestParam
 
 @RestController
+@Validated
 @RequestMapping(value = ["/api/v1/groups/{groupId}", "/admin/groups/{groupId}"])
 class GroupMemberAdministrationController(
     private val members: GroupMemberAdministrationService,
@@ -31,8 +36,11 @@ class GroupMemberAdministrationController(
     fun list(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
         @PathVariable groupId: String,
+        @RequestParam(defaultValue = "200") @Min(1) @Max(500) limit: Int = 200,
+        @RequestParam(defaultValue = "0") @Min(0) offset: Int = 0,
     ): List<GroupMemberResponse> = translateMemberErrors {
-        members.list(principalResolver.requirePrincipal(authorization), GroupId(groupId)).map(AuthUser::toMemberResponse)
+        members.list(principalResolver.requirePrincipal(authorization), GroupId(groupId), limit, offset)
+            .map(AuthUser::toMemberResponse)
     }
 
     @PatchMapping("/members/{username}")

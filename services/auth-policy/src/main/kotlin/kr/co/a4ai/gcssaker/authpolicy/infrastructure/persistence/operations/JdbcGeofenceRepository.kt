@@ -37,15 +37,15 @@ class JdbcGeofenceRepository(dataSource: DataSource) : GeofenceRepository {
         return geofence
     }
 
-    override fun findVisible(principal: AuthenticatedPrincipal): List<Geofence> =
+    override fun findVisible(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<Geofence> =
         if (principal.role == UserRole.ADMIN) {
-            findByFilter(GeofenceSql.selectAll, emptyArray())
+            findByFilter(GeofenceSql.selectAll, arrayOf(limit, offset))
         } else {
-            findByFilter(GeofenceSql.selectByGroup, arrayOf(principal.groupId.value))
+            findByFilter(GeofenceSql.selectByGroup, arrayOf(principal.groupId.value, limit, offset))
         }
 
     override fun findEnabled(groupId: GroupId): List<Geofence> =
-        findByFilter(GeofenceSql.selectEnabledByGroup, arrayOf(groupId.value))
+        findByFilter(GeofenceSql.selectEnabledByGroup, arrayOf(groupId.value, 500, 0))
 
     override fun delete(id: String, principal: AuthenticatedPrincipal): Boolean {
         val allowed = principal.role == UserRole.ADMIN ||
@@ -54,30 +54,48 @@ class JdbcGeofenceRepository(dataSource: DataSource) : GeofenceRepository {
         return jdbc.update(GeofenceSql.deleteGeofence, id) == 1
     }
 
-    private fun findByFilter(sql: String, arguments: Array<Any>): List<Geofence> =
-        jdbc.query(sql, { rs, _ ->
-            val id = rs.getString("id")
-            Geofence(
-                id = id,
-                name = rs.getString("name"),
-                groupId = GroupId(rs.getString("group_id")),
-                enabled = rs.getBoolean("enabled"),
-                polygon = jdbc.query(
-                    GeofenceSql.selectPoints,
-                    { pointRow, _ -> GeoPoint(pointRow.getDouble("latitude"), pointRow.getDouble("longitude")) },
-                    id,
-                ),
+    private fun findByFilter(sql: String, arguments: Array<Any>): List<Geofence> {
+        val rows = jdbc.query(sql, { rs, _ ->
+            GeofenceRow(
+                id = rs.getString("id"), name = rs.getString("name"),
+                groupId = GroupId(rs.getString("group_id")), enabled = rs.getBoolean("enabled"),
+                point = rs.getObject("point_order")?.let { GeoPoint(rs.getDouble("latitude"), rs.getDouble("longitude")) },
             )
-        }, *arguments).sortedBy { it.name }
+        }, *arguments)
+        return rows.groupBy { it.id }.values.map { group ->
+            val first = group.first()
+            Geofence(
+                id = first.id, name = first.name, groupId = first.groupId,
+                polygon = group.mapNotNull { it.point }, enabled = first.enabled,
+            )
+        }
+    }
 }
 
+private data class GeofenceRow(
+    val id: String,
+    val name: String,
+    val groupId: GroupId,
+    val enabled: Boolean,
+    val point: GeoPoint?,
+)
+
 private object GeofenceSql {
-    const val selectAll = "SELECT id, name, group_id, enabled FROM geofences"
-    const val selectByGroup = "SELECT id, name, group_id, enabled FROM geofences WHERE group_id = ?"
-    const val selectEnabledByGroup =
-        "SELECT id, name, group_id, enabled FROM geofences WHERE group_id = ? AND enabled = TRUE"
-    const val selectPoints =
-        "SELECT latitude, longitude FROM geofence_points WHERE geofence_id = ? ORDER BY point_order"
+    const val selectAll = """
+        WITH page AS (SELECT id, name, group_id, enabled FROM geofences ORDER BY name, id LIMIT ? OFFSET ?)
+        SELECT page.*, point.point_order, point.latitude, point.longitude FROM page
+        LEFT JOIN geofence_points point ON point.geofence_id = page.id ORDER BY page.name, page.id, point.point_order
+    """
+    const val selectByGroup = """
+        WITH page AS (SELECT id, name, group_id, enabled FROM geofences WHERE group_id = ? ORDER BY name, id LIMIT ? OFFSET ?)
+        SELECT page.*, point.point_order, point.latitude, point.longitude FROM page
+        LEFT JOIN geofence_points point ON point.geofence_id = page.id ORDER BY page.name, page.id, point.point_order
+    """
+    const val selectEnabledByGroup = """
+        WITH page AS (SELECT id, name, group_id, enabled FROM geofences WHERE group_id = ? AND enabled = TRUE ORDER BY name, id LIMIT ? OFFSET ?)
+        SELECT page.*, point.point_order, point.latitude, point.longitude FROM page
+        LEFT JOIN geofence_points point ON point.geofence_id = page.id ORDER BY page.name, page.id, point.point_order
+    """
     const val countOwned = "SELECT COUNT(*) FROM geofences WHERE id = ? AND group_id = ?"
     const val deletePoints = "DELETE FROM geofence_points WHERE geofence_id = ?"
     const val deleteGeofence = "DELETE FROM geofences WHERE id = ?"

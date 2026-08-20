@@ -26,7 +26,7 @@ class JdbcOperationalReadRepository(
         seeder.seedAssets(assetsByGateway)
     }
 
-    override fun telemetryFor(principal: AuthenticatedPrincipal): List<TelemetryReadModel> =
+    override fun telemetryFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<TelemetryReadModel> =
         jdbc.query(
             OperationalReadSql.selectTelemetry,
             OperationalReadRowMappers.telemetry,
@@ -35,6 +35,8 @@ class JdbcOperationalReadRepository(
             UserRole.ADMIN.name,
             principal.role.name,
             principal.groupId.value,
+            limit,
+            offset,
         )
 
     @Synchronized
@@ -58,7 +60,9 @@ class JdbcOperationalReadRepository(
             limit.coerceIn(1, 500),
         )
 
-    override fun assetsForGateway(principal: AuthenticatedPrincipal, gatewayUuid: String): List<AssetReadModel> =
+    override fun assetsForGateway(
+        principal: AuthenticatedPrincipal, gatewayUuid: String, limit: Int, offset: Int,
+    ): List<AssetReadModel> =
         jdbc.query(
             OperationalReadSql.selectAssetsByGateway,
             OperationalReadRowMappers.asset,
@@ -68,6 +72,8 @@ class JdbcOperationalReadRepository(
             UserRole.ADMIN.name,
             principal.role.name,
             principal.groupId.value,
+            limit,
+            offset,
         )
 
     override fun recordServerHealthSnapshot(snapshot: ServerHealthSnapshotReadModel): ServerHealthSnapshotReadModel =
@@ -91,7 +97,7 @@ class JdbcOperationalReadRepository(
     override fun recordStreamSession(session: StreamSessionReadModel): StreamSessionReadModel =
         writer.insertStreamSessionEvent(session)
 
-    override fun streamSessionsFor(principal: AuthenticatedPrincipal): List<StreamSessionReadModel> =
+    override fun streamSessionsFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<StreamSessionReadModel> =
         jdbc.query(
             OperationalReadSql.selectLatestStreamSessions,
             OperationalReadRowMappers.streamSession,
@@ -100,6 +106,8 @@ class JdbcOperationalReadRepository(
             UserRole.ADMIN.name,
             principal.role.name,
             principal.groupId.value,
+            limit,
+            offset,
         )
 
 }

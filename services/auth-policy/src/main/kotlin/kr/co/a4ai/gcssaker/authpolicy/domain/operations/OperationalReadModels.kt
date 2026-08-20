@@ -69,14 +69,16 @@ data class StreamSessionReadModel(
 )
 
 interface OperationalReadRepository {
-    fun telemetryFor(principal: AuthenticatedPrincipal): List<TelemetryReadModel>
+    fun telemetryFor(principal: AuthenticatedPrincipal, limit: Int = 200, offset: Int = 0): List<TelemetryReadModel>
     fun upsertTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel
     fun telemetryHistoryFor(principal: AuthenticatedPrincipal, uuid: String, limit: Int): List<TelemetryHistoryReadModel>
-    fun assetsForGateway(principal: AuthenticatedPrincipal, gatewayUuid: String): List<AssetReadModel>
+    fun assetsForGateway(
+        principal: AuthenticatedPrincipal, gatewayUuid: String, limit: Int = 200, offset: Int = 0,
+    ): List<AssetReadModel>
     fun recordServerHealthSnapshot(snapshot: ServerHealthSnapshotReadModel): ServerHealthSnapshotReadModel
     fun serverHealthSnapshotsFor(principal: AuthenticatedPrincipal, limit: Int): List<ServerHealthSnapshotReadModel>
     fun recordStreamSession(session: StreamSessionReadModel): StreamSessionReadModel
-    fun streamSessionsFor(principal: AuthenticatedPrincipal): List<StreamSessionReadModel>
+    fun streamSessionsFor(principal: AuthenticatedPrincipal, limit: Int = 200, offset: Int = 0): List<StreamSessionReadModel>
 }
 
 class InMemoryOperationalReadRepository(
@@ -91,10 +93,10 @@ class InMemoryOperationalReadRepository(
         }
     }
 
-    override fun telemetryFor(principal: AuthenticatedPrincipal): List<TelemetryReadModel> =
+    override fun telemetryFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<TelemetryReadModel> =
         telemetryByUuid.values
             .filter { it.groupId == principal.groupId || principal.role == UserRole.ADMIN }
-            .sortedBy { it.uuid }
+            .sortedBy { it.uuid }.drop(offset).take(limit)
 
     override fun upsertTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel {
         if (telemetry.eventId != null && !eventIds.add(telemetry.eventId)) return telemetry
@@ -119,9 +121,12 @@ class InMemoryOperationalReadRepository(
             .take(limit.coerceIn(1, 500))
             .toList()
 
-    override fun assetsForGateway(principal: AuthenticatedPrincipal, gatewayUuid: String): List<AssetReadModel> =
+    override fun assetsForGateway(
+        principal: AuthenticatedPrincipal, gatewayUuid: String, limit: Int, offset: Int,
+    ): List<AssetReadModel> =
         assetsByGateway[gatewayUuid].orEmpty()
             .filter { it.groupId == principal.groupId || principal.role == UserRole.ADMIN }
+            .drop(offset).take(limit)
             .sortedBy { it.uuid }
 
     private val serverHealthSnapshots = java.util.concurrent.CopyOnWriteArrayList<ServerHealthSnapshotReadModel>()
@@ -148,7 +153,7 @@ class InMemoryOperationalReadRepository(
         return session
     }
 
-    override fun streamSessionsFor(principal: AuthenticatedPrincipal): List<StreamSessionReadModel> =
+    override fun streamSessionsFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<StreamSessionReadModel> =
         streamSessionHistory
             .asSequence()
             .filter { it.groupId == principal.groupId || principal.role == UserRole.ADMIN }
@@ -156,5 +161,5 @@ class InMemoryOperationalReadRepository(
             .values
             .map { sessions -> sessions.maxBy { it.lastHeartbeatAt } }
             .sortedWith(compareBy<StreamSessionReadModel> { it.status }.thenBy { it.streamId })
-            .toList()
+            .drop(offset).take(limit).toList()
 }

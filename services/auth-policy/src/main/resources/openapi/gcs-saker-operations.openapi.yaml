@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: GCS-Saker Operations API
-  version: "2026-08-10"
+  version: "2026-08-20"
   description: |
     운영 배포의 public edge 기준 통합 계약이다. 내부 포트, DB, Redis, MQTT 관리 포트와
     credential 원문은 문서화하거나 노출하지 않는다. Swagger UI는 조회 전용이며 실제 변경
@@ -32,17 +32,17 @@ paths:
   /auth-policy/auth/logout:
     post: { tags: [Auth], summary: refresh session 폐기, responses: { '204': { description: Logged out } } }
   /auth-policy/api/v1/signup-tokens:
-    get: { tags: [Admin], summary: 회원가입 토큰 이력 조회, responses: { '200': { $ref: '#/components/responses/Json' }, '403': { $ref: '#/components/responses/Error' } } }
+    get: { tags: [Admin], summary: 회원가입 토큰 이력 조회, parameters: [ { $ref: '#/components/parameters/PageLimit' }, { $ref: '#/components/parameters/PageOffset' } ], responses: { '200': { $ref: '#/components/responses/Json' }, '403': { $ref: '#/components/responses/Error' } } }
     post: { tags: [Admin], summary: 회원가입 토큰 발급, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/OneTimeSecret' } } }
   /auth-policy/api/v1/signup-tokens/{tokenId}:
     delete: { tags: [Admin], summary: 미사용 회원가입 토큰 폐기, parameters: [ { name: tokenId, in: path, required: true, schema: { type: string } } ], responses: { '200': { description: Revoked }, '404': { $ref: '#/components/responses/Error' } } }
   /auth-policy/api/v1/provisioning-tokens:
-    get: { tags: [Admin], summary: 장비 provisioning 토큰 이력 조회, responses: { '200': { $ref: '#/components/responses/Json' } } }
+    get: { tags: [Admin], summary: 장비 provisioning 토큰 이력 조회, parameters: [ { $ref: '#/components/parameters/PageLimit' }, { $ref: '#/components/parameters/PageOffset' } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
     post: { tags: [Admin], summary: 장비 provisioning 토큰 발급, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/OneTimeSecret' } } }
   /auth-policy/api/v1/provisioning-tokens/{tokenId}:
     delete: { tags: [Admin], summary: 미사용 provisioning 토큰 폐기, parameters: [ { name: tokenId, in: path, required: true, schema: { type: string } } ], responses: { '200': { description: Revoked }, '404': { $ref: '#/components/responses/Error' } } }
   /auth-policy/api/v1/devices:
-    get: { tags: [Admin], summary: 등록 장비 조회, responses: { '200': { $ref: '#/components/responses/Json' } } }
+    get: { tags: [Admin], summary: 등록 장비 조회, parameters: [ { $ref: '#/components/parameters/PageLimit' }, { $ref: '#/components/parameters/PageOffset' } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
     post: { tags: [Admin], summary: 장비 등록 및 credential 최초 1회 발급, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/OneTimeSecret' } } }
   /auth-policy/api/v1/devices/{deviceUuid}:
     parameters: [ { $ref: '#/components/parameters/DeviceUuid' } ]
@@ -55,30 +55,30 @@ paths:
   /auth-policy/api/v1/devices/{deviceUuid}/credential:
     post: { tags: [Admin], summary: credential 회전 및 원문 1회 반환, parameters: [ { $ref: '#/components/parameters/DeviceUuid' } ], responses: { '200': { $ref: '#/components/responses/OneTimeSecret' } } }
   /api/v1/groups:
-    get: { tags: [Groups], summary: principal이 조회 가능한 그룹, responses: { '200': { $ref: '#/components/responses/Json' } } }
+    get: { tags: [Groups], summary: principal이 조회 가능한 그룹, parameters: [ { $ref: '#/components/parameters/PageLimit' }, { $ref: '#/components/parameters/PageOffset' } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
   /api/v1/groups/{groupId}/devices:
-    get: { tags: [Groups], summary: 그룹 장비 조회, parameters: [ { $ref: '#/components/parameters/GroupId' } ], responses: { '200': { $ref: '#/components/responses/Json' }, '403': { $ref: '#/components/responses/Error' } } }
+    get: { tags: [Groups], summary: 그룹 장비 조회, parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/PageLimit' }, { $ref: '#/components/parameters/PageOffset' } ], responses: { '200': { $ref: '#/components/responses/Json' }, '403': { $ref: '#/components/responses/Error' } } }
   /api/v1/groups/{groupId}/dashboard:
     get: { tags: [Groups], summary: 그룹 dashboard aggregate, parameters: [ { $ref: '#/components/parameters/GroupId' } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
   /auth-policy/api/v1/groups/{groupId}/members:
-    get: { tags: [Groups], summary: 권한 범위 내 그룹 회원 조회, parameters: [ { $ref: '#/components/parameters/GroupId' } ], responses: { '200': { $ref: '#/components/responses/Json' }, '403': { $ref: '#/components/responses/Error' } } }
+    get: { tags: [Groups], summary: 권한 범위 내 그룹 회원 조회, parameters: [ { $ref: '#/components/parameters/GroupId' }, { $ref: '#/components/parameters/PageLimit' }, { $ref: '#/components/parameters/PageOffset' } ], responses: { '200': { $ref: '#/components/responses/Json' }, '403': { $ref: '#/components/responses/Error' } } }
   /auth-policy/api/v1/groups/{groupId}/members/{username}:
     patch: { tags: [Groups], summary: 권한 범위 내 그룹 회원 변경, parameters: [ { $ref: '#/components/parameters/GroupId' }, { name: username, in: path, required: true, schema: { type: string } } ], requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/Json' }, '403': { $ref: '#/components/responses/Error' }, '404': { $ref: '#/components/responses/Error' }, '409': { $ref: '#/components/responses/Error' } } }
   /auth-policy/api/v1/groups/{groupId}/administrator:
     put: { tags: [Groups], summary: 시스템 관리자의 그룹 관리자 교체, parameters: [ { $ref: '#/components/parameters/GroupId' } ], requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/Json' }, '403': { $ref: '#/components/responses/Error' } } }
   /api/telemetry/all:
-    get: { tags: [Operations], summary: 권한 범위 telemetry 조회, responses: { '200': { $ref: '#/components/responses/Json' } } }
+    get: { tags: [Operations], summary: 권한 범위 telemetry 조회, parameters: [ { $ref: '#/components/parameters/PageLimit' }, { $ref: '#/components/parameters/PageOffset' } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
   /api/telemetry/:
     post: { tags: [Operations], summary: 계정 기반 legacy telemetry ingest, deprecated: true, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/Json' }, '401': { $ref: '#/components/responses/Error' } } }
   /api/telemetry/{uuid}/history:
     get: { tags: [Operations], summary: 장비 telemetry 이력, parameters: [ { $ref: '#/components/parameters/Uuid' } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
   /api/asset/{gatewayUuid}:
-    get: { tags: [Operations], summary: gateway 자산 조회, parameters: [ { name: gatewayUuid, in: path, required: true, schema: { type: string } } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
+    get: { tags: [Operations], summary: gateway 자산 조회, parameters: [ { name: gatewayUuid, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/PageLimit' }, { $ref: '#/components/parameters/PageOffset' } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
   /api/ops/server-health/snapshots:
     get: { tags: [Operations], summary: 서버 상태 이력, responses: { '200': { $ref: '#/components/responses/Json' } } }
     post: { tags: [Operations], summary: 서버 상태 snapshot 기록, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/Json' } } }
   /api/ops/stream-sessions:
-    get: { tags: [Operations], summary: stream session 조회, responses: { '200': { $ref: '#/components/responses/Json' } } }
+    get: { tags: [Operations], summary: stream session 조회, parameters: [ { $ref: '#/components/parameters/PageLimit' }, { $ref: '#/components/parameters/PageOffset' } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
     post: { tags: [Operations], summary: stream session 기록, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/Json' } } }
   /api/ops/stream-sessions/stream:
     get: { tags: [Operations], summary: stream session SSE, responses: { '200': { description: text/event-stream, content: { text/event-stream: { schema: { type: string } } } } } }
@@ -99,7 +99,7 @@ paths:
   /api/ops/time/config:
     put: { tags: [Operations], summary: 시간 동기화 설정, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/Json' } } }
   /api/v1/geofences:
-    get: { tags: [Operations], summary: principal 그룹의 geofence 조회, responses: { '200': { $ref: '#/components/responses/Json' } } }
+    get: { tags: [Operations], summary: principal 그룹의 geofence 조회, parameters: [ { $ref: '#/components/parameters/PageLimit' }, { $ref: '#/components/parameters/PageOffset' } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
     post: { tags: [Operations], summary: principal 그룹에 geofence 생성, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '201': { $ref: '#/components/responses/Json' } } }
   /api/v1/geofences/{geofenceId}:
     delete: { tags: [Operations], summary: 권한 범위 geofence 삭제, parameters: [ { name: geofenceId, in: path, required: true, schema: { type: string } } ], responses: { '204': { description: Deleted }, '404': { $ref: '#/components/responses/Error' } } }
@@ -197,6 +197,8 @@ components:
     StreamId: { name: streamId, in: path, required: true, schema: { type: string } }
     StreamPath: { name: streamPath, in: path, required: true, schema: { type: string } }
     SessionId: { name: sessionId, in: path, required: true, schema: { type: string } }
+    PageLimit: { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 500, default: 200 } }
+    PageOffset: { name: offset, in: query, required: false, schema: { type: integer, minimum: 0, maximum: 100000, default: 0 } }
   requestBodies:
     JsonBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/JsonObject' } } } }
     PublishSessionBody:

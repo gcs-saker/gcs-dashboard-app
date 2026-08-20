@@ -8,6 +8,7 @@ import org.h2.jdbcx.JdbcDataSource
 import org.springframework.jdbc.core.JdbcTemplate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
 class JdbcOrganizationHierarchyRepositoryTest {
@@ -33,6 +34,23 @@ class JdbcOrganizationHierarchyRepositoryTest {
         )
     }
 
+    @Test
+    fun `failed hierarchy rebuild rolls back group and closure changes`() {
+        val dataSource = h2DataSource()
+        val repository = JdbcOrganizationHierarchyRepository(dataSource, seedUnits())
+        val jdbc = JdbcTemplate(dataSource)
+        val closureRowsBefore = jdbc.queryForObject(GroupHierarchyTestSql.countClosureRows, Int::class.java)
+
+        assertFails {
+            repository.create(
+                OrganizationUnit(GroupId("cycle"), "Cycle", GroupType.PLATOON, GroupId("cycle")),
+            )
+        }
+
+        assertEquals(0, jdbc.queryForObject(GroupHierarchyTestSql.countGroupById, Int::class.java, "cycle"))
+        assertEquals(closureRowsBefore, jdbc.queryForObject(GroupHierarchyTestSql.countClosureRows, Int::class.java))
+    }
+
     private fun h2DataSource(): JdbcDataSource =
         JdbcDataSource().apply {
             setURL("jdbc:h2:mem:group_hierarchy_${System.nanoTime()};MODE=PostgreSQL;DB_CLOSE_DELAY=-1")
@@ -50,6 +68,7 @@ class JdbcOrganizationHierarchyRepositoryTest {
 
 private object GroupHierarchyTestSql {
     const val countClosureRows = "SELECT COUNT(*) FROM organization_group_closure"
+    const val countGroupById = "SELECT COUNT(*) FROM organization_groups WHERE id = ?"
     const val depthBetweenGroups = """
         SELECT depth
         FROM organization_group_closure

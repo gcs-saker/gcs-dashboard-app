@@ -88,6 +88,7 @@ data class ApiAccessRecord(
     val correlationId: String,
     val traceId: String,
     val remoteAddress: String,
+    val clientIpTrustSource: String,
 )
 
 interface ApiAccessLogSink {
@@ -99,7 +100,7 @@ class Slf4jApiAccessLogSink : ApiAccessLogSink {
 
     override fun append(record: ApiAccessRecord) {
         logger.info(
-            "api_access method={} path={} status={} durationMs={} correlationId={} traceId={} remote={}",
+            "api_access method={} path={} status={} durationMs={} correlationId={} traceId={} remote={} clientIpTrustSource={}",
             record.method,
             record.path,
             record.status,
@@ -107,6 +108,7 @@ class Slf4jApiAccessLogSink : ApiAccessLogSink {
             record.correlationId,
             record.traceId,
             record.remoteAddress,
+            record.clientIpTrustSource,
         )
     }
 }
@@ -131,16 +133,19 @@ class ApiAccessLogFilter(
     private fun HttpServletRequest.toAccessRecord(
         response: HttpServletResponse,
         startedAt: Long,
-    ): ApiAccessRecord =
-        ApiAccessRecord(
+    ): ApiAccessRecord {
+        val clientIp = clientIpResolver.resolveWithTrust(this)
+        return ApiAccessRecord(
             method = method,
             path = ApiPathSanitizer.sanitize(requestURI),
             status = response.status,
             durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt),
             correlationId = attributeOrUnknown(RequestTraceContract.CORRELATION_ID_ATTRIBUTE),
             traceId = attributeOrUnknown(RequestTraceContract.TRACE_ID_ATTRIBUTE),
-            remoteAddress = clientIpResolver.resolve(this),
+            remoteAddress = clientIp.address,
+            clientIpTrustSource = clientIp.trustSource,
         )
+    }
 
     private fun HttpServletRequest.attributeOrUnknown(name: String): String =
         getAttribute(name)?.toString()?.takeIf { it.isNotBlank() }

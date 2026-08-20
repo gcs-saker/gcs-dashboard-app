@@ -65,14 +65,16 @@ describe("streamDevices", () => {
 
     const devices = await fetchStreamDeviceOptions(fetcher as unknown as typeof fetch);
 
-    expect(fetcher).toHaveBeenNthCalledWith(1, "/media-control/api/v1/streams", {
+    expect(fetcher).toHaveBeenNthCalledWith(1, "/media-control/api/v1/streams", expect.objectContaining({
       credentials: "include",
       headers: { Accept: "application/json" },
-    });
-    expect(fetcher).toHaveBeenNthCalledWith(2, "/api/telemetry/all", {
+      signal: expect.any(AbortSignal),
+    }));
+    expect(fetcher).toHaveBeenNthCalledWith(2, "/api/telemetry/all", expect.objectContaining({
       credentials: "include",
       headers: { Accept: "application/json" },
-    });
+      signal: expect.any(AbortSignal),
+    }));
     expect(devices[0]).toMatchObject({
       id: "registry-raw.drone-07.front",
       name: "Drone 07 Front",
@@ -129,10 +131,11 @@ describe("streamDevices", () => {
     const history = await fetchTelemetryHistory("raw/local/webcam", 25, fetcher as unknown as typeof fetch);
 
     expect(buildTelemetryHistoryPath("raw/local/webcam", 25)).toBe("/telemetry/raw%2Flocal%2Fwebcam/history?limit=25");
-    expect(fetcher).toHaveBeenCalledWith("/api/telemetry/raw%2Flocal%2Fwebcam/history?limit=25", {
+    expect(fetcher).toHaveBeenCalledWith("/api/telemetry/raw%2Flocal%2Fwebcam/history?limit=25", expect.objectContaining({
       credentials: "include",
       headers: { Accept: "application/json" },
-    });
+      signal: expect.any(AbortSignal),
+    }));
     expect(history[0].telemetry.latitude).toBe(35.9);
   });
 

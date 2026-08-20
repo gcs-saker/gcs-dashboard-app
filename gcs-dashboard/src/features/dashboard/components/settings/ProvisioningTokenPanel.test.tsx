@@ -66,7 +66,10 @@ function renderPanel(role: UserRole) {
   storeAuthSession({
     accessToken: "test-access-token",
     expiresAt: new Date(Date.now() + 60_000).toISOString(),
-    user: { role, username: `${role}-user` },
+    user: { role, username: `${role}-user`, groupId: "co-a", securityVersion: 1,
+      capabilities: { canView: true, canControl: role !== "viewer", canManage: role === "admin",
+        canSendTalkback: role !== "viewer", canPublish: role !== "viewer",
+        canManageMembers: role === "admin", canManageDevices: role === "admin" } },
   });
   render(
     <AuthProvider>

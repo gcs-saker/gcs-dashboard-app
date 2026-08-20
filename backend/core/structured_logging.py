@@ -141,19 +141,24 @@ def is_sensitive_key(key: str) -> bool:
     return any(fragment in normalized for fragment in SENSITIVE_FIELD_FRAGMENTS)
 
 
-def log_request_completed(logger: Any, request: Request, response: Response) -> None:
+def log_request_completed(logger: Any, request: Request, response: Response, duration_ms: int) -> None:
     logger.info(
         "http_request_completed",
         http_method=request.method,
         http_route=route_template(request),
         status_code=response.status_code,
+        duration_ms=duration_ms,
+        result="success" if response.status_code < 400 else "rejected",
     )
 
 
-def log_request_failed(logger: Any, request: Request, exc: Exception) -> None:
+def log_request_failed(logger: Any, request: Request, exc: Exception, duration_ms: int) -> None:
     logger.error(
         "http_request_failed",
         http_method=request.method,
         http_route=route_template(request),
         error_type=exc.__class__.__name__,
+        error_code="unhandled_request_failure",
+        duration_ms=duration_ms,
+        result="failed",
     )

@@ -32,6 +32,7 @@ interface AuthUserRepository {
     fun findByEmail(email: String): AuthUser?
     fun save(user: AuthUser): AuthUser
     fun list(): List<AuthUser>
+    fun listByGroup(groupId: GroupId, limit: Int = 200, offset: Int = 0): List<AuthUser>
     fun update(user: AuthUser): AuthUser
     fun replaceGroupAdmin(groupId: GroupId, username: String): AuthUser
 }

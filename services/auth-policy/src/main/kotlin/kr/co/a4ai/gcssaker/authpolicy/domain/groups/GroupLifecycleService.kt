@@ -21,9 +21,9 @@ class GroupLifecycleService(
 ) {
     private val administrationPolicy = GroupAdministrationPolicy()
 
-    fun list(principal: AuthenticatedPrincipal): List<OrganizationUnit> {
+    fun list(principal: AuthenticatedPrincipal, limit: Int = 200, offset: Int = 0): List<OrganizationUnit> {
         requireSystemAdmin(principal)
-        return groups.listAll()
+        return groups.listAll().drop(offset).take(limit)
     }
 
     @Synchronized
@@ -77,7 +77,7 @@ class GroupLifecycleService(
         require(groups.listAll().none { it.parentId == groupId && it.status == GroupStatus.ACTIVE }) {
             "active child groups must be deactivated first"
         }
-        require(devices.list().none { it.groupId == groupId && it.status == RegisteredDeviceStatus.ACTIVE }) {
+        require(!devices.hasActiveInGroup(groupId)) {
             "active devices must be disabled first"
         }
         invalidateSubtreeUsers(groupId)

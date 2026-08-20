@@ -29,11 +29,10 @@ func (s Server) dashboardStreamItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) writeDashboardTalkbackPlayback(w http.ResponseWriter, r *http.Request, streamID string) {
-	parsed, talkback, publisherGroupID, ok := s.authorizeTalkbackRoute(w, r, streamID, false)
+	talkback, publisherGroupID, ok := s.authorizeTalkbackRoute(w, r, streamID, false)
 	if !ok {
 		return
 	}
-	_ = parsed
 	playbackURLs := s.withPlaybackTokenForGroup(s.playback.Build(talkback), talkback, publisherGroupID)
 	writeJSON(w, http.StatusOK, streamPlaybackResponse{
 		StreamID: talkback.StreamID, Status: domain.StreamStatusOnline, PlaybackURLs: playbackURLs,
@@ -41,18 +40,18 @@ func (s Server) writeDashboardTalkbackPlayback(w http.ResponseWriter, r *http.Re
 }
 
 func (s Server) writeDashboardTalkbackPublish(w http.ResponseWriter, r *http.Request, streamID string) {
-	_, talkback, publisherGroupID, ok := s.authorizeTalkbackRoute(w, r, streamID, true)
+	talkback, publisherGroupID, ok := s.authorizeTalkbackRoute(w, r, streamID, true)
 	if !ok {
 		return
 	}
 	s.writeStreamPublishResponseForGroup(w, talkback, publisherGroupID)
 }
 
-func (s Server) authorizeTalkbackRoute(w http.ResponseWriter, r *http.Request, streamID string, sendsAudio bool) (domain.ParsedStreamPath, domain.ParsedStreamPath, string, bool) {
+func (s Server) authorizeTalkbackRoute(w http.ResponseWriter, r *http.Request, streamID string, sendsAudio bool) (domain.ParsedStreamPath, string, bool) {
 	parsed, err := domain.ParseStreamID(streamID)
 	if err != nil || parsed.Prefix != "raw" {
 		writeJSON(w, http.StatusUnprocessableEntity, errorPayload("talkback target must be a raw stream"))
-		return domain.ParsedStreamPath{}, domain.ParsedStreamPath{}, "", false
+		return domain.ParsedStreamPath{}, "", false
 	}
 	var accessError error
 	if sendsAudio {
@@ -62,7 +61,7 @@ func (s Server) authorizeTalkbackRoute(w http.ResponseWriter, r *http.Request, s
 	}
 	if accessError != nil {
 		s.writeStreamAccessError(w, accessError)
-		return domain.ParsedStreamPath{}, domain.ParsedStreamPath{}, "", false
+		return domain.ParsedStreamPath{}, "", false
 	}
 	operatorID := strings.TrimSpace(r.URL.Query().Get("operatorId"))
 	if operatorID == "" {
@@ -71,9 +70,9 @@ func (s Server) authorizeTalkbackRoute(w http.ResponseWriter, r *http.Request, s
 	talkback, err := domain.ParseStreamPath("talkback/" + parsed.Path + "/" + operatorID)
 	if err != nil {
 		writeJSON(w, http.StatusUnprocessableEntity, errorPayload("operator id is invalid"))
-		return domain.ParsedStreamPath{}, domain.ParsedStreamPath{}, "", false
+		return domain.ParsedStreamPath{}, "", false
 	}
-	return parsed, talkback, s.groups.TargetFor(parsed).PublisherGroupID, true
+	return talkback, s.groups.TargetFor(parsed).PublisherGroupID, true
 }
 
 func (s Server) writeDashboardStreamPublish(w http.ResponseWriter, r *http.Request, streamID string) {

@@ -10,7 +10,6 @@ export const BROWSER_STORAGE_RESPONSIBILITIES = Object.freeze({
     "rtt-snapshot-cache",
   ]),
   memoryOnly: Object.freeze([
-    "access-token",
     "current-interaction-state",
   ]),
   sessionStorage: Object.freeze([
@@ -28,6 +27,11 @@ export const BROWSER_STORAGE_RESPONSIBILITIES = Object.freeze({
     "refresh-token",
   ]),
   zustand: Object.freeze([
+    "memory-only-access-token",
+    "memory-only-current-user",
+    "refresh-request-coordination",
+    "system-status-memory-cache",
+    "operational-event-memory-history",
     "selected-stream",
     "selected-tab",
     "event-filter",

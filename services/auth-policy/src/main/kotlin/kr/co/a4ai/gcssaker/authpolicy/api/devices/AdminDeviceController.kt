@@ -7,6 +7,10 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.GroupAdministrationPolicy
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisterDeviceCommand
 import kr.co.a4ai.gcssaker.authpolicy.domain.UpdateDeviceCommand
+import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
+import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PatchMapping
@@ -14,9 +18,11 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
+@Validated
 @RequestMapping(value = [AdminDeviceApiRoutes.RESOURCE_ROOT, AdminDeviceApiRoutes.ROOT])
 class AdminDeviceController(
     private val lifecycle: DeviceLifecycleService,
@@ -28,11 +34,16 @@ class AdminDeviceController(
     @RequiresBearerAuth
     fun list(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestParam(defaultValue = "200") @Min(1) @Max(500) limit: Int = 200,
+        @RequestParam(defaultValue = "0") @Min(0) offset: Int = 0,
     ): List<RegisteredDeviceResponse> {
         val principal = requireAdministrator(principalResolver.requirePrincipal(authorization))
-        return lifecycle.list()
-            .filter { administrationPolicy.canManageGroup(principal, it.groupId) }
-            .map { it.toAdminResponse() }
+        val devices = if (principal.role == UserRole.ADMIN) {
+            lifecycle.list(limit, offset)
+        } else {
+            lifecycle.listByGroup(principal.groupId, limit, offset)
+        }
+        return devices.filter { administrationPolicy.canManageGroup(principal, it.groupId) }.map { it.toAdminResponse() }
     }
 
     @GetMapping(AdminDeviceApiRoutes.DEVICE)

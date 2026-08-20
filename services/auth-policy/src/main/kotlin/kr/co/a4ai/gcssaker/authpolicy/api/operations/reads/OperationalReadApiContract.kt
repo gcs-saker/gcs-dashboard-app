@@ -26,6 +26,9 @@ object OperationalReadQueryPolicy {
     const val MAX_LIMIT = 500
 
     fun normalizeLimit(value: Int?): Int = value?.coerceIn(MIN_LIMIT, MAX_LIMIT) ?: DEFAULT_LIMIT
+    fun normalizeOffset(value: Int?): Int = value?.coerceIn(0, MAX_OFFSET) ?: 0
+
+    private const val MAX_OFFSET = 100_000
 }
 
 object OperationalReadStatusContract {

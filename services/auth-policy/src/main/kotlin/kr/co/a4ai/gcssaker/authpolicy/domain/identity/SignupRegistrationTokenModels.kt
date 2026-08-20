@@ -45,8 +45,9 @@ data class SignupRegistrationTokenIssue(
 )
 
 interface SignupRegistrationTokenRepository {
-    fun list(): List<SignupRegistrationTokenRecord>
-    fun activeCandidates(now: Instant): List<SignupRegistrationTokenRecord>
+    fun list(limit: Int = 200, offset: Int = 0): List<SignupRegistrationTokenRecord>
+    fun findByTokenId(tokenId: String): SignupRegistrationTokenRecord?
+    fun activeCandidates(now: Instant, limit: Int = 1_000): List<SignupRegistrationTokenRecord>
     fun save(record: SignupRegistrationTokenRecord): SignupRegistrationTokenRecord
     fun consume(tokenId: String, now: Instant): Boolean
     fun revoke(tokenId: String, revokedBy: String, now: Instant): Boolean
@@ -62,8 +63,9 @@ object DirectSignupTransactionBoundary : SignupTransactionBoundary {
 
 class InMemorySignupRegistrationTokenRepository : SignupRegistrationTokenRepository {
     private val records = mutableMapOf<String, SignupRegistrationTokenRecord>()
-    override fun list() = records.values.sortedByDescending { it.createdAt }
-    override fun activeCandidates(now: Instant) = records.values.filter { it.activeAt(now) }
+    override fun list(limit: Int, offset: Int) = records.values.sortedByDescending { it.createdAt }.drop(offset).take(limit)
+    override fun findByTokenId(tokenId: String) = records[tokenId]
+    override fun activeCandidates(now: Instant, limit: Int) = records.values.asSequence().filter { it.activeAt(now) }.take(limit).toList()
     @Synchronized override fun save(record: SignupRegistrationTokenRecord) = record.also { records[it.tokenId] = it }
     @Synchronized override fun consume(tokenId: String, now: Instant): Boolean {
         val record = records[tokenId]?.takeIf { it.activeAt(now) } ?: return false
@@ -126,7 +128,9 @@ class SignupRegistrationTokenService(
         return SignupRegistrationTokenIssue(repository.save(record), token)
     }
 
-    fun list(): List<SignupRegistrationTokenRecord> = repository.list()
+    fun list(limit: Int = 200, offset: Int = 0): List<SignupRegistrationTokenRecord> = repository.list(limit, offset)
+
+    fun find(tokenId: String): SignupRegistrationTokenRecord? = repository.findByTokenId(tokenId)
 
     fun revoke(tokenId: String, revokedBy: String): Boolean =
         repository.revoke(tokenId, revokedBy, clock.instant())

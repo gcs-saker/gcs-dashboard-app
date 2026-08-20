@@ -3,6 +3,8 @@ package kr.co.a4ai.gcssaker.authpolicy.application
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
 import org.springframework.core.task.TaskExecutor
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicLong
 
@@ -49,16 +51,20 @@ data class OperationalAuditPublisherSnapshot(
     val failed: Long,
 )
 
-class OperationalAuditPublisherMetrics {
+class OperationalAuditPublisherMetrics(registry: MeterRegistry? = null) {
     private val submitted = AtomicLong()
     private val failed = AtomicLong()
+    private val submittedCounter: Counter? = registry?.counter("gcs.auth_policy.audit.submitted")
+    private val failedCounter: Counter? = registry?.counter("gcs.auth_policy.audit.failed")
 
     fun recordSubmitted() {
         submitted.incrementAndGet()
+        submittedCounter?.increment()
     }
 
     fun recordFailed() {
         failed.incrementAndGet()
+        failedCounter?.increment()
     }
 
     fun snapshot(): OperationalAuditPublisherSnapshot =

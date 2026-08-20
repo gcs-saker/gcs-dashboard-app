@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.validation.annotation.Validated
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
 import java.util.UUID
 
 object GeofenceApiRoutes {
@@ -34,6 +38,7 @@ data class GeofenceResponse(
 )
 
 @RestController
+@Validated
 class GeofenceController(
     private val repository: GeofenceRepository,
     principalResolver: BearerPrincipalResolver,
@@ -66,7 +71,10 @@ class GeofenceController(
     @RequiresBearerAuth
     fun list(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
-    ): List<GeofenceResponse> = repository.findVisible(requestReader.principal(authorization)).map { it.toResponse() }
+        @RequestParam(defaultValue = "200") @Min(1) @Max(500) limit: Int = 200,
+        @RequestParam(defaultValue = "0") @Min(0) offset: Int = 0,
+    ): List<GeofenceResponse> = repository.findVisible(requestReader.principal(authorization), limit, offset)
+        .map { it.toResponse() }
 
     @DeleteMapping(GeofenceApiRoutes.BY_ID)
     @ResponseStatus(HttpStatus.NO_CONTENT)

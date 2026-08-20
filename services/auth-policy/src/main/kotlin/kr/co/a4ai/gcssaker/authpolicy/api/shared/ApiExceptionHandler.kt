@@ -27,14 +27,16 @@ class ApiExceptionHandler(
         problem(error.statusCode.value(), error.code, error.reason ?: "request failed", request)
 
     private fun problem(status: Int, code: String, detail: String, request: HttpServletRequest): ProblemDetail {
+        val clientIp = clientIpResolver.resolveWithTrust(request)
         logger.warn(
-            "api_error code={} status={} method={} path={} correlationId={} remote={}",
+            "api_error code={} status={} method={} path={} correlationId={} remote={} clientIpTrustSource={}",
             code,
             status,
             request.method,
             ApiPathSanitizer.sanitize(request.requestURI),
             request.getAttribute(RequestTraceContract.CORRELATION_ID_ATTRIBUTE) ?: ApiAccessLogContract.UNKNOWN_VALUE,
-            clientIpResolver.resolve(request),
+            clientIp.address,
+            clientIp.trustSource,
         )
         return ProblemDetail.forStatusAndDetail(HttpStatus.valueOf(status), detail).also {
             it.title = HttpStatus.valueOf(status).reasonPhrase

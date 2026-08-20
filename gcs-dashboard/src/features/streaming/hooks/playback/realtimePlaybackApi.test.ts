@@ -40,7 +40,7 @@ describe("realtimePlaybackApi", () => {
       expect.objectContaining({
         method: "GET",
         headers: { Accept: "application/json" },
-        signal: abortController.signal,
+        signal: expect.any(AbortSignal),
       }),
     );
   });

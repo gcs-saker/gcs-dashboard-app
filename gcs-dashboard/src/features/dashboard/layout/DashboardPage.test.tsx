@@ -31,7 +31,9 @@ describe("DashboardPage", () => {
     storeAuthSession({
       accessToken: "test-access-token",
       expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
-      user: { username: "operator01", role: "operator" },
+      user: { username: "operator01", role: "operator", groupId: "co-a", securityVersion: 1,
+        capabilities: { canView: true, canControl: true, canManage: false, canSendTalkback: true,
+          canPublish: true, canManageMembers: false, canManageDevices: false } },
     });
   });
 

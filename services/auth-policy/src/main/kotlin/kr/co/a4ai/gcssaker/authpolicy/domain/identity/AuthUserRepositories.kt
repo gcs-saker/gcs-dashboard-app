@@ -23,6 +23,8 @@ class InMemoryAuthUserRepository(users: Collection<AuthUser>) : AuthUserReposito
     }
 
     override fun list(): List<AuthUser> = usersByUsername.values.sortedBy { it.username }
+    override fun listByGroup(groupId: GroupId, limit: Int, offset: Int): List<AuthUser> =
+        usersByUsername.values.filter { it.groupId == groupId }.sortedBy { it.username }.drop(offset).take(limit)
 
     @Synchronized
     override fun update(user: AuthUser): AuthUser {
@@ -66,6 +68,8 @@ class CachedAuthUserRepository(
         delegate.save(user).also(::cache)
 
     override fun list(): List<AuthUser> = delegate.list().onEach(::cache)
+    override fun listByGroup(groupId: GroupId, limit: Int, offset: Int): List<AuthUser> =
+        delegate.listByGroup(groupId, limit, offset).onEach(::cache)
 
     @Synchronized
     override fun update(user: AuthUser): AuthUser =
@@ -74,7 +78,7 @@ class CachedAuthUserRepository(
     @Synchronized
     override fun replaceGroupAdmin(groupId: GroupId, username: String): AuthUser {
         val replaced = delegate.replaceGroupAdmin(groupId, username)
-        delegate.list().filter { it.groupId == groupId }.forEach(::cache)
+        delegate.listByGroup(groupId, limit = 500).forEach(::cache)
         return replaced
     }
 

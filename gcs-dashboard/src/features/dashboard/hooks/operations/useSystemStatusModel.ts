@@ -14,7 +14,6 @@ import {
   saveSystemStatusLocalCache,
 } from "@dashboard/preferences/dashboardLocalCache";
 import {
-  DEFAULT_SERVER_STATUS,
   fetchDashboardServerStatus,
   type DashboardServerStatusSnapshot,
 } from "@dashboard/operations/serverStatus";
@@ -23,6 +22,10 @@ import {
   buildSystemStatusViewModel,
   type SystemStatusViewModel,
 } from "@dashboard/operations/systemStatusViewModel";
+import {
+  resetSystemStatusMemoryStore,
+  systemStatusMemoryStore,
+} from "@dashboard/stores/systemStatusMemoryStore";
 
 interface UseSystemStatusModelInput {
   fetcher?: typeof fetch;
@@ -30,21 +33,8 @@ interface UseSystemStatusModelInput {
   refreshMs: number;
 }
 
-interface SystemStatusMemoryCache {
-  rttHistory: RttSample[];
-  status: DashboardServerStatusSnapshot;
-}
-
-let memoryCache: SystemStatusMemoryCache = {
-  rttHistory: [],
-  status: DEFAULT_SERVER_STATUS,
-};
-
 export function resetSystemStatusModelMemoryCache(): void {
-  memoryCache = {
-    rttHistory: [],
-    status: DEFAULT_SERVER_STATUS,
-  };
+  resetSystemStatusMemoryStore();
 }
 
 registerSessionScopedCache(resetSystemStatusModelMemoryCache);
@@ -57,14 +47,15 @@ export function useSystemStatusModel({
   status: DashboardServerStatusSnapshot;
   viewModel: SystemStatusViewModel;
 } {
-  const [rttHistory, setRttHistory] = useState<RttSample[]>(() => memoryCache.rttHistory);
+  const initialCache = systemStatusMemoryStore.getState();
+  const [rttHistory, setRttHistory] = useState<RttSample[]>(() => initialCache.rttHistory);
   const [cachedStatus, setCachedStatus] = useState<DashboardServerStatusSnapshot | null>(() =>
-    memoryCache.status.checkedAt ? memoryCache.status : null,
+    initialCache.status.checkedAt ? initialCache.status : null,
   );
   const statusQuery = useQuery({
     queryFn: ({ signal }) => fetchDashboardServerStatus(withAbortSignal(fetcher ?? globalThis.fetch, signal)),
     queryKey: DASHBOARD_QUERY_KEY_FACTORY.serverStatus(refreshMs, fetcher ? "custom-fetcher" : "default-fetcher"),
-    initialData: memoryCache.status,
+    initialData: initialCache.status,
     initialDataUpdatedAt: 0,
     refetchInterval: dashboardRefetchInterval(refreshMs),
     staleTime: dashboardStaleTimeForPolling(refreshMs, DASHBOARD_QUERY_POLICY.statusStaleTimeMs),
@@ -77,7 +68,7 @@ export function useSystemStatusModel({
     let disposed = false;
     void loadSystemStatusLocalCache().then((cache) => {
       if (disposed) return;
-      memoryCache = cache;
+      systemStatusMemoryStore.setState(cache, true);
       setCachedStatus(cache.status.checkedAt ? cache.status : null);
       setRttHistory(cache.rttHistory);
     });
@@ -109,7 +100,7 @@ function updateRttHistoryCache(
     checkedAt: status.checkedAt ?? Date.now(),
     latencyMs: status.latencyMs,
   });
-  memoryCache = { rttHistory: next, status };
+  systemStatusMemoryStore.setState({ rttHistory: next, status }, true);
   void saveSystemStatusLocalCache(status, next);
   return next;
 }

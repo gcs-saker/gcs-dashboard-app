@@ -155,6 +155,25 @@ class RequestSecurityFiltersTest {
         assertEquals(204, sink.records.single().status)
         assertEquals("corr-002", sink.records.single().correlationId)
         assertEquals("203.0.113.20", sink.records.single().remoteAddress)
+        assertEquals(ClientIpResolver.TRUST_SOURCE_DIRECT, sink.records.single().clientIpTrustSource)
+    }
+
+    @Test
+    fun `client ip resolver accepts forwarded address only from configured edge cidr`() {
+        val resolver = ClientIpResolver(trustedProxyCidrs = listOf(IpCidr.parse("10.20.0.0/24")))
+        val trustedRequest = MockHttpServletRequest().apply {
+            remoteAddr = "10.20.0.10"
+            addHeader("X-Real-IP", "203.0.113.25")
+        }
+        val untrustedRequest = MockHttpServletRequest().apply {
+            remoteAddr = "10.21.0.10"
+            addHeader("X-Real-IP", "203.0.113.26")
+        }
+
+        assertEquals("203.0.113.25", resolver.resolve(trustedRequest))
+        assertEquals(ClientIpResolver.TRUST_SOURCE_CONFIGURED_EDGE, resolver.resolveWithTrust(trustedRequest).trustSource)
+        assertEquals("10.21.0.10", resolver.resolve(untrustedRequest))
+        assertEquals(ClientIpResolver.TRUST_SOURCE_DIRECT, resolver.resolveWithTrust(untrustedRequest).trustSource)
     }
 
     @Test

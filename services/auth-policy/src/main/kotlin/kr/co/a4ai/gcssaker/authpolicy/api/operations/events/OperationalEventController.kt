@@ -34,9 +34,16 @@ class OperationalEventController(
         @RequestParam(required = false) to: String?,
     ): List<OperationalEventResponse> {
         val context = requests.context(authorization, query, severity, from, to)
-        val events = repository.eventsFor(context.principal, context.query)
+        val events = repository.eventPageFor(
+            context.principal,
+            requests.pageQuery(context.query, LEGACY_EVENTS_LIMIT, after = null),
+        ).events
         auditPublisher.publish(context.principal, context.query, events.size)
         return events.map { it.toResponse() }
+    }
+
+    private companion object {
+        const val LEGACY_EVENTS_LIMIT = 500
     }
 
     @GetMapping(OperationalEventApiRoutes.EVENTS_PAGE)

@@ -134,6 +134,8 @@ class JdbcAuthUserRepositoryTest {
         override fun save(user: AuthUser): AuthUser = user
 
         override fun list(): List<AuthUser> = listOf(user)
+        override fun listByGroup(groupId: GroupId, limit: Int, offset: Int): List<AuthUser> =
+            listOf(user).filter { it.groupId == groupId }.drop(offset).take(limit)
 
         override fun update(user: AuthUser): AuthUser = user
 

@@ -12,9 +12,9 @@ class GroupMemberAdministrationService(
     private val administrationPolicy: GroupAdministrationPolicy = GroupAdministrationPolicy(),
     private val refreshSessions: RefreshSessionStore = StatelessRefreshSessionStore,
 ) {
-    fun list(principal: AuthenticatedPrincipal, groupId: GroupId): List<AuthUser> {
+    fun list(principal: AuthenticatedPrincipal, groupId: GroupId, limit: Int = 200, offset: Int = 0): List<AuthUser> {
         administrationPolicy.requireGroupManagement(principal, groupId)
-        return users.list().filter { it.groupId == groupId }.sortedBy { it.username }
+        return users.listByGroup(groupId, limit, offset)
     }
 
     @Synchronized
@@ -62,7 +62,8 @@ class GroupMemberAdministrationService(
         username: String,
     ): AuthUser {
         administrationPolicy.requireSystemAdministrator(principal)
-        val before = users.list().filter { it.groupId == groupId && it.role == UserRole.GROUP_ADMIN }.map { it.username }
+        val before = users.listByGroup(groupId, limit = 500)
+            .filter { it.role == UserRole.GROUP_ADMIN }.map { it.username }
         return users.replaceGroupAdmin(groupId, username).also {
             (before + username).distinct().forEach(refreshSessions::revokePrincipalSessions)
         }

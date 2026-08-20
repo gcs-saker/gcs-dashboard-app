@@ -390,7 +390,7 @@ async def wait_for_track_frame(track_queue: asyncio.Queue[object], timeout_secon
     return await asyncio.wait_for(track.recv(), timeout=timeout_seconds)  # type: ignore[attr-defined]
 
 
-async def run_webrtc_smoke(args: argparse.Namespace) -> int:
+def load_aiortc_runtime() -> tuple[Any, Any, Any, Any]:
     try:
         from aiortc import (
             RTCConfiguration,
@@ -400,6 +400,56 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
         )
     except ImportError as error:
         raise RuntimeError("aiortc is required for --run. Install with: python -m pip install aiortc") from error
+    return RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
+
+
+@dataclass(frozen=True)
+class FirstFrameResult:
+    video_frame: object | None = None
+    video_elapsed_ms: float | None = None
+    audio_elapsed_ms: float | None = None
+
+
+@dataclass(frozen=True)
+class WebRTCSmokeResult:
+    local_inspection: SdpInspection
+    answer_inspection: SdpInspection
+    selected_pair: SelectedIcePair | None
+    path_summary: IcePathSummary
+    offer_ready_elapsed_ms: float
+    answer_elapsed_ms: float
+    frames: FirstFrameResult
+
+
+async def receive_required_frames(
+    args: argparse.Namespace,
+    video_tracks: asyncio.Queue[object],
+    audio_tracks: asyncio.Queue[object],
+    started: float,
+) -> FirstFrameResult:
+    if not args.require_video_frame:
+        return FirstFrameResult()
+    video_task = asyncio.create_task(wait_for_track_frame(video_tracks, args.timeout_seconds))
+    audio_task = None
+    if args.measure_audio_video_sync:
+        audio_task = asyncio.create_task(wait_for_track_frame(audio_tracks, args.timeout_seconds))
+    frame = await video_task
+    video_elapsed_ms = (time.perf_counter() - started) * 1000
+    if audio_task is None:
+        return FirstFrameResult(frame, video_elapsed_ms)
+    await audio_task
+    return FirstFrameResult(frame, video_elapsed_ms, (time.perf_counter() - started) * 1000)
+
+
+async def hold_connection_if_requested(args: argparse.Namespace) -> None:
+    if args.hold_seconds <= 0:
+        return
+    await asyncio.sleep(args.hold_seconds)
+    print(f"Connected hold seconds: {args.hold_seconds:.1f}")
+
+
+async def run_webrtc_smoke(args: argparse.Namespace) -> int:
+    RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription = load_aiortc_runtime()
 
     peer_connection = RTCPeerConnection(
         RTCConfiguration(
@@ -463,54 +513,58 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
             )
         path_summary = summarize_ice_paths([selected_pair] if selected_pair is not None else [])
 
-        frame = None
-        first_frame_elapsed_ms = None
-        first_audio_frame_elapsed_ms = None
-        if args.require_video_frame:
-            video_task = asyncio.create_task(wait_for_track_frame(video_tracks, args.timeout_seconds))
-            audio_task = (
-                asyncio.create_task(wait_for_track_frame(audio_tracks, args.timeout_seconds))
-                if args.measure_audio_video_sync
-                else None
-            )
-            frame = await video_task
-            first_frame_elapsed_ms = (time.perf_counter() - started) * 1000
-            if audio_task is not None:
-                await audio_task
-                first_audio_frame_elapsed_ms = (time.perf_counter() - started) * 1000
-
-        print("WebRTC ICE smoke run passed")
-        print(f"WHEP URL: {redact_url_query(args.whep_url)}")
-        print(f"ICE server URL: {args.ice_server_url}")
-        print(f"Local offer candidates: {local_inspection.candidate_count}")
-        print_candidate_summary("Local offer", local_inspection.candidates)
-        print(f"WHEP answer candidates: {answer_inspection.candidate_count}")
-        print_candidate_summary("WHEP answer", answer_inspection.candidates)
-        print(f"Local offer ready ms: {offer_ready_elapsed_ms:.1f}")
-        print(f"WHEP answer latency ms: {answer_elapsed_ms:.1f}")
-        print(f"ICE gathering state: {peer_connection.iceGatheringState}")
-        print(f"ICE connection state: {peer_connection.iceConnectionState}")
-        print_selected_ice_pair(selected_pair)
-        print(
-            "ICE path summary: "
-            f"total={path_summary.total}, direct={path_summary.direct}, relay={path_summary.relay}, "
-            f"direct_ratio={path_summary.direct_ratio:.4f}, relay_ratio={path_summary.relay_ratio:.4f}"
+        frames = await receive_required_frames(args, video_tracks, audio_tracks, started)
+        print_webrtc_smoke_result(
+            args,
+            peer_connection,
+            WebRTCSmokeResult(
+                local_inspection,
+                answer_inspection,
+                selected_pair,
+                path_summary,
+                offer_ready_elapsed_ms,
+                answer_elapsed_ms,
+                frames,
+            ),
         )
-        print(f"Direct ICE path ratio: {path_summary.direct_ratio:.4f}")
-        print(f"Relay ICE path ratio: {path_summary.relay_ratio:.4f}")
-        if frame is not None and first_frame_elapsed_ms is not None:
-            print(f"First video frame latency ms: {first_frame_elapsed_ms:.1f}")
-            print(f"First video frame size: {frame.width}x{frame.height}")  # type: ignore[attr-defined]
-        if first_frame_elapsed_ms is not None and first_audio_frame_elapsed_ms is not None:
-            sync_offset_ms = abs(first_audio_frame_elapsed_ms - first_frame_elapsed_ms)
-            print(f"First audio frame latency ms: {first_audio_frame_elapsed_ms:.1f}")
-            print(f"Audio/video sync offset ms: {sync_offset_ms:.1f}")
-        if args.hold_seconds > 0:
-            await asyncio.sleep(args.hold_seconds)
-            print(f"Connected hold seconds: {args.hold_seconds:.1f}")
+        await hold_connection_if_requested(args)
         return 0
     finally:
         await peer_connection.close()
+
+
+def print_webrtc_smoke_result(args: argparse.Namespace, peer_connection: Any, result: WebRTCSmokeResult) -> None:
+    print("WebRTC ICE smoke run passed")
+    print(f"WHEP URL: {redact_url_query(args.whep_url)}")
+    print(f"ICE server URL: {args.ice_server_url}")
+    print(f"Local offer candidates: {result.local_inspection.candidate_count}")
+    print_candidate_summary("Local offer", result.local_inspection.candidates)
+    print(f"WHEP answer candidates: {result.answer_inspection.candidate_count}")
+    print_candidate_summary("WHEP answer", result.answer_inspection.candidates)
+    print(f"Local offer ready ms: {result.offer_ready_elapsed_ms:.1f}")
+    print(f"WHEP answer latency ms: {result.answer_elapsed_ms:.1f}")
+    print(f"ICE gathering state: {peer_connection.iceGatheringState}")
+    print(f"ICE connection state: {peer_connection.iceConnectionState}")
+    print_selected_ice_pair(result.selected_pair)
+    print(
+        "ICE path summary: "
+        f"total={result.path_summary.total}, direct={result.path_summary.direct}, relay={result.path_summary.relay}, "
+        f"direct_ratio={result.path_summary.direct_ratio:.4f}, relay_ratio={result.path_summary.relay_ratio:.4f}"
+    )
+    print(f"Direct ICE path ratio: {result.path_summary.direct_ratio:.4f}")
+    print(f"Relay ICE path ratio: {result.path_summary.relay_ratio:.4f}")
+    print_first_frame_result(result.frames)
+
+
+def print_first_frame_result(frames: FirstFrameResult) -> None:
+    if frames.video_frame is not None and frames.video_elapsed_ms is not None:
+        print(f"First video frame latency ms: {frames.video_elapsed_ms:.1f}")
+        print(
+            f"First video frame size: {frames.video_frame.width}x{frames.video_frame.height}"  # type: ignore[attr-defined]
+        )
+    if frames.video_elapsed_ms is not None and frames.audio_elapsed_ms is not None:
+        print(f"First audio frame latency ms: {frames.audio_elapsed_ms:.1f}")
+        print(f"Audio/video sync offset ms: {abs(frames.audio_elapsed_ms - frames.video_elapsed_ms):.1f}")
 
 
 def print_candidate_summary(label: str, summary: CandidateSummary) -> None:

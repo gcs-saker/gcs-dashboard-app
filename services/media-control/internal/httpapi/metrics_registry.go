@@ -15,6 +15,8 @@ func newMetricsRegistry() (*prometheus.Registry, *Metrics) {
 		streamCacheEvents:      newStreamCacheEventsMetric(),
 		iceCacheEvents:         newIceCacheEventsMetric(),
 		errors:                 newErrorsMetric(),
+		gatewayMessages:        newGatewayMessagesMetric(),
+		gatewayDuration:        newGatewayDurationMetric(),
 	}
 	registry.MustRegister(
 		metrics.httpRequests,
@@ -26,8 +28,25 @@ func newMetricsRegistry() (*prometheus.Registry, *Metrics) {
 		metrics.streamCacheEvents,
 		metrics.iceCacheEvents,
 		metrics.errors,
+		metrics.gatewayMessages,
+		metrics.gatewayDuration,
 	)
 	return registry, metrics
+}
+
+func newGatewayMessagesMetric() *prometheus.CounterVec {
+	return prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: metricNamespace, Subsystem: metricSubsystem,
+		Name: "gateway_messages_total", Help: "gRPC gateway messages by status and stable reason.",
+	}, []string{"status", "reason"})
+}
+
+func newGatewayDurationMetric() *prometheus.HistogramVec {
+	return prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: metricNamespace, Subsystem: metricSubsystem,
+		Name: "gateway_message_duration_seconds", Help: "gRPC gateway message processing latency by status.",
+		Buckets: requestDurationBuckets,
+	}, []string{"status"})
 }
 
 func newHTTPRequestsMetric() *prometheus.CounterVec {

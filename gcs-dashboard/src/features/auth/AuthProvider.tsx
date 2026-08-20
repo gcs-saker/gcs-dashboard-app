@@ -7,6 +7,7 @@ import {
   getStoredUser,
 } from "./authStorage";
 import type { AuthenticatedUser, LoginRequest } from "./types";
+import { safeParseAuthenticatedUser } from "./authResponseValidation";
 
 interface AuthContextValue {
   accessToken: string | null;
@@ -26,9 +27,7 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children, onSessionCleared }: AuthProviderProps) {
   const [accessToken, setAccessToken] = useState<string | null>(() => getStoredAccessToken());
-  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(() =>
-    getStoredUser<AuthenticatedUser>(),
-  );
+  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(readStoredAuthenticatedUser);
   const [isAuthReady, setIsAuthReady] = useState<boolean>(() => Boolean(getStoredAccessToken()));
   const didRequestLogoutRef = useRef(false);
   useSessionRefresh(accessToken, didRequestLogoutRef, setAccessToken, setCurrentUser, setIsAuthReady);
@@ -113,6 +112,14 @@ function tokenUser(token: Awaited<ReturnType<typeof loginRequest>>): Authenticat
     securityVersion: token.securityVersion,
     capabilities: token.capabilities,
   };
+}
+
+function readStoredAuthenticatedUser(): AuthenticatedUser | null {
+  const storedUser = getStoredUser();
+  if (storedUser === null) return null;
+  const parsed = safeParseAuthenticatedUser(storedUser);
+  if (!parsed) clearAuthSession();
+  return parsed;
 }
 
 export function useAuth(): AuthContextValue {

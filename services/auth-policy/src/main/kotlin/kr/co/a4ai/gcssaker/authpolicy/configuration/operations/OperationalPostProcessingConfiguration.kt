@@ -10,12 +10,14 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.core.task.TaskExecutor
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import java.util.concurrent.ThreadPoolExecutor
+import io.micrometer.core.instrument.Gauge
+import io.micrometer.core.instrument.MeterRegistry
 
 @Configuration
 class OperationalPostProcessingConfiguration {
     @Bean
-    fun operationalPostProcessingExecutor(settings: AuthRuntimeSettings): TaskExecutor =
-        ThreadPoolTaskExecutor().apply {
+    fun operationalPostProcessingExecutor(settings: AuthRuntimeSettings, registry: MeterRegistry): TaskExecutor {
+        val executor = ThreadPoolTaskExecutor().apply {
             corePoolSize = settings.postProcessingCorePoolSize
             maxPoolSize = settings.postProcessingMaxPoolSize
             queueCapacity = settings.postProcessingQueueCapacity
@@ -23,12 +25,17 @@ class OperationalPostProcessingConfiguration {
             setRejectedExecutionHandler(ThreadPoolExecutor.CallerRunsPolicy())
             initialize()
         }
+        Gauge.builder("gcs.auth_policy.audit.queue.depth", executor.threadPoolExecutor.queue) { it.size.toDouble() }
+            .register(registry)
+        return executor
+    }
 
     @Bean
     fun operationalAuditSink(): InMemoryOperationalAuditSink = InMemoryOperationalAuditSink()
 
     @Bean
-    fun operationalAuditPublisherMetrics(): OperationalAuditPublisherMetrics = OperationalAuditPublisherMetrics()
+    fun operationalAuditPublisherMetrics(registry: MeterRegistry): OperationalAuditPublisherMetrics =
+        OperationalAuditPublisherMetrics(registry)
 
     @Bean
     fun operationalAuditPublisher(

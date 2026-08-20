@@ -32,9 +32,6 @@ object SecurityAuditEventContract {
         return "${trimmed.first()}***${trimmed.last()}"
     }
 
-    fun maskStreamId(streamId: String): String =
-        streamId.take(96)
-
     fun maskGroupId(groupId: GroupId): String =
         groupId.value.take(64)
 
@@ -50,7 +47,10 @@ object SecurityAuditEventContract {
         publisherGroupId: GroupId,
         reason: String,
     ): String =
-        "스트림 접근 ${if (allowed) "허용" else "거부"}: ${maskStreamId(streamId)} " +
+        "스트림 접근 ${if (allowed) "허용" else "거부"}: ${privateStreamReference(streamId)} " +
             "[viewerGroup=${maskGroupId(viewerGroupId)}, publisherGroup=${maskGroupId(publisherGroupId)}] " +
             "(${safeReason(reason)})"
+
+    private fun privateStreamReference(streamId: String): String =
+        if (streamId.isBlank()) "stream=unknown" else "stream=redacted"
 }

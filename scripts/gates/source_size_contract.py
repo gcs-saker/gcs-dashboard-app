@@ -14,6 +14,16 @@ SOURCE_ROOTS = (
 SOURCE_SUFFIXES = {".go", ".kt", ".py", ".ts", ".tsx"}
 EXCLUDED_PARTS = {"generated", "__pycache__"}
 MAX_LINES = 350
+MAX_REACT_COMPONENT_LINES = 150
+MAX_REACT_HOOK_LINES = 120
+
+
+def source_line_limit(path: Path) -> int:
+    if path.name.startswith("use") and path.suffix in {".ts", ".tsx"}:
+        return MAX_REACT_HOOK_LINES
+    if path.suffix == ".tsx":
+        return MAX_REACT_COMPONENT_LINES
+    return MAX_LINES
 
 
 def oversized_sources() -> list[tuple[Path, int]]:
@@ -31,7 +41,8 @@ def oversized_sources() -> list[tuple[Path, int]]:
             ):
                 continue
             line_count = len(path.read_text(encoding="utf-8").splitlines())
-            if line_count > MAX_LINES:
+            limit = source_line_limit(path)
+            if line_count > limit:
                 violations.append((path, line_count))
     return violations
 
@@ -40,7 +51,7 @@ def main() -> int:
     violations = oversized_sources()
     if violations:
         for path, line_count in violations:
-            print(f"{path.relative_to(REPO_ROOT)}: {line_count} lines (maximum {MAX_LINES})")
+            print(f"{path.relative_to(REPO_ROOT)}: {line_count} lines (maximum {source_line_limit(path)})")
         return 1
     print("production source size contract passed")
     return 0

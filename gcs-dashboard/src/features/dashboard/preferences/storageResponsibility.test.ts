@@ -6,7 +6,7 @@ import {
 
 describe("storageResponsibility", () => {
   test("keeps browser storage responsibilities explicit", () => {
-    expect(BROWSER_STORAGE_RESPONSIBILITIES.memoryOnly).toContain("access-token");
+    expect(BROWSER_STORAGE_RESPONSIBILITIES.zustand).toContain("memory-only-access-token");
     expect(BROWSER_STORAGE_RESPONSIBILITIES.httpOnlyCookie).toEqual(["refresh-token"]);
     expect(BROWSER_STORAGE_RESPONSIBILITIES.indexedDb).toEqual(
       expect.arrayContaining([

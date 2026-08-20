@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
@@ -116,7 +117,9 @@ func (w *statusRecordingWriter) WriteHeader(status int) {
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set(contentTypeHeader, jsonContentType)
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		slog.Error("http_response_encode_failed", "errorCode", "json_encode_failed")
+	}
 }
 
 func errorPayload(detail string) map[string]string {

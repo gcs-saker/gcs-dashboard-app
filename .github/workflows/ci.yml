@@ -113,7 +113,7 @@ jobs:
             services/auth-policy/gradle/wrapper/gradle-wrapper.properties
 
       - name: Run auth-policy tests
-        run: ./gradlew test --no-daemon
+        run: ./gradlew check --no-daemon
 
       - name: Build auth-policy runtime image
         run: docker build -t gcs-saker-auth-policy:ci .
@@ -186,7 +186,7 @@ jobs:
         run: python -m mypy .
 
       - name: Run backend tests with coverage
-        run: python -m pytest tests --cov=. --cov-report=term-missing
+        run: python -m pytest tests --cov=. --cov-report=term-missing --cov-fail-under=85
 
       - name: Build backend runtime image
         run: docker build -t gcs-saker-backend:ci .

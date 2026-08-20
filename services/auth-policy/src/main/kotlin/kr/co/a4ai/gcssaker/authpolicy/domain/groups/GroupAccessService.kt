@@ -36,7 +36,7 @@ class GroupAccessService(
 
     fun devicesFor(principal: AuthenticatedPrincipal, groupId: GroupId): List<RegisteredDevice> {
         requireViewAccess(principal, groupId)
-        return devices.list().filter { it.groupId == groupId }.sortedBy { it.deviceUuid }
+        return devices.listByGroup(groupId, limit = 500).sortedBy { it.deviceUuid }
     }
 
     fun accessFor(principal: AuthenticatedPrincipal, groupId: GroupId): GroupAccess {
