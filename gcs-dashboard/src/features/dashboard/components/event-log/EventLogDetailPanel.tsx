@@ -58,7 +58,7 @@ function EventLogDetailFields({ event }: { event: OperationalEvent }) {
     ["분류", EVENT_CATEGORY_LABELS[event.category]],
     ["이벤트 타입", event.eventType ?? "미지정"],
     ["서비스", event.sourceService ?? "미지정"],
-    ["스트림", event.streamId ?? "미지정"],
+    ["스트림", event.streamId ? "연결 스트림" : "미지정"],
     ["세션", event.connectionId ?? "미지정"],
     ["ICE 경로", event.icePath ?? "미지정"],
     ["Fallback", event.relayFallbackReason ?? "없음"],

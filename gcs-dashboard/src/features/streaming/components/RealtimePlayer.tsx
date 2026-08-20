@@ -72,7 +72,6 @@ function RealtimePlayerContent(props: RealtimePlayerContentProps) {
           {streamStatus}
         </span>
         <span className="realtime-player__latency">저지연</span>
-        <span className="realtime-player__stream">{props.streamId}</span>
         <span className="realtime-player__mode">mode: {mode}</span>
       </header> : null}
 

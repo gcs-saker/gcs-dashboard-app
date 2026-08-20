@@ -72,6 +72,21 @@ describe("SelectedStreamPanel", () => {
     expect(screen.getByText("AI 감지 overlay")).toBeInTheDocument();
   });
 
+  test("hides internal stream diagnostics in the selected stream header and overlay", () => {
+    render(
+      <SelectedStreamPanel
+        stream={{
+          ...DEFAULT_DASHBOARD_STREAMS[0],
+          status: "online",
+          detail: "raw.device.pub_secret (webRTCSession, readers 3)",
+        }}
+      />,
+    );
+
+    expect(screen.queryByText(/raw\.device|webRTCSession|readers 3/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText("스트리밍 1").length).toBeGreaterThan(0);
+  });
+
   test("marks the stream card that is receiving audio", () => {
     render(
       <StreamGrid

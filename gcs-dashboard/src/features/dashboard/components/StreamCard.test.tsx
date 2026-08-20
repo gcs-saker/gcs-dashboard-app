@@ -44,4 +44,17 @@ describe("StreamCard", () => {
     expect(screen.queryByTestId("player-raw.drone-02.front")).not.toBeInTheDocument();
     expect(screen.getByText("상태: 스트림 선택 대기")).toBeInTheDocument();
   });
+
+  test("never renders internal stream routes or session diagnostics as a label", () => {
+    render(
+      <StreamCard
+        stream={{ ...STREAM, detail: "raw.device.pub_secret (webRTCSession, readers 3)" }}
+        isSelected={false}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/raw\.device|webRTCSession|readers 3/i)).not.toBeInTheDocument();
+    expect(screen.getByText("스트리밍 2")).toBeInTheDocument();
+  });
 });

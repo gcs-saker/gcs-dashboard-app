@@ -34,7 +34,6 @@
 }
 
 .webrtc-player__status,
-.webrtc-player__stream,
 .webrtc-player__state,
 .webrtc-player__audio,
 .webrtc-player__error {
@@ -44,7 +43,6 @@
   background: rgba(3, 8, 13, 0.64);
 }
 
-.webrtc-player__stream,
 .webrtc-player__state {
   display: none;
 }

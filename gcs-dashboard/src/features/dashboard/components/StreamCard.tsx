@@ -4,7 +4,7 @@ import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
 import { isReceivableStream } from "@dashboard/streaming/dashboardCctv";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import {
-  getDashboardStreamDisplayName,
+  getStreamSecondaryLabel,
   getDashboardStreamStatusClass,
   getDashboardStreamStatusText,
 } from "@dashboard/streaming/streamTypes";
@@ -40,6 +40,7 @@ export const StreamCard = memo(function StreamCard({
       onToggleTalkbackTarget?.(stream.streamPath);
     }
   }, [onToggleTalkbackTarget, stream.streamPath]);
+  const secondaryLabel = getStreamSecondaryLabel(stream);
 
   return (
     <article className={`stream-card ${isSelected ? "is-selected" : ""} ${hasAudioActivity ? "has-audio" : ""} ${isTalkbackTarget ? "is-talkback-target" : ""}`}>
@@ -70,7 +71,7 @@ export const StreamCard = memo(function StreamCard({
           </>
         )}
       </div>
-      <span className="stream-card__detail">{getDashboardStreamDisplayName(stream)}</span>
+      {secondaryLabel ? <span className="stream-card__detail">{secondaryLabel}</span> : null}
       {isSelected ? <span className="stream-card__selected-link">현재 선택</span> : null}
       {onToggleTalkbackTarget ? (
         <button

@@ -68,7 +68,7 @@ export function formatOperationalEventPayload(event: OperationalEvent): string {
     `sourceService=${event.sourceService ?? ""}`,
     `source=${event.source}`,
     `message=${event.message}`,
-    `streamId=${event.streamId ?? ""}`,
+    `stream=${event.streamId ? "connected" : "none"}`,
     `connectionId=${event.connectionId ?? ""}`,
     `icePath=${event.icePath ?? ""}`,
     `relayFallbackReason=${event.relayFallbackReason ?? ""}`,

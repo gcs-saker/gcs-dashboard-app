@@ -24,7 +24,7 @@ export const CctvChannelCard = memo(function CctvChannelCard({
   onSelect,
 }: CctvChannelCardProps) {
   const selectStream = useCallback(() => onSelect(stream.id), [onSelect, stream.id]);
-  const sourceLabel = stream.streamPath ?? "스트림 미선택";
+  const sourceLabel = stream.streamPath ? "서버 스트림" : "스트림 미선택";
   const statusText = getDashboardStreamStatusText(stream.status);
 
   return (
@@ -53,7 +53,7 @@ export const CctvChannelCard = memo(function CctvChannelCard({
       <div className="cctv-channel-card__statusbar" aria-label={`${stream.title} 수신 상태`}>
         <span>FPS {stream.status === "offline" ? "-" : qualityMode === "preview" ? "12" : "30"}</span>
         <span>RTT {stream.status === "offline" ? "-" : "42ms"}</span>
-        <span>{stream.streamPath ? "REC ready" : "No path"}</span>
+        <span>{stream.streamPath ? "녹화 준비" : "미연결"}</span>
       </div>
     </article>
   );

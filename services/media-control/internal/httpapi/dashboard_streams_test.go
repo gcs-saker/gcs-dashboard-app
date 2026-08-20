@@ -9,16 +9,22 @@ import (
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 )
+
 func TestStreamListResponse(t *testing.T) {
-	path, _ := domain.NewStreamPath("raw/local/webcam")
-	server := newTestServer(fakeStreams{streams: []domain.StreamDescriptor{{Path: path, Ready: true, Status: domain.StreamStatusOnline}}}, fakeIce{})
+	server := newTestServer(fakeStreams{}, fakeIce{})
 	request := httptest.NewRequest(http.MethodGet, "/v1/streams", nil)
 	recorder := httptest.NewRecorder()
 
 	server.Routes().ServeHTTP(recorder, request)
 
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", recorder.Code)
+	if recorder.Code != http.StatusGone {
+		t.Fatalf("expected 410, got %d", recorder.Code)
+	}
+	if recorder.Header().Get(replacementRouteHeader) != legacyStreamStatusReplacement {
+		t.Fatalf("missing replacement route header")
+	}
+	if strings.Contains(recorder.Body.String(), "raw/") {
+		t.Fatalf("legacy registry leaked a private stream path: %s", recorder.Body.String())
 	}
 }
 
@@ -77,11 +83,15 @@ func TestDashboardStreamListContract(t *testing.T) {
 	if payload[0].Status != domain.StreamStatusOnline {
 		t.Fatalf("unexpected status %v", payload[0].Status)
 	}
-	webrtcURL := payload[0].PlaybackURLs.WebRTC
-	if !strings.HasPrefix(webrtcURL, "http://edge.local/webrtc/raw/local/webcam/whep?") {
-		t.Fatalf("unexpected webrtc URL %v", webrtcURL)
+	if payload[0].DisplayName != nil {
+		t.Fatalf("stream diagnostics leaked through displayName: %q", *payload[0].DisplayName)
 	}
-	assertMediaURLToken(t, webrtcURL, playbackTokenQueryKey, mediaMTXActionPlayback, "raw/local/webcam")
+	responseBody := recorder.Body.String()
+	for _, privateField := range []string{"\"path\"", "\"playbackUrls\"", "webRTCSession", "readers"} {
+		if strings.Contains(responseBody, privateField) {
+			t.Fatalf("stream list leaked private routing detail %q: %s", privateField, responseBody)
+		}
+	}
 }
 
 func TestDashboardStreamListFiltersDeniedStreams(t *testing.T) {

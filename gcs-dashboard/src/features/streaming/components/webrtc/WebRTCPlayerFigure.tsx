@@ -20,7 +20,7 @@ export function WebRTCPlayerFigure(props: WebRTCPlayerFigureProps) {
         controls={controls}
         className="webrtc-player__video"
       />
-      {showDiagnostics ? <WebRTCPlayerDiagnostics snapshot={props} streamId={props.streamId} /> : null}
+      {showDiagnostics ? <WebRTCPlayerDiagnostics snapshot={props} /> : null}
     </figure>
   );
 }

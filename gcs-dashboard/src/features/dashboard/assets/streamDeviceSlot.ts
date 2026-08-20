@@ -10,7 +10,7 @@ export function connectDeviceToStreamSlot(
   return {
     ...stream,
     connectedDeviceId: device.id,
-    detail: `${device.name} / ${device.streamPath}`,
+    detail: device.name,
     mode: modeForMediaType(device.mediaType),
     status: device.status,
     streamPath: device.streamPath,

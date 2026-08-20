@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
-import { getDashboardStreamStatusText } from "@dashboard/streaming/streamTypes";
+import { getDashboardStreamDisplayName, getDashboardStreamStatusText } from "@dashboard/streaming/streamTypes";
 import { coordinateSourceLabel, coordinateText } from "./mapContracts";
 
 interface StreamMapPopupProps {
@@ -56,12 +56,12 @@ function StreamMapDetails({ coordinates, stream }: { coordinates: string; stream
           </dd>
         </div>
         <div>
-          <dt>단말 ID</dt>
-          <dd>{stream.connectedDeviceId ?? "미등록"}</dd>
+          <dt>연결 상태</dt>
+          <dd>{stream.connectedDeviceId ? "연결됨" : "미등록"}</dd>
         </div>
         <div>
           <dt>스트림</dt>
-          <dd>{stream.streamPath ?? stream.id}</dd>
+          <dd>{getDashboardStreamDisplayName(stream)}</dd>
         </div>
         <div>
           <dt>미디어</dt>

@@ -45,7 +45,7 @@ function mergeExistingStreamSlot(
   return [{
     ...stream,
     connectedDeviceId: stream.connectedDeviceId ?? device.id,
-    detail: `${device.name} / ${device.streamPath}`,
+    detail: device.name,
     mode: modeForMediaType(device.mediaType),
     status: device.status,
     geometry: shouldPreferDeviceGeometry(device.geometry) ? device.geometry : stream.geometry ?? device.geometry,
@@ -85,7 +85,7 @@ function streamSlotForDevice(device: StreamDeviceOption, title: string): Dashboa
     title,
     status: device.status,
     mode: modeForMediaType(device.mediaType),
-    detail: `${device.name} / ${device.streamPath}`,
+    detail: device.name,
     connectedDeviceId: device.id,
     streamPath: device.streamPath,
     geometry: device.geometry,

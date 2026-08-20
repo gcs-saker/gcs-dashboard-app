@@ -19,6 +19,25 @@ export function getStreamStatusClass(status: DashboardStreamStatus): string {
 export function getStreamDisplayName(stream: Pick<StreamSlot, "detail" | "streamPath" | "title">): string {
   const [label] = stream.detail.split(" / ");
   const trimmed = label.trim();
-  if (trimmed && trimmed !== stream.streamPath) return trimmed;
+  if (isPublicStreamLabel(trimmed) && trimmed !== stream.streamPath) return trimmed;
   return stream.title;
 }
+
+export function getStreamSecondaryLabel(stream: Pick<StreamSlot, "detail" | "streamPath" | "title">): string | null {
+  const displayName = getStreamDisplayName(stream);
+  return displayName === stream.title ? null : displayName;
+}
+
+export function isPublicStreamLabel(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return false;
+  return !PRIVATE_STREAM_LABEL_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
+const PRIVATE_STREAM_LABEL_PATTERNS = [
+  /^(?:raw|archive|live|talkback)[./]/,
+  /(?:^|[._/-])pub_[a-z0-9_-]+/,
+  /webrtcsession|rtspSession|hlsmuxer/i,
+  /\breaders?\s*\d+/,
+  /^(?:https?|rtsp|rtmp|srt|whep|whip):/,
+];

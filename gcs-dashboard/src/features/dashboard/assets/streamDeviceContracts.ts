@@ -17,10 +17,8 @@ export interface StreamDeviceOption {
 
 export interface StreamRegistryResponse {
   streamId: string;
-  path: string;
   status: "registered" | "online" | "offline" | "unknown";
   displayName?: string | null;
-  prefix: string;
   assetId: string;
   sensorId: string;
 }
@@ -56,10 +54,8 @@ export interface TelemetryHistoryResponse {
 const STREAM_REGISTRY_STATUSES = new Set<unknown>(["registered", "online", "offline", "unknown"]);
 const STREAM_REGISTRY_SCHEMA: PayloadSchema = {
   streamId: isString,
-  path: isString,
   status: isStreamRegistryStatus,
   displayName: (value) => value === undefined || isNullableString(value),
-  prefix: isString,
   assetId: isString,
   sensorId: isString,
 };

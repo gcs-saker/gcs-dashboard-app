@@ -112,7 +112,8 @@ describe("EventLogView", () => {
     expect(screen.getByText("권장 조치")).toBeInTheDocument();
     expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("category=network");
     expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("icePath=relay");
-    expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("streamId=raw/local/webcam");
+    expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("stream=connected");
+    expect(screen.getByLabelText("운영 이벤트 원문")).not.toHaveTextContent("raw/local/webcam");
     expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("latencyMs=164");
     await waitFor(() => expect(screen.queryByText("만료된 세션으로 스트림 접근 거절")).not.toBeInTheDocument());
     expect(fetch).toHaveBeenCalledWith("/api/ops/events/page?severity=warn&limit=50", expect.objectContaining({

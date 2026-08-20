@@ -109,9 +109,10 @@ describe("TacticalLeafletMap", () => {
 
     expect(onSelectStream).toHaveBeenCalledWith("raw.local.webcam");
     expect(screen.getByLabelText("로컬 웹캠 단말 정보")).toBeInTheDocument();
-    expect(screen.getByText("단말 ID")).toBeInTheDocument();
+    expect(screen.getByText("연결 상태")).toBeInTheDocument();
     expect(screen.getByText("미등록")).toBeInTheDocument();
-    expect(screen.getByText("raw.local.webcam")).toBeInTheDocument();
+    expect(screen.getByText("closed network map test")).toBeInTheDocument();
+    expect(screen.queryByText("raw.local.webcam")).not.toBeInTheDocument();
     expect(screen.getByText("35.871435, 128.601445")).toBeInTheDocument();
     expect(screen.getByText("배터리")).toBeInTheDocument();
     expect(screen.getAllByText("78%").length).toBeGreaterThan(0);

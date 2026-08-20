@@ -26,8 +26,6 @@ describe("streamDeviceMapping", () => {
     const device = streamDeviceFromRegistryItem(
       {
         streamId: "raw.drone-07.front",
-        path: "raw/drone-07/front",
-        prefix: "raw",
         assetId: "drone-07",
         sensorId: "front",
         status: "online",
@@ -75,8 +73,6 @@ describe("streamDeviceMapping", () => {
     const device = streamDeviceFromRegistryItem(
       {
         streamId: "raw.uav01.front",
-        path: "raw/uav01/front",
-        prefix: "raw",
         assetId: deviceUuid,
         sensorId: "front",
         status: "online",

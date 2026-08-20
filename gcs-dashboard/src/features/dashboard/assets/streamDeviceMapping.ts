@@ -10,6 +10,7 @@ import {
   type StreamRegistryResponse,
   type TelemetryReadResponse,
 } from "@dashboard/assets/streamDeviceContracts";
+import { isPublicStreamLabel } from "@streaming/presentation/streamPresentation";
 
 export function modeForMediaType(mediaType: StreamDeviceOption["mediaType"]): DashboardStreamMode {
   switch (mediaType) {
@@ -31,16 +32,26 @@ export function streamDeviceFromRegistryItem(
   const mediaType = item.sensorId.toLowerCase().includes("thermal") ? "ir" : "eo";
   const telemetry =
     telemetryByUuid.get(item.streamId) ??
-    telemetryByUuid.get(item.path) ??
     telemetryByUuid.get(item.assetId);
   return {
     id: `registry-${item.streamId}`,
-    name: item.displayName ?? `${item.assetId} ${item.sensorId}`,
+    name: registryStreamDisplayName(item),
     streamPath: item.streamId,
     status: dashboardStatusFromRegistryStatus(item.status),
     mediaType,
     geometry: telemetry ? geometryFromTelemetry(telemetry) : defaultGeometryForStream(item.streamId, "registry"),
   };
+}
+
+function registryStreamDisplayName(item: StreamRegistryResponse): string {
+  const provided = item.displayName?.trim();
+  if (provided && isPublicStreamLabel(provided)) return provided;
+  switch (item.sensorId.trim().toLowerCase()) {
+    case "front": return "전방 카메라";
+    case "rear": return "후방 카메라";
+    case "thermal": return "열화상 카메라";
+    default: return "연결된 스트림";
+  }
 }
 
 export function shouldPreferDeviceGeometry(geometry: StreamDeviceGeometry): boolean {

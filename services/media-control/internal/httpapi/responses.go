@@ -9,16 +9,11 @@ import (
 )
 
 type streamDescriptorResponse struct {
-	StreamID     string              `json:"streamId"`
-	Path         string              `json:"path"`
-	Prefix       string              `json:"prefix"`
-	AssetID      string              `json:"assetId"`
-	SensorID     string              `json:"sensorId"`
-	ProcessorID  *string             `json:"processorId"`
-	Date         *string             `json:"date"`
-	Status       domain.StreamStatus `json:"status"`
-	DisplayName  *string             `json:"displayName"`
-	PlaybackURLs domain.PlaybackURLs `json:"playbackUrls"`
+	StreamID    string              `json:"streamId"`
+	AssetID     string              `json:"assetId"`
+	SensorID    string              `json:"sensorId"`
+	Status      domain.StreamStatus `json:"status"`
+	DisplayName *string             `json:"displayName"`
 }
 
 type streamPlaybackResponse struct {
@@ -36,10 +31,6 @@ type streamPublishResponse struct {
 	StreamID   string              `json:"streamId"`
 	WhipURL    string              `json:"whipUrl"`
 	IceServers []iceServerResponse `json:"iceServers"`
-}
-
-type streamListResponse struct {
-	Streams []domain.StreamDescriptor `json:"streams"`
 }
 
 type legacyStreamStatusResponse struct {

@@ -19,7 +19,6 @@ const latencyModeLabel = {
 
 export function HLSFallbackPlayer({
   hlsUrl,
-  streamId,
   title = "HLS fallback stream",
   fallbackReason = "WebRTC failed. Playing HLS fallback.",
   autoPlay = true,
@@ -66,18 +65,17 @@ export function HLSFallbackPlayer({
         poster={poster}
         className="hls-fallback-player__video"
       />
-      {showDiagnostics ? <HlsDiagnostics {...{ activeLatencyMode, errorMessage, fallbackReason, mode, status, streamId, webCodecs }} /> : null}
+      {showDiagnostics ? <HlsDiagnostics {...{ activeLatencyMode, errorMessage, fallbackReason, mode, status, webCodecs }} /> : null}
     </figure>
   );
 }
 
-function HlsDiagnostics({ activeLatencyMode, errorMessage, fallbackReason, mode, status, streamId, webCodecs }: {
+function HlsDiagnostics({ activeLatencyMode, errorMessage, fallbackReason, mode, status, webCodecs }: {
   activeLatencyMode: keyof typeof latencyModeLabel;
   errorMessage: string | null;
   fallbackReason: string;
   mode: string;
   status: keyof typeof statusLabel;
-  streamId?: string;
   webCodecs: ReturnType<typeof detectWebCodecsCapability>;
 }) {
   return <figcaption className="hls-fallback-player__overlay">
@@ -89,7 +87,6 @@ function HlsDiagnostics({ activeLatencyMode, errorMessage, fallbackReason, mode,
           fallback {statusLabel[status]}
         </span>
         <span className="hls-fallback-player__reason">{fallbackReason}</span>
-        {streamId ? <span className="hls-fallback-player__stream">{streamId}</span> : null}
         <span className="hls-fallback-player__mode">mode: {mode}</span>
         <span className="hls-fallback-player__latency">{latencyModeLabel[activeLatencyMode]}</span>
         <span className="hls-fallback-player__webcodecs">

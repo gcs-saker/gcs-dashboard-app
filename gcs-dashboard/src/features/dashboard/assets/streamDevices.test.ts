@@ -12,15 +12,29 @@ import {
   MOCK_STREAM_DEVICES,
   preferredSelectedStreamId,
 } from "@dashboard/assets/streamDevices";
+import { streamDeviceFromRegistryItem } from "@dashboard/assets/streamDeviceMapping";
 
 describe("streamDevices", () => {
+  test("replaces internal registry diagnostics with a public sensor label", () => {
+    const device = streamDeviceFromRegistryItem({
+      streamId: "raw.device.pub_secret",
+      assetId: "pub_secret",
+      sensorId: "front",
+      status: "online",
+      displayName: "raw.device.pub_secret (webRTCSession, readers 3)",
+    });
+
+    expect(device.name).toBe("전방 카메라");
+    expect(device.name).not.toMatch(/raw\.device|webRTCSession|readers/i);
+  });
+
   test("connects a registry device to a stream slot", () => {
     const connected = connectDeviceToStreamSlot(DEFAULT_DASHBOARD_STREAMS[3], MOCK_STREAM_DEVICES[0]);
 
     expect(connected.connectedDeviceId).toBe("device-drn-01-front");
     expect(connected.streamPath).toBe("raw.sample.front");
     expect(connected.status).toBe("online");
-    expect(connected.detail).toBe("DRN-01 전방 EO / raw.sample.front");
+    expect(connected.detail).toBe("DRN-01 전방 EO");
     expect(connected.geometry?.fovDeg).toBe(72);
   });
 
@@ -41,8 +55,6 @@ describe("streamDevices", () => {
         Response.json([
           {
             streamId: "raw.drone-07.front",
-            path: "raw/drone-07/front",
-            prefix: "raw",
             assetId: "drone-07",
             sensorId: "front",
             status: "online",
@@ -164,7 +176,7 @@ describe("streamDevices", () => {
   test("keeps online stream discovery available when optional telemetry is malformed", async () => {
     const fetcher = vi.fn()
       .mockResolvedValueOnce(Response.json([{
-        streamId: "raw.robot.front", path: "raw/robot/front", prefix: "raw",
+        streamId: "raw.robot.front",
         assetId: "robot", sensorId: "front", status: "online", displayName: "Robot Front",
       }]))
       .mockResolvedValueOnce(Response.json([{
@@ -234,7 +246,7 @@ describe("streamDevices", () => {
     expect(merged[1]).toMatchObject({
       id: "raw.drone-09.front",
       title: "스트리밍 2",
-      detail: "Drone 09 Front / raw.drone-09.front",
+      detail: "Drone 09 Front",
     });
   });
 

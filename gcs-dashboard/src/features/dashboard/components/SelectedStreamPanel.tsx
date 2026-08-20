@@ -8,7 +8,7 @@ import { isReceivableStream } from "@dashboard/streaming/dashboardCctv";
 import {
   getDashboardStreamStatusClass,
   getDashboardStreamStatusText,
-  getDashboardStreamDisplayName,
+  getStreamSecondaryLabel,
   SELECTED_STREAM_WIDGET,
 } from "@dashboard/streaming/streamTypes";
 
@@ -30,6 +30,7 @@ export function SelectedStreamPanel({
   onToggleAiMode,
 }: SelectedStreamPanelProps) {
   useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.selectedStreamPanel);
+  const secondaryLabel = getStreamSecondaryLabel(stream);
   return (
     <section
       aria-labelledby="selected-stream-title"
@@ -56,7 +57,7 @@ export function SelectedStreamPanel({
         <StreamTelemetryOverlay geometry={stream.geometry} />
         <div className="selected-stream__meta">
           <strong>{stream.title}</strong>
-          <span>{getDashboardStreamDisplayName(stream)}</span>
+          {secondaryLabel ? <span>{secondaryLabel}</span> : null}
           {hasAudioActivity ? <span>음성 수신 중</span> : null}
           {stream.aiModeEnabled ? <span>AI 필터 준비됨</span> : null}
         </div>
@@ -70,11 +71,12 @@ function SelectedStreamHeader({
   onToggleAiMode,
   stream,
 }: Pick<SelectedStreamPanelProps, "controls" | "onToggleAiMode" | "stream">) {
+  const secondaryLabel = getStreamSecondaryLabel(stream);
   return (
     <div className="ops-panel__header">
       <span className="selected-stream__heading">
         <h2 id="selected-stream-title">선택 스트림</h2>
-        <span>{stream.title} / {getDashboardStreamDisplayName(stream)}</span>
+        <span>{stream.title}{secondaryLabel ? ` · ${secondaryLabel}` : ""}</span>
       </span>
       <span className="ops-panel__header-actions">
         <span className={`ops-badge ${getDashboardStreamStatusClass(stream.status)}`}>

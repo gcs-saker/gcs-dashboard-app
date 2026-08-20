@@ -167,7 +167,7 @@ describe("DashboardPage", () => {
     await user.click(screen.getByRole("button", { name: "스트리밍 3 선택" }));
 
     expect(screen.getAllByText("AI 감지 overlay").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText("스트리밍 3 / AI 감지 overlay")).toBeInTheDocument();
+    expect(screen.getByText("스트리밍 3 · AI 감지 overlay")).toBeInTheDocument();
     expect(screen.getByLabelText("최근 상태")).toHaveTextContent("AI 감지 overlay 선택됨");
     expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 기본 좌표 84deg / FOV 82deg");
     const telemetryPanel = screen.getByLabelText("지오메트리 / 텔레메트리");
@@ -191,7 +191,7 @@ describe("DashboardPage", () => {
 
     await user.click(await screen.findByRole("button", { name: "스트리밍 3 위치 35.866900, 128.593100" }));
 
-    expect(screen.getByText("스트리밍 3 / AI 감지 overlay")).toBeInTheDocument();
+    expect(screen.getByText("스트리밍 3 · AI 감지 overlay")).toBeInTheDocument();
     expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 기본 좌표 84deg / FOV 82deg");
     expect(screen.getByText("지도 핀 스트림 선택됨")).toBeInTheDocument();
     expect(screen.getByLabelText("스트리밍 3 단말 정보")).toBeInTheDocument();
@@ -337,7 +337,7 @@ describe("DashboardPage", () => {
     await user.click(screen.getByRole("button", { name: "자산" }));
     await user.click(screen.getByRole("button", { name: "후방 AI" }));
 
-    expect(screen.getByText("스트리밍 3 / AI 감지 overlay")).toBeInTheDocument();
+    expect(screen.getByText("스트리밍 3 · AI 감지 overlay")).toBeInTheDocument();
     expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 기본 좌표 84deg / FOV 82deg");
     expect(screen.getByText("자산트리 스트림 선택됨")).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "스트리밍 3 스트림 연결" })).not.toBeInTheDocument();

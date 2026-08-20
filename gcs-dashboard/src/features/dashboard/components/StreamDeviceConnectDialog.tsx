@@ -74,7 +74,7 @@ function AvailableStreamList({ devices, onConnect }: {
     {devices.map((device) => (
       <button className="widget-dialog__item stream-connect-dialog__device" key={device.id}
         onClick={() => onConnect(device)} type="button">
-        <span><strong>{device.name}</strong><small>{device.mediaType.toUpperCase()} · {device.streamPath}</small></span>
+        <span><strong>{device.name}</strong><small>{device.mediaType.toUpperCase()} · 수신 가능</small></span>
         <span className="ops-badge is-online">수신 중</span>
       </button>
     ))}

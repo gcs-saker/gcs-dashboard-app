@@ -3,10 +3,9 @@ import type { WebRTCPlaybackSnapshot } from "@streaming/types";
 
 interface WebRTCPlayerDiagnosticsProps {
   snapshot: WebRTCPlaybackSnapshot;
-  streamId?: string;
 }
 
-export function WebRTCPlayerDiagnostics({ snapshot, streamId }: WebRTCPlayerDiagnosticsProps) {
+export function WebRTCPlayerDiagnostics({ snapshot }: WebRTCPlayerDiagnosticsProps) {
   const {
     audioDiagnosticMessage,
     audioPlaybackState,
@@ -23,7 +22,6 @@ export function WebRTCPlayerDiagnostics({ snapshot, streamId }: WebRTCPlayerDiag
       <span className={`webrtc-player__status webrtc-player__status--${status}`} role="status" aria-live="polite">
         {WEBRTC_STATUS_LABELS[status]}
       </span>
-      {streamId ? <span className="webrtc-player__stream">{streamId}</span> : null}
       <span className="webrtc-player__state">pc: {connectionState}</span>
       <span className="webrtc-player__state">ice: {iceConnectionState}</span>
       {firstFrameLatencyMs !== null ? (
