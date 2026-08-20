@@ -6,6 +6,17 @@ const PREVIEW_LOGIN_RESPONSE = Object.freeze({
   role: "operator",
   token_type: "bearer",
   username: "operator01",
+  group_id: "co-a",
+  securityVersion: 1,
+  capabilities: {
+    canView: true,
+    canControl: true,
+    canManage: false,
+    canSendTalkback: true,
+    canPublish: true,
+    canManageMembers: false,
+    canManageDevices: false,
+  },
 });
 
 declare global {
@@ -81,6 +92,9 @@ async function mockOperationalPolling(page: Page): Promise<void> {
     route.fulfill({ json: [], status: 200 }),
   );
   await page.route("**/api/telemetry/all**", (route) =>
+    route.fulfill({ json: [], status: 200 }),
+  );
+  await page.route("**/api/v1/groups**", (route) =>
     route.fulfill({ json: [], status: 200 }),
   );
 }

@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -9,14 +9,16 @@ from core.db import get_db
 from sql.mediate_sql import Gateway, GatewayAsset, UnmannedAsset
 
 router = APIRouter()
+PageLimit = Annotated[int, Query(ge=1, le=500)]
+PageOffset = Annotated[int, Query(ge=0, le=100_000)]
 
 
 @router.get(AssetRoutes.BY_GATEWAY_UUID)
 async def get_asset(
     uuid: str,
     db: Session = Depends(get_db),
-    limit: int = Query(200, ge=1, le=500),
-    offset: int = Query(0, ge=0, le=100_000),
+    limit: PageLimit = 200,
+    offset: PageOffset = 0,
 ):
     gateway_id = cast(int | None, db.query(Gateway.id).filter(Gateway.uuid == uuid).scalar())
     if gateway_id is None:

@@ -23,6 +23,8 @@ def get_telemetry_read_model_store(request: Request) -> TelemetryReadModelStore:
 
 
 TelemetryReadModelDependency = Annotated[TelemetryReadModelStore, Depends(get_telemetry_read_model_store)]
+PageLimit = Annotated[int, Query(ge=1, le=500)]
+PageOffset = Annotated[int, Query(ge=0, le=100_000)]
 
 
 # 센서 데이터 수집 (장비 → 서버)
@@ -42,8 +44,8 @@ async def receive_telemetry(
 async def get_all_telemetry(
     read_models: TelemetryReadModelDependency,
     current_user: AuthenticatedUser = Depends(get_current_user),
-    limit: int = Query(200, ge=1, le=500),
-    offset: int = Query(0, ge=0, le=100_000),
+    limit: PageLimit = 200,
+    offset: PageOffset = 0,
 ):
     return read_models.list(limit, offset)
 
