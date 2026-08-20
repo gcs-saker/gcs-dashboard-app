@@ -113,11 +113,13 @@ class DeviceLifecycleService(
         val updatedSensors = command.sensors?.let(::RegisteredDeviceSensors) ?: current.sensors
         val updatedStreams = command.streamPaths?.let(::RegisteredDeviceStreams)
             ?: if (command.sensors != null) canonicalStreams(current.deviceUuid, updatedSensors.values) else current.streamPaths
+        val updatedStatus = command.status?.let(::parseStatus) ?: current.status
+        requireActiveSensor(updatedStatus, updatedSensors)
         return devices.save(
             current.copy(
                 groupId = command.groupId?.let(::GroupId) ?: current.groupId,
                 displayName = command.displayName ?: current.displayName,
-                status = command.status?.let(::parseStatus) ?: current.status,
+                status = updatedStatus,
                 deviceType = command.deviceType?.let(::parseDeviceType) ?: current.deviceType,
                 sensors = updatedSensors,
                 streamPaths = updatedStreams,
@@ -128,7 +130,15 @@ class DeviceLifecycleService(
 
     private fun updateStatus(deviceUuid: String, status: RegisteredDeviceStatus): RegisteredDevice {
         val device = get(deviceUuid)
+        requireActiveSensor(status, device.sensors)
         return devices.save(device.copy(status = status, policyVersion = device.policyVersion + 1))
+    }
+
+    private fun requireActiveSensor(status: RegisteredDeviceStatus, sensors: RegisteredDeviceSensors) {
+        if (status != RegisteredDeviceStatus.ACTIVE) return
+        require(sensors.values.any { sensor ->
+            sensor.status.equals(DeviceRegistryDefaults.ACTIVE_STATUS, ignoreCase = true)
+        }) { DeviceLifecycleContract.ACTIVE_SENSOR_REQUIRED }
     }
 
     private fun canonicalStreams(deviceUuid: String, sensors: List<RegisteredDeviceSensor>): RegisteredDeviceStreams =
@@ -155,4 +165,5 @@ object DeviceLifecycleContract {
     const val UUID_GENERATION_FAILED = "device uuid generation failed"
     const val INVALID_DEVICE_STATUS = "invalid device status"
     const val INVALID_DEVICE_TYPE = "invalid device type"
+    const val ACTIVE_SENSOR_REQUIRED = "active device requires at least one active sensor"
 }

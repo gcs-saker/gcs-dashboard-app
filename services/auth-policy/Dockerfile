@@ -5,13 +5,15 @@ COPY gradle ./gradle
 COPY src ./src
 RUN gradle --no-daemon clean bootJar
 
-FROM bellsoft/liberica-runtime-container@sha256:9f40ba2e62588e78433db1faddaf0e3bf712edf12fc8837c4ef9df652a01896d
+FROM amazoncorretto:21-alpine@sha256:58c1d555f4ff3be0cfe90d3b4d1762bde080b57afbb71d48657b9d22748cad5b
 ARG SOURCE_COMMIT=unknown
-LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
+LABEL org.opencontainers.image.revision=$SOURCE_COMMIT \
+      org.opencontainers.image.base.name="amazoncorretto:21-alpine"
 WORKDIR /app
 COPY --from=build /workspace/build/libs/*.jar /app/auth-policy.jar
-RUN addgroup -S -g 10002 gcs \
-    && adduser -S -D -H -u 10002 -G gcs -s /sbin/nologin gcs \
+RUN apk upgrade --no-cache \
+    && addgroup -S -g 10002 gcs \
+    && adduser -S -D -H -u 10002 -G gcs -h /app -s /sbin/nologin gcs \
     && chown -R gcs:gcs /app
 USER 10002:10002
 EXPOSE 8080

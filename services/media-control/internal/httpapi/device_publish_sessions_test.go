@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -99,6 +100,35 @@ func TestDevicePublishSessionRejectsClientOwnedDestinationFields(t *testing.T) {
 
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestDevicePublishSessionDistinguishesAuthorizationFailures(t *testing.T) {
+	tests := []struct {
+		name       string
+		err        error
+		wantStatus int
+	}{
+		{name: "credential denied", err: domain.ErrDevicePublishAccessDenied, wantStatus: http.StatusForbidden},
+		{name: "policy invalid", err: domain.ErrDevicePublishPolicyInvalid, wantStatus: http.StatusBadRequest},
+		{name: "auth policy unavailable", err: errors.New("upstream unavailable"), wantStatus: http.StatusBadGateway},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := newTestServerWithDevicePublisher(fakeStreams{}, fakeIce{}, fakeDevicePublisher{err: tt.err}).
+				WithPublishSessionStore(domain.NewInMemoryPublishSessionStore())
+			request := httptest.NewRequest(http.MethodPost, routeDevicePublishSessions, strings.NewReader(`{"sensorId":"front"}`))
+			request.Header.Set(deviceUUIDHeader, "device-001")
+			request.Header.Set(deviceCredentialHeader, "secret")
+			recorder := httptest.NewRecorder()
+
+			server.Routes().ServeHTTP(recorder, request)
+
+			if recorder.Code != tt.wantStatus {
+				t.Fatalf("expected %d, got %d: %s", tt.wantStatus, recorder.Code, recorder.Body.String())
+			}
+		})
 	}
 }
 

@@ -171,6 +171,9 @@ func (c Client) AuthorizeDevicePublish(
 	if response.StatusCode == http.StatusForbidden {
 		return domain.DevicePublishAuthorization{}, domain.ErrDevicePublishAccessDenied
 	}
+	if response.StatusCode == http.StatusBadRequest {
+		return domain.DevicePublishAuthorization{}, domain.ErrDevicePublishPolicyInvalid
+	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return domain.DevicePublishAuthorization{}, fmt.Errorf("auth-policy device publish returned status %d", response.StatusCode)
 	}
