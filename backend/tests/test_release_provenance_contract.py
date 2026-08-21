@@ -115,6 +115,16 @@ def test_deploy_keeps_public_edge_available_during_application_rollout() -> None
     assert "127.0.0.1:80" in script
 
 
+def test_single_node_edge_supports_release_independent_runtime_config() -> None:
+    compose = (REPO_ROOT / "deploy/compose/compose.single-node.poc.yml").read_text(encoding="utf-8")
+    stage_script = (REPO_ROOT / "scripts/ops/stage_edge_runtime_config.sh").read_text(encoding="utf-8")
+
+    assert "${EDGE_NGINX_CONFIG_FILE:-../nginx/single-node.poc.conf}" in compose
+    assert "TARGET_CONFIG must be outside source and release checkouts" in stage_script
+    assert 'install -m 600 "${SOURCE_CONFIG}"' in stage_script
+    assert 'mv -f "${staged}" "${TARGET_CONFIG}"' in stage_script
+
+
 def test_deploy_routes_to_healthy_green_before_replacing_official_services() -> None:
     script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
 

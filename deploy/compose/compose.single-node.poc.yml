@@ -439,7 +439,7 @@ services:
       - "${PUBLIC_HTTP_BIND_ADDR:-127.0.0.1}:${PUBLIC_HTTP_PORT:-8080}:8080"
     volumes:
       - type: bind
-        source: ../nginx/single-node.poc.conf
+        source: ${EDGE_NGINX_CONFIG_FILE:-../nginx/single-node.poc.conf}
         target: /etc/nginx/nginx.conf
         read_only: true
     depends_on:
