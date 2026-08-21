@@ -63,7 +63,7 @@ function CctvHeader(props: Pick<CctvViewProps, "cctvGridSize" | "cctvLayoutMode"
     <div className="cctv-view__header">
         <div>
           <h2>통합 CCTV 월</h2>
-          <span>{props.cctvGridSize ** 2}채널 감시 레이아웃 · {props.cctvQualityMode === "preview" ? "저화질 Preview" : "고화질 확인"}</span>
+          <span>{props.cctvGridSize ** 2}채널 감시 레이아웃 · {props.cctvQualityMode === "preview" ? "간소 보기" : "상세 보기"}</span>
         </div>
         <div className="cctv-view__summary" aria-label="CCTV 운영 요약">
           <span>LIVE {props.cctvStatusSummary.online}</span>
@@ -90,7 +90,7 @@ function CctvHeader(props: Pick<CctvViewProps, "cctvGridSize" | "cctvLayoutMode"
               onClick={() => props.onSetQualityMode(mode)}
               type="button"
             >
-              {mode === "preview" ? "저화질" : "고화질"}
+              {mode === "preview" ? "간소 보기" : "상세 보기"}
             </button>
           ))}
         </div>
