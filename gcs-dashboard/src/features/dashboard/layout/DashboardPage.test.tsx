@@ -7,6 +7,7 @@ import { AuthProvider } from "@auth/AuthProvider";
 import { clearAuthSession, storeAuthSession } from "@auth/authStorage";
 import { createDashboardQueryClient } from "@features/queryClient";
 import { DashboardPage } from "@dashboard/layout/DashboardPage";
+import { SAMPLE_DASHBOARD_STREAMS } from "@dashboard/stories/dashboardSampleStreams";
 
 vi.mock("@dashboard/hooks/assets/useAccessibleGroupInventory", () => ({
   useAccessibleGroupInventory: () => undefined,
@@ -19,7 +20,7 @@ function renderDashboard() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <DashboardPage />
+          <DashboardPage initialStreams={SAMPLE_DASHBOARD_STREAMS} />
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>,

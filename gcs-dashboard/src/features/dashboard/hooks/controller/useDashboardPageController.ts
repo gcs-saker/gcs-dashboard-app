@@ -14,7 +14,13 @@ import { useDashboardStreams } from "@dashboard/hooks/controller/useDashboardStr
 import { useDashboardUserPreferences } from "@dashboard/hooks/controller/useDashboardUserPreferences";
 import { useStreamAvailabilityNotification } from "@dashboard/hooks/shared/useStreamAvailabilityNotification";
 import { useAccessibleGroupInventory } from "@dashboard/hooks/assets/useAccessibleGroupInventory";
-export function useDashboardPageController(): DashboardPageViewProps {
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
+
+interface DashboardPageControllerOptions {
+  readonly initialStreams?: DashboardStreamSlot[];
+}
+
+export function useDashboardPageController(options: DashboardPageControllerOptions = {}): DashboardPageViewProps {
   useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.dashboardPageController);
   const { currentUser, handleAuthFailure, handleLogout } = useDashboardAuthNavigation();
   const ui = useDashboardLocalUiState();
@@ -23,6 +29,7 @@ export function useDashboardPageController(): DashboardPageViewProps {
   const { motionMode } = preferencesApi.preferences;
 
   const streamState = useDashboardStreams({
+    initialStreams: options.initialStreams,
     onAuthFailure: handleAuthFailure,
     onStreamDeviceAliasChange: preferencesApi.setStreamAlias,
     streamPreferences: preferencesApi.preferences.streamPreferences,

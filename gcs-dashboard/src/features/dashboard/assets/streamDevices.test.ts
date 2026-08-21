@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { AuthApiError } from "@auth/authApi";
-import { DEFAULT_DASHBOARD_STREAMS } from "@dashboard/streaming/streamTypes";
+import { SAMPLE_DASHBOARD_STREAMS as DEFAULT_DASHBOARD_STREAMS } from "@dashboard/stories/dashboardSampleStreams";
 import {
   connectDeviceToStreamSlot,
   disconnectStreamSlot,

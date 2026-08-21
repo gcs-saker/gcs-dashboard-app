@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
 import { getMapFocusForStream } from "@dashboard/layout/mapFocus";
-import { DEFAULT_DASHBOARD_STREAMS } from "@dashboard/streaming/streamTypes";
+import { SAMPLE_DASHBOARD_STREAMS } from "@dashboard/stories/dashboardSampleStreams";
 
 describe("mapFocus", () => {
   test("builds map focus and FOV view data from stream geometry", () => {
-    const focus = getMapFocusForStream(DEFAULT_DASHBOARD_STREAMS[0]);
+    const focus = getMapFocusForStream(SAMPLE_DASHBOARD_STREAMS[0]);
 
     expect(focus.hasGeometry).toBe(true);
     expect(focus.label).toContain("기본 좌표");
@@ -14,7 +14,7 @@ describe("mapFocus", () => {
 
   test("returns a safe fallback when geometry is missing", () => {
     const focus = getMapFocusForStream({
-      ...DEFAULT_DASHBOARD_STREAMS[0],
+      ...SAMPLE_DASHBOARD_STREAMS[0],
       geometry: null,
     });
 
