@@ -1,41 +1,64 @@
 import type { ReactNode } from "react";
 import type { DashboardWidgetDefinition } from "@dashboard/layout/dashboardLayout";
 
-interface AiResultsPanelProps {
-  controls: ReactNode;
-  panelClassName: string;
-  widget: DashboardWidgetDefinition;
+export interface AiDetectionSummary {
+  readonly confidence: number;
+  readonly label: string;
+  readonly riskScore: number;
 }
 
-export function AiResultsPanel({ controls, panelClassName, widget }: AiResultsPanelProps) {
+export interface AiAnalysisSummary {
+  readonly detections: readonly AiDetectionSummary[];
+  readonly generatedAt: string;
+  readonly processingLatencyMs: number | null;
+  readonly reportText: string;
+  readonly riskScore: number;
+}
+
+interface AiResultsPanelProps {
+  readonly analysis?: AiAnalysisSummary | null;
+  readonly controls: ReactNode;
+  readonly panelClassName: string;
+  readonly widget: DashboardWidgetDefinition;
+}
+
+export function AiResultsPanel({ analysis = null, controls, panelClassName, widget }: AiResultsPanelProps) {
   return (
-    <section
-      aria-labelledby="ai-title"
-      className={panelClassName}
-      data-widget-id={widget.id}
-      style={{ minHeight: widget.minHeight, minWidth: widget.minWidth }}
-    >
+    <section aria-labelledby="ai-title" className={panelClassName} data-widget-id={widget.id}
+      style={{ minHeight: widget.minHeight, minWidth: widget.minWidth }}>
       <div className="ops-panel__header">
         <h2 id="ai-title">AI 결과</h2>
         <span className="ops-panel__header-actions">
-          <span className="ops-badge is-warning">대기</span>
+          <span className={`ops-badge ${analysis ? "is-online" : "is-offline"}`}>
+            {analysis ? "수신" : "결과 없음"}
+          </span>
           {controls}
         </span>
       </div>
-      <ul>
-        <li>
-          <strong>탐지</strong>
-          <span>person / 0.72</span>
-        </li>
-        <li>
-          <strong>위험도</strong>
-          <span>중간</span>
-        </li>
-        <li>
-          <strong>처리 지연</strong>
-          <span>42 ms</span>
-        </li>
-      </ul>
+      {analysis ? <AiAnalysisContent analysis={analysis} /> : (
+        <p className="ai-panel__empty">검증된 AI metadata가 수신되면 탐지 결과를 표시합니다.</p>
+      )}
     </section>
+  );
+}
+
+function AiAnalysisContent({ analysis }: { readonly analysis: AiAnalysisSummary }) {
+  return (
+    <div className="ai-panel__content">
+      <p>{analysis.reportText}</p>
+      <dl>
+        <div><dt>탐지</dt><dd>{analysis.detections.length}건</dd></div>
+        <div><dt>위험도</dt><dd>{Math.round(analysis.riskScore * 100)}%</dd></div>
+        <div><dt>처리 지연</dt><dd>{analysis.processingLatencyMs === null ? "미제공" : `${analysis.processingLatencyMs} ms`}</dd></div>
+      </dl>
+      <ul>
+        {analysis.detections.map((detection, index) => (
+          <li key={`${detection.label}-${index}`}>
+            <strong>{detection.label}</strong>
+            <span>신뢰도 {Math.round(detection.confidence * 100)}% · 위험도 {Math.round(detection.riskScore * 100)}%</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
