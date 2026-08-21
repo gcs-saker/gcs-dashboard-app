@@ -29,6 +29,8 @@ staged="$(mktemp "${target_parent}/.edge-nginx.XXXXXX")"
 cleanup() { rm -f "${staged}"; }
 trap cleanup EXIT
 install -m 600 "${SOURCE_CONFIG}" "${staged}"
+setfacl -b "${staged}"
+setfacl -m u:101:r "${staged}"
 mv -f "${staged}" "${TARGET_CONFIG}"
 trap - EXIT
 printf 'edge_runtime_config=%s sha256=%s\n' \

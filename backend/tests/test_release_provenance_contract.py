@@ -122,6 +122,7 @@ def test_single_node_edge_supports_release_independent_runtime_config() -> None:
     assert "${EDGE_NGINX_CONFIG_FILE:-../nginx/single-node.poc.conf}" in compose
     assert "TARGET_CONFIG must be outside source and release checkouts" in stage_script
     assert 'install -m 600 "${SOURCE_CONFIG}"' in stage_script
+    assert 'setfacl -m u:101:r "${staged}"' in stage_script
     assert 'mv -f "${staged}" "${TARGET_CONFIG}"' in stage_script
 
 
