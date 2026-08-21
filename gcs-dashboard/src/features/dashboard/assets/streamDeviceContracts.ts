@@ -12,7 +12,7 @@ export interface StreamDeviceOption {
   streamPath: string;
   status: DashboardStreamStatus;
   mediaType: "eo" | "ir" | "ai" | "map";
-  geometry: StreamDeviceGeometry;
+  geometry: StreamDeviceGeometry | null;
 }
 
 export interface StreamRegistryResponse {
@@ -68,7 +68,7 @@ function isStreamRegistryStatus(value: unknown): value is StreamRegistryResponse
   return STREAM_REGISTRY_STATUSES.has(value);
 }
 
-export const MOCK_STREAM_DEVICES: StreamDeviceOption[] = [
+export const MOCK_STREAM_DEVICES = [
   {
     id: "device-drn-01-front",
     name: "DRN-01 전방 EO",
@@ -141,4 +141,4 @@ export const MOCK_STREAM_DEVICES: StreamDeviceOption[] = [
       source: "mock",
     },
   },
-];
+] satisfies Array<StreamDeviceOption & { geometry: StreamDeviceGeometry }>;

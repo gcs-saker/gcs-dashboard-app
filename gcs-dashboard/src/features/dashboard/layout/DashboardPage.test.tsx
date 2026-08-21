@@ -326,9 +326,10 @@ describe("DashboardPage", () => {
 
     await user.click(screen.getByRole("button", { name: "자산" }));
 
-    expect(screen.getByText("GCS-SAKER")).toBeInTheDocument();
+    expect(screen.getByText("접근 가능 자산")).toBeInTheDocument();
+    expect(screen.getByText("감지 스트림")).toBeInTheDocument();
     expect(screen.getAllByText("전방 EO").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("후방 AI").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("AI 감지 overlay").length).toBeGreaterThan(0);
   });
 
   test("selects a stream from the asset tree without opening the connect dialog", async () => {
@@ -336,7 +337,7 @@ describe("DashboardPage", () => {
     renderDashboard();
 
     await user.click(screen.getByRole("button", { name: "자산" }));
-    await user.click(screen.getByRole("button", { name: "후방 AI" }));
+    await user.click(screen.getByRole("button", { name: "AI 감지 overlay" }));
 
     expect(screen.getByText("스트리밍 3 · AI 감지 overlay")).toBeInTheDocument();
     expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 기본 좌표 84deg / FOV 82deg");

@@ -1,10 +1,8 @@
 import type {
-  DashboardGeometrySource,
   DashboardStreamMode,
   DashboardStreamStatus,
 } from "@dashboard/streaming/streamTypes";
 import {
-  MOCK_STREAM_DEVICES,
   type StreamDeviceGeometry,
   type StreamDeviceOption,
   type StreamRegistryResponse,
@@ -39,7 +37,7 @@ export function streamDeviceFromRegistryItem(
     streamPath: item.streamId,
     status: dashboardStatusFromRegistryStatus(item.status),
     mediaType,
-    geometry: telemetry ? geometryFromTelemetry(telemetry) : defaultGeometryForStream(item.streamId, "registry"),
+    geometry: telemetry ? geometryFromTelemetry(telemetry) : null,
   };
 }
 
@@ -54,8 +52,8 @@ function registryStreamDisplayName(item: StreamRegistryResponse): string {
   }
 }
 
-export function shouldPreferDeviceGeometry(geometry: StreamDeviceGeometry): boolean {
-  return geometry.source === "telemetry" || geometry.source === "device";
+export function shouldPreferDeviceGeometry(geometry: StreamDeviceGeometry | null): boolean {
+  return geometry?.source === "telemetry" || geometry?.source === "device";
 }
 
 export function geometryFromTelemetry(telemetry: TelemetryReadResponse): StreamDeviceGeometry {
@@ -91,23 +89,4 @@ export function mediaTypeFromStreamPath(streamPath: string): StreamDeviceOption[
   if (lowered.includes("thermal") || lowered.includes("ir")) return "ir";
   if (lowered.startsWith("ai.")) return "ai";
   return "eo";
-}
-
-export function defaultGeometryForStream(
-  streamId: string,
-  source: DashboardGeometrySource = "mock",
-): StreamDeviceGeometry {
-  const knownDevice = MOCK_STREAM_DEVICES.find((device) => device.streamPath === streamId);
-  if (knownDevice) return { ...knownDevice.geometry, source };
-  return {
-    lat: 35.871435,
-    lng: 128.601445,
-    altitudeM: 0,
-    headingDeg: 0,
-    pitchDeg: 0,
-    rollDeg: 0,
-    yawDeg: 0,
-    fovDeg: 60,
-    source,
-  };
 }

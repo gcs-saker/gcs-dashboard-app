@@ -1,58 +1,9 @@
 import type { AssetTreeNode } from "./assetTreeModel";
 
 export const DEFAULT_ASSET_TREE: AssetTreeNode = {
-  id: "gcs-saker",
-  label: "GCS-SAKER",
+  id: "accessible-assets",
+  label: "접근 가능 자산",
   type: "root",
-  status: "online",
-  children: [
-    {
-      id: "group-drone",
-      label: "드론",
-      type: "group",
-      status: "online",
-      children: [
-        {
-          id: "DRN-01",
-          label: "DRN-01",
-          type: "device",
-          status: "online",
-          children: [{ id: "raw.sample.front", label: "전방 EO", type: "stream", status: "online" }],
-        },
-        {
-          id: "DRN-02",
-          label: "DRN-02",
-          type: "device",
-          status: "online",
-          children: [{ id: "raw.sample.thermal", label: "열화상", type: "stream", status: "warning" }],
-        },
-      ],
-    },
-    {
-      id: "group-ugv",
-      label: "지상로봇",
-      type: "group",
-      status: "warning",
-      children: [
-        {
-          id: "UGV-01",
-          label: "UGV-01",
-          type: "device",
-          status: "online",
-          children: [{ id: "raw.sample.rear", label: "후방 AI", type: "stream", status: "online" }],
-        },
-        { id: "UGV-02", label: "UGV-02", type: "device", status: "warning" },
-      ],
-    },
-    {
-      id: "group-sensor",
-      label: "센서",
-      type: "group",
-      status: "warning",
-      children: [
-        { id: "SEN-01", label: "SEN-01", type: "sensor", status: "online" },
-        { id: "SEN-04", label: "SEN-04", type: "sensor", status: "offline" },
-      ],
-    },
-  ],
+  status: "offline",
+  children: [],
 };

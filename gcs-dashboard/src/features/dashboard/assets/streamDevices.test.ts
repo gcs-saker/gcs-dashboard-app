@@ -188,7 +188,7 @@ describe("streamDevices", () => {
 
     expect(devices).toHaveLength(1);
     expect(devices[0]).toMatchObject({ streamPath: "raw.robot.front", status: "online" });
-    expect(devices[0].geometry.source).toBe("registry");
+    expect(devices[0].geometry).toBeNull();
   });
 
   test("still propagates telemetry authentication failures", async () => {

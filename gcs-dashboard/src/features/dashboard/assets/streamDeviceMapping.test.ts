@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
   dashboardStatusFromRegistryStatus,
-  defaultGeometryForStream,
   mediaTypeFromStreamPath,
   modeForMediaType,
   streamDeviceFromRegistryItem,
@@ -100,13 +99,14 @@ describe("streamDeviceMapping", () => {
     });
   });
 
-  test("keeps fallback geometry in the Daegu operating area", () => {
+  test("maps media types without inventing registry geometry", () => {
     expect(mediaTypeFromStreamPath("ai.drn-01.front.detector")).toBe("ai");
     expect(mediaTypeFromStreamPath("raw.drn-01.thermal")).toBe("ir");
-    expect(defaultGeometryForStream("raw.unknown.front")).toMatchObject({
-      lat: 35.871435,
-      lng: 128.601445,
-      source: "mock",
-    });
+    expect(streamDeviceFromRegistryItem({
+      streamId: "opaque-stream",
+      assetId: "opaque-asset",
+      sensorId: "front",
+      status: "online",
+    }).geometry).toBeNull();
   });
 });
