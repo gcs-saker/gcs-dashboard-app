@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import array
 import asyncio
 import fractions
+import math
 import ssl
 import sys
 import time
@@ -150,7 +152,13 @@ class SyntheticVideoTrack:  # aiortc VideoStreamTrack subclass at runtime.
 
 
 class SyntheticAudioTrack:  # aiortc AudioStreamTrack subclass at runtime.
-    def __init__(self, sample_rate: int, frame_duration_ms: int) -> None:
+    def __init__(
+        self,
+        sample_rate: int,
+        frame_duration_ms: int,
+        tone_frequency_hz: float = 440.0,
+        tone_amplitude: float = 0.25,
+    ) -> None:
         from aiortc import AudioStreamTrack
 
         class _Track(AudioStreamTrack):
@@ -165,6 +173,8 @@ class SyntheticAudioTrack:  # aiortc AudioStreamTrack subclass at runtime.
         self.sample_rate = sample_rate
         self.samples_per_frame = int(sample_rate * frame_duration_ms / 1000)
         self.frame_duration = frame_duration_ms / 1000
+        self.tone_frequency_hz = tone_frequency_hz
+        self.tone_amplitude = tone_amplitude
         self.sequence = 0
         self.started_at = time.perf_counter()
 
@@ -182,12 +192,44 @@ class SyntheticAudioTrack:  # aiortc AudioStreamTrack subclass at runtime.
 
         frame = AudioFrame(format="s16", layout="mono", samples=self.samples_per_frame)
         frame.sample_rate = self.sample_rate
+        samples = self._tone_samples()
         for plane in frame.planes:
-            plane.update(bytes(plane.buffer_size))
+            plane.update(samples)
         frame.pts = self.sequence * self.samples_per_frame
         frame.time_base = fractions.Fraction(1, self.sample_rate)
         self.sequence += 1
         return frame
+
+    def _tone_samples(self) -> bytes:
+        first_sample = self.sequence * self.samples_per_frame
+        return sine_pcm_s16le(
+            sample_rate=self.sample_rate,
+            sample_count=self.samples_per_frame,
+            first_sample=first_sample,
+            frequency_hz=self.tone_frequency_hz,
+            amplitude=self.tone_amplitude,
+        )
+
+
+def sine_pcm_s16le(
+    *,
+    sample_rate: int,
+    sample_count: int,
+    first_sample: int,
+    frequency_hz: float,
+    amplitude: float,
+) -> bytes:
+    peak = int(32767 * amplitude)
+    values = array.array(
+        "h",
+        (
+            int(peak * math.sin(2 * math.pi * frequency_hz * (first_sample + offset) / sample_rate))
+            for offset in range(sample_count)
+        ),
+    )
+    if sys.byteorder != "little":
+        values.byteswap()
+    return values.tobytes()
 
 
 async def run_publish_smoke(args: argparse.Namespace) -> int:
@@ -213,7 +255,16 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         )
     )
     track = SyntheticVideoTrack(args.width, args.height, args.fps)
-    audio_track = None if args.no_audio else SyntheticAudioTrack(args.audio_sample_rate, args.audio_frame_duration_ms)
+    audio_track = (
+        None
+        if args.no_audio
+        else SyntheticAudioTrack(
+            args.audio_sample_rate,
+            args.audio_frame_duration_ms,
+            args.audio_tone_frequency_hz,
+            args.audio_tone_amplitude,
+        )
+    )
     peer_connection.addTrack(track.track)
     if audio_track is not None:
         peer_connection.addTrack(audio_track.track)
@@ -283,9 +334,15 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--no-audio", action="store_true")
     parser.add_argument("--audio-sample-rate", type=int, default=48000)
     parser.add_argument("--audio-frame-duration-ms", type=int, default=20)
+    parser.add_argument("--audio-tone-frequency-hz", type=float, default=440.0)
+    parser.add_argument("--audio-tone-amplitude", type=float, default=0.25)
     parser.add_argument("--insecure", action="store_true")
     parser.add_argument("--require-connected", action="store_true")
     args = parser.parse_args(argv)
+    if args.audio_tone_frequency_hz <= 0:
+        parser.error("--audio-tone-frequency-hz must be positive")
+    if not 0 < args.audio_tone_amplitude <= 1:
+        parser.error("--audio-tone-amplitude must be in the range (0, 1]")
     if not args.check and not args.run:
         args.check = True
     return args

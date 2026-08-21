@@ -77,3 +77,19 @@ def test_webrtc_whip_publish_smoke_redacts_media_token_query() -> None:
 
     assert redacted == "https://edge.example/webrtc/raw/nat/smoke/whip?<redacted-query>"
     assert "secret" not in redacted
+
+
+def test_webrtc_whip_publish_smoke_generates_audible_nonzero_pcm() -> None:
+    module = load_publish_module()
+
+    payload = module.sine_pcm_s16le(
+        sample_rate=48_000,
+        sample_count=960,
+        first_sample=0,
+        frequency_hz=440,
+        amplitude=0.25,
+    )
+
+    assert len(payload) == 1_920
+    assert any(payload)
+    assert len(set(payload)) > 16
