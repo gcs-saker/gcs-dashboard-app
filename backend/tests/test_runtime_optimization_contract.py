@@ -22,6 +22,17 @@ def test_auth_policy_has_explicit_jvm_memory_budget() -> None:
     assert "-Xmx512m" in options
     assert "-XX:MaxMetaspaceSize=192m" in options
     assert "-XX:MaxDirectMemorySize=64m" in options
+    assert "-XX:+ExitOnOutOfMemoryError" in options
+
+
+def test_auth_policy_memory_and_event_pipeline_alerts_are_bounded() -> None:
+    rules = (REPO_ROOT / "deploy/monitoring/auth-policy-alerts.yml").read_text(encoding="utf-8")
+
+    assert "AuthPolicyHeapPressure" in rules
+    assert "AuthPolicyOldGenerationPressure" in rules
+    assert "AuthPolicySseConnectionPressure" in rules
+    assert "AuthPolicyOperationalEventBatchSaturation" in rules
+    assert "gcs_auth_policy_operational_events_sse_active" in rules
 
 
 def test_same_host_secondary_turn_is_opt_in() -> None:

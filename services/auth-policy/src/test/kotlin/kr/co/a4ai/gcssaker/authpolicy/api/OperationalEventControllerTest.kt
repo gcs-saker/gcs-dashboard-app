@@ -9,6 +9,12 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventReadModel
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPage
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPageQuery
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventCursor
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPageLimit
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -180,6 +186,26 @@ class OperationalEventControllerTest {
     }
 
     @Test
+    fun `event stream follows bounded watermark batches without full event reads`() {
+        val initial = event("evt-initial", "info", "api", "초기", "초기", GroupId("co-a"), 1, 10, 1.0)
+        val incremental = event("evt-next", "info", "api", "증분", "증분", GroupId("co-a"), 1, 11, 1.1)
+        val tailRepository = TailOnlyOperationalEventRepository(initial, incremental)
+        val tailController = OperationalEventController(
+            repository = tailRepository,
+            principalResolver = BearerPrincipalResolver(sessions),
+            objectMapper = jacksonObjectMapper().registerModule(JavaTimeModule()),
+            streamPolicy = OperationalEventStreamPolicy(pollCount = 1, pollIntervalMillis = 0),
+        )
+        val output = ByteArrayOutputStream()
+
+        tailController.eventStream(bearer(accessToken("viewer-a")), null, null, null, null).body?.writeTo(output)
+
+        assertTrue(output.toString(Charsets.UTF_8).contains("evt-initial"))
+        assertTrue(output.toString(Charsets.UTF_8).contains("evt-next"))
+        assertEquals(OperationalEventStreamContract.BATCH_LIMIT, tailRepository.requestedLimit)
+    }
+
+    @Test
     fun `metrics returns dashboard aggregate without exposing other group events`() {
         val response = controller.metrics(
             authorization = bearer(accessToken("viewer-a")),
@@ -280,4 +306,31 @@ class OperationalEventControllerTest {
 
     private fun bearer(token: String): String =
         "${AuthTokenContract.BEARER_PREFIX}$token"
+}
+
+private class TailOnlyOperationalEventRepository(
+    private val initial: OperationalEventReadModel,
+    private val incremental: OperationalEventReadModel,
+) : OperationalEventRepository {
+    var requestedLimit: Int? = null
+
+    override fun eventsFor(principal: kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal, query: OperationalEventQuery) =
+        error("full operational event reads are prohibited for SSE")
+
+    override fun eventPageFor(
+        principal: kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal,
+        query: OperationalEventPageQuery,
+    ) = OperationalEventPage(listOf(initial), null)
+
+    override fun eventsAfter(
+        principal: kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal,
+        query: OperationalEventQuery,
+        cursor: OperationalEventCursor,
+        limit: OperationalEventPageLimit,
+    ): List<OperationalEventReadModel> {
+        requestedLimit = limit.value
+        return listOf(incremental)
+    }
+
+    override fun append(event: OperationalEventReadModel) = Unit
 }

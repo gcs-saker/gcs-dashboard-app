@@ -68,6 +68,8 @@ def test_public_caddy_terminator_sets_security_headers_for_every_host() -> None:
     assert "{$LEGACY_TLS_HOST}" not in config
     assert "Strict-Transport-Security" in config
     assert "Content-Security-Policy" in config
+    assert "script-src 'self'" in config
+    assert "unsafe-eval" not in config
     assert "Permissions-Policy" in config
     assert "X-Content-Type-Options" in config
     assert "X-Frame-Options" in config

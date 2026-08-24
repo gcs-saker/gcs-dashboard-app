@@ -16,6 +16,7 @@ object OperationalEventStreamContract {
     const val DEFAULT_POLL_COUNT = 30
     const val MAX_POLL_COUNT = 120
     const val DEFAULT_POLL_INTERVAL_MILLIS = 1_000L
+    const val BATCH_LIMIT = 100
     const val EVENT_OPERATIONAL_EVENT = "operational-event"
     const val EVENT_HEARTBEAT = "heartbeat"
     const val FIELD_EVENT = "event"

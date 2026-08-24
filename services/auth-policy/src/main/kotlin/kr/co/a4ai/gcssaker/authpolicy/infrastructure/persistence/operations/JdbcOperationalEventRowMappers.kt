@@ -5,6 +5,8 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventIcePathCount
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventMetrics
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventSeverityCount
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalStreamSessionMetric
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventTimeBucket
 import org.springframework.jdbc.core.RowMapper
 
 internal object JdbcOperationalEventRowMappers {
@@ -61,6 +63,29 @@ internal object JdbcOperationalEventRowMappers {
             count = rs.getLong(OperationalEventMetricColumns.totalEvents),
         )
     }
+
+    val streamSession = RowMapper<OperationalStreamSessionMetric> { rs, _ ->
+        OperationalStreamSessionMetric(
+            streamId = rs.getString(OperationalEventColumns.streamId),
+            connectionId = rs.getString(OperationalEventColumns.connectionId),
+            lastOccurredAt = rs.getTimestamp(OperationalEventMetricColumns.lastOccurredAt).toInstant(),
+            eventCount = rs.getLong(OperationalEventMetricColumns.eventCount),
+            averageLatencyMs = rs.getDouble(OperationalEventMetricColumns.avgLatencyMs),
+            averageThroughputMbps = rs.getDouble(OperationalEventMetricColumns.avgThroughputMbps),
+            icePath = rs.getString(OperationalEventColumns.icePath),
+            relayFallbackReason = rs.getString(OperationalEventColumns.relayFallbackReason),
+        )
+    }
+
+    val timeBucket = RowMapper<OperationalEventTimeBucket> { rs, _ ->
+        OperationalEventTimeBucket(
+            bucketStart = rs.getTimestamp(OperationalEventMetricColumns.bucketStart).toInstant(),
+            eventCount = rs.getLong(OperationalEventMetricColumns.eventCount),
+            totalConnections = rs.getLong(OperationalEventMetricColumns.totalConnections),
+            avgLatencyMs = rs.getDouble(OperationalEventMetricColumns.avgLatencyMs),
+            avgThroughputMbps = rs.getDouble(OperationalEventMetricColumns.avgThroughputMbps),
+        )
+    }
 }
 
 internal object OperationalEventColumns {
@@ -89,4 +114,7 @@ internal object OperationalEventMetricColumns {
     const val avgLatencyMs = "avg_latency_ms"
     const val maxLatencyMs = "max_latency_ms"
     const val avgThroughputMbps = "avg_throughput_mbps"
+    const val lastOccurredAt = "last_occurred_at"
+    const val eventCount = "event_count"
+    const val bucketStart = "bucket_start"
 }

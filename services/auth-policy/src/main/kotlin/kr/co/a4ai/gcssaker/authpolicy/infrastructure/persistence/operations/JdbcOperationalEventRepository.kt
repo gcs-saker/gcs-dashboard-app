@@ -2,10 +2,13 @@ package kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventMetrics
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventCursor
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPageLimit
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPage
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPageQuery
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventReadModel
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventTimeBucket
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.toCursor
 import org.springframework.jdbc.core.JdbcTemplate
@@ -18,7 +21,7 @@ class JdbcOperationalEventRepository(
 ) : OperationalEventRepository {
     private val jdbc = JdbcTemplate(dataSource)
     private val writer = JdbcOperationalEventWriter(jdbc)
-    private val metricsReader = JdbcOperationalEventMetricsReader(jdbc, ::eventsFor)
+    private val metricsReader = JdbcOperationalEventMetricsReader(jdbc)
 
     init {
         OperationalEventSchema.ensure(dataSource)
@@ -33,6 +36,25 @@ class JdbcOperationalEventRepository(
         val params = mutableListOf<Any>()
         OperationalEventFilterAppender.append(sql, params, principal, query)
         sql.append(OperationalEventSql.orderByOccurredAt)
+        return jdbc.query(sql.toString(), JdbcOperationalEventRowMappers.readModel, *params.toTypedArray())
+    }
+
+    override fun eventsAfter(
+        principal: AuthenticatedPrincipal,
+        query: OperationalEventQuery,
+        cursor: OperationalEventCursor,
+        limit: OperationalEventPageLimit,
+    ): List<OperationalEventReadModel> {
+        val sql = StringBuilder(OperationalEventSql.selectBase)
+        val params = mutableListOf<Any>()
+        OperationalEventFilterAppender.append(sql, params, principal, query)
+        sql.append(OperationalEventSql.andAfterWatermark)
+        params.add(Timestamp.from(cursor.occurredAt))
+        params.add(Timestamp.from(cursor.occurredAt))
+        params.add(cursor.id)
+        sql.append(OperationalEventSql.orderByOccurredAtAscending)
+        sql.append(OperationalEventSql.limit)
+        params.add(limit.value)
         return jdbc.query(sql.toString(), JdbcOperationalEventRowMappers.readModel, *params.toTypedArray())
     }
 
@@ -68,6 +90,17 @@ class JdbcOperationalEventRepository(
         principal: AuthenticatedPrincipal,
         query: OperationalEventQuery,
     ): OperationalEventMetrics = metricsReader.metricsFor(principal, query)
+
+    override fun timeBucketsFor(
+        principal: AuthenticatedPrincipal,
+        query: OperationalEventQuery,
+    ): List<OperationalEventTimeBucket> {
+        val sql = StringBuilder(OperationalEventSql.selectTimeBucketsBase)
+        val params = mutableListOf<Any>()
+        OperationalEventFilterAppender.append(sql, params, principal, query)
+        sql.append(OperationalEventSql.groupByTimeBucket)
+        return jdbc.query(sql.toString(), JdbcOperationalEventRowMappers.timeBucket, *params.toTypedArray())
+    }
 }
 
 object OperationalEventSchema {

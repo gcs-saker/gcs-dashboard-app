@@ -268,8 +268,6 @@ class AuthPolicyConfigTest {
         val repository = OperationalPersistenceConfiguration().operationalEventRepository(
             AuthRuntimeSettings.fromEnvironment(localEnvironment()).copy(jdbcPersistenceEnabled = false),
             EmptyObjectProvider(),
-            EmptyObjectProvider<StringRedisTemplate>(),
-            jacksonObjectMapper().findAndRegisterModules(),
         )
         val principal = AuthenticatedPrincipal("operator01", UserRole.OPERATOR, GroupId("co-a"))
 

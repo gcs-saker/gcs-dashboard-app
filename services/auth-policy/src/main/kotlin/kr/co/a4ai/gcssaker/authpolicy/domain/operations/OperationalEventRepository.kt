@@ -5,6 +5,19 @@ import java.time.temporal.ChronoUnit
 interface OperationalEventRepository {
     fun eventsFor(principal: AuthenticatedPrincipal, query: OperationalEventQuery): List<OperationalEventReadModel>
 
+    fun eventsAfter(
+        principal: AuthenticatedPrincipal,
+        query: OperationalEventQuery,
+        cursor: OperationalEventCursor,
+        limit: OperationalEventPageLimit,
+    ): List<OperationalEventReadModel> =
+        eventsFor(principal, query)
+            .asSequence()
+            .filter { it.occurredAt > cursor.occurredAt || (it.occurredAt == cursor.occurredAt && it.id > cursor.id) }
+            .sortedWith(compareBy<OperationalEventReadModel> { it.occurredAt }.thenBy { it.id })
+            .take(limit.value)
+            .toList()
+
     fun append(event: OperationalEventReadModel)
 
     fun metricsFor(principal: AuthenticatedPrincipal, query: OperationalEventQuery): OperationalEventMetrics {

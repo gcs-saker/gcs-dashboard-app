@@ -3,16 +3,16 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { AuthProvider, useAuth } from "./AuthProvider";
 
-const { logoutRequest, refreshSessionRequest } = vi.hoisted(() => ({
+const { logoutRequest, refreshSessionOnce } = vi.hoisted(() => ({
   logoutRequest: vi.fn(async () => undefined),
-  refreshSessionRequest: vi.fn(async () => { throw new Error("no renewal session"); }),
+  refreshSessionOnce: vi.fn(async () => { throw new Error("no renewal session"); }),
 }));
 
 vi.mock("./authApi", () => ({
   loginRequest: vi.fn(),
   logoutRequest,
   persistTokenResponse: vi.fn(),
-  refreshSessionRequest,
+  refreshSessionOnce,
 }));
 vi.mock("./authStorage", () => ({
   clearAuthSession: vi.fn(),

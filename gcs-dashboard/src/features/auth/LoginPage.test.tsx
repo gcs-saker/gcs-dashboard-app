@@ -100,6 +100,23 @@ describe("LoginPage auth flow", () => {
     );
   });
 
+  test("does not issue authentication requests while credentials are typed", async () => {
+    mockRefreshMissingThenLogin(Response.json(ISSUED_TOKEN_RESPONSE));
+
+    render(<App />);
+
+    const usernameInput = await screen.findByLabelText("아이디");
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
+    await userEvent.type(usernameInput, "operator01");
+    await userEvent.type(screen.getByLabelText("비밀번호"), "correct-password");
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      AUTH_REFRESH_URL,
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
   test("links unauthenticated users to signup", async () => {
     globalThis.fetch = vi.fn(async () => Response.json({ detail: "refresh token required" }, { status: 401 }));
 

@@ -3,21 +3,18 @@ package kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventMetrics
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
-import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventReadModel
-import kr.co.a4ai.gcssaker.authpolicy.domain.toStreamSessionMetrics
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.RowMapper
 
 class JdbcOperationalEventMetricsReader(
     private val jdbc: JdbcTemplate,
-    private val eventsReader: (AuthenticatedPrincipal, OperationalEventQuery) -> List<OperationalEventReadModel>,
 ) {
     fun metricsFor(principal: AuthenticatedPrincipal, query: OperationalEventQuery): OperationalEventMetrics {
         val aggregate = aggregateMetrics(principal, query)
         return aggregate.copy(
             severityCounts = severityCounts(principal, query),
             icePathCounts = icePathCounts(principal, query),
-            streamSessions = eventsReader(principal, query).toStreamSessionMetrics(),
+            streamSessions = streamSessions(principal, query),
         )
     }
 
@@ -46,6 +43,15 @@ class JdbcOperationalEventMetricsReader(
             preGroupSql = OperationalEventSql.andIcePathPresent,
             groupSql = OperationalEventSql.groupByIcePath,
             mapper = JdbcOperationalEventRowMappers.icePathCount,
+        )
+
+    private fun streamSessions(principal: AuthenticatedPrincipal, query: OperationalEventQuery) =
+        groupedCounts(
+            principal = principal,
+            query = query,
+            baseSql = OperationalEventSql.selectStreamSessionsBase,
+            groupSql = OperationalEventSql.groupByStreamSession,
+            mapper = JdbcOperationalEventRowMappers.streamSession,
         )
 
     private fun <T> groupedCounts(

@@ -58,6 +58,19 @@ test("login mock flow reaches dashboard without real credentials", async ({ page
   await attachScreenshot(page, testInfo, "login-dashboard");
 });
 
+test("dashboard application does not emit string-evaluation CSP violations", async ({ page }) => {
+  const cspErrors: string[] = [];
+  page.on("console", (message) => {
+    if (/unsafe-eval|refused to evaluate|evaluat(?:e|ing).+string/i.test(message.text())) {
+      cspErrors.push(message.text());
+    }
+  });
+
+  await page.goto("/login?redirect=%2F");
+  await page.waitForTimeout(500);
+  expect(cspErrors).toEqual([]);
+});
+
 test("dashboard preview supports stream, map, and operations navigation", async ({ page }, testInfo) => {
   await page.goto("/?uiPreview=1");
 

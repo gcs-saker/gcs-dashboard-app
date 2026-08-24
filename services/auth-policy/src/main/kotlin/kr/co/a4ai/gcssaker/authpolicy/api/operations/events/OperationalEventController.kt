@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
+import kr.co.a4ai.gcssaker.authpolicy.observability.OperationalEventPipelineMetrics
 
 @RestController
 class OperationalEventController(
@@ -20,9 +21,10 @@ class OperationalEventController(
     private val auditPublisher: OperationalAuditPublisher = NoopOperationalAuditPublisher,
     private val objectMapper: ObjectMapper,
     private val streamPolicy: OperationalEventStreamPolicy = OperationalEventStreamPolicy(),
+    private val pipelineMetrics: OperationalEventPipelineMetrics = OperationalEventPipelineMetrics(),
 ) {
     private val requests = OperationalEventRequestReader(principalResolver)
-    private val streamWriter = OperationalEventStreamWriter(repository, objectMapper, streamPolicy)
+    private val streamWriter = OperationalEventStreamWriter(repository, objectMapper, streamPolicy, pipelineMetrics)
 
     @GetMapping(OperationalEventApiRoutes.EVENTS)
     @RequiresBearerAuth

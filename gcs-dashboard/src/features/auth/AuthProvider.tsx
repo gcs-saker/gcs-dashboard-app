@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
   type Dispatch, type MutableRefObject, type ReactNode, type SetStateAction } from "react";
-import { loginRequest, logoutRequest, persistTokenResponse, refreshSessionRequest } from "./authApi";
+import { loginRequest, logoutRequest, persistTokenResponse, refreshSessionOnce } from "./authApi";
 import {
   clearAuthSession,
   getStoredAccessToken,
@@ -79,7 +79,7 @@ function useSessionRefresh(
       };
     }
 
-    void refreshSessionRequest()
+    void refreshSessionOnce()
       .then((token) => {
         if (disposed) return;
         const user = tokenUser(token);

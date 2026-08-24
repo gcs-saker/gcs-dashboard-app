@@ -38,9 +38,16 @@ class OperationalEventGraphQlController(
             from = parseGraphQlInstantQuery(OperationalEventQueryFields.FROM, from),
             to = parseGraphQlInstantQuery(OperationalEventQueryFields.TO, to),
         )
-        val events = repository.eventsFor(principal, eventQuery)
+        val events = repository.eventPageFor(
+            principal,
+            OperationalEventPageQuery(eventQuery, OperationalEventPageLimit(LEGACY_GRAPHQL_LIMIT)),
+        ).events
         auditPublisher.publish(principal, eventQuery, events.size)
         return events.map { it.toGraphQlResponse() }
+    }
+
+    private companion object {
+        const val LEGACY_GRAPHQL_LIMIT = 500
     }
 
     @QueryMapping(name = GraphQlQueryNames.OPERATIONAL_EVENT_PAGE)

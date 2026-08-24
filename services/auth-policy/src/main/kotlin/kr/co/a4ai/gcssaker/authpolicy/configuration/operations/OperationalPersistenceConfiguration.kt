@@ -1,6 +1,8 @@
 package kr.co.a4ai.gcssaker.authpolicy.configuration
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.micrometer.core.instrument.MeterRegistry
+import kr.co.a4ai.gcssaker.authpolicy.observability.OperationalEventPipelineMetrics
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
 import org.springframework.beans.factory.ObjectProvider
@@ -11,6 +13,10 @@ import javax.sql.DataSource
 
 @Configuration
 class OperationalPersistenceConfiguration {
+    @Bean
+    fun operationalEventPipelineMetrics(registry: MeterRegistry): OperationalEventPipelineMetrics =
+        OperationalEventPipelineMetrics(registry)
+
     @Bean
     fun operationalReadRepository(
         settings: AuthRuntimeSettings,
@@ -24,8 +30,6 @@ class OperationalPersistenceConfiguration {
     fun operationalEventRepository(
         settings: AuthRuntimeSettings,
         dataSource: ObjectProvider<DataSource>,
-        redisTemplate: ObjectProvider<StringRedisTemplate>,
-        objectMapper: ObjectMapper,
     ): OperationalEventRepository =
-        createOperationalEventRepository(settings, dataSource, redisTemplate, objectMapper)
+        createOperationalEventRepository(settings, dataSource)
 }
