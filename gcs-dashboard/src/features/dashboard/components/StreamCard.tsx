@@ -50,13 +50,13 @@ export const StreamCard = memo(function StreamCard({
         </span>
       </button>
       <div className={`stream-card__visual mode-${stream.mode.toLowerCase()}`}>
-        {stream.streamPath ? (
+        {stream.streamPath && !isSelected ? (
           <RealtimePlayer controls={false} muted streamId={stream.streamPath} title={`${stream.title} 미리보기`} />
         ) : (
           <>
             <span className="reticle" />
             <span className="stream-card__visual-status">
-              상태: 스트림 선택 대기
+              {stream.streamPath ? "메인 화면에서 재생 중" : "상태: 스트림 선택 대기"}
             </span>
           </>
         )}

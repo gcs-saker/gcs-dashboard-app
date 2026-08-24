@@ -27,9 +27,12 @@ describe("StreamCard", () => {
     expect(screen.getByRole("button", { name: "스트리밍 2 선택" })).toHaveAttribute("aria-pressed", "false");
   });
 
-  test("selecting another stream does not turn the grid player into a placeholder", () => {
+  test("mounts a single grid preview only after the stream is no longer selected", () => {
     const onSelect = vi.fn();
     const { rerender } = render(<StreamCard stream={STREAM} isSelected={true} onSelect={onSelect} />);
+
+    expect(screen.queryByTestId("player-raw.drone-02.front")).not.toBeInTheDocument();
+    expect(screen.getByText("메인 화면에서 재생 중")).toBeInTheDocument();
 
     rerender(<StreamCard stream={STREAM} isSelected={false} onSelect={onSelect} />);
     fireEvent.click(screen.getByRole("button", { name: "스트리밍 2 선택" }));
