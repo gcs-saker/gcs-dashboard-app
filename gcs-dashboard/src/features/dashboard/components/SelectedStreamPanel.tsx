@@ -43,7 +43,7 @@ export function SelectedStreamPanel({
       style={{ minHeight: SELECTED_STREAM_WIDGET.minHeight }}
     >
       <SelectedStreamHeader audioEnabled={audioEnabled} controls={controls} onAudioToggle={() => setAudioEnabled((current) => !current)}
-        cameraControl={cameraControl} onToggleAiMode={onToggleAiMode} stream={stream} />
+        onToggleAiMode={onToggleAiMode} stream={stream} />
       <div className={`selected-stream__viewport mode-${stream.mode.toLowerCase()}`}>
         {isReceivableStream(stream) ? (
           <RealtimePlayer
@@ -61,6 +61,7 @@ export function SelectedStreamPanel({
           </div>
         )}
         {isReceivableStream(stream) ? <StreamTelemetryOverlay geometry={stream.geometry} /> : null}
+        {isReceivableStream(stream) ? <CameraDirectionOverlay cameraControl={cameraControl} /> : null}
         <div className="selected-stream__meta">
           <strong>{stream.title}</strong>
           {secondaryLabel ? <span>{secondaryLabel}</span> : null}
@@ -75,14 +76,12 @@ export function SelectedStreamPanel({
 
 function SelectedStreamHeader({
   audioEnabled,
-  cameraControl,
   controls,
   onAudioToggle,
   onToggleAiMode,
   stream,
 }: Pick<SelectedStreamPanelProps, "controls" | "onToggleAiMode" | "stream"> & {
   audioEnabled: boolean;
-  cameraControl: ReturnType<typeof useStreamCameraControl>;
   onAudioToggle: () => void;
 }) {
   const secondaryLabel = getStreamSecondaryLabel(stream);
@@ -109,14 +108,20 @@ function SelectedStreamHeader({
           onClick={onAudioToggle}
           type="button"
         >{audioEnabled ? "음성 끄기" : "음성 켜기"}</button>
-        <span className="selected-stream__camera-controls" role="group" aria-label="모바일 카메라 방향">
-          <button disabled={!isReceivableStream(stream) || cameraControl.pendingMode !== null}
-            onClick={() => void cameraControl.requestFacingMode("front")} type="button">전면</button>
-          <button disabled={!isReceivableStream(stream) || cameraControl.pendingMode !== null}
-            onClick={() => void cameraControl.requestFacingMode("rear")} type="button">후면</button>
-        </span>
         {controls}
       </span>
     </div>
   );
+}
+
+function CameraDirectionOverlay({ cameraControl }: {
+  cameraControl: ReturnType<typeof useStreamCameraControl>;
+}) {
+  return <span className="selected-stream__camera-controls" role="group" aria-label="모바일 카메라 방향">
+    <small>카메라</small>
+    <button disabled={cameraControl.pendingMode !== null}
+      onClick={() => void cameraControl.requestFacingMode("front")} type="button">전면</button>
+    <button disabled={cameraControl.pendingMode !== null}
+      onClick={() => void cameraControl.requestFacingMode("rear")} type="button">후면</button>
+  </span>;
 }

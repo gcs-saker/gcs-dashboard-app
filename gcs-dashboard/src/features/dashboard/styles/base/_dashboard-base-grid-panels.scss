@@ -10,6 +10,36 @@
   padding: 10px;
 }
 
+.ops-dashboard[data-layout-mode="map-priority"] .ops-dashboard__grid {
+  grid-template-columns: minmax(230px, 0.34fr) minmax(700px, 1.5fr) minmax(430px, 0.72fr);
+}
+
+.ops-dashboard[data-layout-mode="stream-priority"] .ops-dashboard__grid {
+  grid-template-columns: minmax(220px, 0.32fr) minmax(390px, 0.7fr) minmax(760px, 1.5fr);
+}
+
+.ops-dashboard[data-layout-mode="overview"] {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.ops-dashboard[data-layout-mode="overview"] .ops-dashboard__grid {
+  grid-template-columns: minmax(250px, 0.5fr) minmax(520px, 1fr) minmax(520px, 1fr);
+  grid-template-rows: minmax(190px, 0.44fr) minmax(220px, 0.56fr);
+  overflow: hidden;
+}
+
+.ops-dashboard[data-layout-mode="overview"] .telemetry-panel { grid-column: 1; grid-row: 1; }
+.ops-dashboard[data-layout-mode="overview"] .ops-summary { grid-column: 1; grid-row: 2; }
+.ops-dashboard[data-layout-mode="overview"] .tactical-map { grid-column: 2; grid-row: 1 / 3; }
+.ops-dashboard[data-layout-mode="overview"] .selected-stream { grid-column: 3; grid-row: 1; }
+.ops-dashboard[data-layout-mode="overview"] .stream-grid {
+  grid-column: 3;
+  grid-row: 2;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-height: 0;
+}
+
 .ops-panel,
 .stream-card {
   background:

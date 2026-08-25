@@ -23,18 +23,19 @@ interface DashboardPageViewPropsInput {
 export function useDashboardPageViewProps({
   actions, auth, commands, notification, onDismissNotification, preferences, streams, ui, viewModel,
 }: DashboardPageViewPropsInput): DashboardPageViewProps {
-  const { activeView, cctvLayoutMode, cctvQualityMode, layout, motionMode } = preferences.preferences;
+  const { activeView, cctvLayoutMode, cctvQualityMode, dashboardLayoutMode, layout, motionMode } = preferences.preferences;
   return {
     headerProps: {
       activeView, currentUser: auth.currentUser, isAssetDrawerOpen: ui.isAssetDrawerOpen,
       layoutMessage: ui.layoutMessage, onChangeView: preferences.setActiveView, onLogout: auth.handleLogout,
+      dashboardLayoutMode, onSetDashboardLayoutMode: preferences.setDashboardLayoutMode,
       onOpenAssetDrawer: commands.openAssetDrawer, onOpenWidgetDialog: commands.openWidgetDialog,
       onResetLayout: actions.resetLayout, streams: streams.streams, selectedStreamId: streams.selectedStreamId,
       talkbackTargetStreamIds: ui.talkbackTargetStreamIds,
     },
-    motionMode, notification, onDismissNotification,
+    dashboardLayoutMode, motionMode, notification, onDismissNotification,
     routerProps: {
-      activeView, aiResultsWidget: getDashboardWidgetDefinition("ai-results"),
+      activeView, aiResultsWidget: getDashboardWidgetDefinition("ai-results"), dashboardLayoutMode,
       audioActiveStreamId: ui.audioActiveStreamId, audioAnalysis: ui.audioAnalysis,
       cctvGridSize: viewModel.cctvGridSize, cctvLayoutMode, cctvQualityMode,
       cctvStatusSummary: viewModel.cctvStatusSummary, cctvStreams: viewModel.cctvStreams,

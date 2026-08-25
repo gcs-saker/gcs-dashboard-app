@@ -16,9 +16,11 @@ import type { MapFocusViewModel } from "@dashboard/layout/mapFocus";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import type { RealtimePlayerSnapshot } from "@streaming/types";
 import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
+import type { DashboardLayoutMode } from "@dashboard/preferences/userPreferences";
 
 interface DashboardMainGridProps {
   aiResultsWidget: DashboardWidgetDefinition; audioActiveStreamId: string | null;
+  dashboardLayoutMode: DashboardLayoutMode;
   audioAnalysis: AudioAnalysisSnapshot | null; isWidgetPinned: (widgetId: DashboardWidgetId) => boolean;
   isWidgetVisible: (widgetId: DashboardWidgetId) => boolean; mapFocus: MapFocusViewModel; motionEnabled: boolean;
   onPlaybackStatusChange: (streamId: string, snapshot: RealtimePlayerSnapshot) => void;
@@ -35,8 +37,8 @@ export function DashboardMainGrid(props: DashboardMainGridProps) {
   return <section className="ops-dashboard__grid">
     <MapPanel {...props} /><SelectedPanel {...props} /><StreamGridPanel {...props} />
     <SummaryPanel {...props} /><TelemetryWidget {...props} />
-    <DashboardAudioWaveformWidget analysis={props.audioAnalysis} isMotionEnabled={props.motionEnabled}
-      selectedStream={props.selectedStream} talkback={props.talkback} />
+    {props.dashboardLayoutMode !== "overview" ? <DashboardAudioWaveformWidget analysis={props.audioAnalysis}
+      isMotionEnabled={props.motionEnabled} selectedStream={props.selectedStream} talkback={props.talkback} /> : null}
     <AiPanel {...props} />
   </section>;
 }
@@ -69,7 +71,8 @@ function StreamGridPanel(props: DashboardMainGridProps) {
       resetKeys={[props.selectedStreamId, props.streams.length]} scope="panel" title="다중 스트림">
       <StreamGrid audioActiveStreamId={props.audioActiveStreamId} onSelectStream={props.onSelectStream}
         onToggleTalkbackTarget={props.onToggleTalkbackTarget} selectedStreamId={props.selectedStreamId}
-        talkbackTargetStreamIds={props.talkbackTargetStreamIds} streams={props.streams} />
+        talkbackTargetStreamIds={props.talkbackTargetStreamIds}
+        streams={props.dashboardLayoutMode === "overview" ? props.streams.slice(0, 2) : props.streams} />
     </DashboardErrorBoundary>
   </RenderProfilerBoundary>;
 }

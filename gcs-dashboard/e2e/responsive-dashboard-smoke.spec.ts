@@ -31,6 +31,17 @@ for (const viewport of VIEWPORTS) {
   });
 }
 
+test("overview mode fits the desktop viewport without page scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/?uiPreview=1");
+  await page.getByRole("combobox", { name: "대시보드 보기 모드" }).selectOption("overview");
+
+  await expect(page.getByRole("heading", { name: "음성 파형 분석" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "스트리밍 3 선택" })).toHaveCount(0);
+  const verticalOverflow = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+  expect(verticalOverflow).toBeLessThanOrEqual(1);
+});
+
 async function mockEmptyOperationalState(page: Page): Promise<void> {
   await page.route("**/media-control/api/v1/streams**", (route) => route.fulfill({ json: [], status: 200 }));
   await page.route("**/api/telemetry/all**", (route) => route.fulfill({ json: [], status: 200 }));

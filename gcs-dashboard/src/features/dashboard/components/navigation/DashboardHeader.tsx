@@ -1,12 +1,14 @@
 import { TalkbackControlPanel } from "@dashboard/components/TalkbackControlPanel";
 import type { AuthenticatedUser } from "@auth/types";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
-import type { DashboardView } from "@dashboard/preferences/userPreferences";
+import type { DashboardLayoutMode, DashboardView } from "@dashboard/preferences/userPreferences";
 import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
+import { DashboardLayoutModeSelect } from "./DashboardLayoutModeSelect";
 
 export interface DashboardHeaderProps {
   activeView: DashboardView;
   currentUser: AuthenticatedUser | null;
+  dashboardLayoutMode: DashboardLayoutMode;
   isAssetDrawerOpen: boolean;
   layoutMessage: string;
   onChangeView: (view: DashboardView) => void;
@@ -14,6 +16,7 @@ export interface DashboardHeaderProps {
   onOpenAssetDrawer: () => void;
   onOpenWidgetDialog: () => void;
   onResetLayout: () => void;
+  onSetDashboardLayoutMode: (mode: DashboardLayoutMode) => void;
   streams: DashboardStreamSlot[];
   selectedStreamId: string;
   talkbackTargetStreamIds: string[];
@@ -31,6 +34,7 @@ const DASHBOARD_TABS: readonly { id: DashboardView; label: string }[] = [
 export function DashboardHeader({
   activeView,
   currentUser,
+  dashboardLayoutMode,
   isAssetDrawerOpen,
   layoutMessage,
   onChangeView,
@@ -38,8 +42,8 @@ export function DashboardHeader({
   onOpenAssetDrawer,
   onOpenWidgetDialog,
   onResetLayout,
-  streams,
-  selectedStreamId,
+  onSetDashboardLayoutMode,
+  streams, selectedStreamId,
   talkbackTargetStreamIds,
   talkback,
 }: DashboardHeaderProps) {
@@ -47,6 +51,7 @@ export function DashboardHeader({
     <header className="ops-dashboard__tabs" aria-label="주요 탭">
       <DashboardTabs activeView={activeView} onChangeView={onChangeView} />
       <div className="ops-dashboard__actions">
+        {activeView === "dashboard" ? <DashboardLayoutModeSelect mode={dashboardLayoutMode} onChange={onSetDashboardLayoutMode} /> : null}
         <div className="ops-dashboard__action-group">
           <button
             aria-controls="asset-tree-drawer"

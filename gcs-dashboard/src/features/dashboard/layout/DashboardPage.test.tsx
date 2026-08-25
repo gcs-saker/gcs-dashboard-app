@@ -187,6 +187,24 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("region", { name: "다중 stream 음성 송신" })).toHaveTextContent("전방 EO");
   });
 
+  test("switches among dashboard priority modes and limits overview rendering", async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+    const modeSelect = screen.getByRole("combobox", { name: "대시보드 보기 모드" });
+
+    await user.selectOptions(modeSelect, "map-priority");
+    expect(screen.getByRole("main", { name: "Field Ops Dashboard" })).toHaveAttribute("data-layout-mode", "map-priority");
+    await user.selectOptions(modeSelect, "stream-priority");
+    expect(screen.getByRole("main", { name: "Field Ops Dashboard" })).toHaveAttribute("data-layout-mode", "stream-priority");
+    await user.selectOptions(modeSelect, "overview");
+
+    expect(screen.getByRole("main", { name: "Field Ops Dashboard" })).toHaveAttribute("data-layout-mode", "overview");
+    expect(screen.queryByRole("heading", { name: "음성 파형 분석" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "스트리밍 1 선택" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "스트리밍 2 선택" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "스트리밍 3 선택" })).not.toBeInTheDocument();
+  });
+
   test("selects a stream from the tactical map pin without opening the connect dialog", async () => {
     const user = userEvent.setup();
     renderDashboard();

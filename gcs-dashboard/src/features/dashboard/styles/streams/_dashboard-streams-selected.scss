@@ -67,8 +67,26 @@
 }
 
 .selected-stream__camera-controls {
+  backdrop-filter: blur(10px);
+  background: rgba(3, 12, 18, 0.78);
+  border: 1px solid rgba(61, 184, 255, 0.42);
+  border-radius: 7px;
   display: inline-flex;
   gap: 3px;
+  padding: 4px;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 5;
+}
+
+.selected-stream__camera-controls small {
+  align-items: center;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 0.66rem;
+  font-weight: 800;
+  padding: 0 5px;
 }
 
 .selected-stream__camera-controls button {
@@ -90,7 +108,7 @@
   padding: 6px 9px;
   position: absolute;
   right: 12px;
-  top: 12px;
+  top: 54px;
 }
 
 .stream-card__promote {

@@ -4,7 +4,7 @@ import type { DashboardLayoutItem, DashboardWidgetId } from "@dashboard/layout/d
 import type { MotionMode } from "@dashboard/preferences/motionPreference";
 import { setStreamDeviceAlias } from "@dashboard/preferences/streamPreferences";
 import { saveStreamDeviceAliases } from "@dashboard/assets/streamAliasRepository";
-import type { CctvLayoutMode, DashboardUserPreferences, DashboardView } from "@dashboard/preferences/userPreferences";
+import type { CctvLayoutMode, DashboardLayoutMode, DashboardUserPreferences, DashboardView } from "@dashboard/preferences/userPreferences";
 import type { useDebouncedPreferenceWriter } from "@/features/shared/hooks/useDebouncedPreferenceWriter";
 
 interface PreferenceActionsInput {
@@ -40,7 +40,9 @@ function useSimplePreferenceSetters(update: PreferenceUpdater) {
   const setCctvLayoutMode = useCallback((cctvLayoutMode: CctvLayoutMode) => update((value) => ({ ...value, cctvLayoutMode })), [update]);
   const setCctvQualityMode = useCallback((cctvQualityMode: CctvQualityMode) => update((value) => ({ ...value, cctvQualityMode })), [update]);
   const setMotionMode = useCallback((motionMode: MotionMode) => update((value) => ({ ...value, motionMode })), [update]);
-  return { setActiveView, setCctvLayoutMode, setCctvQualityMode, setMotionMode };
+  const setDashboardLayoutMode = useCallback((dashboardLayoutMode: DashboardLayoutMode) =>
+    update((value) => ({ ...value, dashboardLayoutMode })), [update]);
+  return { setActiveView, setCctvLayoutMode, setCctvQualityMode, setDashboardLayoutMode, setMotionMode };
 }
 
 function useLayoutPreferenceActions(update: PreferenceUpdater) {
