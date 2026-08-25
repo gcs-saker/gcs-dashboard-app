@@ -27,7 +27,7 @@ for (const viewport of VIEWPORTS) {
 
     await page.getByRole("button", { name: "자산" }).click();
     await expect(page.getByRole("complementary", { name: "자산트리" })).toBeVisible();
-    await page.getByRole("button", { name: "닫기" }).click();
+    await page.getByTitle("자산트리 닫기").click();
   });
 }
 
