@@ -28,7 +28,7 @@ describe("CctvChannelCard", () => {
 
     expect(screen.getByTestId("cctv-player")).toHaveTextContent("opaque-live");
     expect(screen.queryByText(/FPS|42ms|녹화 준비/)).not.toBeInTheDocument();
-    expect(screen.getAllByText("실시간 수신")).toHaveLength(2);
+    expect(screen.getByText("실시간 수신")).toBeInTheDocument();
     expect(screen.getByText("간소 보기")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "CCTV 01 선택" }));

@@ -3,8 +3,7 @@
   border: 1px solid rgba(94, 151, 181, 0.36);
   border-radius: 6px;
   color: var(--text);
-  display: grid;
-  grid-template-rows: minmax(72px, 1fr) 28px 24px 30px;
+  display: block;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
@@ -25,15 +24,25 @@
     linear-gradient(145deg, rgba(8, 32, 42, 0.94), rgba(3, 8, 12, 0.98));
   border: 0;
   color: var(--text);
+  height: 100%;
   min-height: 72px;
   overflow: hidden;
   position: relative;
 }
 
 .cctv-channel-card__viewport > .realtime-player {
+  height: 100%;
   inset: 0;
   min-height: 100%;
   position: absolute;
+  width: 100%;
+}
+
+.cctv-channel-card__viewport .webrtc-player__video,
+.cctv-channel-card__viewport .hls-fallback-player__video {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
 }
 
 .cctv-channel-card__select {
@@ -44,7 +53,7 @@
   inset: 0;
   position: absolute;
   width: 100%;
-  z-index: 2;
+  z-index: 3;
 }
 
 .cctv-channel-card__viewport::before {
@@ -74,15 +83,17 @@
 }
 
 .cctv-channel-card__empty {
-  bottom: 8px;
+  left: 50%;
+  top: 50%;
   color: rgba(220, 232, 242, 0.84);
   font-size: 0.7rem;
   font-weight: 900;
-  left: 8px;
   max-width: calc(100% - 16px);
   overflow: hidden;
   position: absolute;
-  text-align: left;
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transform: translate(-50%, -50%);
+  z-index: 1;
 }

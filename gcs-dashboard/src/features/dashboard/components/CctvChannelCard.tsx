@@ -36,25 +36,21 @@ export const CctvChannelCard = memo(function CctvChannelCard({
         {receivable ? <RealtimePlayer controls={false} muted streamId={stream.streamPath}
           title={`${stream.title} CCTV`} /> : null}
         <button aria-label={`${stream.title} 선택`} aria-pressed={isSelected}
-          className="cctv-channel-card__select" onClick={selectStream} type="button">
-        <span className="cctv-channel-card__channel">{stream.title.replace("CCTV ", "CH ")}</span>
+          className="cctv-channel-card__select" onClick={selectStream} type="button" />
         {!receivable ? <><span className="cctv-channel-card__scanline" /><span className="cctv-channel-card__reticle" />
           <span className="cctv-channel-card__empty">{stream.streamPath ? getDashboardStreamDisplayName(stream) : "채널 미연결"}</span></> : null}
-        </button>
-      </div>
-      <div className="cctv-channel-card__meta">
-        <strong>{stream.title}</strong>
-        <span className={`ops-badge ${getDashboardStreamStatusClass(stream.status)}`}>{statusText}</span>
-        {hasAudioActivity ? <span className="cctv-channel-card__audio">음성</span> : null}
-      </div>
-      <div className="cctv-channel-card__footer">
-        <span title={sourceLabel}>{sourceLabel}</span>
-        <em>{qualityMode === "preview" ? "간소 보기" : "상세 보기"}</em>
-      </div>
-      <div className="cctv-channel-card__statusbar" aria-label={`${stream.title} 수신 상태`}>
-        <span>{sourceLabel}</span>
-        <span>{hasAudioActivity ? "오디오 수신" : "오디오 대기"}</span>
-        <span>{stream.geometry ? "좌표 수신" : "좌표 대기"}</span>
+        <div className="cctv-channel-card__overlay cctv-channel-card__overlay--top">
+          <strong>{stream.title}</strong>
+          <span className={`ops-badge ${getDashboardStreamStatusClass(stream.status)}`}>{statusText}</span>
+          {hasAudioActivity ? <span className="cctv-channel-card__audio">음성</span> : null}
+        </div>
+        <div className="cctv-channel-card__overlay cctv-channel-card__overlay--bottom"
+          aria-label={`${stream.title} 수신 상태`}>
+          <span title={sourceLabel}>{sourceLabel}</span>
+          <span>{hasAudioActivity ? "오디오 수신" : "오디오 대기"}</span>
+          <span>{stream.geometry ? "좌표 수신" : "좌표 대기"}</span>
+          <em>{qualityMode === "preview" ? "간소 보기" : "상세 보기"}</em>
+        </div>
       </div>
     </article>
   );

@@ -1,30 +1,47 @@
-.cctv-channel-card__meta,
-.cctv-channel-card__footer {
+.cctv-channel-card__overlay {
   align-items: center;
+  background: linear-gradient(90deg, rgba(2, 9, 14, 0.88), rgba(2, 9, 14, 0.48));
+  color: #dce8f2;
   display: flex;
   gap: 6px;
+  left: 0;
   min-width: 0;
+  pointer-events: none;
+  position: absolute;
   padding: 0 8px;
+  right: 0;
+  z-index: 4;
 }
 
-.cctv-channel-card__meta {
-  border-top: 1px solid rgba(94, 151, 181, 0.24);
+.cctv-channel-card__overlay--top {
+  min-height: 30px;
+  top: 0;
+}
+
+.cctv-channel-card__overlay--bottom {
+  background: linear-gradient(90deg, rgba(2, 9, 14, 0.9), rgba(2, 9, 14, 0.58));
+  bottom: 0;
+  color: rgba(220, 232, 242, 0.82);
+  font-size: 0.64rem;
+  font-weight: 800;
   justify-content: space-between;
+  min-height: 28px;
 }
 
-.cctv-channel-card__meta strong,
-.cctv-channel-card__footer span {
+.cctv-channel-card__overlay strong,
+.cctv-channel-card__overlay span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.cctv-channel-card__meta strong {
+.cctv-channel-card__overlay strong {
   color: #dce8f2;
   font-size: 0.76rem;
+  margin-right: auto;
 }
 
-.cctv-channel-card__meta .ops-badge {
+.cctv-channel-card__overlay .ops-badge {
   font-size: 0.62rem;
   min-height: 18px;
   padding: 0 6px;
@@ -38,17 +55,13 @@
   padding: 1px 5px;
 }
 
-.cctv-channel-card__footer {
-  border-top: 1px solid rgba(94, 151, 181, 0.18);
-  color: var(--muted);
-  font-size: 0.66rem;
-  font-weight: 800;
-  justify-content: space-between;
-}
-
-.cctv-channel-card__footer em {
+.cctv-channel-card__overlay em {
   color: rgba(190, 213, 226, 0.72);
   font-style: normal;
+}
+
+.stream-grid--cctv.is-preview .cctv-channel-card__overlay--bottom span:nth-of-type(n + 2) {
+  display: none;
 }
 
 .stream-grid--cctv.is-3x3 .cctv-channel-card__viewport {
