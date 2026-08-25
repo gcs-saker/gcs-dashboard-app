@@ -5,7 +5,7 @@
 
   .ops-dashboard__grid {
     grid-template-columns: minmax(260px, 0.72fr) minmax(560px, 1.28fr);
-    grid-template-rows: minmax(220px, auto) minmax(360px, 54vh) minmax(260px, auto) minmax(180px, auto);
+    grid-template-rows: minmax(220px, auto) minmax(360px, 54vh) minmax(260px, auto) 220px minmax(160px, auto);
     overflow: visible;
   }
 
@@ -54,6 +54,10 @@
   .audio-waveform {
     grid-row: 4;
   }
+
+  .ai-panel {
+    grid-row: 5;
+  }
 }
 
 @media (max-height: 860px) and (min-width: 1501px) {
@@ -63,7 +67,7 @@
   }
 
   .ops-dashboard__grid {
-    grid-template-rows: minmax(190px, 0.24fr) minmax(190px, 0.24fr) minmax(150px, 0.18fr) minmax(150px, 0.18fr);
+    grid-template-rows: minmax(190px, 0.24fr) minmax(190px, 0.24fr) minmax(150px, 0.18fr) 210px;
   }
 
   .stream-grid {

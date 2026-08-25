@@ -1,7 +1,6 @@
 .audio-waveform {
-  grid-column: 1;
+  grid-column: 1 / 3;
   grid-row: 4;
-  max-height: 300px;
 }
 
 .audio-waveform.has-audio {

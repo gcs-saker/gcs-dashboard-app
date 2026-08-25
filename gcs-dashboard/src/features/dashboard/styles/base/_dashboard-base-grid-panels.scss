@@ -5,7 +5,7 @@
   flex: 1;
   gap: 10px;
   grid-template-columns: minmax(260px, 0.42fr) minmax(500px, 1.08fr) minmax(560px, 1fr);
-  grid-template-rows: 242px 242px minmax(200px, 1fr) minmax(200px, 1fr);
+  grid-template-rows: 242px 242px minmax(200px, 1fr) 220px;
   min-height: 0;
   padding: 10px;
 }
