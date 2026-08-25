@@ -15,16 +15,11 @@ interface TalkbackControlPanelProps {
 }
 
 export function TalkbackControlPanel({
-  selectedStreamId,
   selectedStreamIds,
   streams,
   talkback,
 }: TalkbackControlPanelProps) {
-  const selectedStreamPath = streams.find((stream) => stream.id === selectedStreamId)?.streamPath;
-  const effectiveStreamIds = selectedStreamIds.length > 0
-    ? selectedStreamIds
-    : selectedStreamPath ? [selectedStreamPath] : [];
-  const selection = buildTalkbackSelectionViewModel(streams, effectiveStreamIds);
+  const selection = buildTalkbackSelectionViewModel(streams, selectedStreamIds);
   const isActive = isTalkbackActive(talkback.status);
 
   return (

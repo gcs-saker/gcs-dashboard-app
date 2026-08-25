@@ -86,7 +86,7 @@ export const StreamCard = memo(function StreamCard({
           onClick={toggleTalkback}
           type="button"
         >
-          음성 송신 대상
+          {isTalkbackTarget ? "송신 대상 선택됨" : "음성 송신 대상"}
         </button>
       ) : null}
     </article>

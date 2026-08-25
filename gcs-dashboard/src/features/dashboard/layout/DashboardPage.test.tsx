@@ -52,7 +52,8 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("button", { name: "서버상태" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "운영설정" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "웹캠 송출" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "마이크 송신" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "마이크 송신" })).toBeDisabled();
+    expect(screen.getByRole("region", { name: "다중 stream 음성 송신" })).toHaveTextContent("대상 없음");
     expect(screen.getAllByText("전방 EO").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "자산" })).toBeInTheDocument();
@@ -170,6 +171,20 @@ describe("DashboardPage", () => {
     expect(within(telemetryPanel).getByText("128.593100")).toBeInTheDocument();
     expect(within(telemetryPanel).getByText("기본 좌표")).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "스트리밍 3 스트림 연결" })).not.toBeInTheDocument();
+  });
+
+  test("toggles an online stream as a talkback target", async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+    const targetButton = screen.getAllByRole("button", { name: "음성 송신 대상" })[0];
+
+    expect(targetButton).toBeEnabled();
+    await user.click(targetButton);
+
+    expect(targetButton).toHaveAttribute("aria-pressed", "true");
+    expect(targetButton).toHaveTextContent("송신 대상 선택됨");
+    expect(screen.getByRole("button", { name: "마이크 송신" })).toBeEnabled();
+    expect(screen.getByRole("region", { name: "다중 stream 음성 송신" })).toHaveTextContent("전방 EO");
   });
 
   test("selects a stream from the tactical map pin without opening the connect dialog", async () => {
