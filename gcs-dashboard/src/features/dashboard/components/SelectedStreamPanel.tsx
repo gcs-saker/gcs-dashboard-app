@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
 import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
 import { StreamTelemetryOverlay } from "@streaming/components/StreamTelemetryOverlay";
 import type { RealtimePlayerSnapshot } from "@streaming/types";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import { isReceivableStream } from "@dashboard/streaming/dashboardCctv";
+import { useStreamCameraControl } from "@dashboard/hooks/useStreamCameraControl";
 import {
   getDashboardStreamStatusClass,
   getDashboardStreamStatusText,
@@ -30,6 +31,9 @@ export function SelectedStreamPanel({
   onToggleAiMode,
 }: SelectedStreamPanelProps) {
   useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.selectedStreamPanel);
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const cameraControl = useStreamCameraControl(stream.streamPath);
+  useEffect(() => setAudioEnabled(false), [stream.id]);
   const secondaryLabel = getStreamSecondaryLabel(stream);
   return (
     <section
@@ -38,11 +42,13 @@ export function SelectedStreamPanel({
       data-widget-id={SELECTED_STREAM_WIDGET.id}
       style={{ minHeight: SELECTED_STREAM_WIDGET.minHeight }}
     >
-      <SelectedStreamHeader controls={controls} onToggleAiMode={onToggleAiMode} stream={stream} />
+      <SelectedStreamHeader audioEnabled={audioEnabled} controls={controls} onAudioToggle={() => setAudioEnabled((current) => !current)}
+        cameraControl={cameraControl} onToggleAiMode={onToggleAiMode} stream={stream} />
       <div className={`selected-stream__viewport mode-${stream.mode.toLowerCase()}`}>
         {isReceivableStream(stream) ? (
           <RealtimePlayer
             controls={false}
+            muted={!audioEnabled}
             onStatusChange={(snapshot) => onPlaybackStatusChange?.(stream.id, snapshot)}
             streamId={stream.streamPath}
             title={stream.title}
@@ -54,23 +60,31 @@ export function SelectedStreamPanel({
             <p>서버가 탐지한 온라인 스트림을 선택하면 이 영역에서 수신 상태를 확인합니다.</p>
           </div>
         )}
-        <StreamTelemetryOverlay geometry={stream.geometry} />
+        {isReceivableStream(stream) ? <StreamTelemetryOverlay geometry={stream.geometry} /> : null}
         <div className="selected-stream__meta">
           <strong>{stream.title}</strong>
           {secondaryLabel ? <span>{secondaryLabel}</span> : null}
           {hasAudioActivity ? <span>음성 수신 중</span> : null}
           {stream.aiModeEnabled ? <span>AI 필터 준비됨</span> : null}
         </div>
+        {cameraControl.message ? <span className="selected-stream__camera-message" role="status">{cameraControl.message}</span> : null}
       </div>
     </section>
   );
 }
 
 function SelectedStreamHeader({
+  audioEnabled,
+  cameraControl,
   controls,
+  onAudioToggle,
   onToggleAiMode,
   stream,
-}: Pick<SelectedStreamPanelProps, "controls" | "onToggleAiMode" | "stream">) {
+}: Pick<SelectedStreamPanelProps, "controls" | "onToggleAiMode" | "stream"> & {
+  audioEnabled: boolean;
+  cameraControl: ReturnType<typeof useStreamCameraControl>;
+  onAudioToggle: () => void;
+}) {
   const secondaryLabel = getStreamSecondaryLabel(stream);
   return (
     <div className="ops-panel__header">
@@ -88,6 +102,19 @@ function SelectedStreamHeader({
           onClick={() => onToggleAiMode?.(stream.id)}
           type="button"
         >AI 모드</button>
+        <button
+          aria-pressed={audioEnabled}
+          className={`ops-command-button ${audioEnabled ? "is-active" : ""}`}
+          disabled={!isReceivableStream(stream)}
+          onClick={onAudioToggle}
+          type="button"
+        >{audioEnabled ? "음성 끄기" : "음성 켜기"}</button>
+        <span className="selected-stream__camera-controls" role="group" aria-label="모바일 카메라 방향">
+          <button disabled={!isReceivableStream(stream) || cameraControl.pendingMode !== null}
+            onClick={() => void cameraControl.requestFacingMode("front")} type="button">전면</button>
+          <button disabled={!isReceivableStream(stream) || cameraControl.pendingMode !== null}
+            onClick={() => void cameraControl.requestFacingMode("rear")} type="button">후면</button>
+        </span>
         {controls}
       </span>
     </div>

@@ -12,6 +12,7 @@ import { useLocalWebcamPublisherViewProps } from "@streaming/hooks/publishing/us
 import { usePublisherConnectionRecovery } from "@streaming/hooks/publishing/usePublisherConnectionRecovery";
 import { usePublisherPreview } from "@streaming/hooks/publishing/usePublisherPreview";
 import { usePublisherWhipPublish } from "@streaming/hooks/publishing/usePublisherWhipPublish";
+import { useRemoteCameraControl } from "@streaming/hooks/publishing/useRemoteCameraControl";
 
 export interface LocalWebcamPublisherProps {
   streamId?: string;
@@ -52,6 +53,13 @@ export function useLocalWebcamPublisherController({
     startGpsTelemetry, stopGpsTelemetry, streamId: selectedStreamTarget.id, updateStatus,
   });
   publishRef.current = publish;
+  useRemoteCameraControl({
+    enabled: ["previewing", "published", "reconnecting"].includes(runtime.status),
+    fetcher,
+    mediaDevices,
+    runtime,
+    streamId: selectedStreamTarget.id,
+  });
 
   useEffect(() => {
     if (!streamTargets.some((target) => target.id === selectedStreamId)) setSelectedStreamId(streamTargets[0].id);

@@ -57,6 +57,7 @@ type streamEndpoints struct {
 	playback   domain.PlaybackURLBuilder
 	authorizer StreamAuthorizer
 	groups     domain.StreamGroupResolver
+	cameras    *cameraCommandStore
 }
 
 type publishEndpoints struct {
@@ -98,6 +99,7 @@ func NewServerWithMetrics(
 	return Server{
 		streamEndpoints: streamEndpoints{
 			streams: streams, ice: ice, playback: playback, authorizer: authorizer, groups: groups,
+			cameras: newCameraCommandStore(),
 		},
 		publishEndpoints:     publishEndpoints{publishToken: strings.TrimSpace(publishToken)},
 		operationalEndpoints: operationalEndpoints{metrics: metrics, now: time.Now},

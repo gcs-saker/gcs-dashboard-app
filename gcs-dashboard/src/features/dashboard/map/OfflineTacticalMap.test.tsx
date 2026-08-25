@@ -52,7 +52,7 @@ describe("OfflineTacticalMap", () => {
     await user.click(screen.getByRole("button", { name: "지도 확대" }));
 
     expect(onStreamMarkerSelect).toHaveBeenCalledWith("stream-1");
-    expect(onAutoFocusChange).toHaveBeenCalledWith(false);
+    expect(onAutoFocusChange).toHaveBeenCalledWith(true);
   });
 
   test("shows stream popup for the active stream", () => {

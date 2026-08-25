@@ -137,6 +137,18 @@ paths:
       description: 원본 stream control 권한을 확인한 뒤 서버가 talkback WHEP 경로와 단기 토큰을 결정한다. 재생 주소는 UI에 표시하거나 저장하지 않는다.
       parameters: [ { $ref: '#/components/parameters/StreamId' } ]
       responses: { '200': { $ref: '#/components/responses/Json' }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' }, '422': { $ref: '#/components/responses/Error' } }
+  /media-control/api/v1/streams/{streamId}/camera-control:
+    get:
+      tags: [Media]
+      summary: 모바일 송출기의 최근 카메라 방향 명령 조회
+      parameters: [ { $ref: '#/components/parameters/StreamId' } ]
+      responses: { '200': { $ref: '#/components/responses/Json' }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' } }
+    post:
+      tags: [Media]
+      summary: 권한 범위 모바일 송출기에 전면 또는 후면 카메라 전환 요청
+      parameters: [ { $ref: '#/components/parameters/StreamId' } ]
+      requestBody: { $ref: '#/components/requestBodies/JsonBody' }
+      responses: { '200': { $ref: '#/components/responses/Json' }, '400': { $ref: '#/components/responses/Error' }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' } }
   /media-control/api/v1/streams/{streamId}/status:
     get: { tags: [Media], summary: stream 상태, parameters: [ { $ref: '#/components/parameters/StreamId' } ], responses: { '200': { $ref: '#/components/responses/Json' } } }
   /media-control/api/v1/device/publish-sessions:

@@ -13,11 +13,13 @@ import { PublicMapMarkers } from "./PublicMapMarkers";
 import { StreamMapPopup } from "./StreamMapPopup";
 import { useLeafletTileMap } from "./useLeafletTileMap";
 import { usePublicVectorMapMarkers } from "./usePublicVectorMapMarkers";
+import { MapLayerSelector, type MapLayerMode } from "./MapLayerSelector";
 
 interface PublicVectorMapProps {
   activeStreamId: string | null;
   autoFocusEnabled: boolean;
   isMotionEnabled?: boolean;
+  layerMode: MapLayerMode;
   mapConfig: DashboardMapConfig;
   onAutoFocusChange: (enabled: boolean) => void;
   onStreamMarkerSelect: (streamId: string) => void;
@@ -25,12 +27,14 @@ interface PublicVectorMapProps {
   selectedStream: DashboardStreamSlot;
   streams: DashboardStreamSlot[];
   onMapError: () => void;
+  onLayerModeChange: (mode: MapLayerMode) => void;
 }
 
 export function PublicVectorMap({
   activeStreamId,
   autoFocusEnabled,
   isMotionEnabled = true,
+  layerMode,
   mapConfig,
   onAutoFocusChange,
   onStreamMarkerSelect,
@@ -38,6 +42,7 @@ export function PublicVectorMap({
   selectedStream,
   streams,
   onMapError,
+  onLayerModeChange,
 }: PublicVectorMapProps) {
   useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.publicVectorMap);
   const selectedGeometry = selectedStream.geometry ?? DEFAULT_MAP_CENTER;
@@ -69,6 +74,7 @@ export function PublicVectorMap({
         중심 {selectedGeometry.lat.toFixed(6)}, {selectedGeometry.lng.toFixed(6)}
       </span>
       <MapToolbar autoFocusEnabled={autoFocusEnabled} {...controls} />
+      <MapLayerSelector mode={layerMode} onChange={onLayerModeChange} />
     </div>
   );
 }
@@ -95,12 +101,14 @@ function usePublicMapControls(input: {
     focus(selectedGeometry, isMotionEnabled);
   };
   const onZoomInClick = () => {
-    onAutoFocusChange(false);
     zoomIn();
+    onAutoFocusChange(true);
+    focus(selectedGeometry, false);
   };
   const onZoomOutClick = () => {
-    onAutoFocusChange(false);
     zoomOut();
+    onAutoFocusChange(true);
+    focus(selectedGeometry, false);
   };
   return { onAutoFocusClick, onManualFocusClick, onZoomInClick, onZoomOutClick };
 }

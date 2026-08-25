@@ -213,7 +213,7 @@ describe("TacticalLeafletMap", () => {
     expect(within(popup).getByText("실시간 GPS")).toBeInTheDocument();
   });
 
-  test("applies the style URL returned by the backend map config API", async () => {
+  test("offers satellite and street map layers over the backend public map mode", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({
@@ -232,9 +232,9 @@ describe("TacticalLeafletMap", () => {
 
     await waitFor(() => {
       expect(leafletMock().tileLayer).toHaveBeenLastCalledWith(
-        "https://maps.example.test/style.json",
+        "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         expect.objectContaining({
-          attribution: "Example Maps",
+          attribution: "Esri World Imagery",
           tileSize: 256,
         }),
       );
@@ -245,5 +245,10 @@ describe("TacticalLeafletMap", () => {
         headers: expect.objectContaining({ Accept: "application/json" }),
       }),
     );
+    fireEvent.click(screen.getByRole("button", { name: "평면" }));
+    await waitFor(() => expect(leafletMock().tileLayer).toHaveBeenLastCalledWith(
+      "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      expect.objectContaining({ attribution: "Esri World Street Map" }),
+    ));
   });
 });

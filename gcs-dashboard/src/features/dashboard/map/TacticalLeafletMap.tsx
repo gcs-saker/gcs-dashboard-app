@@ -7,6 +7,20 @@ import { OfflineTacticalMap } from "./OfflineTacticalMap";
 import { PublicVectorMap } from "./PublicVectorMap";
 import { fetchMapConfig } from "./mapConfig";
 import { chooseDashboardMapEngine } from "./mapEngineDecision";
+import { type MapLayerMode } from "./MapLayerSelector";
+
+const SATELLITE_MAP_CONFIG: DashboardMapConfig = {
+  provider: "esri-satellite",
+  styleUrl: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  attribution: "Esri World Imagery",
+  requiresApiKey: false,
+};
+const STREET_MAP_CONFIG: DashboardMapConfig = {
+  provider: "custom",
+  styleUrl: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+  attribution: "Esri World Street Map",
+  requiresApiKey: false,
+};
 
 interface TacticalLeafletMapProps {
   isMotionEnabled?: boolean;
@@ -27,7 +41,8 @@ export function TacticalLeafletMap({
   if (!map.useOfflineMap) {
     return (
       <PublicVectorMap activeStreamId={map.activeStreamId} autoFocusEnabled={map.autoFocusEnabled}
-        isMotionEnabled={isMotionEnabled} mapConfig={map.mapConfig} onAutoFocusChange={map.setAutoFocusEnabled}
+        isMotionEnabled={isMotionEnabled} layerMode={map.layerMode} mapConfig={map.mapConfig}
+        onLayerModeChange={map.setLayerMode} onAutoFocusChange={map.setAutoFocusEnabled}
         onStreamMarkerSelect={map.handleStreamMarkerSelect} onStreamPopupClose={map.handlePopupClose}
         selectedStream={selectedStream} streams={streams} onMapError={map.handleMapError} />
     );
@@ -44,6 +59,7 @@ function useTacticalMapState(onSelectStream?: (streamId: string) => void) {
   const [activeStreamId, setActiveStreamId] = useState<string | null>(null);
   const [autoFocusEnabled, setAutoFocusEnabled] = useState(true);
   const [mapConfig, setMapConfig] = useState<DashboardMapConfig>(FALLBACK_MAP_CONFIG);
+  const [layerMode, setLayerMode] = useState<MapLayerMode>("satellite");
   const [mapFallbackNotice, setMapFallbackNotice] = useState<string | null>(null);
   const [useOfflineMap, setUseOfflineMap] = useState(chooseDashboardMapEngine(FALLBACK_MAP_CONFIG) === "leaflet-offline");
   const handleMapError = useCallback(() => {
@@ -60,15 +76,15 @@ function useTacticalMapState(onSelectStream?: (streamId: string) => void) {
     let disposed = false;
     void fetchMapConfig().then((config) => {
       if (disposed) return;
-      setMapConfig(config);
+      setMapConfig(config.provider === "offline" ? config : layerMode === "satellite" ? SATELLITE_MAP_CONFIG : STREET_MAP_CONFIG);
       setUseOfflineMap(chooseDashboardMapEngine(config) === "leaflet-offline");
       setMapFallbackNotice(config.provider === "offline" ? "폐쇄망 오프라인 지도 사용 중" : null);
     });
     return () => {
       disposed = true;
     };
-  }, []);
+  }, [layerMode]);
 
   return { activeStreamId, autoFocusEnabled, handleMapError, handlePopupClose, handleStreamMarkerSelect,
-    mapConfig, mapFallbackNotice, setAutoFocusEnabled, useOfflineMap } as const;
+    layerMode, mapConfig, mapFallbackNotice, setAutoFocusEnabled, setLayerMode, useOfflineMap } as const;
 }

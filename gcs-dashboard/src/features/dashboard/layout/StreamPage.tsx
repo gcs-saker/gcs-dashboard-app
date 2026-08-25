@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@auth/AuthProvider";
 import { useDashboardStreams } from "@dashboard/hooks/controller/useDashboardStreams";
+import { useDashboardUserPreferences } from "@dashboard/hooks/controller/useDashboardUserPreferences";
 import { StreamWallTile } from "@streaming/components/StreamWallTile";
 import { reconcileStreamWallSlots, type StreamWallLayout } from "@streaming/layout/streamWallLayout";
 import "./StreamPage.css";
@@ -15,9 +16,11 @@ export function StreamPage() {
     logout();
     navigate("/login?reason=session-expired", { replace: true });
   }, [logout, navigate]);
+  const preferences = useDashboardUserPreferences(currentUser?.username);
   const { streams, toggleStreamAiMode } = useDashboardStreams({
     initialStreams: EMPTY_STREAM_WALL,
     onAuthFailure: handleAuthFailure,
+    streamPreferences: preferences.preferences.streamPreferences,
   });
   const [layout, setLayout] = useState<StreamWallLayout>("2x2");
   const [slotStreamIds, setSlotStreamIds] = useState<(string | null)[]>([]);

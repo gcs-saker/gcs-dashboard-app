@@ -131,28 +131,15 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("status")).toHaveTextContent("레이아웃 변경 적용됨");
   });
 
-  test("pins and pops out dashboard widgets", async () => {
+  test("offers only the close action for dashboard widgets", async () => {
     const user = userEvent.setup();
     renderDashboard();
 
     await user.click(screen.getByRole("button", { name: "자산" }));
     const assetTools = screen.getByLabelText("자산트리 위젯 도구");
-    const pinButton = assetTools.querySelector('button[title="자산트리 고정"]');
-    const popoutButton = assetTools.querySelector('button[title="자산트리 팝아웃"]');
-
-    expect(pinButton).not.toBeNull();
-    expect(popoutButton).not.toBeNull();
-
-    await user.click(pinButton as HTMLButtonElement);
-
-    expect(pinButton).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("status")).toHaveTextContent("위젯 고정됨");
-
-    await user.click(popoutButton as HTMLButtonElement);
-
-    expect(screen.getByRole("dialog", { name: "자산트리 팝아웃" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "X" }));
-    expect(screen.queryByRole("dialog", { name: "자산트리 팝아웃" })).not.toBeInTheDocument();
+    expect(assetTools).not.toHaveTextContent("PIN");
+    expect(assetTools).not.toHaveTextContent("POP");
+    expect(within(assetTools).getByRole("button", { name: "닫기" })).toHaveAttribute("title", "자산트리 숨김");
   });
 
   test("shows all dashboard stream slots and changes the selected stream", async () => {

@@ -73,6 +73,11 @@ export const StreamCard = memo(function StreamCard({
       </div>
       {secondaryLabel ? <span className="stream-card__detail">{secondaryLabel}</span> : null}
       {isSelected ? <span className="stream-card__selected-link">현재 선택</span> : null}
+      {!isSelected && isReceivableStream(stream) ? (
+        <button className="stream-card__promote" onClick={selectStream} type="button">
+          선택 스트림으로 보기
+        </button>
+      ) : null}
       {onToggleTalkbackTarget ? (
         <button
           aria-pressed={isTalkbackTarget}

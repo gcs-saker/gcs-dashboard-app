@@ -25,6 +25,10 @@ func (s Server) dashboardStreamItem(w http.ResponseWriter, r *http.Request) {
 		s.writeDashboardTalkbackPlayback(w, r, route.streamID)
 		return
 	}
+	if route.suffix == routeSuffixCameraControl {
+		s.writeDashboardCameraControl(w, r, route.streamID)
+		return
+	}
 	s.writeDashboardStreamRead(w, r, route.streamID, route.suffix)
 }
 

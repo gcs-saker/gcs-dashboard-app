@@ -66,6 +66,44 @@
   top: 10px;
 }
 
+.selected-stream__camera-controls {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.selected-stream__camera-controls button {
+  background: rgba(4, 14, 21, 0.72);
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 0.7rem;
+  min-height: 30px;
+  padding: 0 8px;
+}
+
+.selected-stream__camera-message {
+  background: rgba(3, 12, 18, 0.82);
+  border: 1px solid rgba(61, 184, 255, 0.48);
+  border-radius: 5px;
+  color: #dff6ff;
+  font-size: 0.72rem;
+  padding: 6px 9px;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+}
+
+.stream-card__promote {
+  background: rgba(61, 184, 255, 0.08);
+  border: 0;
+  border-top: 1px solid var(--line-soft);
+  color: var(--cyan);
+  font-size: 0.72rem;
+  font-weight: 800;
+  min-height: 32px;
+  width: 100%;
+}
+
 .mode-ir {
   filter: grayscale(100%);
 }

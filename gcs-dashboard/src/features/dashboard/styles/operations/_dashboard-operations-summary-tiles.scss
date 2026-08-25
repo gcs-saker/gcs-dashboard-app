@@ -33,7 +33,8 @@
 .ops-summary__tiles div.is-good,
 .ops-summary__telemetry div.is-good,
 .audio-waveform dl div.is-good {
-  border-color: rgba(86, 211, 124, 0.44);
+  border-color: rgba(86, 211, 124, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(86, 211, 124, 0.2), 0 0 12px rgba(86, 211, 124, 0.18);
 }
 
 .ops-summary__tiles div.is-warning,

@@ -67,11 +67,11 @@ export function OfflineTacticalMap({
           setZoom(INITIAL_MAP_ZOOM);
         }}
         onZoomInClick={() => {
-          onAutoFocusChange(false);
+          onAutoFocusChange(true);
           setZoom((current) => Math.min(MAX_ZOOM, current + 1));
         }}
         onZoomOutClick={() => {
-          onAutoFocusChange(false);
+          onAutoFocusChange(true);
           setZoom((current) => Math.max(MIN_ZOOM, current - 1));
         }}
       />
