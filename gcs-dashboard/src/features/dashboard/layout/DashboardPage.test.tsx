@@ -182,8 +182,7 @@ describe("DashboardPage", () => {
     expect(within(telemetryPanel).getByText("35.866900")).toBeInTheDocument();
     expect(within(telemetryPanel).getByText("128.593100")).toBeInTheDocument();
     expect(within(telemetryPanel).getByText("기본 좌표")).toBeInTheDocument();
-    expect(screen.getByRole("dialog", { name: "스트리밍 3 스트림 연결" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "취소" }));
+    expect(screen.queryByRole("dialog", { name: "스트리밍 3 스트림 연결" })).not.toBeInTheDocument();
   });
 
   test("selects a stream from the tactical map pin without opening the connect dialog", async () => {
@@ -215,6 +214,8 @@ describe("DashboardPage", () => {
     const user = userEvent.setup();
     renderDashboard();
 
+    await user.click(screen.getByRole("button", { name: "스트리밍 4 선택" }));
+    expect(screen.queryByRole("dialog", { name: "스트리밍 4 스트림 연결" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "스트리밍 4 선택" }));
 
     expect(screen.getByRole("dialog", { name: "스트리밍 4 스트림 연결" })).toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import {
   connectDeviceToStreamSlot,
   disconnectStreamSlot,
@@ -54,8 +54,8 @@ export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
   useEffect(() => {
     setSelectedStreamId((current) => preferredSelectedStreamId(current, streamsRef.current, streamDevices));
   }, [streamDevices]);
-  const actions = useDashboardStreamActions({ editingStreamId, onStreamDeviceAliasChange,
-    setEditingStreamId, setSelectedStreamId, setStreams });
+  const actions = useDashboardStreamActions({ editingStreamId, onStreamDeviceAliasChange, selectedStreamId,
+    setEditingStreamId, setSelectedStreamId, setStreams, streamsRef });
 
   return {
     ...actions,
@@ -71,15 +71,20 @@ export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
 interface StreamActionsInput {
   editingStreamId: string | null;
   onStreamDeviceAliasChange?: (deviceId: string, alias: string) => void;
+  selectedStreamId: string;
   setEditingStreamId: Dispatch<SetStateAction<string | null>>;
   setSelectedStreamId: Dispatch<SetStateAction<string>>;
   setStreams: Dispatch<SetStateAction<DashboardStreamSlot[]>>;
+  streamsRef: MutableRefObject<DashboardStreamSlot[]>;
 }
 
 function useDashboardStreamActions(input: StreamActionsInput) {
   const openStreamConnection = useCallback((streamId: string): void => {
-    input.setStreams((current) => ensureEditableCctvSlot(current, streamId));
-    input.setSelectedStreamId(streamId); input.setEditingStreamId(streamId);
+    const nextStreams = ensureEditableCctvSlot(input.streamsRef.current, streamId);
+    if (nextStreams !== input.streamsRef.current) input.setStreams(nextStreams);
+    const target = nextStreams.find((stream) => stream.id === streamId);
+    input.setSelectedStreamId(streamId);
+    input.setEditingStreamId(target?.streamPath && input.selectedStreamId !== streamId ? null : streamId);
   }, [input]);
   const selectStream = useCallback((identifier: string): void => input.setStreams((current) => {
     const next = ensureEditableCctvSlot(current, identifier);
