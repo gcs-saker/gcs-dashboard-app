@@ -8,7 +8,7 @@ vi.mock("./RealtimePlayer", () => ({ RealtimePlayer: ({ title }: { title: string
 const stream: StreamSlot = {
   id: "slot-1", title: "현장 카메라", status: "online", mode: "EO", detail: "",
   streamPath: "raw.mobile.front", geometry: { lat: 35.1, lng: 128.2, altitudeM: 10,
-    headingDeg: 90, rollDeg: 1, pitchDeg: 2, yawDeg: 90, source: "telemetry" }, aiModeEnabled: false,
+    headingDeg: 90, rollDeg: 1, pitchDeg: 2, yawDeg: 90, fovDeg: 72, source: "telemetry" }, aiModeEnabled: false,
 };
 
 describe("StreamWallTile", () => {
