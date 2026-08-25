@@ -97,18 +97,15 @@ export function DashboardOverlays({
 
 function AssetTreeDrawer(props: Pick<DashboardOverlaysProps,
   "assetTreeRoot" | "assetTreeWidget" | "onCloseAssetDrawer" | "onSelectAssetTreeStream" |
-  "onSetDeviceAlias" | "panelClass" | "widgetControls">) {
+  "onSetDeviceAlias" | "panelClass">) {
   return <div className="asset-drawer__backdrop" onClick={props.onCloseAssetDrawer}>
     <aside aria-labelledby="asset-tree-title"
       className={props.panelClass("ops-panel asset-tree asset-drawer", "asset-tree")}
       data-widget-id={props.assetTreeWidget.id} id="asset-tree-drawer"
       onClick={(event) => event.stopPropagation()}
       style={{ minHeight: props.assetTreeWidget.minHeight, minWidth: props.assetTreeWidget.minWidth }}>
-      <AssetTreePanel controls={<>
-        <button className="widget-icon-button" onClick={props.onCloseAssetDrawer}
-          title="자산트리 닫기" type="button">닫기</button>
-        {props.widgetControls("asset-tree", "자산트리")}
-      </>} onSelectStream={props.onSelectAssetTreeStream} onSetDeviceAlias={props.onSetDeviceAlias}
+      <AssetTreePanel controls={<button className="widget-icon-button" onClick={props.onCloseAssetDrawer}
+        title="자산트리 닫기" type="button">닫기</button>} onSelectStream={props.onSelectAssetTreeStream} onSetDeviceAlias={props.onSetDeviceAlias}
         root={props.assetTreeRoot} />
     </aside>
   </div>;
