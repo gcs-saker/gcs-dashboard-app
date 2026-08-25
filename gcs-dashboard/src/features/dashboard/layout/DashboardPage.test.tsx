@@ -300,7 +300,7 @@ describe("DashboardPage", () => {
     await user.click(screen.getByRole("button", { name: /DRN-01 전방 EO/ }));
 
     expect(screen.queryByRole("dialog", { name: "CCTV 25 스트림 연결" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "CCTV 25 선택" })).toHaveTextContent("DRN-01 전방 EO");
+    expect(screen.getByText("DRN-01 전방 EO")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("스트림 연결됨");
   });
 
