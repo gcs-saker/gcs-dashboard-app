@@ -43,6 +43,14 @@ export function useLeafletTileMap({
     });
   }, [initialZoom, onTileError, onUserInteraction, tileConfig]);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !mapInstance || typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(() => mapInstance.invalidateSize(false));
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [mapInstance]);
+
   const focus = useCallback((geometry: MapFocusGeometry, isMotionEnabled: boolean): void => {
     mapRef.current?.panTo([geometry.lat, geometry.lng], {
       animate: isMotionEnabled,

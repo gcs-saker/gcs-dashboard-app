@@ -6,6 +6,7 @@ import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 interface LeafletTestMock {
   instances: Array<{
     emit: (event: string) => void;
+    invalidateSize: ReturnType<typeof vi.fn>;
     latLngToContainerPoint: ReturnType<typeof vi.fn>;
     panTo: ReturnType<typeof vi.fn>;
     setView: ReturnType<typeof vi.fn>;
@@ -145,6 +146,28 @@ describe("TacticalLeafletMap", () => {
     expect(leafletMock().instances[0].zoomIn).toHaveBeenCalledTimes(1);
     expect(leafletMock().instances[0].zoomOut).toHaveBeenCalledTimes(1);
     expect(leafletMock().instances[0].panTo).toHaveBeenCalled();
+  });
+
+  test("resizes the public map when its dashboard panel changes size", async () => {
+    let notifyResize: ResizeObserverCallback | undefined;
+    const disconnect = vi.fn();
+    const observe = vi.fn();
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(callback: ResizeObserverCallback) {
+        notifyResize = callback;
+      }
+
+      disconnect = disconnect;
+      observe = observe;
+      unobserve = vi.fn();
+    });
+
+    render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
+
+    await act(async () => Promise.resolve());
+    expect(observe).toHaveBeenCalledWith(expect.objectContaining({ className: "tactical-map__leaflet" }));
+    act(() => notifyResize?.([], {} as ResizeObserver));
+    expect(leafletMock().instances[0].invalidateSize).toHaveBeenCalledWith(false);
   });
 
   test("disables public map pan animation when motion is off", () => {

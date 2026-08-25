@@ -6,6 +6,7 @@ declare module "leaflet" {
 
   export interface LeafletMap {
     addControl(control: unknown): this;
+    invalidateSize(animate?: boolean): this;
     off(eventName: string, handler: () => void): this;
     on(eventName: string, handler: () => void): this;
     panTo(latLng: readonly [number, number], options?: { animate?: boolean; duration?: number }): this;

@@ -14,6 +14,7 @@ interface MockMapInstance {
   easeTo?: ReturnType<typeof vi.fn>;
   emit: (event: string) => void;
   emitError?: () => void;
+  invalidateSize: ReturnType<typeof vi.fn>;
   latLngToContainerPoint: ReturnType<typeof vi.fn>;
   off: ReturnType<typeof vi.fn>;
   on: ReturnType<typeof vi.fn>;
@@ -44,6 +45,7 @@ const leafletMock = vi.hoisted(() => {
       addControl: vi.fn(),
       container,
       emit: (event: string) => eventHandlers.get(event)?.forEach((handler) => handler()),
+      invalidateSize: vi.fn(),
       latLngToContainerPoint: vi.fn(([lat, lng]) => ({
         x: Math.round((Number(lng) - 128.55) * 5000),
         y: Math.round((35.91 - Number(lat)) * 5000),
