@@ -39,7 +39,7 @@ describe("TelemetryPanel", () => {
     );
 
     const panel = screen.getByLabelText("지오메트리 / 텔레메트리");
-    expect(within(panel).getByText("36.11995, 128.36337")).toBeInTheDocument();
+    expect(within(panel).getByText("36.119950, 128.363370")).toBeInTheDocument();
     expect(within(panel).getAllByText("85.4 m")).toHaveLength(2);
     expect(within(panel).getByText("79%")).toBeInTheDocument();
     expect(within(panel).getByText("R 18.9° · P 43.8° · Y 194°")).toBeInTheDocument();

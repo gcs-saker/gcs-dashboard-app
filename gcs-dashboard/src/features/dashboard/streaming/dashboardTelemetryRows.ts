@@ -86,7 +86,7 @@ export function formatSignedDegree(value: number): string {
 }
 
 export function formatTelemetryCoordinate(geometry: NonNullable<DashboardStreamSlot["geometry"]>): string {
-  return `${geometry.lat.toFixed(5)}, ${geometry.lng.toFixed(5)}`;
+  return `${geometry.lat.toFixed(6)}, ${geometry.lng.toFixed(6)}`;
 }
 
 export function formatTelemetryBattery(geometry: NonNullable<DashboardStreamSlot["geometry"]>): string {

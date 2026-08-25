@@ -53,10 +53,10 @@ describe("opsSummaryViewModel", () => {
 
     expect(viewModel.missionText).toBe("실시간 운용 가능");
     expect(viewModel.missionTone).toBe("good");
-    expect(viewModel.focusTitle).toBe("36.11995, 128.36337");
+    expect(viewModel.focusTitle).toBe("36.119950, 128.363370");
     expect(viewModel.focusDetail).toContain("배터리 79%");
     expect(viewModel.telemetryTiles).toEqual([
-      { label: "좌표", value: "36.11995, 128.36337", tone: "good" },
+      { label: "좌표", value: "36.119950, 128.363370", tone: "good" },
       { label: "고도", value: "85.4 m", tone: "info" },
       { label: "배터리", value: "79%", tone: "good" },
       { label: "자세", value: "R 18.9° · P 43.8° · Y 194°", tone: "info" },

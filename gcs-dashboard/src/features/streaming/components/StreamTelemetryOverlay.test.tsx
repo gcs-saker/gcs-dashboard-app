@@ -21,8 +21,8 @@ describe("StreamTelemetryOverlay", () => {
       />,
     );
 
-    expect(screen.getByLabelText("스트림 텔레메트리")).toHaveTextContent("35.87140");
-    expect(screen.getByLabelText("스트림 텔레메트리")).toHaveTextContent("128.60140");
+    expect(screen.getByLabelText("스트림 텔레메트리")).toHaveTextContent("35.871400");
+    expect(screen.getByLabelText("스트림 텔레메트리")).toHaveTextContent("128.601400");
     expect(screen.getByLabelText("스트림 텔레메트리")).toHaveTextContent("42.5 m");
     expect(screen.getByLabelText("스트림 텔레메트리")).toHaveTextContent("123°");
     expect(screen.getByLabelText("스트림 텔레메트리")).toHaveTextContent("79%");

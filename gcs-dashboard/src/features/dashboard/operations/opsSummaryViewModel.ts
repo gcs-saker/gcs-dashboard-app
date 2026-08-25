@@ -44,7 +44,7 @@ export function buildOpsSummaryViewModel(
       ? `고도 ${selectedStream.geometry.altitudeM.toFixed(1)}m · 방위 ${formatBearing(selectedStream.geometry.headingDeg)} · 배터리 ${formatTelemetryBattery(selectedStream.geometry)}`
       : "GPS 수신 후 지도와 동기화됩니다.",
     focusTitle: selectedStream.geometry
-      ? `${selectedStream.geometry.lat.toFixed(5)}, ${selectedStream.geometry.lng.toFixed(5)}`
+      ? formatTelemetryCoordinate(selectedStream.geometry)
       : "좌표 대기",
     missionText: missionTextForStatus(selectedStream.status),
     missionTone: missionToneForStatus(selectedStream.status),

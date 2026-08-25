@@ -6,7 +6,7 @@ interface StreamTelemetryOverlayProps {
 }
 
 function formatCoordinate(value: number): string {
-  return value.toFixed(5);
+  return value.toFixed(6);
 }
 
 function formatAngle(value: number): string {
