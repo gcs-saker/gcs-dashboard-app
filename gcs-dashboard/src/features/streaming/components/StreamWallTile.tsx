@@ -2,7 +2,6 @@ import { memo } from "react";
 import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
 import { StreamTelemetryOverlay } from "@streaming/components/StreamTelemetryOverlay";
 import { getStreamDisplayName } from "@streaming/presentation/streamPresentation";
-import { isReceivableStream } from "@dashboard/streaming/dashboardCctv";
 import type { StreamSlot as DashboardStreamSlot } from "@streaming/layout/streamModel";
 
 interface StreamWallTileProps {
@@ -31,7 +30,7 @@ export const StreamWallTile = memo(function StreamWallTile({ index, onSelect, on
         </div>
       )}
 
-      {stream && isReceivableStream(stream) ? <StreamTelemetryOverlay geometry={stream.geometry} /> : null}
+      {stream?.streamPath && stream.status === "online" ? <StreamTelemetryOverlay geometry={stream.geometry} /> : null}
 
       <div className="stream-wall-tile__toolbar">
         <span className={`stream-wall-tile__status is-${stream?.status ?? "empty"}`} aria-hidden="true" />
