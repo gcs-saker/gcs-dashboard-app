@@ -15,6 +15,9 @@ import { useLeafletTileMap } from "./useLeafletTileMap";
 import { usePublicVectorMapMarkers } from "./usePublicVectorMapMarkers";
 import { MapLayerSelector, type MapLayerMode } from "./MapLayerSelector";
 
+const SATELLITE_INITIAL_ZOOM = 14;
+const STREET_INITIAL_ZOOM = 12;
+
 interface PublicVectorMapProps {
   activeStreamId: string | null;
   autoFocusEnabled: boolean;
@@ -54,6 +57,7 @@ export function PublicVectorMap({
   const disableAutoFocus = useCallback(() => onAutoFocusChange(false), [onAutoFocusChange]);
   const { containerRef, focus, mapInstance, zoomIn, zoomOut } = useLeafletTileMap({
     initialCenter: selectedGeometry,
+    initialZoom: layerMode === "street" ? STREET_INITIAL_ZOOM : SATELLITE_INITIAL_ZOOM,
     onTileError: onMapError,
     onUserInteraction: disableAutoFocus,
     tileConfig,

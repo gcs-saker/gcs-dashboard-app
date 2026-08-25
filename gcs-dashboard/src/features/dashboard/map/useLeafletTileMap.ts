@@ -13,6 +13,7 @@ interface LeafletTileConfig {
 
 interface UseLeafletTileMapOptions {
   initialCenter: MapFocusGeometry;
+  initialZoom?: number;
   onTileError: () => void;
   onUserInteraction: () => void;
   tileConfig: LeafletTileConfig;
@@ -23,6 +24,7 @@ const USER_INTERACTION_EVENTS = ["dragstart", "zoomstart", "rotatestart", "pitch
 
 export function useLeafletTileMap({
   initialCenter,
+  initialZoom = INITIAL_PUBLIC_MAP_ZOOM,
   onTileError,
   onUserInteraction,
   tileConfig,
@@ -35,11 +37,11 @@ export function useLeafletTileMap({
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    return initializeLeafletMap(container, initialCenterRef.current, tileConfig, onTileError, onUserInteraction, (map) => {
+    return initializeLeafletMap(container, initialCenterRef.current, initialZoom, tileConfig, onTileError, onUserInteraction, (map) => {
       mapRef.current = map;
       setMapInstance(map);
     });
-  }, [onTileError, onUserInteraction, tileConfig]);
+  }, [initialZoom, onTileError, onUserInteraction, tileConfig]);
 
   const focus = useCallback((geometry: MapFocusGeometry, isMotionEnabled: boolean): void => {
     mapRef.current?.panTo([geometry.lat, geometry.lng], {
@@ -68,13 +70,14 @@ export function useLeafletTileMap({
 function initializeLeafletMap(
   container: HTMLDivElement,
   center: MapFocusGeometry,
+  initialZoom: number,
   tileConfig: LeafletTileConfig,
   onTileError: () => void,
   onUserInteraction: () => void,
   onReady: (map: L.LeafletMap | null) => void,
 ): () => void {
   const map = L.map(container, { attributionControl: false, zoomControl: false })
-    .setView([center.lat, center.lng], INITIAL_PUBLIC_MAP_ZOOM, { animate: false });
+    .setView([center.lat, center.lng], initialZoom, { animate: false });
   const tileLayer = L.tileLayer(tileConfig.urlTemplate, {
     attribution: tileConfig.attribution, maxZoom: 19, tileSize: 256,
   }).addTo(map);

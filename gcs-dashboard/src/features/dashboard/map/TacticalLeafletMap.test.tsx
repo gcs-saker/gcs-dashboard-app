@@ -250,6 +250,9 @@ describe("TacticalLeafletMap", () => {
       "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
       expect.objectContaining({ attribution: "Esri World Street Map" }),
     ));
+    await waitFor(() => expect(leafletMock().instances.at(-1)?.setView).toHaveBeenCalledWith(
+      [35.871435, 128.601445], 12, { animate: false },
+    ));
     fireEvent.click(screen.getByRole("button", { name: "위성" }));
   });
 });
