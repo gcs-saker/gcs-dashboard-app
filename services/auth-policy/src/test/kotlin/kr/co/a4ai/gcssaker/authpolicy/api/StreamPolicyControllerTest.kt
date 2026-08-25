@@ -204,7 +204,7 @@ class StreamPolicyControllerTest {
     }
 
     @Test
-    fun `stream access decision publishes allow and deny audit events`() {
+    fun `stream access audit persists denials without flooding successful view checks`() {
         val audit = RecordingSecurityAuditPublisher()
         val auditedController = StreamPolicyController(
             BearerPrincipalResolver(sessions),
@@ -238,7 +238,6 @@ class StreamPolicyControllerTest {
 
         assertEquals(
             listOf(
-                "raw.sample.front:co-a:true:same group stream",
                 "raw.company-b.front:co-b:false:stream is outside principal group scope",
             ),
             audit.events,

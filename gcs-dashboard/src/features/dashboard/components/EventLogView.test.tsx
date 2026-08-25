@@ -112,7 +112,7 @@ describe("EventLogView", () => {
     expect(screen.getByText("권장 조치")).toBeInTheDocument();
     expect(screen.queryByLabelText("운영 이벤트 원문")).not.toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText("만료된 세션으로 스트림 접근 거절")).not.toBeInTheDocument());
-    expect(fetch).toHaveBeenCalledWith("/api/ops/events/page?severity=warn&limit=50", expect.objectContaining({
+    expect(fetch).toHaveBeenCalledWith("/api/ops/events/page?severity=warn&limit=10", expect.objectContaining({
       credentials: "include",
       headers: { Accept: "application/json" },
     }));

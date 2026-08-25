@@ -69,7 +69,7 @@ export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }
 
   return (
     <section className="time-sync-view" aria-label="시간 동기화 설정">
-      <TimeSyncHeader status={status} />
+      <TimeSyncHeader browserOffsetMs={browserOffsetMs} status={status} />
       <SettingsTabs
         activeTab={activeTab}
         onChangeTab={setActiveTab}

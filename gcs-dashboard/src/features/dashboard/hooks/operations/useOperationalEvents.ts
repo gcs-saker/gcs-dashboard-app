@@ -1,18 +1,17 @@
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DASHBOARD_QUERY_KEY_FACTORY } from "@features/stateContracts";
 import {
-  dashboardRefetchInterval,
   DASHBOARD_QUERY_POLICY,
   withAbortSignal,
 } from "@features/queryClient";
-import { consumeOperationalEventStream, fetchOperationalEventPage } from "@dashboard/operations/operationalEventsApi";
+import { fetchOperationalEventPage } from "@dashboard/operations/operationalEventsApi";
 import type { OperationalEvent, OperationalEventFilters } from "@dashboard/operations/operationalEvents";
 import {
-  mergeOperationalEvents,
   readOperationalEventHistory,
   rememberOperationalEventHistory,
 } from "@dashboard/operations/operationalEventHistory";
+import { useOperationalEventSubscription } from "./useOperationalEventSubscription";
 export { resetOperationalEventHistory } from "@dashboard/operations/operationalEventHistory";
 
 interface OperationalEventsState {
@@ -22,27 +21,27 @@ interface OperationalEventsState {
   lastUpdatedAt: number | null;
 }
 
+const EMPTY_EVENTS: OperationalEvent[] = [];
+
 
 export function useOperationalEvents(
   sessionScope: string,
   filters: OperationalEventFilters,
   fetcher: typeof fetch = fetch,
-  pollIntervalMs = DASHBOARD_QUERY_POLICY.operationsRefetchMs,
 ): OperationalEventsState {
   const filterKey = useMemo(() => JSON.stringify([sessionScope, filters]), [filters, sessionScope]);
   const queryFilters = useMemo(() => ({ ...filters }), [filters]);
   const [events, setEvents] = useState<OperationalEvent[]>(
     () => readOperationalEventHistory(filterKey),
   );
-  const query = useQuery<OperationalEvent[]>({
+  const query = useQuery({
     queryKey: DASHBOARD_QUERY_KEY_FACTORY.operationalEvents(sessionScope, queryFilters),
     queryFn: ({ signal }) =>
       fetchOperationalEventPage(
         queryFilters,
         withAbortSignal(fetcher, signal),
-      ).then((page) => page.events),
-    placeholderData: readOperationalEventHistory(filterKey),
-    refetchInterval: dashboardRefetchInterval(pollIntervalMs),
+      ),
+    placeholderData: { events: readOperationalEventHistory(filterKey), nextCursor: null },
     staleTime: DASHBOARD_QUERY_POLICY.operationsStaleTimeMs,
   });
 
@@ -52,14 +51,18 @@ export function useOperationalEvents(
 
   useEffect(() => {
     if (!query.data) return;
-    setEvents((current) => {
-      const merged = mergeOperationalEvents(current, query.data ?? []);
-      rememberOperationalEventHistory(filterKey, merged);
-      return merged;
-    });
+    rememberOperationalEventHistory(filterKey, query.data.events);
+    setEvents(query.data.events);
   }, [filterKey, query.data]);
 
-  useOperationalEventSubscription({ filters: queryFilters, fetcher, filterKey, setEvents });
+  useOperationalEventSubscription({
+    enabled: query.isSuccess,
+    filters: queryFilters,
+    fetcher,
+    filterKey,
+    initialEvents: query.data?.events ?? EMPTY_EVENTS,
+    setEvents,
+  });
 
   return {
     events,
@@ -67,36 +70,4 @@ export function useOperationalEvents(
     isLoading: query.isLoading || query.isFetching,
     lastUpdatedAt: query.dataUpdatedAt > 0 ? query.dataUpdatedAt : null,
   };
-}
-
-interface OperationalEventSubscriptionInput {
-  filters: OperationalEventFilters;
-  fetcher: typeof fetch;
-  filterKey: string;
-  setEvents: Dispatch<SetStateAction<OperationalEvent[]>>;
-}
-
-function useOperationalEventSubscription(input: OperationalEventSubscriptionInput): void {
-  const { fetcher, filterKey, filters, setEvents } = input;
-  useEffect(() => {
-    if (typeof ReadableStream === "undefined") return undefined;
-    const controller = new AbortController();
-    consumeOperationalEventStream(
-      filters,
-      {
-        onEvent: (event) => {
-          setEvents((current) => {
-            const merged = mergeOperationalEvents(current, [event]);
-            rememberOperationalEventHistory(filterKey, merged);
-            return merged;
-          });
-        },
-      },
-      {
-        fetcher,
-        signal: controller.signal,
-      },
-    ).catch(() => undefined);
-    return () => controller.abort();
-  }, [fetcher, filterKey, filters, setEvents]);
 }

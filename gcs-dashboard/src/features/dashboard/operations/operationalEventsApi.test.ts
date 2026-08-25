@@ -28,6 +28,10 @@ describe("operationalEventsApi", () => {
     expect(buildOperationalEventsUrl(filters)).toContain("/api/ops/events?query=ice&severity=warn&from=");
     expect(buildOperationalEventPageUrl(filters, 25)).toContain("/api/ops/events/page?query=ice&severity=warn&from=");
     expect(buildOperationalEventStreamUrl(filters)).toContain("/api/ops/events/stream?query=ice&severity=warn&from=");
+    expect(buildOperationalEventStreamUrl(filters, {
+      id: "evt-10",
+      occurredAt: "2026-06-01T00:00:00Z",
+    })).toContain("afterOccurredAt=2026-06-01T00%3A00%3A00Z&afterId=evt-10");
     expect(buildOperationalEventPageUrl(filters, 25)).toContain("limit=25");
     expect(buildOperationalEventMetricsUrl(filters)).toContain("/api/ops/events/metrics?query=ice&severity=warn&from=");
     expect(buildOperationalEventBucketsUrl(filters)).toContain("/api/ops/events/buckets?query=ice&severity=warn&from=");

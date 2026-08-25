@@ -41,14 +41,16 @@ class StreamPolicyController(
             "send_talkback" -> groupPolicy.canSendTalkback(principal, publisherGroupId)
             else -> throw BadRequestApiError("unsupported stream access action")
         }
-        securityAuditPublisher.publishStreamAction(
-            principal = principal,
-            streamId = request.streamId,
-            publisherGroupId = publisherGroupId,
-            action = request.action,
-            allowed = decision.allowed,
-            reason = decision.reason,
-        )
+        if (!decision.allowed || request.action == "send_talkback") {
+            securityAuditPublisher.publishStreamAction(
+                principal = principal,
+                streamId = request.streamId,
+                publisherGroupId = publisherGroupId,
+                action = request.action,
+                allowed = decision.allowed,
+                reason = decision.reason,
+            )
+        }
 
         return StreamAccessResponse(
             streamId = request.streamId,

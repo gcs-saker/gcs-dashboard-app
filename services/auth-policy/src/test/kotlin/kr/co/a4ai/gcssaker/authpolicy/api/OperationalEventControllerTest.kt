@@ -206,6 +206,29 @@ class OperationalEventControllerTest {
     }
 
     @Test
+    fun `event stream resumes after composite cursor without replaying initial page`() {
+        val initial = event("evt-initial", "info", "api", "초기", "초기", GroupId("co-a"), 1, 10, 1.0)
+        val incremental = event("evt-next", "info", "api", "증분", "증분", GroupId("co-a"), 1, 11, 1.1)
+        val tailRepository = TailOnlyOperationalEventRepository(initial, incremental)
+        val tailController = OperationalEventController(
+            repository = tailRepository,
+            principalResolver = BearerPrincipalResolver(sessions),
+            objectMapper = jacksonObjectMapper().registerModule(JavaTimeModule()),
+            streamPolicy = OperationalEventStreamPolicy(pollCount = 1, pollIntervalMillis = 0),
+        )
+        val output = ByteArrayOutputStream()
+
+        tailController.eventStream(
+            bearer(accessToken("viewer-a")), null, null, null, null,
+            afterOccurredAt = "2026-06-01T00:00:00Z", afterId = "evt-initial",
+        ).body?.writeTo(output)
+
+        assertTrue(!output.toString(Charsets.UTF_8).contains("evt-initial"))
+        assertTrue(output.toString(Charsets.UTF_8).contains("evt-next"))
+        assertEquals(0, tailRepository.initialPageReads)
+    }
+
+    @Test
     fun `metrics returns dashboard aggregate without exposing other group events`() {
         val response = controller.metrics(
             authorization = bearer(accessToken("viewer-a")),
@@ -313,6 +336,7 @@ private class TailOnlyOperationalEventRepository(
     private val incremental: OperationalEventReadModel,
 ) : OperationalEventRepository {
     var requestedLimit: Int? = null
+    var initialPageReads: Int = 0
 
     override fun eventsFor(principal: kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal, query: OperationalEventQuery) =
         error("full operational event reads are prohibited for SSE")
@@ -320,7 +344,10 @@ private class TailOnlyOperationalEventRepository(
     override fun eventPageFor(
         principal: kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal,
         query: OperationalEventPageQuery,
-    ) = OperationalEventPage(listOf(initial), null)
+    ): OperationalEventPage {
+        initialPageReads += 1
+        return OperationalEventPage(listOf(initial), null)
+    }
 
     override fun eventsAfter(
         principal: kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal,

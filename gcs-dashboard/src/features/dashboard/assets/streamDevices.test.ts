@@ -154,7 +154,6 @@ describe("streamDevices", () => {
   test("surfaces stream registry 401 as an auth failure", async () => {
     const fetcher = vi.fn()
       .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
-      .mockResolvedValueOnce(Response.json([]))
       .mockResolvedValueOnce(new Response("refresh unauthorized", { status: 401 }));
 
     await expect(fetchStreamDeviceOptions(fetcher as unknown as typeof fetch)).rejects.toMatchObject({
@@ -193,7 +192,10 @@ describe("streamDevices", () => {
 
   test("still propagates telemetry authentication failures", async () => {
     const fetcher = vi.fn()
-      .mockResolvedValueOnce(Response.json([]))
+      .mockResolvedValueOnce(Response.json([{
+        streamId: "raw.robot.front", assetId: "robot", sensorId: "front",
+        status: "online", displayName: "Robot Front",
+      }]))
       .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
       .mockResolvedValueOnce(new Response("refresh unauthorized", { status: 401 }));
 

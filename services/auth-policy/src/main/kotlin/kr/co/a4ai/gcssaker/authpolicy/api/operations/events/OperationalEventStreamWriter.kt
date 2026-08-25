@@ -19,11 +19,17 @@ class OperationalEventStreamWriter(
     private val streamPolicy: OperationalEventStreamPolicy,
     private val metrics: OperationalEventPipelineMetrics = OperationalEventPipelineMetrics(),
 ) {
-    fun body(principal: AuthenticatedPrincipal, query: OperationalEventQuery): StreamingResponseBody =
+    fun body(
+        principal: AuthenticatedPrincipal,
+        query: OperationalEventQuery,
+        initialCursor: OperationalEventCursor? = null,
+    ): StreamingResponseBody =
         StreamingResponseBody { output ->
             metrics.streamOpened()
             try {
-                var cursor = writeInitialPage(output, principal, query) ?: OperationalEventCursor(Instant.now(), "")
+                var cursor = initialCursor
+                    ?: writeInitialPage(output, principal, query)
+                    ?: OperationalEventCursor(Instant.now(), "")
                 repeat(streamPolicy.pollCount) { index ->
                     val events = metrics.measureQuery {
                         repository.eventsAfter(principal, query, cursor, OperationalEventPageLimit(BATCH_LIMIT))
@@ -55,10 +61,10 @@ class OperationalEventStreamWriter(
     ) = metrics.measureQuery {
         repository.eventPageFor(
             principal,
-            OperationalEventPageQuery(query, OperationalEventPageLimit(BATCH_LIMIT)),
+            OperationalEventPageQuery(query, OperationalEventPageLimit(INITIAL_LIMIT)),
         ).events
     }.also { events ->
-        metrics.recordBatch(events.size, BATCH_LIMIT)
+        metrics.recordBatch(events.size, INITIAL_LIMIT)
         events.asReversed().forEach { event ->
             output.writeOperationalEventSseEvent(EVENT_OPERATIONAL_EVENT, event.toResponse(), objectMapper)
         }
@@ -66,6 +72,7 @@ class OperationalEventStreamWriter(
 
     private companion object {
         const val BATCH_LIMIT = OperationalEventStreamContract.BATCH_LIMIT
+        const val INITIAL_LIMIT = 10
         const val EVENT_OPERATIONAL_EVENT = OperationalEventStreamContract.EVENT_OPERATIONAL_EVENT
         const val EVENT_HEARTBEAT = OperationalEventStreamContract.EVENT_HEARTBEAT
     }

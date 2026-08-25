@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DASHBOARD_QUERY_KEY_FACTORY } from "@features/stateContracts";
 import {
-  dashboardRefetchInterval,
   DASHBOARD_QUERY_POLICY,
   withAbortSignal,
 } from "@features/queryClient";
@@ -20,7 +19,6 @@ export function useOperationalEventMetrics(
   sessionScope: string,
   filters: OperationalEventFilters,
   fetcher: typeof fetch = fetch,
-  pollIntervalMs = DASHBOARD_QUERY_POLICY.operationsRefetchMs,
 ): OperationalEventMetricsState {
   const queryFilters = useMemo(() => ({ ...filters }), [filters]);
   const query = useQuery({
@@ -30,7 +28,6 @@ export function useOperationalEventMetrics(
         queryFilters,
         withAbortSignal(fetcher, signal),
       ),
-    refetchInterval: dashboardRefetchInterval(pollIntervalMs),
     staleTime: DASHBOARD_QUERY_POLICY.operationsStaleTimeMs,
   });
 

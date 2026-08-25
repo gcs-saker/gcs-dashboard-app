@@ -34,13 +34,14 @@ export function buildDashboardPageViewModel({
   groupInventory,
 }: DashboardPageViewModelInput): DashboardPageViewModel {
   const cctvGridSize = getCctvGridSize(preferences.cctvLayoutMode);
+  const cctvStreams = buildCctvGridStreams(streams, cctvGridSize);
   return {
     assetTreeRoot: groupInventory
       ? buildAccessibleAssetTree(groupInventory, streams)
       : mergeAssetTreeWithStreams(DEFAULT_ASSET_TREE, streams),
     cctvGridSize,
-    cctvStatusSummary: summarizeCctvStatus(streams),
-    cctvStreams: buildCctvGridStreams(streams, cctvGridSize),
+    cctvStatusSummary: summarizeCctvStatus(cctvStreams),
+    cctvStreams,
     mapFocus: getMapFocusForStream(selectedStream),
     motionEnabled: isMotionEnabled(preferences.motionMode),
     telemetryRows: telemetryRowsForStream(selectedStream),

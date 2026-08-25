@@ -78,14 +78,21 @@ export function operationalEventContextRows(message: string): string[][] {
 }
 
 function parseOperationalEventMessage(message: string) {
-  const match = /^\[([^\]]+)]\s*(.*)$/.exec(message.trim());
-  if (!match) return { attributes: new Map<string, string>(), summary: message };
   const attributes = new Map<string, string>();
-  match[1].split(/,\s*/).forEach((entry) => {
-    const separator = entry.indexOf("=");
-    if (separator > 0) attributes.set(entry.slice(0, separator), entry.slice(separator + 1));
+  const withoutAttributes = message.trim().replace(/\[([^\]]+)]/g, (_block, content: string) => {
+    content.split(/,\s*/).forEach((entry) => {
+      const separator = entry.indexOf("=");
+      if (separator > 0) attributes.set(entry.slice(0, separator).trim(), entry.slice(separator + 1).trim());
+    });
+    return " ";
   });
-  return { attributes, summary: match[2] || "운영 이벤트" };
+  const summary = withoutAttributes
+    .replace(/\bstream=redacted\b/gi, " ")
+    .replace(/\(same group stream\)/gi, " ")
+    .replace(/\s*:\s*$/, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return { attributes, summary: summary || "운영 이벤트" };
 }
 
 const OPERATION_LABELS: Readonly<Record<string, string>> = {

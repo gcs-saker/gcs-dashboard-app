@@ -50,9 +50,10 @@ export function DashboardHeader({
         <div className="ops-dashboard__action-group">
           <button
             aria-controls="asset-tree-drawer"
-            aria-expanded={isAssetDrawerOpen}
+            aria-expanded={activeView === "dashboard" && isAssetDrawerOpen}
             className="ops-command-button asset-menu-button"
             onClick={onOpenAssetDrawer}
+            disabled={activeView !== "dashboard"}
             type="button"
           >
             <span aria-hidden="true">☰</span>

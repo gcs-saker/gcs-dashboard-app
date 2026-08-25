@@ -3,7 +3,9 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 import com.fasterxml.jackson.databind.ObjectMapper
 import kr.co.a4ai.gcssaker.authpolicy.application.NoopOperationalAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.OperationalAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventCursor
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
+import kr.co.a4ai.gcssaker.authpolicy.observability.OperationalEventPipelineMetrics
 import org.springframework.http.CacheControl
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -12,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
-import kr.co.a4ai.gcssaker.authpolicy.observability.OperationalEventPipelineMetrics
+import java.time.Instant
 
 @RestController
 class OperationalEventController(
@@ -76,13 +78,28 @@ class OperationalEventController(
         @RequestParam(required = false) severity: String?,
         @RequestParam(required = false) from: String?,
         @RequestParam(required = false) to: String?,
+        @RequestParam(required = false) afterOccurredAt: String? = null,
+        @RequestParam(required = false) afterId: String? = null,
     ): ResponseEntity<StreamingResponseBody> {
         val context = requests.context(authorization, query, severity, from, to)
+        val cursor = streamCursor(afterOccurredAt, afterId)
         return ResponseEntity.ok()
             .contentType(MediaType.TEXT_EVENT_STREAM)
             .cacheControl(CacheControl.noStore())
             .header(OperationalEventStreamContract.HEADER_ACCEL_BUFFERING, OperationalEventStreamContract.HEADER_VALUE_NO)
-            .body(streamWriter.body(context.principal, context.query))
+            .body(streamWriter.body(context.principal, context.query, cursor))
+    }
+
+    private fun streamCursor(occurredAt: String?, id: String?): OperationalEventCursor? {
+        if (occurredAt == null && id == null) return null
+        if (occurredAt.isNullOrBlank() || id.isNullOrBlank()) {
+            throw BadRequestApiError("event stream cursor requires afterOccurredAt and afterId")
+        }
+        return try {
+            OperationalEventCursor(Instant.parse(occurredAt), id)
+        } catch (_: RuntimeException) {
+            throw BadRequestApiError("event stream cursor is invalid")
+        }
     }
 
     @GetMapping(OperationalEventApiRoutes.EVENTS_METRICS)

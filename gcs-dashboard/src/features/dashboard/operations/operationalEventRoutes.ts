@@ -2,7 +2,7 @@ import { apiUrl } from "@/config";
 import { DASHBOARD_API_ROUTES } from "@/features/apiRoutes";
 import type { OperationalEventFilters } from "@dashboard/operations/operationalEvents";
 
-export const DEFAULT_OPERATIONAL_EVENT_PAGE_LIMIT = 50;
+export const DEFAULT_OPERATIONAL_EVENT_PAGE_LIMIT = 10;
 
 export function buildOperationalEventsUrl(filters: OperationalEventFilters): string {
   return buildOperationalEventUrl(DASHBOARD_API_ROUTES.operationalEvents, filters);
@@ -15,8 +15,16 @@ export function buildOperationalEventPageUrl(
   return buildOperationalEventUrl(DASHBOARD_API_ROUTES.operationalEventsPage, filters, limit);
 }
 
-export function buildOperationalEventStreamUrl(filters: OperationalEventFilters): string {
-  return buildOperationalEventUrl(DASHBOARD_API_ROUTES.operationalEventsStream, filters);
+export function buildOperationalEventStreamUrl(
+  filters: OperationalEventFilters,
+  after?: { id: string; occurredAt: string } | null,
+): string {
+  const url = new URL(buildOperationalEventUrl(DASHBOARD_API_ROUTES.operationalEventsStream, filters), "http://local");
+  if (after) {
+    url.searchParams.set("afterOccurredAt", after.occurredAt);
+    url.searchParams.set("afterId", after.id);
+  }
+  return `${url.pathname}${url.search}`;
 }
 
 export function buildOperationalEventMetricsUrl(filters: OperationalEventFilters): string {

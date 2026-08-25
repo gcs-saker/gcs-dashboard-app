@@ -22,6 +22,7 @@ export interface OperationalEventStreamHandlers {
 }
 
 interface OperationalEventStreamOptions {
+  after?: { id: string; occurredAt: string } | null;
   fetcher?: typeof fetch;
   signal?: AbortSignal;
 }
@@ -37,7 +38,7 @@ export async function consumeOperationalEventStream(
   options: OperationalEventStreamOptions = {},
 ): Promise<void> {
   const fetcher = options.fetcher ?? fetch;
-  const response = await authenticatedFetch(buildOperationalEventStreamUrl(filters), {
+  const response = await authenticatedFetch(buildOperationalEventStreamUrl(filters, options.after), {
     headers: { Accept: "text/event-stream" },
     signal: options.signal,
   }, fetcher);
