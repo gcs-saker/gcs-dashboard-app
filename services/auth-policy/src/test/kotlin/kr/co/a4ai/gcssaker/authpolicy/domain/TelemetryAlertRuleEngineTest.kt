@@ -30,6 +30,12 @@ class TelemetryAlertRuleEngineTest {
             eventTypes(),
         )
         assertEquals(3, events.eventsFor(principal, OperationalEventQuery()).size)
+        events.eventsFor(principal, OperationalEventQuery()).forEach { event ->
+            assertEquals("warn", event.severity)
+            assertEquals("security", event.category)
+            assertEquals("telemetry-monitor", event.source)
+            assertEquals(false, event.message.contains("device-001"))
+        }
     }
 
     @Test

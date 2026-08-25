@@ -53,8 +53,7 @@ class TelemetryAlertRuleEngine(
         devices.forEach { (deviceKey, state) ->
             val timedOut = Duration.between(state.lastSeenAt, now) > thresholds.telemetryTimeout
             if (timedOut && activate(deviceKey, "telemetry.timeout")) {
-                val deviceId = deviceKey.substringAfter(':')
-                appendAlert(deviceId, state.groupId, "telemetry.timeout", now)
+                appendAlert(state.groupId, "telemetry.timeout", now)
             }
             if (timedOut) devices.remove(deviceKey, state)
         }
@@ -67,23 +66,23 @@ class TelemetryAlertRuleEngine(
         occurredAt: Instant,
     ) {
         if (breached && activate(telemetry.key(), rule)) {
-            appendAlert(telemetry.uuid, telemetry.groupId, rule, occurredAt)
+            appendAlert(telemetry.groupId, rule, occurredAt)
         } else if (!breached) {
             setRuleState(telemetry.key(), rule, false)
         }
     }
 
-    private fun appendAlert(deviceId: String, groupId: GroupId, rule: String, occurredAt: Instant) {
+    private fun appendAlert(groupId: GroupId, rule: String, occurredAt: Instant) {
         events?.append(
             OperationalEventReadModel(
                 id = UUID.randomUUID().toString(),
                 occurredAt = occurredAt,
-                severity = "warning",
-                category = "alert",
+                severity = "warn",
+                category = "security",
                 eventType = rule,
                 sourceService = "auth-policy",
-                source = deviceId,
-                message = "Telemetry alert $rule for device $deviceId",
+                source = "telemetry-monitor",
+                message = "Telemetry alert $rule",
                 connections = 0,
                 latencyMs = 0,
                 throughputMbps = 0.0,
