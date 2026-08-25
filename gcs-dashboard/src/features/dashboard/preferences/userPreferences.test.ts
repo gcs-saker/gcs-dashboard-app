@@ -149,6 +149,16 @@ describe("userPreferences", () => {
     expect(normalizeDashboardUserPreferences({ dashboardLayoutMode: "overview" })).toEqual(
       expect.objectContaining({ dashboardDensityMode: "overview", dashboardPriorityMode: "default" }),
     );
+    expect(normalizeDashboardUserPreferences({ dashboardLayoutMode: "stream-priority" })).toEqual(
+      expect.objectContaining({ dashboardDensityMode: "expanded", dashboardPriorityMode: "stream" }),
+    );
+    expect(normalizeDashboardUserPreferences({ dashboardLayoutMode: "expanded" })).toEqual(
+      expect.objectContaining({ dashboardDensityMode: "expanded", dashboardPriorityMode: "default" }),
+    );
+    expect(normalizeDashboardUserPreferences({
+      dashboardDensityMode: "overview",
+      dashboardPriorityMode: "map",
+    })).toEqual(expect.objectContaining({ dashboardDensityMode: "overview", dashboardPriorityMode: "map" }));
   });
 });
 
