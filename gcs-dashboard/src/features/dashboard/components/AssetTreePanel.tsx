@@ -31,7 +31,7 @@ function AssetNodeView({
           {node.label}
         </button>
       ) : (
-        <span>{node.label}</span>
+        <span className="asset-node__label">{node.label}</span>
       )}
       {node.detail ? <small className="asset-node__detail">{node.detail}</small> : null}
       <span className="asset-node__status">{getAssetTreeStatusText(node.status)}</span>

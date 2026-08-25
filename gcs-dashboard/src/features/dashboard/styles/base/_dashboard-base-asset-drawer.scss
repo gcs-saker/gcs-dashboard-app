@@ -9,7 +9,7 @@
 .asset-tree,
 .asset-drawer {
   max-height: calc(100vh - 100px);
-  width: min(380px, calc(100vw - 20px));
+  width: min(420px, calc(100vw - 20px));
 }
 
 .asset-drawer {
@@ -50,8 +50,8 @@
 .asset-node {
   align-items: center;
   display: grid;
-  gap: 10px;
-  grid-template-columns: 12px minmax(0, 1fr) 48px 54px;
+  column-gap: 8px;
+  grid-template-columns: 12px minmax(0, 1fr) 54px 62px;
   min-height: 34px;
 }
 
@@ -80,6 +80,16 @@
   min-width: 0;
   padding: 0;
   text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-node__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .asset-node__select:hover,
@@ -108,6 +118,7 @@
   text-align: right;
   text-transform: uppercase;
   white-space: nowrap;
+  width: 100%;
 }
 
 .asset-node__alias-form {

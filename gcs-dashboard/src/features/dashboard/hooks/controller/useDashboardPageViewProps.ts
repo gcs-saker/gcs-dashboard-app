@@ -29,7 +29,7 @@ export function useDashboardPageViewProps({
       activeView, currentUser: auth.currentUser, isAssetDrawerOpen: ui.isAssetDrawerOpen,
       layoutMessage: ui.layoutMessage, onChangeView: preferences.setActiveView, onLogout: auth.handleLogout,
       dashboardLayoutMode, onSetDashboardLayoutMode: preferences.setDashboardLayoutMode,
-      onOpenAssetDrawer: commands.openAssetDrawer, onOpenWidgetDialog: commands.openWidgetDialog,
+      onOpenAssetDrawer: commands.openAssetDrawer,
       onResetLayout: actions.resetLayout, streams: streams.streams, selectedStreamId: streams.selectedStreamId,
       talkbackTargetStreamIds: ui.talkbackTargetStreamIds,
     },

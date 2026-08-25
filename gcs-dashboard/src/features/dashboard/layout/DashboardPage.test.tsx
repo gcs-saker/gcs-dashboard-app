@@ -100,22 +100,13 @@ describe("DashboardPage", () => {
     expect(container.querySelector('[data-widget-id="asset-tree"]')).toBeInTheDocument();
   });
 
-  test("opens and closes the widget add dialog from the dashboard toolbar", async () => {
-    const user = userEvent.setup();
+  test("does not expose the legacy layout dialog button in the dashboard toolbar", () => {
     renderDashboard();
-
-    await user.click(screen.getByRole("button", { name: "위젯 추가" }));
-
-    expect(screen.getByRole("dialog", { name: "위젯 추가" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /지도\s*420 x 340/ })).toHaveTextContent("숨기기");
-
-    await user.click(screen.getByRole("button", { name: "취소" }));
-
-    expect(screen.queryByRole("dialog", { name: "위젯 추가" })).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("레이아웃 변경 취소됨");
+    expect(screen.queryByRole("button", { name: "위젯 추가" })).not.toBeInTheDocument();
+    expect(screen.queryByText("레이아웃")).not.toBeInTheDocument();
   });
 
-  test("hides and restores widgets through the layout dialog", async () => {
+  test("hides a widget and restores the default layout from reset", async () => {
     const user = userEvent.setup();
     renderDashboard();
 
@@ -124,12 +115,10 @@ describe("DashboardPage", () => {
     expect(screen.queryByRole("heading", { name: "지도" })).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("위젯 숨김");
 
-    await user.click(screen.getByRole("button", { name: "위젯 추가" }));
-    await user.click(screen.getByRole("button", { name: /지도\s*420 x 340/ }));
-    await user.click(screen.getByRole("button", { name: "적용" }));
+    await user.click(screen.getByRole("button", { name: "초기화" }));
 
     expect(screen.getByRole("heading", { name: "지도" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("레이아웃 변경 적용됨");
+    expect(screen.getByRole("status")).toHaveTextContent("기본 레이아웃으로 초기화됨");
   });
 
   test("offers only the close action for dashboard widgets", async () => {

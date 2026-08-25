@@ -14,7 +14,6 @@ export interface DashboardHeaderProps {
   onChangeView: (view: DashboardView) => void;
   onLogout: () => void;
   onOpenAssetDrawer: () => void;
-  onOpenWidgetDialog: () => void;
   onResetLayout: () => void;
   onSetDashboardLayoutMode: (mode: DashboardLayoutMode) => void;
   streams: DashboardStreamSlot[];
@@ -40,7 +39,6 @@ export function DashboardHeader({
   onChangeView,
   onLogout,
   onOpenAssetDrawer,
-  onOpenWidgetDialog,
   onResetLayout,
   onSetDashboardLayoutMode,
   streams, selectedStreamId,
@@ -76,9 +74,6 @@ export function DashboardHeader({
           >
             스트림 화면
           </a>
-          <button aria-label="위젯 추가" className="ops-command-button" onClick={onOpenWidgetDialog} type="button">
-            레이아웃
-          </button>
           <button className="ops-command-button" onClick={onResetLayout} type="button">
             초기화
           </button>
