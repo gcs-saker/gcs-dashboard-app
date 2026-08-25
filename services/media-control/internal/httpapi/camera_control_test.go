@@ -5,10 +5,15 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 )
 
 func TestCameraControlStoresAuthorizedFacingCommand(t *testing.T) {
-	server := newTestServer(fakeStreams{}, fakeIce{})
+	path, _ := domain.NewStreamPath("raw/mobile/front")
+	server := newTestServer(fakeStreams{streams: []domain.StreamDescriptor{{
+		Path: path, Ready: true, Status: domain.StreamStatusOnline,
+	}}}, fakeIce{})
 	post := httptest.NewRequest(http.MethodPost, "/api/v1/streams/raw.mobile.front/camera-control", strings.NewReader(`{"facingMode":"rear"}`))
 	post.Header.Set(authorizationHeader, "Bearer operator-token")
 	postRecorder := httptest.NewRecorder()
@@ -34,7 +39,10 @@ func TestCameraControlStoresAuthorizedFacingCommand(t *testing.T) {
 }
 
 func TestCameraControlRejectsInvalidFacingMode(t *testing.T) {
-	server := newTestServer(fakeStreams{}, fakeIce{})
+	path, _ := domain.NewStreamPath("raw/mobile/front")
+	server := newTestServer(fakeStreams{streams: []domain.StreamDescriptor{{
+		Path: path, Ready: true, Status: domain.StreamStatusOnline,
+	}}}, fakeIce{})
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/streams/raw.mobile.front/camera-control", strings.NewReader(`{"facingMode":"side"}`))
 	request.Header.Set(authorizationHeader, "Bearer operator-token")
 	recorder := httptest.NewRecorder()
@@ -43,5 +51,18 @@ func TestCameraControlRejectsInvalidFacingMode(t *testing.T) {
 
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("expected invalid camera mode 400, got %d", recorder.Code)
+	}
+}
+
+func TestCameraControlRejectsOfflineStream(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/streams/raw.mobile.front/camera-control", strings.NewReader(`{"facingMode":"front"}`))
+	request.Header.Set(authorizationHeader, "Bearer operator-token")
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("expected offline camera target 409, got %d", recorder.Code)
 	}
 }

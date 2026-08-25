@@ -75,6 +75,15 @@ func (s Server) readCameraControl(w http.ResponseWriter, r *http.Request, parsed
 }
 
 func (s Server) updateCameraControl(w http.ResponseWriter, r *http.Request, parsed domain.ParsedStreamPath) {
+	stream, found, err := s.findStream(r.Context(), parsed.StreamID)
+	if err != nil {
+		writeJSON(w, http.StatusBadGateway, errorPayload(errStreamRegistryQueryFailed))
+		return
+	}
+	if !found || !stream.Ready || stream.Status != domain.StreamStatusOnline {
+		writeJSON(w, http.StatusConflict, errorPayload("camera control target is not actively publishing"))
+		return
+	}
 	if err := s.requireTalkbackSendAccess(r.Context(), r.Header.Get(authorizationHeader), parsed); err != nil {
 		s.writeStreamAccessError(w, err)
 		return
