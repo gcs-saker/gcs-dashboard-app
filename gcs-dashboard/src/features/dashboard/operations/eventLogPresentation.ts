@@ -58,22 +58,38 @@ export function diagnoseOperationalEventAction(event: OperationalEvent): string 
   return "해당 서비스 health와 최근 배포/재시작 이력을 확인합니다.";
 }
 
-export function formatOperationalEventPayload(event: OperationalEvent): string {
-  return [
-    `id=${event.id}`,
-    `occurredAt=${event.occurredAt}`,
-    `severity=${event.severity}`,
-    `category=${event.category}`,
-    `eventType=${event.eventType ?? ""}`,
-    `sourceService=${event.sourceService ?? ""}`,
-    `source=${event.source}`,
-    `message=${event.message}`,
-    `stream=${event.streamId ? "connected" : "none"}`,
-    `connectionId=${event.connectionId ?? ""}`,
-    `icePath=${event.icePath ?? ""}`,
-    `relayFallbackReason=${event.relayFallbackReason ?? ""}`,
-    `connections=${event.connections}`,
-    `latencyMs=${event.latencyMs}`,
-    `throughputMbps=${event.throughputMbps.toFixed(1)}`,
-  ].join("\n");
+export function formatOperationalEventMessage(message: string): string {
+  return parseOperationalEventMessage(message).summary;
 }
+
+export function operationalEventContextRows(message: string): string[][] {
+  const attributes = parseOperationalEventMessage(message).attributes;
+  const rows: string[][] = [];
+  const action = attributes.get("action");
+  const viewerGroup = attributes.get("viewerGroup");
+  const publisherGroup = attributes.get("publisherGroup");
+  if (action) rows.push(["작업", OPERATION_LABELS[action] ?? action]);
+  if (viewerGroup) rows.push(["요청 그룹", viewerGroup]);
+  if (publisherGroup) rows.push(["송출 그룹", publisherGroup]);
+  if (viewerGroup && publisherGroup) {
+    rows.push(["접근 범위", viewerGroup === publisherGroup ? "동일 그룹" : "그룹 간 접근"]);
+  }
+  return rows;
+}
+
+function parseOperationalEventMessage(message: string) {
+  const match = /^\[([^\]]+)]\s*(.*)$/.exec(message.trim());
+  if (!match) return { attributes: new Map<string, string>(), summary: message };
+  const attributes = new Map<string, string>();
+  match[1].split(/,\s*/).forEach((entry) => {
+    const separator = entry.indexOf("=");
+    if (separator > 0) attributes.set(entry.slice(0, separator), entry.slice(separator + 1));
+  });
+  return { attributes, summary: match[2] || "운영 이벤트" };
+}
+
+const OPERATION_LABELS: Readonly<Record<string, string>> = {
+  view_stream: "스트림 조회",
+  publish_stream: "스트림 송출",
+  send_talkback: "음성 송신",
+};

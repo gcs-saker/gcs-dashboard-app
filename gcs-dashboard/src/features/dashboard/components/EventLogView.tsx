@@ -5,7 +5,6 @@ import { buildEventLogViewModel } from "@dashboard/operations/eventLogViewModel"
 import { useOperationalEventMetrics } from "@dashboard/hooks/operations/useOperationalEventMetrics";
 import { useOperationalEvents } from "@dashboard/hooks/operations/useOperationalEvents";
 import { useEventSelectionSync } from "@dashboard/hooks/operations/useEventSelectionSync";
-import { useVirtualList } from "@/features/shared/hooks/useVirtualList";
 import { useEventLogActions, useEventLogFilterState } from "@dashboard/stores/useEventLogStore";
 import type { OperationalEventCategory, OperationalEventFilters } from "@dashboard/operations/operationalEvents";
 import { EventLogDetailPanel } from "./event-log/EventLogDetailPanel";
@@ -15,9 +14,6 @@ import { EventLogIncidentStrip } from "./event-log/EventLogIncidentStrip";
 import { EventLogNetworkPanel } from "./event-log/EventLogNetworkPanel";
 import { EventLogQuickFilters } from "./event-log/EventLogQuickFilters";
 import { EventLogSummaryStrip } from "./event-log/EventLogSummaryStrip";
-import { EventLogTimelinePanel } from "./event-log/EventLogTimelinePanel";
-
-const EVENT_ROW_HEIGHT_PX = 96;
 
 export function EventLogView() {
   useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.eventLogView);
@@ -38,7 +34,6 @@ export function EventLogView() {
     }),
     [categoryFilter, eventMetrics.metrics, filters, rawEvents, selectedEventId, sourceFilter],
   );
-  const { containerRef, onScroll, range, visibleTimelineEvents } = useEventTimelineWindow(viewModel.events);
   const mergedLastUpdatedAt = latestTimestamp(lastUpdatedAt, eventMetrics.lastUpdatedAt);
 
   useEventSelectionSync(viewModel.events, selectedEventId, setSelectedEventId);
@@ -61,32 +56,10 @@ export function EventLogView() {
           peakThroughput={viewModel.peakThroughput}
           selectedEventId={viewModel.selectedEvent?.id ?? null}
         />
-        <EventLogTimelinePanel
-          filters={filters}
-          onScroll={onScroll}
-          onSelectEvent={setSelectedEventId}
-          range={range}
-          selectedEventId={viewModel.selectedEvent?.id ?? null}
-          timelineContainerRef={containerRef}
-          visibleEvents={visibleTimelineEvents}
-        />
         <EventLogDetailPanel event={viewModel.selectedEvent} onCategoryFilterChange={setCategoryFilter} onSourceFilterChange={setSourceFilter} />
       </div>
     </section>
   );
-}
-
-function useEventTimelineWindow(events: ReturnType<typeof buildEventLogViewModel>["events"]) {
-  const { containerRef, onScroll, range } = useVirtualList({
-    itemCount: events.length,
-    itemHeight: EVENT_ROW_HEIGHT_PX,
-    overscan: 5,
-  });
-  const visibleTimelineEvents = useMemo(
-    () => events.slice(range.startIndex, range.endIndex),
-    [events, range.endIndex, range.startIndex],
-  );
-  return { containerRef, onScroll, range, visibleTimelineEvents } as const;
 }
 
 interface EventLogOverviewProps {

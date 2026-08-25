@@ -4,7 +4,8 @@ import {
   diagnoseOperationalEventAction,
   diagnoseOperationalEventCause,
   diagnoseOperationalEventImpact,
-  formatOperationalEventPayload,
+  formatOperationalEventMessage,
+  operationalEventContextRows,
   summarizeEventCategories,
 } from "@dashboard/operations/eventLogPresentation";
 import type { OperationalEvent } from "@dashboard/operations/operationalEvents";
@@ -44,9 +45,15 @@ describe("eventLogPresentation", () => {
     ]);
   });
 
-  it("formats operational event payload fields for raw inspection", () => {
-    expect(formatOperationalEventPayload(networkEvent)).toContain("icePath=relay");
-    expect(formatOperationalEventPayload(networkEvent)).toContain("latencyMs=164");
-    expect(formatOperationalEventPayload(networkEvent)).toContain("throughputMbps=31.6");
+  it("presents access events without exposing raw internal attributes", () => {
+    expect(formatOperationalEventMessage("[action=view_stream, stream=redacted] 스트림 접근 허용")).toBe("스트림 접근 허용");
+    expect(operationalEventContextRows(
+      "[action=view_stream, viewerGroup=co-a, publisherGroup=co-a, stream=redacted] 스트림 접근 허용",
+    )).toEqual([
+      ["작업", "스트림 조회"],
+      ["요청 그룹", "co-a"],
+      ["송출 그룹", "co-a"],
+      ["접근 범위", "동일 그룹"],
+    ]);
   });
 });

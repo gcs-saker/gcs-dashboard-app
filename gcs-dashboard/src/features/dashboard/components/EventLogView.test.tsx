@@ -92,7 +92,7 @@ describe("EventLogView", () => {
 
     expect(screen.getByLabelText("이벤트로그")).toBeInTheDocument();
     expect(screen.getByLabelText("시간대별 네트워크 지표")).toBeInTheDocument();
-    expect(screen.getByText("운영 이벤트 타임라인")).toBeInTheDocument();
+    expect(screen.queryByText("운영 이벤트 타임라인")).not.toBeInTheDocument();
     expect(screen.getByText("이벤트 상세")).toBeInTheDocument();
     expect(screen.getByText("연결 합계")).toBeInTheDocument();
     expect(screen.getByText("TURN Relay")).toBeInTheDocument();
@@ -102,7 +102,7 @@ describe("EventLogView", () => {
     expect(screen.getByLabelText("서버")).toBeInTheDocument();
     expect(screen.getByLabelText("빠른 이벤트 필터")).toBeInTheDocument();
     expect(screen.getByText("전체 이벤트")).toBeInTheDocument();
-    expect((await screen.findAllByText("헬스체크 정상")).length).toBeGreaterThanOrEqual(1);
+    expect(await screen.findByRole("button", { name: "API 서버 헬스체크 정상" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "WARN" }));
 
@@ -110,11 +110,7 @@ describe("EventLogView", () => {
     expect(screen.getByText("원인 후보")).toBeInTheDocument();
     expect(screen.getByText("영향 범위")).toBeInTheDocument();
     expect(screen.getByText("권장 조치")).toBeInTheDocument();
-    expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("category=network");
-    expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("icePath=relay");
-    expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("stream=connected");
-    expect(screen.getByLabelText("운영 이벤트 원문")).not.toHaveTextContent("raw/local/webcam");
-    expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("latencyMs=164");
+    expect(screen.queryByLabelText("운영 이벤트 원문")).not.toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText("만료된 세션으로 스트림 접근 거절")).not.toBeInTheDocument());
     expect(fetch).toHaveBeenCalledWith("/api/ops/events/page?severity=warn&limit=50", expect.objectContaining({
       credentials: "include",

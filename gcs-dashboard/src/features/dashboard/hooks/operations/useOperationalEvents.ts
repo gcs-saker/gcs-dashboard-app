@@ -34,7 +34,6 @@ export function useOperationalEvents(
   const [events, setEvents] = useState<OperationalEvent[]>(
     () => readOperationalEventHistory(filterKey),
   );
-  const [streamError, setStreamError] = useState<string | null>(null);
   const query = useQuery<OperationalEvent[]>({
     queryKey: DASHBOARD_QUERY_KEY_FACTORY.operationalEvents(sessionScope, queryFilters),
     queryFn: ({ signal }) =>
@@ -60,11 +59,11 @@ export function useOperationalEvents(
     });
   }, [filterKey, query.data]);
 
-  useOperationalEventSubscription({ filters: queryFilters, fetcher, filterKey, setEvents, setStreamError });
+  useOperationalEventSubscription({ filters: queryFilters, fetcher, filterKey, setEvents });
 
   return {
     events,
-    errorMessage: query.error instanceof Error ? query.error.message : streamError,
+    errorMessage: query.error instanceof Error ? query.error.message : null,
     isLoading: query.isLoading || query.isFetching,
     lastUpdatedAt: query.dataUpdatedAt > 0 ? query.dataUpdatedAt : null,
   };
@@ -75,11 +74,10 @@ interface OperationalEventSubscriptionInput {
   fetcher: typeof fetch;
   filterKey: string;
   setEvents: Dispatch<SetStateAction<OperationalEvent[]>>;
-  setStreamError: Dispatch<SetStateAction<string | null>>;
 }
 
 function useOperationalEventSubscription(input: OperationalEventSubscriptionInput): void {
-  const { fetcher, filterKey, filters, setEvents, setStreamError } = input;
+  const { fetcher, filterKey, filters, setEvents } = input;
   useEffect(() => {
     if (typeof ReadableStream === "undefined") return undefined;
     const controller = new AbortController();
@@ -87,7 +85,6 @@ function useOperationalEventSubscription(input: OperationalEventSubscriptionInpu
       filters,
       {
         onEvent: (event) => {
-          setStreamError(null);
           setEvents((current) => {
             const merged = mergeOperationalEvents(current, [event]);
             rememberOperationalEventHistory(filterKey, merged);
@@ -99,11 +96,7 @@ function useOperationalEventSubscription(input: OperationalEventSubscriptionInpu
         fetcher,
         signal: controller.signal,
       },
-    ).catch((error) => {
-      if (!(error instanceof DOMException && error.name === "AbortError")) {
-        setStreamError("실시간 이벤트 연결이 중단되어 polling으로 전환했습니다.");
-      }
-    });
+    ).catch(() => undefined);
     return () => controller.abort();
-  }, [fetcher, filterKey, filters, setEvents, setStreamError]);
+  }, [fetcher, filterKey, filters, setEvents]);
 }

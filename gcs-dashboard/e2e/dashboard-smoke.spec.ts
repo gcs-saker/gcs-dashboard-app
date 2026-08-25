@@ -88,7 +88,8 @@ test("dashboard preview supports stream, map, and operations navigation", async 
 
   await page.getByRole("button", { name: "이벤트로그" }).click();
   await expect(page.getByRole("heading", { name: "이벤트 로그" })).toBeVisible();
-  await expect(page.getByRole("option", { name: /Mock ICE relay fallback 감지/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Signaling 서버 Mock ICE relay fallback 감지" })).toBeVisible();
+  await expect(page.getByText("운영 이벤트 타임라인")).toHaveCount(0);
   await expectRenderDiagnostics(page, ["EventLogView"]);
   await attachScreenshot(page, testInfo, "event-log-preview");
 

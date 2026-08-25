@@ -5,7 +5,6 @@ import { describe, expect, test, vi } from "vitest";
 import type { OperationalEvent } from "@dashboard/operations/operationalEvents";
 import { EventLogDetailPanel } from "./EventLogDetailPanel";
 import { EventLogNetworkPanel, formatNetworkFlowTime } from "./EventLogNetworkPanel";
-import { TimelineEventRow } from "./TimelineEventRow";
 
 const BASE_EVENT: OperationalEvent = {
   id: "evt-001",
@@ -60,7 +59,6 @@ describe("event log panels", () => {
 
     expect(screen.getByText("TURN fallback 감지")).toBeInTheDocument();
     expect(screen.getByText("원인 후보")).toBeInTheDocument();
-    expect(screen.getByLabelText("운영 이벤트 원문")).toHaveTextContent("icePath=relay");
 
     await user.click(screen.getByRole("button", { name: "이 서버만 보기" }));
     await user.click(screen.getByRole("button", { name: "이 분류만 보기" }));
@@ -106,18 +104,4 @@ describe("event log panels", () => {
     expect(onCategoryFilterChange).toHaveBeenCalledWith("api");
   });
 
-  test("renders timeline row as selectable option", async () => {
-    const user = userEvent.setup();
-    const onSelect = vi.fn();
-
-    render(<TimelineEventRow event={BASE_EVENT} isSelected={true} onSelect={onSelect} />);
-
-    const row = screen.getByRole("option", { selected: true });
-    expect(row).toHaveTextContent("Signaling 서버");
-    expect(row).toHaveTextContent("Network · RTT 420 ms · 연결 3");
-
-    await user.click(row);
-
-    expect(onSelect).toHaveBeenCalledWith("evt-001");
-  });
 });
