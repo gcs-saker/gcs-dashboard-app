@@ -177,18 +177,24 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("region", { name: "다중 stream 음성 송신" })).toHaveTextContent("전방 EO");
   });
 
-  test("switches among dashboard priority modes and limits overview rendering", async () => {
+  test("combines dashboard density and priority into six layouts", async () => {
     const user = userEvent.setup();
     renderDashboard();
-    const modeSelect = screen.getByRole("combobox", { name: "대시보드 보기 모드" });
+    const densitySelect = screen.getByRole("combobox", { name: "대시보드 표시 방식" });
+    const prioritySelect = screen.getByRole("combobox", { name: "대시보드 우선순위" });
+    const dashboard = screen.getByRole("main", { name: "Field Ops Dashboard" });
 
-    await user.selectOptions(modeSelect, "map-priority");
-    expect(screen.getByRole("main", { name: "Field Ops Dashboard" })).toHaveAttribute("data-layout-mode", "map-priority");
-    await user.selectOptions(modeSelect, "stream-priority");
-    expect(screen.getByRole("main", { name: "Field Ops Dashboard" })).toHaveAttribute("data-layout-mode", "stream-priority");
-    await user.selectOptions(modeSelect, "overview");
+    for (const density of ["expanded", "overview"] as const) {
+      await user.selectOptions(densitySelect, density);
+      for (const priority of ["default", "map", "stream"] as const) {
+        await user.selectOptions(prioritySelect, priority);
+        expect(dashboard).toHaveAttribute("data-layout-density", density);
+        expect(dashboard).toHaveAttribute("data-layout-priority", priority);
+      }
+    }
 
-    expect(screen.getByRole("main", { name: "Field Ops Dashboard" })).toHaveAttribute("data-layout-mode", "overview");
+    expect(dashboard).toHaveAttribute("data-layout-density", "overview");
+    expect(dashboard).toHaveAttribute("data-layout-priority", "stream");
     expect(screen.queryByRole("heading", { name: "음성 파형 분석" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "스트리밍 1 선택" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "스트리밍 2 선택" })).toBeInTheDocument();

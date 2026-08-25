@@ -20,7 +20,8 @@ export interface DashboardWidgetControlBindings {
 export interface DashboardPageViewProps {
   headerProps: Omit<DashboardHeaderProps, "talkback">;
   motionMode: DashboardUserPreferences["motionMode"];
-  dashboardLayoutMode: DashboardUserPreferences["dashboardLayoutMode"];
+  dashboardDensityMode: DashboardUserPreferences["dashboardDensityMode"];
+  dashboardPriorityMode: DashboardUserPreferences["dashboardPriorityMode"];
   notification: StreamAvailabilityNotification | null;
   onDismissNotification: () => void;
   overlayProps: Omit<DashboardOverlaysProps, "widgetControls">;
@@ -30,7 +31,8 @@ export interface DashboardPageViewProps {
 
 export function DashboardPageView({
   headerProps,
-  dashboardLayoutMode,
+  dashboardDensityMode,
+  dashboardPriorityMode,
   motionMode,
   notification,
   onDismissNotification,
@@ -55,7 +57,8 @@ export function DashboardPageView({
   );
 
   return (
-    <main className="ops-dashboard" data-layout-mode={dashboardLayoutMode} data-motion={motionMode} aria-label="Field Ops Dashboard">
+    <main className="ops-dashboard" data-layout-density={dashboardDensityMode}
+      data-layout-priority={dashboardPriorityMode} data-motion={motionMode} aria-label="Field Ops Dashboard">
       <DashboardHeader {...headerProps} talkback={talkback} />
 
       {notification ? <StreamNotificationToast notification={notification} onDismiss={onDismissNotification} /> : null}

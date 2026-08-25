@@ -115,7 +115,7 @@ describe("userPreferences", () => {
     expect(fakeIndexedDB.records.get("dashboard:operator01")).toEqual(
       expect.objectContaining({
         activeView: "settings",
-        version: 1,
+        version: 2,
       }),
     );
   });
@@ -140,6 +140,15 @@ describe("userPreferences", () => {
     expect(sanitized.streamPreferences.deviceAliases).toEqual({
       "raw.mobile.front": "전방 단말",
     });
+  });
+
+  test("migrates legacy single-axis layout preferences", () => {
+    expect(normalizeDashboardUserPreferences({ dashboardLayoutMode: "map-priority" })).toEqual(
+      expect.objectContaining({ dashboardDensityMode: "expanded", dashboardPriorityMode: "map" }),
+    );
+    expect(normalizeDashboardUserPreferences({ dashboardLayoutMode: "overview" })).toEqual(
+      expect.objectContaining({ dashboardDensityMode: "overview", dashboardPriorityMode: "default" }),
+    );
   });
 });
 

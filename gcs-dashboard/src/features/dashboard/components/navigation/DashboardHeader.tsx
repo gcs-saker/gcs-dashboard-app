@@ -1,21 +1,23 @@
 import { TalkbackControlPanel } from "@dashboard/components/TalkbackControlPanel";
 import type { AuthenticatedUser } from "@auth/types";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
-import type { DashboardLayoutMode, DashboardView } from "@dashboard/preferences/userPreferences";
+import type { DashboardDensityMode, DashboardPriorityMode, DashboardView } from "@dashboard/preferences/userPreferences";
 import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
 import { DashboardLayoutModeSelect } from "./DashboardLayoutModeSelect";
 
 export interface DashboardHeaderProps {
   activeView: DashboardView;
   currentUser: AuthenticatedUser | null;
-  dashboardLayoutMode: DashboardLayoutMode;
+  dashboardDensityMode: DashboardDensityMode;
+  dashboardPriorityMode: DashboardPriorityMode;
   isAssetDrawerOpen: boolean;
   layoutMessage: string;
   onChangeView: (view: DashboardView) => void;
   onLogout: () => void;
   onOpenAssetDrawer: () => void;
   onResetLayout: () => void;
-  onSetDashboardLayoutMode: (mode: DashboardLayoutMode) => void;
+  onSetDashboardDensityMode: (mode: DashboardDensityMode) => void;
+  onSetDashboardPriorityMode: (mode: DashboardPriorityMode) => void;
   streams: DashboardStreamSlot[];
   selectedStreamId: string;
   talkbackTargetStreamIds: string[];
@@ -33,14 +35,16 @@ const DASHBOARD_TABS: readonly { id: DashboardView; label: string }[] = [
 export function DashboardHeader({
   activeView,
   currentUser,
-  dashboardLayoutMode,
+  dashboardDensityMode,
+  dashboardPriorityMode,
   isAssetDrawerOpen,
   layoutMessage,
   onChangeView,
   onLogout,
   onOpenAssetDrawer,
   onResetLayout,
-  onSetDashboardLayoutMode,
+  onSetDashboardDensityMode,
+  onSetDashboardPriorityMode,
   streams, selectedStreamId,
   talkbackTargetStreamIds,
   talkback,
@@ -49,7 +53,9 @@ export function DashboardHeader({
     <header className="ops-dashboard__tabs" aria-label="주요 탭">
       <DashboardTabs activeView={activeView} onChangeView={onChangeView} />
       <div className="ops-dashboard__actions">
-        {activeView === "dashboard" ? <DashboardLayoutModeSelect mode={dashboardLayoutMode} onChange={onSetDashboardLayoutMode} /> : null}
+        {activeView === "dashboard" ? <DashboardLayoutModeSelect densityMode={dashboardDensityMode}
+          onDensityChange={onSetDashboardDensityMode} onPriorityChange={onSetDashboardPriorityMode}
+          priorityMode={dashboardPriorityMode} /> : null}
         <div className="ops-dashboard__action-group">
           <button
             aria-controls="asset-tree-drawer"

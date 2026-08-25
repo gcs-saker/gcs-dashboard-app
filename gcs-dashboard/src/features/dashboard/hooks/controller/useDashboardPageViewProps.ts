@@ -23,19 +23,21 @@ interface DashboardPageViewPropsInput {
 export function useDashboardPageViewProps({
   actions, auth, commands, notification, onDismissNotification, preferences, streams, ui, viewModel,
 }: DashboardPageViewPropsInput): DashboardPageViewProps {
-  const { activeView, cctvLayoutMode, cctvQualityMode, dashboardLayoutMode, layout, motionMode } = preferences.preferences;
+  const { activeView, cctvLayoutMode, cctvQualityMode, dashboardDensityMode, dashboardPriorityMode, layout, motionMode } = preferences.preferences;
   return {
     headerProps: {
       activeView, currentUser: auth.currentUser, isAssetDrawerOpen: ui.isAssetDrawerOpen,
       layoutMessage: ui.layoutMessage, onChangeView: preferences.setActiveView, onLogout: auth.handleLogout,
-      dashboardLayoutMode, onSetDashboardLayoutMode: preferences.setDashboardLayoutMode,
+      dashboardDensityMode, dashboardPriorityMode,
+      onSetDashboardDensityMode: preferences.setDashboardDensityMode,
+      onSetDashboardPriorityMode: preferences.setDashboardPriorityMode,
       onOpenAssetDrawer: commands.openAssetDrawer,
       onResetLayout: actions.resetLayout, streams: streams.streams, selectedStreamId: streams.selectedStreamId,
       talkbackTargetStreamIds: ui.talkbackTargetStreamIds,
     },
-    dashboardLayoutMode, motionMode, notification, onDismissNotification,
+    dashboardDensityMode, dashboardPriorityMode, motionMode, notification, onDismissNotification,
     routerProps: {
-      activeView, aiResultsWidget: getDashboardWidgetDefinition("ai-results"), dashboardLayoutMode,
+      activeView, aiResultsWidget: getDashboardWidgetDefinition("ai-results"), dashboardDensityMode,
       audioActiveStreamId: ui.audioActiveStreamId, audioAnalysis: ui.audioAnalysis,
       cctvGridSize: viewModel.cctvGridSize, cctvLayoutMode, cctvQualityMode,
       cctvStatusSummary: viewModel.cctvStatusSummary, cctvStreams: viewModel.cctvStreams,

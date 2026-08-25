@@ -16,11 +16,11 @@ import type { MapFocusViewModel } from "@dashboard/layout/mapFocus";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import type { RealtimePlayerSnapshot } from "@streaming/types";
 import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
-import type { DashboardLayoutMode } from "@dashboard/preferences/userPreferences";
+import type { DashboardDensityMode } from "@dashboard/preferences/userPreferences";
 
 interface DashboardMainGridProps {
   aiResultsWidget: DashboardWidgetDefinition; audioActiveStreamId: string | null;
-  dashboardLayoutMode: DashboardLayoutMode;
+  dashboardDensityMode: DashboardDensityMode;
   audioAnalysis: AudioAnalysisSnapshot | null; isWidgetPinned: (widgetId: DashboardWidgetId) => boolean;
   isWidgetVisible: (widgetId: DashboardWidgetId) => boolean; mapFocus: MapFocusViewModel; motionEnabled: boolean;
   onPlaybackStatusChange: (streamId: string, snapshot: RealtimePlayerSnapshot) => void;
@@ -37,7 +37,7 @@ export function DashboardMainGrid(props: DashboardMainGridProps) {
   return <section className="ops-dashboard__grid">
     <MapPanel {...props} /><SelectedPanel {...props} /><StreamGridPanel {...props} />
     <SummaryPanel {...props} /><TelemetryWidget {...props} />
-    {props.dashboardLayoutMode !== "overview" ? <DashboardAudioWaveformWidget analysis={props.audioAnalysis}
+    {props.dashboardDensityMode !== "overview" ? <DashboardAudioWaveformWidget analysis={props.audioAnalysis}
       isMotionEnabled={props.motionEnabled} selectedStream={props.selectedStream} talkback={props.talkback} /> : null}
     <AiPanel {...props} />
   </section>;
@@ -72,7 +72,7 @@ function StreamGridPanel(props: DashboardMainGridProps) {
       <StreamGrid audioActiveStreamId={props.audioActiveStreamId} onSelectStream={props.onSelectStream}
         onToggleTalkbackTarget={props.onToggleTalkbackTarget} selectedStreamId={props.selectedStreamId}
         talkbackTargetStreamIds={props.talkbackTargetStreamIds}
-        streams={props.dashboardLayoutMode === "overview" ? props.streams.slice(0, 2) : props.streams} />
+        streams={props.dashboardDensityMode === "overview" ? props.streams.slice(0, 2) : props.streams} />
     </DashboardErrorBoundary>
   </RenderProfilerBoundary>;
 }

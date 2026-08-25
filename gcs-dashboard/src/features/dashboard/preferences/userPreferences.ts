@@ -2,36 +2,38 @@ import type { CctvQualityMode } from "@dashboard/components/CctvChannelCard";
 import { resetDashboardLayout, type DashboardLayoutItem } from "@dashboard/layout/dashboardLayout";
 import { detectPreferredMotionMode, normalizeMotionMode, type MotionMode } from "@dashboard/preferences/motionPreference";
 import {
-  EMPTY_STREAM_PREFERENCES,
-  normalizeStreamPreferencesSnapshot,
-  type StreamPreferencesSnapshot,
-} from "@dashboard/preferences/streamPreferences";
+  DEFAULT_DASHBOARD_DENSITY_MODE,
+  DEFAULT_DASHBOARD_PRIORITY_MODE,
+  normalizeDashboardLayoutPreferences,
+  type DashboardDensityMode,
+  type DashboardPriorityMode,
+} from "@dashboard/preferences/dashboardLayoutPreferences";
+import { EMPTY_STREAM_PREFERENCES, normalizeStreamPreferencesSnapshot, type StreamPreferencesSnapshot } from "@dashboard/preferences/streamPreferences";
 
 export type DashboardView = "dashboard" | "cctv" | "events" | "status" | "settings";
 export type CctvLayoutMode = "3x3" | "4x4" | "5x5" | "auto";
-export type DashboardLayoutMode = "expanded" | "map-priority" | "stream-priority" | "overview";
+export type { DashboardDensityMode, DashboardPriorityMode } from "@dashboard/preferences/dashboardLayoutPreferences";
 export interface DashboardUserPreferences {
   readonly activeView: DashboardView;
   readonly cctvLayoutMode: CctvLayoutMode;
   readonly cctvQualityMode: CctvQualityMode;
   readonly layout: DashboardLayoutItem[];
-  readonly dashboardLayoutMode: DashboardLayoutMode;
+  readonly dashboardDensityMode: DashboardDensityMode;
+  readonly dashboardPriorityMode: DashboardPriorityMode;
   readonly motionMode: MotionMode;
   readonly streamPreferences: StreamPreferencesSnapshot;
   readonly version: number;
 }
 
-export const DASHBOARD_USER_PREFERENCES_VERSION = 1;
+export const DASHBOARD_USER_PREFERENCES_VERSION = 2;
 export const DEFAULT_DASHBOARD_VIEW: DashboardView = "dashboard";
 export const DEFAULT_CCTV_LAYOUT_MODE: CctvLayoutMode = "4x4";
 export const DEFAULT_CCTV_QUALITY_MODE: CctvQualityMode = "preview";
-export const DEFAULT_DASHBOARD_LAYOUT_MODE: DashboardLayoutMode = "expanded";
 export const CCTV_LAYOUT_MODE_OPTIONS: readonly CctvLayoutMode[] = ["3x3", "4x4", "5x5", "auto"] as const;
 export const CCTV_QUALITY_MODE_OPTIONS: readonly CctvQualityMode[] = ["preview", "high"] as const;
 const DASHBOARD_VIEWS = new Set<DashboardView>(["dashboard", "cctv", "events", "status", "settings"]);
 const CCTV_LAYOUT_MODES = new Set<CctvLayoutMode>(CCTV_LAYOUT_MODE_OPTIONS);
 const CCTV_QUALITY_MODES = new Set<CctvQualityMode>(CCTV_QUALITY_MODE_OPTIONS);
-const DASHBOARD_LAYOUT_MODES = new Set<DashboardLayoutMode>(["expanded", "map-priority", "stream-priority", "overview"]);
 const ANONYMOUS_PREFERENCE_SCOPE = "preview";
 const USER_KEY_SAFE_PATTERN = /[^a-zA-Z0-9._-]/g;
 
@@ -40,7 +42,8 @@ export function createDefaultDashboardUserPreferences(): DashboardUserPreference
     activeView: DEFAULT_DASHBOARD_VIEW,
     cctvLayoutMode: DEFAULT_CCTV_LAYOUT_MODE,
     cctvQualityMode: DEFAULT_CCTV_QUALITY_MODE,
-    dashboardLayoutMode: DEFAULT_DASHBOARD_LAYOUT_MODE,
+    dashboardDensityMode: DEFAULT_DASHBOARD_DENSITY_MODE,
+    dashboardPriorityMode: DEFAULT_DASHBOARD_PRIORITY_MODE,
     layout: resetDashboardLayout(),
     motionMode: detectPreferredMotionMode(),
     streamPreferences: EMPTY_STREAM_PREFERENCES,
@@ -57,12 +60,13 @@ export function normalizeDashboardUserPreferences(value: unknown): DashboardUser
   const defaults = createDefaultDashboardUserPreferences();
   if (!value || typeof value !== "object") return defaults;
   const candidate = value as Partial<DashboardUserPreferences>;
+  const layoutPreferences = normalizeDashboardLayoutPreferences(value as Partial<DashboardUserPreferences> & { dashboardLayoutMode?: unknown });
 
   return {
     activeView: isDashboardView(candidate.activeView) ? candidate.activeView : defaults.activeView,
     cctvLayoutMode: isCctvLayoutMode(candidate.cctvLayoutMode) ? candidate.cctvLayoutMode : defaults.cctvLayoutMode,
     cctvQualityMode: isCctvQualityMode(candidate.cctvQualityMode) ? candidate.cctvQualityMode : defaults.cctvQualityMode,
-    dashboardLayoutMode: isDashboardLayoutMode(candidate.dashboardLayoutMode) ? candidate.dashboardLayoutMode : defaults.dashboardLayoutMode,
+    ...layoutPreferences,
     layout: normalizeLayout(candidate.layout, defaults.layout),
     motionMode: normalizeMotionMode(candidate.motionMode, defaults.motionMode),
     streamPreferences: normalizeStreamPreferences(candidate.streamPreferences),
@@ -80,10 +84,6 @@ function isCctvLayoutMode(value: unknown): value is CctvLayoutMode {
 
 function isCctvQualityMode(value: unknown): value is CctvQualityMode {
   return typeof value === "string" && CCTV_QUALITY_MODES.has(value as CctvQualityMode);
-}
-
-function isDashboardLayoutMode(value: unknown): value is DashboardLayoutMode {
-  return typeof value === "string" && DASHBOARD_LAYOUT_MODES.has(value as DashboardLayoutMode);
 }
 
 function normalizeLayout(
