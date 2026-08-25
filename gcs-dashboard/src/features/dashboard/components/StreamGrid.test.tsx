@@ -121,6 +121,6 @@ describe("SelectedStreamPanel", () => {
 
     expect(onToggleTalkbackTarget).toHaveBeenCalledWith("raw.sample.front");
     expect(onSelectStream).not.toHaveBeenCalled();
-    expect(screen.getAllByRole("button", { name: "음성 송신 대상" })[2]).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "송신 대상 선택됨" })).toHaveAttribute("aria-pressed", "true");
   });
 });
