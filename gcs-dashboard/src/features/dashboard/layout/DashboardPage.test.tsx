@@ -126,10 +126,11 @@ describe("DashboardPage", () => {
     renderDashboard();
 
     await user.click(screen.getByRole("button", { name: "자산" }));
-    const assetTools = screen.getByLabelText("자산트리 위젯 도구");
-    expect(assetTools).not.toHaveTextContent("PIN");
-    expect(assetTools).not.toHaveTextContent("POP");
-    expect(within(assetTools).getByRole("button", { name: "닫기" })).toHaveAttribute("title", "자산트리 숨김");
+    const drawer = screen.getByRole("complementary", { name: "자산트리" });
+    expect(drawer).not.toHaveTextContent("PIN");
+    expect(drawer).not.toHaveTextContent("POP");
+    expect(within(drawer).getAllByRole("button", { name: "닫기" })).toHaveLength(1);
+    expect(within(drawer).getByRole("button", { name: "닫기" })).toHaveAttribute("title", "자산트리 닫기");
   });
 
   test("shows all dashboard stream slots and changes the selected stream", async () => {
