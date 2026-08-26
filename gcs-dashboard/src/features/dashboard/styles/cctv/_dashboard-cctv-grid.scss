@@ -8,6 +8,23 @@
   grid-row: 2;
 }
 
+.ops-dashboard[data-layout-density][data-layout-priority] .cctv-view .stream-grid--cctv {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.ops-dashboard[data-layout-density][data-layout-priority] .cctv-view .stream-grid--cctv.is-3x3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ops-dashboard[data-layout-density][data-layout-priority] .cctv-view .stream-grid--cctv.is-4x4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ops-dashboard[data-layout-density][data-layout-priority] .cctv-view .stream-grid--cctv.is-5x5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .stream-grid--cctv,
 .stream-grid--cctv.is-4x4 {
   align-self: stretch;
