@@ -17,8 +17,8 @@ const SATELLITE_MAP_CONFIG: DashboardMapConfig = {
 };
 const STREET_MAP_CONFIG: DashboardMapConfig = {
   provider: "custom",
-  styleUrl: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-  attribution: "Esri World Street Map",
+  styleUrl: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  attribution: "© OpenStreetMap contributors",
   requiresApiKey: false,
 };
 

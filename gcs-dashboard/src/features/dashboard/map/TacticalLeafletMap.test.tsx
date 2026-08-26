@@ -270,8 +270,8 @@ describe("TacticalLeafletMap", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "평면" }));
     await waitFor(() => expect(leafletMock().tileLayer).toHaveBeenLastCalledWith(
-      "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-      expect.objectContaining({ attribution: "Esri World Street Map" }),
+      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      expect.objectContaining({ attribution: "© OpenStreetMap contributors" }),
     ));
     await waitFor(() => expect(leafletMock().instances.at(-1)?.setView).toHaveBeenCalledWith(
       [35.871435, 128.601445], 12, { animate: false },
