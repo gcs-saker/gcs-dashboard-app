@@ -25,7 +25,9 @@ class GroupMemberAdministrationServiceTest {
     fun `group admin lists and updates only exact group members`() {
         val principal = repository.findByUsername("admin-a")!!.principal()
 
-        assertEquals(4, service.list(principal, groupA).size)
+        val manageableMembers = service.list(principal, groupA)
+        assertEquals(3, manageableMembers.size)
+        assertTrue(manageableMembers.none { it.role == UserRole.ADMIN })
         assertFailsWith<IllegalArgumentException> { service.list(principal, groupB) }
 
         val updated = service.update(

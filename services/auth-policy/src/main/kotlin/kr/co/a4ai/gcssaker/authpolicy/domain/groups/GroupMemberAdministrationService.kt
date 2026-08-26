@@ -14,7 +14,7 @@ class GroupMemberAdministrationService(
 ) {
     fun list(principal: AuthenticatedPrincipal, groupId: GroupId, limit: Int = 200, offset: Int = 0): List<AuthUser> {
         administrationPolicy.requireGroupManagement(principal, groupId)
-        return users.listByGroup(groupId, limit, offset)
+        return users.listByGroup(groupId, limit, offset).filter { it.role != UserRole.ADMIN }
     }
 
     @Synchronized

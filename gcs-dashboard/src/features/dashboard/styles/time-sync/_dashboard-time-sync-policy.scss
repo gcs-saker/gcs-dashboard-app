@@ -351,6 +351,86 @@
 .group-lifecycle-editor__fields { grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto auto; }
 .group-lifecycle-editor__status { border-color: rgba(255, 107, 107, 0.54); color: #ff8f8f; }
 
+.group-member-panel__group-field {
+  display: grid;
+  gap: 6px;
+  max-width: 320px;
+}
+
+.group-member-panel__group-field > span,
+.group-member-panel__appoint::before {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.group-member-panel__group-field select,
+.group-member-panel__appoint input,
+.group-member-actions input {
+  background: rgba(8, 28, 42, 0.94);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  color: var(--text);
+  height: 40px;
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.group-member-panel__appoint {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(240px, 420px) auto;
+}
+
+.group-member-panel__appoint button,
+.group-member-actions button {
+  min-height: 40px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.group-member-editor {
+  background: rgba(7, 24, 34, 0.72);
+  border: 1px solid rgba(61, 184, 255, 0.34);
+  border-radius: 6px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.group-member-editor header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.group-member-editor header div {
+  display: grid;
+  gap: 3px;
+}
+
+.group-member-editor header span,
+.group-member-editor header small { color: var(--muted); }
+
+.group-member-editor header em {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-style: normal;
+  padding: 4px 9px;
+}
+
+.group-member-editor header em.is-active { color: var(--green); }
+.group-member-editor header em.is-inactive { color: var(--muted); }
+
+.group-member-actions {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, auto) minmax(220px, 1fr) auto auto;
+}
+
 .device-approval-panel__identity {
   display: grid;
   gap: 5px;
@@ -372,6 +452,7 @@
   .settings-listbox { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .group-lifecycle-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .group-lifecycle-editor__fields { grid-template-columns: 1fr 1fr; }
+  .group-member-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .device-alias-card__form {

@@ -8,8 +8,8 @@ export function MemberActions({ canAppoint, member, onAppoint, onUpdate }: {
   onUpdate: (member: GroupMember, update: { role?: "viewer" | "operator"; active?: boolean; password?: string }) => Promise<void>;
 }) {
   const [password, setPassword] = useState("");
-  if (member.role === "group_admin") return <div className="device-approval-panel__actions"><span>그룹 관리자</span></div>;
-  return <div className="device-approval-panel__actions">
+  if (member.role === "group_admin") return <div className="group-member-actions"><span>그룹 관리자 계정</span></div>;
+  return <div className="group-member-actions">
     <button type="button" onClick={() => void onUpdate(member, { role: member.role === "viewer" ? "operator" : "viewer" })}>역할 변경</button>
     <button type="button" onClick={() => void onUpdate(member, { active: !member.active })}>{member.active ? "비활성화" : "활성화"}</button>
     <input aria-label={`${member.username} 임시 비밀번호`} minLength={12}

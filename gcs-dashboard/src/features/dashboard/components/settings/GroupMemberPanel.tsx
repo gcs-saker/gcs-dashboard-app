@@ -4,7 +4,7 @@ import { fetchAccessibleGroupInventory } from "@dashboard/assets/groupAssetApi";
 import { fetchManagedGroups } from "@dashboard/groups/managedGroupApi";
 import { fetchGroupMembers, replaceGroupAdministrator, updateGroupMember } from "@dashboard/groups/groupMemberApi";
 import type { GroupMember } from "@dashboard/groups/groupMembers";
-import { MemberActions } from "./MemberActions";
+import { GroupMemberBrowser } from "./GroupMemberBrowser";
 
 export function GroupMemberPanel() {
   const { currentUser } = useAuth();
@@ -84,14 +84,14 @@ function GroupMemberPanelView(props: {
         <button className="ops-command-button settings-refresh-button" type="button"
           onClick={() => void props.refresh()}>새로고침</button>
       </header>
-      <label>
+      <label className="group-member-panel__group-field">
         <span>관리 그룹</span>
         <select value={props.groupId} onChange={(event) => props.setGroupId(event.target.value)}>
           {props.groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
         </select>
       </label>
       {props.currentUser?.role === "admin" ? (
-        <div className="device-approval-panel__actions">
+        <div className="group-member-panel__appoint">
           <input
             aria-label="새 그룹 관리자 사용자명"
             onChange={(event) => props.setAdministratorCandidate(event.target.value)}
@@ -104,19 +104,8 @@ function GroupMemberPanelView(props: {
         </div>
       ) : null}
       {props.error ? <p className="time-sync-view__error" role="alert">{props.error}</p> : null}
-      <div className="device-approval-panel__list">
-        {props.members.map((member) => (
-          <article className="device-approval-panel__card" key={member.username}>
-            <div><span>{member.role} · {member.active ? "활성" : "비활성"}</span><strong>{member.username}</strong><small>{member.email}</small></div>
-            <MemberActions
-              canAppoint={props.currentUser?.role === "admin"}
-              member={member}
-              onAppoint={props.appoint}
-              onUpdate={props.mutate}
-            />
-          </article>
-        ))}
-      </div>
+      <GroupMemberBrowser canAppoint={props.currentUser?.role === "admin"} members={props.members}
+        onAppoint={props.appoint} onUpdate={props.mutate} />
     </section>
   );
 }
