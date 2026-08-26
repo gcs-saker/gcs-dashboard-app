@@ -64,7 +64,7 @@
   }
 
   .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .ops-dashboard__grid {
-    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 0.45fr);
   }
 
   .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .selected-stream { display: block; grid-column: 1; grid-row: 1; }
