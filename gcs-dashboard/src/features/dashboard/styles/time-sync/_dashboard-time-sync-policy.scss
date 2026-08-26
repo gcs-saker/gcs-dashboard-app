@@ -5,6 +5,11 @@
   padding: 16px;
 }
 
+.time-sync-view__policy > * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
 .time-sync-view__policy article {
   background: rgba(4, 14, 21, 0.54);
   border: 1px solid var(--line-soft);
@@ -265,6 +270,59 @@
   min-width: 58px;
 }
 
+.settings-pagination button,
+.group-lifecycle-form button,
+.group-lifecycle-editor button,
+.group-member-panel__appoint button,
+.group-member-actions button,
+.device-alias-card__form button {
+  background: rgba(8, 28, 42, 0.94);
+  border: 1px solid rgba(72, 137, 170, 0.52);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.settings-listbox button {
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.settings-pagination button:hover:not(:disabled),
+.settings-listbox button:hover,
+.group-lifecycle-form button:hover:not(:disabled),
+.group-lifecycle-editor button:hover:not(:disabled),
+.group-member-panel__appoint button:hover:not(:disabled),
+.group-member-actions button:hover:not(:disabled),
+.device-alias-card__form button:hover:not(:disabled) {
+  background: rgba(13, 43, 61, 0.98);
+  border-color: var(--cyan);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(61, 184, 255, 0.12);
+  color: var(--heading);
+  transform: translateY(-1px);
+}
+
+.settings-pagination button:active:not(:disabled),
+.settings-listbox button:active,
+.group-lifecycle-form button:active:not(:disabled),
+.group-lifecycle-editor button:active:not(:disabled),
+.group-member-panel__appoint button:active:not(:disabled),
+.group-member-actions button:active:not(:disabled),
+.device-alias-card__form button:active:not(:disabled) {
+  box-shadow: none;
+  transform: translateY(0);
+}
+
+.settings-pagination button:disabled,
+.group-lifecycle-form button:disabled,
+.group-lifecycle-editor button:disabled,
+.group-member-panel__appoint button:disabled,
+.group-member-actions button:disabled,
+.device-alias-card__form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .group-lifecycle-form,
 .group-lifecycle-editor__fields {
   align-items: end;
@@ -298,6 +356,7 @@
   height: 40px;
   min-width: 0;
   padding: 0 10px;
+  width: 100%;
 }
 
 .group-lifecycle-form button,
@@ -374,6 +433,7 @@
   height: 40px;
   min-width: 0;
   padding: 0 10px;
+  width: 100%;
 }
 
 .group-member-panel__appoint {
@@ -447,12 +507,24 @@
   grid-template-columns: minmax(240px, 1fr) minmax(360px, 0.9fr);
 }
 
+@media (max-width: 1250px) {
+  .signup-token-panel__form,
+  .group-lifecycle-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-listbox { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .group-lifecycle-editor__fields,
+  .group-member-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .device-approval-panel__card { grid-template-columns: 1fr; }
+  .device-alias-card { grid-template-columns: 1fr; }
+  .device-alias-card__form { grid-template-columns: minmax(0, 1fr) auto; }
+}
+
 @media (max-width: 900px) {
   .signup-token-panel__form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .settings-listbox { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .group-lifecycle-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .group-lifecycle-editor__fields { grid-template-columns: 1fr 1fr; }
   .group-member-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .group-member-panel__appoint { grid-template-columns: 1fr; }
 }
 
 .device-alias-card__form {
@@ -555,4 +627,13 @@
   .device-alias-card__form {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 620px) {
+  .signup-token-panel__form,
+  .group-lifecycle-form,
+  .group-lifecycle-editor__fields,
+  .group-member-actions,
+  .device-alias-card__form { grid-template-columns: 1fr; }
+  .settings-listbox { grid-template-columns: 1fr; }
 }
