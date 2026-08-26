@@ -33,7 +33,7 @@ export function useDashboardPageViewProps({
       onSetDashboardDensityMode: preferences.setDashboardDensityMode,
       onSetDashboardPriorityMode: preferences.setDashboardPriorityMode,
       onOpenAssetDrawer: commands.openAssetDrawer,
-      onResetLayout: actions.resetLayout, streams: streams.streams, selectedStreamId: streams.selectedStreamId,
+      streams: streams.streams, selectedStreamId: streams.selectedStreamId,
       talkbackTargetStreamIds: ui.talkbackTargetStreamIds,
     },
     dashboardDensityMode, dashboardPriorityMode, motionMode, notification, onDismissNotification,

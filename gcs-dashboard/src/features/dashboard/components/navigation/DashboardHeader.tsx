@@ -14,7 +14,6 @@ export interface DashboardHeaderProps {
   onChangeView: (view: DashboardView) => void;
   onLogout: () => void;
   onOpenAssetDrawer: () => void;
-  onResetLayout: () => void;
   onSetDashboardDensityMode: (mode: DashboardDensityMode) => void;
   onSetDashboardPriorityMode: (mode: DashboardPriorityMode) => void;
   streams: DashboardStreamSlot[];
@@ -40,7 +39,6 @@ export function DashboardHeader({
   onChangeView,
   onLogout,
   onOpenAssetDrawer,
-  onResetLayout,
   onSetDashboardDensityMode,
   onSetDashboardPriorityMode,
   streams, selectedStreamId,
@@ -75,9 +73,6 @@ export function DashboardHeader({
           >
             스트림 화면
           </a>
-          <button className="ops-command-button" onClick={onResetLayout} type="button">
-            초기화
-          </button>
         </div>
         <details className="ops-user-menu">
           <summary>{currentUser ? currentUser.username : "미리보기"}</summary>
