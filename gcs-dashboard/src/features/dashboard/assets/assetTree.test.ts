@@ -50,11 +50,13 @@ describe("assetTree", () => {
         { deviceUuid: "device-live", groupId: "team-a", displayName: "현장 드론", deviceType: "drone", status: "active", streamPaths: ["raw.device-live.front"] },
         { deviceUuid: "device-idle", groupId: "team-a", displayName: "대기 로봇", deviceType: "robot", status: "active", streamPaths: [] },
       ],
-    }, [{ streamPath: "raw.device-live.front", detail: "전방 카메라 / raw.device-live.front", status: "online" }]);
+    }, [{ streamPath: "raw.device-live.front", detail: "전방 카메라 / raw.device-live.front", status: "online" }], {
+      "device-live": "개인 드론",
+    });
     const nodes = collectAssetTreeNodes(tree);
 
-    expect(nodes.find((node) => node.id === "device-live")).toMatchObject({ label: "현장 드론", detail: "drone", status: "online" });
+    expect(nodes.find((node) => node.id === "device-live")).toMatchObject({ label: "개인 드론", detail: "drone", status: "online" });
     expect(nodes.find((node) => node.id === "device-idle")).toMatchObject({ label: "대기 로봇", detail: "robot", status: "online" });
-    expect(nodes.find((node) => node.id === "raw.device-live.front")).toMatchObject({ label: "전방 카메라", status: "online" });
+    expect(nodes.find((node) => node.id === "raw.device-live.front")).toBeUndefined();
   });
 });

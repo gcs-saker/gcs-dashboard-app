@@ -26,7 +26,6 @@ export function useDashboardPageActionInput(
     setIsAssetDrawerOpen: ui.setIsAssetDrawerOpen,
     setIsWidgetDialogOpen: ui.setIsWidgetDialogOpen,
     setLayout: preferencesApi.setLayout,
-    setLayoutMessage: ui.setLayoutMessage,
     setPopoutWidgetId: ui.setPopoutWidgetId,
     setTalkbackTargetStreamIds: ui.setTalkbackTargetStreamIds,
     streams: streamState.streams,
@@ -46,7 +45,6 @@ export function useDashboardPageActionInput(
     ui.setAudioAnalysis,
     ui.setIsAssetDrawerOpen,
     ui.setIsWidgetDialogOpen,
-    ui.setLayoutMessage,
     ui.setPopoutWidgetId,
     ui.setTalkbackTargetStreamIds,
   ]);

@@ -37,7 +37,7 @@ export function buildDashboardPageViewModel({
   const cctvStreams = buildCctvGridStreams(streams, cctvGridSize);
   return {
     assetTreeRoot: groupInventory
-      ? buildAccessibleAssetTree(groupInventory, streams)
+      ? buildAccessibleAssetTree(groupInventory, streams, preferences.streamPreferences.deviceAliases)
       : mergeAssetTreeWithStreams(DEFAULT_ASSET_TREE, streams),
     cctvGridSize,
     cctvStatusSummary: summarizeCctvStatus(cctvStreams),

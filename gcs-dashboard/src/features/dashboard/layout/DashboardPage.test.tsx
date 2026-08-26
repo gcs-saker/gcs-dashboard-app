@@ -113,12 +113,10 @@ describe("DashboardPage", () => {
     await user.click(screen.getByLabelText("지도 위젯 도구").querySelector('button[title="지도 숨김"]') as HTMLButtonElement);
 
     expect(screen.queryByRole("heading", { name: "지도" })).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("위젯 숨김");
 
     await user.click(screen.getByRole("button", { name: "초기화" }));
 
     expect(screen.getByRole("heading", { name: "지도" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("기본 레이아웃으로 초기화됨");
   });
 
   test("offers only the close action for dashboard widgets", async () => {
@@ -209,7 +207,6 @@ describe("DashboardPage", () => {
 
     expect(screen.getByText("스트리밍 3 · AI 감지 overlay")).toBeInTheDocument();
     expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 기본 좌표 84deg / FOV 82deg");
-    expect(screen.getByText("지도 핀 스트림 선택됨")).toBeInTheDocument();
     expect(screen.getByLabelText("스트리밍 3 단말 정보")).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "스트리밍 3 스트림 연결" })).not.toBeInTheDocument();
   });
@@ -223,7 +220,6 @@ describe("DashboardPage", () => {
 
     expect(aiToggle).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("AI 필터 준비됨")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("AI 모드 옵션 변경됨");
   });
 
   test("connects, cancels, and disconnects stream devices through the slot dialog", async () => {
@@ -241,13 +237,11 @@ describe("DashboardPage", () => {
     expect(screen.queryByRole("dialog", { name: "스트리밍 4 스트림 연결" })).not.toBeInTheDocument();
     expect(screen.getAllByText("DRN-01 전방 EO").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 4 기본 좌표 130deg / FOV 72deg");
-    expect(screen.getByRole("status")).toHaveTextContent("스트림 연결됨");
 
     await user.click(screen.getByRole("button", { name: "스트리밍 4 선택" }));
     await user.click(screen.getByRole("button", { name: "스트림 연결 해제" }));
 
     expect(screen.getAllByText("스트림 미선택").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByRole("status")).toHaveTextContent("스트림 연결 해제됨");
   });
 
   test("renders operational status placeholders needed before live backend wiring", () => {
@@ -318,7 +312,6 @@ describe("DashboardPage", () => {
 
     expect(screen.queryByRole("dialog", { name: "CCTV 25 스트림 연결" })).not.toBeInTheDocument();
     expect(screen.getByText("DRN-01 전방 EO")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("스트림 연결됨");
   });
 
   test("only offers online registry streams without an address input", async () => {
@@ -358,7 +351,6 @@ describe("DashboardPage", () => {
 
     expect(screen.getByText("스트리밍 3 · AI 감지 overlay")).toBeInTheDocument();
     expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 3 기본 좌표 84deg / FOV 82deg");
-    expect(screen.getByText("자산트리 스트림 선택됨")).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "스트리밍 3 스트림 연결" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "자산트리" })).not.toBeInTheDocument();
   });

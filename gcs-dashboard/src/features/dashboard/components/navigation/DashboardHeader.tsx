@@ -11,7 +11,6 @@ export interface DashboardHeaderProps {
   dashboardDensityMode: DashboardDensityMode;
   dashboardPriorityMode: DashboardPriorityMode;
   isAssetDrawerOpen: boolean;
-  layoutMessage: string;
   onChangeView: (view: DashboardView) => void;
   onLogout: () => void;
   onOpenAssetDrawer: () => void;
@@ -38,7 +37,6 @@ export function DashboardHeader({
   dashboardDensityMode,
   dashboardPriorityMode,
   isAssetDrawerOpen,
-  layoutMessage,
   onChangeView,
   onLogout,
   onOpenAssetDrawer,
@@ -68,7 +66,6 @@ export function DashboardHeader({
             <span aria-hidden="true">☰</span>
             자산
           </button>
-          <span className="ops-layout-status" role="status">{layoutMessage}</span>
         </div>
         <TalkbackControlPanel selectedStreamId={selectedStreamId} selectedStreamIds={talkbackTargetStreamIds} streams={streams} talkback={talkback} />
         <div className="ops-dashboard__action-group">

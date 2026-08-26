@@ -30,9 +30,10 @@
 
 .ops-dashboard__actions {
   color: var(--muted);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   font-size: 0.78rem;
   justify-content: flex-end;
+  min-width: 0;
 }
 
 .dashboard-layout-mode {

@@ -27,7 +27,7 @@ export function useDashboardPageViewProps({
   return {
     headerProps: {
       activeView, currentUser: auth.currentUser, isAssetDrawerOpen: ui.isAssetDrawerOpen,
-      layoutMessage: ui.layoutMessage, onChangeView: preferences.setActiveView, onLogout: auth.handleLogout,
+      onChangeView: preferences.setActiveView, onLogout: auth.handleLogout,
       dashboardDensityMode, dashboardPriorityMode,
       onSetDashboardDensityMode: preferences.setDashboardDensityMode,
       onSetDashboardPriorityMode: preferences.setDashboardPriorityMode,

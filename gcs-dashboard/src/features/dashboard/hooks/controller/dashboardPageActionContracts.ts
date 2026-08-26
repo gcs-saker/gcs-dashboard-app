@@ -17,7 +17,6 @@ export interface DashboardPageActionInput {
   setIsAssetDrawerOpen: Dispatch<SetStateAction<boolean>>;
   setIsWidgetDialogOpen: Dispatch<SetStateAction<boolean>>;
   setLayout: Dispatch<SetStateAction<DashboardLayoutItem[]>>;
-  setLayoutMessage: Dispatch<SetStateAction<string>>;
   setPopoutWidgetId: Dispatch<SetStateAction<DashboardWidgetId | null>>;
   setTalkbackTargetStreamIds: Dispatch<SetStateAction<string[]>>;
   streams: DashboardStreamSlot[];

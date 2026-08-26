@@ -2,23 +2,20 @@ import { useCallback, useMemo } from "react";
 import type { DashboardPageActionInput } from "@dashboard/hooks/controller/dashboardPageActionContracts";
 
 type OverlayActionInput = Pick<DashboardPageActionInput,
-  "setEditingStreamId" | "setIsAssetDrawerOpen" | "setIsWidgetDialogOpen" | "setLayoutMessage"
+  "setEditingStreamId" | "setIsAssetDrawerOpen" | "setIsWidgetDialogOpen"
 >;
 
 export function useDashboardOverlayActions(input: OverlayActionInput) {
-  const { setEditingStreamId, setIsAssetDrawerOpen, setIsWidgetDialogOpen, setLayoutMessage } = input;
+  const { setEditingStreamId, setIsAssetDrawerOpen, setIsWidgetDialogOpen } = input;
   const applyWidgetDialog = useCallback(() => {
     setIsWidgetDialogOpen(false);
-    setLayoutMessage("레이아웃 변경 적용됨");
-  }, [setIsWidgetDialogOpen, setLayoutMessage]);
+  }, [setIsWidgetDialogOpen]);
   const cancelWidgetDialog = useCallback(() => {
     setIsWidgetDialogOpen(false);
-    setLayoutMessage("레이아웃 변경 취소됨");
-  }, [setIsWidgetDialogOpen, setLayoutMessage]);
+  }, [setIsWidgetDialogOpen]);
   const cancelStreamConnection = useCallback(() => {
     setEditingStreamId(null);
-    setLayoutMessage("스트림 연결 변경 취소됨");
-  }, [setEditingStreamId, setLayoutMessage]);
+  }, [setEditingStreamId]);
   const closeAssetDrawer = useCallback(() => setIsAssetDrawerOpen(false), [setIsAssetDrawerOpen]);
 
   return useMemo(() => ({ applyWidgetDialog, cancelStreamConnection, cancelWidgetDialog, closeAssetDrawer }),
