@@ -3,10 +3,11 @@
   border: 1px solid var(--line-soft);
   border-radius: 6px;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
   min-height: 34px;
   padding: 4px 6px;
+  white-space: nowrap;
 }
 
 .talkback-panel__targets,
