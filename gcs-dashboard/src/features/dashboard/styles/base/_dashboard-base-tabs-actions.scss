@@ -83,12 +83,16 @@
 
 .ops-command-button,
 .widget-icon-button {
+  align-items: center;
   background: var(--surface-glass);
   border: 1px solid var(--line);
   border-radius: 6px;
   color: var(--text);
   cursor: pointer;
+  display: inline-flex;
   font-weight: 800;
+  justify-content: center;
+  line-height: 1;
   min-height: 32px;
   overflow: hidden;
   position: relative;
@@ -115,8 +119,6 @@
 }
 
 .ops-command-button {
-  align-items: center;
-  display: inline-flex;
   flex: none;
   text-decoration: none;
   padding: 0 12px;
