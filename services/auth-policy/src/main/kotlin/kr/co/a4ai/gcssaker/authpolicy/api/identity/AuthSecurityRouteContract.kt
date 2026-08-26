@@ -24,7 +24,9 @@ object AuthSecurityRouteContract {
     val CORS_METHODS = listOf(
         HttpMethod.GET.name(),
         HttpMethod.POST.name(),
+        HttpMethod.PUT.name(),
         HttpMethod.PATCH.name(),
+        HttpMethod.DELETE.name(),
         HttpMethod.OPTIONS.name(),
     )
     val CORS_HEADERS = listOf(
