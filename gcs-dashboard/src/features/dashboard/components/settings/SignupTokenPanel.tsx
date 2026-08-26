@@ -28,10 +28,7 @@ export function SignupTokenPanel() {
           onClick={() => void refresh()}>새로고침</button>
       </header>
       <p>회원가입 화면의 초대 코드 칸에 입력할 일회성 또는 제한 사용 토큰을 발급합니다.</p>
-      <form className="provisioning-token-panel__form" onSubmit={submit}>
-        <label><span>회사 ID</span><input type="number" min={1} value={form.companyId}
-          disabled={!isAdmin || isIssuing}
-          onChange={(e) => setForm({ ...form, companyId: Number(e.target.value) })} /></label>
+      <form className="provisioning-token-panel__form signup-token-panel__form" onSubmit={submit}>
         <label><span>그룹</span><select value={form.groupId} disabled={!isAdmin || isIssuing || groups.length === 0}
           onChange={(e) => setForm({ ...form, groupId: e.target.value })}>
           {groups.map((group) => <option key={group.id} value={group.id}>
@@ -51,7 +48,8 @@ export function SignupTokenPanel() {
         <label><span>사용 가능 횟수</span><input type="number" min={1} max={100} value={form.maxUses}
           disabled={!isAdmin || isIssuing}
           onChange={(e) => setForm({ ...form, maxUses: Number(e.target.value) })} /></label>
-        <button type="submit" disabled={!isAdmin || isIssuing || !groups.some((group) => group.id === form.groupId)}>
+        <button className="signup-token-panel__submit" type="submit"
+          disabled={!isAdmin || isIssuing || !groups.some((group) => group.id === form.groupId)}>
           {isIssuing ? "발급 중" : "회원가입 토큰 발급"}
         </button>
       </form>

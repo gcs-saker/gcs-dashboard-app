@@ -76,12 +76,12 @@ function RegisteredDeviceAliasCard({ device, isMutating, onRename }: RegisteredD
   };
 
   return (
-    <article className="device-approval-panel__card">
-      <div>
+    <article className="device-approval-panel__card device-alias-card">
+      <div className="device-approval-panel__identity">
         <span>{device.groupId} · {device.deviceType} · {device.status}</span>
         <strong>{device.displayName}</strong>
       </div>
-      <form className="device-approval-panel__actions" onSubmit={submit}>
+      <form className="device-approval-panel__actions device-alias-card__form" onSubmit={submit}>
         <label>
           <span>장비 별칭</span>
           <input
@@ -116,7 +116,7 @@ function PendingDeviceCard({
 }: PendingDeviceCardProps) {
   return (
     <article className="device-approval-panel__card">
-      <div>
+      <div className="device-approval-panel__identity">
         <span>{device.groupId} · {device.deviceType}</span>
         <strong>{device.displayName}</strong>
       </div>

@@ -47,9 +47,20 @@
 }
 
 .provisioning-token-panel__form {
+  align-items: end;
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(4, minmax(140px, 1fr)) auto;
+}
+
+.signup-token-panel__form {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.signup-token-panel__submit {
+  height: 40px;
+  justify-self: start;
+  width: min(100%, 200px);
 }
 
 .provisioning-token-panel__form label {
@@ -191,6 +202,56 @@
   min-height: auto;
 }
 
+.device-approval-panel__identity {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.device-approval-panel__identity strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-alias-card {
+  grid-template-columns: minmax(240px, 1fr) minmax(360px, 0.9fr);
+}
+
+.device-alias-card__form {
+  align-items: end;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+}
+
+.device-alias-card__form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.device-alias-card__form input {
+  background: rgba(8, 28, 42, 0.94);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  color: var(--text);
+  min-height: 40px;
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.device-alias-card__form input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px rgba(61, 184, 255, 0.16);
+  outline: 0;
+}
+
+.device-alias-card__form button:last-child {
+  border-color: rgba(61, 184, 255, 0.42);
+  color: var(--cyan);
+  min-width: 96px;
+}
+
 .device-approval-panel__card small {
   color: var(--muted);
   overflow-wrap: anywhere;
@@ -251,6 +312,10 @@
 
 @media (max-width: 840px) {
   .device-approval-panel__card {
+    grid-template-columns: 1fr;
+  }
+
+  .device-alias-card__form {
     grid-template-columns: 1fr;
   }
 }
