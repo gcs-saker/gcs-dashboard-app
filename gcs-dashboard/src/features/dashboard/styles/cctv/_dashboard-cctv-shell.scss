@@ -10,7 +10,9 @@
   background: rgba(3, 10, 15, 0.72);
   display: grid;
   gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;
+  width: 100%;
 }
 
 .cctv-view__header {
@@ -19,6 +21,8 @@
   border-radius: 6px;
   display: flex;
   gap: 12px;
+  grid-column: 1;
+  grid-row: 1;
   justify-content: space-between;
   min-height: 54px;
   padding: 0 14px;
