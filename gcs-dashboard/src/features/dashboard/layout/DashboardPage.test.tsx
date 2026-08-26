@@ -106,17 +106,12 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("레이아웃")).not.toBeInTheDocument();
   });
 
-  test("hides a widget and restores the default layout from reset", async () => {
-    const user = userEvent.setup();
+  test("does not render close controls on the main dashboard widgets", () => {
     renderDashboard();
 
-    await user.click(screen.getByLabelText("지도 위젯 도구").querySelector('button[title="지도 숨김"]') as HTMLButtonElement);
-
-    expect(screen.queryByRole("heading", { name: "지도" })).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "초기화" }));
-
     expect(screen.getByRole("heading", { name: "지도" })).toBeInTheDocument();
+    expect(screen.queryByText("닫기")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/위젯 도구/)).not.toBeInTheDocument();
   });
 
   test("offers only the close action for dashboard widgets", async () => {
