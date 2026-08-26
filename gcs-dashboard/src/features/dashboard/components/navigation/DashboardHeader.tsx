@@ -54,19 +54,17 @@ export function DashboardHeader({
         {activeView === "dashboard" ? <DashboardLayoutModeSelect densityMode={dashboardDensityMode}
           onDensityChange={onSetDashboardDensityMode} onPriorityChange={onSetDashboardPriorityMode}
           priorityMode={dashboardPriorityMode} /> : null}
-        <div className="ops-dashboard__action-group">
-          <button
-            aria-controls="asset-tree-drawer"
-            aria-expanded={activeView === "dashboard" && isAssetDrawerOpen}
-            className="ops-command-button asset-menu-button"
-            onClick={onOpenAssetDrawer}
-            disabled={activeView !== "dashboard"}
-            type="button"
-          >
-            <span aria-hidden="true">☰</span>
-            자산
-          </button>
-        </div>
+        <button
+          aria-controls="asset-tree-drawer"
+          aria-expanded={activeView === "dashboard" && isAssetDrawerOpen}
+          className="ops-command-button asset-menu-button"
+          onClick={onOpenAssetDrawer}
+          disabled={activeView !== "dashboard"}
+          type="button"
+        >
+          <span aria-hidden="true">☰</span>
+          자산
+        </button>
         <TalkbackControlPanel selectedStreamId={selectedStreamId} selectedStreamIds={talkbackTargetStreamIds} streams={streams} talkback={talkback} />
         <div className="ops-dashboard__action-group">
           <a

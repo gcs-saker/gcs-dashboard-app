@@ -18,14 +18,12 @@ export function DashboardLayoutModeSelect({ densityMode, onDensityChange, onPrio
 }) {
   return <div className="dashboard-layout-mode">
     <label>
-      <span className="sr-only">대시보드 표시 방식</span>
       <select aria-label="대시보드 표시 방식" value={densityMode}
         onChange={(event) => onDensityChange(event.target.value as DashboardDensityMode)}>
         {DENSITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
     </label>
     <label>
-      <span className="sr-only">대시보드 우선순위</span>
       <select aria-label="대시보드 우선순위" value={priorityMode}
         onChange={(event) => onPriorityChange(event.target.value as DashboardPriorityMode)}>
         {PRIORITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
