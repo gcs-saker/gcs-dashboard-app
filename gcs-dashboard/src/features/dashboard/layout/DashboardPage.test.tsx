@@ -51,6 +51,7 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("button", { name: "대시보드" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "서버상태" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "운영설정" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "이벤트로그" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "웹캠 송출" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "마이크 송신" })).toBeDisabled();
     expect(screen.getByRole("region", { name: "다중 stream 음성 송신" })).toHaveTextContent("대상 없음");
@@ -70,6 +71,21 @@ describe("DashboardPage", () => {
     expect(screen.getByText("선택 스트림 품질")).toBeInTheDocument();
     expect(screen.getByText("현재 선택")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "AI 결과" })).not.toBeInTheDocument();
+  });
+
+  test("shows the event log navigation only to the system administrator", () => {
+    clearAuthSession();
+    storeAuthSession({
+      accessToken: "admin-access-token",
+      expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+      user: { username: "admin01", role: "admin", groupId: "co-a", securityVersion: 1,
+        capabilities: { canView: true, canControl: true, canManage: true, canSendTalkback: true,
+          canPublish: true, canManageMembers: true, canManageDevices: true } },
+    });
+
+    renderDashboard();
+
+    expect(screen.getByRole("button", { name: "이벤트로그" })).toBeInTheDocument();
   });
 
   test("applies motion kill switch from operations settings", async () => {

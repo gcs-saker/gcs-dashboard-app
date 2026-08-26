@@ -5,6 +5,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventCursor
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPageLimit
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPageQuery
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
+import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 
 data class OperationalEventRequestContext(
     val principal: AuthenticatedPrincipal,
@@ -20,11 +21,14 @@ class OperationalEventRequestReader(
         severity: String?,
         from: String?,
         to: String?,
-    ): OperationalEventRequestContext =
-        OperationalEventRequestContext(
-            principal = principalResolver.requirePrincipal(authorization),
+    ): OperationalEventRequestContext {
+        val principal = principalResolver.requirePrincipal(authorization)
+        if (principal.role != UserRole.ADMIN) throw ForbiddenApiError("system administrator required")
+        return OperationalEventRequestContext(
+            principal = principal,
             query = OperationalEventQueryParser.parse(query, severity, from, to),
         )
+    }
 
     fun pageQuery(
         filter: OperationalEventQuery,

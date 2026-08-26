@@ -41,7 +41,7 @@ class OperationalEventControllerTest {
                     username = "viewer-a",
                     email = "viewer-a@example.test",
                     passwordHash = passwordHasher.hash("pass"),
-                    role = UserRole.VIEWER,
+                    role = UserRole.ADMIN,
                     groupId = GroupId("co-a"),
                 ),
                 AuthUser(
@@ -285,6 +285,15 @@ class OperationalEventControllerTest {
         }
 
         assertEquals(HttpStatus.UNAUTHORIZED, error.statusCode)
+    }
+
+    @Test
+    fun `events reject non administrator accounts`() {
+        val error = assertThrows<ResponseStatusException> {
+            controller.events(bearer(accessToken("viewer-b")), null, null, null, null)
+        }
+
+        assertEquals(HttpStatus.FORBIDDEN, error.statusCode)
     }
 
     private fun event(

@@ -49,7 +49,7 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   return (
     <header className="ops-dashboard__tabs" aria-label="주요 탭">
-      <DashboardTabs activeView={activeView} onChangeView={onChangeView} />
+      <DashboardTabs activeView={activeView} currentUser={currentUser} onChangeView={onChangeView} />
       <div className="ops-dashboard__actions">
         {activeView === "dashboard" ? <DashboardLayoutModeSelect densityMode={dashboardDensityMode}
           onDensityChange={onSetDashboardDensityMode} onPriorityChange={onSetDashboardPriorityMode}
@@ -88,10 +88,14 @@ export function DashboardHeader({
   );
 }
 
-function DashboardTabs({ activeView, onChangeView }: Pick<DashboardHeaderProps, "activeView" | "onChangeView">) {
+function DashboardTabs({ activeView, currentUser, onChangeView }:
+  Pick<DashboardHeaderProps, "activeView" | "currentUser" | "onChangeView">) {
+  const visibleTabs = currentUser?.role === "admin"
+    ? DASHBOARD_TABS
+    : DASHBOARD_TABS.filter((tab) => tab.id !== "events");
   return (
     <nav className="ops-dashboard__tab-list">
-      {DASHBOARD_TABS.map((tab) => (
+      {visibleTabs.map((tab) => (
         <button
           className={`ops-tab ${activeView === tab.id ? "is-active" : ""}`}
           key={tab.id}
