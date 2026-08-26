@@ -1,14 +1,19 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { canManageDeviceProvisioning } from "@auth/rolePermissions";
 import { useSignupTokens } from "@dashboard/hooks/devices/useSignupTokens";
 import { DEFAULT_SIGNUP_TOKEN_INPUT, type IssueSignupTokenInput } from "@dashboard/devices/signupTokens";
+import { fetchManagedGroups } from "@dashboard/groups/managedGroupApi";
+import type { ManagedGroup } from "@dashboard/groups/managedGroups";
 
 export function SignupTokenPanel() {
   const { currentUser } = useAuth();
   const { records, issuedToken, isLoading, isIssuing, errorMessage, refresh, issue, clear } = useSignupTokens();
   const [form, setForm] = useState<IssueSignupTokenInput>(DEFAULT_SIGNUP_TOKEN_INPUT);
+  const [groups, setGroups] = useState<ManagedGroup[]>([]);
+  const [groupError, setGroupError] = useState("");
   const isAdmin = currentUser?.capabilities?.canManageMembers ?? canManageDeviceProvisioning(currentUser?.role);
+  useSignupTokenGroups(currentUser, setForm, setGroups, setGroupError);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -19,15 +24,18 @@ export function SignupTokenPanel() {
     <section className="time-sync-view__policy provisioning-token-panel" aria-label="회원가입 등록 토큰">
       <header className="time-sync-view__policy-header provisioning-token-panel__header">
         <div><span>회원 관리</span><strong>회원가입 등록 토큰</strong></div>
-        <button type="button" onClick={() => void refresh()}>새로고침</button>
+        <button className="ops-command-button settings-refresh-button" type="button"
+          onClick={() => void refresh()}>새로고침</button>
       </header>
       <p>회원가입 화면의 초대 코드 칸에 입력할 일회성 또는 제한 사용 토큰을 발급합니다.</p>
       <form className="provisioning-token-panel__form" onSubmit={submit}>
         <label><span>회사 ID</span><input type="number" min={1} value={form.companyId}
           disabled={!isAdmin || isIssuing}
           onChange={(e) => setForm({ ...form, companyId: Number(e.target.value) })} /></label>
-        <label><span>그룹 ID</span><input value={form.groupId} disabled={!isAdmin || isIssuing}
-          onChange={(e) => setForm({ ...form, groupId: e.target.value })} /></label>
+        <label><span>그룹</span><select value={form.groupId} disabled={!isAdmin || isIssuing || groups.length === 0}
+          onChange={(e) => setForm({ ...form, groupId: e.target.value })}>
+          {groups.map((group) => <option key={group.id} value={group.id}>{group.name} · {group.id}</option>)}
+        </select></label>
         <label><span>가입 권한</span><select className="provisioning-token-panel__role-select" value={form.role} disabled={!isAdmin || isIssuing}
           onChange={(e) => setForm({ ...form, role: e.target.value as IssueSignupTokenInput["role"] })}>
           <option value="viewer">Viewer · 조회 전용</option>
@@ -41,9 +49,12 @@ export function SignupTokenPanel() {
         <label><span>사용 가능 횟수</span><input type="number" min={1} max={100} value={form.maxUses}
           disabled={!isAdmin || isIssuing}
           onChange={(e) => setForm({ ...form, maxUses: Number(e.target.value) })} /></label>
-        <button type="submit" disabled={!isAdmin || isIssuing}>{isIssuing ? "발급 중" : "회원가입 토큰 발급"}</button>
+        <button type="submit" disabled={!isAdmin || isIssuing || !groups.some((group) => group.id === form.groupId)}>
+          {isIssuing ? "발급 중" : "회원가입 토큰 발급"}
+        </button>
       </form>
       {!isAdmin ? <p className="provisioning-token-panel__notice">관리자 계정만 발급할 수 있습니다.</p> : null}
+      {groupError ? <p role="alert" className="time-sync-view__error">{groupError}</p> : null}
       {errorMessage ? <p role="alert" className="time-sync-view__error">{errorMessage}</p> : null}
       {issuedToken ? (
         <article className="provisioning-token-panel__issued">
@@ -58,6 +69,34 @@ export function SignupTokenPanel() {
       <SignupTokenRecords isLoading={isLoading} records={records} />
     </section>
   );
+}
+
+function useSignupTokenGroups(
+  currentUser: ReturnType<typeof useAuth>["currentUser"],
+  setForm: Dispatch<SetStateAction<IssueSignupTokenInput>>,
+  setGroups: Dispatch<SetStateAction<ManagedGroup[]>>,
+  setGroupError: Dispatch<SetStateAction<string>>,
+): void {
+  useEffect(() => {
+    if (!currentUser) return;
+    if (currentUser.role !== "admin") {
+      setGroups([{ id: currentUser.groupId, name: currentUser.groupId, type: "company", parentId: null, status: "active" }]);
+      setForm((current) => ({ ...current, groupId: currentUser.groupId }));
+      return;
+    }
+    let disposed = false;
+    void fetchManagedGroups().then((records) => {
+      if (disposed) return;
+      const activeGroups = records.filter((group) => group.status === "active");
+      setGroups(activeGroups);
+      setForm((current) => activeGroups.some((group) => group.id === current.groupId)
+        ? current : { ...current, groupId: activeGroups[0]?.id ?? "" });
+      setGroupError("");
+    }).catch((error) => {
+      if (!disposed) setGroupError(error instanceof Error ? error.message : "그룹 목록을 불러오지 못했습니다.");
+    });
+    return () => { disposed = true; };
+  }, [currentUser, setForm, setGroupError, setGroups]);
 }
 
 function SignupTokenRecords({ isLoading, records }: Pick<ReturnType<typeof useSignupTokens>, "isLoading" | "records">) {

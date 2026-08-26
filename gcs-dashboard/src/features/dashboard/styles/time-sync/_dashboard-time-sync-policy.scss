@@ -39,6 +39,13 @@
   grid-template-columns: 1fr;
 }
 
+.provisioning-token-panel__header .settings-refresh-button {
+  border-color: rgba(61, 184, 255, 0.42);
+  color: var(--cyan);
+  min-height: 36px;
+  min-width: 88px;
+}
+
 .provisioning-token-panel__form {
   display: grid;
   gap: 12px;
