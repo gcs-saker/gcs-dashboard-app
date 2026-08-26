@@ -1,19 +1,25 @@
 .time-sync-view__tabs {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  min-height: 60px;
   padding: 10px;
 }
 
 .time-sync-view__tabs button {
   background: rgba(8, 28, 42, 0.72);
   border: 1px solid var(--line-soft);
+  box-sizing: border-box;
   color: var(--muted);
   cursor: pointer;
+  flex: 0 0 auto;
   font-size: 0.875rem;
   font-weight: 600;
-  min-height: 38px;
+  height: 38px;
+  line-height: 1;
   padding: 0 14px;
+  white-space: nowrap;
 }
 
 .time-sync-view__tabs button.is-active,
