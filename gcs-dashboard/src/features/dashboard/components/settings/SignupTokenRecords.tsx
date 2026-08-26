@@ -4,7 +4,7 @@ import type { SignupTokenRecord } from "@dashboard/devices/signupTokens";
 const PAGE_SIZE = 5;
 
 export function SignupTokenRecords({ isLoading, records }: { isLoading: boolean; records: SignupTokenRecord[] }) {
-  const sorted = [...records].sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+  const sorted = records.reduce<SignupTokenRecord[]>(insertNewestFirst, []);
   const [page, setPage] = useState(0);
   const [selectedId, setSelectedId] = useState("");
   const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
@@ -30,4 +30,10 @@ export function SignupTokenRecords({ isLoading, records }: { isLoading: boolean;
       <button disabled={page + 1 >= pageCount} onClick={() => setPage(page + 1)} type="button">다음</button>
     </nav>
   </div>;
+}
+
+function insertNewestFirst(ordered: SignupTokenRecord[], record: SignupTokenRecord): SignupTokenRecord[] {
+  const insertionIndex = ordered.findIndex((candidate) => Date.parse(candidate.createdAt) < Date.parse(record.createdAt));
+  if (insertionIndex < 0) return [...ordered, record];
+  return [...ordered.slice(0, insertionIndex), record, ...ordered.slice(insertionIndex)];
 }
