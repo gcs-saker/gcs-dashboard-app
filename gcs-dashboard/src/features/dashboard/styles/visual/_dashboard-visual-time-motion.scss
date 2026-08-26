@@ -38,7 +38,10 @@
 .motion-settings__choices {
   display: grid;
   gap: 10px;
+  grid-column: 1 / -1;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+  width: 100%;
 }
 
 .motion-settings__choices button {
@@ -84,4 +87,8 @@
   color: var(--muted);
   font-size: 0.74rem;
   line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  .motion-settings__choices { grid-template-columns: 1fr; }
 }
