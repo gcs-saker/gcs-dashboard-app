@@ -52,7 +52,7 @@ describe("DeviceApprovalPanel", () => {
     await user.type(input, "현장 드론");
     await user.click(screen.getByRole("button", { name: "별칭 저장" }));
 
-    await screen.findByText("현장 드론");
+    expect((await screen.findAllByText("현장 드론")).length).toBeGreaterThan(0);
     expect(fetcher.mock.calls.at(-1)?.[0]).toBe("/auth-policy/api/v1/devices/device-001");
   });
 

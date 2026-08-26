@@ -1,8 +1,8 @@
-import { useState, type FormEvent } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { canManageDeviceProvisioning } from "@auth/rolePermissions";
 import { useAdminDevices } from "@dashboard/hooks/devices/useAdminDevices";
 import type { RegisteredDevice } from "@dashboard/devices/adminDevices";
+import { RegisteredDeviceBrowser } from "./RegisteredDeviceBrowser";
 
 export function DeviceApprovalPanel() {
   const { currentUser } = useAuth();
@@ -47,55 +47,8 @@ export function DeviceApprovalPanel() {
         </div>
       </header>
       <p className="device-approval-panel__hint">별칭은 서버에 저장되어 다른 브라우저와 다음 로그인에서도 동일하게 표시됩니다.</p>
-      <div className="device-approval-panel__list">
-        {devices.map((device) => (
-          <RegisteredDeviceAliasCard
-            key={device.deviceUuid}
-            device={device}
-            isMutating={mutatingDeviceUuid === device.deviceUuid}
-            onRename={rename}
-          />
-        ))}
-      </div>
+      <RegisteredDeviceBrowser devices={devices} mutatingDeviceUuid={mutatingDeviceUuid} onRename={rename} />
     </section>
-  );
-}
-
-interface RegisteredDeviceAliasCardProps {
-  device: RegisteredDevice;
-  isMutating: boolean;
-  onRename: (deviceUuid: string, displayName: string) => Promise<void>;
-}
-
-function RegisteredDeviceAliasCard({ device, isMutating, onRename }: RegisteredDeviceAliasCardProps) {
-  const [alias, setAlias] = useState(device.displayName);
-  const submit = (event: FormEvent): void => {
-    event.preventDefault();
-    const nextAlias = alias.trim();
-    if (nextAlias && nextAlias !== device.displayName) void onRename(device.deviceUuid, nextAlias);
-  };
-
-  return (
-    <article className="device-approval-panel__card device-alias-card">
-      <div className="device-approval-panel__identity">
-        <span>{device.groupId} · {device.deviceType} · {device.status}</span>
-        <strong>{device.displayName}</strong>
-      </div>
-      <form className="device-approval-panel__actions device-alias-card__form" onSubmit={submit}>
-        <label>
-          <span>장비 별칭</span>
-          <input
-            aria-label={`${device.displayName} 장비 별칭`}
-            maxLength={128}
-            onChange={(event) => setAlias(event.target.value)}
-            value={alias}
-          />
-        </label>
-        <button disabled={isMutating || !alias.trim() || alias.trim() === device.displayName} type="submit">
-          {isMutating ? "저장 중" : "별칭 저장"}
-        </button>
-      </form>
-    </article>
   );
 }
 

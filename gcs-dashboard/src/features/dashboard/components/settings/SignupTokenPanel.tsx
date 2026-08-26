@@ -5,6 +5,7 @@ import { useSignupTokens } from "@dashboard/hooks/devices/useSignupTokens";
 import { DEFAULT_SIGNUP_TOKEN_INPUT, type IssueSignupTokenInput, type SignupTokenIssue } from "@dashboard/devices/signupTokens";
 import { fetchManagedGroups } from "@dashboard/groups/managedGroupApi";
 import type { ManagedGroup } from "@dashboard/groups/managedGroups";
+import { SignupTokenRecords } from "./SignupTokenRecords";
 
 export function SignupTokenPanel() {
   const { currentUser } = useAuth();
@@ -104,17 +105,4 @@ function useSignupTokenGroups(
     });
     return () => { disposed = true; };
   }, [currentUser, setForm, setGroupError, setGroups]);
-}
-
-function SignupTokenRecords({ isLoading, records }: Pick<ReturnType<typeof useSignupTokens>, "isLoading" | "records">) {
-  return <div className="provisioning-token-panel__records">
-    {isLoading ? <p>토큰 목록을 불러오는 중</p> : records.map((record) => (
-      <article className="provisioning-token-panel__record" key={record.tokenId}>
-        <span>회사 {record.companyId} · {record.groupId} · {record.role}</span>
-        <strong>{record.label}</strong>
-        <em>{record.status} · {record.usedCount}/{record.maxUses}</em>
-        <small>만료 {new Date(record.expiresAt).toLocaleString()}</small>
-      </article>
-    ))}
-  </div>;
 }

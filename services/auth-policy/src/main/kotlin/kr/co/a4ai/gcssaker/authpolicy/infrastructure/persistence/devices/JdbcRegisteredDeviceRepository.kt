@@ -112,12 +112,12 @@ private object RegisteredDeviceSql {
     const val selectPage = """
         SELECT device_uuid, group_id, display_name, credential_hash, status, device_type, credential_version, policy_version
         FROM registered_devices
-        ORDER BY device_uuid ASC LIMIT ? OFFSET ?
+        ORDER BY created_at DESC, device_uuid ASC LIMIT ? OFFSET ?
     """
     const val selectPageByGroup = """
         SELECT device_uuid, group_id, display_name, credential_hash, status, device_type, credential_version, policy_version
         FROM registered_devices WHERE group_id = ?
-        ORDER BY device_uuid ASC LIMIT ? OFFSET ?
+        ORDER BY created_at DESC, device_uuid ASC LIMIT ? OFFSET ?
     """
     const val countActiveByGroup = "SELECT COUNT(*) FROM registered_devices WHERE group_id = ? AND status = ?"
     const val selectByUuid = """

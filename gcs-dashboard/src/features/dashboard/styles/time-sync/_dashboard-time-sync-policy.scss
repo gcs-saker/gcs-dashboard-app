@@ -54,7 +54,7 @@
 }
 
 .signup-token-panel__form {
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
 }
 
 .signup-token-panel__submit {
@@ -202,6 +202,69 @@
   min-height: auto;
 }
 
+.settings-paged-list {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.settings-listbox {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.settings-listbox button {
+  align-content: center;
+  background: rgba(7, 24, 34, 0.82);
+  border: 1px solid var(--line-soft);
+  color: var(--text);
+  display: grid;
+  gap: 4px;
+  min-height: 58px;
+  min-width: 0;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.settings-listbox button[aria-selected="true"] {
+  border-color: var(--cyan);
+  box-shadow: inset 0 0 0 1px rgba(61, 184, 255, 0.2);
+}
+
+.settings-listbox strong,
+.settings-listbox span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-listbox span {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.settings-selected-detail {
+  border: 1px solid rgba(61, 184, 255, 0.35);
+  border-radius: 6px;
+  display: grid;
+  gap: 5px;
+  min-height: 0;
+  padding: 12px;
+}
+
+.settings-pagination {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.settings-pagination button {
+  min-height: 34px;
+  min-width: 58px;
+}
+
 .device-approval-panel__identity {
   display: grid;
   gap: 5px;
@@ -216,6 +279,11 @@
 
 .device-alias-card {
   grid-template-columns: minmax(240px, 1fr) minmax(360px, 0.9fr);
+}
+
+@media (max-width: 900px) {
+  .signup-token-panel__form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-listbox { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .device-alias-card__form {
