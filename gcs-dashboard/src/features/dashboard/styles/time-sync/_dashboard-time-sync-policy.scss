@@ -71,6 +71,7 @@
 .provisioning-token-panel__form label {
   display: grid;
   gap: 6px;
+  min-width: 0;
 }
 
 .provisioning-token-panel__form button,
@@ -81,9 +82,21 @@
   background: rgba(8, 28, 42, 0.94);
   border: 1px solid var(--line-soft);
   border-radius: 6px;
+  box-sizing: border-box;
   color: var(--text);
   min-height: 40px;
+  max-width: 100%;
+  min-width: 0;
   padding: 0 10px;
+  width: 100%;
+}
+
+.provisioning-token-panel__form button {
+  box-sizing: border-box;
+}
+
+.signup-token-panel__form .signup-token-panel__submit {
+  width: min(100%, 200px);
 }
 
 .provisioning-token-panel__form select {
