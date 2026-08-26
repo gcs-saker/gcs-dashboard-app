@@ -106,11 +106,10 @@ class OperationalEventControllerTest {
     )
 
     @Test
-    fun `events returns authenticated group events with operational metrics`() {
+    fun `events returns system-wide events to the administrator`() {
         val response = controller.events(bearer(accessToken("viewer-a")), null, null, null, null)
 
-        assertEquals(2, response.size)
-        assertTrue(response.all { it.id.startsWith("evt-a") })
+        assertEquals(3, response.size)
         assertTrue(response.any { it.connections == 7 && it.throughputMbps == 20.0 })
     }
 
@@ -156,10 +155,15 @@ class OperationalEventControllerTest {
             limit = 1,
             after = firstPage.nextCursor,
         )
+        val thirdPage = controller.eventPage(
+            authorization = token, query = null, severity = null, from = null, to = null,
+            limit = 1, after = secondPage.nextCursor,
+        )
 
         assertEquals(listOf("evt-a-warn"), firstPage.events.map { it.id })
-        assertEquals(listOf("evt-a-info"), secondPage.events.map { it.id })
-        assertEquals(null, secondPage.nextCursor)
+        assertEquals(listOf("evt-b-error"), secondPage.events.map { it.id })
+        assertEquals(listOf("evt-a-info"), thirdPage.events.map { it.id })
+        assertEquals(null, thirdPage.nextCursor)
     }
 
     @Test
@@ -182,7 +186,7 @@ class OperationalEventControllerTest {
         assertTrue(payload.contains("event: heartbeat"))
         assertTrue(payload.contains("\"id\":\"evt-a-warn\""))
         assertTrue(payload.contains("\"id\":\"evt-a-info\""))
-        assertTrue(!payload.contains("evt-b-error"))
+        assertTrue(payload.contains("evt-b-error"))
     }
 
     @Test
@@ -229,7 +233,7 @@ class OperationalEventControllerTest {
     }
 
     @Test
-    fun `metrics returns dashboard aggregate without exposing other group events`() {
+    fun `metrics returns the administrator system-wide aggregate`() {
         val response = controller.metrics(
             authorization = bearer(accessToken("viewer-a")),
             query = null,
@@ -238,13 +242,13 @@ class OperationalEventControllerTest {
             to = null,
         )
 
-        assertEquals(2, response.totalEvents)
-        assertEquals(10, response.totalConnections)
+        assertEquals(3, response.totalEvents)
+        assertEquals(109, response.totalConnections)
         assertEquals(40, response.minLatencyMs)
-        assertEquals(60.0, response.avgLatencyMs)
-        assertEquals(80, response.maxLatencyMs)
-        assertEquals(15.0, response.avgThroughputMbps)
-        assertEquals(listOf("info", "warn"), response.severityCounts.map { it.severity })
+        assertEquals(373.0, response.avgLatencyMs)
+        assertEquals(999, response.maxLatencyMs)
+        assertEquals(343.0, response.avgThroughputMbps)
+        assertEquals(listOf("error", "info", "warn"), response.severityCounts.map { it.severity })
         assertEquals(listOf("relay"), response.icePathCounts.map { it.icePath })
         assertEquals(listOf("raw/local/webcam"), response.streamSessions.map { it.streamId })
         assertEquals("conn-whep-001", response.streamSessions.single().connectionId)
@@ -262,9 +266,9 @@ class OperationalEventControllerTest {
 
         assertEquals(2, response.size)
         assertEquals(Instant.parse("2026-06-01T00:00:00Z"), response[0].bucketStart)
-        assertEquals(1, response[0].eventCount)
-        assertEquals(3, response[0].totalConnections)
-        assertEquals(40.0, response[0].avgLatencyMs)
+        assertEquals(2, response[0].eventCount)
+        assertEquals(102, response[0].totalConnections)
+        assertEquals(519.5, response[0].avgLatencyMs)
         assertEquals(Instant.parse("2026-06-01T00:10:00Z"), response[1].bucketStart)
         assertEquals(7, response[1].totalConnections)
     }
