@@ -30,8 +30,9 @@
 .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .audio-waveform { grid-column: 1; grid-row: 3; }
 .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .selected-stream { grid-column: 2; grid-row: 1; }
 .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .selected-stream__viewport {
-  aspect-ratio: 16 / 9;
-  height: auto;
+  aspect-ratio: auto;
+  height: calc(100% - 46px);
+  min-height: clamp(480px, 58vh, 720px);
 }
 .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .stream-grid { grid-column: 2; grid-row: 2 / 4; }
 .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .stream-card { grid-template-rows: 38px auto 30px 32px 34px; }
