@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   refresh: vi.fn(async () => undefined),
   fetchGroups: vi.fn(async () => [
     { id: "co-a", name: "A Company", type: "company" as const, parentId: null, status: "active" as const },
-    { id: "co-b", name: "B Company", type: "company" as const, parentId: null, status: "active" as const },
+    { id: "co-b", name: "B Company", type: "company" as const, parentId: null, status: "inactive" as const },
   ]),
 }));
 
@@ -38,6 +38,7 @@ describe("SignupTokenPanel", () => {
     const groupSelect = await screen.findByRole("combobox", { name: "그룹" });
     expect(screen.queryByRole("textbox", { name: "그룹 ID" })).not.toBeInTheDocument();
     await user.selectOptions(groupSelect, "co-b");
+    expect(screen.getByRole("option", { name: "B Company · co-b · 비활성" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "회원가입 토큰 발급" }));
 
     expect(mocks.issue).toHaveBeenCalledWith(expect.objectContaining({ companyId: 1, groupId: "co-b" }));

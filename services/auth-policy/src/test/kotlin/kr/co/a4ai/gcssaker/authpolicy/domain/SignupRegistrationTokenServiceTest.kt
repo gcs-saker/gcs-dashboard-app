@@ -75,4 +75,26 @@ class SignupRegistrationTokenServiceTest {
         assertNull(service.findByCode("wrong-token"))
         assertEquals(0, service.list().single().usedCount)
     }
+
+    @Test
+    fun `system admin can bootstrap an inactive group with a signup token`() {
+        val inactiveGroup = OrganizationUnit(
+            GroupId("plt-new"), "New Platoon", GroupType.PLATOON, GroupId("co-a"), GroupStatus.INACTIVE,
+        )
+        val hierarchy = InMemoryOrganizationHierarchyRepository(listOf(
+            OrganizationUnit(GroupId("co-a"), "A Company", GroupType.COMPANY),
+            inactiveGroup,
+        ))
+        val bootstrapService = SignupRegistrationTokenService(
+            repository = InMemorySignupRegistrationTokenRepository(),
+            passwordHasher = PasswordHasher(),
+            hierarchyRepository = hierarchy,
+        )
+
+        val issued = bootstrapService.issue(
+            SignupRegistrationTokenIssueCommand(1, inactiveGroup.id.value, "first group member", 60, 1, "admin01"),
+        )
+
+        assertEquals(inactiveGroup.id, bootstrapService.findByCode(issued.token)?.groupId)
+    }
 }

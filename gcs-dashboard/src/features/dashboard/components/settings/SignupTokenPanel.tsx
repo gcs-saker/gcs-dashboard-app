@@ -34,7 +34,9 @@ export function SignupTokenPanel() {
           onChange={(e) => setForm({ ...form, companyId: Number(e.target.value) })} /></label>
         <label><span>그룹</span><select value={form.groupId} disabled={!isAdmin || isIssuing || groups.length === 0}
           onChange={(e) => setForm({ ...form, groupId: e.target.value })}>
-          {groups.map((group) => <option key={group.id} value={group.id}>{group.name} · {group.id}</option>)}
+          {groups.map((group) => <option key={group.id} value={group.id}>
+            {group.name} · {group.id} · {group.status === "active" ? "활성" : "비활성"}
+          </option>)}
         </select></label>
         <label><span>가입 권한</span><select className="provisioning-token-panel__role-select" value={form.role} disabled={!isAdmin || isIssuing}
           onChange={(e) => setForm({ ...form, role: e.target.value as IssueSignupTokenInput["role"] })}>
@@ -87,10 +89,9 @@ function useSignupTokenGroups(
     let disposed = false;
     void fetchManagedGroups().then((records) => {
       if (disposed) return;
-      const activeGroups = records.filter((group) => group.status === "active");
-      setGroups(activeGroups);
-      setForm((current) => activeGroups.some((group) => group.id === current.groupId)
-        ? current : { ...current, groupId: activeGroups[0]?.id ?? "" });
+      setGroups(records);
+      setForm((current) => records.some((group) => group.id === current.groupId)
+        ? current : { ...current, groupId: records[0]?.id ?? "" });
       setGroupError("");
     }).catch((error) => {
       if (!disposed) setGroupError(error instanceof Error ? error.message : "그룹 목록을 불러오지 못했습니다.");

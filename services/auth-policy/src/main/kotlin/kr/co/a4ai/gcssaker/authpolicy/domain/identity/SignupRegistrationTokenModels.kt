@@ -109,7 +109,9 @@ class SignupRegistrationTokenService(
         require(command.ttlMinutes in 5..10_080) { "ttl minutes must be between 5 and 10080" }
         require(command.maxUses in 1..100) { "max uses must be between 1 and 100" }
         val groupId = GroupId(command.groupId.trim())
-        hierarchyRepository?.current()?.let { require(it.contains(groupId)) { "group does not exist" } }
+        hierarchyRepository?.listAll()?.let { groups ->
+            require(groups.any { it.id == groupId }) { "group does not exist" }
+        }
         val token = generator.generate()
         val now = clock.instant()
         val record = SignupRegistrationTokenRecord(
