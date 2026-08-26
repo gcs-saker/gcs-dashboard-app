@@ -51,7 +51,7 @@ export function ProvisioningTokenPanel() {
           <span>장비 bootstrap</span>
           <strong>로봇/드론 최초 등록 토큰</strong>
         </div>
-        <button type="button" onClick={() => void refresh()}>
+        <button className="ops-command-button settings-refresh-button" type="button" onClick={() => void refresh()}>
           새로고침
         </button>
       </header>

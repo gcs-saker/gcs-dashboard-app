@@ -51,7 +51,8 @@ export function TimeSyncForm({ form, isLoading, isSaving, onChangeForm, onRefres
       <div className="time-sync-view__commands">
         <button disabled={disabled} type="submit">설정 저장</button>
         <button disabled={disabled} onClick={onRunCheck} type="button">동기화 점검</button>
-        <button disabled={disabled} onClick={onRefresh} type="button">새로고침</button>
+        <button className="ops-command-button settings-refresh-button" disabled={disabled}
+          onClick={onRefresh} type="button">새로고침</button>
       </div>
     </form>
   );

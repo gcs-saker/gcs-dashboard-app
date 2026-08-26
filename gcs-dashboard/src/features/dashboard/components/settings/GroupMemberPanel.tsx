@@ -81,7 +81,8 @@ function GroupMemberPanelView(props: {
     <section className="time-sync-view__policy device-approval-panel" aria-label="그룹 회원 관리">
       <header className="time-sync-view__policy-header provisioning-token-panel__header">
         <div><span>계층 권한</span><strong>그룹 회원 관리</strong></div>
-        <button type="button" onClick={() => void props.refresh()}>새로고침</button>
+        <button className="ops-command-button settings-refresh-button" type="button"
+          onClick={() => void props.refresh()}>새로고침</button>
       </header>
       <label>
         <span>관리 그룹</span>

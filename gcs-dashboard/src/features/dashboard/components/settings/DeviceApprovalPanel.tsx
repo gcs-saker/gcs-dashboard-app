@@ -16,7 +16,7 @@ export function DeviceApprovalPanel() {
           <span>관리자 승인</span>
           <strong>승인 대기 장비 {pendingDevices.length}대</strong>
         </div>
-        <button type="button" onClick={() => void refresh()}>
+        <button className="ops-command-button settings-refresh-button" type="button" onClick={() => void refresh()}>
           새로고침
         </button>
       </header>
@@ -80,13 +80,12 @@ function RegisteredDeviceAliasCard({ device, isMutating, onRename }: RegisteredD
       <div>
         <span>{device.groupId} · {device.deviceType} · {device.status}</span>
         <strong>{device.displayName}</strong>
-        <small>{device.deviceUuid}</small>
       </div>
       <form className="device-approval-panel__actions" onSubmit={submit}>
         <label>
           <span>장비 별칭</span>
           <input
-            aria-label={`${device.deviceUuid} 장비 별칭`}
+            aria-label={`${device.displayName} 장비 별칭`}
             maxLength={128}
             onChange={(event) => setAlias(event.target.value)}
             value={alias}
@@ -120,7 +119,6 @@ function PendingDeviceCard({
       <div>
         <span>{device.groupId} · {device.deviceType}</span>
         <strong>{device.displayName}</strong>
-        <small>{device.deviceUuid}</small>
       </div>
       <dl>
         <div>

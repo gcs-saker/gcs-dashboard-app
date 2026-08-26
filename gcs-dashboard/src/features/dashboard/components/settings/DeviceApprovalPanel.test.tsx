@@ -26,6 +26,8 @@ describe("DeviceApprovalPanel", () => {
 
     expect((await screen.findAllByText("Daegu Drone 01")).length).toBeGreaterThan(0);
     expect(screen.getByText("승인 대기 장비 1대")).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent("device-001");
+    expect(screen.getByRole("button", { name: "새로고침" })).toHaveClass("settings-refresh-button");
 
     await user.click(screen.getByRole("button", { name: "승인" }));
 
@@ -45,7 +47,7 @@ describe("DeviceApprovalPanel", () => {
     vi.stubGlobal("fetch", fetcher);
     renderPanel("admin");
 
-    const input = await screen.findByRole("textbox", { name: "device-001 장비 별칭" });
+    const input = await screen.findByRole("textbox", { name: "Daegu Drone 01 장비 별칭" });
     await user.clear(input);
     await user.type(input, "현장 드론");
     await user.click(screen.getByRole("button", { name: "별칭 저장" }));
