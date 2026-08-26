@@ -38,6 +38,16 @@ describe("StreamCard", () => {
     expect(onSelect).toHaveBeenCalledWith("stream-2");
   });
 
+  test("selects the stream when any non-control area of the card is clicked", () => {
+    const onSelect = vi.fn();
+    render(<StreamCard stream={STREAM} isSelected={false} onSelect={onSelect} />);
+
+    fireEvent.click(screen.getByTestId("player-raw.drone-02.front"));
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith("stream-2");
+  });
+
   test("does not request playback for an offline registry path", () => {
     render(<StreamCard stream={{ ...STREAM, status: "offline" }} isSelected={false} onSelect={vi.fn()} />);
 

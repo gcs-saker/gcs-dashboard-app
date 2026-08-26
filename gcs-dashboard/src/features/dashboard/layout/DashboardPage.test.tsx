@@ -222,26 +222,15 @@ describe("DashboardPage", () => {
     expect(screen.getByText("AI 필터 준비됨")).toBeInTheDocument();
   });
 
-  test("connects, cancels, and disconnects stream devices through the slot dialog", async () => {
+  test("selects dashboard stream cards without opening the legacy connection dialog", async () => {
     const user = userEvent.setup();
     renderDashboard();
 
     await user.click(screen.getByRole("button", { name: "스트리밍 4 선택" }));
     expect(screen.queryByRole("dialog", { name: "스트리밍 4 스트림 연결" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "스트리밍 4 선택" }));
-
-    expect(screen.getByRole("dialog", { name: "스트리밍 4 스트림 연결" })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /DRN-01 전방 EO/ }));
-
     expect(screen.queryByRole("dialog", { name: "스트리밍 4 스트림 연결" })).not.toBeInTheDocument();
-    expect(screen.getAllByText("DRN-01 전방 EO").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByTestId("map-focus-label")).toHaveTextContent("스트리밍 4 기본 좌표 130deg / FOV 72deg");
-
-    await user.click(screen.getByRole("button", { name: "스트리밍 4 선택" }));
-    await user.click(screen.getByRole("button", { name: "스트림 연결 해제" }));
-
-    expect(screen.getAllByText("스트림 미선택").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole("button", { name: "스트리밍 4 선택" })).toHaveAttribute("aria-pressed", "true");
   });
 
   test("renders operational status placeholders needed before live backend wiring", () => {

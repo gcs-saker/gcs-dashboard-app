@@ -43,12 +43,13 @@ export const StreamCard = memo(function StreamCard({
   const secondaryLabel = getStreamSecondaryLabel(stream);
 
   return (
-    <article className={`stream-card ${isSelected ? "is-selected" : ""} ${hasAudioActivity ? "has-audio" : ""} ${isTalkbackTarget ? "is-talkback-target" : ""}`}>
+    <article className={`stream-card ${isSelected ? "is-selected" : ""} ${hasAudioActivity ? "has-audio" : ""} ${isTalkbackTarget ? "is-talkback-target" : ""}`}
+      onClick={selectStream}>
       <button
         aria-label={`${stream.title} 선택`}
         aria-pressed={isSelected}
         className="stream-card__select"
-        onClick={selectStream}
+        onClick={(event) => { event.stopPropagation(); selectStream(); }}
         type="button"
       >
         <span className="stream-card__topline">
@@ -74,7 +75,7 @@ export const StreamCard = memo(function StreamCard({
       {secondaryLabel ? <span className="stream-card__detail">{secondaryLabel}</span> : null}
       {isSelected ? <span className="stream-card__selected-link">현재 선택</span> : null}
       {!isSelected && isReceivableStream(stream) ? (
-        <button className="stream-card__promote" onClick={selectStream} type="button">
+        <button className="stream-card__promote" onClick={(event) => { event.stopPropagation(); selectStream(); }} type="button">
           선택 스트림으로 보기
         </button>
       ) : null}
@@ -83,7 +84,7 @@ export const StreamCard = memo(function StreamCard({
           aria-pressed={isTalkbackTarget}
           className="stream-card__talkback"
           disabled={!canTalkback}
-          onClick={toggleTalkback}
+          onClick={(event) => { event.stopPropagation(); toggleTalkback(); }}
           type="button"
         >
           {isTalkbackTarget ? "송신 대상 선택됨" : "음성 송신 대상"}

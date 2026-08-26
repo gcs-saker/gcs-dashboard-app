@@ -7,6 +7,7 @@ import {
   type StreamDeviceOption,
 } from "@dashboard/assets/streamDevices";
 import {
+  CCTV_EMPTY_STREAM_ID_PREFIX,
   DEFAULT_DASHBOARD_STREAMS,
   type DashboardStreamSlot,
 } from "@dashboard/streaming/streamTypes";
@@ -82,9 +83,8 @@ function useDashboardStreamActions(input: StreamActionsInput) {
   const openStreamConnection = useCallback((streamId: string): void => {
     const nextStreams = ensureEditableCctvSlot(input.streamsRef.current, streamId);
     if (nextStreams !== input.streamsRef.current) input.setStreams(nextStreams);
-    const target = nextStreams.find((stream) => stream.id === streamId);
     input.setSelectedStreamId(streamId);
-    input.setEditingStreamId(target?.streamPath && input.selectedStreamId !== streamId ? null : streamId);
+    input.setEditingStreamId(streamId.startsWith(CCTV_EMPTY_STREAM_ID_PREFIX) ? streamId : null);
   }, [input]);
   const selectStream = useCallback((identifier: string): void => input.setStreams((current) => {
     const next = ensureEditableCctvSlot(current, identifier);
