@@ -5,9 +5,10 @@ import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPubl
 import { StreamNotificationToast } from "./atoms/StreamNotificationToast";
 import { TalkbackControlPanel } from "./TalkbackControlPanel";
 
+const STREAM_PATH = "opaque-stream-1";
 const stream: DashboardStreamSlot = {
   id: "stream-1", title: "현장 영상", status: "online", mode: "EO",
-  detail: "현장 영상", streamPath: "opaque-stream-1",
+  detail: "현장 영상", streamPath: STREAM_PATH,
 };
 
 describe("dashboard toolbar controls", () => {
@@ -16,12 +17,12 @@ describe("dashboard toolbar controls", () => {
     const stop = vi.fn();
     const idle = talkbackSnapshot({ start, stop });
     const { rerender } = render(<TalkbackControlPanel selectedStreamId={stream.id}
-      selectedStreamIds={[stream.streamPath]} streams={[stream]} talkback={idle} />);
+      selectedStreamIds={[STREAM_PATH]} streams={[stream]} talkback={idle} />);
 
     fireEvent.click(screen.getByRole("button", { name: "마이크 송신" }));
-    expect(start).toHaveBeenCalledWith([stream.streamPath]);
+    expect(start).toHaveBeenCalledWith([STREAM_PATH]);
 
-    rerender(<TalkbackControlPanel selectedStreamId={stream.id} selectedStreamIds={[stream.streamPath]}
+    rerender(<TalkbackControlPanel selectedStreamId={stream.id} selectedStreamIds={[STREAM_PATH]}
       streams={[stream]} talkback={{ ...idle, status: "active" }} />);
     fireEvent.click(screen.getByRole("button", { name: "송신 중지" }));
     expect(stop).toHaveBeenCalledTimes(1);
@@ -38,7 +39,7 @@ describe("dashboard toolbar controls", () => {
 function talkbackSnapshot(overrides: Partial<TalkbackPublisherSnapshot>): TalkbackPublisherSnapshot {
   return {
     status: "idle", errorMessage: null, hasLocalAudioTrack: false, micLevel: null,
-    targets: [{ streamId: stream.streamPath, status: "active", errorMessage: null }],
+    targets: [{ streamId: STREAM_PATH, status: "active", errorMessage: null }],
     start: async () => undefined, stop: () => undefined, ...overrides,
   };
 }
