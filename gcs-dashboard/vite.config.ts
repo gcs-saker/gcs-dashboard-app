@@ -83,7 +83,7 @@ export default defineConfig(({ mode }) => {
         provider: "istanbul",
         reporter: ["text", "text-summary"],
         include: ["src/**/*.{ts,tsx}"],
-        exclude: ["src/index.tsx", "src/setupTests.ts"],
+        exclude: ["src/index.tsx", "src/setupTests.ts", "src/**/*.stories.tsx"],
         thresholds: {
           statements: 88,
           branches: 78,

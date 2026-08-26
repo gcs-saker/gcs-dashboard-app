@@ -61,7 +61,8 @@
     "collectCoverageFrom": [
       "src/**/*.{ts,tsx}",
       "!src/index.tsx",
-      "!src/setupTests.ts"
+      "!src/setupTests.ts",
+      "!src/**/*.stories.tsx"
     ]
   },
   "browserslist": {

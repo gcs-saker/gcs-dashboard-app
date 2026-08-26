@@ -1,4 +1,4 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, type MouseEvent } from "react";
 import { haveEqualFields } from "@/features/valueEquality";
 import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
 import { isReceivableStream } from "@dashboard/streaming/dashboardCctv";
@@ -35,7 +35,8 @@ export const StreamCard = memo(function StreamCard({
 }: StreamCardProps) {
   const canTalkback = Boolean(stream.streamPath);
   const selectStream = useCallback(() => onSelect(stream.id), [onSelect, stream.id]);
-  const toggleTalkback = useCallback(() => {
+  const toggleTalkback = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
     if (stream.streamPath) {
       onToggleTalkbackTarget?.(stream.streamPath);
     }
@@ -49,7 +50,6 @@ export const StreamCard = memo(function StreamCard({
         aria-label={`${stream.title} 선택`}
         aria-pressed={isSelected}
         className="stream-card__select"
-        onClick={(event) => { event.stopPropagation(); selectStream(); }}
         type="button"
       >
         <span className="stream-card__topline">
@@ -75,7 +75,7 @@ export const StreamCard = memo(function StreamCard({
       {secondaryLabel ? <span className="stream-card__detail">{secondaryLabel}</span> : null}
       {isSelected ? <span className="stream-card__selected-link">현재 선택</span> : null}
       {!isSelected && isReceivableStream(stream) ? (
-        <button className="stream-card__promote" onClick={(event) => { event.stopPropagation(); selectStream(); }} type="button">
+        <button className="stream-card__promote" type="button">
           선택 스트림으로 보기
         </button>
       ) : null}
@@ -84,7 +84,7 @@ export const StreamCard = memo(function StreamCard({
           aria-pressed={isTalkbackTarget}
           className="stream-card__talkback"
           disabled={!canTalkback}
-          onClick={(event) => { event.stopPropagation(); toggleTalkback(); }}
+          onClick={toggleTalkback}
           type="button"
         >
           {isTalkbackTarget ? "송신 대상 선택됨" : "음성 송신 대상"}
