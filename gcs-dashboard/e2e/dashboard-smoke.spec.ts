@@ -81,10 +81,10 @@ test("dashboard preview supports stream, map, and operations navigation", async 
   await attachScreenshot(page, testInfo, "dashboard-preview");
 
   await page.getByRole("button", { name: "스트리밍 3 선택" }).click();
-  await expect(page.getByRole("dialog", { name: "스트리밍 3 스트림 연결" })).toBeVisible();
-  await page.getByRole("button", { name: "취소" }).click();
+  await expect(page.getByRole("dialog", { name: "스트리밍 3 스트림 연결" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "스트리밍 3 선택" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("스트리밍 3 focus 대기")).toBeVisible();
-  await expect(page.getByRole("region", { name: "선택 스트림" })).toContainText("스트림 미선택");
+  await expect(page.getByRole("region", { name: "선택 스트림" })).toContainText("스트리밍 3");
 
   await page.getByRole("button", { name: "이벤트로그" }).click();
   await expect(page.getByRole("heading", { name: "이벤트 로그" })).toBeVisible();
