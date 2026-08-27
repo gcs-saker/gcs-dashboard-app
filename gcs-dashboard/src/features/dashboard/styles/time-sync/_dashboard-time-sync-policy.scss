@@ -328,8 +328,6 @@
 }
 
 .settings-pagination button,
-.group-lifecycle-form button,
-.group-lifecycle-editor button,
 .group-member-panel__appoint button,
 .group-member-actions button,
 .device-alias-card__form button {
@@ -347,8 +345,6 @@
 
 .settings-pagination button:hover:not(:disabled),
 .settings-listbox button:hover,
-.group-lifecycle-form button:hover:not(:disabled),
-.group-lifecycle-editor button:hover:not(:disabled),
 .group-member-panel__appoint button:hover:not(:disabled),
 .group-member-actions button:hover:not(:disabled),
 .device-alias-card__form button:hover:not(:disabled) {
@@ -361,8 +357,6 @@
 
 .settings-pagination button:active:not(:disabled),
 .settings-listbox button:active,
-.group-lifecycle-form button:active:not(:disabled),
-.group-lifecycle-editor button:active:not(:disabled),
 .group-member-panel__appoint button:active:not(:disabled),
 .group-member-actions button:active:not(:disabled),
 .device-alias-card__form button:active:not(:disabled) {
@@ -371,101 +365,12 @@
 }
 
 .settings-pagination button:disabled,
-.group-lifecycle-form button:disabled,
-.group-lifecycle-editor button:disabled,
 .group-member-panel__appoint button:disabled,
 .group-member-actions button:disabled,
 .device-alias-card__form button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
-
-.group-lifecycle-form,
-.group-lifecycle-editor__fields {
-  align-items: end;
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
-}
-
-.group-lifecycle-form label,
-.group-lifecycle-editor label {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-}
-
-.group-lifecycle-form label > span,
-.group-lifecycle-editor label > span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.group-lifecycle-form input,
-.group-lifecycle-form select,
-.group-lifecycle-editor input,
-.group-lifecycle-editor select {
-  background: rgba(8, 28, 42, 0.94);
-  border: 1px solid var(--line-soft);
-  border-radius: 6px;
-  color: var(--text);
-  height: 40px;
-  min-width: 0;
-  padding: 0 10px;
-  width: 100%;
-}
-
-.group-lifecycle-form button,
-.group-lifecycle-editor button {
-  min-height: 40px;
-  padding: 0 14px;
-  white-space: nowrap;
-}
-
-.group-lifecycle-form > button {
-  border-color: rgba(61, 184, 255, 0.52);
-  color: var(--cyan);
-}
-
-.group-lifecycle-editor {
-  background: rgba(7, 24, 34, 0.72);
-  border: 1px solid rgba(61, 184, 255, 0.34);
-  border-radius: 6px;
-  display: grid;
-  gap: 12px;
-  padding: 14px;
-}
-
-.group-lifecycle-editor header {
-  align-items: center;
-  display: flex;
-  justify-content: space-between;
-}
-
-.group-lifecycle-editor header div {
-  display: grid;
-  gap: 3px;
-}
-
-.group-lifecycle-editor header span {
-  color: var(--muted);
-  font-size: 0.74rem;
-  text-transform: uppercase;
-}
-
-.group-lifecycle-editor header em {
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  font-size: 0.74rem;
-  font-style: normal;
-  padding: 4px 9px;
-}
-
-.group-lifecycle-editor header em.is-active { color: var(--green); }
-.group-lifecycle-editor header em.is-inactive { color: var(--muted); }
-.group-lifecycle-editor__fields { grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto auto; }
-.group-lifecycle-editor__status { border-color: rgba(255, 107, 107, 0.54); color: #ff8f8f; }
 
 .group-member-panel__group-field {
   display: grid;
@@ -565,10 +470,8 @@
 }
 
 @media (max-width: 1250px) {
-  .signup-token-panel__form,
-  .group-lifecycle-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .signup-token-panel__form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .settings-listbox { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .group-lifecycle-editor__fields,
   .group-member-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .device-approval-panel__card { grid-template-columns: 1fr; }
   .device-alias-card { grid-template-columns: 1fr; }
@@ -578,8 +481,6 @@
 @media (max-width: 900px) {
   .signup-token-panel__form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .settings-listbox { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .group-lifecycle-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .group-lifecycle-editor__fields { grid-template-columns: 1fr 1fr; }
   .group-member-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .group-member-panel__appoint { grid-template-columns: 1fr; }
 }
@@ -688,8 +589,6 @@
 
 @media (max-width: 620px) {
   .signup-token-panel__form,
-  .group-lifecycle-form,
-  .group-lifecycle-editor__fields,
   .group-member-actions,
   .device-alias-card__form { grid-template-columns: 1fr; }
   .settings-listbox { grid-template-columns: 1fr; }

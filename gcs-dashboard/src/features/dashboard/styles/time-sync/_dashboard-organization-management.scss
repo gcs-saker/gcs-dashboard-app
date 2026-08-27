@@ -1,0 +1,180 @@
+.organization-management {
+  background: rgba(5, 18, 28, 0.86);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(250px, 0.34fr) minmax(0, 1fr);
+  min-height: 520px;
+  padding: 12px;
+}
+
+.organization-tree,
+.organization-detail {
+  background: rgba(3, 13, 20, 0.72);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.organization-tree header,
+.organization-detail__header,
+.organization-create header,
+.organization-members > header,
+.organization-overview section > header {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.organization-tree header div,
+.organization-detail__header > div,
+.organization-create header div,
+.organization-members > header div,
+.organization-overview section > header div {
+  display: grid;
+  gap: 3px;
+}
+
+.organization-management button,
+.organization-management input,
+.organization-management select {
+  background: rgba(8, 28, 42, 0.94);
+  border: 1px solid rgba(72, 137, 170, 0.52);
+  border-radius: 6px;
+  box-sizing: border-box;
+  color: var(--text);
+  min-height: 38px;
+  min-width: 0;
+}
+
+.organization-management button {
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0 12px;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.organization-management button:hover:not(:disabled) {
+  background: rgba(13, 43, 61, 0.98);
+  border-color: var(--cyan);
+  color: var(--heading);
+  transform: translateY(-1px);
+}
+
+.organization-management button:disabled { cursor: default; opacity: 0.45; }
+.organization-management button.is-primary { border-color: var(--cyan); color: var(--cyan); }
+.organization-management input,
+.organization-management select { padding: 0 10px; width: 100%; }
+
+.organization-tree__filters {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  margin: 12px 0;
+}
+
+.organization-tree__nodes { display: grid; gap: 4px; }
+.organization-tree__nodes > button {
+  align-items: center;
+  background: transparent;
+  border-color: transparent;
+  display: grid;
+  gap: 9px;
+  grid-template-columns: 8px minmax(0, 1fr);
+  padding: 7px 9px 7px calc(9px + var(--tree-indent));
+  text-align: left;
+}
+
+.organization-tree__nodes > button.is-selected {
+  background: rgba(61, 184, 255, 0.1);
+  border-color: var(--cyan);
+}
+
+.organization-tree__nodes button > span:last-child { display: grid; min-width: 0; }
+.organization-tree__nodes strong,
+.organization-tree__nodes small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.organization-tree__nodes small { color: var(--muted); }
+.organization-tree__status { background: var(--muted); border-radius: 50%; height: 7px; width: 7px; }
+.organization-tree__status.is-active { background: var(--green); box-shadow: 0 0 8px rgba(86, 211, 124, 0.45); }
+
+.organization-detail { display: grid; gap: 12px; align-content: start; }
+.organization-detail__header {
+  background: linear-gradient(90deg, rgba(61, 184, 255, 0.1), transparent 58%);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.organization-detail__header nav { display: flex; gap: 6px; margin-left: auto; }
+.organization-detail__header nav button[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); }
+.organization-detail__header em,
+.organization-overview header em { border: 1px solid currentColor; border-radius: 999px; font-style: normal; padding: 4px 9px; }
+.organization-detail__header em.is-active,
+.organization-overview header em.is-ready { color: var(--green); }
+.organization-detail__header em.is-inactive,
+.organization-overview header em.is-waiting { color: var(--amber); }
+
+.organization-overview { display: grid; gap: 12px; }
+.organization-overview__card,
+.organization-bootstrap,
+.organization-members,
+.organization-create {
+  background: rgba(5, 18, 28, 0.78);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.organization-overview__fields,
+.organization-bootstrap__actions,
+.organization-create__fields {
+  align-items: end;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto auto;
+}
+
+.organization-overview label,
+.organization-create label { display: grid; gap: 5px; min-width: 0; }
+.organization-overview label > span,
+.organization-create label > span { color: var(--muted); font-size: 0.76rem; font-weight: 800; }
+.organization-overview .is-danger { border-color: rgba(255, 108, 93, 0.5); color: #ffaaa0; }
+.organization-bootstrap p,
+.organization-create p { color: var(--muted); margin: 0; }
+
+.organization-bootstrap__token {
+  background: rgba(13, 43, 30, 0.72);
+  border: 1px solid rgba(82, 211, 128, 0.46);
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.organization-bootstrap__token button:nth-child(2) { display: grid; gap: 3px; justify-items: start; overflow-wrap: anywhere; }
+.organization-create__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.organization-create footer { display: flex; gap: 8px; justify-content: flex-end; }
+.organization-create .is-primary { border-color: var(--cyan); color: var(--cyan); }
+.organization-members .group-member-editor { margin-top: 2px; }
+
+@media (max-width: 900px) {
+  .organization-management { grid-template-columns: 1fr; }
+  .organization-tree__nodes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .organization-overview__fields,
+  .organization-bootstrap__actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .organization-tree__nodes,
+  .organization-overview__fields,
+  .organization-bootstrap__actions,
+  .organization-create__fields { grid-template-columns: 1fr; }
+  .organization-detail__header { align-items: flex-start; flex-wrap: wrap; }
+  .organization-detail__header nav { margin-left: 0; width: 100%; }
+  .organization-detail__header nav button { flex: 1; }
+}

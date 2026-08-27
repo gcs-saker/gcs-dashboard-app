@@ -15,7 +15,7 @@ import { TimeSyncForm } from "./settings/TimeSyncForm";
 import { TimeSyncHeader } from "./settings/TimeSyncHeader";
 import { TimeSyncMetrics } from "./settings/TimeSyncMetrics";
 import { GroupMemberPanel } from "./settings/GroupMemberPanel";
-import { GroupLifecyclePanel } from "./settings/GroupLifecyclePanel";
+import { OrganizationAccessManagement } from "./settings/OrganizationAccessManagement";
 
 const DEFAULT_TIME_SYNC_FORM: TimeSyncConfigInput = {
   mode: "public",
@@ -118,10 +118,7 @@ function SettingsTabContent(props: {
           <DeviceApprovalPanel />
         </>
       ) : props.activeTab === "account" && props.canManageDevices ? (
-        <>
-          {props.currentUser?.role === "admin" ? <GroupLifecyclePanel /> : null}
-          <GroupMemberPanel />
-        </>
+        props.currentUser?.role === "admin" ? <OrganizationAccessManagement /> : <GroupMemberPanel />
       ) : (
         <SettingsPolicyPanel tab={props.activeTab as PolicySettingsTab} />
       );
