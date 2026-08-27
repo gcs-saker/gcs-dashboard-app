@@ -8,9 +8,11 @@
   max-width: 1180px;
   overflow: auto;
   padding: 18px;
-  scrollbar-gutter: stable;
+  scrollbar-width: none;
   width: min(100%, 1180px);
 }
+
+.time-sync-view::-webkit-scrollbar { display: none; }
 
 .time-sync-view__header,
 .time-sync-view__tabs,
