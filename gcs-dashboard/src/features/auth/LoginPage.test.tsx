@@ -71,6 +71,17 @@ describe("LoginPage auth flow", () => {
     );
   });
 
+  test("submits login when Enter is pressed in the password field", async () => {
+    mockRefreshMissingThenLogin(Response.json(ISSUED_TOKEN_RESPONSE));
+    render(<App />);
+
+    await userEvent.type(await screen.findByLabelText("아이디"), "operator01");
+    await userEvent.type(screen.getByLabelText("비밀번호"), "correct-password{Enter}");
+
+    await waitFor(() => expect(getStoredAccessToken()).toBe("issued-access-token"));
+    expect(window.location.pathname).toBe("/ops");
+  });
+
   test("keeps the user on login when credentials are rejected", async () => {
     mockRefreshMissingThenLogin(Response.json({ detail: "Invalid credentials" }, { status: 401 }));
 
@@ -82,6 +93,7 @@ describe("LoginPage auth flow", () => {
 
     expect(await screen.findByText("아이디 또는 비밀번호가 올바르지 않습니다.")).toBeInTheDocument();
     expect(getStoredAccessToken()).toBeNull();
+    expect(screen.getByLabelText("비밀번호")).toHaveValue("");
     expect(window.location.pathname).toBe("/login");
   });
 

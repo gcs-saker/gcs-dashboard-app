@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { useForm, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import type { FormEventHandler } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -27,6 +27,7 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
+    resetField,
   } = useForm<LoginFormValues>({
     defaultValues: {
       password: "",
@@ -53,6 +54,8 @@ export function LoginPage() {
       } else {
         setErrorMessage("인증 서버 상태를 확인해주세요.");
       }
+    } finally {
+      resetField("password", { defaultValue: "" });
     }
   });
 
@@ -115,6 +118,8 @@ function LoginFields({ errors, register }: Pick<LoginFormViewProps, "errors" | "
             aria-describedby={errors.password ? "login-password-error" : undefined}
             aria-invalid={Boolean(errors.password)}
             autoComplete="current-password"
+            onKeyDown={submitLoginOnEnter}
+            spellCheck={false}
             type="password"
             {...register("password")}
           />
@@ -126,4 +131,10 @@ function LoginFields({ errors, register }: Pick<LoginFormViewProps, "errors" | "
         ) : null}
 
   </>;
+}
+
+function submitLoginOnEnter(event: KeyboardEvent<HTMLInputElement>): void {
+  if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+  event.preventDefault();
+  event.currentTarget.form?.requestSubmit();
 }

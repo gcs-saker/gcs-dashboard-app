@@ -3,11 +3,14 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.HttpHeaders
+import org.springframework.context.ApplicationContext
+import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -28,7 +31,13 @@ class AuthSecurityConfigTest @Autowired constructor(
     private val mockMvc: MockMvc,
     private val sessions: AuthSessionService,
     private val users: AuthUserRepository,
+    private val applicationContext: ApplicationContext,
 ) {
+    @Test
+    fun `production context does not create a generated development password user`() {
+        assertTrue(applicationContext.getBeansOfType(UserDetailsService::class.java).isEmpty())
+    }
+
     @Test
     fun `public health route remains open without bearer auth`() {
         mockMvc.get(HealthApiRoutes.HEALTHZ)

@@ -1,6 +1,8 @@
 spring:
   application:
     name: gcs-saker-auth-policy
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   threads:
     virtual:
       enabled: true
