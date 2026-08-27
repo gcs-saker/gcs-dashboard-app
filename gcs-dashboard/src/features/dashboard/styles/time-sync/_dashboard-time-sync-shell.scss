@@ -1,8 +1,11 @@
 .time-sync-view {
+  align-content: start;
   font-size: 0.875rem;
   line-height: 1.5;
   display: grid;
   gap: 16px;
+  grid-auto-rows: max-content;
+  grid-template-columns: minmax(0, 1fr);
   min-height: calc(100vh - 92px);
   margin: 0 auto;
   max-width: 1180px;
