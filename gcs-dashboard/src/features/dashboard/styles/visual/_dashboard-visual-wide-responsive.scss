@@ -125,16 +125,16 @@
     padding-top: 8px;
   }
 
-  .ops-dashboard__grid {
+  .ops-dashboard[data-layout-density="expanded"] .ops-dashboard__grid {
     grid-template-rows: minmax(190px, 0.24fr) minmax(190px, 0.24fr) minmax(150px, 0.18fr) 210px;
   }
 
-  .stream-grid {
+  .ops-dashboard[data-layout-density="expanded"] .stream-grid {
     min-height: 300px;
   }
 
-  .audio-waveform__scope,
-  .audio-waveform__body {
+  .ops-dashboard[data-layout-density="expanded"] .audio-waveform__scope,
+  .ops-dashboard[data-layout-density="expanded"] .audio-waveform__body {
     min-height: 0;
   }
 }
