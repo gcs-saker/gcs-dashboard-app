@@ -59,6 +59,16 @@
   width: 100%;
 }
 
+.time-sync-view__form input[type="number"] {
+  appearance: textfield;
+}
+
+.time-sync-view__form input[type="number"]::-webkit-inner-spin-button,
+.time-sync-view__form input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
 .time-sync-view__commands {
   align-items: end;
   border-top: 1px solid rgba(72, 137, 170, 0.24);
