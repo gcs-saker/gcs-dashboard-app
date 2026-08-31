@@ -63,7 +63,7 @@ class JdbcFlywayMigrationTest {
     }
 
     @Test
-    fun `migration backfills publish metadata only for legacy active drones`() {
+    fun `migration backfills publish metadata for legacy active drones and ugvs`() {
         val dataSource = h2DataSource()
         Flyway.configure()
             .dataSource(dataSource)
@@ -80,6 +80,8 @@ class JdbcFlywayMigrationTest {
         )
         insertLegacyDevice(jdbc, "legacy-drone-001", "ACTIVE", "drone")
         insertLegacyDevice(jdbc, "pending-drone-001", "PENDING", "drone")
+        insertLegacyDevice(jdbc, "legacy-ugv-001", "ACTIVE", "ugv")
+        insertLegacyDevice(jdbc, "pending-ugv-001", "PENDING", "ugv")
         insertLegacyDevice(jdbc, "active-robot-001", "ACTIVE", "robot")
 
         Flyway.configure()
@@ -105,9 +107,25 @@ class JdbcFlywayMigrationTest {
             ),
         )
         assertEquals(
+            1,
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM registered_device_sensors WHERE device_uuid = ? AND sensor_id = 'front' AND sensor_type = 'camera' AND status = 'active'",
+                Int::class.java,
+                "legacy-ugv-001",
+            ),
+        )
+        assertEquals(
+            1,
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM registered_device_streams WHERE device_uuid = ? AND stream_path = 'raw/legacy-ugv-001/front' AND kind = 'webrtc' AND status = 'active'",
+                Int::class.java,
+                "legacy-ugv-001",
+            ),
+        )
+        assertEquals(
             0,
             jdbc.queryForObject(
-                "SELECT COUNT(*) FROM registered_device_sensors WHERE device_uuid IN ('pending-drone-001', 'active-robot-001')",
+                "SELECT COUNT(*) FROM registered_device_sensors WHERE device_uuid IN ('pending-drone-001', 'pending-ugv-001', 'active-robot-001')",
                 Int::class.java,
             ),
         )
