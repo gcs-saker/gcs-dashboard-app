@@ -96,8 +96,13 @@
 
 .telemetry-panel__details {
   align-content: start;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
 }
+
+.telemetry-panel__details::-webkit-scrollbar { display: none; }
 
 .telemetry-panel__details div {
   align-items: center;
