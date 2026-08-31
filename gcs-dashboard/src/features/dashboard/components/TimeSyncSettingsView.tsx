@@ -32,7 +32,7 @@ interface TimeSyncSettingsViewProps {
 export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }: TimeSyncSettingsViewProps = {}) {
   const { currentUser } = useAuth();
   const canManageDevices = currentUser?.capabilities?.canManageDevices ?? canManageDeviceProvisioning(currentUser?.role);
-  const { errorMessage, isLoading, isSaving, lastUpdatedAt, refresh, runCheck, save, status } = useTimeSyncStatus();
+  const { errorMessage, isLoading, isSaving, refresh, runCheck, save, status } = useTimeSyncStatus();
   const [form, setForm] = useState<TimeSyncConfigInput>(DEFAULT_TIME_SYNC_FORM);
   const [activeTab, setActiveTab] = useState<SettingsTab>("time");
 
@@ -76,7 +76,7 @@ export function TimeSyncSettingsView({ motionMode = "full", onMotionModeChange }
         visibleTabs={visibleTabs}
       />
       <SettingsTabContent {...{ activeTab, browserOffsetMs, canManageDevices, currentUser, form, isLoading,
-        isSaving, lastUpdatedAt, motionMode, onMotionModeChange, refreshStatus, runSyncCheck,
+        isSaving, motionMode, onMotionModeChange, refreshStatus, runSyncCheck,
         saveCurrentForm, setForm, status }} />
       {errorMessage ? <p className="time-sync-view__error" role="alert">{errorMessage}</p> : null}
     </section>
@@ -91,7 +91,6 @@ function SettingsTabContent(props: {
   form: TimeSyncConfigInput;
   isLoading: boolean;
   isSaving: boolean;
-  lastUpdatedAt: number | null;
   motionMode: MotionMode;
   onMotionModeChange?: (mode: MotionMode) => void;
   refreshStatus: () => void;
@@ -102,7 +101,7 @@ function SettingsTabContent(props: {
 }) {
   return props.activeTab === "time" ? (
         <>
-          <TimeSyncMetrics browserOffsetMs={props.browserOffsetMs} lastUpdatedAt={props.lastUpdatedAt} status={props.status} />
+          <TimeSyncMetrics browserOffsetMs={props.browserOffsetMs} status={props.status} />
           <TimeSyncForm
             form={props.form} isLoading={props.isLoading} isSaving={props.isSaving}
             onChangeForm={props.setForm} onRefresh={props.refreshStatus}
