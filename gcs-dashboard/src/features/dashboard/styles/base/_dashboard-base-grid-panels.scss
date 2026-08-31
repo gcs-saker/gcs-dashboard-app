@@ -35,9 +35,11 @@
   min-height: clamp(480px, 58vh, 720px);
 }
 .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .stream-grid {
+  align-self: start;
   grid-column: 2;
   grid-row: 2 / 4;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: max-content;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .stream-card { grid-template-rows: 38px auto 30px 32px 34px; }
 .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .stream-card__visual {

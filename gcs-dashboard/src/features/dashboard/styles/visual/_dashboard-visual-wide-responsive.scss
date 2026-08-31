@@ -68,7 +68,11 @@
   }
 
   .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .selected-stream { display: block; grid-column: 1; grid-row: 1; }
-  .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .stream-grid { grid-column: 1; grid-row: 2; }
+  .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .stream-grid {
+    grid-column: 1;
+    grid-row: 2;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
   .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .tactical-map { display: block; grid-column: 2; grid-row: 1 / 3; }
   .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .telemetry-panel { grid-column: 1 / -1; grid-row: 3; }
   .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .ops-summary { grid-column: 1 / -1; grid-row: 4; }

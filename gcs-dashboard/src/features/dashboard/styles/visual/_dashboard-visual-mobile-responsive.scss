@@ -81,6 +81,10 @@
     grid-template-columns: 1fr;
   }
 
+  .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .stream-grid {
+    grid-template-columns: 1fr;
+  }
+
   .telemetry-panel__body {
     grid-template-columns: 1fr;
   }
