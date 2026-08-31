@@ -16,7 +16,7 @@
 
 .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .ops-dashboard__grid {
   grid-template-columns: minmax(0, 0.32fr) minmax(0, 1.58fr) minmax(0, 0.48fr);
-  grid-template-rows: auto auto auto;
+  grid-template-rows: auto auto auto auto;
   overflow: visible;
 }
 
@@ -26,8 +26,8 @@
 .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .ops-dashboard__grid > * { min-width: 0 !important; }
 
 .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .telemetry-panel { grid-column: 1; grid-row: 1; }
-.ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .ops-summary { grid-column: 1; grid-row: 2; }
-.ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .audio-waveform { grid-column: 1; grid-row: 3; }
+.ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .ops-summary { grid-column: 1 / -1; grid-row: 3; }
+.ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .audio-waveform { grid-column: 1 / -1; grid-row: 4; }
 .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .selected-stream { grid-column: 2; grid-row: 1; }
 .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .selected-stream__viewport {
   aspect-ratio: auto;
@@ -36,8 +36,8 @@
 }
 .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .stream-grid {
   align-self: start;
-  grid-column: 2;
-  grid-row: 2 / 4;
+  grid-column: 1 / -1;
+  grid-row: 2;
   grid-auto-rows: max-content;
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
