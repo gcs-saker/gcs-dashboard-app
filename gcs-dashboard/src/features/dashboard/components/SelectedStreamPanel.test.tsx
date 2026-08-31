@@ -1,10 +1,18 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
+import type { RealtimePlayerSnapshot } from "@streaming/types";
 import { SelectedStreamPanel } from "./SelectedStreamPanel";
 
 vi.mock("@streaming/components/RealtimePlayer", () => ({
-  RealtimePlayer: () => <div data-testid="selected-player" />,
+  RealtimePlayer: ({ onStatusChange }: { onStatusChange?: (snapshot: RealtimePlayerSnapshot) => void }) => (
+    <button data-testid="complete-whep" onClick={() => onStatusChange?.({
+      errorMessage: null,
+      mode: "webrtc",
+      streamStatus: "online",
+      webrtcSignalingComplete: true,
+    })} type="button">WHEP ready</button>
+  ),
 }));
 
 vi.mock("@dashboard/hooks/useStreamCameraControl", () => ({
@@ -26,6 +34,8 @@ describe("SelectedStreamPanel", () => {
     render(<SelectedStreamPanel onToggleTalkbackTarget={onToggleTalkbackTarget} stream={STREAM} />);
 
     const button = screen.getByRole("button", { name: "음성 송신 대상" });
+    expect(button).toBeDisabled();
+    fireEvent.click(screen.getByTestId("complete-whep"));
     expect(button).toBeEnabled();
     fireEvent.click(button);
     expect(onToggleTalkbackTarget).toHaveBeenCalledWith("raw.mobile.front");

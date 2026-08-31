@@ -36,8 +36,12 @@ export function SelectedStreamPanel({
 }: SelectedStreamPanelProps) {
   useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.selectedStreamPanel);
   const [audioEnabled, setAudioEnabled] = useState(false);
+  const [playbackReady, setPlaybackReady] = useState(false);
   const cameraControl = useStreamCameraControl(stream.streamPath);
-  useEffect(() => setAudioEnabled(false), [stream.id]);
+  useEffect(() => {
+    setAudioEnabled(false);
+    setPlaybackReady(false);
+  }, [stream.id]);
   const secondaryLabel = getStreamSecondaryLabel(stream);
   return (
     <section
@@ -46,7 +50,8 @@ export function SelectedStreamPanel({
       data-widget-id={SELECTED_STREAM_WIDGET.id}
       style={{ minHeight: SELECTED_STREAM_WIDGET.minHeight }}
     >
-      <SelectedStreamHeader audioEnabled={audioEnabled} controls={controls} isTalkbackTarget={isTalkbackTarget}
+      <SelectedStreamHeader audioEnabled={audioEnabled} controls={controls} isPlaybackReady={playbackReady}
+        isTalkbackTarget={isTalkbackTarget}
         onAudioToggle={() => setAudioEnabled((current) => !current)} onToggleAiMode={onToggleAiMode}
         onToggleTalkbackTarget={onToggleTalkbackTarget} stream={stream} />
       <div className={`selected-stream__viewport mode-${stream.mode.toLowerCase()}`}>
@@ -54,7 +59,10 @@ export function SelectedStreamPanel({
           <RealtimePlayer
             controls={false}
             muted={!audioEnabled}
-            onStatusChange={(snapshot) => onPlaybackStatusChange?.(stream.id, snapshot)}
+            onStatusChange={(snapshot) => {
+              setPlaybackReady(snapshot.mode === "webrtc" && snapshot.webrtcSignalingComplete === true);
+              onPlaybackStatusChange?.(stream.id, snapshot);
+            }}
             streamId={stream.streamPath}
             title={stream.title}
           />
@@ -66,7 +74,7 @@ export function SelectedStreamPanel({
           </div>
         )}
         {isReceivableStream(stream) ? <StreamTelemetryOverlay geometry={stream.geometry} /> : null}
-        {isReceivableStream(stream) ? <CameraDirectionOverlay cameraControl={cameraControl} /> : null}
+        {isReceivableStream(stream) ? <CameraDirectionOverlay cameraControl={cameraControl} playbackReady={playbackReady} /> : null}
         <div className="selected-stream__meta">
           <strong>{stream.title}</strong>
           {secondaryLabel ? <span>{secondaryLabel}</span> : null}
@@ -82,6 +90,7 @@ export function SelectedStreamPanel({
 function SelectedStreamHeader({
   audioEnabled,
   controls,
+  isPlaybackReady,
   isTalkbackTarget,
   onAudioToggle,
   onToggleAiMode,
@@ -89,6 +98,7 @@ function SelectedStreamHeader({
   stream,
 }: Pick<SelectedStreamPanelProps, "controls" | "isTalkbackTarget" | "onToggleAiMode" | "onToggleTalkbackTarget" | "stream"> & {
   audioEnabled: boolean;
+  isPlaybackReady: boolean;
   onAudioToggle: () => void;
 }) {
   const secondaryLabel = getStreamSecondaryLabel(stream);
@@ -105,19 +115,20 @@ function SelectedStreamHeader({
         <button
           aria-pressed={Boolean(stream.aiModeEnabled)}
           className={`ops-command-button stream-ai-toggle ${stream.aiModeEnabled ? "is-active" : ""}`}
+          disabled={!isPlaybackReady}
           onClick={() => onToggleAiMode?.(stream.id)}
           type="button"
         >AI 모드</button>
         <button
           aria-pressed={audioEnabled}
           className={`ops-command-button ${audioEnabled ? "is-active" : ""}`}
-          disabled={!isReceivableStream(stream)}
+          disabled={!isPlaybackReady}
           onClick={onAudioToggle}
           type="button"
         >{audioEnabled ? "음성 끄기" : "음성 켜기"}</button>
         <button aria-label="음성 송신 대상" aria-pressed={isTalkbackTarget}
           className={`ops-command-button ${isTalkbackTarget ? "is-active" : ""}`}
-          disabled={!isReceivableStream(stream)}
+          disabled={!isPlaybackReady}
           onClick={() => stream.streamPath && onToggleTalkbackTarget?.(stream.streamPath)} type="button">
           송신 대상
         </button>
@@ -127,14 +138,15 @@ function SelectedStreamHeader({
   );
 }
 
-function CameraDirectionOverlay({ cameraControl }: {
+function CameraDirectionOverlay({ cameraControl, playbackReady }: {
   cameraControl: ReturnType<typeof useStreamCameraControl>;
+  playbackReady: boolean;
 }) {
   return <span className="selected-stream__camera-controls" role="group" aria-label="모바일 카메라 방향">
     <small>카메라</small>
-    <button disabled={cameraControl.pendingMode !== null}
+    <button disabled={!playbackReady || cameraControl.pendingMode !== null}
       onClick={() => void cameraControl.requestFacingMode("front")} type="button">전면</button>
-    <button disabled={cameraControl.pendingMode !== null}
+    <button disabled={!playbackReady || cameraControl.pendingMode !== null}
       onClick={() => void cameraControl.requestFacingMode("rear")} type="button">후면</button>
   </span>;
 }
