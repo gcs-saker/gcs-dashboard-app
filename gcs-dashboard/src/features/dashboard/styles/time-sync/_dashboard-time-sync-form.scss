@@ -74,6 +74,11 @@
   min-width: 112px;
 }
 
+.time-sync-view__commands .settings-refresh-button {
+  min-height: 40px;
+  min-width: 112px;
+}
+
 @media (max-width: 760px) {
   .time-sync-view__form { grid-template-columns: 1fr; }
   .time-sync-view__form fieldset,
