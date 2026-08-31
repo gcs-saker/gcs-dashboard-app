@@ -48,13 +48,21 @@
 }
 
 .stream-card__talkback {
+  align-items: center;
   background: rgba(10, 20, 28, 0.88);
   border: 0;
   border-top: 1px solid var(--line-soft);
+  box-sizing: border-box;
   color: var(--muted);
   cursor: pointer;
+  display: flex;
   font-size: 0.72rem;
   font-weight: 900;
+  height: 100%;
+  justify-content: center;
+  line-height: 1.2;
+  min-height: 0;
+  padding: 0 8px;
 }
 
 .stream-card__talkback[aria-pressed="true"] {
