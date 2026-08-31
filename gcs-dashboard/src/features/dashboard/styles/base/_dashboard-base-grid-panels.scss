@@ -136,6 +136,11 @@
   margin: 0;
 }
 
+.stream-card__topline {
+  min-height: 38px;
+  padding-inline: 12px;
+}
+
 .selected-stream__heading {
   display: grid;
   gap: 3px;
