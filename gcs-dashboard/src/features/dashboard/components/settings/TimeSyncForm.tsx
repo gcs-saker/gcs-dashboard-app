@@ -45,12 +45,12 @@ export function TimeSyncForm({ form, isLoading, isSaving, onChangeForm, onRefres
         <input disabled={isManual} min={1} max={65535} onChange={(event) => onChangeForm({ ...form, sourcePort: Number(event.target.value) })} type="number" value={form.sourcePort} />
       </label>
       <label>
-        <span>Drift 경고</span>
+        <span>허용 시각 오차 (ms)</span>
         <input min={1} max={600000} onChange={(event) => onChangeForm({ ...form, driftWarnMs: Number(event.target.value) })} type="number" value={form.driftWarnMs} />
       </label>
       <div className="time-sync-view__commands">
         <button disabled={disabled} type="submit">설정 저장</button>
-        <button disabled={disabled} onClick={onRunCheck} type="button">동기화 점검</button>
+        <button disabled={disabled} onClick={onRunCheck} type="button">지금 점검</button>
         <button className="ops-command-button settings-refresh-button" disabled={disabled}
           onClick={onRefresh} type="button">새로고침</button>
       </div>

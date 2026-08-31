@@ -94,8 +94,8 @@ describe("TimeSyncSettingsView", () => {
     await user.click(screen.getByRole("button", { name: "폐쇄망" }));
     await user.clear(screen.getByLabelText("시간 서버"));
     await user.type(screen.getByLabelText("시간 서버"), "10.10.10.10");
-    await user.clear(screen.getByLabelText("Drift 경고"));
-    await user.type(screen.getByLabelText("Drift 경고"), "500");
+    await user.clear(screen.getByLabelText("허용 시각 오차 (ms)"));
+    await user.type(screen.getByLabelText("허용 시각 오차 (ms)"), "500");
     await user.click(screen.getByRole("button", { name: "설정 저장" }));
 
     await waitFor(() =>
@@ -123,7 +123,7 @@ describe("TimeSyncSettingsView", () => {
     render(<TimeSyncSettingsView />);
     await screen.findByText("수동/격리 모드입니다.");
 
-    await user.click(screen.getByRole("button", { name: "동기화 점검" }));
+    await user.click(screen.getByRole("button", { name: "지금 점검" }));
 
     await waitFor(() =>
       expect(fetcher).toHaveBeenLastCalledWith(

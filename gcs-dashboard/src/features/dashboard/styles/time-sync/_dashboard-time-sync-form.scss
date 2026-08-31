@@ -1,7 +1,7 @@
 .time-sync-view__form {
   display: grid;
   gap: 14px;
-  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  grid-template-columns: minmax(280px, 1.35fr) minmax(140px, 0.65fr) minmax(220px, 1fr);
   padding: 16px;
 }
 
@@ -61,8 +61,23 @@
 
 .time-sync-view__commands {
   align-items: end;
+  border-top: 1px solid rgba(72, 137, 170, 0.24);
   display: flex;
   gap: 8px;
   grid-column: 1 / -1;
   justify-content: flex-end;
+  padding-top: 14px;
+}
+
+.time-sync-view__commands button {
+  justify-content: center;
+  min-width: 112px;
+}
+
+@media (max-width: 760px) {
+  .time-sync-view__form { grid-template-columns: 1fr; }
+  .time-sync-view__form fieldset,
+  .time-sync-view__commands { grid-column: 1; }
+  .time-sync-view__commands { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .time-sync-view__commands button { min-width: 0; }
 }
