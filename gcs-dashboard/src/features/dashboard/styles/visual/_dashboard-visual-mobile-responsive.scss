@@ -25,7 +25,10 @@
 
 @media (max-width: 760px) {
   .ops-dashboard {
-    overflow: auto;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    width: 100%;
   }
 
   .ops-dashboard__tabs {
@@ -50,6 +53,25 @@
   .talkback-panel {
     max-width: 100%;
     min-width: 0;
+    width: 100%;
+  }
+
+  .ops-dashboard__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-layout-mode {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .dashboard-layout-mode label,
+  .dashboard-layout-mode select,
+  .asset-menu-button,
+  .ops-dashboard__action-group .ops-command-button {
+    width: 100%;
   }
 
   .ops-dashboard__action-group,
@@ -58,7 +80,12 @@
   }
 
   .ops-user-menu {
-    margin-left: auto;
+    width: 100%;
+  }
+
+  .ops-user-menu summary {
+    justify-content: center;
+    width: 100%;
   }
 
   .ops-tab {
@@ -68,7 +95,9 @@
 
   .ops-dashboard__grid {
     grid-template-columns: 1fr;
+    min-width: 0;
     padding: 6px;
+    width: 100%;
   }
 
   .ops-dashboard__grid > * {
@@ -79,6 +108,21 @@
 
   .stream-grid {
     grid-template-columns: 1fr;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .ops-panel__header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+    height: auto;
+    padding-block: 8px;
+  }
+
+  .ops-panel__header-actions {
+    flex-wrap: wrap;
+    max-width: 100%;
   }
 
   .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .stream-grid {
