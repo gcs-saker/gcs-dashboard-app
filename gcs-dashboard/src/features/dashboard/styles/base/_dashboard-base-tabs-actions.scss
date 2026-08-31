@@ -48,8 +48,8 @@
     linear-gradient(45deg, transparent 50%, var(--cyan) 50%),
     linear-gradient(135deg, var(--cyan) 50%, transparent 50%);
   background-position:
-    calc(100% - 22px) 14px,
-    calc(100% - 17px) 14px;
+    calc(100% - 15px) 14px,
+    calc(100% - 10px) 14px;
   background-repeat: no-repeat;
   background-size: 5px 5px, 5px 5px;
   border: 1px solid rgba(61, 184, 255, 0.42);
@@ -58,7 +58,9 @@
   font-size: 0.76rem;
   font-weight: 800;
   min-height: 34px;
-  padding: 0 36px 0 12px;
+  min-width: 112px;
+  padding-inline: 12px;
+  text-align: center;
 }
 
 .asset-menu-button {
