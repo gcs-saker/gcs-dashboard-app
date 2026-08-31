@@ -11,7 +11,7 @@
 .audio-waveform__body {
   display: grid;
   gap: 8px;
-  grid-template-rows: auto 88px auto;
+  grid-template-rows: auto minmax(56px, 72px) auto;
   height: calc(100% - 46px);
   padding: 8px;
 }
@@ -48,7 +48,7 @@
   display: flex;
   gap: 2px;
   min-height: 44px;
-  max-height: 88px;
+  max-height: 72px;
   overflow: hidden;
   padding: 10px 12px;
 }
