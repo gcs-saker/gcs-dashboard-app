@@ -59,8 +59,10 @@ function SelectedPanel(props: DashboardMainGridProps) {
     resetKeys={[props.selectedStream.id, props.selectedStream.streamPath]} scope="panel" title="선택 스트림">
     <SelectedStreamPanel controls={props.widgetControls("selected-stream", "선택 스트림")}
       hasAudioActivity={props.selectedStream.id === props.audioActiveStreamId}
-      isPinned={props.isWidgetPinned("selected-stream")} onPlaybackStatusChange={props.onPlaybackStatusChange}
-      onToggleAiMode={props.onToggleAiMode} stream={props.selectedStream} />
+      isPinned={props.isWidgetPinned("selected-stream")}
+      isTalkbackTarget={Boolean(props.selectedStream.streamPath && props.talkbackTargetStreamIds.includes(props.selectedStream.streamPath))}
+      onPlaybackStatusChange={props.onPlaybackStatusChange} onToggleAiMode={props.onToggleAiMode}
+      onToggleTalkbackTarget={props.onToggleTalkbackTarget} stream={props.selectedStream} />
   </DashboardErrorBoundary>;
 }
 

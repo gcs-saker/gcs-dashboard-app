@@ -51,27 +51,37 @@
   background-size: 100% 32px, 30px 100%, auto, auto;
   border: 1px solid var(--line-soft);
   border-radius: 6px;
-  display: flex;
-  gap: 2px;
   min-height: 44px;
   max-height: 72px;
   overflow: hidden;
   padding: 10px 12px;
 }
 
-.audio-waveform__scope span {
-  background: linear-gradient(180deg, rgba(141, 240, 167, 0.95), rgba(61, 184, 255, 0.52));
-  border-radius: 999px;
-  box-shadow: 0 0 12px rgba(86, 211, 124, 0.22);
-  flex: 1 1 0;
-  height: var(--bar-height);
-  min-width: 2px;
-  transition: height 120ms linear;
+.audio-waveform__scope svg {
+  height: 100%;
+  overflow: visible;
+  width: 100%;
 }
 
-.audio-waveform:not(.has-audio) .audio-waveform__scope span {
-  background: rgba(141, 160, 174, 0.34);
-  box-shadow: none;
+.audio-waveform__trace {
+  fill: none;
+  filter: drop-shadow(0 0 3px rgba(86, 211, 124, 0.5));
+  stroke: var(--green);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  vector-effect: non-scaling-stroke;
+}
+
+.audio-waveform__baseline {
+  stroke: rgba(141, 160, 174, 0.32);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.audio-waveform:not(.has-audio) .audio-waveform__trace {
+  filter: none;
+  stroke: rgba(141, 160, 174, 0.58);
 }
 
 .audio-waveform dl {

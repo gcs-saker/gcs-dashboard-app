@@ -38,7 +38,7 @@ describe("useAudioWaveformHistory", () => {
     expect(result.current).toEqual(Array.from({ length: 5 }, () => 4));
   });
 
-  test("shows a low transport waveform when an audio track has no measurable level", () => {
+  test("does not invent motion when an audio track has no measured level", () => {
     const { result } = renderHook(() => useAudioWaveformHistory({
       audioLevel: null,
       isSignalPresent: true,
@@ -47,7 +47,7 @@ describe("useAudioWaveformHistory", () => {
     }));
 
     act(() => vi.advanceTimersByTime(360));
-    expect(result.current.some((sample) => sample > 4)).toBe(true);
+    expect(result.current).toEqual(Array.from({ length: 6 }, () => 4));
   });
 
   test("normalizes invalid sample counts to a safe bounded history", () => {

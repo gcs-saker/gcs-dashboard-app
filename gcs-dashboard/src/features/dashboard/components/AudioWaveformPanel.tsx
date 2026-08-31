@@ -1,4 +1,4 @@
-import { memo, type CSSProperties } from "react";
+import { memo } from "react";
 import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import {
@@ -10,6 +10,7 @@ import {
   type AudioAnalysisSnapshot,
 } from "@dashboard/layout/dashboardPresentation";
 import { useAudioWaveformHistory } from "@dashboard/hooks/useAudioWaveformHistory";
+import { buildAudioWaveformTrace } from "@dashboard/layout/audioWaveformTrace";
 import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
 
 interface AudioWaveformPanelProps {
@@ -27,32 +28,34 @@ export const AudioWaveformPanel = memo(function AudioWaveformPanel({
 }: AudioWaveformPanelProps) {
   useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.audioWaveformPanel);
   const isSelectedAnalysis = analysis?.streamId === selectedStream.id;
-  const isActive = Boolean(analysis?.isAudioActive);
-  const hasTrack = Boolean(analysis?.hasAudioTrack);
+  const selectedAnalysis = isSelectedAnalysis ? analysis : null;
+  const isActive = Boolean(selectedAnalysis?.isAudioActive);
+  const hasTrack = Boolean(selectedAnalysis?.hasAudioTrack);
   const isMicActive = talkback.hasLocalAudioTrack;
   const hasAudioSignal = isActive || hasTrack || isMicActive;
-  const audioLevel = isMicActive ? talkback.micLevel : analysis?.audioLevel ?? null;
+  const audioLevel = isMicActive ? talkback.micLevel : selectedAnalysis?.audioLevel ?? null;
   const waveformHistory = useAudioWaveformHistory({
     audioLevel,
     isSignalPresent: isMotionEnabled && hasAudioSignal,
     sourceId: isMicActive ? "operator-microphone" : selectedStream.id,
   });
-  const bars = isMotionEnabled ? waveformHistory : buildAudioWaveformBars(audioLevel, hasAudioSignal);
-  const sourceName = isMicActive ? "관제 마이크" : analysis?.title ?? selectedStream.title;
-  const modeText = isMicActive ? "송신 음성" : analysis ? formatPlaybackMode(analysis.mode, analysis.streamStatus) : "대기";
-  const latencyText = analysis?.firstFrameLatencyMs !== null && analysis?.firstFrameLatencyMs !== undefined ? `${analysis.firstFrameLatencyMs} ms` : "대기";
-  const jitterText = analysis?.jitterMs !== null && analysis?.jitterMs !== undefined ? `${analysis.jitterMs} ms` : "대기";
-  const lostText = analysis?.packetsLost !== null && analysis?.packetsLost !== undefined ? String(analysis.packetsLost) : "0";
-  const iceRttText = analysis?.iceRoundTripTimeMs !== null && analysis?.iceRoundTripTimeMs !== undefined
-    ? `${analysis.iceRoundTripTimeMs} ms`
+  const samples = isMotionEnabled ? waveformHistory : buildAudioWaveformBars(audioLevel, hasAudioSignal);
+  const tracePoints = buildAudioWaveformTrace(samples);
+  const sourceName = isMicActive ? "관제 마이크" : selectedAnalysis?.title ?? selectedStream.title;
+  const modeText = isMicActive ? "송신 음성" : selectedAnalysis ? formatPlaybackMode(selectedAnalysis.mode, selectedAnalysis.streamStatus) : "대기";
+  const latencyText = selectedAnalysis?.firstFrameLatencyMs !== null && selectedAnalysis?.firstFrameLatencyMs !== undefined ? `${selectedAnalysis.firstFrameLatencyMs} ms` : "대기";
+  const jitterText = selectedAnalysis?.jitterMs !== null && selectedAnalysis?.jitterMs !== undefined ? `${selectedAnalysis.jitterMs} ms` : "대기";
+  const lostText = selectedAnalysis?.packetsLost !== null && selectedAnalysis?.packetsLost !== undefined ? String(selectedAnalysis.packetsLost) : "0";
+  const iceRttText = selectedAnalysis?.iceRoundTripTimeMs !== null && selectedAnalysis?.iceRoundTripTimeMs !== undefined
+    ? `${selectedAnalysis.iceRoundTripTimeMs} ms`
     : "대기";
-  const icePathText = formatIcePath(analysis?.localCandidateType ?? null, analysis?.remoteCandidateType ?? null, analysis?.iceTransportProtocol ?? null);
+  const icePathText = formatIcePath(selectedAnalysis?.localCandidateType ?? null, selectedAnalysis?.remoteCandidateType ?? null, selectedAnalysis?.iceTransportProtocol ?? null);
   const levelText = audioLevel !== null ? `${Math.round(audioLevel * 100)}%` : "대기";
-  const latencyTone = getLatencyTone(analysis?.firstFrameLatencyMs ?? null);
-  const jitterTone = getJitterTone(analysis?.jitterMs ?? null);
-  const lossTone = getPacketLossTone(analysis?.packetsLost ?? null);
-  const iceTone = analysis?.localCandidateType === "relay" ? "warning" : analysis?.localCandidateType ? "good" : "info";
-  const scopeText = isMicActive ? "마이크 송신 레벨" : isSelectedAnalysis ? "선택 스트림 품질" : analysis ? "최근 음성 수신" : "선택 스트림 품질";
+  const latencyTone = getLatencyTone(selectedAnalysis?.firstFrameLatencyMs ?? null);
+  const jitterTone = getJitterTone(selectedAnalysis?.jitterMs ?? null);
+  const lossTone = getPacketLossTone(selectedAnalysis?.packetsLost ?? null);
+  const iceTone = selectedAnalysis?.localCandidateType === "relay" ? "warning" : selectedAnalysis?.localCandidateType ? "good" : "info";
+  const scopeText = isMicActive ? "마이크 송신 레벨" : "선택 스트림 수신 음성";
 
   return (
     <section aria-labelledby="audio-waveform-title" className={`ops-panel audio-waveform ${hasAudioSignal ? "has-audio" : ""}`}>
@@ -70,9 +73,10 @@ export const AudioWaveformPanel = memo(function AudioWaveformPanel({
           <strong>{modeText}</strong>
         </div>
         <div className="audio-waveform__scope" aria-label="수신 음성 파형">
-          {bars.map((height, index) => (
-            <span key={`${selectedStream.id}-${index}`} style={{ "--bar-height": `${height}%` } as CSSProperties} />
-          ))}
+          <svg aria-hidden="true" preserveAspectRatio="none" viewBox="0 0 100 100">
+            <line className="audio-waveform__baseline" x1="0" x2="100" y1="96" y2="96" />
+            <polyline className="audio-waveform__trace" points={tracePoints} />
+          </svg>
         </div>
         <dl>
           <div>
@@ -97,9 +101,9 @@ export const AudioWaveformPanel = memo(function AudioWaveformPanel({
           </div>
           <div className={`is-${iceTone}`}>
             <dt>ICE 경로</dt>
-            <dd title={analysis?.relayFallbackReason ?? undefined}>{icePathText}</dd>
+            <dd title={selectedAnalysis?.relayFallbackReason ?? undefined}>{icePathText}</dd>
           </div>
-          <div className={`is-${getLatencyTone(analysis?.iceRoundTripTimeMs ?? null)}`}>
+          <div className={`is-${getLatencyTone(selectedAnalysis?.iceRoundTripTimeMs ?? null)}`}>
             <dt>ICE RTT</dt>
             <dd>{iceRttText}</dd>
           </div>

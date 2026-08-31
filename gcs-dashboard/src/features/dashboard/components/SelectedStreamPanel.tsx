@@ -18,8 +18,10 @@ interface SelectedStreamPanelProps {
   controls?: ReactNode;
   hasAudioActivity?: boolean;
   isPinned?: boolean;
+  isTalkbackTarget?: boolean;
   onPlaybackStatusChange?: (streamId: string, snapshot: RealtimePlayerSnapshot) => void;
   onToggleAiMode?: (streamId: string) => void;
+  onToggleTalkbackTarget?: (streamPath: string) => void;
 }
 
 export function SelectedStreamPanel({
@@ -27,8 +29,10 @@ export function SelectedStreamPanel({
   controls,
   hasAudioActivity = false,
   isPinned = false,
+  isTalkbackTarget = false,
   onPlaybackStatusChange,
   onToggleAiMode,
+  onToggleTalkbackTarget,
 }: SelectedStreamPanelProps) {
   useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.selectedStreamPanel);
   const [audioEnabled, setAudioEnabled] = useState(false);
@@ -42,8 +46,9 @@ export function SelectedStreamPanel({
       data-widget-id={SELECTED_STREAM_WIDGET.id}
       style={{ minHeight: SELECTED_STREAM_WIDGET.minHeight }}
     >
-      <SelectedStreamHeader audioEnabled={audioEnabled} controls={controls} onAudioToggle={() => setAudioEnabled((current) => !current)}
-        onToggleAiMode={onToggleAiMode} stream={stream} />
+      <SelectedStreamHeader audioEnabled={audioEnabled} controls={controls} isTalkbackTarget={isTalkbackTarget}
+        onAudioToggle={() => setAudioEnabled((current) => !current)} onToggleAiMode={onToggleAiMode}
+        onToggleTalkbackTarget={onToggleTalkbackTarget} stream={stream} />
       <div className={`selected-stream__viewport mode-${stream.mode.toLowerCase()}`}>
         {isReceivableStream(stream) ? (
           <RealtimePlayer
@@ -77,10 +82,12 @@ export function SelectedStreamPanel({
 function SelectedStreamHeader({
   audioEnabled,
   controls,
+  isTalkbackTarget,
   onAudioToggle,
   onToggleAiMode,
+  onToggleTalkbackTarget,
   stream,
-}: Pick<SelectedStreamPanelProps, "controls" | "onToggleAiMode" | "stream"> & {
+}: Pick<SelectedStreamPanelProps, "controls" | "isTalkbackTarget" | "onToggleAiMode" | "onToggleTalkbackTarget" | "stream"> & {
   audioEnabled: boolean;
   onAudioToggle: () => void;
 }) {
@@ -108,6 +115,12 @@ function SelectedStreamHeader({
           onClick={onAudioToggle}
           type="button"
         >{audioEnabled ? "음성 끄기" : "음성 켜기"}</button>
+        <button aria-label="음성 송신 대상" aria-pressed={isTalkbackTarget}
+          className={`ops-command-button ${isTalkbackTarget ? "is-active" : ""}`}
+          disabled={!isReceivableStream(stream)}
+          onClick={() => stream.streamPath && onToggleTalkbackTarget?.(stream.streamPath)} type="button">
+          송신 대상
+        </button>
         {controls}
       </span>
     </div>
