@@ -27,16 +27,6 @@
   text-align: center;
 }
 
-.selected-stream__empty::before {
-  border: 1px solid rgba(190, 213, 226, 0.3);
-  content: "";
-  height: 92px;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 92px;
-}
-
 .selected-stream__empty::after {
   background:
     linear-gradient(90deg, transparent 0 43%, rgba(190, 213, 226, 0.55) 44% 56%, transparent 57%),
