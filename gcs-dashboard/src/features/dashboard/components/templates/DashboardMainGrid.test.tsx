@@ -22,6 +22,7 @@ describe("DashboardMainGrid error isolation", () => {
     render(
       <DashboardMainGrid
         dashboardDensityMode="expanded"
+        dashboardPriorityMode="default"
         aiResultsWidget={DASHBOARD_WIDGET_REGISTRY["ai-results"]}
         audioActiveStreamId={null}
         audioAnalysis={null}

@@ -16,11 +16,12 @@ import type { MapFocusViewModel } from "@dashboard/layout/mapFocus";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import type { RealtimePlayerSnapshot } from "@streaming/types";
 import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
-import type { DashboardDensityMode } from "@dashboard/preferences/userPreferences";
+import type { DashboardDensityMode, DashboardPriorityMode } from "@dashboard/preferences/userPreferences";
 
 interface DashboardMainGridProps {
   aiResultsWidget: DashboardWidgetDefinition; audioActiveStreamId: string | null;
   dashboardDensityMode: DashboardDensityMode;
+  dashboardPriorityMode: DashboardPriorityMode;
   audioAnalysis: AudioAnalysisSnapshot | null; isWidgetPinned: (widgetId: DashboardWidgetId) => boolean;
   isWidgetVisible: (widgetId: DashboardWidgetId) => boolean; mapFocus: MapFocusViewModel; motionEnabled: boolean;
   onPlaybackStatusChange: (streamId: string, snapshot: RealtimePlayerSnapshot) => void;
@@ -72,9 +73,15 @@ function StreamGridPanel(props: DashboardMainGridProps) {
       <StreamGrid audioActiveStreamId={props.audioActiveStreamId} onSelectStream={props.onSelectStream}
         onToggleTalkbackTarget={props.onToggleTalkbackTarget} selectedStreamId={props.selectedStreamId}
         talkbackTargetStreamIds={props.talkbackTargetStreamIds}
-        streams={props.dashboardDensityMode === "overview" ? props.streams.slice(0, 2) : props.streams} />
+        streams={visibleDashboardStreams(props)} />
     </DashboardErrorBoundary>
   </RenderProfilerBoundary>;
+}
+
+function visibleDashboardStreams(props: DashboardMainGridProps): DashboardStreamSlot[] {
+  if (props.dashboardDensityMode !== "overview") return props.streams;
+  if (props.dashboardPriorityMode !== "stream") return props.streams.slice(0, 2);
+  return props.streams.filter((stream) => stream.id !== props.selectedStreamId).slice(0, 3);
 }
 
 function SummaryPanel(props: DashboardMainGridProps) {

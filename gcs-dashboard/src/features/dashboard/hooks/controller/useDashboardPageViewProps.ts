@@ -38,7 +38,7 @@ export function useDashboardPageViewProps({
     },
     dashboardDensityMode, dashboardPriorityMode, motionMode, notification, onDismissNotification,
     routerProps: {
-      activeView, aiResultsWidget: getDashboardWidgetDefinition("ai-results"), dashboardDensityMode,
+      activeView, aiResultsWidget: getDashboardWidgetDefinition("ai-results"), dashboardDensityMode, dashboardPriorityMode,
       audioActiveStreamId: ui.audioActiveStreamId, audioAnalysis: ui.audioAnalysis,
       cctvGridSize: viewModel.cctvGridSize, cctvLayoutMode, cctvQualityMode,
       cctvStatusSummary: viewModel.cctvStatusSummary, cctvStreams: viewModel.cctvStreams,

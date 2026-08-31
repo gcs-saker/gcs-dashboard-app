@@ -5,7 +5,7 @@ import type { AudioAnalysisSnapshot, TelemetryRow } from "@dashboard/layout/dash
 import type { DashboardWidgetDefinition, DashboardWidgetId } from "@dashboard/layout/dashboardLayout";
 import type { MapFocusViewModel } from "@dashboard/layout/mapFocus";
 import type { CctvQualityMode } from "@dashboard/components/CctvChannelCard";
-import type { CctvLayoutMode, DashboardDensityMode, DashboardUserPreferences, DashboardView } from "@dashboard/preferences/userPreferences";
+import type { CctvLayoutMode, DashboardDensityMode, DashboardPriorityMode, DashboardUserPreferences, DashboardView } from "@dashboard/preferences/userPreferences";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import { CctvView } from "@dashboard/components/cctv/CctvView";
 import { SystemStatusPanel } from "@dashboard/components/SystemStatusPanel";
@@ -25,6 +25,7 @@ export interface DashboardViewRouterProps {
   cctvStatusSummary: CctvStatusSummary;
   cctvStreams: DashboardStreamSlot[];
   dashboardDensityMode: DashboardDensityMode;
+  dashboardPriorityMode: DashboardPriorityMode;
   isWidgetPinned: (widgetId: DashboardWidgetId) => boolean;
   isWidgetVisible: (widgetId: DashboardWidgetId) => boolean;
   mapFocus: MapFocusViewModel;

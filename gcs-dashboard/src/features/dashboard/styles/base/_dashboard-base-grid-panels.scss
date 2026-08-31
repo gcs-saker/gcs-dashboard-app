@@ -85,6 +85,16 @@
 
 .ops-dashboard[data-layout-density="overview"][data-layout-priority="stream"] .ops-dashboard__grid {
   grid-template-columns: minmax(250px, 0.46fr) minmax(420px, 0.72fr) minmax(520px, 1.42fr);
+  grid-template-rows: minmax(360px, 0.74fr) minmax(150px, 0.26fr);
+}
+
+.ops-dashboard[data-layout-density="overview"][data-layout-priority="stream"] .selected-stream__viewport {
+  height: calc(100% - 46px);
+  min-height: 0;
+}
+
+.ops-dashboard[data-layout-density="overview"][data-layout-priority="stream"] .stream-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .ops-panel,

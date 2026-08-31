@@ -205,9 +205,10 @@ describe("DashboardPage", () => {
     expect(dashboard).toHaveAttribute("data-layout-density", "overview");
     expect(dashboard).toHaveAttribute("data-layout-priority", "stream");
     expect(screen.queryByRole("heading", { name: "음성 파형 분석" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "스트리밍 1 선택" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "스트리밍 1 선택" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "스트리밍 2 선택" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "스트리밍 3 선택" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "스트리밍 3 선택" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "스트리밍 4 선택" })).toBeInTheDocument();
   });
 
   test("selects a stream from the tactical map pin without opening the connect dialog", async () => {
