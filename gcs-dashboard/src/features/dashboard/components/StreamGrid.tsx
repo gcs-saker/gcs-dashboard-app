@@ -1,7 +1,7 @@
 import { memo, useMemo, type ReactNode } from "react";
 import { RENDER_DIAGNOSTIC_LABELS, useRenderDiagnostics } from "@/features/renderDiagnostics";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
-import { STREAM_GRID_WIDGET } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
+import { STREAM_GRID_WIDGET } from "@dashboard/streaming/streamTypes";
 import { StreamCard } from "./StreamCard";
 import { StreamPanelErrorBoundary } from "./StreamPanelErrorBoundary";
 

@@ -31,7 +31,8 @@
     "@vitest/coverage-istanbul": "4.1.7",
     "jsdom": "29.1.1",
     "msw": "2.12.4",
-    "typescript": "6.0.3",
+    "oxlint": "1.50.0",
+    "typescript": "5.9.3",
     "vite": "8.0.16",
     "vitest": "4.1.7"
   },
@@ -44,6 +45,8 @@
   "scripts": {
     "start": "vite --host 0.0.0.0",
     "dev": "vite --host 0.0.0.0",
+    "lint:hooks": "oxlint --react-plugin --deny-warnings -D react/exhaustive-deps -D react/rules-of-hooks src",
+    "lint:quality": "oxlint --deny-warnings -D correctness -D suspicious src",
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
@@ -58,7 +61,8 @@
     "collectCoverageFrom": [
       "src/**/*.{ts,tsx}",
       "!src/index.tsx",
-      "!src/setupTests.ts"
+      "!src/setupTests.ts",
+      "!src/**/*.stories.tsx"
     ]
   },
   "browserslist": {

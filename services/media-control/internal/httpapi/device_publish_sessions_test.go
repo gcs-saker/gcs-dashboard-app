@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessiontoken"
 )
 
 func TestDevicePublishSessionUsesServerOwnedIdentityAndRotatesRenewalToken(t *testing.T) {
@@ -44,7 +45,7 @@ func TestDevicePublishSessionUsesServerOwnedIdentityAndRotatesRenewalToken(t *te
 	if created.PublishToken == "" || created.RenewalToken == "" || created.AuthorizationScheme != "Bearer" {
 		t.Fatalf("expected token pair: %#v", created)
 	}
-	if !strings.HasPrefix(created.PublishToken, mediaTokenPrefix) || strings.Contains(created.PublishToken, ".") ||
+	if !strings.HasPrefix(created.PublishToken, sessiontoken.Prefix) || strings.Contains(created.PublishToken, ".") ||
 		strings.Contains(created.PublishToken, "co-a") || strings.Contains(created.PublishToken, "device-001") {
 		t.Fatalf("publish token must be opaque: %q", created.PublishToken)
 	}
@@ -131,16 +132,16 @@ func TestDevicePublishSessionDistinguishesAuthorizationFailures(t *testing.T) {
 	}
 }
 
-func TestClientIPTrustsForwardedHeaderOnlyFromPrivateProxy(t *testing.T) {
+func TestClientIPTrustsForwardedHeaderOnlyFromLoopbackEdge(t *testing.T) {
 	request := httptest.NewRequest(http.MethodPost, routeDevicePublishSessions, nil)
-	request.RemoteAddr = "10.0.0.2:1234"
+	request.RemoteAddr = "127.0.0.1:1234"
 	request.Header.Set(forwardedForHeader, "203.0.113.9, 10.0.0.1")
-	if got := clientIP(request); got != "203.0.113.9" {
-		t.Fatalf("unexpected forwarded IP %q", got)
+	if got, source := clientIP(request); got != "203.0.113.9" || source != "loopback_edge" {
+		t.Fatalf("unexpected forwarded IP %q from %q", got, source)
 	}
 
 	request.RemoteAddr = "198.51.100.10:1234"
-	if got := clientIP(request); got != "198.51.100.10" {
+	if got, source := clientIP(request); got != "198.51.100.10" || source != "direct_peer" {
 		t.Fatalf("untrusted peer spoofed forwarded IP: %q", got)
 	}
 }

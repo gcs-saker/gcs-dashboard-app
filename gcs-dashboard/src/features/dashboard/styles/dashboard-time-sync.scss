@@ -1,4 +1,5 @@
-@use "./dashboard-time-sync-shell";
-@use "./dashboard-time-sync-tabs-metrics";
-@use "./dashboard-time-sync-form";
-@use "./dashboard-time-sync-policy";
+@use "./time-sync/dashboard-time-sync-shell";
+@use "./time-sync/dashboard-time-sync-tabs-metrics";
+@use "./time-sync/dashboard-time-sync-form";
+@use "./time-sync/dashboard-time-sync-policy";
+@use "./time-sync/dashboard-organization-management";

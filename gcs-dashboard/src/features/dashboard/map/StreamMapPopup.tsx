@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
-import { getDashboardStreamStatusText } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
+import { getDashboardStreamDisplayName, getDashboardStreamStatusText } from "@dashboard/streaming/streamTypes";
 import { coordinateSourceLabel, coordinateText } from "./mapContracts";
 
 interface StreamMapPopupProps {
@@ -9,7 +9,6 @@ interface StreamMapPopupProps {
 }
 
 export function StreamMapPopup({ onClose, stream }: StreamMapPopupProps) {
-  const geometry = stream.geometry;
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const coordinates = coordinateText(stream);
   const copyCoordinates = async (): Promise<void> => {
@@ -32,7 +31,18 @@ export function StreamMapPopup({ onClose, stream }: StreamMapPopupProps) {
           X
         </button>
       </div>
-      <dl>
+      <StreamMapDetails coordinates={coordinates} stream={stream} />
+      <div className="stream-map-popup__actions">
+        <button type="button" onClick={() => void copyCoordinates()}>좌표 복사</button>
+        <span role="status">{copyState === "copied" ? "복사됨" : copyState === "failed" ? "복사 실패" : "좌표 공유"}</span>
+      </div>
+    </aside>
+  );
+}
+
+function StreamMapDetails({ coordinates, stream }: { coordinates: string; stream: DashboardStreamSlot }) {
+  const geometry = stream.geometry;
+  return <dl>
         <div>
           <dt>상태</dt>
           <dd><span className="stream-map-popup__badge">{getDashboardStreamStatusText(stream.status)}</span></dd>
@@ -46,12 +56,12 @@ export function StreamMapPopup({ onClose, stream }: StreamMapPopupProps) {
           </dd>
         </div>
         <div>
-          <dt>단말 ID</dt>
-          <dd>{stream.connectedDeviceId ?? "미등록"}</dd>
+          <dt>연결 상태</dt>
+          <dd>{stream.connectedDeviceId ? "연결됨" : "미등록"}</dd>
         </div>
         <div>
           <dt>스트림</dt>
-          <dd>{stream.streamPath ?? stream.id}</dd>
+          <dd>{getDashboardStreamDisplayName(stream)}</dd>
         </div>
         <div>
           <dt>미디어</dt>
@@ -73,15 +83,5 @@ export function StreamMapPopup({ onClose, stream }: StreamMapPopupProps) {
           <dt>방위/FOV</dt>
           <dd>{geometry ? `${Math.round(geometry.headingDeg)}deg / ${Math.round(geometry.fovDeg)}deg` : "대기"}</dd>
         </div>
-      </dl>
-      <div className="stream-map-popup__actions">
-        <button type="button" onClick={() => void copyCoordinates()}>
-          좌표 복사
-        </button>
-        <span role="status">
-          {copyState === "copied" ? "복사됨" : copyState === "failed" ? "복사 실패" : "좌표 공유"}
-        </span>
-      </div>
-    </aside>
-  );
+  </dl>;
 }

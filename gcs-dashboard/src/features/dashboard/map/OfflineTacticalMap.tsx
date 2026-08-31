@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import {
   coordinateSourceLabel,
   coordinateText,
@@ -67,15 +67,25 @@ export function OfflineTacticalMap({
           setZoom(INITIAL_MAP_ZOOM);
         }}
         onZoomInClick={() => {
-          onAutoFocusChange(false);
+          onAutoFocusChange(true);
           setZoom((current) => Math.min(MAX_ZOOM, current + 1));
         }}
         onZoomOutClick={() => {
-          onAutoFocusChange(false);
+          onAutoFocusChange(true);
           setZoom((current) => Math.max(MIN_ZOOM, current - 1));
         }}
       />
-      {projectedStreams.map(({ stream, left, top }) => (
+      <OfflineMapMarkers projectedStreams={projectedStreams} selectedStream={selectedStream} onSelect={onStreamMarkerSelect} />
+    </div>
+  );
+}
+
+function OfflineMapMarkers({ projectedStreams, selectedStream, onSelect }: {
+  projectedStreams: ReturnType<typeof projectStreams>;
+  selectedStream: DashboardStreamSlot;
+  onSelect: (streamId: string) => void;
+}) {
+  return <>{projectedStreams.map(({ stream, left, top }) => (
         <button
           key={stream.id}
           className={`${markerClassForStream(stream, selectedStream)} offline-map-marker--pin`}
@@ -83,11 +93,9 @@ export function OfflineTacticalMap({
           type="button"
           title={`${stream.title} / ${coordinateText(stream)}`}
           aria-label={`${stream.title} 위치 ${coordinateText(stream)}`}
-          onClick={() => onStreamMarkerSelect(stream.id)}
+          onClick={() => onSelect(stream.id)}
         >
           <StreamMapMarkerContent stream={stream} />
         </button>
-      ))}
-    </div>
-  );
+      ))}</>;
 }

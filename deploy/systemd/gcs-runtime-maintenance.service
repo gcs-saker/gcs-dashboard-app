@@ -1,0 +1,18 @@
+[Unit]
+Description=GCS-Saker bounded runtime maintenance
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=user
+Group=user
+Environment=DEPLOYMENT_TARGET=server01-production
+Environment=COMPOSE_PROJECT_NAME=gcs-saker-m2-production
+Environment=TELEMETRY_RETENTION_DAYS=30
+ExecStart=/usr/bin/bash /home/user/gcs-saker-runtime/current/scripts/ops/runtime_maintenance.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+PrivateTmp=true
+NoNewPrivileges=true

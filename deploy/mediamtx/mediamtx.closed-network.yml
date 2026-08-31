@@ -50,10 +50,6 @@ webrtcICEServers2:
     username: ${TURN_USERNAME}
     password: ${TURN_PASSWORD}
     clientOnly: true
-  - url: turn:turn-secondary:3478
-    username: ${TURN_USERNAME}
-    password: ${TURN_PASSWORD}
-    clientOnly: true
 webrtcSTUNGatherTimeout: 5s
 
 paths:

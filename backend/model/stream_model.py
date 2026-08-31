@@ -46,6 +46,11 @@ class StreamPath:
 
 
 def validate_stream_path(path: str) -> StreamPath:
+    parts = _validated_path_parts(path)
+    return _parse_stream_parts(parts)
+
+
+def _validated_path_parts(path: str) -> list[str]:
     if not isinstance(path, str) or not path:
         raise StreamPathError("stream path must be a non-empty string")
     if path.startswith("/") or path.endswith("/"):
@@ -57,34 +62,38 @@ def validate_stream_path(path: str) -> StreamPath:
     if any(part == "" for part in parts):
         raise StreamPathError("stream path must not contain empty segments")
 
+    return parts
+
+
+def _parse_stream_parts(parts: list[str]) -> StreamPath:
     prefix = parts[0]
     if prefix == "raw":
-        _require_segment_count(parts, 3, "raw/{assetId}/{sensorId}")
-        asset_id, sensor_id = _validate_named_segments(parts[1], parts[2])
-        return StreamPath(prefix="raw", asset_id=asset_id, sensor_id=sensor_id)
-
+        return _parse_raw_stream(parts)
     if prefix == "ai":
-        _require_segment_count(parts, 4, "ai/{assetId}/{sensorId}/{processorId}")
-        asset_id, sensor_id, processor_id = _validate_named_segments(parts[1], parts[2], parts[3])
-        return StreamPath(
-            prefix="ai",
-            asset_id=asset_id,
-            sensor_id=sensor_id,
-            processor_id=processor_id,
-        )
-
+        return _parse_ai_stream(parts)
     if prefix == "archive":
-        _require_segment_count(parts, 4, "archive/{assetId}/{sensorId}/{date}")
-        asset_id, sensor_id = _validate_named_segments(parts[1], parts[2])
-        archive_date = _validate_archive_date(parts[3])
-        return StreamPath(
-            prefix="archive",
-            asset_id=asset_id,
-            sensor_id=sensor_id,
-            archive_date=archive_date,
-        )
-
+        return _parse_archive_stream(parts)
     raise StreamPathError("stream path prefix must be one of raw, ai, archive")
+
+
+def _parse_raw_stream(parts: list[str]) -> StreamPath:
+    _require_segment_count(parts, 3, "raw/{assetId}/{sensorId}")
+    asset_id, sensor_id = _validate_named_segments(parts[1], parts[2])
+    return StreamPath(prefix="raw", asset_id=asset_id, sensor_id=sensor_id)
+
+
+def _parse_ai_stream(parts: list[str]) -> StreamPath:
+    _require_segment_count(parts, 4, "ai/{assetId}/{sensorId}/{processorId}")
+    asset_id, sensor_id, processor_id = _validate_named_segments(parts[1], parts[2], parts[3])
+    return StreamPath(prefix="ai", asset_id=asset_id, sensor_id=sensor_id, processor_id=processor_id)
+
+
+def _parse_archive_stream(parts: list[str]) -> StreamPath:
+    _require_segment_count(parts, 4, "archive/{assetId}/{sensorId}/{date}")
+    asset_id, sensor_id = _validate_named_segments(parts[1], parts[2])
+    return StreamPath(
+        prefix="archive", asset_id=asset_id, sensor_id=sensor_id, archive_date=_validate_archive_date(parts[3])
+    )
 
 
 def validate_stream_id(stream_id: str) -> StreamPath:

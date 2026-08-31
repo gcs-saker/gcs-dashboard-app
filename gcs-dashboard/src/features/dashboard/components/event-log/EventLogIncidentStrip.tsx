@@ -1,4 +1,4 @@
-import type { OperationalEvent } from "@dashboard/operationalEvents";
+import type { OperationalEvent } from "@dashboard/operations/operationalEvents";
 
 interface EventLogIncidentStripProps {
   incidents: OperationalEvent[];

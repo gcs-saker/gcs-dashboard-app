@@ -1,14 +1,21 @@
-from __future__ import annotations
+"""Compatibility names derived from the canonical generated protobuf contract."""
+# mypy: disable-error-code="attr-defined"
 
 from enum import IntEnum
 
+from gcs.saker.v1 import gateway_service_pb2
+
+
+def _field(message_type, name: str) -> int:
+    return message_type.DESCRIPTOR.fields_by_name[name].number
+
 
 class GatewayAckStatus(IntEnum):
-    UNSPECIFIED = 0
-    ACCEPTED = 1
-    REJECTED = 2
-    BACKPRESSURE = 3
-    RECONNECT = 4
+    UNSPECIFIED = gateway_service_pb2.GATEWAY_ACK_STATUS_UNSPECIFIED
+    ACCEPTED = gateway_service_pb2.GATEWAY_ACK_STATUS_ACCEPTED
+    REJECTED = gateway_service_pb2.GATEWAY_ACK_STATUS_REJECTED
+    BACKPRESSURE = gateway_service_pb2.GATEWAY_ACK_STATUS_BACKPRESSURE
+    RECONNECT = gateway_service_pb2.GATEWAY_ACK_STATUS_RECONNECT
 
 
 class GatewayPayloadKind:
@@ -20,22 +27,22 @@ class GatewayPayloadKind:
 
 
 class GatewayStreamRequestFields:
-    REQUEST_ID = 1
-    ORG_ID = 2
-    GROUP_ID = 3
-    ASSET_ID = 4
-    TELEMETRY = 10
-    STREAM_EVENT = 11
-    COMMAND_ACK = 12
+    REQUEST_ID = _field(gateway_service_pb2.GatewayStreamRequest, "request_id")
+    ORG_ID = _field(gateway_service_pb2.GatewayStreamRequest, "org_id")
+    GROUP_ID = _field(gateway_service_pb2.GatewayStreamRequest, "group_id")
+    ASSET_ID = _field(gateway_service_pb2.GatewayStreamRequest, "asset_id")
+    TELEMETRY = _field(gateway_service_pb2.GatewayStreamRequest, "telemetry")
+    STREAM_EVENT = _field(gateway_service_pb2.GatewayStreamRequest, "stream_event")
+    COMMAND_ACK = _field(gateway_service_pb2.GatewayStreamRequest, "command_ack")
 
 
 class GatewayStreamResponseFields:
-    RESPONSE_ID = 1
-    REQUEST_ID = 2
-    STATUS = 3
-    REASON_CODE = 4
-    COMMAND = 10
-    TELEMETRY_BATCH = 11
+    RESPONSE_ID = _field(gateway_service_pb2.GatewayStreamResponse, "response_id")
+    REQUEST_ID = _field(gateway_service_pb2.GatewayStreamResponse, "request_id")
+    STATUS = _field(gateway_service_pb2.GatewayStreamResponse, "status")
+    REASON_CODE = _field(gateway_service_pb2.GatewayStreamResponse, "reason_code")
+    COMMAND = _field(gateway_service_pb2.GatewayStreamResponse, "command")
+    TELEMETRY_BATCH = _field(gateway_service_pb2.GatewayStreamResponse, "telemetry_batch")
 
 
 REQUEST_PAYLOAD_FIELDS = {

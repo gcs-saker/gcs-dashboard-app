@@ -5,9 +5,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	sakerv1 "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
 )
 
-func TestGatewayWireConstantsMatchProtoContract(t *testing.T) {
+func TestGeneratedGatewayDescriptorMatchesProtoContract(t *testing.T) {
 	content := readGatewayProto(t)
 
 	assertProtoContains(t, content, "service SakerGatewayService")
@@ -27,11 +29,13 @@ func TestGatewayWireConstantsMatchProtoContract(t *testing.T) {
 	if fullMethodExchange != "/gcs.saker.v1.SakerGatewayService/Exchange" {
 		t.Fatalf("grpc method drifted from proto contract: %s", fullMethodExchange)
 	}
-	if requestFieldTelemetry != 10 || requestFieldStreamEvent != 11 || requestFieldCommandAck != 12 {
-		t.Fatalf("gateway request payload field constants drifted from proto contract")
+	request := (&sakerv1.GatewayStreamRequest{}).ProtoReflect().Descriptor().Fields()
+	response := (&sakerv1.GatewayStreamResponse{}).ProtoReflect().Descriptor().Fields()
+	if request.ByName("telemetry").Number() != 10 || request.ByName("stream_event").Number() != 11 || request.ByName("command_ack").Number() != 12 {
+		t.Fatal("generated gateway request descriptor drifted from proto contract")
 	}
-	if responseFieldCommand != 10 || responseFieldTelemetry != 11 {
-		t.Fatalf("gateway response payload field constants drifted from proto contract")
+	if response.ByName("command").Number() != 10 || response.ByName("telemetry_batch").Number() != 11 {
+		t.Fatal("generated gateway response descriptor drifted from proto contract")
 	}
 }
 

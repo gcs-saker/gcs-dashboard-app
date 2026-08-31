@@ -91,6 +91,19 @@ class RedisSessionStoreTest {
         assertNull(refreshSessions.consumeRefreshSession("refresh-token"))
     }
 
+    @Test
+    fun `refresh session store revokes every unused token for principal`() {
+        val store = InMemoryStringKeyValueStore()
+        val refreshSessions = RedisRefreshSessionStore(store, "test:refresh:")
+        refreshSessions.putRefreshSession("refresh-one", principal, Duration.ofDays(7))
+        refreshSessions.putRefreshSession("refresh-two", principal, Duration.ofDays(7))
+
+        refreshSessions.revokePrincipalSessions(principal.username)
+
+        assertNull(refreshSessions.consumeRefreshSession("refresh-one"))
+        assertNull(refreshSessions.consumeRefreshSession("refresh-two"))
+    }
+
     private class InMemoryStringKeyValueStore : StringKeyValueStore {
         private val values = linkedMapOf<String, String>()
 

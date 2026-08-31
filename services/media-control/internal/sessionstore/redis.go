@@ -11,7 +11,10 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const keyPrefix = "gcs-saker:publish-session:"
+const (
+	keyPrefix          = "gcs-saker:publish-session:v1:"
+	sessionExpiryGrace = time.Minute
+)
 
 type RedisStore struct {
 	client *redis.Client
@@ -26,23 +29,29 @@ func NewRedisStore(address, password string, timeout time.Duration) *RedisStore 
 
 func (s *RedisStore) Ping(ctx context.Context) error { return s.client.Ping(ctx).Err() }
 
+func (s *RedisStore) Close() error { return s.client.Close() }
+
 func (s *RedisStore) Save(ctx context.Context, v domain.PublishSession) error {
 	key := keyPrefix + v.SessionID
 	err := s.client.HSet(ctx, key, encode(v)).Err()
 	if err == nil {
-		err = s.client.ExpireAt(ctx, key, v.RenewalTokenExpiresAt.Add(time.Minute)).Err()
+		err = s.client.ExpireAt(ctx, key, v.RenewalTokenExpiresAt.Add(sessionExpiryGrace)).Err()
 	}
 	return err
 }
 
 func (s *RedisStore) Find(ctx context.Context, id string) (domain.PublishSession, error) {
 	values, err := s.client.HGetAll(ctx, keyPrefix+id).Result()
-	if err != nil { return domain.PublishSession{}, fmt.Errorf("%w: %v", domain.ErrPublishSessionStoreUnavailable, err) }
+	if err != nil {
+		return domain.PublishSession{}, fmt.Errorf("%w: %v", domain.ErrPublishSessionStoreUnavailable, err)
+	}
 	if len(values) == 0 {
 		return domain.PublishSession{}, domain.ErrPublishSessionNotFound
 	}
 	v, err := decode(values)
-	if err != nil { return domain.PublishSession{}, fmt.Errorf("%w: corrupt session", domain.ErrPublishSessionStoreUnavailable) }
+	if err != nil {
+		return domain.PublishSession{}, fmt.Errorf("%w: corrupt session", domain.ErrPublishSessionStoreUnavailable)
+	}
 	return v, nil
 }
 
@@ -84,7 +93,9 @@ func (s *RedisStore) End(ctx context.Context, id string, now time.Time) error {
 	key := keyPrefix + id
 	exists, err := s.client.Exists(ctx, key).Result()
 	if err != nil || exists == 0 {
-		if err != nil { return fmt.Errorf("%w: %v", domain.ErrPublishSessionStoreUnavailable, err) }
+		if err != nil {
+			return fmt.Errorf("%w: %v", domain.ErrPublishSessionStoreUnavailable, err)
+		}
 		return domain.ErrPublishSessionNotFound
 	}
 	if err := s.client.HSet(ctx, key, "status", string(domain.PublishSessionEnded), "updated_ms", millis(now)).Err(); err != nil {
@@ -126,15 +137,57 @@ func decode(m map[string]string) (domain.PublishSession, error) {
 	if err != nil && m["previous_renewal_hash"] != "" {
 		return domain.PublishSession{}, err
 	}
+	times, err := decodeSessionTimes(m)
+	if err != nil {
+		return domain.PublishSession{}, err
+	}
+	status := domain.PublishSessionStatus(m["status"])
+	if status != domain.PublishSessionActive && status != domain.PublishSessionEnded {
+		return domain.PublishSession{}, fmt.Errorf("invalid publish session status")
+	}
 	return domain.PublishSession{
 		SessionID: m["session_id"], DeviceUUID: m["device_uuid"], SensorID: m["sensor_id"], StreamID: m["stream_id"], Path: m["path"], GroupID: m["group_id"],
-		CredentialVersion: credentialVersion, DevicePolicyVersion: policyVersion, Status: domain.PublishSessionStatus(m["status"]),
+		CredentialVersion: credentialVersion, DevicePolicyVersion: policyVersion, Status: status,
 		RenewalTokenHash: current, PreviousRenewalTokenHash: previous, RenewalTokenVersion: version,
-		PublishTokenExpiresAt: fromMillis(m["publish_expires_ms"]), RenewalTokenExpiresAt: fromMillis(m["renewal_expires_ms"]),
-		CreatedAt: fromMillis(m["created_ms"]), UpdatedAt: fromMillis(m["updated_ms"]),
+		PublishTokenExpiresAt: times.publishExpiresAt, RenewalTokenExpiresAt: times.renewalExpiresAt,
+		CreatedAt: times.createdAt, UpdatedAt: times.updatedAt,
 	}, nil
 }
 
-func b64(v []byte) string           { return base64.RawURLEncoding.EncodeToString(v) }
-func millis(v time.Time) int64      { return v.UnixMilli() }
-func fromMillis(v string) time.Time { n, _ := strconv.ParseInt(v, 10, 64); return time.UnixMilli(n) }
+type sessionTimes struct {
+	publishExpiresAt time.Time
+	renewalExpiresAt time.Time
+	createdAt        time.Time
+	updatedAt        time.Time
+}
+
+func decodeSessionTimes(values map[string]string) (sessionTimes, error) {
+	publishExpiresAt, err := parseMillisField(values, "publish_expires_ms")
+	if err != nil {
+		return sessionTimes{}, err
+	}
+	renewalExpiresAt, err := parseMillisField(values, "renewal_expires_ms")
+	if err != nil {
+		return sessionTimes{}, err
+	}
+	createdAt, err := parseMillisField(values, "created_ms")
+	if err != nil {
+		return sessionTimes{}, err
+	}
+	updatedAt, err := parseMillisField(values, "updated_ms")
+	if err != nil {
+		return sessionTimes{}, err
+	}
+	return sessionTimes{publishExpiresAt, renewalExpiresAt, createdAt, updatedAt}, nil
+}
+
+func parseMillisField(values map[string]string, field string) (time.Time, error) {
+	millisValue, err := strconv.ParseInt(values[field], 10, 64)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid %s: %w", field, err)
+	}
+	return time.UnixMilli(millisValue), nil
+}
+
+func b64(v []byte) string      { return base64.RawURLEncoding.EncodeToString(v) }
+func millis(v time.Time) int64 { return v.UnixMilli() }

@@ -1,5 +1,5 @@
-import { EVENT_SEVERITY_LABELS } from "@dashboard/eventLogPresentation";
-import type { OperationalEventFilters } from "@dashboard/operationalEvents";
+import { EVENT_SEVERITY_LABELS } from "@dashboard/operations/eventLogPresentation";
+import type { OperationalEventFilters } from "@dashboard/operations/operationalEvents";
 
 interface EventLogQuickFiltersProps {
   activeFilterText: string;

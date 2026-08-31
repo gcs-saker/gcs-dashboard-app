@@ -36,7 +36,7 @@ func serveWithReadiness(ctx context.Context, server Server, listenAddress string
 	}
 	if err := server.serve(ctx, listenAddress, state.markReady); err != nil {
 		state.markFailed(grpcFailureReason(err))
-		log.Printf("gRPC gateway stopped: %v", err)
+		log.Printf("grpc_gateway_stopped error_code=%s error_type=%T", grpcFailureReason(err), err)
 	}
 }
 

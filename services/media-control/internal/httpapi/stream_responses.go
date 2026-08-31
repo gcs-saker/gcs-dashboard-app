@@ -3,11 +3,11 @@ package httpapi
 import (
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessiontoken"
 )
 
 func (s Server) streamDescriptorResponse(stream domain.StreamDescriptor) (streamDescriptorResponse, error) {
@@ -22,19 +22,12 @@ func (s Server) streamDescriptorResponseFromParsed(
 	stream domain.StreamDescriptor,
 	parsed domain.ParsedStreamPath,
 ) streamDescriptorResponse {
-	playbackURLs := s.playback.Build(parsed)
-	playbackURLs = s.withPlaybackToken(playbackURLs, parsed)
 	return streamDescriptorResponse{
-		StreamID:     parsed.StreamID,
-		Path:         parsed.Path,
-		Prefix:       parsed.Prefix,
-		AssetID:      parsed.AssetID,
-		SensorID:     parsed.SensorID,
-		ProcessorID:  emptyAsNil(parsed.ProcessorID),
-		Date:         emptyAsNil(parsed.ArchiveDate),
-		Status:       stream.Status,
-		DisplayName:  emptyAsNil(displayName(stream, parsed)),
-		PlaybackURLs: playbackURLs,
+		StreamID:    parsed.StreamID,
+		AssetID:     parsed.AssetID,
+		SensorID:    parsed.SensorID,
+		Status:      stream.Status,
+		DisplayName: nil,
 	}
 }
 
@@ -50,11 +43,11 @@ func (s Server) streamPlaybackResponseFromParsed(
 	stream domain.StreamDescriptor,
 	parsed domain.ParsedStreamPath,
 ) streamPlaybackResponse {
-	descriptor := s.streamDescriptorResponseFromParsed(stream, parsed)
+	playbackURLs := s.withPlaybackToken(s.playback.Build(parsed), parsed)
 	return streamPlaybackResponse{
-		StreamID:     descriptor.StreamID,
-		Status:       descriptor.Status,
-		PlaybackURLs: descriptor.PlaybackURLs,
+		StreamID:     parsed.StreamID,
+		Status:       stream.Status,
+		PlaybackURLs: playbackURLs,
 	}
 }
 
@@ -73,7 +66,7 @@ func (s Server) writeStreamPublishResponseForGroup(
 		return
 	}
 	playbackURLs := s.playback.Build(parsed)
-	token, err := issueMediaToken(
+	token, err := sessiontoken.Issue(
 		s.publishToken,
 		mediaMTXActionPublish,
 		parsed.StreamID,
@@ -118,7 +111,7 @@ func (s Server) withPlaybackTokenForGroup(playbackURLs domain.PlaybackURLs, pars
 	if s.publishToken == "" {
 		return playbackURLs
 	}
-	token, err := issueMediaToken(
+	token, err := sessiontoken.Issue(
 		s.publishToken,
 		mediaMTXActionPlayback,
 		parsed.StreamID,
@@ -147,13 +140,6 @@ func appendQueryToken(rawURL string, key string, token string) string {
 	values.Set(key, token)
 	parsed.RawQuery = values.Encode()
 	return parsed.String()
-}
-
-func displayName(stream domain.StreamDescriptor, parsed domain.ParsedStreamPath) string {
-	if stream.Source == "" {
-		return parsed.StreamID
-	}
-	return parsed.StreamID + " (" + stream.Source + ", readers " + strconv.Itoa(stream.ReaderCount) + ")"
 }
 
 func emptyAsNil(value string) *string {

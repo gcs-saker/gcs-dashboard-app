@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { appendHlsPlaybackQuery } from "@streaming/hooks/hlsPlaybackConfig";
+import { appendHlsPlaybackQuery } from "@streaming/hooks/playback/hlsPlaybackConfig";
 import { HLSFallbackPlayer } from "./HLSFallbackPlayer";
 
 const hlsMock = vi.hoisted(() => {

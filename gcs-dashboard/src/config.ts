@@ -62,9 +62,9 @@ export function authUrl(path: string): string {
   return buildAuthUrl(AUTH_API_BASE_URL, path);
 }
 
-export function buildAuthUrl(authBaseUrl: string, path: string): string {
+export function buildAuthUrl(baseUrl: string, path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${authBaseUrl.replace(/\/$/, "")}${normalizedPath}`;
+  return `${baseUrl.replace(/\/$/, "")}${normalizedPath}`;
 }
 
 export function backendRootUrl(path: string): string {
@@ -82,9 +82,9 @@ export function streamApiV1Url(path: string): string {
   return buildApiV1Url(STREAM_API_BASE_URL, path);
 }
 
-export function buildApiV1Url(apiBaseUrl: string, path: string): string {
+export function buildApiV1Url(baseUrl: string, path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const apiBase = apiBaseUrl.replace(/\/$/, "");
+  const apiBase = baseUrl.replace(/\/$/, "");
   const v1Base = apiBase.endsWith("/api") ? `${apiBase}/v1` : `${apiBase}/api/v1`;
   return `${v1Base}${normalizedPath}`;
 }

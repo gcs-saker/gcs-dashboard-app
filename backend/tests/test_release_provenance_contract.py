@@ -94,7 +94,7 @@ def test_deploy_is_server01_only_and_rolls_back_with_previous_compose() -> None:
     assert "com.docker.compose.project.config_files" in script
     assert "previous_compose=(docker compose" in script
     assert '"${previous_compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"' in script
-    assert script.index('"${compose[@]}" build') < script.index("trap rollback ERR")
+    assert script.index('"${compose[@]}" build') < script.index("trap on_exit EXIT")
     assert "RELEASE_DIR must be outside the immutable source checkout" in script
     assert script.index("release_dir_real") < script.index("flyway_file=")
 
@@ -104,10 +104,7 @@ def test_deploy_guards_stateful_container_identity() -> None:
 
     assert "stateful-containers.before.env" in script
     assert "stateful/external service was replaced" in script
-    assert (
-        "UNCHANGED_SERVICES=(edge mobile-publisher postgres-geo redis mqtt mediamtx turn-primary turn-secondary)"
-        in script
-    )
+    assert "UNCHANGED_SERVICES=(edge mobile-publisher postgres-geo redis mqtt mediamtx turn-primary)" in script
 
 
 def test_deploy_keeps_public_edge_available_during_application_rollout() -> None:
@@ -118,6 +115,44 @@ def test_deploy_keeps_public_edge_available_during_application_rollout() -> None
     assert "127.0.0.1:80" in script
 
 
+def test_single_node_edge_supports_release_independent_runtime_config() -> None:
+    compose = (REPO_ROOT / "deploy/compose/compose.single-node.poc.yml").read_text(encoding="utf-8")
+    stage_script = (REPO_ROOT / "scripts/ops/stage_edge_runtime_config.sh").read_text(encoding="utf-8")
+
+    assert "${EDGE_NGINX_CONFIG_FILE:-../nginx/single-node.poc.conf}" in compose
+    assert "TARGET_CONFIG must be outside source and release checkouts" in stage_script
+    assert 'install -m 600 "${SOURCE_CONFIG}"' in stage_script
+    assert 'setfacl -m u:101:r "${staged}"' in stage_script
+    assert 'mv -f "${staged}" "${TARGET_CONFIG}"' in stage_script
+
+
+def test_deploy_routes_to_healthy_green_before_replacing_official_services() -> None:
+    script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+
+    green_start = script.index("start_green_containers\n")
+    green_switch = script.index('reload_edge_config "${green_edge_config}"', green_start)
+    official_replace = script.index(
+        '"${compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"',
+        green_switch,
+    )
+    official_wait = script.index("wait_official_services", official_replace)
+    canonical_switch = script.index(
+        'reload_edge_config "${canonical_edge_config}"',
+        official_wait,
+    )
+    green_cleanup = script.index("remove_green_containers", canonical_switch)
+
+    assert green_start < green_switch < official_replace
+    assert official_replace < official_wait < canonical_switch < green_cleanup
+    assert "assert_availability_probe" in script
+    assert "edge_config_source=" in script
+    assert 'cp "${config}" "${edge_config_source}"' in script
+    assert "cmp -s" in script
+    assert "curl -ksS --resolve" in script
+    assert "wait_edge_workers_drained" in script
+    assert "official auth-policy did not become ready" in script
+
+
 def test_deploy_updates_active_release_pointer_only_after_verification() -> None:
     script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
 
@@ -125,7 +160,7 @@ def test_deploy_updates_active_release_pointer_only_after_verification() -> None
     assert pointer_update in script
     assert script.index("stateful/external service was replaced") < script.index(pointer_update)
     assert script.rindex('check_public_tls.sh" "${PUBLIC_TLS_HOST}"') < script.index(pointer_update)
-    assert script.index(pointer_update) < script.rindex("trap - ERR")
+    assert script.index(pointer_update) < script.rindex("trap - EXIT")
 
 
 def test_mqtt_password_preparer_grants_only_runtime_read_acl() -> None:

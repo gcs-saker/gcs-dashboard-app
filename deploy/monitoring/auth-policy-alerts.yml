@@ -1,0 +1,23 @@
+groups:
+  - name: gcs-saker-auth-policy-memory
+    rules:
+      - alert: AuthPolicyHeapPressure
+        expr: sum(jvm_memory_used_bytes{application="gcs-saker-auth-policy",area="heap"}) / sum(jvm_memory_max_bytes{application="gcs-saker-auth-policy",area="heap"}) > 0.85
+        for: 5m
+        labels: { severity: critical }
+        annotations: { summary: "Auth-policy heap usage exceeded 85%" }
+      - alert: AuthPolicyOldGenerationPressure
+        expr: sum(jvm_memory_used_bytes{application="gcs-saker-auth-policy",id=~"G1 Old Gen|Tenured Gen"}) / sum(jvm_memory_max_bytes{application="gcs-saker-auth-policy",id=~"G1 Old Gen|Tenured Gen"}) > 0.80
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Auth-policy old generation remained above 80%" }
+      - alert: AuthPolicySseConnectionPressure
+        expr: gcs_auth_policy_operational_events_sse_active > 16
+        for: 2m
+        labels: { severity: warning }
+        annotations: { summary: "Operational event SSE connections exceeded the owned pool budget" }
+      - alert: AuthPolicyOperationalEventBatchSaturation
+        expr: increase(gcs_auth_policy_operational_events_batch_saturated_total[5m]) > 5
+        for: 1m
+        labels: { severity: warning }
+        annotations: { summary: "Operational event tail repeatedly reached its bounded row limit" }

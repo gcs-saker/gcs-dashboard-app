@@ -155,6 +155,38 @@ class RequestSecurityFiltersTest {
         assertEquals(204, sink.records.single().status)
         assertEquals("corr-002", sink.records.single().correlationId)
         assertEquals("203.0.113.20", sink.records.single().remoteAddress)
+        assertEquals(ClientIpResolver.TRUST_SOURCE_DIRECT, sink.records.single().clientIpTrustSource)
+    }
+
+    @Test
+    fun `client ip resolver accepts forwarded address only from configured edge cidr`() {
+        val resolver = ClientIpResolver(trustedProxyCidrs = listOf(IpCidr.parse("10.20.0.0/24")))
+        val trustedRequest = MockHttpServletRequest().apply {
+            remoteAddr = "10.20.0.10"
+            addHeader("X-Real-IP", "203.0.113.25")
+        }
+        val untrustedRequest = MockHttpServletRequest().apply {
+            remoteAddr = "10.21.0.10"
+            addHeader("X-Real-IP", "203.0.113.26")
+        }
+
+        assertEquals("203.0.113.25", resolver.resolve(trustedRequest))
+        assertEquals(ClientIpResolver.TRUST_SOURCE_CONFIGURED_EDGE, resolver.resolveWithTrust(trustedRequest).trustSource)
+        assertEquals("10.21.0.10", resolver.resolve(untrustedRequest))
+        assertEquals(ClientIpResolver.TRUST_SOURCE_DIRECT, resolver.resolveWithTrust(untrustedRequest).trustSource)
+    }
+
+    @Test
+    fun `api access log redacts device and member identifiers while retaining route shape`() {
+        val sink = RecordingApiAccessLogSink()
+        val request = MockHttpServletRequest("PATCH", "/auth-policy/admin/groups/co-a/members/operator01").apply {
+            remoteAddr = "203.0.113.20"
+        }
+
+        ApiAccessLogFilter(sink).doFilter(request, MockHttpServletResponse(), MockFilterChain())
+
+        assertEquals("/auth-policy/admin/groups/:id/members/:id", sink.records.single().path)
+        assertTrue("operator01" !in sink.records.single().path)
     }
 
     private fun authRequest(): MockHttpServletRequest =

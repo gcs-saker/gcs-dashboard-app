@@ -54,6 +54,7 @@ class SecurityAuditEventFactory(
         allowed: Boolean,
         reason: String,
         occurredAt: Instant,
+        action: String = "view_stream",
     ): OperationalEventReadModel =
         event(
             principal = principal,
@@ -63,7 +64,8 @@ class SecurityAuditEventFactory(
             } else {
                 SecurityAuditEventContract.EVENT_TYPE_STREAM_ACCESS_DENIED
             },
-            message = SecurityAuditEventContract.streamAccessMessage(
+            message = "[action=${SecurityAuditEventContract.safeReason(action)}] " +
+                SecurityAuditEventContract.streamAccessMessage(
                 allowed = allowed,
                 streamId = streamId,
                 viewerGroupId = principal.groupId,
@@ -71,8 +73,25 @@ class SecurityAuditEventFactory(
                 reason = reason,
             ),
             severity = if (allowed) SecurityAuditEventContract.SEVERITY_INFO else SecurityAuditEventContract.SEVERITY_WARN,
-            streamId = streamId,
+            streamId = null,
         )
+
+    fun groupManagement(
+        principal: AuthenticatedPrincipal,
+        targetGroupId: GroupId,
+        action: String,
+        target: String,
+        clientIp: String,
+        occurredAt: Instant,
+    ): OperationalEventReadModel = event(
+        principal = principal,
+        occurredAt = occurredAt,
+        eventType = SecurityAuditEventContract.EVENT_TYPE_GROUP_MANAGEMENT,
+        message = "group management: ${SecurityAuditEventContract.safeReason(action)} " +
+            "[target=${SecurityAuditEventContract.maskUsername(target)}, ip=${SecurityAuditEventContract.safeClientIp(clientIp)}]",
+        severity = SecurityAuditEventContract.SEVERITY_INFO,
+        groupId = targetGroupId,
+    )
 
     private fun event(
         principal: AuthenticatedPrincipal,
@@ -81,6 +100,7 @@ class SecurityAuditEventFactory(
         message: String,
         severity: String,
         streamId: String? = null,
+        groupId: GroupId = principal.groupId,
     ): OperationalEventReadModel =
         OperationalEventReadModel(
             id = "${SecurityAuditEventContract.ID_PREFIX}${occurredAt.toEpochMilli()}-${nextSequence()}",
@@ -94,7 +114,7 @@ class SecurityAuditEventFactory(
             connections = SecurityAuditEventContract.NO_CONNECTIONS,
             latencyMs = SecurityAuditEventContract.NO_LATENCY_MS,
             throughputMbps = SecurityAuditEventContract.NO_THROUGHPUT_MBPS,
-            groupId = principal.groupId,
+            groupId = groupId,
             streamId = streamId,
         )
 }

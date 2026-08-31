@@ -1,31 +1,12 @@
-import { useEffect, useState } from "react";
-
-import { useWhepPlayback } from "@streaming/hooks/useWhepPlayback";
-import { fetchAuthorizedTalkbackPlayback } from "@streaming/publisher/publisherApi";
+import { useTalkbackAudioReceiver } from "@streaming/hooks/audio/useTalkbackAudioReceiver";
 
 interface TalkbackAudioReceiverProps {
+  autoStart?: boolean;
   streamId: string;
 }
 
-export function TalkbackAudioReceiver({ streamId }: TalkbackAudioReceiverProps) {
-  const [enabled, setEnabled] = useState(false);
-  const [whepUrl, setWhepUrl] = useState<string | null>(null);
-  const [sessionError, setSessionError] = useState<string | null>(null);
-  useEffect(() => {
-    if (!enabled) {
-      setWhepUrl(null);
-      setSessionError(null);
-      return;
-    }
-    let isCurrent = true;
-    void fetchAuthorizedTalkbackPlayback(streamId, fetch)
-      .then((url) => { if (isCurrent) setWhepUrl(url); })
-      .catch((error: unknown) => {
-        if (isCurrent) setSessionError(error instanceof Error ? error.message : "관제 음성 수신 인증 실패");
-      });
-    return () => { isCurrent = false; };
-  }, [enabled, streamId]);
-  const playback = useWhepPlayback({ whepUrl, isOnline: enabled });
+export function TalkbackAudioReceiver({ autoStart = false, streamId }: TalkbackAudioReceiverProps) {
+  const { enabled, playback, sessionError, setEnabled } = useTalkbackAudioReceiver(autoStart, streamId);
   const errorMessage = sessionError ?? talkbackErrorMessage(playback.errorMessage);
 
   return (

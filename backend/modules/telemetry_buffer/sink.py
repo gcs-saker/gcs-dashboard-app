@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from prometheus_client import Gauge
 from pydantic import Field, ValidationError
 
 from api.telemetry import upsert_telemetry
@@ -25,10 +26,12 @@ from modules.telemetry_buffer.bulk_sql import (
 
 class TelemetryBufferEnv:
     AUTO_FLUSH_MAX_ITEMS = "TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS"
+    MAX_PENDING_HISTORY = "TELEMETRY_BUFFER_MAX_PENDING_HISTORY"
 
 
 class TelemetryBufferSettings(BackendBaseSettings):
     auto_flush_max_items: int = Field(1000, validation_alias=TelemetryBufferEnv.AUTO_FLUSH_MAX_ITEMS, gt=0)
+    max_pending_history: int = Field(10_000, validation_alias=TelemetryBufferEnv.MAX_PENDING_HISTORY, gt=0)
 
     @classmethod
     def from_env(cls) -> "TelemetryBufferSettings":
@@ -85,8 +88,9 @@ class BufferedTelemetrySink:
 
     def upsert(self, telemetry: TelemetryCreate) -> TelemetryCreate:
         record = TelemetryBufferRecord.create(telemetry)
-        self._buffer.put_latest(record)
         self._buffer.append_history(record)
+        self._buffer.put_latest(record)
+        self._record_queue_depth()
         if self._bulk_sink is not None and self._auto_flush_max_items > 0:
             pending = self._buffer.stats().pending_history_count
             if pending >= self._auto_flush_max_items:
@@ -97,22 +101,34 @@ class BufferedTelemetrySink:
         if self._bulk_sink is None:
             return TelemetryFlushResult(flushed_count=0)
         records = self._buffer.drain_history(max_items)
+        self._record_queue_depth()
         if not records:
             return TelemetryFlushResult(flushed_count=0)
         try:
             flushed_count = self._bulk_sink.flush(records)
         except Exception:
             self._buffer.restore_history_front(records)
+            self._record_queue_depth()
             raise
         if flushed_count != len(records):
             self._buffer.restore_history_front(records[flushed_count:])
+        self._record_queue_depth()
         return TelemetryFlushResult(flushed_count=flushed_count)
+
+    def _record_queue_depth(self) -> None:
+        TELEMETRY_QUEUE_DEPTH.set(self._buffer.stats().pending_history_count)
 
 
 def build_buffered_telemetry_sink() -> BufferedTelemetrySink:
     settings = TelemetryBufferSettings.from_env()
     return BufferedTelemetrySink(
-        buffer=InMemoryTelemetryWriteBuffer(),
+        buffer=InMemoryTelemetryWriteBuffer(max_pending_history=settings.max_pending_history),
         bulk_sink=LegacyDbTelemetryBulkSink(),
         auto_flush_max_items=settings.auto_flush_max_items,
     )
+
+
+TELEMETRY_QUEUE_DEPTH = Gauge(
+    "gcs_saker_backend_telemetry_queue_depth",
+    "Pending telemetry records waiting for durable storage.",
+)

@@ -1,12 +1,15 @@
 package kr.co.a4ai.gcssaker.authpolicy
 
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuthUserRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.AuthPolicyDatabaseInitializer
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.AuthUserSeeder
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.CachedAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.h2.jdbcx.JdbcDataSource
+import org.springframework.dao.DataAccessException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -14,10 +17,20 @@ import kotlin.test.assertNotNull
 
 class JdbcAuthUserRepositoryTest {
     @Test
+    fun `jdbc repository construction does not mutate database schema`() {
+        val dataSource = h2DataSource()
+        val repository = JdbcAuthUserRepository(dataSource)
+
+        assertFailsWith<DataAccessException> { repository.list() }
+
+        AuthPolicyDatabaseInitializer(dataSource).initializeSchema()
+        assertEquals(emptyList(), repository.list())
+    }
+
+    @Test
     fun `jdbc repository persists seeded and signed up users`() {
-        val repository = JdbcAuthUserRepository(
-            h2DataSource(),
-            listOf(seedUser(1, "operator01", "operator@example.test")),
+        val repository = initializedRepository(
+            h2DataSource(), listOf(seedUser(1, "operator01", "operator@example.test")),
         )
 
         assertNotNull(repository.findByUsername("operator01"))
@@ -30,9 +43,8 @@ class JdbcAuthUserRepositoryTest {
 
     @Test
     fun `jdbc repository enforces unique username and email`() {
-        val repository = JdbcAuthUserRepository(
-            h2DataSource(),
-            listOf(seedUser(1, "operator01", "operator@example.test")),
+        val repository = initializedRepository(
+            h2DataSource(), listOf(seedUser(1, "operator01", "operator@example.test")),
         )
 
         assertFailsWith<IllegalArgumentException> {
@@ -46,12 +58,12 @@ class JdbcAuthUserRepositoryTest {
     @Test
     fun `jdbc repository synchronizes configured seed credentials on restart`() {
         val dataSource = h2DataSource()
-        JdbcAuthUserRepository(
+        initializedRepository(
             dataSource,
             listOf(seedUser(1, "operator01", "operator@example.test").copy(passwordHash = "old-hash")),
         )
 
-        val restarted = JdbcAuthUserRepository(
+        val restarted = initializedRepository(
             dataSource,
             listOf(seedUser(1, "operator01", "operator@example.test").copy(passwordHash = "rotated-hash")),
         )
@@ -79,6 +91,18 @@ class JdbcAuthUserRepositoryTest {
             user = "sa"
             password = ""
         }
+
+    private fun initializedRepository(
+        dataSource: JdbcDataSource,
+        users: Collection<AuthUser>,
+    ): JdbcAuthUserRepository {
+        val initializer = AuthPolicyDatabaseInitializer(dataSource)
+        initializer.initializeSchema()
+        return JdbcAuthUserRepository(dataSource).also { repository ->
+            AuthUserSeeder().synchronize(repository, users)
+            initializer.alignGeneratedIdentity()
+        }
+    }
 
     private fun seedUser(id: Int, username: String, email: String): AuthUser =
         AuthUser(
@@ -108,5 +132,13 @@ class JdbcAuthUserRepositoryTest {
         }
 
         override fun save(user: AuthUser): AuthUser = user
+
+        override fun list(): List<AuthUser> = listOf(user)
+        override fun listByGroup(groupId: GroupId, limit: Int, offset: Int): List<AuthUser> =
+            listOf(user).filter { it.groupId == groupId }.drop(offset).take(limit)
+
+        override fun update(user: AuthUser): AuthUser = user
+
+        override fun replaceGroupAdmin(groupId: GroupId, username: String): AuthUser = user
     }
 }

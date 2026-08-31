@@ -13,6 +13,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
 
 class AuthSessionServiceTest {
     private val passwordHasher = PasswordHasher()
@@ -90,6 +91,42 @@ class AuthSessionServiceTest {
 
         assertEquals(tokens.principal, principal)
         assertEquals(1, principalCache.reads)
+    }
+
+    @Test
+    fun `role mutation invalidates existing access and refresh tokens immediately`() {
+        val tokens = requireNotNull(service.login("operator01", "correct-password"))
+        val current = requireNotNull(users.findByUsername("operator01"))
+        users.update(current.copy(role = UserRole.VIEWER, securityVersion = current.securityVersion + 1))
+
+        assertFailsWith<IllegalArgumentException> { service.verifyAccessToken(tokens.accessToken) }
+        assertNull(service.refresh(tokens.refreshToken))
+    }
+
+    @Test
+    fun `disabled user cannot login or continue an existing session`() {
+        val tokens = requireNotNull(service.login("operator01", "correct-password"))
+        val current = requireNotNull(users.findByUsername("operator01"))
+        users.update(current.copy(active = false, securityVersion = current.securityVersion + 1))
+
+        assertNull(service.login("operator01", "correct-password"))
+        assertFailsWith<IllegalArgumentException> { service.verifyAccessToken(tokens.accessToken) }
+        assertNull(service.refresh(tokens.refreshToken))
+    }
+
+    @Test
+    fun `inactive group prevents login and existing token use`() {
+        val activeGroup = OrganizationUnit(GroupId("co-a"), "A", GroupType.COMPANY)
+        val hierarchy = InMemoryOrganizationHierarchyRepository(listOf(activeGroup))
+        val scopedService = AuthSessionService(
+            users, passwordHasher, tokenService, principalCache, refreshSessions, hierarchy,
+        )
+        val tokens = requireNotNull(scopedService.login("operator01", "correct-password"))
+        hierarchy.update(activeGroup.copy(status = GroupStatus.INACTIVE))
+
+        assertNull(scopedService.login("operator01", "correct-password"))
+        assertFailsWith<IllegalArgumentException> { scopedService.verifyAccessToken(tokens.accessToken) }
+        assertNull(scopedService.refresh(tokens.refreshToken))
     }
 
     @Test

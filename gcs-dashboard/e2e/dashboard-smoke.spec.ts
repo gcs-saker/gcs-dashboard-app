@@ -6,13 +6,43 @@ const PREVIEW_LOGIN_RESPONSE = Object.freeze({
   role: "operator",
   token_type: "bearer",
   username: "operator01",
+  group_id: "co-a",
+  securityVersion: 1,
+  capabilities: {
+    canView: true,
+    canControl: true,
+    canManage: false,
+    canSendTalkback: true,
+    canPublish: true,
+    canManageMembers: false,
+    canManageDevices: false,
+  },
 });
+
+const PREVIEW_STREAMS = [
+  { streamId: "raw.preview.front", assetId: "preview", sensorId: "front", status: "offline", displayName: "전방 EO" },
+  { streamId: "raw.preview.thermal", assetId: "preview", sensorId: "thermal", status: "offline", displayName: "열화상 fallback" },
+  { streamId: "raw.preview.rear", assetId: "preview", sensorId: "rear", status: "offline", displayName: "AI 감지 overlay" },
+] as const;
+
+const PREVIEW_TELEMETRY = [{
+  uuid: "raw.preview.rear",
+  latitude: 35.8669,
+  longitude: 128.5931,
+  altitude: 18,
+  velocity: 0,
+  epochTime: "00:00:01",
+}] as const;
 
 declare global {
   interface Window {
     __GCS_SAKER_RENDER_DIAGNOSTICS__?: Record<string, { renderCount: number }>;
   }
 }
+
+test.beforeEach(async ({ page }) => {
+  await mockOperationalPolling(page);
+});
 
 test("login mock flow reaches dashboard without real credentials", async ({ page }, testInfo) => {
   await mockLoginFlow(page);
@@ -28,6 +58,19 @@ test("login mock flow reaches dashboard without real credentials", async ({ page
   await attachScreenshot(page, testInfo, "login-dashboard");
 });
 
+test("dashboard application does not emit string-evaluation CSP violations", async ({ page }) => {
+  const cspErrors: string[] = [];
+  page.on("console", (message) => {
+    if (/unsafe-eval|refused to evaluate|evaluat(?:e|ing).+string/i.test(message.text())) {
+      cspErrors.push(message.text());
+    }
+  });
+
+  await page.goto("/login?redirect=%2F");
+  await page.waitForTimeout(500);
+  expect(cspErrors).toEqual([]);
+});
+
 test("dashboard preview supports stream, map, and operations navigation", async ({ page }, testInfo) => {
   await page.goto("/?uiPreview=1");
 
@@ -38,17 +81,12 @@ test("dashboard preview supports stream, map, and operations navigation", async 
   await attachScreenshot(page, testInfo, "dashboard-preview");
 
   await page.getByRole("button", { name: "스트리밍 3 선택" }).click();
-  await expect(page.getByRole("dialog", { name: "스트리밍 3 스트림 연결" })).toBeVisible();
-  await page.getByRole("button", { name: "취소" }).click();
-  await page.getByRole("button", { name: "스트리밍 3 위치 35.866900, 128.593100" }).click();
-  await expect(page.getByText("지도 핀 스트림 선택됨")).toBeVisible();
-  await expect(page.getByText("스트리밍 3 / AI 감지 overlay")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "스트리밍 3 스트림 연결" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "스트리밍 3 선택" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("스트리밍 3 focus 대기")).toBeVisible();
+  await expect(page.getByRole("region", { name: "선택 스트림" })).toContainText("스트리밍 3");
 
-  await page.getByRole("button", { name: "이벤트로그" }).click();
-  await expect(page.getByRole("heading", { name: "이벤트 로그" })).toBeVisible();
-  await expect(page.getByRole("option", { name: /Mock ICE relay fallback 감지/ })).toBeVisible();
-  await expectRenderDiagnostics(page, ["EventLogView"]);
-  await attachScreenshot(page, testInfo, "event-log-preview");
+  await expect(page.getByRole("button", { name: "이벤트로그" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "CCTV" }).click();
   await expect(page.getByRole("heading", { name: "통합 CCTV 월" })).toBeVisible();
@@ -61,12 +99,6 @@ test("dashboard preview supports stream, map, and operations navigation", async 
 });
 
 async function mockLoginFlow(page: Page): Promise<void> {
-  await page.route("**/media-control/api/v1/streams", (route) =>
-    route.fulfill({ json: [], status: 200 }),
-  );
-  await page.route("**/api/telemetry/all", (route) =>
-    route.fulfill({ json: [], status: 200 }),
-  );
   await page.route("**/auth-policy/auth/refresh", (route) =>
     route.fulfill({ json: { detail: "preview refresh disabled" }, status: 401 }),
   );
@@ -75,6 +107,18 @@ async function mockLoginFlow(page: Page): Promise<void> {
   );
   await page.route("**/auth-policy/auth/logout", (route) =>
     route.fulfill({ body: "", status: 204 }),
+  );
+}
+
+async function mockOperationalPolling(page: Page): Promise<void> {
+  await page.route("**/media-control/api/v1/streams**", (route) =>
+    route.fulfill({ json: PREVIEW_STREAMS, status: 200 }),
+  );
+  await page.route("**/api/telemetry/all**", (route) =>
+    route.fulfill({ json: PREVIEW_TELEMETRY, status: 200 }),
+  );
+  await page.route("**/api/v1/groups**", (route) =>
+    route.fulfill({ json: [], status: 200 }),
   );
 }
 

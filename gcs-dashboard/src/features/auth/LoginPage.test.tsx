@@ -6,6 +6,7 @@ import { AUTH_JSON_HEADERS } from "./authApi";
 import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
 
 vi.mock("../streaming/components/StreamingSmokeDashboard", () => ({
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- Vitest requires this component inside its hoisted mock factory.
   StreamingSmokeDashboard: function MockStreamingSmokeDashboard() {
     return <div data-testid="streaming-smoke-dashboard">Streaming smoke</div>;
   },
@@ -20,6 +21,12 @@ describe("LoginPage auth flow", () => {
     expires_in_minutes: 30,
     username: "operator01",
     role: "operator",
+    group_id: "co-a",
+    securityVersion: 1,
+    capabilities: {
+      canView: true, canControl: true, canManage: false, canSendTalkback: true,
+      canPublish: true, canManageMembers: false, canManageDevices: false,
+    },
   } as const;
 
   function mockRefreshMissingThenLogin(loginResponse: Response): void {
@@ -47,7 +54,7 @@ describe("LoginPage auth flow", () => {
 
     render(<App />);
 
-    await userEvent.type(await screen.findByLabelText("아이디"), "operator01");
+    await userEvent.type(await screen.findByLabelText("아이디", {}, { timeout: 10_000 }), "operator01");
     await userEvent.type(screen.getByLabelText("비밀번호"), "correct-password");
     await userEvent.click(screen.getByRole("button", { name: "접속" }));
 
@@ -64,6 +71,17 @@ describe("LoginPage auth flow", () => {
     );
   });
 
+  test("submits login when Enter is pressed in the password field", async () => {
+    mockRefreshMissingThenLogin(Response.json(ISSUED_TOKEN_RESPONSE));
+    render(<App />);
+
+    await userEvent.type(await screen.findByLabelText("아이디"), "operator01");
+    await userEvent.type(screen.getByLabelText("비밀번호"), "correct-password{Enter}");
+
+    await waitFor(() => expect(getStoredAccessToken()).toBe("issued-access-token"));
+    expect(window.location.pathname).toBe("/ops");
+  });
+
   test("keeps the user on login when credentials are rejected", async () => {
     mockRefreshMissingThenLogin(Response.json({ detail: "Invalid credentials" }, { status: 401 }));
 
@@ -75,6 +93,7 @@ describe("LoginPage auth flow", () => {
 
     expect(await screen.findByText("아이디 또는 비밀번호가 올바르지 않습니다.")).toBeInTheDocument();
     expect(getStoredAccessToken()).toBeNull();
+    expect(screen.getByLabelText("비밀번호")).toHaveValue("");
     expect(window.location.pathname).toBe("/login");
   });
 
@@ -93,6 +112,23 @@ describe("LoginPage auth flow", () => {
     );
   });
 
+  test("does not issue authentication requests while credentials are typed", async () => {
+    mockRefreshMissingThenLogin(Response.json(ISSUED_TOKEN_RESPONSE));
+
+    render(<App />);
+
+    const usernameInput = await screen.findByLabelText("아이디");
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
+    await userEvent.type(usernameInput, "operator01");
+    await userEvent.type(screen.getByLabelText("비밀번호"), "correct-password");
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      AUTH_REFRESH_URL,
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
   test("links unauthenticated users to signup", async () => {
     globalThis.fetch = vi.fn(async () => Response.json({ detail: "refresh token required" }, { status: 401 }));
 
@@ -108,7 +144,10 @@ describe("LoginPage auth flow", () => {
     storeAuthSession({
       accessToken: "active-token",
       expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
-      user: { username: "operator01", role: "operator" },
+      user: {
+        username: "operator01", role: "operator", groupId: "co-a", securityVersion: 1,
+        capabilities: ISSUED_TOKEN_RESPONSE.capabilities,
+      },
     });
     window.history.pushState({}, "", "/login");
 

@@ -16,6 +16,7 @@ import org.h2.jdbcx.JdbcDataSource
 import org.springframework.jdbc.core.JdbcTemplate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 
 class JdbcRegisteredDeviceRepositoryTest {
     @Test
@@ -122,6 +123,33 @@ class JdbcRegisteredDeviceRepositoryTest {
         assertEquals(listOf(DeviceRepositoryFixtures.DEVICE_UUID_A, DeviceRepositoryFixtures.DEVICE_UUID_B), devices.map { it.deviceUuid })
         assertEquals(DeviceRepositoryFixtures.CREDENTIAL_HASH, devices.first().credentialHash)
         assertEquals(DeviceRepositoryFixtures.SENSOR_ID, devices.first().sensors.values.single().sensorId)
+    }
+
+    @Test
+    fun `metadata write failure rolls back the device row update`() {
+        val dataSource = h2DataSource()
+        JdbcOrganizationHierarchyRepository(
+            dataSource, listOf(OrganizationUnit(GroupId("co-a"), "A Company", GroupType.COMPANY)),
+        )
+        val repository = JdbcRegisteredDeviceRepository(dataSource)
+        val original = DeviceRepositoryFixtures.device(DeviceRepositoryFixtures.DEVICE_UUID)
+        repository.save(original)
+        JdbcTemplate(dataSource).execute(
+            "ALTER TABLE registered_device_streams ADD CONSTRAINT reject_blocked_stream CHECK (stream_path <> 'blocked')",
+        )
+
+        assertFails {
+            repository.save(
+                original.copy(
+                    displayName = "Must Roll Back",
+                    streamPaths = RegisteredDeviceStreams(listOf(RegisteredDeviceStream("blocked"))),
+                ),
+            )
+        }
+
+        val stored = repository.findByDeviceUuid(DeviceRepositoryFixtures.DEVICE_UUID)
+        assertEquals(original.displayName, stored?.displayName)
+        assertEquals(DeviceRepositoryFixtures.STREAM_PATH, stored?.streamPaths?.values?.single()?.streamPath)
     }
 
     private fun h2DataSource(): JdbcDataSource =

@@ -1,4 +1,4 @@
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 
 interface ProjectedStream {
   stream: DashboardStreamSlot;

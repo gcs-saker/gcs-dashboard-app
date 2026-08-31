@@ -5,7 +5,7 @@ requires-python = ">=3.12,<3.13"
 
 [tool.mypy]
 python_version = "3.12"
-ignore_missing_imports = true
+ignore_missing_imports = false
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
@@ -22,10 +22,14 @@ extend-exclude = [
   ".pytest_cache",
   "__pycache__",
   "venv",
+  "gcs/saker/v1/*_pb2.py",
 ]
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I"]
+select = ["C90", "E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]

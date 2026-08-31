@@ -16,6 +16,7 @@ func TestMetricsEndpointExposesPrometheusText(t *testing.T) {
 	metrics.ObserveStreamCache(metricResultHit)
 	metrics.ObserveIceCache(metricResultMiss)
 	metrics.ObserveError(metricSourceHTTP, "access_denied")
+	metrics.ObserveGateway("GATEWAY_ACK_STATUS_ACCEPTED", "accepted", 3*time.Millisecond)
 	recorder := httptest.NewRecorder()
 
 	metrics.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/metrics", nil))
@@ -25,6 +26,7 @@ func TestMetricsEndpointExposesPrometheusText(t *testing.T) {
 		"gcs_media_control_stream_cache_events_total{result=\"hit\"} 1",
 		"gcs_media_control_ice_cache_events_total{result=\"miss\"} 1",
 		"gcs_media_control_errors_total{reason=\"access_denied\",source=\"http\"} 1",
+		"gcs_media_control_gateway_messages_total{reason=\"accepted\",status=\"GATEWAY_ACK_STATUS_ACCEPTED\"} 1",
 	} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected metric line %q in:\n%s", expected, body)

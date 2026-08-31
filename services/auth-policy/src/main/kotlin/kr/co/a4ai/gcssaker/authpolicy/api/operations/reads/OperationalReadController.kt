@@ -1,0 +1,193 @@
+package kr.co.a4ai.gcssaker.authpolicy.api
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.GeofenceTelemetryEvaluator
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryAlertRuleEngine
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryPublisher
+import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceCredentialAuthenticationService
+import kr.co.a4ai.gcssaker.authpolicy.domain.DevicePublishAuthorizationRejectedException
+import org.springframework.http.CacheControl
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
+import java.time.Clock
+import java.time.Instant
+import java.util.concurrent.TimeUnit
+
+@RestController
+class OperationalReadController(
+    private val repository: OperationalReadRepository,
+    private val principalResolver: BearerPrincipalResolver,
+    private val objectMapper: ObjectMapper = ObjectMapper(),
+    private val streamPolicy: OperationalReadStreamPolicy = OperationalReadStreamPolicy(),
+    private val clock: Clock = Clock.systemUTC(),
+    private val geofenceEvaluator: GeofenceTelemetryEvaluator = GeofenceTelemetryEvaluator.NOOP,
+    private val alertRuleEngine: TelemetryAlertRuleEngine = TelemetryAlertRuleEngine.NOOP,
+    private val telemetryPublisher: TelemetryPublisher = TelemetryPublisher.NOOP,
+    private val deviceCredentials: DeviceCredentialAuthenticationService? = null,
+) {
+    private val requestReader = OperationalReadRequestReader(principalResolver)
+
+    @GetMapping(OperationalReadApiRoutes.TELEMETRY_ALL)
+    @RequiresBearerAuth
+    fun telemetryAll(
+        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestParam(required = false) limit: Int? = null,
+        @RequestParam(required = false) offset: Int? = null,
+    ): List<TelemetryReadResponse> {
+        val principal = requestReader.principal(authorization)
+        return repository.telemetryFor(principal, requestReader.boundedLimit(limit), requestReader.boundedOffset(offset))
+            .map { it.toResponse() }
+    }
+
+    @PostMapping(OperationalReadApiRoutes.TELEMETRY_INGEST)
+    @RequiresBearerAuth
+    fun ingestTelemetry(
+        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestBody request: TelemetryIngestRequest,
+    ): TelemetryReadResponse {
+        val principal = requestReader.principal(authorization)
+        val telemetry = repository.upsertTelemetry(request.toReadModel(principal))
+        geofenceEvaluator.evaluate(telemetry, Instant.now(clock))
+        alertRuleEngine.evaluate(telemetry, Instant.now(clock))
+        telemetryPublisher.publish(telemetry)
+        return telemetry.toResponse()
+    }
+
+    @PostMapping(OperationalReadApiRoutes.DEVICE_TELEMETRY_INGEST)
+    @RequiresBearerAuth
+    fun ingestDeviceTelemetry(
+        @PathVariable deviceId: String,
+        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestBody request: TelemetryIngestRequest,
+        @RequestHeader(DeviceTelemetryAuthHeaders.DEVICE_UUID, required = false) deviceUuid: String? = null,
+        @RequestHeader(DeviceTelemetryAuthHeaders.DEVICE_CREDENTIAL, required = false) deviceCredential: String? = null,
+    ): TelemetryReadResponse {
+        val groupId = if (!deviceUuid.isNullOrBlank() || !deviceCredential.isNullOrBlank()) {
+            if (deviceUuid != deviceId) {
+                throw ForbiddenApiError(OperationalReadApiErrors.DEVICE_ID_MISMATCH)
+            }
+            try {
+                deviceCredentials?.authenticate(deviceUuid, deviceCredential.orEmpty())?.groupId
+                    ?: throw UnauthorizedApiError(AuthApiErrors.AUTHENTICATION_REQUIRED)
+            } catch (error: DevicePublishAuthorizationRejectedException) {
+                throw ForbiddenApiError(error.message ?: "device authentication failed")
+            }
+        } else {
+            requestReader.principal(authorization).groupId
+        }
+        val telemetry = repository.upsertTelemetry(
+            request.toDeviceReadModel(groupId, deviceId, Instant.now(clock)),
+        )
+        geofenceEvaluator.evaluate(telemetry, Instant.now(clock))
+        alertRuleEngine.evaluate(telemetry, Instant.now(clock))
+        telemetryPublisher.publish(telemetry)
+        return telemetry.toResponse()
+    }
+
+    @GetMapping(OperationalReadApiRoutes.TELEMETRY_HISTORY)
+    @RequiresBearerAuth
+    fun telemetryHistory(
+        @PathVariable uuid: String,
+        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestParam(required = false) limit: Int?,
+    ): List<TelemetryHistoryResponse> {
+        val principal = requestReader.principal(authorization)
+        return repository.telemetryHistoryFor(principal, uuid, requestReader.boundedLimit(limit)).map { it.toResponse() }
+    }
+
+    @GetMapping(OperationalReadApiRoutes.ASSET_BY_GATEWAY)
+    @RequiresBearerAuth
+    fun assetsForGateway(
+        @PathVariable gatewayUuid: String,
+        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestParam(required = false) limit: Int? = null,
+        @RequestParam(required = false) offset: Int? = null,
+    ): List<AssetReadResponse> {
+        val principal = requestReader.principal(authorization)
+        return repository.assetsForGateway(
+            principal, gatewayUuid, requestReader.boundedLimit(limit), requestReader.boundedOffset(offset),
+        ).map { it.toResponse() }
+    }
+
+    @PostMapping(OperationalReadApiRoutes.SERVER_HEALTH_SNAPSHOTS)
+    @RequiresBearerAuth
+    fun recordServerHealthSnapshot(
+        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestBody request: ServerHealthSnapshotRequest,
+    ): ServerHealthSnapshotResponse {
+        val principal = requestReader.principal(authorization)
+        return repository.recordServerHealthSnapshot(request.toReadModel(principal)).toResponse()
+    }
+
+    @GetMapping(OperationalReadApiRoutes.SERVER_HEALTH_SNAPSHOTS)
+    @RequiresBearerAuth
+    fun serverHealthSnapshots(
+        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestParam(required = false) limit: Int?,
+    ): List<ServerHealthSnapshotResponse> {
+        val principal = requestReader.principal(authorization)
+        return repository.serverHealthSnapshotsFor(principal, requestReader.boundedLimit(limit)).map { it.toResponse() }
+    }
+
+    @PostMapping(OperationalReadApiRoutes.STREAM_SESSIONS)
+    @RequiresBearerAuth
+    fun recordStreamSession(
+        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestBody request: StreamSessionRequest,
+    ): StreamSessionResponse {
+        val principal = requestReader.principal(authorization)
+        return repository.recordStreamSession(request.toReadModel(principal)).toResponse()
+    }
+
+    @GetMapping(OperationalReadApiRoutes.STREAM_SESSIONS)
+    @RequiresBearerAuth
+    fun streamSessions(
+        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+        @RequestParam(required = false) limit: Int? = null,
+        @RequestParam(required = false) offset: Int? = null,
+    ): List<StreamSessionResponse> {
+        val principal = requestReader.principal(authorization)
+        return repository.streamSessionsFor(principal, requestReader.boundedLimit(limit), requestReader.boundedOffset(offset))
+            .map { it.toResponse() }
+    }
+
+    @GetMapping(OperationalReadApiRoutes.STREAM_SESSIONS_STREAM, produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
+    @RequiresBearerAuth
+    fun streamSessionStream(
+        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
+    ): ResponseEntity<StreamingResponseBody> {
+        val principal = requestReader.principal(authorization)
+        val stream = StreamingResponseBody { output ->
+            repeat(streamPolicy.pollCount) { index ->
+                output.writeOperationalReadSseEvent(
+                    OperationalReadStreamContract.EVENT_STREAM_SESSIONS,
+                    repository.streamSessionsFor(principal, limit = 200).map { it.toResponse() },
+                    objectMapper,
+                )
+                output.writeOperationalReadSseEvent(
+                    OperationalReadStreamContract.EVENT_HEARTBEAT,
+                    StreamSessionHeartbeatResponse(Instant.now()),
+                    objectMapper,
+                )
+                output.flush()
+                if (index < streamPolicy.pollCount - 1 && streamPolicy.pollIntervalMillis > 0) {
+                    TimeUnit.MILLISECONDS.sleep(streamPolicy.pollIntervalMillis)
+                }
+            }
+        }
+        return ResponseEntity.ok()
+            .contentType(MediaType.TEXT_EVENT_STREAM)
+            .cacheControl(CacheControl.noStore())
+            .header(OperationalReadStreamContract.HEADER_ACCEL_BUFFERING, OperationalReadStreamContract.HEADER_VALUE_NO)
+            .body(stream)
+    }
+}

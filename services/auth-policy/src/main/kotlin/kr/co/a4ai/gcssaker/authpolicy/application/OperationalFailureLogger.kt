@@ -23,12 +23,12 @@ class OperationalFailureLogger(
         groupId: GroupId,
     ) {
         logger.warn(
-            "{} component={} operation={} message={}",
+            "{} component={} operation={} message={} errorType={}",
             OperationalFailureLogContract.LOG_MARKER,
             component,
             operation,
             message,
-            error,
+            error?.javaClass?.simpleName ?: "none",
         )
         val occurredAt = now()
         repository.append(

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessiontoken"
 )
 
 func (s Server) mediaMTXAuth(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +47,7 @@ func (s Server) authorizeMediaMTXPublish(w http.ResponseWriter, payload mediaMTX
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
 		return
 	}
-	tokenPayload, err := validateMediaTokenForRoute(
+	tokenPayload, err := sessiontoken.ValidateForRoute(
 		s.publishToken,
 		values.Get(publisherTokenQueryKey),
 		mediaMTXActionPublish,
@@ -79,7 +80,7 @@ func (s Server) authorizeMediaMTXPlayback(w http.ResponseWriter, payload mediaMT
 		return
 	}
 	if parsed.Prefix == "talkback" {
-		if _, err := validateMediaTokenForRoute(
+		if _, err := sessiontoken.ValidateForRoute(
 			s.publishToken,
 			values.Get(playbackTokenQueryKey),
 			mediaMTXActionPlayback,
@@ -93,7 +94,7 @@ func (s Server) authorizeMediaMTXPlayback(w http.ResponseWriter, payload mediaMT
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	if validateMediaToken(
+	if sessiontoken.Validate(
 		s.publishToken,
 		values.Get(playbackTokenQueryKey),
 		mediaMTXActionPlayback,

@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { HLSFallbackPlayerProps, WebRTCPlayerProps } from "@streaming/types";
-import { normalizeBrowserMediaUrl } from "@streaming/hooks/realtimePlaybackUrls";
+import { normalizeBrowserMediaUrl } from "@streaming/hooks/playback/realtimePlaybackUrls";
 import { RealtimePlayer } from "./RealtimePlayer";
 
 const emptyAudioStats = {
@@ -20,9 +20,9 @@ const emptyAudioStats = {
 };
 
 vi.mock("./WebRTCPlayer", () => ({
-  WebRTCPlayer: function MockWebRTCPlayer({ whepUrl, streamId, onStatusChange }: WebRTCPlayerProps) {
+  WebRTCPlayer: function MockWebRTCPlayer({ controls, showDiagnostics, whepUrl, streamId, onStatusChange }: WebRTCPlayerProps) {
     return (
-      <div data-testid="webrtc-player">
+      <div data-controls={String(controls)} data-diagnostics={String(showDiagnostics)} data-testid="webrtc-player">
         <span>webrtc:{whepUrl}</span>
         <span>stream:{streamId}</span>
         <button
@@ -138,6 +138,7 @@ vi.mock("./WebRTCPlayer", () => ({
 }));
 
 vi.mock("./HLSFallbackPlayer", () => ({
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- Vitest requires this component inside its hoisted mock factory.
   HLSFallbackPlayer: function MockHLSFallbackPlayer({
     hlsUrl,
     streamId,
@@ -173,7 +174,7 @@ describe("RealtimePlayer", () => {
       }),
     );
 
-    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} />);
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} showDiagnostics />);
 
     expect(screen.getByRole("status")).toHaveTextContent("스트림 신호 확인 중");
     await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
@@ -187,6 +188,22 @@ describe("RealtimePlayer", () => {
     );
     expect(screen.getByText("webrtc:https://media.example.test/raw/sample/front/whep")).toBeInTheDocument();
     expect(screen.getByText("online")).toBeInTheDocument();
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-controls", "true");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-diagnostics", "true");
+  });
+
+  test("keeps browser controls independent from diagnostic overlays", async () => {
+    const fetcher = vi.fn(async () => jsonResponse({
+      streamId: "raw.sample.front",
+      status: "online",
+      playbackUrls: { webrtc: "https://media.example.test/raw/sample/front/whep", hls: null },
+    }));
+
+    render(<RealtimePlayer controls={false} streamId="raw.sample.front" fetcher={fetcher} />);
+
+    await waitFor(() => expect(screen.getByTestId("webrtc-player")).toBeInTheDocument());
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-controls", "false");
+    expect(screen.getByTestId("webrtc-player")).toHaveAttribute("data-diagnostics", "false");
   });
 
   test("forwards ICE route metrics for TURN load diagnostics", async () => {
@@ -392,7 +409,7 @@ describe("RealtimePlayer", () => {
   test("contains malformed playback payloads inside the realtime player", async () => {
     const fetcher = vi.fn(async () => jsonResponse({ access_token: "unexpected-auth-payload" }));
 
-    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} />);
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} showDiagnostics />);
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("수신 경로 오류");
@@ -407,7 +424,7 @@ describe("RealtimePlayer", () => {
       throw new Error("Failed to fetch");
     });
 
-    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} />);
+    render(<RealtimePlayer streamId="raw.sample.front" fetcher={fetcher} showDiagnostics />);
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("수신 경로 오류");

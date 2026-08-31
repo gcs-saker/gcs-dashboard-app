@@ -50,7 +50,7 @@ def test_endpoint_error_writes_json_log_contract() -> None:
         try:
             return await call_next(request)
         except Exception as exc:
-            log_request_failed(logger, request, exc)
+            log_request_failed(logger, request, exc, 12)
             raise
 
     @app.get("/boom")

@@ -13,6 +13,7 @@ interface LeafletTileConfig {
 
 interface UseLeafletTileMapOptions {
   initialCenter: MapFocusGeometry;
+  initialZoom?: number;
   onTileError: () => void;
   onUserInteraction: () => void;
   tileConfig: LeafletTileConfig;
@@ -23,6 +24,7 @@ const USER_INTERACTION_EVENTS = ["dragstart", "zoomstart", "rotatestart", "pitch
 
 export function useLeafletTileMap({
   initialCenter,
+  initialZoom = INITIAL_PUBLIC_MAP_ZOOM,
   onTileError,
   onUserInteraction,
   tileConfig,
@@ -35,32 +37,19 @@ export function useLeafletTileMap({
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    return initializeLeafletMap(container, initialCenterRef.current, initialZoom, tileConfig, onTileError, onUserInteraction, (map) => {
+      mapRef.current = map;
+      setMapInstance(map);
+    });
+  }, [initialZoom, onTileError, onUserInteraction, tileConfig]);
 
-    const center = initialCenterRef.current;
-    const map = L.map(container, {
-      attributionControl: false,
-      zoomControl: false,
-    }).setView([center.lat, center.lng], INITIAL_PUBLIC_MAP_ZOOM, { animate: false });
-    const tileLayer = L.tileLayer(tileConfig.urlTemplate, {
-      attribution: tileConfig.attribution,
-      maxZoom: 19,
-      tileSize: 256,
-    }).addTo(map);
-
-    map.addControl(new L.Control.Attribution({ position: "bottomright", prefix: false }));
-    tileLayer.on("tileerror", onTileError);
-    USER_INTERACTION_EVENTS.forEach((eventName) => map.on(eventName, onUserInteraction));
-    mapRef.current = map;
-    setMapInstance(map);
-
-    return () => {
-      USER_INTERACTION_EVENTS.forEach((eventName) => map.off?.(eventName, onUserInteraction));
-      tileLayer.off("tileerror", onTileError);
-      mapRef.current = null;
-      setMapInstance(null);
-      map.remove();
-    };
-  }, [onTileError, onUserInteraction, tileConfig.attribution, tileConfig.urlTemplate]);
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !mapInstance || typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(() => mapInstance.invalidateSize(false));
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [mapInstance]);
 
   const focus = useCallback((geometry: MapFocusGeometry, isMotionEnabled: boolean): void => {
     mapRef.current?.panTo([geometry.lat, geometry.lng], {
@@ -84,4 +73,30 @@ export function useLeafletTileMap({
     zoomIn,
     zoomOut,
   } as const;
+}
+
+function initializeLeafletMap(
+  container: HTMLDivElement,
+  center: MapFocusGeometry,
+  initialZoom: number,
+  tileConfig: LeafletTileConfig,
+  onTileError: () => void,
+  onUserInteraction: () => void,
+  onReady: (map: L.LeafletMap | null) => void,
+): () => void {
+  const map = L.map(container, { attributionControl: false, zoomControl: false })
+    .setView([center.lat, center.lng], initialZoom, { animate: false });
+  const tileLayer = L.tileLayer(tileConfig.urlTemplate, {
+    attribution: tileConfig.attribution, maxZoom: 19, tileSize: 256,
+  }).addTo(map);
+  map.addControl(new L.Control.Attribution({ position: "bottomright", prefix: false }));
+  tileLayer.on("tileerror", onTileError);
+  USER_INTERACTION_EVENTS.forEach((eventName) => map.on(eventName, onUserInteraction));
+  onReady(map);
+  return () => {
+    USER_INTERACTION_EVENTS.forEach((eventName) => map.off?.(eventName, onUserInteraction));
+    tileLayer.off("tileerror", onTileError);
+    onReady(null);
+    map.remove();
+  };
 }

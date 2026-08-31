@@ -1,11 +1,12 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { TacticalLeafletMap } from "./TacticalLeafletMap";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 
 interface LeafletTestMock {
   instances: Array<{
     emit: (event: string) => void;
+    invalidateSize: ReturnType<typeof vi.fn>;
     latLngToContainerPoint: ReturnType<typeof vi.fn>;
     panTo: ReturnType<typeof vi.fn>;
     setView: ReturnType<typeof vi.fn>;
@@ -109,9 +110,10 @@ describe("TacticalLeafletMap", () => {
 
     expect(onSelectStream).toHaveBeenCalledWith("raw.local.webcam");
     expect(screen.getByLabelText("로컬 웹캠 단말 정보")).toBeInTheDocument();
-    expect(screen.getByText("단말 ID")).toBeInTheDocument();
+    expect(screen.getByText("연결 상태")).toBeInTheDocument();
     expect(screen.getByText("미등록")).toBeInTheDocument();
-    expect(screen.getByText("raw.local.webcam")).toBeInTheDocument();
+    expect(screen.getByText("closed network map test")).toBeInTheDocument();
+    expect(screen.queryByText("raw.local.webcam")).not.toBeInTheDocument();
     expect(screen.getByText("35.871435, 128.601445")).toBeInTheDocument();
     expect(screen.getByText("배터리")).toBeInTheDocument();
     expect(screen.getAllByText("78%").length).toBeGreaterThan(0);
@@ -144,6 +146,28 @@ describe("TacticalLeafletMap", () => {
     expect(leafletMock().instances[0].zoomIn).toHaveBeenCalledTimes(1);
     expect(leafletMock().instances[0].zoomOut).toHaveBeenCalledTimes(1);
     expect(leafletMock().instances[0].panTo).toHaveBeenCalled();
+  });
+
+  test("resizes the public map when its dashboard panel changes size", async () => {
+    let notifyResize: ResizeObserverCallback | undefined;
+    const disconnect = vi.fn();
+    const observe = vi.fn();
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(callback: ResizeObserverCallback) {
+        notifyResize = callback;
+      }
+
+      disconnect = disconnect;
+      observe = observe;
+      unobserve = vi.fn();
+    });
+
+    render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
+
+    await act(async () => Promise.resolve());
+    expect(observe).toHaveBeenCalledWith(expect.objectContaining({ className: "tactical-map__leaflet" }));
+    act(() => notifyResize?.([], {} as ResizeObserver));
+    expect(leafletMock().instances[0].invalidateSize).toHaveBeenCalledWith(false);
   });
 
   test("disables public map pan animation when motion is off", () => {
@@ -212,7 +236,7 @@ describe("TacticalLeafletMap", () => {
     expect(within(popup).getByText("실시간 GPS")).toBeInTheDocument();
   });
 
-  test("applies the style URL returned by the backend map config API", async () => {
+  test("offers satellite and street map layers over the backend public map mode", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({
@@ -231,9 +255,9 @@ describe("TacticalLeafletMap", () => {
 
     await waitFor(() => {
       expect(leafletMock().tileLayer).toHaveBeenLastCalledWith(
-        "https://maps.example.test/style.json",
+        "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         expect.objectContaining({
-          attribution: "Example Maps",
+          attribution: "Esri World Imagery",
           tileSize: 256,
         }),
       );
@@ -244,5 +268,14 @@ describe("TacticalLeafletMap", () => {
         headers: expect.objectContaining({ Accept: "application/json" }),
       }),
     );
+    fireEvent.click(screen.getByRole("button", { name: "평면" }));
+    await waitFor(() => expect(leafletMock().tileLayer).toHaveBeenLastCalledWith(
+      "https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+      expect.objectContaining({ attribution: "Esri World Topographic Map" }),
+    ));
+    await waitFor(() => expect(leafletMock().instances.at(-1)?.setView).toHaveBeenCalledWith(
+      [35.871435, 128.601445], 12, { animate: false },
+    ));
+    fireEvent.click(screen.getByRole("button", { name: "위성" }));
   });
 });

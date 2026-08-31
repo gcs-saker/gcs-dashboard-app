@@ -3,11 +3,11 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MODE="check"
-EDGE_BASE_URL="${EDGE_BASE_URL:-https://a4ai.tplinkdns.com}"
+EDGE_BASE_URL="${EDGE_BASE_URL:-https://a4ai.121-159-26-245.sslip.io}"
 STREAM_PATH="${STREAM_PATH:-raw/nat/soak}"
-STUN_URL="${STUN_URL:-stun:a4ai.tplinkdns.com:3478}"
-TURN_PRIMARY_URL="${TURN_PRIMARY_URL:-turn:a4ai.tplinkdns.com:3478?transport=udp}"
-TURN_SECONDARY_URL="${TURN_SECONDARY_URL:-turn:a4ai.tplinkdns.com:3479?transport=udp}"
+STUN_URL="${STUN_URL:-stun:a4ai.121-159-26-245.sslip.io:3478}"
+TURN_PRIMARY_URL="${TURN_PRIMARY_URL:-turn:a4ai.121-159-26-245.sslip.io:3478?transport=udp}"
+TURN_SECONDARY_URL="${TURN_SECONDARY_URL:-}"
 TURN_USERNAME="${TURN_USERNAME:-${WEBRTC_TURN_USERNAME:-}}"
 TURN_PASSWORD="${TURN_PASSWORD:-${WEBRTC_TURN_PASSWORD:-}}"
 RELAY_ONLY="${RELAY_ONLY:-0}"
@@ -34,11 +34,11 @@ Modes:
   --run    Keep one WHIP publisher open and sample WHEP first-frame stability.
 
 Environment:
-  EDGE_BASE_URL                 Default: https://a4ai.tplinkdns.com
+  EDGE_BASE_URL                 Default: https://a4ai.121-159-26-245.sslip.io
   STREAM_PATH                   Default: raw/nat/soak
-  STUN_URL                      Default: stun:a4ai.tplinkdns.com:3478
-  TURN_PRIMARY_URL              Default: turn:a4ai.tplinkdns.com:3478?transport=udp
-  TURN_SECONDARY_URL            Default: turn:a4ai.tplinkdns.com:3479?transport=udp
+  STUN_URL                      Default: stun:a4ai.121-159-26-245.sslip.io:3478
+  TURN_PRIMARY_URL              Default: turn:a4ai.121-159-26-245.sslip.io:3478?transport=udp
+  TURN_SECONDARY_URL            Optional external failover TURN endpoint
   TURN_USERNAME                 Defaults to WEBRTC_TURN_USERNAME
   TURN_PASSWORD                 Defaults to WEBRTC_TURN_PASSWORD
   RELAY_ONLY                    Default: 0. Set 1 to use TURN primary for media.
@@ -248,7 +248,9 @@ run_live() {
 
     if [[ "$RUN_TURN_ALLOCATIONS" == "1" ]]; then
       run_turn_allocation "sample ${sample} TURN primary" "$TURN_PRIMARY_URL" || true
-      run_turn_allocation "sample ${sample} TURN secondary" "$TURN_SECONDARY_URL" || true
+      if [[ -n "$TURN_SECONDARY_URL" ]]; then
+        run_turn_allocation "sample ${sample} TURN secondary" "$TURN_SECONDARY_URL" || true
+      fi
     fi
 
     if python3 "${REPO_ROOT}/scripts/smoke/webrtc_ice_smoke.py" \

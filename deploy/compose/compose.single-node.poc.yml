@@ -63,7 +63,7 @@ services:
       - --maxmemory
       - ${REDIS_MAXMEMORY:-384mb}
       - --maxmemory-policy
-      - noeviction
+      - ${REDIS_MAXMEMORY_POLICY:-volatile-ttl}
       - --auto-aof-rewrite-percentage
       - "100"
       - --auto-aof-rewrite-min-size
@@ -148,6 +148,7 @@ services:
       MQTT_USERNAME: ${MQTT_USERNAME:?Set MQTT_USERNAME}
       MQTT_PASSWORD: ${MQTT_PASSWORD:?Set MQTT_PASSWORD}
       TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS: ${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}
+      TELEMETRY_BUFFER_MAX_PENDING_HISTORY: ${TELEMETRY_BUFFER_MAX_PENDING_HISTORY:-10000}
       CONTROL_MESSAGE_SENDER: ${CONTROL_MESSAGE_SENDER:-mqtt}
       CONTROL_GRPC_TARGET: ${CONTROL_GRPC_TARGET:-media-control:9090}
       CONTROL_GRPC_AUTH_TOKEN: ${CONTROL_GRPC_AUTH_TOKEN:-${MEDIA_CONTROL_PUBLISH_TOKEN:?Set MEDIA_CONTROL_PUBLISH_TOKEN}}
@@ -190,6 +191,7 @@ services:
         SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
     env_file: *service_env_files
     environment:
+      JAVA_TOOL_OPTIONS: ${AUTH_POLICY_JAVA_TOOL_OPTIONS:--Xms128m -Xmx512m -XX:MaxMetaspaceSize=192m -XX:MaxDirectMemorySize=64m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError}
       AUTH_POLICY_JWT_ISSUER: ${AUTH_JWT_ISSUER:-gcs-saker}
       AUTH_POLICY_JWT_SECRET: ${AUTH_JWT_SECRET:?Set AUTH_JWT_SECRET}
       AUTH_POLICY_ACCESS_TOKEN_EXPIRE_MINUTES: ${AUTH_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
@@ -205,6 +207,7 @@ services:
       AUTH_POLICY_TRACING_SAMPLING_PROBABILITY: ${AUTH_POLICY_TRACING_SAMPLING_PROBABILITY:-0.1}
       AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED: ${AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED:-true}
       AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED: ${AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED:-true}
+      AUTH_POLICY_TRUSTED_PROXY_CIDRS: ${AUTH_POLICY_TRUSTED_PROXY_CIDRS:-127.0.0.0/8}
       SPRING_DATASOURCE_URL: ${AUTH_POLICY_DATASOURCE_URL:-jdbc:postgresql://postgres-geo:5432/${POSTGRES_DB:-gcs_geo}}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-gcs_geo}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
@@ -255,7 +258,7 @@ services:
       MEDIA_CONTROL_AUTHZ_CACHE_TTL_SECONDS: ${MEDIA_CONTROL_AUTHZ_CACHE_TTL_SECONDS:-2}
       MEDIA_CONTROL_STUN_URL: ${MEDIA_CONTROL_STUN_URL:-stun:stun.l.google.com:19302}
       MEDIA_CONTROL_TURN_PRIMARY_URL: ${MEDIA_CONTROL_TURN_PRIMARY_URL:-turn:localhost:3478?transport=udp}
-      MEDIA_CONTROL_TURN_SECONDARY_URL: ${MEDIA_CONTROL_TURN_SECONDARY_URL:-turn:localhost:3479?transport=udp}
+      MEDIA_CONTROL_TURN_SECONDARY_URL: ${MEDIA_CONTROL_TURN_SECONDARY_URL:-}
       MEDIA_CONTROL_TURN_MAX_HEALTHY_SERVERS: ${MEDIA_CONTROL_TURN_MAX_HEALTHY_SERVERS:-1}
       MEDIA_CONTROL_ICE_SERVER_CACHE_TTL_SECONDS: ${MEDIA_CONTROL_ICE_SERVER_CACHE_TTL_SECONDS:-10}
       MEDIA_CONTROL_ICE_SERVER_CACHE_KEY: ${MEDIA_CONTROL_ICE_SERVER_CACHE_KEY:-gcs-saker:media-control:ice-servers}
@@ -283,8 +286,6 @@ services:
       mediamtx:
         condition: service_started
       turn-primary:
-        condition: service_started
-      turn-secondary:
         condition: service_started
       auth-policy:
         condition: service_healthy
@@ -351,6 +352,7 @@ services:
       - media-net
 
   turn-secondary:
+    profiles: [same-host-turn-redundancy]
     image: coturn/coturn@sha256:71c3c990283385567f11794ee692e3a47b66fd9b0bb39e42afbe776e331dd888
     pids_limit: 256
     mem_limit: ${TURN_MEMORY_LIMIT:-256m}
@@ -437,7 +439,7 @@ services:
       - "${PUBLIC_HTTP_BIND_ADDR:-127.0.0.1}:${PUBLIC_HTTP_PORT:-8080}:8080"
     volumes:
       - type: bind
-        source: ../nginx/single-node.poc.conf
+        source: ${EDGE_NGINX_CONFIG_FILE:-../nginx/single-node.poc.conf}
         target: /etc/nginx/nginx.conf
         read_only: true
     depends_on:

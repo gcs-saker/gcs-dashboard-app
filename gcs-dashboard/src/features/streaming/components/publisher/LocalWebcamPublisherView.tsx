@@ -86,7 +86,7 @@ export function LocalWebcamPublisherView(props: LocalWebcamPublisherViewProps) {
       <p className={`local-webcam-publisher__gps local-webcam-publisher__gps--${props.gpsStatus}`} aria-live="polite">
         GPS: {getGpsStatusLabel(props.gpsStatus)} / {props.gpsDetail}
       </p>
-      <TalkbackAudioReceiver streamId={props.selectedStreamTarget.id} />
+      <TalkbackAudioReceiver autoStart={props.status === "published"} streamId={props.selectedStreamTarget.id} />
       {props.errorMessage ? <p className="local-webcam-publisher__error">{props.errorMessage}</p> : null}
     </main>
   );

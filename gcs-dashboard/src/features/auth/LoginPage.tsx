@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState, type KeyboardEvent } from "react";
+import { useForm, type FieldErrors, type UseFormRegister } from "react-hook-form";
+import type { FormEventHandler } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthApiError } from "./authApi";
 import { useAuth } from "./AuthProvider";
@@ -26,6 +27,7 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
+    resetField,
   } = useForm<LoginFormValues>({
     defaultValues: {
       password: "",
@@ -52,23 +54,48 @@ export function LoginPage() {
       } else {
         setErrorMessage("인증 서버 상태를 확인해주세요.");
       }
+    } finally {
+      resetField("password", { defaultValue: "" });
     }
   });
 
+  return <LoginFormView {...{ errorMessage, errors, isSubmitting, register, registeredUsername, submitLogin }} />;
+}
+
+interface LoginFormViewProps {
+  errorMessage: string | null;
+  errors: FieldErrors<LoginFormValues>;
+  isSubmitting: boolean;
+  register: UseFormRegister<LoginFormValues>;
+  registeredUsername: string | null;
+  submitLogin: FormEventHandler<HTMLFormElement>;
+}
+
+function LoginFormView(props: LoginFormViewProps) {
   return (
     <main className="auth-page">
-      <form className="auth-login" noValidate onSubmit={submitLogin}>
+      <form className="auth-login" noValidate onSubmit={props.submitLogin}>
         <div className="auth-login__header">
           <p>GCS-SAKER</p>
           <h1>대시보드 로그인</h1>
         </div>
 
-        {registeredUsername ? (
+        {props.registeredUsername ? (
           <p className="auth-login__success">
-            {registeredUsername} 계정이 등록되었습니다. 로그인해주세요.
+            {props.registeredUsername} 계정이 등록되었습니다. 로그인해주세요.
           </p>
         ) : null}
+        <LoginFields errors={props.errors} register={props.register} />
+        {props.errorMessage ? <p className="auth-login__error">{props.errorMessage}</p> : null}
+        <button disabled={props.isSubmitting} type="submit">{props.isSubmitting ? "확인 중" : "접속"}</button>
+        <p className="auth-login__footer"><Link to="/signup">회원가입</Link></p>
+      </form>
+    </main>
+  );
+}
 
+function LoginFields({ errors, register }: Pick<LoginFormViewProps, "errors" | "register">) {
+  return <>
         <label>
           <span>아이디</span>
           <input
@@ -91,6 +118,8 @@ export function LoginPage() {
             aria-describedby={errors.password ? "login-password-error" : undefined}
             aria-invalid={Boolean(errors.password)}
             autoComplete="current-password"
+            onKeyDown={submitLoginOnEnter}
+            spellCheck={false}
             type="password"
             {...register("password")}
           />
@@ -101,16 +130,11 @@ export function LoginPage() {
           </p>
         ) : null}
 
-        {errorMessage ? <p className="auth-login__error">{errorMessage}</p> : null}
+  </>;
+}
 
-        <button disabled={isSubmitting} type="submit">
-          {isSubmitting ? "확인 중" : "접속"}
-        </button>
-
-        <p className="auth-login__footer">
-          <Link to="/signup">회원가입</Link>
-        </p>
-      </form>
-    </main>
-  );
+function submitLoginOnEnter(event: KeyboardEvent<HTMLInputElement>): void {
+  if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+  event.preventDefault();
+  event.currentTarget.form?.requestSubmit();
 }

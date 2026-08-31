@@ -1,8 +1,11 @@
 name: Bug report
-description: Report a defect or regression
-title: "[Bug]: "
+description: Report a defect, regression, or unexpected behavior
+title: "[P?][Area] "
 labels: ["type: bug"]
 body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, tokens, cookies, UUIDs, or private routes.
   - type: textarea
     id: observed
     attributes:
@@ -37,3 +40,26 @@ body:
     attributes:
       label: Logs or screenshots
       render: shell
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact and priority
+      description: Who or what is affected, and why is the proposed P0-P3 priority appropriate?
+    validations:
+      required: true
+  - type: textarea
+    id: cause
+    attributes:
+      label: Confirmed cause or investigation status
+      description: Separate confirmed evidence from hypotheses. Write "Under investigation" when unknown.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Completion criteria
+      placeholder: |
+        - [ ] Expected behavior is restored
+        - [ ] Regression test covers the failure
+        - [ ] Negative authorization path passes when applicable
+        - [ ] No credential or internal route is exposed
+    validations:
+      required: true

@@ -97,6 +97,15 @@ class ResilientRefreshSessionStore(
         }
     }
 
+    override fun revokePrincipalSessions(username: String) {
+        runCatching {
+            breaker.executeRunnable { delegate.revokePrincipalSessions(username) }
+        }.getOrElse { error ->
+            recordRefreshFailure(OperationalFailureLogContract.OPERATION_REFRESH_SESSION_REVOKE, error)
+            throw error
+        }
+    }
+
     private fun recordRefreshFailure(
         operation: String,
         error: Throwable,

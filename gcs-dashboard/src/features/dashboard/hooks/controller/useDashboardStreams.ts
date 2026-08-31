@@ -1,0 +1,110 @@
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import {
+  connectDeviceToStreamSlot,
+  disconnectStreamSlot,
+  MOCK_STREAM_DEVICES,
+  preferredSelectedStreamId,
+  type StreamDeviceOption,
+} from "@dashboard/assets/streamDevices";
+import {
+  CCTV_EMPTY_STREAM_ID_PREFIX,
+  DEFAULT_DASHBOARD_STREAMS,
+  type DashboardStreamSlot,
+} from "@dashboard/streaming/streamTypes";
+import {
+  applyStreamDeviceAliases,
+  EMPTY_STREAM_PREFERENCES,
+  type StreamPreferencesSnapshot,
+} from "@dashboard/preferences/streamPreferences";
+import {
+  ensureEditableCctvSlot,
+} from "@dashboard/streaming/dashboardStreamState";
+import { useStreamDevicePolling } from "@dashboard/hooks/assets/useStreamDevicePolling";
+
+interface UseDashboardStreamsOptions {
+  readonly initialStreams?: DashboardStreamSlot[];
+  readonly onAuthFailure?: () => void;
+  readonly onStreamDeviceAliasChange?: (deviceId: string, alias: string) => void;
+  readonly streamPreferences?: StreamPreferencesSnapshot;
+}
+
+export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
+  const { initialStreams, onAuthFailure, onStreamDeviceAliasChange, streamPreferences } = options;
+  const preferences = streamPreferences ?? EMPTY_STREAM_PREFERENCES;
+  const [streams, setStreams] = useState(() => initialStreams ?? DEFAULT_DASHBOARD_STREAMS);
+  const [streamDevices, setStreamDevices] = useState<StreamDeviceOption[]>(() =>
+    import.meta.env.MODE === "test"
+      ? applyStreamDeviceAliases(MOCK_STREAM_DEVICES, preferences.deviceAliases)
+      : [],
+  );
+  const [selectedStreamId, setSelectedStreamId] = useState(initialStreams?.[0]?.id ?? DEFAULT_DASHBOARD_STREAMS[0].id);
+  const [editingStreamId, setEditingStreamId] = useState<string | null>(null);
+  const streamsRef = useRef(streams);
+  streamsRef.current = streams;
+
+  const selectedStream = useMemo(
+    () => streams.find((stream) => stream.id === selectedStreamId) ?? streams[0],
+    [selectedStreamId, streams],
+  );
+  const editingStream = useMemo(
+    () => streams.find((stream) => stream.id === editingStreamId) ?? null,
+    [editingStreamId, streams],
+  );
+
+  useStreamDevicePolling({ onAuthFailure, preferences, setStreamDevices, setStreams });
+  useEffect(() => {
+    setSelectedStreamId((current) => preferredSelectedStreamId(current, streamsRef.current, streamDevices));
+  }, [streamDevices]);
+  const actions = useDashboardStreamActions({ editingStreamId, onStreamDeviceAliasChange, selectedStreamId,
+    setEditingStreamId, setSelectedStreamId, setStreams, streamsRef });
+
+  return {
+    ...actions,
+    editingStream,
+    selectedStream,
+    selectedStreamId,
+    setEditingStreamId,
+    streamDevices,
+    streams,
+  };
+}
+
+interface StreamActionsInput {
+  editingStreamId: string | null;
+  onStreamDeviceAliasChange?: (deviceId: string, alias: string) => void;
+  selectedStreamId: string;
+  setEditingStreamId: Dispatch<SetStateAction<string | null>>;
+  setSelectedStreamId: Dispatch<SetStateAction<string>>;
+  setStreams: Dispatch<SetStateAction<DashboardStreamSlot[]>>;
+  streamsRef: MutableRefObject<DashboardStreamSlot[]>;
+}
+
+function useDashboardStreamActions(input: StreamActionsInput) {
+  const openStreamConnection = useCallback((streamId: string): void => {
+    const nextStreams = ensureEditableCctvSlot(input.streamsRef.current, streamId);
+    if (nextStreams !== input.streamsRef.current) input.setStreams(nextStreams);
+    input.setSelectedStreamId(streamId);
+    input.setEditingStreamId(streamId.startsWith(CCTV_EMPTY_STREAM_ID_PREFIX) ? streamId : null);
+  }, [input]);
+  const selectStream = useCallback((identifier: string): void => input.setStreams((current) => {
+    const next = ensureEditableCctvSlot(current, identifier);
+    const match = next.find((stream) => stream.id === identifier || stream.streamPath === identifier);
+    if (match) input.setSelectedStreamId(match.id);
+    return next;
+  }), [input]);
+  const connectStreamDevice = useCallback((device: StreamDeviceOption): void => {
+    input.onStreamDeviceAliasChange?.(device.id, device.name);
+    input.setStreams((current) => current.map((stream) => input.editingStreamId === stream.id
+      ? connectDeviceToStreamSlot(stream, device) : stream));
+    if (input.editingStreamId) input.setSelectedStreamId(input.editingStreamId);
+    input.setEditingStreamId(null);
+  }, [input]);
+  const disconnectCurrentStreamSlot = useCallback((): void => {
+    input.setStreams((current) => current.map((stream) => input.editingStreamId === stream.id
+      ? disconnectStreamSlot(stream) : stream));
+    input.setEditingStreamId(null);
+  }, [input]);
+  const toggleStreamAiMode = useCallback((streamId: string): void => input.setStreams((current) =>
+    current.map((stream) => stream.id === streamId ? { ...stream, aiModeEnabled: !stream.aiModeEnabled } : stream)), [input]);
+  return { connectStreamDevice, disconnectCurrentStreamSlot, openStreamConnection, selectStream, toggleStreamAiMode };
+}

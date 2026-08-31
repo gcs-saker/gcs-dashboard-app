@@ -1,6 +1,6 @@
-import { EVENT_CATEGORY_LABELS } from "@dashboard/eventLogPresentation";
-import type { EventCategorySummary } from "@dashboard/eventLogPresentation";
-import type { OperationalEvent, OperationalEventCategory } from "@dashboard/operationalEvents";
+import { EVENT_CATEGORY_LABELS, formatOperationalEventMessage } from "@dashboard/operations/eventLogPresentation";
+import type { EventCategorySummary } from "@dashboard/operations/eventLogPresentation";
+import type { OperationalEvent, OperationalEventCategory } from "@dashboard/operations/operationalEvents";
 
 interface EventLogNetworkPanelProps {
   categoryFilter: "all" | OperationalEventCategory;
@@ -28,7 +28,7 @@ export function EventLogNetworkPanel(props: EventLogNetworkPanelProps) {
             : null;
           return (
           <button
-            aria-label={`${event.source} ${event.message}`}
+            aria-label={`${event.source} ${formatOperationalEventMessage(event.message)}`}
             className={`event-log-view__bar is-${event.severity} ${props.selectedEventId === event.id ? "is-selected" : ""}`}
             key={event.id}
             onClick={() => props.onSelectEvent(event.id)}

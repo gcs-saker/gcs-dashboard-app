@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/authpolicy"
-	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/httpapi"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/mediamtx"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessionstore"
@@ -27,7 +26,7 @@ func newAuthorizer(config runtimeConfig) (authpolicy.CachedAuthorizer, error) {
 	return authpolicy.NewCachedAuthorizer(baseAuthorizer, config.authzCacheTTL), nil
 }
 
-func newPublishSessionStore(config runtimeConfig) (domain.PublishSessionStore, error) {
+func newPublishSessionStore(config runtimeConfig) (*sessionstore.RedisStore, error) {
 	if config.redisAddress == "" {
 		return nil, fmt.Errorf("REDIS_ADDRESS is required for durable publish sessions")
 	}

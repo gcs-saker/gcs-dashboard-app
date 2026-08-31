@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import { DASHBOARD_STREAM_MODE, DASHBOARD_STREAM_STATUS } from "@/features/stateContracts";
 import { OfflineTacticalMap } from "./OfflineTacticalMap";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 
 const STREAM: DashboardStreamSlot = {
   detail: "전방",
@@ -52,7 +52,7 @@ describe("OfflineTacticalMap", () => {
     await user.click(screen.getByRole("button", { name: "지도 확대" }));
 
     expect(onStreamMarkerSelect).toHaveBeenCalledWith("stream-1");
-    expect(onAutoFocusChange).toHaveBeenCalledWith(false);
+    expect(onAutoFocusChange).toHaveBeenCalledWith(true);
   });
 
   test("shows stream popup for the active stream", () => {

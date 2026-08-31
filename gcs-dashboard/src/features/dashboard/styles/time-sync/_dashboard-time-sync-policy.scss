@@ -1,0 +1,595 @@
+.time-sync-view__policy {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  padding: 16px;
+}
+
+.time-sync-view__policy > * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.time-sync-view__policy article {
+  background: rgba(4, 14, 21, 0.54);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  min-height: 96px;
+  padding: 14px;
+}
+
+.time-sync-view__policy span {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.time-sync-view__policy strong {
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.time-sync-view__error {
+  border: 1px solid rgba(255, 108, 93, 0.56);
+  color: #ffb0a6;
+  margin: 0;
+  padding: 10px;
+}
+
+.provisioning-token-panel {
+  grid-template-columns: 1fr;
+}
+
+.time-sync-view .settings-refresh-button {
+  border-color: rgba(61, 184, 255, 0.42);
+  color: var(--cyan);
+  min-height: 36px;
+  min-width: 88px;
+}
+
+.provisioning-token-panel__form {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(140px, 1fr)) auto;
+}
+
+.signup-token-panel__form {
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+}
+
+.signup-token-panel__submit {
+  height: 40px;
+  justify-self: start;
+  width: min(100%, 200px);
+}
+
+.provisioning-token-panel__form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.provisioning-token-panel__form button,
+.provisioning-token-panel__form input,
+.provisioning-token-panel__form select,
+.provisioning-token-panel__copy-token,
+.provisioning-token-panel__issued button {
+  background: rgba(8, 28, 42, 0.94);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  box-sizing: border-box;
+  color: var(--text);
+  min-height: 40px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.provisioning-token-panel__form button {
+  box-sizing: border-box;
+}
+
+.signup-token-panel__form .signup-token-panel__submit {
+  width: min(100%, 200px);
+}
+
+.provisioning-token-panel__form select {
+  appearance: none;
+  background-color: rgba(8, 28, 42, 0.94);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--cyan) 50%),
+    linear-gradient(135deg, var(--cyan) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 17px,
+    calc(100% - 11px) 17px;
+  background-repeat: no-repeat;
+  background-size: 5px 5px, 5px 5px;
+  padding-right: 34px;
+}
+
+.provisioning-token-panel__form input:focus,
+.provisioning-token-panel__form select:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px rgba(61, 184, 255, 0.16);
+  outline: 0;
+}
+
+.provisioning-token-panel__form select option {
+  background: #081c2a;
+  color: var(--text);
+}
+
+.provisioning-token-panel__form input:disabled,
+.provisioning-token-panel__form select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.provisioning-token-panel__form button,
+.provisioning-token-panel__copy-token,
+.provisioning-token-panel__issued button {
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.provisioning-token-panel__form button:hover:not(:disabled),
+.provisioning-token-panel__copy-token:hover,
+.provisioning-token-panel__issued button:hover {
+  border-color: var(--accent);
+  color: var(--heading);
+}
+
+.provisioning-token-panel__notice,
+.provisioning-token-panel__records p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.provisioning-token-panel__issued {
+  background: rgba(13, 43, 30, 0.72);
+  border: 1px solid rgba(82, 211, 128, 0.46);
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.provisioning-token-panel__issued strong {
+  color: #b8ffd4;
+  overflow-wrap: anywhere;
+}
+
+.provisioning-token-panel__copy-token {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  min-height: 56px;
+  text-align: left;
+}
+
+.provisioning-token-panel__copy-token small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.provisioning-token-panel__records {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.provisioning-token-panel__record {
+  min-height: 112px;
+}
+
+.device-approval-panel {
+  grid-template-columns: 1fr;
+  margin-top: 14px;
+}
+
+.device-approval-panel__hint {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.device-approval-panel__list {
+  display: grid;
+  gap: 10px;
+}
+
+.device-approval-panel__list > p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.device-approval-panel__card {
+  align-items: center;
+  border-color: rgba(62, 164, 255, 0.32);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(160px, 0.8fr) auto;
+  min-height: auto;
+}
+
+.settings-paged-list {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.settings-listbox {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.settings-listbox button {
+  align-content: center;
+  background: rgba(7, 24, 34, 0.82);
+  border: 1px solid var(--line-soft);
+  color: var(--text);
+  display: grid;
+  gap: 4px;
+  min-height: 58px;
+  min-width: 0;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.settings-listbox button[aria-selected="true"] {
+  border-color: var(--cyan);
+  box-shadow: inset 0 0 0 1px rgba(61, 184, 255, 0.2);
+}
+
+.settings-listbox strong,
+.settings-listbox span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-listbox span {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.settings-selected-detail {
+  border: 1px solid rgba(61, 184, 255, 0.35);
+  border-radius: 6px;
+  display: grid;
+  gap: 5px;
+  min-height: 0;
+  padding: 12px;
+}
+
+.settings-pagination {
+  align-items: center;
+  background: rgba(5, 18, 27, 0.82);
+  border: 1px solid rgba(72, 137, 170, 0.3);
+  border-radius: 999px;
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  justify-self: end;
+  padding: 4px;
+  width: fit-content;
+}
+
+.time-sync-view .settings-pagination button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 800;
+  justify-content: center;
+  min-height: 32px;
+  min-width: 62px;
+  padding: 0 12px;
+}
+
+.settings-pagination span {
+  align-items: center;
+  background: rgba(61, 184, 255, 0.1);
+  border: 1px solid rgba(61, 184, 255, 0.28);
+  border-radius: 999px;
+  color: var(--cyan);
+  display: inline-flex;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 32px;
+  min-width: 52px;
+  padding: 0 10px;
+}
+
+.time-sync-view .settings-pagination button:hover:not(:disabled) {
+  background: rgba(61, 184, 255, 0.12);
+  border-color: rgba(61, 184, 255, 0.42);
+  color: var(--heading);
+}
+
+.time-sync-view .settings-pagination button:disabled {
+  background: transparent;
+  border-color: transparent;
+  color: rgba(142, 164, 176, 0.38);
+  opacity: 1;
+}
+
+.settings-pagination button,
+.group-member-panel__appoint button,
+.group-member-actions button,
+.device-alias-card__form button {
+  background: rgba(8, 28, 42, 0.94);
+  border: 1px solid rgba(72, 137, 170, 0.52);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.settings-listbox button {
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.settings-pagination button:hover:not(:disabled),
+.settings-listbox button:hover,
+.group-member-panel__appoint button:hover:not(:disabled),
+.group-member-actions button:hover:not(:disabled),
+.device-alias-card__form button:hover:not(:disabled) {
+  background: rgba(13, 43, 61, 0.98);
+  border-color: var(--cyan);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(61, 184, 255, 0.12);
+  color: var(--heading);
+  transform: translateY(-1px);
+}
+
+.settings-pagination button:active:not(:disabled),
+.settings-listbox button:active,
+.group-member-panel__appoint button:active:not(:disabled),
+.group-member-actions button:active:not(:disabled),
+.device-alias-card__form button:active:not(:disabled) {
+  box-shadow: none;
+  transform: translateY(0);
+}
+
+.settings-pagination button:disabled,
+.group-member-panel__appoint button:disabled,
+.group-member-actions button:disabled,
+.device-alias-card__form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.group-member-panel__group-field {
+  display: grid;
+  gap: 6px;
+  max-width: 320px;
+}
+
+.group-member-panel__group-field > span,
+.group-member-panel__appoint::before {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.group-member-panel__group-field select,
+.group-member-panel__appoint input,
+.group-member-actions input {
+  background: rgba(8, 28, 42, 0.94);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  color: var(--text);
+  height: 40px;
+  min-width: 0;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.group-member-panel__appoint {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(240px, 420px) auto;
+}
+
+.group-member-panel__appoint button,
+.group-member-actions button {
+  min-height: 40px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.group-member-editor {
+  background: rgba(7, 24, 34, 0.72);
+  border: 1px solid rgba(61, 184, 255, 0.34);
+  border-radius: 6px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.group-member-editor header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.group-member-editor header div {
+  display: grid;
+  gap: 3px;
+}
+
+.group-member-editor header span,
+.group-member-editor header small { color: var(--muted); }
+
+.group-member-editor header em {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-style: normal;
+  padding: 4px 9px;
+}
+
+.group-member-editor header em.is-active { color: var(--green); }
+.group-member-editor header em.is-inactive { color: var(--muted); }
+
+.group-member-actions {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, auto) minmax(220px, 1fr) auto auto;
+}
+
+.device-approval-panel__identity {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.device-approval-panel__identity strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-alias-card {
+  grid-template-columns: minmax(240px, 1fr) minmax(360px, 0.9fr);
+}
+
+@media (max-width: 1250px) {
+  .signup-token-panel__form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-listbox { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .group-member-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .device-approval-panel__card { grid-template-columns: 1fr; }
+  .device-alias-card { grid-template-columns: 1fr; }
+  .device-alias-card__form { grid-template-columns: minmax(0, 1fr) auto; }
+}
+
+@media (max-width: 900px) {
+  .signup-token-panel__form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-listbox { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .group-member-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .group-member-panel__appoint { grid-template-columns: 1fr; }
+}
+
+.device-alias-card__form {
+  align-items: end;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+}
+
+.device-alias-card__form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.device-alias-card__form input {
+  background: rgba(8, 28, 42, 0.94);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  color: var(--text);
+  min-height: 40px;
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.device-alias-card__form input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px rgba(61, 184, 255, 0.16);
+  outline: 0;
+}
+
+.device-alias-card__form button:last-child {
+  border-color: rgba(61, 184, 255, 0.42);
+  color: var(--cyan);
+  min-width: 96px;
+}
+
+.device-approval-panel__card small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.device-approval-panel__card dl {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.device-approval-panel__card dl div {
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.device-approval-panel__card dt,
+.device-approval-panel__card dd {
+  margin: 0;
+}
+
+.device-approval-panel__card dd {
+  color: var(--heading);
+  font-weight: 900;
+}
+
+.device-approval-panel__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.device-approval-panel__actions button {
+  background: rgba(8, 28, 42, 0.94);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.device-approval-panel__actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--heading);
+}
+
+.device-approval-panel__actions button:last-child {
+  border-color: rgba(255, 108, 93, 0.4);
+  color: #ffb0a6;
+}
+
+.device-approval-panel__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 840px) {
+  .device-approval-panel__card {
+    grid-template-columns: 1fr;
+  }
+
+  .device-alias-card__form {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .signup-token-panel__form,
+  .group-member-actions,
+  .device-alias-card__form { grid-template-columns: 1fr; }
+  .settings-listbox { grid-template-columns: 1fr; }
+}

@@ -44,6 +44,13 @@ class StreamPolicyControllerTest {
                     role = UserRole.OPERATOR,
                     groupId = GroupId("bn-1"),
                 ),
+                AuthUser(
+                    username = "group-admin-bn",
+                    email = "group-admin@example.test",
+                    passwordHash = passwordHasher.hash("pass"),
+                    role = UserRole.GROUP_ADMIN,
+                    groupId = GroupId("bn-1"),
+                ),
             ),
         ),
         passwordHasher,
@@ -100,8 +107,8 @@ class StreamPolicyControllerTest {
     }
 
     @Test
-    fun `operator can access descendant group stream`() {
-        val token = accessToken("operator-bn")
+    fun `group admin can access descendant group stream`() {
+        val token = accessToken("group-admin-bn")
 
         val response = controller.access(
             bearer(token),
@@ -113,7 +120,71 @@ class StreamPolicyControllerTest {
         )
 
         assertTrue(response.allowed)
-        assertEquals("operator can view descendant group stream", response.reason)
+        assertEquals("group admin can view descendant group stream", response.reason)
+    }
+
+    @Test
+    fun `operator cannot access descendant group stream`() {
+        val token = accessToken("operator-bn")
+
+        val response = controller.access(
+            bearer(token),
+            StreamAccessRequest(
+                streamId = "raw.company-b.front",
+                path = "raw/company-b/front",
+                publisherGroupId = "co-b",
+            ),
+        )
+
+        assertFalse(response.allowed)
+    }
+
+    @Test
+    fun `group admin can send talkback to descendant group`() {
+        val response = controller.access(
+            bearer(accessToken("group-admin-bn")),
+            StreamAccessRequest(
+                streamId = "raw.company-b.front",
+                path = "raw/company-b/front",
+                publisherGroupId = "co-b",
+                action = "send_talkback",
+            ),
+        )
+
+        assertTrue(response.allowed)
+        assertEquals("group admin can send descendant talkback", response.reason)
+    }
+
+    @Test
+    fun `viewer cannot send talkback in same group`() {
+        val response = controller.access(
+            bearer(accessToken("viewer-a")),
+            StreamAccessRequest(
+                streamId = "raw.sample.front",
+                path = "raw/sample/front",
+                publisherGroupId = "co-a",
+                action = "send_talkback",
+            ),
+        )
+
+        assertFalse(response.allowed)
+    }
+
+    @Test
+    fun `unknown access action is rejected`() {
+        val error = org.junit.jupiter.api.assertThrows<BadRequestApiError> {
+            controller.access(
+                bearer(accessToken("viewer-a")),
+                StreamAccessRequest(
+                    streamId = "raw.sample.front",
+                    path = "raw/sample/front",
+                    publisherGroupId = "co-a",
+                    action = "delete_stream",
+                ),
+            )
+        }
+
+        assertEquals("unsupported stream access action", error.reason)
     }
 
     @Test
@@ -133,7 +204,7 @@ class StreamPolicyControllerTest {
     }
 
     @Test
-    fun `stream access decision publishes allow and deny audit events`() {
+    fun `stream access audit persists denials without flooding successful view checks`() {
         val audit = RecordingSecurityAuditPublisher()
         val auditedController = StreamPolicyController(
             BearerPrincipalResolver(sessions),
@@ -167,7 +238,6 @@ class StreamPolicyControllerTest {
 
         assertEquals(
             listOf(
-                "raw.sample.front:co-a:true:same group stream",
                 "raw.company-b.front:co-b:false:stream is outside principal group scope",
             ),
             audit.events,

@@ -1,4 +1,4 @@
-import type { OperationalEventSummary } from "@dashboard/operationalEvents";
+import type { OperationalEventSummary } from "@dashboard/operations/operationalEvents";
 import { EventLogMetricCard } from "./EventLogMetricCard";
 
 interface EventLogSummaryStripProps {

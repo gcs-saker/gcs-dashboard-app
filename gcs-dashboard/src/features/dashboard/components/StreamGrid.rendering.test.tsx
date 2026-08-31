@@ -2,7 +2,8 @@ import { memo } from "react";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_DASHBOARD_STREAMS, type DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
+import { SAMPLE_DASHBOARD_STREAMS as DEFAULT_DASHBOARD_STREAMS } from "@dashboard/stories/dashboardSampleStreams";
 import { DASHBOARD_STREAM_STATUS } from "@/features/stateContracts";
 import { StreamGrid } from "./StreamGrid";
 
@@ -19,17 +20,18 @@ const ProbeStreamCard = memo(function ProbeStreamCard({
   return <button aria-pressed={isSelected} type="button">{stream.title}</button>;
 });
 
+const renderProbeCard = (stream: DashboardStreamSlot, isSelected: boolean) => (
+  <ProbeStreamCard isSelected={isSelected} stream={stream} />
+);
+
 describe("StreamGrid rendering contract", () => {
   it("re-renders only the stream card whose status payload changed", () => {
     renderCounts.clear();
     const streams = DEFAULT_DASHBOARD_STREAMS.slice(0, 3);
-    const renderCard = (stream: DashboardStreamSlot, isSelected: boolean) => (
-      <ProbeStreamCard isSelected={isSelected} stream={stream} />
-    );
     const { rerender } = render(
       <StreamGrid
         onSelectStream={() => undefined}
-        renderCard={renderCard}
+        renderCard={renderProbeCard}
         selectedStreamId={streams[0].id}
         streams={streams}
       />,
@@ -43,7 +45,7 @@ describe("StreamGrid rendering contract", () => {
     rerender(
       <StreamGrid
         onSelectStream={() => undefined}
-        renderCard={renderCard}
+        renderCard={renderProbeCard}
         selectedStreamId={streams[0].id}
         streams={nextStreams}
       />,

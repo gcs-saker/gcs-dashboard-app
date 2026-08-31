@@ -16,6 +16,13 @@ PRODUCTION_ROOTS = (
 )
 SOURCE_SUFFIXES = {".go", ".kt", ".py", ".ts", ".tsx"}
 MAX_PRODUCTION_LINES = 350
+REQUIRED_AGREEMENTS = (
+    REPOSITORY_ROOT / "AGENTS.md",
+    REPOSITORY_ROOT / "backend" / "AGENTS.md",
+    REPOSITORY_ROOT / "gcs-dashboard" / "AGENTS.md",
+    REPOSITORY_ROOT / "services" / "auth-policy" / "AGENTS.md",
+    REPOSITORY_ROOT / "services" / "media-control" / "AGENTS.md",
+)
 FORBIDDEN_TRACKED_PARTS = {
     ".agents",
     ".benchmarks",
@@ -95,16 +102,32 @@ def validate_kotlin_names(paths: list[Path], errors: list[str]) -> None:
 
 def validate_production_file_sizes(paths: list[Path], errors: list[str]) -> None:
     for path in paths:
-        if path.suffix not in SOURCE_SUFFIXES or is_test_file(path):
+        relative = path.relative_to(REPOSITORY_ROOT)
+        if path.suffix not in SOURCE_SUFFIXES or is_test_file(path) or "generated" in relative.parts:
             continue
         if not any(path.is_relative_to(root) for root in PRODUCTION_ROOTS):
             continue
         line_count = len(path.read_text(encoding="utf-8").splitlines())
         if line_count > MAX_PRODUCTION_LINES:
+            errors.append(f"production source exceeds {MAX_PRODUCTION_LINES} lines ({line_count}): {relative}")
+
+
+def validate_unique_flyway_versions(paths: list[Path], errors: list[str]) -> None:
+    versions: dict[int, Path] = {}
+    for path in paths:
+        relative = path.relative_to(REPOSITORY_ROOT)
+        if "db" not in relative.parts or not path.name.endswith(".sql"):
+            continue
+        match = re.fullmatch(r"V(\d+)__.+\.sql", path.name)
+        if not match:
+            continue
+        version = int(match.group(1))
+        if previous := versions.get(version):
             errors.append(
-                f"production source exceeds {MAX_PRODUCTION_LINES} lines ({line_count}): "
-                f"{path.relative_to(REPOSITORY_ROOT)}"
+                f"duplicate Flyway version V{version}: {previous.relative_to(REPOSITORY_ROOT)} and {relative}"
             )
+        else:
+            versions[version] = path
 
 
 def main() -> int:
@@ -114,8 +137,10 @@ def main() -> int:
     validate_python_names(paths, errors)
     validate_kotlin_names(paths, errors)
     validate_production_file_sizes(paths, errors)
-    if not (REPOSITORY_ROOT / "AGENTS.md").is_file():
-        errors.append("AGENTS.md is required at the repository root")
+    validate_unique_flyway_versions(paths, errors)
+    for agreement in REQUIRED_AGREEMENTS:
+        if not agreement.is_file():
+            errors.append(f"required code agreement is missing: {agreement.relative_to(REPOSITORY_ROOT)}")
     if errors:
         for error in errors:
             print(f"ERROR: {error}")

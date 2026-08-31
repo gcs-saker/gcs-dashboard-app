@@ -1,11 +1,13 @@
 import { useAuth } from "@/features/auth/AuthProvider";
-import { useAdminDevices } from "@dashboard/hooks/useAdminDevices";
-import type { RegisteredDevice } from "@dashboard/adminDevices";
+import { canManageDeviceProvisioning } from "@auth/rolePermissions";
+import { useAdminDevices } from "@dashboard/hooks/devices/useAdminDevices";
+import type { RegisteredDevice } from "@dashboard/devices/adminDevices";
+import { RegisteredDeviceBrowser } from "./RegisteredDeviceBrowser";
 
 export function DeviceApprovalPanel() {
   const { currentUser } = useAuth();
-  const { activate, disable, errorMessage, isLoading, mutatingDeviceUuid, pendingDevices, refresh } = useAdminDevices();
-  const isAdmin = currentUser?.role === "admin";
+  const { activate, devices, disable, errorMessage, isLoading, mutatingDeviceUuid, pendingDevices, refresh, rename } = useAdminDevices();
+  const isAdmin = currentUser?.capabilities?.canManageDevices ?? canManageDeviceProvisioning(currentUser?.role);
 
   return (
     <section className="time-sync-view__policy device-approval-panel" aria-label="승인 대기 장비">
@@ -14,7 +16,7 @@ export function DeviceApprovalPanel() {
           <span>관리자 승인</span>
           <strong>승인 대기 장비 {pendingDevices.length}대</strong>
         </div>
-        <button type="button" onClick={() => void refresh()}>
+        <button className="ops-command-button settings-refresh-button" type="button" onClick={() => void refresh()}>
           새로고침
         </button>
       </header>
@@ -38,6 +40,14 @@ export function DeviceApprovalPanel() {
           />
         ))}
       </div>
+      <header className="time-sync-view__policy-header provisioning-token-panel__header">
+        <div>
+          <span>그룹별 장비</span>
+          <strong>등록 장비 {devices.length}대</strong>
+        </div>
+      </header>
+      <p className="device-approval-panel__hint">별칭은 서버에 저장되어 다른 브라우저와 다음 로그인에서도 동일하게 표시됩니다.</p>
+      <RegisteredDeviceBrowser devices={devices} mutatingDeviceUuid={mutatingDeviceUuid} onRename={rename} />
     </section>
   );
 }
@@ -59,10 +69,9 @@ function PendingDeviceCard({
 }: PendingDeviceCardProps) {
   return (
     <article className="device-approval-panel__card">
-      <div>
+      <div className="device-approval-panel__identity">
         <span>{device.groupId} · {device.deviceType}</span>
         <strong>{device.displayName}</strong>
-        <small>{device.deviceUuid}</small>
       </div>
       <dl>
         <div>

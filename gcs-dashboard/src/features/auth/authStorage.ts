@@ -1,3 +1,5 @@
+import { authSessionStore, clearMemoryAuthSession } from "./authSessionStore";
+
 export const LEGACY_AUTH_STORAGE_KEYS = Object.freeze({
   accessToken: "gcs_saker_access_token",
   session: "gcs_saker_auth_session",
@@ -11,10 +13,6 @@ export interface StoredAuthSession<TUser = unknown> {
   user: TUser;
 }
 
-let memoryAccessToken: string | null = null;
-let memoryAccessTokenExpiresAt: string | null = null;
-let memoryUser: unknown | null = null;
-
 function clearLegacyBrowserStorage(): void {
   window.localStorage.removeItem(LEGACY_AUTH_STORAGE_KEYS.session);
   window.localStorage.removeItem(LEGACY_AUTH_STORAGE_KEYS.accessToken);
@@ -22,12 +20,12 @@ function clearLegacyBrowserStorage(): void {
 }
 
 export function getStoredAccessToken(): string | null {
-  if (memoryAccessToken && isFutureIsoDate(memoryAccessTokenExpiresAt)) {
-    return memoryAccessToken;
+  const { accessToken, accessTokenExpiresAt } = authSessionStore.getState();
+  if (accessToken && isFutureIsoDate(accessTokenExpiresAt)) {
+    return accessToken;
   }
 
-  memoryAccessToken = null;
-  memoryAccessTokenExpiresAt = null;
+  authSessionStore.setState({ accessToken: null, accessTokenExpiresAt: null });
   clearLegacyBrowserStorage();
   return null;
 }
@@ -37,41 +35,37 @@ export function storeAccessToken(token: string): void {
 }
 
 export function clearAccessToken(): void {
-  memoryAccessToken = null;
-  memoryAccessTokenExpiresAt = null;
+  authSessionStore.setState({ accessToken: null, accessTokenExpiresAt: null });
   clearLegacyBrowserStorage();
 }
 
-export function getStoredUser<T>(): T | null {
-  return (memoryUser as T | null) ?? null;
+export function getStoredUser(): unknown | null {
+  return authSessionStore.getState().user;
 }
 
 export function storeUser(user: unknown): void {
-  memoryUser = user;
+  authSessionStore.setState({ user });
   clearLegacyBrowserStorage();
 }
 
 export function clearStoredUser(): void {
-  memoryUser = null;
+  authSessionStore.setState({ user: null });
   clearLegacyBrowserStorage();
 }
 
 export function storeAuthSession<TUser>(session: StoredAuthSession<TUser>): void {
   setMemoryAccessToken(session.accessToken ?? null, session.expiresAt);
-  memoryUser = session.user;
+  authSessionStore.setState({ user: session.user });
   clearLegacyBrowserStorage();
 }
 
 export function clearAuthSession(): void {
-  memoryAccessToken = null;
-  memoryAccessTokenExpiresAt = null;
-  memoryUser = null;
+  clearMemoryAuthSession();
   clearLegacyBrowserStorage();
 }
 
 function setMemoryAccessToken(token: string | null, expiresAt: string): void {
-  memoryAccessToken = token;
-  memoryAccessTokenExpiresAt = token ? expiresAt : null;
+  authSessionStore.setState({ accessToken: token, accessTokenExpiresAt: token ? expiresAt : null });
 }
 
 function isFutureIsoDate(value: string | null): boolean {

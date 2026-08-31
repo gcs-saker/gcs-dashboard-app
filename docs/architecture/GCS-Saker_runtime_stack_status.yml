@@ -115,7 +115,6 @@ stacks:
     runtime:
       composeServices:
         - turn-primary
-        - turn-secondary
     evidence:
       - deploy/compose/compose.single-node.poc.yml
       - scripts/smoke/webrtc_ice_smoke.py
@@ -237,7 +236,7 @@ stacks:
       composeService: auth-policy
     evidence:
       - services/auth-policy/src/main/resources/graphql/schema.graphqls
-      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalEventGraphQlController.kt
+      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/operations/events/OperationalEventGraphQlController.kt
       - services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalEventGraphQlControllerTest.kt
     missingRuntime:
       - "edge /graphql route"
@@ -249,10 +248,10 @@ stacks:
     status: prototype
     issue: 419
     evidence:
-      - gcs-dashboard/src/features/streaming/webCodecsSupport.ts
-      - gcs-dashboard/src/features/streaming/webCodecsSupport.test.ts
-      - gcs-dashboard/src/features/streaming/webCodecsPipelinePlan.ts
-      - gcs-dashboard/src/features/streaming/webCodecsPipelinePlan.test.ts
+      - gcs-dashboard/src/features/streaming/runtime/webCodecsSupport.ts
+      - gcs-dashboard/src/features/streaming/runtime/webCodecsSupport.test.ts
+      - gcs-dashboard/src/features/streaming/runtime/webCodecsPipelinePlan.ts
+      - gcs-dashboard/src/features/streaming/runtime/webCodecsPipelinePlan.test.ts
     missingRuntime:
       - "worker pipeline"
       - "HLS fallback frame processing"

@@ -1,0 +1,154 @@
+@media (max-width: 1320px) {
+  .ops-dashboard__grid {
+    grid-template-columns: minmax(240px, 0.68fr) minmax(440px, 1.32fr);
+  }
+}
+
+@media (max-width: 1600px) {
+  .ops-dashboard__tabs {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ops-dashboard__tab-list {
+    min-width: 0;
+    overflow-x: auto;
+    width: 100%;
+  }
+
+  .ops-dashboard__actions {
+    justify-content: flex-start;
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .ops-dashboard {
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    width: 100%;
+  }
+
+  .ops-dashboard__tabs {
+    gap: 8px;
+    min-height: 64px;
+    overflow: visible;
+    padding: 10px;
+    width: 100%;
+  }
+
+  .ops-dashboard__tab-list {
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .ops-dashboard__tab-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ops-dashboard__actions,
+  .ops-dashboard__action-group,
+  .talkback-panel {
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .ops-dashboard__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-layout-mode {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .dashboard-layout-mode label,
+  .dashboard-layout-mode select,
+  .asset-menu-button,
+  .ops-dashboard__action-group .ops-command-button {
+    width: 100%;
+  }
+
+  .ops-dashboard__action-group,
+  .talkback-panel {
+    flex-wrap: wrap;
+  }
+
+  .ops-user-menu {
+    width: 100%;
+  }
+
+  .ops-user-menu summary {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .ops-tab {
+    min-width: 108px;
+    white-space: nowrap;
+  }
+
+  .ops-dashboard__grid {
+    grid-template-columns: 1fr;
+    min-width: 0;
+    padding: 6px;
+    width: 100%;
+  }
+
+  .ops-dashboard__grid > * {
+    grid-column: auto;
+    grid-row: auto;
+    min-width: 0;
+  }
+
+  .stream-grid {
+    grid-template-columns: 1fr;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .ops-panel__header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+    height: auto;
+    padding-block: 8px;
+  }
+
+  .ops-panel__header-actions {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+
+  .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .stream-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .telemetry-panel__body {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-panel ul {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-panel li {
+    border-bottom: 1px solid var(--line-soft);
+    border-right: 0;
+  }
+
+  .time-sync-view__header,
+  .time-sync-view__commands {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .time-sync-view__form {
+    grid-template-columns: 1fr;
+  }
+}

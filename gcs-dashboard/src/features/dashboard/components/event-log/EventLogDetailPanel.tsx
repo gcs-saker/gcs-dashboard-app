@@ -3,9 +3,10 @@ import {
   diagnoseOperationalEventCause,
   diagnoseOperationalEventImpact,
   EVENT_CATEGORY_LABELS,
-  formatOperationalEventPayload,
-} from "@dashboard/eventLogPresentation";
-import type { OperationalEvent, OperationalEventCategory } from "@dashboard/operationalEvents";
+  formatOperationalEventMessage,
+  operationalEventContextRows,
+} from "@dashboard/operations/eventLogPresentation";
+import type { OperationalEvent, OperationalEventCategory } from "@dashboard/operations/operationalEvents";
 
 interface EventLogDetailPanelProps {
   event: OperationalEvent | null;
@@ -22,17 +23,13 @@ export function EventLogDetailPanel({ event, onCategoryFilterChange, onSourceFil
       </div>
       {event ? (
         <>
-          <strong>{event.message}</strong>
+          <strong>{formatOperationalEventMessage(event.message)}</strong>
           <div className="event-log-view__detail-actions">
             <button onClick={() => onSourceFilterChange(event.source)} type="button">이 서버만 보기</button>
             <button onClick={() => onCategoryFilterChange(event.category)} type="button">이 분류만 보기</button>
           </div>
           <EventLogDiagnosis event={event} />
           <EventLogDetailFields event={event} />
-          <section className="event-log-view__raw" aria-label="운영 이벤트 원문">
-            <span>운영 이벤트 원문</span>
-            <pre>{formatOperationalEventPayload(event)}</pre>
-          </section>
         </>
       ) : (
         <p>표시할 이벤트가 없습니다.</p>
@@ -53,12 +50,13 @@ function EventLogDiagnosis({ event }: { event: OperationalEvent }) {
 
 function EventLogDetailFields({ event }: { event: OperationalEvent }) {
   const rows = [
+    ...operationalEventContextRows(event.message),
     ["시간", new Date(event.occurredAt).toLocaleString("ko-KR")],
     ["출처", event.source],
     ["분류", EVENT_CATEGORY_LABELS[event.category]],
     ["이벤트 타입", event.eventType ?? "미지정"],
     ["서비스", event.sourceService ?? "미지정"],
-    ["스트림", event.streamId ?? "미지정"],
+    ["스트림", event.streamId ? "연결 스트림" : "미지정"],
     ["세션", event.connectionId ?? "미지정"],
     ["ICE 경로", event.icePath ?? "미지정"],
     ["Fallback", event.relayFallbackReason ?? "없음"],

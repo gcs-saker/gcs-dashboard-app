@@ -18,6 +18,21 @@ interface SecurityAuditPublisher {
         allowed: Boolean,
         reason: String,
     )
+    fun publishGroupManagement(
+        principal: AuthenticatedPrincipal,
+        targetGroupId: GroupId,
+        action: String,
+        target: String,
+        clientIp: String,
+    ) = Unit
+    fun publishStreamAction(
+        principal: AuthenticatedPrincipal,
+        streamId: String,
+        publisherGroupId: GroupId,
+        action: String,
+        allowed: Boolean,
+        reason: String,
+    ) = publishStreamAccess(principal, streamId, publisherGroupId, allowed, reason)
 }
 
 object NoopSecurityAuditPublisher : SecurityAuditPublisher {
@@ -74,5 +89,26 @@ class RepositorySecurityAuditPublisher(
                 occurredAt = now(),
             ),
         )
+    }
+
+    override fun publishGroupManagement(
+        principal: AuthenticatedPrincipal,
+        targetGroupId: GroupId,
+        action: String,
+        target: String,
+        clientIp: String,
+    ) {
+        repository.append(events.groupManagement(principal, targetGroupId, action, target, clientIp, now()))
+    }
+
+    override fun publishStreamAction(
+        principal: AuthenticatedPrincipal,
+        streamId: String,
+        publisherGroupId: GroupId,
+        action: String,
+        allowed: Boolean,
+        reason: String,
+    ) {
+        repository.append(events.streamAccess(principal, streamId, publisherGroupId, allowed, reason, now(), action))
     }
 }

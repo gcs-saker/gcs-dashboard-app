@@ -31,14 +31,52 @@ class GroupPolicyServiceTest {
     }
 
     @Test
-    fun `operator can view descendant group stream`() {
-        val principal = AuthenticatedPrincipal("op-bn", UserRole.OPERATOR, battalion.id)
+    fun `group admin can view descendant group stream`() {
+        val principal = AuthenticatedPrincipal("admin-bn", UserRole.GROUP_ADMIN, battalion.id)
         val stream = StreamSessionDescriptor(StreamPath("raw/company-b/drone-1"), companyB.id, Instant.EPOCH)
 
         val decision = service.canViewStream(principal, stream)
 
         assertTrue(decision.allowed)
-        assertEquals("operator can view descendant group stream", decision.reason)
+        assertEquals("group admin can view descendant group stream", decision.reason)
+    }
+
+    @Test
+    fun `operator cannot inherit descendant stream access`() {
+        val principal = AuthenticatedPrincipal("op-bn", UserRole.OPERATOR, battalion.id)
+        val stream = StreamSessionDescriptor(StreamPath("raw/company-b/drone-1"), companyB.id, Instant.EPOCH)
+
+        assertFalse(service.canViewStream(principal, stream).allowed)
+    }
+
+    @Test
+    fun `group admin can send talkback to descendant group`() {
+        val principal = AuthenticatedPrincipal("admin-bn", UserRole.GROUP_ADMIN, battalion.id)
+
+        assertTrue(service.canSendTalkback(principal, companyB.id).allowed)
+        assertTrue(service.canSendTalkback(principal, platoonB1.id).allowed)
+    }
+
+    @Test
+    fun `operator cannot send talkback to descendant group`() {
+        val principal = AuthenticatedPrincipal("op-bn", UserRole.OPERATOR, battalion.id)
+
+        assertFalse(service.canSendTalkback(principal, companyB.id).allowed)
+    }
+
+    @Test
+    fun `viewer cannot send talkback even inside same group`() {
+        val principal = AuthenticatedPrincipal("viewer-a", UserRole.VIEWER, companyA.id)
+
+        assertFalse(service.canSendTalkback(principal, companyA.id).allowed)
+    }
+
+    @Test
+    fun `group admin cannot send talkback to sibling or ancestor group`() {
+        val principal = AuthenticatedPrincipal("admin-a", UserRole.GROUP_ADMIN, companyA.id)
+
+        assertFalse(service.canSendTalkback(principal, companyB.id).allowed)
+        assertFalse(service.canSendTalkback(principal, battalion.id).allowed)
     }
 
     @Test
@@ -63,6 +101,9 @@ class GroupPolicyServiceTest {
     @Test
     fun `role permissions are explicit`() {
         assertEquals(setOf(Permission.VIEW_STREAM), service.permissionsFor(UserRole.VIEWER))
+        assertTrue(Permission.MANAGE_GROUP_MEMBERS in service.permissionsFor(UserRole.GROUP_ADMIN))
+        assertFalse(Permission.MANAGE_POLICY in service.permissionsFor(UserRole.GROUP_ADMIN))
+        assertTrue(Permission.SEND_TALKBACK in service.permissionsFor(UserRole.GROUP_ADMIN))
         assertTrue(Permission.MANAGE_POLICY in service.permissionsFor(UserRole.ADMIN))
     }
 

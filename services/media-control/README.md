@@ -58,6 +58,10 @@ Metric naming rule:
 - `gcs_media_control_ice_server_requests_total`: ICE server list response result count
 - `gcs_media_control_ice_servers_returned`: request당 반환된 healthy ICE server 수
 - `gcs_media_control_stream_cache_events_total`: stream list cache hit/miss/degraded count
+- `gcs_media_control_gateway_messages_total`: gRPC telemetry accepted/rejected/backpressure와 고정 reason count
+- `gcs_media_control_gateway_message_duration_seconds`: gRPC telemetry 처리 latency histogram
+
+Gateway metric label에는 UUID, stream ID, request ID를 넣지 않고 protobuf status와 고정 reason catalog만 사용한다.
 - `gcs_media_control_ice_cache_events_total`: ICE server cache hit/miss/degraded count
 - `gcs_media_control_errors_total`: source/reason 기준 low-cardinality error count
 

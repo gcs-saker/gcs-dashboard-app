@@ -1,5 +1,5 @@
-import { serverHealthText } from "@dashboard/serverStatus";
-import type { SystemServiceCard } from "@dashboard/systemStatusViewModel";
+import { serverHealthText } from "@dashboard/operations/serverStatus";
+import type { SystemServiceCard } from "@dashboard/operations/systemStatusViewModel";
 
 interface SystemServiceCardsProps {
   serviceCards: SystemServiceCard[];

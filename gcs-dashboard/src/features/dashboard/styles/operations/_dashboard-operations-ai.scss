@@ -1,0 +1,26 @@
+.ai-panel {
+  grid-column: 3;
+  grid-row: 4;
+}
+
+.ai-panel ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ai-panel li {
+  align-items: center;
+  border-right: 1px solid var(--line-soft);
+  display: flex;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 0 14px;
+}
+
+.ai-panel li:last-child {
+  border-right: 0;
+}
+
+.ai-panel li span {
+  color: var(--muted);
+}

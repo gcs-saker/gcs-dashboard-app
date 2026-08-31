@@ -20,6 +20,7 @@ const (
 	routeSuffixPlayback              = "playback"
 	routeSuffixPublish               = "publish"
 	routeSuffixStatus                = "status"
+	routeSuffixCameraControl         = "camera-control"
 
 	mediaMTXActionPlayback = "playback"
 	mediaMTXActionPublish  = "publish"

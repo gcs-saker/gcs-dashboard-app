@@ -1,6 +1,6 @@
-@use "./dashboard-base-shell";
-@use "./dashboard-base-tabs-actions";
-@use "./dashboard-base-talkback";
-@use "./dashboard-base-widgets-toast";
-@use "./dashboard-base-grid-panels";
-@use "./dashboard-base-asset-drawer";
+@use "./base/dashboard-base-shell";
+@use "./base/dashboard-base-tabs-actions";
+@use "./base/dashboard-base-talkback";
+@use "./base/dashboard-base-widgets-toast";
+@use "./base/dashboard-base-grid-panels";
+@use "./base/dashboard-base-asset-drawer";

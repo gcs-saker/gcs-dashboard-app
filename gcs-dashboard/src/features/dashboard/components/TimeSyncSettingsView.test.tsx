@@ -2,6 +2,16 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { TimeSyncSettingsView } from "./TimeSyncSettingsView";
+import { SETTINGS_TABS } from "@dashboard/operations/timeSyncSettingsContracts";
+import type { UserRole } from "@auth/types";
+
+const authState = vi.hoisted(() => ({ role: "viewer" as UserRole }));
+
+vi.mock("@auth/AuthProvider", () => ({
+  useAuth: () => ({
+    currentUser: { username: "settings-test", role: authState.role },
+  }),
+}));
 
 const publicStatus = {
   mode: "public",
@@ -19,10 +29,40 @@ const publicStatus = {
 };
 
 afterEach(() => {
+  authState.role = "viewer";
   vi.unstubAllGlobals();
 });
 
 describe("TimeSyncSettingsView", () => {
+  test.each<UserRole>(["operator", "viewer"])("does not expose device provisioning to %s users", async (role) => {
+    authState.role = role;
+    const fetcher = vi.fn(async (_input: RequestInfo | URL) => jsonResponse(publicStatus));
+    vi.stubGlobal("fetch", fetcher);
+
+    render(<TimeSyncSettingsView />);
+    await screen.findByText(publicStatus.message);
+
+    const provisioningLabel = SETTINGS_TABS.find((tab) => tab.id === "provisioning")?.label;
+    expect(provisioningLabel).toBeDefined();
+    expect(screen.queryByRole("button", { name: provisioningLabel })).not.toBeInTheDocument();
+    expect(fetcher.mock.calls.some(([input]) => String(input).includes("/admin/"))).toBe(false);
+  });
+
+  test("exposes device provisioning to administrators", async () => {
+    authState.role = "admin";
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(publicStatus)));
+    const user = userEvent.setup();
+
+    render(<TimeSyncSettingsView />);
+    await screen.findByText(publicStatus.message);
+
+    const provisioningLabel = SETTINGS_TABS.find((tab) => tab.id === "provisioning")?.label;
+    expect(provisioningLabel).toBeDefined();
+    await user.click(screen.getByRole("button", { name: provisioningLabel }));
+
+    expect(screen.getByRole("button", { name: "회원가입 토큰 발급" })).toBeInTheDocument();
+  });
+
   test("renders server time status and saves closed network config", async () => {
     const user = userEvent.setup();
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -54,8 +94,8 @@ describe("TimeSyncSettingsView", () => {
     await user.click(screen.getByRole("button", { name: "폐쇄망" }));
     await user.clear(screen.getByLabelText("시간 서버"));
     await user.type(screen.getByLabelText("시간 서버"), "10.10.10.10");
-    await user.clear(screen.getByLabelText("Drift 경고"));
-    await user.type(screen.getByLabelText("Drift 경고"), "500");
+    await user.clear(screen.getByLabelText("허용 시각 오차 (ms)"));
+    await user.type(screen.getByLabelText("허용 시각 오차 (ms)"), "500");
     await user.click(screen.getByRole("button", { name: "설정 저장" }));
 
     await waitFor(() =>
@@ -83,7 +123,7 @@ describe("TimeSyncSettingsView", () => {
     render(<TimeSyncSettingsView />);
     await screen.findByText("수동/격리 모드입니다.");
 
-    await user.click(screen.getByRole("button", { name: "동기화 점검" }));
+    await user.click(screen.getByRole("button", { name: "지금 점검" }));
 
     await waitFor(() =>
       expect(fetcher).toHaveBeenLastCalledWith(

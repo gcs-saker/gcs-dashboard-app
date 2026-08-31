@@ -1,16 +1,19 @@
 import type { ReactNode } from "react";
-import type { DashboardWidgetDefinition } from "@dashboard/dashboardLayout";
+import type { DashboardWidgetDefinition } from "@dashboard/layout/dashboardLayout";
 import {
   getDashboardStreamDisplayName,
   getDashboardStreamStatusText,
   type DashboardStreamSlot,
-} from "@dashboard/streamTypes";
+} from "@dashboard/streaming/streamTypes";
 import {
   formatBearing,
   formatBearingDelta,
+  formatTelemetryAttitude,
+  formatTelemetryBattery,
+  formatTelemetryCoordinate,
   normalizeDegrees,
   type TelemetryRow,
-} from "@dashboard/dashboardPresentation";
+} from "@dashboard/layout/dashboardPresentation";
 
 interface TelemetryPanelProps {
   controls: ReactNode;
@@ -35,9 +38,10 @@ export function TelemetryPanel({
   const headingRotation = geometry ? `rotate(${normalizeDegrees(geometry.headingDeg)}deg)` : undefined;
   const mapRotation = geometry ? `rotate(${normalizeDegrees(geometry.yawDeg)}deg)` : undefined;
   const primaryMetrics: TelemetryRow[] = [
+    ["좌표", geometry ? formatTelemetryCoordinate(geometry) : "대기"],
     ["고도", geometry ? `${geometry.altitudeM.toFixed(1)} m` : "대기"],
-    ["기체 방위", heading],
-    ["지도 기준", mapBearing],
+    ["배터리", geometry ? formatTelemetryBattery(geometry) : "대기"],
+    ["자세", geometry ? formatTelemetryAttitude(geometry) : "대기"],
   ];
 
   return (
@@ -51,26 +55,55 @@ export function TelemetryPanel({
         <h2 id="telemetry-title">지오메트리 / 텔레메트리</h2>
         {controls}
       </div>
-      <div className="telemetry-panel__body">
+      <TelemetryBody
+        bearingDelta={bearingDelta}
+        heading={heading}
+        headingRotation={headingRotation}
+        mapBearing={mapBearing}
+        mapRotation={mapRotation}
+        primaryMetrics={primaryMetrics}
+        rows={rows}
+        stream={stream}
+        streamName={streamName}
+      />
+    </section>
+  );
+}
+
+interface TelemetryBodyProps {
+  bearingDelta: string;
+  heading: string;
+  headingRotation?: string;
+  mapBearing: string;
+  mapRotation?: string;
+  primaryMetrics: TelemetryRow[];
+  rows: TelemetryRow[];
+  stream: DashboardStreamSlot;
+  streamName: string;
+}
+
+function TelemetryBody(props: TelemetryBodyProps) {
+  return (
+    <div className="telemetry-panel__body">
         <div className="telemetry-panel__identity">
           <span>선택 스트림</span>
-          <strong>{streamName}</strong>
-          <em className={`ops-summary__state is-${stream.status}`}>{getDashboardStreamStatusText(stream.status)}</em>
+          <strong>{props.streamName}</strong>
+          <em className={`ops-summary__state is-${props.stream.status}`}>{getDashboardStreamStatusText(props.stream.status)}</em>
         </div>
         <div className="telemetry-compass" aria-label="기체 방위와 지도 기준 방위">
           <div className="telemetry-compass__dial">
             <span className="telemetry-compass__north">N</span>
-            <span className="telemetry-compass__needle" style={{ transform: headingRotation }} />
-            <span className="telemetry-compass__map-bearing" style={{ transform: mapRotation }} />
+            <span className="telemetry-compass__needle" style={{ transform: props.headingRotation }} />
+            <span className="telemetry-compass__map-bearing" style={{ transform: props.mapRotation }} />
           </div>
           <div className="telemetry-compass__legend">
-            <span>기체 {heading}</span>
-            <span>지도 {mapBearing}</span>
-            <strong>차이 {bearingDelta}</strong>
+            <span>기체 {props.heading}</span>
+            <span>지도 {props.mapBearing}</span>
+            <strong>차이 {props.bearingDelta}</strong>
           </div>
         </div>
         <dl className="telemetry-panel__metrics">
-          {primaryMetrics.map(([label, value]) => (
+          {props.primaryMetrics.map(([label, value]) => (
             <div key={label}>
               <dt>{label}</dt>
               <dd>{value}</dd>
@@ -78,14 +111,13 @@ export function TelemetryPanel({
           ))}
         </dl>
         <dl className="telemetry-panel__details">
-          {rows.map(([label, value]) => (
+          {props.rows.map(([label, value]) => (
             <div key={label}>
               <dt>{label}</dt>
               <dd>{value}</dd>
             </div>
           ))}
         </dl>
-      </div>
-    </section>
+    </div>
   );
 }

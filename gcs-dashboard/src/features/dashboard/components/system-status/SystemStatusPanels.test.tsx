@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
 
 import { DASHBOARD_SERVER_HEALTH } from "@/features/stateContracts";
-import type { DashboardServerStatusSnapshot } from "@dashboard/serverStatus";
-import type { RttChart, RttStats } from "@dashboard/systemStatusRtt";
+import type { DashboardServerStatusSnapshot } from "@dashboard/operations/serverStatus";
+import type { RttChart, RttStats } from "@dashboard/operations/systemStatusRtt";
 import { SystemServiceCards } from "./SystemServiceCards";
 import { SystemStatusPrimaryPanel } from "./SystemStatusPrimaryPanel";
 import { SystemRttPanel } from "./SystemRttPanel";

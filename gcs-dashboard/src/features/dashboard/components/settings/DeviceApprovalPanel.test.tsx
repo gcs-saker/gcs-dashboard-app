@@ -24,15 +24,36 @@ describe("DeviceApprovalPanel", () => {
 
     renderPanel("admin");
 
-    expect(await screen.findByText("Daegu Drone 01")).toBeInTheDocument();
+    expect((await screen.findAllByText("Daegu Drone 01")).length).toBeGreaterThan(0);
     expect(screen.getByText("승인 대기 장비 1대")).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent("device-001");
+    expect(screen.getByRole("button", { name: "새로고침" })).toHaveClass("settings-refresh-button");
 
     await user.click(screen.getByRole("button", { name: "승인" }));
 
     await waitFor(() => {
       expect(screen.getByText("승인 대기중인 장비가 없습니다.")).toBeInTheDocument();
     });
-    expect(fetcher.mock.calls.at(-1)?.[0]).toBe("/auth-policy/admin/devices/device-001/activate");
+    expect(fetcher.mock.calls.at(-1)?.[0]).toBe("/auth-policy/api/v1/devices/device-001/activate");
+  });
+
+  test("admin assigns a persistent alias to a registered device", async () => {
+    const user = userEvent.setup();
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) =>
+      init?.method === "PATCH"
+        ? jsonResponse({ ...device("active"), displayName: "현장 드론" })
+        : jsonResponse([device("active")]),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    renderPanel("admin");
+
+    const input = await screen.findByRole("textbox", { name: "Daegu Drone 01 장비 별칭" });
+    await user.clear(input);
+    await user.type(input, "현장 드론");
+    await user.click(screen.getByRole("button", { name: "별칭 저장" }));
+
+    expect((await screen.findAllByText("현장 드론")).length).toBeGreaterThan(0);
+    expect(fetcher.mock.calls.at(-1)?.[0]).toBe("/auth-policy/api/v1/devices/device-001");
   });
 
   test("viewer can see pending devices but cannot approve", async () => {
@@ -40,7 +61,7 @@ describe("DeviceApprovalPanel", () => {
 
     renderPanel("viewer");
 
-    expect(await screen.findByText("Daegu Drone 01")).toBeInTheDocument();
+    expect((await screen.findAllByText("Daegu Drone 01")).length).toBeGreaterThan(0);
     expect(screen.getByText("관리자 계정으로 로그인해야 장비를 승인할 수 있습니다.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "승인" })).toBeDisabled();
   });
@@ -50,7 +71,10 @@ function renderPanel(role: UserRole) {
   storeAuthSession({
     accessToken: "test-access-token",
     expiresAt: new Date(Date.now() + 60_000).toISOString(),
-    user: { role, username: `${role}-user` },
+    user: { role, username: `${role}-user`, groupId: "co-a", securityVersion: 1,
+      capabilities: { canView: true, canControl: role !== "viewer", canManage: role === "admin",
+        canSendTalkback: role !== "viewer", canPublish: role !== "viewer",
+        canManageMembers: role === "admin", canManageDevices: role === "admin" } },
   });
   render(
     <AuthProvider>

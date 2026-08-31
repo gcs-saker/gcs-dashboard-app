@@ -1,8 +1,8 @@
 import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
 import { DashboardMapWidget, type TacticalMapComponent } from "@dashboard/components/organisms/DashboardMapWidget";
-import type { DashboardWidgetDefinition, DashboardWidgetId } from "@dashboard/dashboardLayout";
-import type { MapFocusViewModel } from "@dashboard/mapFocus";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardWidgetDefinition, DashboardWidgetId } from "@dashboard/layout/dashboardLayout";
+import type { MapFocusViewModel } from "@dashboard/layout/mapFocus";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import type { ReactNode } from "react";
 
 interface DashboardTacticalMapWidgetProps {

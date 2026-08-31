@@ -8,7 +8,7 @@ import org.springframework.data.redis.core.StringRedisTemplate
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AllowedOrigins
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthPolicyConfig
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
-import kr.co.a4ai.gcssaker.authpolicy.configuration.OperationalPolicyConfig
+import kr.co.a4ai.gcssaker.authpolicy.configuration.OperationalPersistenceConfiguration
 import kr.co.a4ai.gcssaker.authpolicy.configuration.RuntimeEnvReader
 import kr.co.a4ai.gcssaker.authpolicy.configuration.TimeSyncPolicyConfiguration
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
@@ -221,6 +221,7 @@ class AuthPolicyConfigTest {
             tokenService,
             NoopPrincipalCache,
             StatelessRefreshSessionStore,
+            EmptyObjectProvider(),
         )
 
         assertNotNull(repository.findByUsername("admin01"))
@@ -264,11 +265,9 @@ class AuthPolicyConfigTest {
 
     @Test
     fun `configuration seeds operational event repository for dashboard log integration`() {
-        val repository = OperationalPolicyConfig().operationalEventRepository(
+        val repository = OperationalPersistenceConfiguration().operationalEventRepository(
             AuthRuntimeSettings.fromEnvironment(localEnvironment()).copy(jdbcPersistenceEnabled = false),
             EmptyObjectProvider(),
-            EmptyObjectProvider<StringRedisTemplate>(),
-            jacksonObjectMapper().findAndRegisterModules(),
         )
         val principal = AuthenticatedPrincipal("operator01", UserRole.OPERATOR, GroupId("co-a"))
 

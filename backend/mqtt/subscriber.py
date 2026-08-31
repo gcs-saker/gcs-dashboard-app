@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Any, Callable, Protocol
+from typing import Any, Callable, Protocol, cast
 
 import paho.mqtt.client as mqtt
 from fastapi import FastAPI
 
-from modules.telemetry_buffer import build_buffered_telemetry_sink
+from core.structured_logging import get_logger
+from modules.telemetry_buffer import TelemetryBufferFullError, build_buffered_telemetry_sink
 from mqtt.client import MqttSettings, configure_mqtt_resilience
 from mqtt.consumer_bridge import MqttConsumerBridge
+from mqtt.subscriber_metrics import record_telemetry_message
 from mqtt.topics import telemetry_subscription_topic
+
+logger = get_logger("mqtt-telemetry-subscriber")
 
 
 class SubscribableMqttClient(Protocol):
@@ -62,7 +66,7 @@ def build_telemetry_subscriber(
 ) -> MqttSubscriberRuntime:
     resolved_settings = settings or MqttSettings.from_env()
     resolved_bridge = bridge or MqttConsumerBridge(build_buffered_telemetry_sink())
-    factory = client_factory or mqtt.Client
+    factory = client_factory or cast(Callable[[str], SubscribableMqttClient], mqtt.Client)
     client = factory(resolved_settings.client_id)
     configure_mqtt_resilience(client, resolved_settings)
     if resolved_settings.username is not None:
@@ -77,7 +81,22 @@ def build_telemetry_subscriber(
 
     def on_message(_client_obj: Any, _userdata: Any, message: Any) -> None:
         payload = bytes(message.payload)
-        resolved_bridge.handle_message(message.topic, payload)
+        try:
+            resolved_bridge.handle_message(message.topic, payload)
+            record_telemetry_message("accepted")
+        except TelemetryBufferFullError:
+            record_telemetry_message("backpressure")
+            logger.warning("telemetry_message_rejected", error_code="telemetry_buffer_full")
+        except ValueError:
+            record_telemetry_message("rejected")
+            logger.warning("telemetry_message_rejected", error_code="invalid_telemetry_message")
+        except Exception as error:
+            record_telemetry_message("failed")
+            logger.error(
+                "telemetry_message_failed",
+                error_code="telemetry_processing_failed",
+                error_type=error.__class__.__name__,
+            )
 
     client.on_connect = on_connect
     client.on_message = on_message

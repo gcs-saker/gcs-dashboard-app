@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -10,6 +11,13 @@ import (
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/authpolicy"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/grpcgateway"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/httpapi"
+)
+
+const (
+	gatewayTelemetryEventKeyPrefix = "gcs-saker:gateway:v1:telemetry-event:"
+	gatewayTelemetryPendingTTL     = 30 * time.Second
+	gatewayTelemetryStoredTTL      = 7 * 24 * time.Hour
 )
 
 type gatewayAuthAdapter struct{ client authpolicy.Client }
@@ -43,15 +51,25 @@ func (s gatewayTelemetryStore) StoreTelemetry(ctx context.Context, identity grpc
 	})
 }
 
-func newGatewayServer(config runtimeConfig) grpcgateway.Server {
+type gatewayRuntime struct {
+	server      grpcgateway.Server
+	idempotency *redis.Client
+}
+
+func (r gatewayRuntime) Close() error { return r.idempotency.Close() }
+
+func newGatewayRuntime(config runtimeConfig, metrics *httpapi.Metrics) gatewayRuntime {
 	client := authpolicy.NewClient(config.authPolicyBaseURL, &http.Client{Timeout: 3 * time.Second})
 	authenticator := gatewayAuthAdapter{client: client}
 	idempotency := redis.NewClient(&redis.Options{
 		Addr: config.redisAddress, Password: config.redisPassword, DialTimeout: config.redisTimeout,
 	})
-	return grpcgateway.NewDeviceServer(authenticator, config.grpcMaxPayloadBytes, grpcgateway.NewTelemetryHandler(
-		gatewayContextTelemetryStore{client: client, idempotency: idempotency},
-	))
+	return gatewayRuntime{
+		server: grpcgateway.NewDeviceServer(authenticator, config.grpcMaxPayloadBytes, grpcgateway.NewTelemetryHandler(
+			gatewayContextTelemetryStore{client: client, idempotency: idempotency},
+		)).WithMetrics(metrics),
+		idempotency: idempotency,
+	}
 }
 
 type gatewayContextTelemetryStore struct {
@@ -64,8 +82,8 @@ func (s gatewayContextTelemetryStore) StoreTelemetry(ctx context.Context, identi
 	if !ok {
 		return fmt.Errorf("gateway credentials missing")
 	}
-	key := "gcs-saker:gateway:telemetry-event:" + identity.DeviceUUID + ":" + telemetry.EventID
-	acquired, err := s.idempotency.SetNX(ctx, key, "pending", 30*time.Second).Result()
+	key := gatewayTelemetryEventKeyPrefix + identity.DeviceUUID + ":" + telemetry.EventID
+	acquired, err := s.idempotency.SetNX(ctx, key, "pending", gatewayTelemetryPendingTTL).Result()
 	if err != nil {
 		return fmt.Errorf("reserve telemetry event: %w", err)
 	}
@@ -77,10 +95,12 @@ func (s gatewayContextTelemetryStore) StoreTelemetry(ctx context.Context, identi
 		return fmt.Errorf("telemetry event is already being stored")
 	}
 	if err := (gatewayTelemetryStore{client: s.client, credentials: credentials}).StoreTelemetry(ctx, identity, telemetry); err != nil {
-		_ = s.idempotency.Del(ctx, key).Err()
+		if deleteErr := s.idempotency.Del(ctx, key).Err(); deleteErr != nil {
+			return errors.Join(err, fmt.Errorf("release telemetry reservation: %w", deleteErr))
+		}
 		return err
 	}
-	if err := s.idempotency.Set(ctx, key, "stored", 7*24*time.Hour).Err(); err != nil {
+	if err := s.idempotency.Set(ctx, key, "stored", gatewayTelemetryStoredTTL).Err(); err != nil {
 		return fmt.Errorf("commit telemetry event idempotency: %w", err)
 	}
 	return nil

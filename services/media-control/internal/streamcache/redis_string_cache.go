@@ -62,7 +62,9 @@ func (c RedisStringCache) command(ctx context.Context, args ...string) (any, err
 	if ctxDeadline, ok := ctx.Deadline(); ok && ctxDeadline.Before(deadline) {
 		deadline = ctxDeadline
 	}
-	_ = conn.SetDeadline(deadline)
+	if err := conn.SetDeadline(deadline); err != nil {
+		return nil, fmt.Errorf("set redis connection deadline: %w", err)
+	}
 
 	reader := bufio.NewReader(conn)
 	if c.password != "" {

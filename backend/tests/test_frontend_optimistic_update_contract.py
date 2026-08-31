@@ -14,9 +14,9 @@ FORBIDDEN_SERVER_OPTIMISTIC_PATTERNS = (
 )
 
 LOCAL_FIRST_FILES = (
-    "gcs-dashboard/src/features/dashboard/hooks/useDashboardUserPreferences.ts",
-    "gcs-dashboard/src/features/dashboard/userPreferencesStore.ts",
-    "gcs-dashboard/src/features/dashboard/streamPreferences.ts",
+    "gcs-dashboard/src/features/dashboard/hooks/controller/useDashboardUserPreferences.ts",
+    "gcs-dashboard/src/features/dashboard/preferences/userPreferencesStore.ts",
+    "gcs-dashboard/src/features/dashboard/preferences/streamPreferences.ts",
 )
 
 
@@ -40,7 +40,7 @@ def test_frontend_does_not_use_unguarded_server_optimistic_mutations() -> None:
 
 
 def test_manual_stream_address_connection_is_not_exposed() -> None:
-    source = (FRONTEND_SRC / "features" / "dashboard" / "streamDevices.ts").read_text(encoding="utf-8")
+    source = (FRONTEND_SRC / "features" / "dashboard" / "assets" / "streamDevices.ts").read_text(encoding="utf-8")
     assert "createManualStreamDeviceOption" not in source
     assert "normalizeStreamAddress" not in source
 

@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from "react";
 
-import { useHlsFallbackPlayback } from "@streaming/hooks/useHlsFallbackPlayback";
+import { useHlsFallbackPlayback } from "@streaming/hooks/playback/useHlsFallbackPlayback";
 import type { HLSFallbackPlayerProps } from "@streaming/types";
-import { detectWebCodecsCapability } from "@streaming/webCodecsSupport";
+import { detectWebCodecsCapability } from "@streaming/runtime/webCodecsSupport";
 import "./HLSFallbackPlayer.css";
 
 const statusLabel = {
@@ -19,12 +19,12 @@ const latencyModeLabel = {
 
 export function HLSFallbackPlayer({
   hlsUrl,
-  streamId,
   title = "HLS fallback stream",
   fallbackReason = "WebRTC failed. Playing HLS fallback.",
   autoPlay = true,
   muted = true,
   controls = true,
+  showDiagnostics = true,
   preload = "none",
   latencyMode = "stable",
   poster,
@@ -65,7 +65,20 @@ export function HLSFallbackPlayer({
         poster={poster}
         className="hls-fallback-player__video"
       />
-      <figcaption className="hls-fallback-player__overlay">
+      {showDiagnostics ? <HlsDiagnostics {...{ activeLatencyMode, errorMessage, fallbackReason, mode, status, webCodecs }} /> : null}
+    </figure>
+  );
+}
+
+function HlsDiagnostics({ activeLatencyMode, errorMessage, fallbackReason, mode, status, webCodecs }: {
+  activeLatencyMode: keyof typeof latencyModeLabel;
+  errorMessage: string | null;
+  fallbackReason: string;
+  mode: string;
+  status: keyof typeof statusLabel;
+  webCodecs: ReturnType<typeof detectWebCodecsCapability>;
+}) {
+  return <figcaption className="hls-fallback-player__overlay">
         <span
           className={`hls-fallback-player__status hls-fallback-player__status--${status}`}
           role="status"
@@ -74,16 +87,13 @@ export function HLSFallbackPlayer({
           fallback {statusLabel[status]}
         </span>
         <span className="hls-fallback-player__reason">{fallbackReason}</span>
-        {streamId ? <span className="hls-fallback-player__stream">{streamId}</span> : null}
         <span className="hls-fallback-player__mode">mode: {mode}</span>
         <span className="hls-fallback-player__latency">{latencyModeLabel[activeLatencyMode]}</span>
         <span className="hls-fallback-player__webcodecs">
           WebCodecs: {webCodecs.supported ? "ready" : "fallback"}
         </span>
         {errorMessage ? <span className="hls-fallback-player__error">{errorMessage}</span> : null}
-      </figcaption>
-    </figure>
-  );
+  </figcaption>;
 }
 
 export default HLSFallbackPlayer;

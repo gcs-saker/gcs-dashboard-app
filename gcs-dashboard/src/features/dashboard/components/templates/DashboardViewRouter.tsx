@@ -1,18 +1,18 @@
 import { Suspense, type ReactNode } from "react";
 import type { RealtimePlayerSnapshot } from "@streaming/types";
-import type { CctvStatusSummary } from "@dashboard/dashboardCctv";
-import type { AudioAnalysisSnapshot, TelemetryRow } from "@dashboard/dashboardPresentation";
-import type { DashboardWidgetDefinition, DashboardWidgetId } from "@dashboard/dashboardLayout";
-import type { MapFocusViewModel } from "@dashboard/mapFocus";
+import type { CctvStatusSummary } from "@dashboard/streaming/dashboardCctv";
+import type { AudioAnalysisSnapshot, TelemetryRow } from "@dashboard/layout/dashboardPresentation";
+import type { DashboardWidgetDefinition, DashboardWidgetId } from "@dashboard/layout/dashboardLayout";
+import type { MapFocusViewModel } from "@dashboard/layout/mapFocus";
 import type { CctvQualityMode } from "@dashboard/components/CctvChannelCard";
-import type { CctvLayoutMode, DashboardUserPreferences, DashboardView } from "@dashboard/userPreferences";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { CctvLayoutMode, DashboardDensityMode, DashboardPriorityMode, DashboardUserPreferences, DashboardView } from "@dashboard/preferences/userPreferences";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import { CctvView } from "@dashboard/components/cctv/CctvView";
 import { SystemStatusPanel } from "@dashboard/components/SystemStatusPanel";
 import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
 import { DashboardMainGrid } from "./DashboardMainGrid";
-import { EventLogView, TacticalLeafletMap, TimeSyncSettingsView } from "@dashboard/dashboardLazyViews";
-import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
+import { EventLogView, TacticalLeafletMap, TimeSyncSettingsView } from "@dashboard/layout/dashboardLazyViews";
+import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
 
 export interface DashboardViewRouterProps {
   activeView: DashboardView;
@@ -24,6 +24,8 @@ export interface DashboardViewRouterProps {
   cctvQualityMode: CctvQualityMode;
   cctvStatusSummary: CctvStatusSummary;
   cctvStreams: DashboardStreamSlot[];
+  dashboardDensityMode: DashboardDensityMode;
+  dashboardPriorityMode: DashboardPriorityMode;
   isWidgetPinned: (widgetId: DashboardWidgetId) => boolean;
   isWidgetVisible: (widgetId: DashboardWidgetId) => boolean;
   mapFocus: MapFocusViewModel;

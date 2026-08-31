@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections import OrderedDict
+from dataclasses import dataclass
+from threading import RLock
 
 from sqlalchemy.dialects.postgresql import Insert
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
@@ -39,17 +41,28 @@ class TelemetryIngestCommand:
         )
 
 
-@dataclass
 class TelemetryReadModelStore:
-    snapshots: dict[str | None, TelemetryResponse] = field(default_factory=dict)
+    """Bounded compatibility cache; PostgreSQL remains the authoritative telemetry source."""
+
+    def __init__(self, max_snapshots: int = 500) -> None:
+        if max_snapshots <= 0:
+            raise ValueError("max telemetry snapshots must be positive")
+        self._max_snapshots = max_snapshots
+        self._snapshots: OrderedDict[str | None, TelemetryResponse] = OrderedDict()
+        self._lock = RLock()
 
     def upsert(self, command: TelemetryIngestCommand) -> TelemetryResponse:
         snapshot = command.response_snapshot()
-        self.snapshots[command.payload.uuid] = snapshot
+        with self._lock:
+            self._snapshots.pop(command.payload.uuid, None)
+            self._snapshots[command.payload.uuid] = snapshot
+            while len(self._snapshots) > self._max_snapshots:
+                self._snapshots.popitem(last=False)
         return snapshot
 
-    def list(self) -> list[TelemetryResponse]:
-        return list(self.snapshots.values())
+    def list(self, limit: int = 200, offset: int = 0) -> list[TelemetryResponse]:
+        with self._lock:
+            return list(self._snapshots.values())[offset : offset + limit]
 
 
 class TelemetryRepository:
@@ -87,9 +100,6 @@ class TelemetryRepository:
         return self.db.get_bind().dialect.name == "postgresql"
 
 
-default_read_model_store = TelemetryReadModelStore()
-
-
 def upsert_telemetry(command_or_data: TelemetryIngestCommand | TelemetryCreate, db: Session) -> Telemetry:
     return TelemetryRepository(db).upsert(command_or_data)
 
@@ -101,14 +111,11 @@ def format_epoch_millis(epoch_val: int | None) -> str | None:
 
 
 def format_epoch_seconds(epoch_val: object) -> str:
-    try:
-        if not isinstance(epoch_val, (int, float, str, bytes, bytearray)):
-            return str(epoch_val)
-        sec = int(epoch_val)
-        h, m, s = sec // 3600, (sec % 3600) // 60, sec % 60
-        return f"{h:02}:{m:02}:{s:02}"
-    except Exception:
-        return str(epoch_val)
+    if not isinstance(epoch_val, (int, float, str, bytes, bytearray)):
+        raise TypeError("epoch seconds must be numeric")
+    sec = int(epoch_val)
+    h, m, s = sec // 3600, (sec % 3600) // 60, sec % 60
+    return f"{h:02}:{m:02}:{s:02}"
 
 
 def format_epoch(epoch_val: object) -> str:

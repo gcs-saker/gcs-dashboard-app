@@ -1,5 +1,6 @@
 from modules.telemetry_buffer.buffer import (
     InMemoryTelemetryWriteBuffer,
+    TelemetryBufferFullError,
     TelemetryBufferRecord,
     TelemetryBufferStats,
     TelemetryWriteBuffer,
@@ -27,6 +28,7 @@ __all__ = [
     "TelemetryBulkPayload",
     "TelemetryBulkWritePlan",
     "InMemoryTelemetryWriteBuffer",
+    "TelemetryBufferFullError",
     "TelemetryBufferRecord",
     "TelemetryBufferStats",
     "TelemetryBulkSink",

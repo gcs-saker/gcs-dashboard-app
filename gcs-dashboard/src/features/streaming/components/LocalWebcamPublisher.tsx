@@ -1,4 +1,4 @@
-import { useLocalWebcamPublisherController, type LocalWebcamPublisherProps } from "@streaming/hooks/useLocalWebcamPublisherController";
+import { useLocalWebcamPublisherController, type LocalWebcamPublisherProps } from "@streaming/hooks/publishing/useLocalWebcamPublisherController";
 import { LocalWebcamPublisherView } from "./publisher/LocalWebcamPublisherView";
 import "./LocalWebcamPublisher.css";
 

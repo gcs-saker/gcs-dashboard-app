@@ -1,11 +1,13 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { loginRequest, logoutRequest, persistTokenResponse, refreshSessionRequest } from "./authApi";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
+  type Dispatch, type MutableRefObject, type ReactNode, type SetStateAction } from "react";
+import { loginRequest, logoutRequest, persistTokenResponse, refreshSessionOnce } from "./authApi";
 import {
   clearAuthSession,
   getStoredAccessToken,
   getStoredUser,
 } from "./authStorage";
 import type { AuthenticatedUser, LoginRequest } from "./types";
+import { safeParseAuthenticatedUser } from "./authResponseValidation";
 
 interface AuthContextValue {
   accessToken: string | null;
@@ -18,14 +20,50 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+interface AuthProviderProps {
+  children: ReactNode;
+  onSessionCleared?: () => void;
+}
+
+export function AuthProvider({ children, onSessionCleared }: AuthProviderProps) {
   const [accessToken, setAccessToken] = useState<string | null>(() => getStoredAccessToken());
-  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(() =>
-    getStoredUser<AuthenticatedUser>(),
-  );
+  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(readStoredAuthenticatedUser);
   const [isAuthReady, setIsAuthReady] = useState<boolean>(() => Boolean(getStoredAccessToken()));
   const didRequestLogoutRef = useRef(false);
+  useSessionRefresh(accessToken, didRequestLogoutRef, setAccessToken, setCurrentUser, setIsAuthReady);
 
+  const logout = useCallback((): void => {
+    didRequestLogoutRef.current = true;
+    clearAuthSession();
+    setAccessToken(null);
+    setCurrentUser(null);
+    setIsAuthReady(true);
+    onSessionCleared?.();
+    void logoutRequest().catch(() => undefined);
+  }, [onSessionCleared]);
+
+  const login = useCallback(async (credentials: LoginRequest): Promise<void> => {
+    const token = await loginRequest(credentials);
+    persistTokenResponse(token);
+    didRequestLogoutRef.current = false;
+    setAccessToken(token.access_token);
+    setCurrentUser(tokenUser(token));
+    setIsAuthReady(true);
+  }, []);
+
+  const value = useMemo<AuthContextValue>(() => ({ accessToken, currentUser,
+    isAuthenticated: Boolean(accessToken), isAuthReady, login, logout,
+  }), [accessToken, currentUser, isAuthReady, login, logout]);
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+function useSessionRefresh(
+  accessToken: string | null,
+  didRequestLogoutRef: MutableRefObject<boolean>,
+  setAccessToken: Dispatch<SetStateAction<string | null>>,
+  setCurrentUser: Dispatch<SetStateAction<AuthenticatedUser | null>>,
+  setIsAuthReady: Dispatch<SetStateAction<boolean>>,
+): void {
   useEffect(() => {
     let disposed = false;
     if (accessToken) {
@@ -41,10 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
     }
 
-    void refreshSessionRequest()
+    void refreshSessionOnce()
       .then((token) => {
         if (disposed) return;
-        const user = { username: token.username, role: token.role };
+        const user = tokenUser(token);
         setAccessToken(token.access_token);
         setCurrentUser(user);
       })
@@ -62,40 +100,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       disposed = true;
     };
-  }, [accessToken]);
+  }, [accessToken, didRequestLogoutRef, setAccessToken, setCurrentUser, setIsAuthReady]);
 
-  const logout = useCallback((): void => {
-    didRequestLogoutRef.current = true;
-    clearAuthSession();
-    setAccessToken(null);
-    setCurrentUser(null);
-    setIsAuthReady(true);
-    void logoutRequest().catch(() => undefined);
-  }, []);
+}
 
-  const login = useCallback(async (credentials: LoginRequest): Promise<void> => {
-    const token = await loginRequest(credentials);
-    const user = { username: token.username, role: token.role };
-    persistTokenResponse(token);
-    didRequestLogoutRef.current = false;
-    setAccessToken(token.access_token);
-    setCurrentUser(user);
-    setIsAuthReady(true);
-  }, []);
+function tokenUser(token: Awaited<ReturnType<typeof loginRequest>>): AuthenticatedUser {
+  return {
+    username: token.username,
+    role: token.role,
+    groupId: token.group_id,
+    securityVersion: token.securityVersion,
+    capabilities: token.capabilities,
+  };
+}
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      accessToken,
-      currentUser,
-      isAuthenticated: Boolean(accessToken),
-      isAuthReady,
-      login,
-      logout,
-    }),
-    [accessToken, currentUser, isAuthReady, login, logout],
-  );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+function readStoredAuthenticatedUser(): AuthenticatedUser | null {
+  const storedUser = getStoredUser();
+  if (storedUser === null) return null;
+  const parsed = safeParseAuthenticatedUser(storedUser);
+  if (!parsed) clearAuthSession();
+  return parsed;
 }
 
 export function useAuth(): AuthContextValue {

@@ -46,18 +46,31 @@ type AccountPublishAuthorizer interface {
 }
 
 type Server struct {
-	streams          StreamLister
-	ice              IceServerProvider
-	playback         domain.PlaybackURLBuilder
-	authorizer       StreamAuthorizer
+	streamEndpoints
+	publishEndpoints
+	operationalEndpoints
+}
+
+type streamEndpoints struct {
+	streams    StreamLister
+	ice        IceServerProvider
+	playback   domain.PlaybackURLBuilder
+	authorizer StreamAuthorizer
+	groups     domain.StreamGroupResolver
+	cameras    *cameraCommandStore
+}
+
+type publishEndpoints struct {
 	devicePublisher  DevicePublishAuthorizer
 	accountPublisher AccountPublishAuthorizer
-	groups           domain.StreamGroupResolver
 	publishToken     string
-	metrics          *Metrics
-	gateway          GatewayReadiness
 	publishSessions  domain.PublishSessionStore
-	now              func() time.Time
+}
+
+type operationalEndpoints struct {
+	metrics *Metrics
+	gateway GatewayReadiness
+	now     func() time.Time
 }
 
 func NewServer(
@@ -84,14 +97,12 @@ func NewServerWithMetrics(
 		metrics = NewMetrics()
 	}
 	return Server{
-		streams:      streams,
-		ice:          ice,
-		playback:     playback,
-		authorizer:   authorizer,
-		groups:       groups,
-		publishToken: strings.TrimSpace(publishToken),
-		metrics:      metrics,
-		now:          time.Now,
+		streamEndpoints: streamEndpoints{
+			streams: streams, ice: ice, playback: playback, authorizer: authorizer, groups: groups,
+			cameras: newCameraCommandStore(),
+		},
+		publishEndpoints:     publishEndpoints{publishToken: strings.TrimSpace(publishToken)},
+		operationalEndpoints: operationalEndpoints{metrics: metrics, now: time.Now},
 	}
 }
 
@@ -117,10 +128,20 @@ func (s Server) WithGatewayReadiness(gateway GatewayReadiness) Server {
 
 func (s Server) Routes() http.Handler {
 	mux := http.NewServeMux()
+	s.registerOperationalRoutes(mux)
+	s.registerStreamRoutes(mux)
+	s.registerPublishRoutes(mux)
+	return mux
+}
+
+func (s Server) registerOperationalRoutes(mux *http.ServeMux) {
 	mux.Handle(routeMetrics, s.metrics.Handler())
 	s.handle(mux, routeHealthz, s.healthz)
 	s.handle(mux, routeReadyz, s.readyz)
 	s.handle(mux, routeRuntimeMetrics, s.runtimeMetrics)
+}
+
+func (s Server) registerStreamRoutes(mux *http.ServeMux) {
 	s.handle(mux, routeMediaMTXAuth, s.mediaMTXAuth)
 	s.handle(mux, routeStreams, s.streamList)
 	s.handle(mux, routeIceServers, s.iceServers)
@@ -128,11 +149,13 @@ func (s Server) Routes() http.Handler {
 	s.handle(mux, routeDashboardIceServers, s.dashboardIceServers)
 	s.handle(mux, routeDashboardStreamItemPrefix, s.dashboardStreamItem)
 	s.handle(mux, routeDashboardStreams, s.dashboardStreamList)
+}
+
+func (s Server) registerPublishRoutes(mux *http.ServeMux) {
 	s.handle(mux, routeDevicePublishSessions, s.devicePublishSessions)
 	s.handle(mux, routeDevicePublishSessionPrefix, s.devicePublishSessions)
 	s.handle(mux, routeAccountPublishSessions, s.accountPublishSessions)
 	s.handle(mux, routeAccountPublishSessionPrefix, s.accountPublishSessions)
-	return mux
 }
 
 func (s Server) handle(mux *http.ServeMux, route string, handler http.HandlerFunc) {

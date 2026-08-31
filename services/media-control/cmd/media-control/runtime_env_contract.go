@@ -128,7 +128,7 @@ var runtimeDefaults = runtimeDefaultsContract{
 	turnPassword:          "replace-with-secret",
 	stunURL:               "stun:turn-primary:3478",
 	turnPrimaryURL:        "turn:turn-primary:3478",
-	turnSecondaryURL:      "turn:turn-secondary:3478",
+	turnSecondaryURL:      "",
 	authzCacheTTL:         2 * time.Second,
 	streamCacheTTL:        time.Second,
 	redisTimeout:          500 * time.Millisecond,
