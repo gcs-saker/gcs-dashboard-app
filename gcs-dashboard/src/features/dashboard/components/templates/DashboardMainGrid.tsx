@@ -71,8 +71,10 @@ export function DashboardMainGrid(props: DashboardMainGridProps) {
             controls={widgetControls("selected-stream", "선택 스트림")}
             hasAudioActivity={selectedStream.id === props.audioActiveStreamId}
             isPinned={props.isWidgetPinned("selected-stream")}
+            isTalkbackTarget={Boolean(selectedStream.streamPath && props.talkbackTargetStreamIds.includes(selectedStream.streamPath))}
             onPlaybackStatusChange={props.onPlaybackStatusChange}
             onToggleAiMode={props.onToggleAiMode}
+            onToggleTalkbackTarget={props.onToggleTalkbackTarget}
             stream={selectedStream}
           />
         </DashboardErrorBoundary>

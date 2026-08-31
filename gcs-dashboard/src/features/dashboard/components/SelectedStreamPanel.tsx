@@ -15,8 +15,10 @@ interface SelectedStreamPanelProps {
   controls?: ReactNode;
   hasAudioActivity?: boolean;
   isPinned?: boolean;
+  isTalkbackTarget?: boolean;
   onPlaybackStatusChange?: (streamId: string, snapshot: RealtimePlayerSnapshot) => void;
   onToggleAiMode?: (streamId: string) => void;
+  onToggleTalkbackTarget?: (streamPath: string) => void;
 }
 
 export function SelectedStreamPanel({
@@ -24,8 +26,10 @@ export function SelectedStreamPanel({
   controls,
   hasAudioActivity = false,
   isPinned = false,
+  isTalkbackTarget = false,
   onPlaybackStatusChange,
   onToggleAiMode,
+  onToggleTalkbackTarget,
 }: SelectedStreamPanelProps) {
   useRenderDiagnostics(RENDER_DIAGNOSTIC_LABELS.selectedStreamPanel);
   return (
@@ -51,6 +55,16 @@ export function SelectedStreamPanel({
             type="button"
           >
             AI 모드
+          </button>
+          <button
+            aria-label="음성 송신 대상"
+            aria-pressed={isTalkbackTarget}
+            className={`ops-command-button selected-stream__talkback-target ${isTalkbackTarget ? "is-active" : ""}`}
+            disabled={!stream.streamPath}
+            onClick={() => stream.streamPath && onToggleTalkbackTarget?.(stream.streamPath)}
+            type="button"
+          >
+            송신 대상
           </button>
           {controls}
         </span>
