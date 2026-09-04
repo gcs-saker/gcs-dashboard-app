@@ -2,7 +2,9 @@ package sessionstore
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -33,11 +35,29 @@ func (s *RedisStore) Close() error { return s.client.Close() }
 
 func (s *RedisStore) Save(ctx context.Context, v domain.PublishSession) error {
 	key := keyPrefix + v.SessionID
-	err := s.client.HSet(ctx, key, encode(v)).Err()
-	if err == nil {
-		err = s.client.ExpireAt(ctx, key, v.RenewalTokenExpiresAt.Add(sessionExpiryGrace)).Err()
-	}
+	_, err := s.client.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.HSet(ctx, key, encode(v))
+		pipe.ExpireAt(ctx, key, v.RenewalTokenExpiresAt.Add(sessionExpiryGrace))
+		pipe.Set(ctx, streamIndexKey(v.StreamID), v.SessionID, 0)
+		pipe.ExpireAt(ctx, streamIndexKey(v.StreamID), v.RenewalTokenExpiresAt.Add(sessionExpiryGrace))
+		return nil
+	})
 	return err
+}
+
+func streamIndexKey(streamID string) string {
+	return fmt.Sprintf("gcs-saker:publish-stream:v1:%x", sha256.Sum256([]byte(streamID)))
+}
+
+func (s *RedisStore) FindByStream(ctx context.Context, streamID string) (domain.PublishSession, error) {
+	id, err := s.client.Get(ctx, streamIndexKey(streamID)).Result()
+	if err == redis.Nil {
+		return domain.PublishSession{}, domain.ErrPublishSessionNotFound
+	}
+	if err != nil {
+		return domain.PublishSession{}, fmt.Errorf("%w: stream lookup failed", domain.ErrPublishSessionStoreUnavailable)
+	}
+	return s.Find(ctx, id)
 }
 
 func (s *RedisStore) Find(ctx context.Context, id string) (domain.PublishSession, error) {
@@ -75,12 +95,22 @@ redis.call('HSET', KEYS[1],
   'renewal_expires_ms', ARGV[4],
   'updated_ms', ARGV[5])
 redis.call('PEXPIREAT', KEYS[1], tonumber(ARGV[4]) + 60000)
+if redis.call('GET', KEYS[2]) == ARGV[6] then
+  redis.call('PEXPIREAT', KEYS[2], tonumber(ARGV[4]) + 60000)
+end
 return {'rotated', tostring(version)}
 `)
 
 func (s *RedisStore) RotateRenewal(ctx context.Context, id string, expected, next []byte, publishExpiry, renewalExpiry, now time.Time) (domain.PublishSession, domain.RenewalRotationResult, error) {
-	result, err := rotateScript.Run(ctx, s.client, []string{keyPrefix + id},
-		b64(expected), b64(next), millis(publishExpiry), millis(renewalExpiry), millis(now)).StringSlice()
+	session, findErr := s.Find(ctx, id)
+	if errors.Is(findErr, domain.ErrPublishSessionNotFound) {
+		return domain.PublishSession{}, domain.RenewalRejected, nil
+	}
+	if findErr != nil {
+		return domain.PublishSession{}, domain.RenewalRejected, findErr
+	}
+	result, err := rotateScript.Run(ctx, s.client, []string{keyPrefix + id, streamIndexKey(session.StreamID)},
+		b64(expected), b64(next), millis(publishExpiry), millis(renewalExpiry), millis(now), id).StringSlice()
 	if err != nil || len(result) == 0 {
 		return domain.PublishSession{}, domain.RenewalRejected, fmt.Errorf("%w: rotation failed", domain.ErrPublishSessionStoreUnavailable)
 	}

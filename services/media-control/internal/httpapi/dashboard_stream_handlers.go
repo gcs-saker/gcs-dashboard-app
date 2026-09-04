@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
@@ -76,7 +77,12 @@ func (s Server) authorizeTalkbackRoute(w http.ResponseWriter, r *http.Request, s
 		writeJSON(w, http.StatusUnprocessableEntity, errorPayload("operator id is invalid"))
 		return domain.ParsedStreamPath{}, "", false
 	}
-	return talkback, s.groups.TargetFor(parsed).PublisherGroupID, true
+	target, err := s.resolveStreamTarget(r.Context(), parsed)
+	if err != nil {
+		s.writeStreamAccessError(w, err)
+		return domain.ParsedStreamPath{}, "", false
+	}
+	return talkback, target.PublisherGroupID, true
 }
 
 func (s Server) writeDashboardStreamPublish(w http.ResponseWriter, r *http.Request, streamID string) {
@@ -93,7 +99,7 @@ func (s Server) writeDashboardStreamPublish(w http.ResponseWriter, r *http.Reque
 		s.writeStreamAccessError(w, err)
 		return
 	}
-	s.writeStreamPublishResponse(w, parsed)
+	s.writeStreamPublishResponse(w, r, parsed)
 }
 
 func (s Server) writeDeviceStreamPublish(w http.ResponseWriter, r *http.Request, parsed domain.ParsedStreamPath) {
@@ -115,7 +121,20 @@ func (s Server) writeDeviceStreamPublish(w http.ResponseWriter, r *http.Request,
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
 		return
 	}
-	s.writeStreamPublishResponseForGroup(w, parsed, authorization.PublisherGroupID)
+	if s.publishSessions == nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
+	response, err := s.createPublishSession(r.Context(), authorization)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store, private")
+	writeJSON(w, http.StatusOK, streamPublishResponse{
+		StreamID: response.StreamID, WhipURL: response.PublishURL + "?" + publisherTokenQueryKey + "=" + url.QueryEscape(response.PublishToken),
+		IceServers: response.IceServers,
+	})
 }
 
 func requestHasDeviceCredential(r *http.Request) bool {
@@ -158,7 +177,12 @@ func (s Server) writeDashboardStreamSuffix(
 	case "":
 		writeJSON(w, http.StatusOK, s.streamDescriptorResponseFromParsed(stream, parsed))
 	case routeSuffixPlayback:
-		writeJSON(w, http.StatusOK, s.streamPlaybackResponseFromParsed(stream, parsed))
+		response, err := s.streamPlaybackResponseFromParsed(r.Context(), stream, parsed)
+		if err != nil {
+			s.writeStreamAccessError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, response)
 	case routeSuffixStatus:
 		writeJSON(w, http.StatusOK, streamStatusResponse{StreamID: parsed.StreamID, Status: stream.Status})
 	default:

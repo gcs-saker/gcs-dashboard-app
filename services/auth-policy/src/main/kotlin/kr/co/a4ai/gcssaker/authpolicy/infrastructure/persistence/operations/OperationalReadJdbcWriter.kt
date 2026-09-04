@@ -58,6 +58,8 @@ internal class OperationalReadJdbcWriter(
             telemetry.yawDeg,
             telemetry.linkQualityPercent,
             telemetry.observedAt?.let(Timestamp::from),
+            telemetry.sessionId,
+            telemetry.streamId,
         )
     }
 
@@ -84,6 +86,8 @@ internal class OperationalReadJdbcWriter(
         telemetry.yawDeg,
         telemetry.linkQualityPercent,
         telemetry.observedAt?.let(Timestamp::from),
+        telemetry.sessionId,
+        telemetry.streamId,
     )
 
     private fun historyArguments(telemetry: TelemetryReadModel): Array<Any?> = arrayOf(
@@ -118,6 +122,8 @@ internal class OperationalReadJdbcWriter(
             telemetry.yawDeg,
             telemetry.linkQualityPercent,
             telemetry.observedAt?.let(Timestamp::from),
+            telemetry.sessionId,
+            telemetry.streamId,
         )
     }
 

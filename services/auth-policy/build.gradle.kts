@@ -1,3 +1,5 @@
+import com.google.protobuf.gradle.*
+
 plugins {
     kotlin("jvm") version "2.3.20"
     kotlin("plugin.spring") version "2.3.20"
@@ -5,6 +7,7 @@ plugins {
     id("org.springframework.boot") version "3.5.14"
     id("io.spring.dependency-management") version "1.1.7"
     jacoco
+    id("com.google.protobuf") version "0.9.5"
 }
 
 extra["springModulithVersion"] = "1.4.11"
@@ -28,6 +31,10 @@ java {
 }
 
 dependencies {
+    implementation("io.grpc:grpc-netty-shaded:1.76.0")
+    implementation("io.grpc:grpc-protobuf:1.76.0")
+    implementation("io.grpc:grpc-stub:1.76.0")
+    compileOnly("javax.annotation:javax.annotation-api:1.3.2")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -59,6 +66,14 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql:42.7.12")
 }
 
+sourceSets.main { proto { srcDir(providers.environmentVariable("CONTRACTS_PROTO_DIR").getOrElse("../../contracts/proto")) } }
+
+protobuf {
+    protoc { artifact = "com.google.protobuf:protoc:3.25.8" }
+    plugins { create("grpc") { artifact = "io.grpc:protoc-gen-grpc-java:1.76.0" } }
+    generateProtoTasks { all().forEach { it.plugins { create("grpc") } } }
+}
+
 dependencyManagement {
     imports {
         mavenBom("org.springframework.modulith:spring-modulith-bom:${property("springModulithVersion")}")
@@ -82,10 +97,13 @@ tasks.jacocoTestReport {
         xml.required.set(true)
         html.required.set(true)
     }
+    // Protoc output is generated contract code, not hand-written application behavior.
+    classDirectories.setFrom(sourceSets.main.get().output.classesDirs.asFileTree.matching { exclude("kr/co/a4ai/gcssaker/contracts/**") })
 }
 
 tasks.jacocoTestCoverageVerification {
     dependsOn(tasks.jacocoTestReport)
+    classDirectories.setFrom(sourceSets.main.get().output.classesDirs.asFileTree.matching { exclude("kr/co/a4ai/gcssaker/contracts/**") })
     violationRules {
         rule {
             limit {

@@ -26,6 +26,8 @@ data class TelemetryReadModel(
     val linkQualityPercent: Double? = null,
     val observedAt: Instant? = null,
     val eventId: String? = null,
+    val sessionId: String? = null,
+    val streamId: String? = null,
 )
 
 data class TelemetryHistoryReadModel(
@@ -84,7 +86,11 @@ interface OperationalReadRepository {
 class InMemoryOperationalReadRepository(
     telemetry: Collection<TelemetryReadModel>,
     private val assetsByGateway: Map<String, List<AssetReadModel>>,
+    private val hierarchy: OrganizationHierarchyRepository? = null,
 ) : OperationalReadRepository {
+    private fun canRead(principal: AuthenticatedPrincipal, groupId: GroupId): Boolean =
+        principal.role == UserRole.ADMIN || principal.groupId == groupId ||
+            (principal.role == UserRole.GROUP_ADMIN && hierarchy?.current()?.isAncestor(principal.groupId, groupId) == true)
     private val eventIds = ConcurrentHashMap.newKeySet<String>()
     private val telemetryByUuid = ConcurrentHashMap(telemetry.associateBy { it.uuid })
     private val telemetryHistory = ConcurrentHashMap<String, List<TelemetryHistoryReadModel>>().apply {
@@ -95,7 +101,7 @@ class InMemoryOperationalReadRepository(
 
     override fun telemetryFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<TelemetryReadModel> =
         telemetryByUuid.values
-            .filter { it.groupId == principal.groupId || principal.role == UserRole.ADMIN }
+            .filter { canRead(principal, it.groupId) }
             .sortedBy { it.uuid }.drop(offset).take(limit)
 
     override fun upsertTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel {
@@ -116,7 +122,7 @@ class InMemoryOperationalReadRepository(
     ): List<TelemetryHistoryReadModel> =
         telemetryHistory[uuid].orEmpty()
             .asSequence()
-            .filter { it.telemetry.groupId == principal.groupId || principal.role == UserRole.ADMIN }
+            .filter { canRead(principal, it.telemetry.groupId) }
             .sortedByDescending { it.recordedAt }
             .take(limit.coerceIn(1, 500))
             .toList()
@@ -125,7 +131,7 @@ class InMemoryOperationalReadRepository(
         principal: AuthenticatedPrincipal, gatewayUuid: String, limit: Int, offset: Int,
     ): List<AssetReadModel> =
         assetsByGateway[gatewayUuid].orEmpty()
-            .filter { it.groupId == principal.groupId || principal.role == UserRole.ADMIN }
+            .filter { canRead(principal, it.groupId) }
             .drop(offset).take(limit)
             .sortedBy { it.uuid }
 
@@ -143,7 +149,7 @@ class InMemoryOperationalReadRepository(
     ): List<ServerHealthSnapshotReadModel> =
         serverHealthSnapshots
             .asSequence()
-            .filter { it.groupId == principal.groupId || principal.role == UserRole.ADMIN }
+            .filter { canRead(principal, it.groupId) }
             .sortedByDescending { it.checkedAt }
             .take(limit.coerceIn(1, 500))
             .toList()
@@ -156,7 +162,7 @@ class InMemoryOperationalReadRepository(
     override fun streamSessionsFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<StreamSessionReadModel> =
         streamSessionHistory
             .asSequence()
-            .filter { it.groupId == principal.groupId || principal.role == UserRole.ADMIN }
+            .filter { canRead(principal, it.groupId) }
             .groupBy { "${it.streamId}|${it.sessionId.orEmpty()}" }
             .values
             .map { sessions -> sessions.maxBy { it.lastHeartbeatAt } }

@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package gcs.saker.v1;
+
+import "gcs/saker/v1/telemetry.proto";
+
+option go_package = "github.com/gcs-saker/gcs-dashboard-app/contracts/gen/go/gcs/saker/v1;sakerv1";
+option java_multiple_files = true;
+option java_package = "kr.co.a4ai.gcssaker.contracts.v1";
+
+// Private service-to-service contract. Never route this service through the public edge.
+service DevicePolicyService {
+  rpc AuthenticateDevice(DeviceCredentialRequest) returns (DeviceBinding);
+  rpc ValidateBinding(DeviceBinding) returns (DeviceBinding);
+  rpc IngestTelemetry(DeviceTelemetryRequest) returns (DeviceTelemetryResult);
+}
+
+service MediaPolicyService {
+  rpc AuthorizeStream(StreamAccessInput) returns (StreamAccessOutput);
+  rpc AuthorizeDevicePublish(DevicePublishInput) returns (PublishBindingOutput);
+  rpc AuthorizeAccountPublish(AccountPublishInput) returns (PublishBindingOutput);
+}
+
+message StreamAccessInput {
+  string authorization = 1;
+  string stream_id = 2;
+  string path = 3;
+  string publisher_group_id = 4;
+  string action = 5;
+}
+message StreamAccessOutput {
+  bool allowed = 1;
+  string stream_id = 2;
+  string principal_id = 3;
+  string group_id = 4;
+  int64 expires_unix_millis = 5;
+}
+message DevicePublishInput { string device_uuid = 1; string credential = 2; string sensor_id = 3; }
+message AccountPublishInput { string authorization = 1; string sensor_id = 2; }
+message PublishBindingOutput {
+  string device_uuid = 1;
+  string group_id = 2;
+  string sensor_id = 3;
+  string stream_id = 4;
+  string path = 5;
+  int64 credential_version = 6;
+  int64 policy_version = 7;
+}
+
+message DeviceCredentialRequest {
+  string device_uuid = 1;
+  string credential = 2;
+}
+
+message DeviceBinding {
+  string device_uuid = 1;
+  string group_id = 2;
+  int64 credential_version = 3;
+  int64 policy_version = 4;
+}
+
+message DeviceTelemetryRequest {
+  DeviceBinding binding = 1;
+  TelemetryEnvelope telemetry = 2;
+  string session_id = 3;
+  string stream_id = 4;
+}
+
+message DeviceTelemetryResult {
+  bool stored = 1;
+}

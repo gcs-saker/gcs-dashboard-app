@@ -12,6 +12,7 @@ import (
 )
 
 type Telemetry struct {
+	Envelope           *sakerv1.TelemetryEnvelope
 	EventID            string
 	AssetID            string
 	ObservedUnixMillis int64
@@ -39,7 +40,7 @@ func NewTelemetryHandler(store TelemetryStore) TelemetryHandler {
 
 func (h TelemetryHandler) HandleGatewayRequest(ctx context.Context, request GatewayStreamRequest) GatewayRequestDecision {
 	identity, ok := GatewayIdentityFromContext(ctx)
-	if !ok || request.AssetID != identity.DeviceUUID || request.GroupID != identity.GroupID {
+	if !ok || !requestMatchesIdentity(request, identity) {
 		return GatewayRequestDecision{Status: GatewayAckStatusRejected, ReasonCode: reasonIdentityMismatch}
 	}
 	if request.Payload.Kind != GatewayPayloadTelemetry || h.store == nil {
@@ -52,6 +53,9 @@ func (h TelemetryHandler) HandleGatewayRequest(ctx context.Context, request Gate
 	if telemetry.AssetID != identity.DeviceUUID {
 		return GatewayRequestDecision{Status: GatewayAckStatusRejected, ReasonCode: reasonIdentityMismatch}
 	}
+	if samplePredatesSession(identity, telemetry) {
+		return GatewayRequestDecision{Status: GatewayAckStatusRejected, ReasonCode: reasonIdentityMismatch}
+	}
 	if err := ValidateTelemetry(telemetry, time.Now()); err != nil {
 		return GatewayRequestDecision{Status: GatewayAckStatusRejected, ReasonCode: reasonSemanticInvalid}
 	}
@@ -59,6 +63,14 @@ func (h TelemetryHandler) HandleGatewayRequest(ctx context.Context, request Gate
 		return GatewayRequestDecision{Status: GatewayAckStatusBackpressure, ReasonCode: reasonStoreFailed}
 	}
 	return GatewayRequestDecision{Status: GatewayAckStatusAccepted, ReasonCode: reasonAccepted}
+}
+
+func samplePredatesSession(identity GatewayIdentity, telemetry Telemetry) bool {
+	return identity.Session != nil && telemetry.ObservedUnixMillis < identity.Session.CreatedAt.UnixMilli()
+}
+
+func requestMatchesIdentity(request GatewayStreamRequest, identity GatewayIdentity) bool {
+	return request.AssetID == identity.DeviceUUID && (request.GroupID == "" || request.GroupID == identity.GroupID)
 }
 
 func ValidateTelemetry(v Telemetry, now time.Time) error {
@@ -143,7 +155,8 @@ func DecodeTelemetry(payload []byte) (Telemetry, error) {
 	}
 	attitude := message.GetAttitudeDeg()
 	telemetry := Telemetry{
-		EventID: message.GetEventId(), AssetID: message.GetAssetId(), ObservedUnixMillis: message.GetTime().GetObservedUnixMillis(),
+		Envelope: message,
+		EventID:  message.GetEventId(), AssetID: message.GetAssetId(), ObservedUnixMillis: message.GetTime().GetObservedUnixMillis(),
 		Latitude: message.GetPosition().GetLatitude(), Longitude: message.GetPosition().GetLongitude(), AltitudeM: message.GetPosition().GetAltitudeM(),
 		HeadingDeg: message.GetHeadingDeg(), SpeedMPS: message.GetSpeedMps(), BatteryPercent: message.GetBatteryPercent(),
 		RollDeg: attitude.GetX(), PitchDeg: attitude.GetY(), YawDeg: attitude.GetZ(), LinkQualityPercent: message.GetLinkQualityPercent(),

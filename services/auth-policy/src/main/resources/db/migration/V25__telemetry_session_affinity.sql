@@ -1,0 +1,4 @@
+ALTER TABLE telemetry_latest ADD COLUMN IF NOT EXISTS session_id VARCHAR(128);
+ALTER TABLE telemetry_latest ADD COLUMN IF NOT EXISTS stream_id VARCHAR(256);
+ALTER TABLE telemetry_history ADD COLUMN IF NOT EXISTS session_id VARCHAR(128);
+ALTER TABLE telemetry_history ADD COLUMN IF NOT EXISTS stream_id VARCHAR(256);

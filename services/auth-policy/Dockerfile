@@ -3,7 +3,9 @@ WORKDIR /workspace
 COPY gradlew gradlew.bat settings.gradle.kts build.gradle.kts ./
 COPY gradle ./gradle
 COPY src ./src
-RUN gradle --no-daemon clean bootJar
+COPY --from=contracts /proto /workspace/contracts/proto
+ENV CONTRACTS_PROTO_DIR=/workspace/contracts/proto
+RUN gradle --no-daemon clean bootJar --stacktrace
 
 FROM amazoncorretto:21-alpine@sha256:58c1d555f4ff3be0cfe90d3b4d1762bde080b57afbb71d48657b9d22748cad5b
 ARG SOURCE_COMMIT=unknown

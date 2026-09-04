@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"io"
 	"sync"
 	"time"
 
@@ -44,6 +45,13 @@ type CachedAuthorizer struct {
 }
 
 const defaultAuthorizationCacheMaxEntries = 4096
+
+func (c *CachedAuthorizer) Close() error {
+	if closer, ok := c.next.(io.Closer); ok {
+		return closer.Close()
+	}
+	return nil
+}
 
 type cachedDecision struct {
 	decision  domain.StreamAccessDecision

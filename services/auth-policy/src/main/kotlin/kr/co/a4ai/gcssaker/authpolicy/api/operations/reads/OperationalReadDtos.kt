@@ -24,6 +24,8 @@ data class TelemetryReadResponse(
     val yawDeg: Double? = null,
     val linkQualityPercent: Double? = null,
     val observedAt: Instant? = null,
+    val sessionId: String? = null,
+    val streamId: String? = null,
 )
 
 data class TelemetryHistoryResponse(

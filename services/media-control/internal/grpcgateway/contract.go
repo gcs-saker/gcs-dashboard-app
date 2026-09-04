@@ -16,7 +16,7 @@ func DecodeGatewayStreamRequest(payload []byte) (GatewayStreamRequest, error) {
 	if err != nil {
 		return GatewayStreamRequest{}, err
 	}
-	if message.GetRequestId() == "" || message.GetOrgId() == "" || message.GetGroupId() == "" || message.GetAssetId() == "" {
+	if message.GetRequestId() == "" || message.GetAssetId() == "" {
 		return GatewayStreamRequest{}, fmt.Errorf("gateway request identity fields are required")
 	}
 	return GatewayStreamRequest{

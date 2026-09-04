@@ -65,6 +65,7 @@ type publishEndpoints struct {
 	accountPublisher AccountPublishAuthorizer
 	publishToken     string
 	publishSessions  domain.PublishSessionStore
+	sessionValidator domain.SessionBindingValidator
 }
 
 type operationalEndpoints struct {
@@ -108,6 +109,11 @@ func NewServerWithMetrics(
 
 func (s Server) WithPublishSessionStore(store domain.PublishSessionStore) Server {
 	s.publishSessions = store
+	return s
+}
+
+func (s Server) WithSessionBindingValidator(validator domain.SessionBindingValidator) Server {
+	s.sessionValidator = validator
 	return s
 }
 

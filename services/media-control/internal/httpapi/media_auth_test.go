@@ -9,6 +9,7 @@ import (
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessiontoken"
 )
+
 func TestMediaMTXPublishAuthRejectsMissingPublisherToken(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
 	request := httptest.NewRequest(
@@ -124,7 +125,7 @@ func TestMediaMTXPublishAuthRejectsTokenIssuedForDifferentPath(t *testing.T) {
 	}
 }
 
-func TestMediaMTXPublishAuthAcceptsSignedDeviceGroupClaim(t *testing.T) {
+func TestMediaMTXPublishAuthRejectsSignedClaimThatDisagreesWithSession(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
 	token, err := sessiontoken.Issue("test-publish-token", mediaMTXActionPublish, "raw.company-b.front", "raw/company-b/front", "co-device", time.Now())
 	if err != nil {
@@ -139,7 +140,7 @@ func TestMediaMTXPublishAuthAcceptsSignedDeviceGroupClaim(t *testing.T) {
 
 	server.Routes().ServeHTTP(recorder, request)
 
-	if recorder.Code != http.StatusNoContent {
-		t.Fatalf("expected 204, got %d: %s", recorder.Code, recorder.Body.String())
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for mismatched session group, got %d: %s", recorder.Code, recorder.Body.String())
 	}
 }

@@ -94,6 +94,9 @@ func (f fakeDevicePublisher) AuthorizeDevicePublish(
 	if authorization.DeviceUUID == "" {
 		authorization.DeviceUUID = command.DeviceUUID
 	}
+	if authorization.SensorID == "" {
+		authorization.SensorID = command.SensorID
+	}
 	return authorization, nil
 }
 
@@ -317,7 +320,8 @@ func newTestServerWithAuthorizer(streams StreamLister, ice IceServerProvider, au
 	if err != nil {
 		panic(err)
 	}
-	return NewServer(streams, ice, playback, authorizer, groups, "test-publish-token")
+	return NewServer(streams, ice, playback, authorizer, groups, "test-publish-token").
+		WithPublishSessionStore(testStreamSessions(streams, groups))
 }
 
 func newTestServerWithDevicePublisher(

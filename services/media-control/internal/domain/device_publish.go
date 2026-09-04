@@ -3,7 +3,7 @@ package domain
 import "errors"
 
 var (
-	ErrDevicePublishAccessDenied = errors.New("device publish access denied")
+	ErrDevicePublishAccessDenied  = errors.New("device publish access denied")
 	ErrDevicePublishPolicyInvalid = errors.New("device publish policy invalid")
 )
 

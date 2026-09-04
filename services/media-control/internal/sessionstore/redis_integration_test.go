@@ -12,19 +12,33 @@ import (
 
 func TestRedisStoreLifecycleAndCancellation(t *testing.T) {
 	address := os.Getenv("TEST_REDIS_ADDR")
-	if address == "" { t.Skip("TEST_REDIS_ADDR is not configured") }
+	if address == "" {
+		t.Skip("TEST_REDIS_ADDR is not configured")
+	}
 	store := NewRedisStore(address, os.Getenv("TEST_REDIS_PASSWORD"), time.Second)
 	ctx := context.Background()
 	now := time.Now().UTC()
-	session := domain.PublishSession{SessionID: "integration-session", DeviceUUID: "device-1", Status: domain.PublishSessionActive,
+	session := domain.PublishSession{SessionID: "integration-session", DeviceUUID: "device-1", StreamID: "raw.device.integration", Path: "raw/device/integration", GroupID: "co-a", Status: domain.PublishSessionActive,
 		RenewalTokenHash: []byte("old"), RenewalTokenVersion: 1, PublishTokenExpiresAt: now.Add(time.Minute),
 		RenewalTokenExpiresAt: now.Add(time.Hour), CreatedAt: now, UpdatedAt: now}
-	if err := store.Save(ctx, session); err != nil { t.Fatal(err) }
+	if err := store.Save(ctx, session); err != nil {
+		t.Fatal(err)
+	}
 	loaded, err := store.Find(ctx, session.SessionID)
-	if err != nil || loaded.DeviceUUID != session.DeviceUUID { t.Fatalf("find: %#v %v", loaded, err) }
+	if err != nil || loaded.DeviceUUID != session.DeviceUUID {
+		t.Fatalf("find: %#v %v", loaded, err)
+	}
+	indexed, err := store.FindByStream(ctx, session.StreamID)
+	if err != nil || indexed.SessionID != session.SessionID {
+		t.Fatalf("stream index: %v", err)
+	}
 	rotated, result, err := store.RotateRenewal(ctx, session.SessionID, []byte("old"), []byte("new"), now.Add(2*time.Minute), now.Add(time.Hour), now)
-	if err != nil || result != domain.RenewalRotated || rotated.RenewalTokenVersion != 2 { t.Fatalf("rotate: %s %#v %v", result, rotated, err) }
-	if err := store.End(ctx, session.SessionID, now); err != nil { t.Fatal(err) }
+	if err != nil || result != domain.RenewalRotated || rotated.RenewalTokenVersion != 2 {
+		t.Fatalf("rotate: %s %#v %v", result, rotated, err)
+	}
+	if err := store.End(ctx, session.SessionID, now); err != nil {
+		t.Fatal(err)
+	}
 
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()

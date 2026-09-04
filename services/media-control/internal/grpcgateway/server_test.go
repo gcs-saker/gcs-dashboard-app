@@ -2,6 +2,7 @@ package grpcgateway
 
 import (
 	"context"
+	"io"
 	"net"
 	"testing"
 	"time"
@@ -146,7 +147,7 @@ func TestExchangeEnforcesAuthenticatedDeviceGroupEndToEnd(t *testing.T) {
 		RequestId: "request-1", OrgId: "a4ai", GroupId: "co-b", AssetId: "device-1",
 		Payload: &sakerv1.GatewayStreamRequest_Telemetry{Telemetry: &sakerv1.TelemetryEnvelope{
 			EventId: "event-1", AssetId: "device-1",
-			Time: &sakerv1.Timestamped{ObservedUnixMillis: 1_722_067_200_000},
+			Time:     &sakerv1.Timestamped{ObservedUnixMillis: 1_722_067_200_000},
 			Position: &sakerv1.GeoPoint{Latitude: 35.8714, Longitude: 128.6014},
 		}},
 	}
@@ -258,7 +259,7 @@ func exchangeOnceWithMetadata(
 	if err != nil {
 		return nil, err
 	}
-	if err := stream.SendMsg(request); err != nil {
+	if err := stream.SendMsg(request); err != nil && err != io.EOF {
 		return nil, err
 	}
 	if err := stream.CloseSend(); err != nil {

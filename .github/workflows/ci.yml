@@ -61,7 +61,7 @@ jobs:
             --plugin=protoc-gen-go-grpc="$RUNNER_TEMP/proto-bin/protoc-gen-go-grpc" \
             --go_out="$RUNNER_TEMP/go-contracts" --go_opt=paths=source_relative \
             --go-grpc_out="$RUNNER_TEMP/go-contracts" --go-grpc_opt=paths=source_relative \
-            contracts/proto/gcs/saker/v1/{common,stream_control,telemetry,gateway_service}.proto
+            contracts/proto/gcs/saker/v1/{common,stream_control,telemetry,gateway_service,device_policy_service,mqtt_gateway}.proto
           diff -ru services/media-control/internal/generated "$RUNNER_TEMP/go-contracts"
 
       - name: Run race tests
@@ -71,6 +71,21 @@ jobs:
 
       - name: Run vet
         run: go vet ./...
+
+      - name: Start isolated MQTT contract broker
+        run: |
+          docker run -d --name mqtt-contract-broker -p 127.0.0.1:18883:1883 \
+            -v "$GITHUB_WORKSPACE/deploy/mqtt-test/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro" \
+            eclipse-mosquitto:2.0.22
+
+      - name: Verify MQTT to gRPC session boundary
+        run: go test ./internal/mqttgateway -count=1
+        env:
+          TEST_MQTT_URL: tcp://127.0.0.1:18883
+
+      - name: Stop isolated MQTT contract broker
+        if: always()
+        run: docker rm -f mqtt-contract-broker
 
       - name: Build runtime image
         run: docker build -t gcs-saker-media-control:ci .
@@ -116,7 +131,7 @@ jobs:
         run: ./gradlew check --no-daemon
 
       - name: Build auth-policy runtime image
-        run: docker build -t gcs-saker-auth-policy:ci .
+        run: docker build --build-context contracts=../../contracts -t gcs-saker-auth-policy:ci .
 
       - name: Generate auth-policy SBOM
         uses: anchore/sbom-action@v0

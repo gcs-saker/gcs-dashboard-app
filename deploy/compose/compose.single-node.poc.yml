@@ -187,6 +187,8 @@ services:
     image: ${AUTH_POLICY_IMAGE:-gcs-saker-auth-policy:arch-poc}
     build:
       context: ../../services/auth-policy
+      additional_contexts:
+        contracts: ../../contracts
       args:
         SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
     env_file: *service_env_files

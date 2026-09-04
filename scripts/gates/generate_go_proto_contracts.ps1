@@ -15,4 +15,6 @@ python -m grpc_tools.protoc `
   (Join-Path $protoRoot "gcs/saker/v1/common.proto") `
   (Join-Path $protoRoot "gcs/saker/v1/stream_control.proto") `
   (Join-Path $protoRoot "gcs/saker/v1/telemetry.proto") `
-  (Join-Path $protoRoot "gcs/saker/v1/gateway_service.proto")
+  (Join-Path $protoRoot "gcs/saker/v1/gateway_service.proto") `
+  (Join-Path $protoRoot "gcs/saker/v1/device_policy_service.proto") `
+  (Join-Path $protoRoot "gcs/saker/v1/mqtt_gateway.proto")

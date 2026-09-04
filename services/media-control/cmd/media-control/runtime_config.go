@@ -21,6 +21,8 @@ type runtimeConfig struct {
 	iceServers          []domain.IceServer
 	authMode            string
 	authPolicyBaseURL   string
+	deviceRPCTarget     string
+	deviceRPCToken      string
 	authzCacheTTL       time.Duration
 	streamCacheTTL      time.Duration
 	redisAddress        string
@@ -73,6 +75,8 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		iceServers:          loadIceServers(),
 		authMode:            getenv(runtimeEnv.authMode, authpolicy.AuthModeRequired),
 		authPolicyBaseURL:   getenv(runtimeEnv.authPolicyBaseURL, runtimeDefaults.authPolicyBaseURL),
+		deviceRPCTarget:     getenv("AUTH_POLICY_GRPC_TARGET", ""),
+		deviceRPCToken:      getenv("AUTH_POLICY_RPC_TOKEN", ""),
 		authzCacheTTL:       getenvDuration(runtimeEnv.authzCacheTTLSeconds, runtimeDefaults.authzCacheTTL),
 		streamCacheTTL:      getenvDuration(runtimeEnv.streamCacheTTLSeconds, runtimeDefaults.streamCacheTTL),
 		redisAddress:        getenv(runtimeEnv.redisAddress, runtimeDefaults.redisAddress),

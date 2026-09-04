@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	ErrPublishSessionNotFound = errors.New("publish session not found")
+	ErrPublishSessionNotFound         = errors.New("publish session not found")
 	ErrPublishSessionStoreUnavailable = errors.New("publish session store unavailable")
 )
 
@@ -55,6 +55,7 @@ func (s PublishSession) ActiveAt(now time.Time) bool {
 type PublishSessionStore interface {
 	Save(context.Context, PublishSession) error
 	Find(context.Context, string) (PublishSession, error)
+	FindByStream(context.Context, string) (PublishSession, error)
 	RotateRenewal(context.Context, string, []byte, []byte, time.Time, time.Time, time.Time) (PublishSession, RenewalRotationResult, error)
 	End(context.Context, string, time.Time) error
 }
@@ -62,24 +63,35 @@ type PublishSessionStore interface {
 type InMemoryPublishSessionStore struct {
 	mu       sync.RWMutex
 	sessions map[string]PublishSession
+	streams  map[string]string
 }
 
 func NewInMemoryPublishSessionStore() *InMemoryPublishSessionStore {
-	return &InMemoryPublishSessionStore{sessions: make(map[string]PublishSession)}
+	return &InMemoryPublishSessionStore{sessions: make(map[string]PublishSession), streams: make(map[string]string)}
 }
 
 func (s *InMemoryPublishSessionStore) Save(_ context.Context, session PublishSession) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sessions[session.SessionID] = clonePublishSession(session)
+	s.streams[session.StreamID] = session.SessionID
 	return nil
+}
+
+func (s *InMemoryPublishSessionStore) FindByStream(ctx context.Context, streamID string) (PublishSession, error) {
+	s.mu.RLock()
+	id := s.streams[streamID]
+	s.mu.RUnlock()
+	return s.Find(ctx, id)
 }
 
 func (s *InMemoryPublishSessionStore) Find(_ context.Context, sessionID string) (PublishSession, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	session, ok := s.sessions[sessionID]
-	if !ok { return PublishSession{}, ErrPublishSessionNotFound }
+	if !ok {
+		return PublishSession{}, ErrPublishSessionNotFound
+	}
 	return clonePublishSession(session), nil
 }
 

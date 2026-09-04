@@ -33,7 +33,8 @@ class DevicePolicyConfiguration {
     fun deviceCredentialAuthenticationService(
         devices: RegisteredDeviceRepository,
         passwordHasher: PasswordHasher,
-    ): DeviceCredentialAuthenticationService = DeviceCredentialAuthenticationService(devices, passwordHasher)
+        hierarchyRepository: OrganizationHierarchyRepository,
+    ): DeviceCredentialAuthenticationService = DeviceCredentialAuthenticationService(devices, passwordHasher, hierarchyRepository)
 
     @Bean
     fun devicePublishAuthorizationService(

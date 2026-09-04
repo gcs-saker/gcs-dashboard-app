@@ -32,6 +32,8 @@ internal object OperationalReadRowMappers {
             yawDeg = rs.getObject(OperationalReadColumns.yawDeg, Double::class.javaObjectType),
             linkQualityPercent = rs.getObject(OperationalReadColumns.linkQualityPercent, Double::class.javaObjectType),
             observedAt = rs.getTimestamp(OperationalReadColumns.observedAt)?.toInstant(),
+            sessionId = rs.getString("session_id"),
+            streamId = rs.getString("stream_id"),
         )
     }
 

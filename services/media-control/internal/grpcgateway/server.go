@@ -23,11 +23,12 @@ const (
 )
 
 type Server struct {
-	token           string
-	maxPayloadBytes int
-	handler         GatewayRequestHandler
-	authenticator   GatewayAuthenticator
-	metrics         GatewayMetrics
+	token                string
+	maxPayloadBytes      int
+	handler              GatewayRequestHandler
+	authenticator        GatewayAuthenticator
+	sessionAuthenticator SessionAuthenticator
+	metrics              GatewayMetrics
 }
 
 type GatewayMetrics interface {
@@ -42,6 +43,11 @@ func NewDeviceServer(authenticator GatewayAuthenticator, maxPayloadBytes int, ha
 
 func (s Server) WithMetrics(metrics GatewayMetrics) Server {
 	s.metrics = metrics
+	return s
+}
+
+func (s Server) WithSessionAuthenticator(authenticator SessionAuthenticator) Server {
+	s.sessionAuthenticator = authenticator
 	return s
 }
 
@@ -145,13 +151,23 @@ func (s Server) authenticatedRequestContext(ctx context.Context, credentials Gat
 	if s.authenticator == nil {
 		return ctx, nil
 	}
-	identity, err := s.authenticator.AuthenticateGateway(ctx, credentials)
+	identity, err := s.authenticateIdentity(ctx, credentials)
 	if err != nil {
 		logGatewaySecurity(ctx, "authentication_rejected", reasonUnauthorized, 0)
 		return nil, status.Error(codes.Unauthenticated, reasonUnauthorized)
 	}
 	ctx = context.WithValue(ctx, gatewayIdentityContextKey{}, identity)
 	return context.WithValue(ctx, gatewayCredentialsContextKey{}, credentials), nil
+}
+
+func (s Server) authenticateIdentity(ctx context.Context, credentials GatewayCredentials) (GatewayIdentity, error) {
+	if credentials.SessionID != "" {
+		if s.sessionAuthenticator == nil {
+			return GatewayIdentity{}, errors.New("session authentication unavailable")
+		}
+		return s.sessionAuthenticator.AuthenticateSession(ctx, credentials)
+	}
+	return s.authenticator.AuthenticateGateway(ctx, credentials)
 }
 
 func logGatewaySecurity(ctx context.Context, event string, reason string, payloadBytes int) {

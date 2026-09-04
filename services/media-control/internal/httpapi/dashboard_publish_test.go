@@ -9,6 +9,7 @@ import (
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 )
+
 func TestDashboardPublishUrlRequiresAuthorizationAndAppendsPublisherToken(t *testing.T) {
 	path, _ := domain.NewStreamPath("raw/local/webcam")
 	ice, _ := domain.NewIceServer("stun:a4ai.tplinkdns.com:3478", domain.IceServerSTUN, "", "", true)
@@ -39,7 +40,7 @@ func TestDashboardPublishUrlRequiresAuthorizationAndAppendsPublisherToken(t *tes
 	assertMediaURLToken(t, whipURL, publisherTokenQueryKey, mediaMTXActionPublish, "raw/local/webcam")
 }
 
-func TestDashboardPublishUrlCanBeIssuedBeforeStreamIsRegistered(t *testing.T) {
+func TestDashboardPublishUrlRejectsStreamWithoutServerOwnedSession(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.new-drone.front/publish", nil)
 	request.Header.Set("Authorization", "Bearer publisher-token")
@@ -47,15 +48,9 @@ func TestDashboardPublishUrlCanBeIssuedBeforeStreamIsRegistered(t *testing.T) {
 
 	server.Routes().ServeHTTP(recorder, request)
 
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("unregistered stream must not inherit a default group: %d", recorder.Code)
 	}
-	payload := decodeTestJSON[streamPublishResponse](t, recorder)
-	whipURL := payload.WhipURL
-	if !strings.HasPrefix(whipURL, "http://edge.local/webrtc/raw/new-drone/front/whip?") {
-		t.Fatalf("unexpected publish URL %v", payload.WhipURL)
-	}
-	assertMediaURLToken(t, whipURL, publisherTokenQueryKey, mediaMTXActionPublish, "raw/new-drone/front")
 }
 
 func TestDashboardTalkbackPublishUsesAuthorizedShortLivedPath(t *testing.T) {
@@ -146,7 +141,15 @@ func TestDashboardPublishUrlUsesDevicePolicyWithoutGroupID(t *testing.T) {
 		t.Fatalf("unexpected device publish command %#v", observed)
 	}
 	payload := decodeTestJSON[streamPublishResponse](t, recorder)
-	assertMediaURLTokenForGroup(t, payload.WhipURL, publisherTokenQueryKey, mediaMTXActionPublish, "raw/drone-01/front", "co-device")
+	issuedURL, err := url.Parse(payload.WhipURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(payload.StreamID, "raw.device.pub_") {
+		t.Fatal("client route must not select the publish destination")
+	}
+	assertMediaURLTokenForGroup(t, payload.WhipURL, publisherTokenQueryKey, mediaMTXActionPublish,
+		strings.TrimSuffix(strings.TrimPrefix(issuedURL.Path, "/webrtc/"), "/whip"), "co-device")
 	if len(payload.IceServers) != 1 || payload.IceServers[0].Credential == nil {
 		t.Fatalf("expected device publish response to include authorized TURN credentials, got %#v", payload.IceServers)
 	}

@@ -41,6 +41,20 @@ class AuthPolicyContainerIntegrationTest {
         val events = JdbcOperationalEventRepository(dataSource, emptyList())
 
         assertNotNull(authUsers.findByUsername(ContainerIntegrationContract.OPERATOR_USERNAME))
+        val telemetryRepository = kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalReadRepository(
+            dataSource, emptyList(), emptyMap(),
+        )
+        val sample = kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel(
+            uuid = "session-fixture", latitude = 35.87, longitude = 128.6, altitude = 1.0,
+            magneticX = 0.0, magneticY = 0.0, magneticZ = 0.0, soc = "50", phoneBatterySOC = 50.0,
+            velocity = 0.0, totalDistance = 0.0, epochTime = "00:00:00", portDistance = 0.0,
+            groupId = GroupId(ContainerIntegrationContract.GROUP_ID), observedAt = Instant.now(),
+            eventId = "session-fixture-event", sessionId = "ps_fixture", streamId = "raw.device.fixture",
+        )
+        telemetryRepository.upsertTelemetry(sample)
+        val reader = AuthenticatedPrincipal("fixture", UserRole.ADMIN, sample.groupId)
+        assertEquals("ps_fixture", telemetryRepository.telemetryFor(reader).single().sessionId)
+        assertEquals("raw.device.fixture", telemetryRepository.telemetryHistoryFor(reader, sample.uuid, 10).single().telemetry.streamId)
         events.append(operationalEvent())
 
         val principal = AuthenticatedPrincipal(

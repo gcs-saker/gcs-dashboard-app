@@ -133,6 +133,8 @@ internal fun TelemetryReadModel.toResponse(): TelemetryReadResponse =
         yawDeg = yawDeg,
         linkQualityPercent = linkQualityPercent,
         observedAt = observedAt,
+        sessionId = sessionId,
+        streamId = streamId,
     )
 
 internal fun TelemetryHistoryReadModel.toResponse(): TelemetryHistoryResponse =

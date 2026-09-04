@@ -88,7 +88,9 @@ func (s Server) updateCameraControl(w http.ResponseWriter, r *http.Request, pars
 		writeJSON(w, http.StatusConflict, errorPayload("camera control target is not actively publishing"))
 		return
 	}
-	var request struct{ FacingMode string `json:"facingMode"` }
+	var request struct {
+		FacingMode string `json:"facingMode"`
+	}
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1024))
 	decoder.DisallowUnknownFields()
 	if decoder.Decode(&request) != nil || (request.FacingMode != "front" && request.FacingMode != "rear") {

@@ -2,6 +2,7 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
 import kr.co.a4ai.gcssaker.authpolicy.domain.Permission
+import kr.co.a4ai.gcssaker.authpolicy.domain.AccountPublishAuthorizationService
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
@@ -44,13 +45,12 @@ class AccountPublisherPolicyController(
         if (Permission.PUBLISH_STREAM !in groupPolicy.permissionsFor(principal.role)) {
             throw ForbiddenApiError("stream publishing permission is required")
         }
-        val sensorId = canonicalSegment(request.sensorId, "sensor id")
-        val publisherId = "account-${stableAccountId(principal.username)}"
+        val result = AccountPublishAuthorizationService(groupPolicy).authorize(principal, request.sensorId)
         return AccountPublishAuthorizationResponse(
-            deviceUuid = publisherId,
-            streamId = "raw.$publisherId.$sensorId",
-            path = "raw/$publisherId/$sensorId",
-            sensorId = sensorId,
+            deviceUuid = result.deviceUuid,
+            streamId = result.streamId,
+            path = result.path,
+            sensorId = result.sensorId,
             publisherGroupId = principal.groupId.value,
             credentialVersion = 0,
             devicePolicyVersion = 1,
@@ -59,17 +59,4 @@ class AccountPublisherPolicyController(
         )
     }
 
-    private fun canonicalSegment(value: String, label: String): String {
-        val normalized = value.trim().lowercase()
-        if (!normalized.matches(Regex("[a-z0-9][a-z0-9_-]{0,127}"))) {
-            throw BadRequestApiError("$label is invalid")
-        }
-        return normalized
-    }
-
-    private fun stableAccountId(username: String): String =
-        MessageDigest.getInstance("SHA-256")
-            .digest(username.trim().lowercase().toByteArray())
-            .take(12)
-            .joinToString("") { byte -> "%02x".format(byte) }
 }

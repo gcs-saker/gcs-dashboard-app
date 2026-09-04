@@ -3,6 +3,7 @@ package grpcgateway
 import (
 	"context"
 	"fmt"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 	"strings"
 
 	"google.golang.org/grpc/metadata"
@@ -14,12 +15,15 @@ const (
 	metadataDeviceUUID       = "x-gcs-device-uuid"
 	metadataDeviceCredential = "x-gcs-device-credential"
 	metadataReconnect        = "x-gcs-gateway-reconnect"
+	metadataPublishSession   = "x-gcs-publish-session-id"
 	bearerPrefix             = "bearer "
 )
 
 type GatewayCredentials struct {
 	DeviceUUID string
 	Credential string
+	SessionID  string
+	Token      string
 }
 
 type GatewayIdentity struct {
@@ -27,6 +31,11 @@ type GatewayIdentity struct {
 	GroupID           string
 	CredentialVersion int64
 	PolicyVersion     int64
+	Session           *domain.PublishSession
+}
+
+type SessionAuthenticator interface {
+	AuthenticateSession(context.Context, GatewayCredentials) (GatewayIdentity, error)
 }
 
 type GatewayAuthenticator interface {
@@ -49,6 +58,12 @@ func GatewayCredentialsFromContext(ctx context.Context) (GatewayCredentials, boo
 func gatewayCredentials(ctx context.Context) (GatewayCredentials, error) {
 	uuidValues := metadataValues(ctx, metadataDeviceUUID)
 	credentialValues := metadataValues(ctx, metadataDeviceCredential)
+	if sessions := metadataValues(ctx, metadataPublishSession); len(sessions) > 0 {
+		if len(uuidValues) != 0 || len(credentialValues) != 0 {
+			return GatewayCredentials{}, fmt.Errorf("ambiguous session authentication")
+		}
+		return sessionCredentials(ctx, sessions)
+	}
 	if len(uuidValues) != 1 || len(credentialValues) != 1 {
 		return GatewayCredentials{}, fmt.Errorf("exactly one UUID and credential are required")
 	}
@@ -60,6 +75,18 @@ func gatewayCredentials(ctx context.Context) (GatewayCredentials, error) {
 		return GatewayCredentials{}, fmt.Errorf("UUID and credential must not be blank")
 	}
 	return credentials, nil
+}
+
+func sessionCredentials(ctx context.Context, sessions []string) (GatewayCredentials, error) {
+	authorization := metadataValues(ctx, metadataAuthorization)
+	if len(sessions) != 1 || len(authorization) != 1 {
+		return GatewayCredentials{}, fmt.Errorf("ambiguous session authentication")
+	}
+	scheme, token, ok := strings.Cut(authorization[0], " ")
+	if !ok || !strings.EqualFold(scheme, "Bearer") || token == "" || sessions[0] == "" {
+		return GatewayCredentials{}, fmt.Errorf("session authentication required")
+	}
+	return GatewayCredentials{SessionID: sessions[0], Token: token}, nil
 }
 
 func (s Server) authorized(ctx context.Context) bool {

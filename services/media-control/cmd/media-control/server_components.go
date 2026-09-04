@@ -15,6 +15,13 @@ import (
 )
 
 func newAuthorizer(config runtimeConfig) (authpolicy.CachedAuthorizer, error) {
+	if config.deviceRPCTarget != "" {
+		client, err := authpolicy.NewDeviceRPCClient(config.deviceRPCTarget, config.deviceRPCToken)
+		if err != nil {
+			return authpolicy.CachedAuthorizer{}, err
+		}
+		return authpolicy.NewCachedAuthorizer(client, config.authzCacheTTL), nil
+	}
 	baseAuthorizer, err := authpolicy.NewAuthorizer(
 		config.authMode,
 		config.authPolicyBaseURL,

@@ -6,7 +6,7 @@ internal object OperationalEventSql {
                connections, latency_ms, throughput_mbps, group_id,
                stream_id, connection_id, ice_path, relay_fallback_reason
         FROM operational_events
-        WHERE (group_id = ? OR ? = ? OR (? = 'OPERATOR' AND EXISTS (
+        WHERE (group_id = ? OR ? = ? OR (? = 'GROUP_ADMIN' AND EXISTS (
             SELECT 1 FROM organization_group_closure c
             WHERE c.ancestor_group_id = ? AND c.descendant_group_id = operational_events.group_id
         )))
@@ -19,7 +19,7 @@ internal object OperationalEventSql {
                MAX(latency_ms) AS max_latency_ms,
                AVG(throughput_mbps) AS avg_throughput_mbps
         FROM operational_events
-        WHERE (group_id = ? OR ? = ? OR (? = 'OPERATOR' AND EXISTS (
+        WHERE (group_id = ? OR ? = ? OR (? = 'GROUP_ADMIN' AND EXISTS (
             SELECT 1 FROM organization_group_closure c
             WHERE c.ancestor_group_id = ? AND c.descendant_group_id = operational_events.group_id
         )))
@@ -27,7 +27,7 @@ internal object OperationalEventSql {
     const val selectSeverityCountsBase = """
         SELECT severity, COUNT(1) AS total_events
         FROM operational_events
-        WHERE (group_id = ? OR ? = ? OR (? = 'OPERATOR' AND EXISTS (
+        WHERE (group_id = ? OR ? = ? OR (? = 'GROUP_ADMIN' AND EXISTS (
             SELECT 1 FROM organization_group_closure c
             WHERE c.ancestor_group_id = ? AND c.descendant_group_id = operational_events.group_id
         )))
@@ -35,7 +35,7 @@ internal object OperationalEventSql {
     const val selectIcePathCountsBase = """
         SELECT ice_path, COUNT(1) AS total_events
         FROM operational_events
-        WHERE (group_id = ? OR ? = ? OR (? = 'OPERATOR' AND EXISTS (
+        WHERE (group_id = ? OR ? = ? OR (? = 'GROUP_ADMIN' AND EXISTS (
             SELECT 1 FROM organization_group_closure c
             WHERE c.ancestor_group_id = ? AND c.descendant_group_id = operational_events.group_id
         )))
@@ -72,7 +72,7 @@ internal object OperationalEventSql {
                (ARRAY_AGG(relay_fallback_reason ORDER BY occurred_at DESC, id DESC))[1] AS relay_fallback_reason
         FROM operational_events
         WHERE stream_id IS NOT NULL AND stream_id <> '' AND
-              (group_id = ? OR ? = ? OR (? = 'OPERATOR' AND EXISTS (
+              (group_id = ? OR ? = ? OR (? = 'GROUP_ADMIN' AND EXISTS (
                   SELECT 1 FROM organization_group_closure c
                   WHERE c.ancestor_group_id = ? AND c.descendant_group_id = operational_events.group_id
               )))
@@ -82,7 +82,7 @@ internal object OperationalEventSql {
                COUNT(1) AS event_count, COALESCE(SUM(connections), 0) AS total_connections,
                AVG(latency_ms) AS avg_latency_ms, AVG(throughput_mbps) AS avg_throughput_mbps
         FROM operational_events
-        WHERE (group_id = ? OR ? = ? OR (? = 'OPERATOR' AND EXISTS (
+        WHERE (group_id = ? OR ? = ? OR (? = 'GROUP_ADMIN' AND EXISTS (
             SELECT 1 FROM organization_group_closure c
             WHERE c.ancestor_group_id = ? AND c.descendant_group_id = operational_events.group_id
         )))

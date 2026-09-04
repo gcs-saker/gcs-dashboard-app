@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"strings"
@@ -36,23 +37,34 @@ func (s Server) streamPlaybackResponse(stream domain.StreamDescriptor) (streamPl
 	if err != nil {
 		return streamPlaybackResponse{}, err
 	}
-	return s.streamPlaybackResponseFromParsed(stream, parsed), nil
+	ctx, cancel := context.WithTimeout(context.Background(), sessionLookupTimeout)
+	defer cancel()
+	return s.streamPlaybackResponseFromParsed(ctx, stream, parsed)
 }
 
 func (s Server) streamPlaybackResponseFromParsed(
+	ctx context.Context,
 	stream domain.StreamDescriptor,
 	parsed domain.ParsedStreamPath,
-) streamPlaybackResponse {
-	playbackURLs := s.withPlaybackToken(s.playback.Build(parsed), parsed)
+) (streamPlaybackResponse, error) {
+	target, err := s.resolveStreamTarget(ctx, parsed)
+	if err != nil {
+		return streamPlaybackResponse{}, err
+	}
+	playbackURLs := s.withPlaybackTokenForGroup(s.playback.Build(parsed), parsed, target.PublisherGroupID)
 	return streamPlaybackResponse{
 		StreamID:     parsed.StreamID,
 		Status:       stream.Status,
 		PlaybackURLs: playbackURLs,
-	}
+	}, nil
 }
 
-func (s Server) writeStreamPublishResponse(w http.ResponseWriter, parsed domain.ParsedStreamPath) {
-	target := s.groups.TargetFor(parsed)
+func (s Server) writeStreamPublishResponse(w http.ResponseWriter, r *http.Request, parsed domain.ParsedStreamPath) {
+	target, err := s.resolveStreamTarget(r.Context(), parsed)
+	if err != nil {
+		s.writeStreamAccessError(w, err)
+		return
+	}
 	s.writeStreamPublishResponseForGroup(w, parsed, target.PublisherGroupID)
 }
 
@@ -97,14 +109,6 @@ func (s Server) iceServerResponses() []iceServerResponse {
 		})
 	}
 	return payload
-}
-
-func (s Server) withPlaybackToken(playbackURLs domain.PlaybackURLs, parsed domain.ParsedStreamPath) domain.PlaybackURLs {
-	if s.publishToken == "" {
-		return playbackURLs
-	}
-	target := s.groups.TargetFor(parsed)
-	return s.withPlaybackTokenForGroup(playbackURLs, parsed, target.PublisherGroupID)
 }
 
 func (s Server) withPlaybackTokenForGroup(playbackURLs domain.PlaybackURLs, parsed domain.ParsedStreamPath, publisherGroupID string) domain.PlaybackURLs {

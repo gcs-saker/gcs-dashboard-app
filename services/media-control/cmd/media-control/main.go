@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/authpolicy"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/grpcgateway"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/httpapi"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/observability"
@@ -55,15 +56,26 @@ func run() error {
 	defer stopGrpc()
 	grpcReadiness := grpcgateway.StartDeviceWithReadiness(grpcContext, config.grpcListenAddress, resources.gateway.server)
 	handler = handler.WithGatewayReadiness(grpcReadiness)
+	stopMQTT, err := startMQTTAdapter(runtimeContext, config)
+	if err != nil {
+		return err
+	}
+	defer stopMQTT()
 	return serveUntilShutdown(runtimeContext, newHTTPServer(config.listenAddress, handler.Routes()))
 }
 
 type runtimeResources struct {
+	authorizer      *authpolicy.CachedAuthorizer
 	publishSessions *sessionstore.RedisStore
 	gateway         gatewayRuntime
 }
 
 func (r runtimeResources) Close() {
+	if r.authorizer != nil {
+		if err := r.authorizer.Close(); err != nil {
+			log.Printf("resource_close_failed component=policy_rpc error_type=%T", err)
+		}
+	}
 	if err := r.gateway.Close(); err != nil {
 		log.Printf("resource_close_failed component=gateway_redis error_type=%T", err)
 	}
@@ -79,7 +91,7 @@ func buildRuntime(config runtimeConfig) (httpapi.Server, runtimeResources, error
 	}
 	publishSessions, err := newPublishSessionStore(config)
 	if err != nil {
-		return httpapi.Server{}, runtimeResources{}, err
+		return httpapi.Server{}, runtimeResources{}, errors.Join(err, authorizer.Close())
 	}
 	metrics := httpapi.NewMetrics()
 	handler := httpapi.NewServerWithMetrics(
@@ -88,8 +100,14 @@ func buildRuntime(config runtimeConfig) (httpapi.Server, runtimeResources, error
 	).WithDevicePublishAuthorizer(&authorizer).
 		WithAccountPublishAuthorizer(&authorizer).
 		WithPublishSessionStore(publishSessions)
-	gateway := newGatewayRuntime(config, metrics)
-	return handler, runtimeResources{publishSessions: publishSessions, gateway: gateway}, nil
+	gateway, err := newGatewayRuntime(config, metrics, publishSessions)
+	if err != nil {
+		return httpapi.Server{}, runtimeResources{}, errors.Join(err, publishSessions.Close(), authorizer.Close())
+	}
+	if gateway.rpc != nil {
+		handler = handler.WithSessionBindingValidator(gateway.rpc)
+	}
+	return handler, runtimeResources{publishSessions: publishSessions, gateway: gateway, authorizer: &authorizer}, nil
 }
 
 func newHTTPServer(address string, handler http.Handler) *http.Server {

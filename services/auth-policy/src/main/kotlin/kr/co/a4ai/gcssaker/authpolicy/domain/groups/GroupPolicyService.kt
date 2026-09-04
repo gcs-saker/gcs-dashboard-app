@@ -24,6 +24,9 @@ class GroupPolicyService private constructor(
         principal: AuthenticatedPrincipal,
         stream: StreamSessionDescriptor,
     ): StreamAccessDecision {
+        if (stream.path.value == "control/stream-list" || stream.path.value == "control/ice-servers") {
+            return StreamAccessDecision.allow("authenticated discovery; each stream is scoped separately")
+        }
         if (principal.role == UserRole.ADMIN) {
             return StreamAccessDecision.allow("admin can view every stream")
         }

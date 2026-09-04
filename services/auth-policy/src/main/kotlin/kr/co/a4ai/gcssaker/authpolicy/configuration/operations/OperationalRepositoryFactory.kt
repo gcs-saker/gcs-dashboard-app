@@ -5,6 +5,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisCachePolicy
@@ -15,21 +16,26 @@ import org.springframework.data.redis.core.StringRedisTemplate
 import java.time.Duration
 import javax.sql.DataSource
 
+data class OperationalReadDependencies(
+    val dataSource: ObjectProvider<DataSource>,
+    val redisTemplate: ObjectProvider<StringRedisTemplate>,
+    val objectMapper: ObjectMapper,
+    val hierarchy: OrganizationHierarchyRepository,
+)
+
 internal fun createOperationalReadRepository(
     settings: AuthRuntimeSettings,
-    dataSource: ObjectProvider<DataSource>,
-    redisTemplate: ObjectProvider<StringRedisTemplate>,
-    objectMapper: ObjectMapper,
+    dependencies: OperationalReadDependencies,
 ): OperationalReadRepository {
     val seeds = seedOperationalReadModels()
-    val repository = PersistenceMode.dataSource(settings, dataSource)?.let {
+    val repository = PersistenceMode.dataSource(settings, dependencies.dataSource)?.let {
         JdbcOperationalReadRepository(it, seeds.telemetry, seeds.assetsByGateway)
     } ?: run {
-        InMemoryOperationalReadRepository(seeds.telemetry, seeds.assetsByGateway)
+        InMemoryOperationalReadRepository(seeds.telemetry, seeds.assetsByGateway, dependencies.hierarchy)
     }
-    return redisTemplate.getIfAvailable()
+    return dependencies.redisTemplate.getIfAvailable()
         ?.takeIf { settings.redisOperationalReadCacheEnabled }
-        ?.let { RedisOperationalReadRepository(repository, RedisTemplateStringKeyValueStore(it), objectMapper, readPolicy(settings)) }
+        ?.let { RedisOperationalReadRepository(repository, RedisTemplateStringKeyValueStore(it), dependencies.objectMapper, readPolicy(settings)) }
         ?: repository
 }
 

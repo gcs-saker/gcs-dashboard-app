@@ -1,6 +1,8 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import kr.co.a4ai.gcssaker.authpolicy.application.TelemetryIngestionService
+import kr.co.a4ai.gcssaker.authpolicy.application.TelemetryIngestionEffects
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.GeofenceTelemetryEvaluator
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryAlertRuleEngine
@@ -35,6 +37,9 @@ class OperationalReadController(
     private val deviceCredentials: DeviceCredentialAuthenticationService? = null,
 ) {
     private val requestReader = OperationalReadRequestReader(principalResolver)
+    private val ingestion = TelemetryIngestionService(
+        repository, TelemetryIngestionEffects(geofenceEvaluator, alertRuleEngine, telemetryPublisher), clock,
+    )
 
     @GetMapping(OperationalReadApiRoutes.TELEMETRY_ALL)
     @RequiresBearerAuth
@@ -55,10 +60,7 @@ class OperationalReadController(
         @RequestBody request: TelemetryIngestRequest,
     ): TelemetryReadResponse {
         val principal = requestReader.principal(authorization)
-        val telemetry = repository.upsertTelemetry(request.toReadModel(principal))
-        geofenceEvaluator.evaluate(telemetry, Instant.now(clock))
-        alertRuleEngine.evaluate(telemetry, Instant.now(clock))
-        telemetryPublisher.publish(telemetry)
+        val telemetry = ingestion.ingest(request.toReadModel(principal))
         return telemetry.toResponse()
     }
 
@@ -84,12 +86,9 @@ class OperationalReadController(
         } else {
             requestReader.principal(authorization).groupId
         }
-        val telemetry = repository.upsertTelemetry(
+        val telemetry = ingestion.ingest(
             request.toDeviceReadModel(groupId, deviceId, Instant.now(clock)),
         )
-        geofenceEvaluator.evaluate(telemetry, Instant.now(clock))
-        alertRuleEngine.evaluate(telemetry, Instant.now(clock))
-        telemetryPublisher.publish(telemetry)
         return telemetry.toResponse()
     }
 

@@ -1,0 +1,13 @@
+syntax = "proto3";
+package gcs.saker.v1;
+import "gcs/saker/v1/gateway_service.proto";
+option go_package = "github.com/gcs-saker/gcs-dashboard-app/contracts/gen/go/gcs/saker/v1;sakerv1";
+option java_multiple_files = true;
+option java_package = "kr.co.a4ai.gcssaker.contracts.v1";
+
+// Topic: gcs/device/<sessionId>/telemetry. Never includes a receiver or group.
+// Token is an opaque, short-lived publish token; never a device credential.
+message MqttGatewayMessage {
+  string publish_token = 1;
+  GatewayStreamRequest request = 2;
+}

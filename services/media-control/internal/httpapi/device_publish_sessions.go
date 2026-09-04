@@ -94,6 +94,16 @@ func (s Server) issuePublishSession(
 	authorization domain.DevicePublishAuthorization,
 	auditIdentity string,
 ) {
+	response, err := s.createPublishSession(r.Context(), authorization)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
+	s.auditDeviceSession(r, "publish_session_created", auditIdentity, "allowed")
+	writeJSON(w, http.StatusCreated, response)
+}
+
+func (s Server) createPublishSession(ctx context.Context, authorization domain.DevicePublishAuthorization) (publishSessionResponse, error) {
 	publicStreamID, publicPath := opaqueDeviceStreamIdentity(
 		s.publishToken,
 		authorization.DeviceUUID,
@@ -102,13 +112,11 @@ func (s Server) issuePublishSession(
 	now := s.now()
 	renewalToken, err := secureOpaqueToken("gcs_renew_")
 	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
-		return
+		return publishSessionResponse{}, err
 	}
 	sessionID, err := secureOpaqueToken("ps_")
 	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
-		return
+		return publishSessionResponse{}, err
 	}
 	session := domain.PublishSession{
 		SessionID: sessionID, DeviceUUID: authorization.DeviceUUID, SensorID: authorization.SensorID,
@@ -118,30 +126,26 @@ func (s Server) issuePublishSession(
 		PublishTokenExpiresAt: now.Add(publishAccessTTL), RenewalTokenExpiresAt: now.Add(publishRenewalTTL),
 		CreatedAt: now, UpdatedAt: now,
 	}
-	if err := s.publishSessions.Save(r.Context(), session); err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
-		return
+	if err := s.publishSessions.Save(ctx, session); err != nil {
+		return publishSessionResponse{}, err
 	}
 	publishToken, err := sessiontoken.IssueDevice(s.publishToken, session, mustOpaqueToken("jti_"), now)
 	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
-		return
+		return publishSessionResponse{}, err
 	}
 	parsed, err := domain.ParseStreamPath(session.Path)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, errorPayload(errPublisherAuthFailed))
-		return
+		return publishSessionResponse{}, err
 	}
 	urls := s.playback.Build(parsed)
 	publishURL := strings.TrimSuffix(urls.WebRTC, "/whep") + "/whip"
-	s.auditDeviceSession(r, "publish_session_created", auditIdentity, "allowed")
-	writeJSON(w, http.StatusCreated, publishSessionResponse{
+	return publishSessionResponse{
 		SessionID: session.SessionID, StreamID: session.StreamID, Protocol: "whip", PublishURL: publishURL,
 		PublishToken: publishToken, RenewalToken: renewalToken,
 		PublishTokenExpiresAt: session.PublishTokenExpiresAt.UTC().Format(time.RFC3339),
 		RenewalTokenExpiresAt: session.RenewalTokenExpiresAt.UTC().Format(time.RFC3339),
 		AuthorizationScheme:   "Bearer", IceServers: s.iceServerResponses(),
-	})
+	}, nil
 }
 
 func (s Server) renewDevicePublishSession(w http.ResponseWriter, r *http.Request, sessionID string) {
@@ -210,11 +214,42 @@ func (s Server) endDevicePublishSession(w http.ResponseWriter, r *http.Request, 
 
 func (s Server) validateActivePublishSession(payload sessiontoken.Payload, now time.Time) bool {
 	if payload.SessionID == "" {
-		return true
-	} // Legacy token compatibility during migration.
-	session, err := s.publishSessions.Find(context.Background(), payload.SessionID)
-	return err == nil && session.ActiveAt(now) && session.DeviceUUID == payload.DeviceUUID &&
-		session.SensorID == payload.SensorID && session.StreamID == payload.StreamID && session.Path == payload.Path &&
-		session.GroupID == payload.GroupID && session.CredentialVersion == payload.CredentialVersion &&
-		session.DevicePolicyVersion == payload.DevicePolicyVersion
+		return s.legacyTokenHasActiveScope(payload)
+	}
+	if s.publishSessions == nil {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), sessionLookupTimeout)
+	defer cancel()
+	session, err := s.publishSessions.Find(ctx, payload.SessionID)
+	if err != nil {
+		return false
+	}
+	current, err := s.publishSessions.FindByStream(ctx, session.StreamID)
+	if err != nil || current.SessionID != session.SessionID {
+		return false
+	}
+	if s.sessionValidator != nil && session.CredentialVersion > 0 {
+		if err := s.sessionValidator.ValidateSessionBinding(ctx, session); err != nil {
+			return false
+		}
+	}
+	return session.ActiveAt(now) && sessiontoken.MatchesSession(payload, session)
+}
+
+func (s Server) legacyTokenHasActiveScope(payload sessiontoken.Payload) bool {
+	parsed, err := domain.ParseStreamPath(payload.Path)
+	if err != nil {
+		return false
+	}
+	if parsed.Prefix == "talkback" {
+		parsed, err = domain.ParseStreamPath("raw/" + parsed.AssetID + "/" + parsed.SensorID)
+		if err != nil {
+			return false
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), sessionLookupTimeout)
+	defer cancel()
+	target, err := s.resolveStreamTarget(ctx, parsed)
+	return err == nil && target.PublisherGroupID == payload.GroupID
 }
