@@ -16,6 +16,6 @@ STIG V6R4 checklist remains NOT_RUN pending rule-by-rule tailoring.
 - Artifact and SBOM signatures, SLSA provenance, VEX, and license policy are incomplete.
 - Audit tamper evidence and long-term retention are incomplete.
 - DAST, fuzzing, and independent penetration evidence are incomplete.
+- AI analysis remains intentionally unavailable until stream/session/group binding is server-owned.
 
 These findings are not accepted risk. They are tracked in `poam.yml` and the linked M12 issues.
-

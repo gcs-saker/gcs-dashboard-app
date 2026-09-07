@@ -49,11 +49,13 @@ traces:
       - docs/compliance/safety/software-level-of-rigor.yml
       - docs/compliance/safety/residual-risk-register.yml
       - docs/compliance/mission/mission-safety-contract.md
+      - docs/compliance/ai/ai-overlay-assurance-profile.yml
       - contracts/mission/v1/mission-dispatch.schema.json
     codeRefs: [services/media-control/internal/mission/mission.go]
     testRefs:
       - backend/tests/test_system_safety_gate.py
       - services/media-control/internal/mission/mission_test.go
+      - backend/tests/test_ai_adapter_router_security.py
     evidenceRefs: []
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/658

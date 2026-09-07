@@ -17,7 +17,6 @@ class AIAnalysisRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True, str_strip_whitespace=True)
     stream_id: str = Field(alias="streamId", min_length=1, max_length=160)
     processor_id: str = Field(alias="processorId", min_length=1, max_length=128)
-    group_id: str = Field(alias="groupId", min_length=1, max_length=64)
 
     @field_validator("stream_id")
     @classmethod
@@ -33,9 +32,21 @@ async def analyze_stream(
     _principal: Annotated[AuthenticatedUser, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AIEndpointResponse:
+    del request, db
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="AI stream binding resolver is not configured",
+    )
+
+
+async def analyze_server_bound_stream(
+    request: AIAnalysisRequest,
+    db: Session,
+    group_id: str,
+) -> AIEndpointResponse:
     try:
         return await AIAdapterService(AIAdapterSettings.from_env()).analyze(
-            db, request.stream_id, request.processor_id, request.group_id
+            db, request.stream_id, request.processor_id, group_id
         )
     except AIProcessorNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
