@@ -26,11 +26,32 @@ func (s Server) dashboardStreamItem(w http.ResponseWriter, r *http.Request) {
 		s.writeDashboardTalkbackPlayback(w, r, route.streamID)
 		return
 	}
+	if route.suffix == "talkback-stop" {
+		s.writeDashboardTalkbackStop(w, r, route.streamID)
+		return
+	}
 	if route.suffix == routeSuffixCameraControl {
 		s.writeDashboardCameraControl(w, r, route.streamID)
 		return
 	}
 	s.writeDashboardStreamRead(w, r, route.streamID, route.suffix)
+}
+
+func (s Server) writeDashboardTalkbackStop(w http.ResponseWriter, r *http.Request, streamID string) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	parsed, err := domain.ParseStreamID(streamID)
+	if err != nil || parsed.Prefix != "raw" {
+		writeJSON(w, http.StatusUnprocessableEntity, errorPayload("talkback target must be a raw stream"))
+		return
+	}
+	if err := s.requireTalkbackAction(r.Context(), r.Header.Get(authorizationHeader), parsed, "stop_talkback"); err != nil {
+		s.writeStreamAccessError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s Server) writeDashboardTalkbackPlayback(w http.ResponseWriter, r *http.Request, streamID string) {

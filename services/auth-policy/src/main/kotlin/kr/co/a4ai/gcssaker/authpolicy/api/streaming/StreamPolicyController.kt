@@ -38,10 +38,10 @@ class StreamPolicyController(
         )
         val decision = when (request.action) {
             "view_stream" -> groupPolicy.canViewStream(principal, stream)
-            "send_talkback" -> groupPolicy.canSendTalkback(principal, publisherGroupId)
+            "send_talkback", "stop_talkback" -> groupPolicy.canSendTalkback(principal, publisherGroupId)
             else -> throw BadRequestApiError("unsupported stream access action")
         }
-        if (!decision.allowed || request.action == "send_talkback") {
+        if (!decision.allowed || request.action in setOf("send_talkback", "stop_talkback")) {
             securityAuditPublisher.publishStreamAction(
                 principal = principal,
                 streamId = request.streamId,

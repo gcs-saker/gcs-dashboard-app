@@ -82,3 +82,11 @@ export async function fetchAuthorizedTalkbackPlayback(
   }
   return whepUrl;
 }
+
+export async function notifyTalkbackStopped(streamId: string, fetcher: typeof fetch): Promise<void> {
+  await authenticatedFetch(
+    streamApiV1Url(`${STREAM_API_ROUTES.streams}/${streamId}/talkback-stop`),
+    { method: "POST", headers: STREAM_JSON_ACCEPT_HEADERS, keepalive: true },
+    fetcher,
+  );
+}

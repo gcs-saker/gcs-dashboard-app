@@ -93,6 +93,10 @@ describe("useWhipAudioPublisher", () => {
     expect(peerConnections[0].close).toHaveBeenCalled();
     expect(peerConnections[1].close).toHaveBeenCalled();
     expect(result.current.status).toBe("idle");
+    await waitFor(() => expect(fetcher).toHaveBeenCalledWith(
+      expect.stringContaining("raw.sample.front/talkback-stop"),
+      expect.objectContaining({ method: "POST", keepalive: true }),
+    ));
   });
 
   test("rejects talkback start when no target stream is selected", async () => {

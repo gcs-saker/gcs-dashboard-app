@@ -88,6 +88,40 @@ func TestDashboardTalkbackPublishRejectsNonRawTarget(t *testing.T) {
 	}
 }
 
+func TestDashboardTalkbackStopAuditsThroughPolicyBoundary(t *testing.T) {
+	var observedTarget domain.StreamAccessTarget
+	server := newTestServerWithAuthorizer(fakeStreams{}, fakeIce{}, fakeAuthorizer{observedTarget: &observedTarget})
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/streams/raw.drone-01.front/talkback-stop", nil)
+	request.Header.Set("Authorization", "Bearer operator-token")
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if observedTarget.Action != "stop_talkback" {
+		t.Fatalf("expected stop_talkback authorization action, got %q", observedTarget.Action)
+	}
+}
+
+func TestDashboardTalkbackStopRejectsGetAndNonRawTargets(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	for _, test := range []struct {
+		method string
+		path   string
+		status int
+	}{{http.MethodGet, "/api/v1/streams/raw.drone-01.front/talkback-stop", 405},
+		{http.MethodPost, "/api/v1/streams/ai.drone-01.front.detector/talkback-stop", 422}} {
+		request := httptest.NewRequest(test.method, test.path, nil)
+		recorder := httptest.NewRecorder()
+		server.Routes().ServeHTTP(recorder, request)
+		if recorder.Code != test.status {
+			t.Fatalf("%s %s: expected %d, got %d", test.method, test.path, test.status, recorder.Code)
+		}
+	}
+}
+
 func TestDashboardTalkbackPlaybackUsesAuthorizedShortLivedPath(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.drone-01.front/talkback-playback", nil)

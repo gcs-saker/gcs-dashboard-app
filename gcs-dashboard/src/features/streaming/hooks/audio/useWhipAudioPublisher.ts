@@ -7,6 +7,7 @@ import { TALKBACK_AUDIO_CONSTRAINTS, type TalkbackPublisherSnapshot, type Talkba
 import { monitorLocalMicLevel } from "@streaming/talkback/talkbackMicLevel";
 import { publishTalkbackTarget } from "@streaming/talkback/talkbackWhipSession";
 import { inspectTalkbackAudioSettings } from "@streaming/talkback/talkbackAudioPolicy";
+import { notifyTalkbackStopped } from "@streaming/publisher/publisherApi";
 
 export type { UseWhipAudioPublisherOptions } from "@streaming/talkback/talkbackPublisherContracts";
 
@@ -16,9 +17,14 @@ export function useWhipAudioPublisher(options: UseWhipAudioPublisherOptions = {}
   const start = useCallback(async (streamIds: string[]): Promise<void> => {
     await startTalkback(runtime, streamIds, { mediaDevices, peerConnectionFactory, fetcher, operatorId });
   }, [fetcher, mediaDevices, operatorId, peerConnectionFactory, runtime]);
+  const stop = useCallback((): void => {
+    const activeTargets = runtime.targets.filter((target) => target.status === "active").map((target) => target.streamId);
+    runtime.stop();
+    activeTargets.forEach((streamId) => { void notifyTalkbackStopped(streamId, fetcher); });
+  }, [fetcher, runtime]);
   return { status: runtime.status, errorMessage: runtime.errorMessage,
     hasLocalAudioTrack: runtime.hasLocalAudioTrack, micLevel: runtime.micLevel,
-    targets: runtime.targets, start, stop: runtime.stop };
+    targets: runtime.targets, start, stop };
 }
 
 function useTalkbackRuntime() {

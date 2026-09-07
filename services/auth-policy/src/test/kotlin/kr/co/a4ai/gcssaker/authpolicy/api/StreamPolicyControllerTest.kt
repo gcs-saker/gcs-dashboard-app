@@ -259,6 +259,29 @@ class StreamPolicyControllerTest {
         )
     }
 
+    @Test
+    fun `talkback stop is authorized and audited as a distinct operation`() {
+        val audit = RecordingSecurityAuditPublisher()
+        val controller = StreamPolicyController(
+            BearerPrincipalResolver(sessions),
+            GroupPolicyService(listOf(OrganizationUnit(GroupId("bn-1"), "1 Battalion", GroupType.BATTALION))),
+            audit,
+        )
+
+        val response = controller.access(
+            bearer(accessToken("operator-bn")),
+            StreamAccessRequest(
+                streamId = "raw.sample.front",
+                path = "raw/sample/front",
+                publisherGroupId = "bn-1",
+                action = "stop_talkback",
+            ),
+        )
+
+        assertEquals(true, response.allowed)
+        assertEquals(listOf("stop_talkback"), audit.actions)
+    }
+
     private fun accessToken(username: String): String =
         sessions.login(username, "pass")?.accessToken ?: error("login failed")
 
@@ -267,6 +290,7 @@ class StreamPolicyControllerTest {
 
     private class RecordingSecurityAuditPublisher : SecurityAuditPublisher {
         val events = mutableListOf<String>()
+        val actions = mutableListOf<String>()
 
         override fun publishLoginSucceeded(principal: AuthenticatedPrincipal) = Unit
 
@@ -284,6 +308,18 @@ class StreamPolicyControllerTest {
             reason: String,
         ) {
             events.add("$streamId:${publisherGroupId.value}:$allowed:$reason")
+        }
+
+        override fun publishStreamAction(
+            principal: AuthenticatedPrincipal,
+            streamId: String,
+            publisherGroupId: GroupId,
+            action: String,
+            allowed: Boolean,
+            reason: String,
+        ) {
+            actions.add(action)
+            publishStreamAccess(principal, streamId, publisherGroupId, allowed, reason)
         }
     }
 }
