@@ -429,8 +429,16 @@ async def receive_required_frames(
 ) -> FirstFrameResult:
     if not args.require_video_frame and not args.require_audio_frame:
         return FirstFrameResult()
-    video_task = asyncio.create_task(wait_for_track_frame(video_tracks, args.timeout_seconds)) if args.require_video_frame else None
-    audio_task = asyncio.create_task(wait_for_track_frame(audio_tracks, args.timeout_seconds)) if args.require_audio_frame else None
+    video_task = (
+        asyncio.create_task(wait_for_track_frame(video_tracks, args.timeout_seconds))
+        if args.require_video_frame
+        else None
+    )
+    audio_task = (
+        asyncio.create_task(wait_for_track_frame(audio_tracks, args.timeout_seconds))
+        if args.require_audio_frame
+        else None
+    )
     frame = await video_task if video_task is not None else None
     video_elapsed_ms = (time.perf_counter() - started) * 1000 if frame is not None else None
     if audio_task is None:
@@ -449,9 +457,17 @@ async def hold_connection_if_requested(args: argparse.Namespace) -> None:
 async def run_webrtc_smoke(args: argparse.Namespace) -> int:
     RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription = load_aiortc_runtime()
 
-    ice_servers = [] if not args.ice_server_url else [RTCIceServer(
-        urls=[args.ice_server_url], username=args.ice_username, credential=args.ice_credential,
-    )]
+    ice_servers = (
+        []
+        if not args.ice_server_url
+        else [
+            RTCIceServer(
+                urls=[args.ice_server_url],
+                username=args.ice_username,
+                credential=args.ice_credential,
+            )
+        ]
+    )
     peer_connection = RTCPeerConnection(RTCConfiguration(iceServers=ice_servers))
     video_tracks: asyncio.Queue[object] = asyncio.Queue()
     audio_tracks: asyncio.Queue[object] = asyncio.Queue()

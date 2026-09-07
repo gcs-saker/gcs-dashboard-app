@@ -243,9 +243,17 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
     except ImportError as error:
         raise RuntimeError("aiortc is required for --run. Install with: python -m pip install aiortc") from error
 
-    ice_servers = [] if not args.ice_server_url else [RTCIceServer(
-        urls=[args.ice_server_url], username=args.ice_username, credential=args.ice_credential,
-    )]
+    ice_servers = (
+        []
+        if not args.ice_server_url
+        else [
+            RTCIceServer(
+                urls=[args.ice_server_url],
+                username=args.ice_username,
+                credential=args.ice_credential,
+            )
+        ]
+    )
     peer_connection = RTCPeerConnection(RTCConfiguration(iceServers=ice_servers))
     track = None if args.no_video else SyntheticVideoTrack(args.width, args.height, args.fps)
     audio_track = (
