@@ -1,0 +1,65 @@
+schemaVersion: gcs-saker.rmf-control-matrix.v1
+baseline: NIST SP 800-53 Rev.5 tailored software baseline
+assessmentMethod: NIST SP 800-53A Rev.5
+controls:
+  - id: AC-2
+    family: Access Control
+    implementation: Auth-policy owns named accounts, active state, roles, groups, security version, and session revocation.
+    assessment: Inspect account lifecycle tests and exercise disable, role change, group change, and refresh replay.
+    evidence: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/AuthSessionServiceTest.kt]
+    status: IMPLEMENTED_NOT_ASSESSED
+  - id: AC-3
+    family: Access Control
+    implementation: Resource authorization combines role, server-owned group scope, stream identity, and active session.
+    assessment: Exercise same-group success and descendant, sibling, inactive, stale-session, and malformed denials.
+    evidence: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/HierarchicalAuthorizationContractTest.kt]
+    status: IMPLEMENTED_NOT_ASSESSED
+  - id: AU-2
+    family: Audit and Accountability
+    implementation: Security-relevant identity, group, stream, Talkback, and operational events use stable event categories.
+    assessment: Inspect event taxonomy, redaction, authorized reads, persistence, and failure behavior.
+    evidence: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/OperationalAuditPublisherTest.kt]
+    status: IMPLEMENTED_NOT_ASSESSED
+  - id: IA-2
+    family: Identification and Authentication
+    implementation: Users authenticate with named credentials and signed short-lived access and rotating refresh tokens.
+    assessment: Verify MFA gap, token algorithms, expiration, replay, revocation, and inactive-account behavior.
+    evidence: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/AuthSessionServiceTest.kt]
+    status: OPEN
+  - id: SC-2
+    family: System and Communications Protection
+    implementation: Browser presentation, policy services, media routing, persistence, and management routes have separate owners and network boundaries.
+    assessment: Inspect public routes and verify databases, brokers, metrics, reflection, and management interfaces remain private.
+    evidence: [scripts/gates/closed_network_static_check.py]
+    status: IMPLEMENTED_NOT_ASSESSED
+  - id: SC-8
+    family: System and Communications Protection
+    implementation: Public ingress uses TLS and WebRTC media uses DTLS-SRTP.
+    assessment: Verify internal gRPC, MQTT, database, Redis, TURN, certificate, and cipher gaps.
+    evidence: [scripts/ops/check_public_tls.sh]
+    status: OPEN
+  - id: SI-2
+    family: System and Information Integrity
+    implementation: CI audits dependencies and scans runtime images with time-bounded vulnerability exceptions.
+    assessment: Review remediation SLA, exception authorization, update delivery, and affected-release notification.
+    evidence: [.github/workflows/ci.yml]
+    status: IMPLEMENTED_NOT_ASSESSED
+  - id: SA-11
+    family: System and Services Acquisition
+    implementation: Formatting, type checking, unit/integration tests, authorization denials, builds, browser smoke, and image scans block release.
+    assessment: Sample a release and reproduce every required check from the immutable source revision.
+    evidence: [.github/workflows/ci.yml]
+    status: IMPLEMENTED_NOT_ASSESSED
+  - id: SA-15
+    family: System and Services Acquisition
+    implementation: Secure Development Plan defines design, code, review, test, incident, and evidence obligations.
+    assessment: Inspect a security-sensitive pull request for complete impact and review evidence.
+    evidence: [docs/compliance/security/secure-development-plan.md]
+    status: IMPLEMENTED_NOT_ASSESSED
+  - id: SR-4
+    family: Supply Chain Risk Management
+    implementation: Lockfiles, exact versions, base-image digests, SBOM generation, dependency audits, and image scans are required.
+    assessment: Verify artifact signatures, VEX, provenance, license policy, and supplier review gaps.
+    evidence: [.github/workflows/ci.yml]
+    status: OPEN
+

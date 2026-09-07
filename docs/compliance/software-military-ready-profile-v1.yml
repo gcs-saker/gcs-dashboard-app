@@ -99,8 +99,8 @@ standards:
     status: NOT_RUN
   - id: DISA-ASD-STIG
     title: Application Security and Development STIG
-    revision: Version 6 Release 3
-    documentDate: 2025-04-07
+    revision: Version 6 Release 4
+    documentDate: 2025-09-09
     source: https://public.cyber.mil/stigs/downloads/
     applicability: APPLICABLE
     rationale: The product exposes browser, API, identity, and application-server attack surfaces.
@@ -172,4 +172,3 @@ reviewPolicy:
     - verify status and revision against the authoritative publisher
     - record changed clauses and impacted requirement IDs
     - invalidate stale PASS evidence until impact analysis completes
-
