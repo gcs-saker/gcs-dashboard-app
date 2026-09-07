@@ -1,0 +1,90 @@
+schemaVersion: gcs-saker.threat-model.v1
+modelId: software-military-ready-v1
+method: STRIDE
+assets:
+  - account and group authorization policy
+  - device credentials and active publish sessions
+  - telemetry, location, and operational event integrity
+  - video, audio, Talkback, and private media routes
+  - waypoint, geofence, and future device commands
+  - AI model identity, frame binding, and overlay metadata
+  - source, build artifacts, release evidence, and backups
+trustBoundaries:
+  - id: TB-PUBLIC-EDGE
+    from: untrusted browser or network
+    to: public TLS edge
+    protections: [TLS, route allowlist, request limits, authentication]
+  - id: TB-BROWSER-MEDIA
+    from: browser permissions and user media
+    to: WebRTC publish and playback
+    protections: [user gesture, DTLS-SRTP, scoped media token, target authorization]
+  - id: TB-APPLICATION
+    from: public edge
+    to: backend, auth-policy, and media-control
+    protections: [service routing, bearer policy, private network, sanitized errors]
+  - id: TB-SERVICE-DATA
+    from: application services
+    to: PostgreSQL, Redis, MQTT, MediaMTX, and TURN
+    protections: [private network, credentials, resource policy, timeout]
+  - id: TB-DEVICE
+    from: field device or simulator
+    to: MQTT and gRPC gateway
+    protections: [device UUID, credential or session token, server-owned group binding]
+  - id: TB-SUPPLY-CHAIN
+    from: source dependencies and CI services
+    to: release images and evidence
+    protections: [lockfile, digest pin, audit, SBOM, image scan, immutable commit]
+  - id: TB-AI-FUTURE
+    from: AI model and processor
+    to: overlay metadata and result storage
+    protections: [schema validation, frame binding, timeout, advisory-only decision]
+threats:
+  - id: THREAT-IDENTITY-SPOOF
+    stride: Spoofing
+    boundaries: [TB-PUBLIC-EDGE, TB-DEVICE]
+    mitigations: [signed sessions, active-principal verification, device credential binding, replay tests]
+    requirementIds: [MR-SEC-001, MR-RMF-001]
+    status: CONTROLLED_NOT_ASSESSED
+  - id: THREAT-CROSS-GROUP
+    stride: Elevation of Privilege
+    boundaries: [TB-APPLICATION, TB-DEVICE]
+    mitigations: [server-owned group resolution, hierarchical policy, same-sibling-descendant denial tests]
+    requirementIds: [MR-SEC-001, MR-SAF-001]
+    status: CONTROLLED_NOT_ASSESSED
+  - id: THREAT-MEDIA-ROUTE-DISCLOSURE
+    stride: Information Disclosure
+    boundaries: [TB-BROWSER-MEDIA, TB-APPLICATION]
+    mitigations: [opaque stream ID, scoped short-lived token, log redaction, Talkback discovery exclusion]
+    requirementIds: [MR-SEC-001, MR-VOICE-001]
+    status: CONTROLLED_NOT_ASSESSED
+  - id: THREAT-COMMAND-REPLAY
+    stride: Tampering
+    boundaries: [TB-DEVICE]
+    mitigations: [session binding, expiry, idempotency requirement, stale-session denial]
+    requirementIds: [MR-SAF-001]
+    status: OPEN
+  - id: THREAT-RESOURCE-EXHAUSTION
+    stride: Denial of Service
+    boundaries: [TB-PUBLIC-EDGE, TB-APPLICATION, TB-SERVICE-DATA]
+    mitigations: [request limits, bounded pagination, timeout, bounded retry, container resource limits]
+    requirementIds: [MR-SEC-001]
+    status: OPEN
+  - id: THREAT-AUDIT-REPUDIATION
+    stride: Repudiation
+    boundaries: [TB-APPLICATION, TB-SERVICE-DATA]
+    mitigations: [structured audit events, UTC, trace ID, future tamper-evident retention]
+    requirementIds: [MR-RMF-001]
+    status: OPEN
+  - id: THREAT-SUPPLY-CHAIN-TAMPER
+    stride: Tampering
+    boundaries: [TB-SUPPLY-CHAIN]
+    mitigations: [dependency audit, SBOM, digest pins, vulnerability scan, future signing and provenance]
+    requirementIds: [MR-SSDF-001, MR-RMF-001]
+    status: OPEN
+  - id: THREAT-AI-CROSS-STREAM
+    stride: Tampering
+    boundaries: [TB-AI-FUTURE]
+    mitigations: [stream and frame validation, model provenance, stale result rejection, advisory-only output]
+    requirementIds: [MR-SAF-001, MR-SEC-001]
+    status: OPEN
+

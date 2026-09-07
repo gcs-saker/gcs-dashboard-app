@@ -53,8 +53,13 @@ traces:
       - docs/compliance/security/cybersecurity-test-plan.md
       - docs/compliance/security/system-security-plan.md
       - docs/compliance/security/security-assessment-report.md
+      - docs/compliance/security/threat-model.yml
+      - docs/compliance/security/attack-surface.yml
     codeRefs: [.github/workflows/ci.yml]
-    testRefs: [backend/tests/test_authorization_api.py, backend/tests/test_stig_rmf_baseline.py]
+    testRefs:
+      - backend/tests/test_authorization_api.py
+      - backend/tests/test_stig_rmf_baseline.py
+      - backend/tests/test_attack_surface_gate.py
     evidenceRefs: []
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/656

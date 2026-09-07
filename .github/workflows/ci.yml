@@ -338,6 +338,9 @@ jobs:
       - name: Validate military-ready requirement traceability
         run: python scripts/gates/military_ready_traceability_gate.py --check
 
+      - name: Validate threat model and attack-surface inventory
+        run: python scripts/gates/attack_surface_gate.py --check
+
       - name: Validate shell syntax
         run: find scripts deploy -type f -name '*.sh' -print0 | xargs -0 -r bash -n
 
