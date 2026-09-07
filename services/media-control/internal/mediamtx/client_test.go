@@ -4,8 +4,10 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
@@ -18,7 +20,7 @@ func TestListStreamsMapsMediaMTXPaths(t *testing.T) {
 		if r.URL.Path != "/v3/paths/list" {
 			t.Fatalf("unexpected path %s", r.URL.Path)
 		}
-		_, _ = w.Write([]byte(`{"items":[{"name":"raw/local/webcam","ready":true,"source":{"type":"rtspSession","id":"session-1"},"readers":[{"type":"webRTCSession"},{"type":"hlsMuxer"}]}]}`))
+		_, _ = w.Write([]byte(`{"items":[{"name":"raw/local/webcam","ready":true,"source":{"type":"rtspSession","id":"session-1"},"readers":[{"type":"webRTCSession"},{"type":"hlsMuxer"}]},{"name":"talkback/raw/local/webcam/operator","ready":true,"source":{"type":"webRTCSession"}}]}`))
 	}))
 	defer server.Close()
 
@@ -28,10 +30,26 @@ func TestListStreamsMapsMediaMTXPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(streams) != 1 {
-		t.Fatalf("expected one stream, got %d", len(streams))
+		t.Fatalf("talkback paths must remain internal; got %d discoverable streams", len(streams))
 	}
 	if !streams[0].Ready || streams[0].ReaderCount != 2 || streams[0].Source != "rtspSession" {
 		t.Fatalf("unexpected stream descriptor: %+v", streams[0])
+	}
+}
+
+func TestRealRegistryHidesTalkbackPaths(t *testing.T) {
+	baseURL := os.Getenv("TEST_MEDIAMTX_API_URL")
+	if baseURL == "" {
+		t.Skip("TEST_MEDIAMTX_API_URL is not configured")
+	}
+	streams, err := NewClient(baseURL, &http.Client{Timeout: 3 * time.Second}).ListStreams(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, stream := range streams {
+		if strings.HasPrefix(string(stream.Path), "talkback/") {
+			t.Fatalf("talkback path escaped internal registry filtering: %s", stream.Path)
+		}
 	}
 }
 

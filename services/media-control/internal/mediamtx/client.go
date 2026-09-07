@@ -71,23 +71,36 @@ func (c Client) ListStreams(ctx context.Context) ([]domain.StreamDescriptor, err
 
 	streams := make([]domain.StreamDescriptor, 0, len(payload.Items))
 	for _, item := range payload.Items {
-		path, err := domain.NewStreamPath(item.Name)
+		stream, include, err := streamDescriptor(item)
 		if err != nil {
 			return nil, err
 		}
-		status := domain.StreamStatusRegistered
-		if item.Ready {
-			status = domain.StreamStatusOnline
+		if !include {
+			continue
 		}
-		streams = append(streams, domain.StreamDescriptor{
-			Path:        path,
-			Ready:       item.Ready,
-			Source:      item.Source.Type,
-			Status:      status,
-			ReaderCount: item.readerCount(),
-		})
+		streams = append(streams, stream)
 	}
 	return streams, nil
+}
+
+func streamDescriptor(item pathItem) (domain.StreamDescriptor, bool, error) {
+	parsed, err := domain.ParseStreamPath(item.Name)
+	if err != nil {
+		return domain.StreamDescriptor{}, false, err
+	}
+	if parsed.Prefix == "talkback" {
+		return domain.StreamDescriptor{}, false, nil
+	}
+	path, err := domain.NewStreamPath(parsed.Path)
+	if err != nil {
+		return domain.StreamDescriptor{}, false, err
+	}
+	status := domain.StreamStatusRegistered
+	if item.Ready {
+		status = domain.StreamStatusOnline
+	}
+	return domain.StreamDescriptor{Path: path, Ready: item.Ready, Source: item.Source.Type,
+		Status: status, ReaderCount: item.readerCount()}, true, nil
 }
 
 func (i pathItem) readerCount() int {

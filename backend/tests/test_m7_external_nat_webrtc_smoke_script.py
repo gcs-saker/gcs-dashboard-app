@@ -93,3 +93,12 @@ def test_webrtc_whip_publish_smoke_generates_audible_nonzero_pcm() -> None:
     assert len(payload) == 1_920
     assert any(payload)
     assert len(set(payload)) > 16
+
+
+def test_webrtc_whip_publish_smoke_supports_audio_only_mode() -> None:
+    module = load_publish_module()
+
+    args = module.parse_args(["--run", "--no-video"])
+
+    assert args.no_video is True
+    assert args.no_audio is False

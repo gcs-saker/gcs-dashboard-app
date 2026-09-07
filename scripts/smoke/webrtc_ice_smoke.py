@@ -427,14 +427,12 @@ async def receive_required_frames(
     audio_tracks: asyncio.Queue[object],
     started: float,
 ) -> FirstFrameResult:
-    if not args.require_video_frame:
+    if not args.require_video_frame and not args.require_audio_frame:
         return FirstFrameResult()
-    video_task = asyncio.create_task(wait_for_track_frame(video_tracks, args.timeout_seconds))
-    audio_task = None
-    if args.measure_audio_video_sync:
-        audio_task = asyncio.create_task(wait_for_track_frame(audio_tracks, args.timeout_seconds))
-    frame = await video_task
-    video_elapsed_ms = (time.perf_counter() - started) * 1000
+    video_task = asyncio.create_task(wait_for_track_frame(video_tracks, args.timeout_seconds)) if args.require_video_frame else None
+    audio_task = asyncio.create_task(wait_for_track_frame(audio_tracks, args.timeout_seconds)) if args.require_audio_frame else None
+    frame = await video_task if video_task is not None else None
+    video_elapsed_ms = (time.perf_counter() - started) * 1000 if frame is not None else None
     if audio_task is None:
         return FirstFrameResult(frame, video_elapsed_ms)
     await audio_task
@@ -451,17 +449,10 @@ async def hold_connection_if_requested(args: argparse.Namespace) -> None:
 async def run_webrtc_smoke(args: argparse.Namespace) -> int:
     RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription = load_aiortc_runtime()
 
-    peer_connection = RTCPeerConnection(
-        RTCConfiguration(
-            iceServers=[
-                RTCIceServer(
-                    urls=[args.ice_server_url],
-                    username=args.ice_username,
-                    credential=args.ice_credential,
-                )
-            ]
-        ),
-    )
+    ice_servers = [] if not args.ice_server_url else [RTCIceServer(
+        urls=[args.ice_server_url], username=args.ice_username, credential=args.ice_credential,
+    )]
+    peer_connection = RTCPeerConnection(RTCConfiguration(iceServers=ice_servers))
     video_tracks: asyncio.Queue[object] = asyncio.Queue()
     audio_tracks: asyncio.Queue[object] = asyncio.Queue()
 
@@ -474,7 +465,7 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
 
     try:
         peer_connection.addTransceiver("video", direction="recvonly")
-        if args.measure_audio_video_sync:
+        if args.require_audio_frame:
             peer_connection.addTransceiver("audio", direction="recvonly")
 
         started = time.perf_counter()
@@ -562,8 +553,9 @@ def print_first_frame_result(frames: FirstFrameResult) -> None:
         print(
             f"First video frame size: {frames.video_frame.width}x{frames.video_frame.height}"  # type: ignore[attr-defined]
         )
-    if frames.video_elapsed_ms is not None and frames.audio_elapsed_ms is not None:
+    if frames.audio_elapsed_ms is not None:
         print(f"First audio frame latency ms: {frames.audio_elapsed_ms:.1f}")
+    if frames.video_elapsed_ms is not None and frames.audio_elapsed_ms is not None:
         print(f"Audio/video sync offset ms: {abs(frames.audio_elapsed_ms - frames.video_elapsed_ms):.1f}")
 
 
@@ -685,6 +677,11 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         help="Fail unless a decoded remote video frame is received.",
     )
     parser.add_argument(
+        "--require-audio-frame",
+        action="store_true",
+        help="Fail unless a decoded remote audio frame is received.",
+    )
+    parser.add_argument(
         "--measure-audio-video-sync",
         action="store_true",
         help="When video is required, also receive first audio frame and print audio/video sync offset.",
@@ -696,6 +693,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     if args.measure_audio_video_sync:
         args.require_connected = True
         args.require_video_frame = True
+        args.require_audio_frame = True
     if not args.check and not args.run:
         args.check = True
     return args

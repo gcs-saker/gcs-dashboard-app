@@ -243,18 +243,11 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
     except ImportError as error:
         raise RuntimeError("aiortc is required for --run. Install with: python -m pip install aiortc") from error
 
-    peer_connection = RTCPeerConnection(
-        RTCConfiguration(
-            iceServers=[
-                RTCIceServer(
-                    urls=[args.ice_server_url],
-                    username=args.ice_username,
-                    credential=args.ice_credential,
-                )
-            ]
-        )
-    )
-    track = SyntheticVideoTrack(args.width, args.height, args.fps)
+    ice_servers = [] if not args.ice_server_url else [RTCIceServer(
+        urls=[args.ice_server_url], username=args.ice_username, credential=args.ice_credential,
+    )]
+    peer_connection = RTCPeerConnection(RTCConfiguration(iceServers=ice_servers))
+    track = None if args.no_video else SyntheticVideoTrack(args.width, args.height, args.fps)
     audio_track = (
         None
         if args.no_audio
@@ -265,7 +258,8 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
             args.audio_tone_amplitude,
         )
     )
-    peer_connection.addTrack(track.track)
+    if track is not None:
+        peer_connection.addTrack(track.track)
     if audio_track is not None:
         peer_connection.addTrack(audio_track.track)
     started = time.perf_counter()
@@ -296,7 +290,8 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         print(f"ICE connection state: {peer_connection.iceConnectionState}")
         if connected_ms is not None:
             print(f"ICE connected latency ms: {connected_ms:.1f}")
-        print(f"Synthetic frames attempted: {track.sequence}")
+        if track is not None:
+            print(f"Synthetic frames attempted: {track.sequence}")
         if audio_track is not None:
             print(f"Synthetic audio frames attempted: {audio_track.sequence}")
         return 0
@@ -332,6 +327,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--height", type=int, default=360)
     parser.add_argument("--fps", type=int, default=15)
     parser.add_argument("--no-audio", action="store_true")
+    parser.add_argument("--no-video", action="store_true")
     parser.add_argument("--audio-sample-rate", type=int, default=48000)
     parser.add_argument("--audio-frame-duration-ms", type=int, default=20)
     parser.add_argument("--audio-tone-frequency-hz", type=float, default=440.0)
@@ -343,6 +339,8 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         parser.error("--audio-tone-frequency-hz must be positive")
     if not 0 < args.audio_tone_amplitude <= 1:
         parser.error("--audio-tone-amplitude must be in the range (0, 1]")
+    if args.no_audio and args.no_video:
+        parser.error("audio and video cannot both be disabled")
     if not args.check and not args.run:
         args.check = True
     return args

@@ -36,6 +36,15 @@ def test_webrtc_ice_smoke_script_check_mode_passes_without_aiortc() -> None:
     assert "direct_ratio=0.5000" in result.stdout
 
 
+def test_webrtc_ice_smoke_supports_audio_only_frame_requirement() -> None:
+    module = load_smoke_module()
+
+    args = module.parse_args(["--run", "--require-audio-frame"])
+
+    assert args.require_audio_frame is True
+    assert args.require_video_frame is False
+
+
 def test_webrtc_ice_smoke_parser_requires_answer_ice_data() -> None:
     module = load_smoke_module()
     sample_answer = "\r\n".join(
