@@ -110,9 +110,14 @@ traces:
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/656
   - requirementId: MR-SDLC-001
     threatsOrHazards: []
-    designRefs: [AGENTS.md]
+    designRefs:
+      - AGENTS.md
+      - docs/compliance/evidence/qualification-package-plan.md
+      - docs/compliance/evidence/evidence-manifest-template.yml
     codeRefs: [.github/workflows/ci.yml]
-    testRefs: [scripts/gates/repository_hygiene_contract.py]
+    testRefs:
+      - scripts/gates/repository_hygiene_contract.py
+      - backend/tests/test_military_ready_evidence_report.py
     evidenceRefs: []
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/655
