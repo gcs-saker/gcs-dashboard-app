@@ -40,10 +40,11 @@ def test_audit_chain_rejects_removed_or_reordered_records() -> None:
         verify_records(chained_records()[1:])
 
 
-def test_audit_policy_forbids_credentials_and_does_not_claim_external_anchor() -> None:
+def test_audit_policy_forbids_credentials_and_does_not_claim_external_immutability() -> None:
     policy = yaml.safe_load(POLICY.read_text(encoding="utf-8"))
 
     assert {"password", "bearerToken", "deviceCredential", "rawAudio"} <= set(policy["forbiddenFields"])
-    assert policy["integrity"]["externalAnchor"] == "REQUIRED_NOT_IMPLEMENTED"
-    assert policy["currentStatus"] == "AUTH_POLICY_PRODUCER_INTEGRATED_EXTERNAL_ANCHOR_OPEN"
+    assert policy["integrity"]["externalAnchor"] == "SOFTWARE_WORM_STAGING_IMPLEMENTED"
+    assert policy["integrity"]["externalImmutableStorage"] == "REQUIRED_NOT_IMPLEMENTED"
+    assert policy["currentStatus"] == "SOFTWARE_WORM_STAGING_EXTERNAL_IMMUTABILITY_OPEN"
     assert policy["integrity"]["protectedCategories"] == ["security", "audit"]

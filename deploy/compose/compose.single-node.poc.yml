@@ -214,6 +214,11 @@ services:
       AUTH_POLICY_AUDIT_WARNING_RECORDS: ${AUTH_POLICY_AUDIT_WARNING_RECORDS:-800000}
       AUTH_POLICY_AUDIT_SECURITY_RETENTION_DAYS: ${AUTH_POLICY_AUDIT_SECURITY_RETENTION_DAYS:-365}
       AUTH_POLICY_AUDIT_PRIVILEGED_RETENTION_DAYS: ${AUTH_POLICY_AUDIT_PRIVILEGED_RETENTION_DAYS:-730}
+      AUTH_POLICY_AUDIT_ANCHOR_ENABLED: ${AUTH_POLICY_AUDIT_ANCHOR_ENABLED:-true}
+      AUTH_POLICY_AUDIT_ANCHOR_DIRECTORY: /var/lib/gcs-audit-anchor
+      AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY: ${AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY:?Set AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY}
+      AUTH_POLICY_AUDIT_ANCHOR_INTERVAL_MILLIS: ${AUTH_POLICY_AUDIT_ANCHOR_INTERVAL_MILLIS:-300000}
+      SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
       SPRING_DATASOURCE_URL: ${AUTH_POLICY_DATASOURCE_URL:-jdbc:postgresql://postgres-geo:5432/${POSTGRES_DB:-gcs_geo}}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-gcs_geo}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
@@ -232,6 +237,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - audit-anchor-data:/var/lib/gcs-audit-anchor
     restart: unless-stopped
     networks:
       - control-net
@@ -479,3 +486,4 @@ volumes:
   postgres-geo-data:
   redis-data:
   mqtt-data:
+  audit-anchor-data:

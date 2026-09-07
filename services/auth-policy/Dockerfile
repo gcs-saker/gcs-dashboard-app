@@ -16,7 +16,8 @@ COPY --from=build /workspace/build/libs/*.jar /app/auth-policy.jar
 RUN apk upgrade --no-cache \
     && addgroup -S -g 10002 gcs \
     && adduser -S -D -H -u 10002 -G gcs -h /app -s /sbin/nologin gcs \
-    && chown -R gcs:gcs /app
+    && mkdir -p /var/lib/gcs-audit-anchor \
+    && chown -R gcs:gcs /app /var/lib/gcs-audit-anchor
 USER 10002:10002
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
