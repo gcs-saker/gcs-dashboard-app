@@ -123,17 +123,21 @@ traces:
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/655
   - requirementId: MR-HW-ENV-001
     threatsOrHazards: []
-    designRefs: [docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md]
+    designRefs:
+      - docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md
+      - docs/compliance/hardware/prototype-entry-gate.yml
     codeRefs: []
-    testRefs: []
+    testRefs: [backend/tests/test_hardware_entry_gate.py]
     evidenceRefs: []
     status: PLANNED_HARDWARE
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/668
   - requirementId: MR-HW-EMC-001
     threatsOrHazards: []
-    designRefs: [docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md]
+    designRefs:
+      - docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md
+      - docs/compliance/hardware/prototype-entry-gate.yml
     codeRefs: []
-    testRefs: []
+    testRefs: [backend/tests/test_hardware_entry_gate.py]
     evidenceRefs: []
     status: PLANNED_HARDWARE
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/668
