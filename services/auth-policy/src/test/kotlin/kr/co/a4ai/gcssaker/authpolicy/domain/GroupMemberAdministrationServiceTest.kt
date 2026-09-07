@@ -51,6 +51,28 @@ class GroupMemberAdministrationServiceTest {
     }
 
     @Test
+    fun `member update cannot elevate a user to either administrator role`() {
+        val groupAdmin = repository.findByUsername("admin-a")!!.principal()
+        val systemAdmin = repository.findByUsername("system")!!.principal()
+
+        assertFailsWith<InvalidContractError> {
+            service.update(groupAdmin, groupA, "viewer-a", GroupMemberUpdate(role = UserRole.GROUP_ADMIN))
+        }
+        assertFailsWith<InvalidContractError> {
+            service.update(systemAdmin, groupA, "viewer-a", GroupMemberUpdate(role = UserRole.ADMIN))
+        }
+    }
+
+    @Test
+    fun `out of scope member is hidden as not found during update`() {
+        val principal = repository.findByUsername("admin-a")!!.principal()
+
+        assertFailsWith<ResourceNotFoundError> {
+            service.update(principal, groupA, "viewer-b", GroupMemberUpdate(role = UserRole.OPERATOR))
+        }
+    }
+
+    @Test
     fun `system admin atomically replaces exact group administrator`() {
         val replacement = service.replaceGroupAdmin(
             repository.findByUsername("system")!!.principal(),

@@ -45,7 +45,7 @@ class GroupAccessServiceTest {
         assertTrue(service.accessFor(groupAdmin, GroupId("company-a")).canManage)
         assertTrue(service.accessFor(groupAdmin, GroupId("company-a")).canControl)
         assertTrue(service.accessFor(groupAdmin, GroupId("platoon-a")).canView)
-        assertTrue(service.accessFor(groupAdmin, GroupId("platoon-a")).canSendTalkback)
+        assertFalse(service.accessFor(groupAdmin, GroupId("platoon-a")).canSendTalkback)
         assertFalse(service.accessFor(groupAdmin, GroupId("platoon-a")).canManage)
         assertFalse(service.accessFor(groupAdmin, GroupId("platoon-a")).canPublish)
         assertFalse(service.accessFor(groupAdmin, GroupId("platoon-a")).canControl)

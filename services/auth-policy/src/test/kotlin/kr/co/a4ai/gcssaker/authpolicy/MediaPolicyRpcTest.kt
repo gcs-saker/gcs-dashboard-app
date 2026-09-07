@@ -39,6 +39,21 @@ class MediaPolicyRpcTest {
     }
 
     @Test
+    fun `talkback RPC keeps group admin inside exact group scope`() {
+        Mockito.`when`(principals.requirePrincipal("Bearer fixture")).thenReturn(
+            AuthenticatedPrincipal("fixture", UserRole.GROUP_ADMIN, GroupId("parent")),
+        )
+        val ownGroup = Capture<StreamAccessOutput>()
+        val descendant = Capture<StreamAccessOutput>()
+
+        service.authorizeStream(talkbackRequest("parent"), ownGroup)
+        service.authorizeStream(talkbackRequest("child"), descendant)
+
+        assertTrue(ownGroup.value?.allowed == true)
+        assertFalse(descendant.value?.allowed == true)
+    }
+
+    @Test
     fun `RPC denies missing principal and malformed actions`() {
         Mockito.`when`(principals.requirePrincipal("")).thenThrow(UnauthorizedApiError("authentication_required"))
         val missing = Capture<StreamAccessOutput>()
@@ -64,6 +79,14 @@ class MediaPolicyRpcTest {
         service.authorizeAccountPublish(request, denied)
         assertEquals(Status.Code.PERMISSION_DENIED, Status.fromThrowable(requireNotNull(denied.error)).code)
     }
+
+    private fun talkbackRequest(groupId: String): StreamAccessInput = StreamAccessInput.newBuilder()
+        .setAuthorization("Bearer fixture")
+        .setStreamId("raw.device.test")
+        .setPath("raw/device/test")
+        .setPublisherGroupId(groupId)
+        .setAction("send_talkback")
+        .build()
 
     private class Capture<T> : StreamObserver<T> {
         var value: T? = null

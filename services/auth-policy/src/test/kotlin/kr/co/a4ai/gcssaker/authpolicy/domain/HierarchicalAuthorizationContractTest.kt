@@ -23,7 +23,7 @@ class HierarchicalAuthorizationContractTest {
             case(UserRole.OPERATOR, companyA.id, companyA.id, expected(view = true, control = true, talkback = true, publish = true)),
             case(UserRole.OPERATOR, companyA.id, platoonA.id, expected()),
             case(UserRole.GROUP_ADMIN, companyA.id, companyA.id, expected(true, true, true, true, true)),
-            case(UserRole.GROUP_ADMIN, companyA.id, platoonA.id, expected(view = true, talkback = true)),
+            case(UserRole.GROUP_ADMIN, companyA.id, platoonA.id, expected(view = true)),
             case(UserRole.GROUP_ADMIN, companyA.id, companyB.id, expected()),
             case(UserRole.GROUP_ADMIN, companyA.id, root.id, expected()),
             case(UserRole.ADMIN, companyA.id, companyB.id, expected(true, true, true, true, true)),

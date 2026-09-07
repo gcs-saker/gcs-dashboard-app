@@ -66,9 +66,6 @@ class GroupPolicyService private constructor(
         ) {
             return StreamAccessDecision.allow("same group talkback")
         }
-        if (principal.role == UserRole.GROUP_ADMIN && hierarchyProvider().isAncestor(principal.groupId, targetGroupId)) {
-            return StreamAccessDecision.allow("group admin can send descendant talkback")
-        }
         return StreamAccessDecision.deny("talkback target is outside principal operational scope")
     }
 

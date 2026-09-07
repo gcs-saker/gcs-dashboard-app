@@ -104,6 +104,25 @@ class AuthSessionServiceTest {
     }
 
     @Test
+    fun `group reassignment invalidates existing access and refresh tokens immediately`() {
+        val tokens = requireNotNull(service.login("operator01", "correct-password"))
+        val current = requireNotNull(users.findByUsername("operator01"))
+        users.update(current.copy(groupId = GroupId("co-b"), securityVersion = current.securityVersion + 1))
+
+        assertFailsWith<IllegalArgumentException> { service.verifyAccessToken(tokens.accessToken) }
+        assertNull(service.refresh(tokens.refreshToken))
+    }
+
+    @Test
+    fun `revoked refresh token cannot extend a session`() {
+        val tokens = requireNotNull(service.login("operator01", "correct-password"))
+
+        service.revokeRefreshToken(tokens.refreshToken)
+
+        assertNull(service.refresh(tokens.refreshToken))
+    }
+
+    @Test
     fun `disabled user cannot login or continue an existing session`() {
         val tokens = requireNotNull(service.login("operator01", "correct-password"))
         val current = requireNotNull(users.findByUsername("operator01"))

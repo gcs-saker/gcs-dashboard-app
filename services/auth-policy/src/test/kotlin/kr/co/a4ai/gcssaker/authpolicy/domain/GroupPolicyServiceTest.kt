@@ -50,11 +50,18 @@ class GroupPolicyServiceTest {
     }
 
     @Test
-    fun `group admin can send talkback to descendant group`() {
+    fun `group admin cannot send talkback to descendant group`() {
         val principal = AuthenticatedPrincipal("admin-bn", UserRole.GROUP_ADMIN, battalion.id)
 
-        assertTrue(service.canSendTalkback(principal, companyB.id).allowed)
-        assertTrue(service.canSendTalkback(principal, platoonB1.id).allowed)
+        assertFalse(service.canSendTalkback(principal, companyB.id).allowed)
+        assertFalse(service.canSendTalkback(principal, platoonB1.id).allowed)
+    }
+
+    @Test
+    fun `group admin retains talkback inside exact group`() {
+        val principal = AuthenticatedPrincipal("admin-a", UserRole.GROUP_ADMIN, companyA.id)
+
+        assertTrue(service.canSendTalkback(principal, companyA.id).allowed)
     }
 
     @Test
@@ -161,6 +168,7 @@ class GroupPolicyServiceTest {
 
         assertTrue(decision.allowed)
         assertEquals("active cross-group route policy", decision.reason)
+        assertFalse(policyService.canSendTalkback(principal, companyB.id).allowed)
     }
 
     @Test

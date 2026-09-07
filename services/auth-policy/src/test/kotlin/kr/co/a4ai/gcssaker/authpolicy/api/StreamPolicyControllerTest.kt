@@ -140,7 +140,7 @@ class StreamPolicyControllerTest {
     }
 
     @Test
-    fun `group admin can send talkback to descendant group`() {
+    fun `group admin cannot send talkback to descendant group`() {
         val response = controller.access(
             bearer(accessToken("group-admin-bn")),
             StreamAccessRequest(
@@ -151,8 +151,23 @@ class StreamPolicyControllerTest {
             ),
         )
 
+        assertFalse(response.allowed)
+        assertEquals("talkback target is outside principal operational scope", response.reason)
+    }
+
+    @Test
+    fun `group admin can send talkback inside exact group`() {
+        val response = controller.access(
+            bearer(accessToken("group-admin-bn")),
+            StreamAccessRequest(
+                streamId = "raw.battalion.command",
+                path = "raw/battalion/command",
+                publisherGroupId = "bn-1",
+                action = "send_talkback",
+            ),
+        )
+
         assertTrue(response.allowed)
-        assertEquals("group admin can send descendant talkback", response.reason)
     }
 
     @Test
