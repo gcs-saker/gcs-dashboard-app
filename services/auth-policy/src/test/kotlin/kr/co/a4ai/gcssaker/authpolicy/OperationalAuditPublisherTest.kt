@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.core.task.SyncTaskExecutor
 import org.springframework.core.task.TaskExecutor
+import org.slf4j.MDC
 import java.time.Instant
 import java.util.concurrent.RejectedExecutionException
 
@@ -111,6 +112,29 @@ class OperationalAuditPublisherTest {
         assertEquals(false, event.message.contains("operator01"))
         assertEquals(false, event.message.contains("password"))
         assertEquals(false, event.message.contains("token"))
+    }
+
+    @Test
+    fun `security audit records trace actor operation result error and clock status`() {
+        val repository = InMemoryOperationalEventRepository(emptyList())
+        val publisher = RepositorySecurityAuditPublisher(repository) { Instant.parse("2026-06-01T00:00:00Z") }
+        MDC.put("traceId", "0123456789abcdef0123456789abcdef")
+        try {
+            publisher.publishLoginFailed("operator01")
+        } finally {
+            MDC.clear()
+        }
+
+        val event = repository.eventsFor(
+            SecurityAuditEventContract.UNKNOWN_PRINCIPAL,
+            OperationalEventQuery(query = SecurityAuditEventContract.EVENT_TYPE_LOGIN_FAILED),
+        ).single()
+        assertEquals("0123456789abcdef0123456789abcdef", event.traceId)
+        assertEquals("u***n", event.actorId)
+        assertEquals(SecurityAuditEventContract.EVENT_TYPE_LOGIN_FAILED, event.operation)
+        assertEquals("denied", event.result)
+        assertEquals(SecurityAuditEventContract.EVENT_TYPE_LOGIN_FAILED, event.errorCode)
+        assertEquals("unverified", event.clockStatus)
     }
 
     @Test

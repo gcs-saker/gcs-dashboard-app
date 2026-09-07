@@ -4,6 +4,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventReadModel
 import java.time.Instant
+import org.slf4j.MDC
 
 class SecurityAuditEventFactory(
     private val nextSequence: () -> Long,
@@ -116,5 +117,21 @@ class SecurityAuditEventFactory(
             throughputMbps = SecurityAuditEventContract.NO_THROUGHPUT_MBPS,
             groupId = groupId,
             streamId = streamId,
+            traceId = MDC.get("traceId")?.take(64),
+            actorId = SecurityAuditEventContract.auditActor(principal),
+            operation = eventType,
+            result = auditResult(eventType),
+            errorCode = auditErrorCode(eventType),
+            clockStatus = SecurityAuditEventContract.CLOCK_STATUS_UNVERIFIED,
         )
+
+    private fun auditResult(eventType: String): String =
+        if (eventType.endsWith("failed") || eventType.endsWith("denied")) {
+            SecurityAuditEventContract.RESULT_DENIED
+        } else {
+            SecurityAuditEventContract.RESULT_SUCCESS
+        }
+
+    private fun auditErrorCode(eventType: String): String =
+        if (eventType.endsWith("failed") || eventType.endsWith("denied")) eventType else SecurityAuditEventContract.ERROR_NONE
 }

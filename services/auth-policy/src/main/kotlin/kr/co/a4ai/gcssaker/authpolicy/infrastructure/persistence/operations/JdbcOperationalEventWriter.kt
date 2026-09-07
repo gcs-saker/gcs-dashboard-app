@@ -11,10 +11,18 @@ class JdbcOperationalEventWriter(
         initialEvents.forEach(::appendIfAbsent)
     }
 
+    @Synchronized
     fun appendIfAbsent(event: OperationalEventReadModel) {
         if (!existsById(event.id)) {
-            insert(event)
+            insert(withAuditChain(event))
         }
+    }
+
+    private fun withAuditChain(event: OperationalEventReadModel): OperationalEventReadModel {
+        if (!AuditHashChain.isAudit(event)) return event
+        val previousHash = jdbc.query(OperationalEventSql.latestAuditHash) { rs, _ -> rs.getString(1) }
+            .firstOrNull() ?: AuditHashChain.GENESIS_HASH
+        return AuditHashChain.chain(event, previousHash)
     }
 
     private fun insert(event: OperationalEventReadModel) {
@@ -36,6 +44,14 @@ class JdbcOperationalEventWriter(
             event.connectionId,
             event.icePath,
             event.relayFallbackReason,
+            event.traceId,
+            event.actorId,
+            event.operation,
+            event.result,
+            event.errorCode,
+            event.clockStatus,
+            event.previousHash,
+            event.eventHash,
         )
     }
 

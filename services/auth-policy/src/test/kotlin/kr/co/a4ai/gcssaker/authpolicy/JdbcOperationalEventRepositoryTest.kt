@@ -77,6 +77,26 @@ class JdbcOperationalEventRepositoryTest {
         assertTrue("IX_OPERATIONAL_EVENTS_GROUP_OCCURRED" in indexes)
         assertTrue("IX_OPERATIONAL_EVENTS_GROUP_SEVERITY_OCCURRED" in indexes)
         assertTrue("IX_OPERATIONAL_EVENTS_GROUP_STREAM_OCCURRED" in indexes)
+        assertTrue("IX_OPERATIONAL_EVENTS_AUDIT_CHAIN" in indexes)
+    }
+
+    @Test
+    fun `security events persist an ordered sha256 integrity chain`() {
+        val dataSource = h2DataSource()
+        val repository = JdbcOperationalEventRepository(dataSource, emptyList())
+        val first = event("audit-1", "info", "security", "login", GroupId("co-a"), "2026-06-01T00:00:00Z")
+        val second = event("audit-2", "warn", "security", "denied", GroupId("co-a"), "2026-06-01T00:00:01Z")
+
+        repository.append(first)
+        repository.append(second)
+
+        val jdbc = JdbcTemplate(dataSource)
+        val firstHash = jdbc.queryForObject("SELECT event_hash FROM operational_events WHERE id = 'audit-1'", String::class.java)
+        val secondPrevious = jdbc.queryForObject("SELECT previous_hash FROM operational_events WHERE id = 'audit-2'", String::class.java)
+        val secondHash = jdbc.queryForObject("SELECT event_hash FROM operational_events WHERE id = 'audit-2'", String::class.java)
+        assertEquals("0".repeat(64), jdbc.queryForObject("SELECT previous_hash FROM operational_events WHERE id = 'audit-1'", String::class.java))
+        assertEquals(firstHash, secondPrevious)
+        assertEquals(64, secondHash?.length)
     }
 
     @Test

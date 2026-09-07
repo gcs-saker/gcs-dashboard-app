@@ -19,6 +19,14 @@ data class OperationalEventReadModel(
     val connectionId: String? = null,
     val icePath: String? = null,
     val relayFallbackReason: String? = null,
+    val traceId: String? = null,
+    val actorId: String? = null,
+    val operation: String? = null,
+    val result: String? = null,
+    val errorCode: String? = null,
+    val clockStatus: String? = null,
+    val previousHash: String? = null,
+    val eventHash: String? = null,
 )
 
 data class OperationalEventQuery(

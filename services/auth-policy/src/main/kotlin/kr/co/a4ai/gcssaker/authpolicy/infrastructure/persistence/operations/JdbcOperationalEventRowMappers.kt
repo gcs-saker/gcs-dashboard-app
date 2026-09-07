@@ -28,6 +28,14 @@ internal object JdbcOperationalEventRowMappers {
             connectionId = rs.getString(OperationalEventColumns.connectionId),
             icePath = rs.getString(OperationalEventColumns.icePath),
             relayFallbackReason = rs.getString(OperationalEventColumns.relayFallbackReason),
+            traceId = rs.getString(OperationalEventColumns.traceId),
+            actorId = rs.getString(OperationalEventColumns.actorId),
+            operation = rs.getString(OperationalEventColumns.operation),
+            result = rs.getString(OperationalEventColumns.result),
+            errorCode = rs.getString(OperationalEventColumns.errorCode),
+            clockStatus = rs.getString(OperationalEventColumns.clockStatus),
+            previousHash = rs.getString(OperationalEventColumns.previousHash),
+            eventHash = rs.getString(OperationalEventColumns.eventHash),
         )
     }
 
@@ -105,6 +113,14 @@ internal object OperationalEventColumns {
     const val connectionId = "connection_id"
     const val icePath = "ice_path"
     const val relayFallbackReason = "relay_fallback_reason"
+    const val traceId = "trace_id"
+    const val actorId = "actor_id"
+    const val operation = "operation"
+    const val result = "result"
+    const val errorCode = "error_code"
+    const val clockStatus = "clock_status"
+    const val previousHash = "previous_hash"
+    const val eventHash = "event_hash"
 }
 
 internal object OperationalEventMetricColumns {

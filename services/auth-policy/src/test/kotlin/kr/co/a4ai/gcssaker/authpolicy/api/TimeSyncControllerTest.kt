@@ -125,7 +125,7 @@ class TimeSyncControllerTest {
         assertEquals("audit", auditEvent.category)
         assertEquals("time_sync.config.updated", auditEvent.eventType)
         assertEquals("auth-policy", auditEvent.sourceService)
-        assertEquals("operator-a", auditEvent.message.substringAfter("by "))
+        assertEquals("o***a", auditEvent.message.substringAfter("by "))
     }
 
     @Test

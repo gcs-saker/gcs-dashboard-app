@@ -23,6 +23,10 @@ object SecurityAuditEventContract {
     const val NO_CONNECTIONS = 0
     const val NO_LATENCY_MS = 0L
     const val NO_THROUGHPUT_MBPS = 0.0
+    const val RESULT_SUCCESS = "success"
+    const val RESULT_DENIED = "denied"
+    const val ERROR_NONE = "none"
+    const val CLOCK_STATUS_UNVERIFIED = "unverified"
 
     val UNKNOWN_PRINCIPAL = AuthenticatedPrincipal(UNKNOWN_USERNAME, UserRole.ADMIN, GroupId(UNKNOWN_GROUP_ID))
 
@@ -39,6 +43,8 @@ object SecurityAuditEventContract {
         reason.take(160)
 
     fun safeClientIp(clientIp: String): String = clientIp.take(64)
+
+    fun auditActor(principal: AuthenticatedPrincipal): String = maskUsername(principal.username)
 
     fun streamAccessMessage(
         allowed: Boolean,

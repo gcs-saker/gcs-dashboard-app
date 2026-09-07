@@ -45,4 +45,5 @@ def test_audit_policy_forbids_credentials_and_does_not_claim_external_anchor() -
 
     assert {"password", "bearerToken", "deviceCredential", "rawAudio"} <= set(policy["forbiddenFields"])
     assert policy["integrity"]["externalAnchor"] == "REQUIRED_NOT_IMPLEMENTED"
-    assert policy["currentStatus"] == "PRODUCER_INTEGRATION_OPEN"
+    assert policy["currentStatus"] == "AUTH_POLICY_PRODUCER_INTEGRATED_EXTERNAL_ANCHOR_OPEN"
+    assert policy["integrity"]["protectedCategories"] == ["security", "audit"]

@@ -5,8 +5,10 @@ time:
   driftStates: [NORMAL, WARNING, UNSAFE, UNKNOWN]
 integrity:
   algorithm: SHA-256
-  canonicalization: UTF-8 JSON with sorted keys and compact separators
-  chainFields: [sequence, previousHash, recordHash]
+  canonicalization: UTF-8 length-prefixed ordered fields
+  chainFields: [previousHash, eventHash]
+  protectedCategories: [security, audit]
+  databaseMutationPolicy: PostgreSQL trigger rejects update and delete
   externalAnchor: REQUIRED_NOT_IMPLEMENTED
 retention:
   securityEventsDays: 365
@@ -26,5 +28,4 @@ requiredEventFamilies:
   - ai-model-and-overlay-policy
   - deployment-and-rollback
 forbiddenFields: [password, bearerToken, refreshToken, deviceCredential, turnPassword, privateKey, rawAudio, privateMediaUrl]
-currentStatus: PRODUCER_INTEGRATION_OPEN
-
+currentStatus: AUTH_POLICY_PRODUCER_INTEGRATED_EXTERNAL_ANCHOR_OPEN

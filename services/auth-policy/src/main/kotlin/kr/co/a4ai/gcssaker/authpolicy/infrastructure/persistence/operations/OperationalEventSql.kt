@@ -4,7 +4,9 @@ internal object OperationalEventSql {
     const val selectBase = """
         SELECT id, occurred_at, severity, category, event_type, source_service, source, message,
                connections, latency_ms, throughput_mbps, group_id,
-               stream_id, connection_id, ice_path, relay_fallback_reason
+               stream_id, connection_id, ice_path, relay_fallback_reason,
+               trace_id, actor_id, operation, result, error_code, clock_status,
+               previous_hash, event_hash
         FROM operational_events
         WHERE (group_id = ? OR ? = ? OR (? = 'GROUP_ADMIN' AND EXISTS (
             SELECT 1 FROM organization_group_closure c
@@ -93,9 +95,16 @@ internal object OperationalEventSql {
         INSERT INTO operational_events (
             id, occurred_at, severity, category, event_type, source_service, source, message,
             connections, latency_ms, throughput_mbps, group_id,
-            stream_id, connection_id, ice_path, relay_fallback_reason
+            stream_id, connection_id, ice_path, relay_fallback_reason,
+            trace_id, actor_id, operation, result, error_code, clock_status,
+            previous_hash, event_hash
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     const val existsById = "SELECT COUNT(1) FROM operational_events WHERE id = ?"
+    const val latestAuditHash = """
+        SELECT event_hash FROM operational_events
+        WHERE category IN ('security', 'audit') AND event_hash IS NOT NULL
+        ORDER BY occurred_at DESC, id DESC LIMIT 1
+    """
 }
