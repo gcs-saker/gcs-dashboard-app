@@ -56,6 +56,7 @@ func run() error {
 	defer stopGrpc()
 	grpcReadiness := grpcgateway.StartDeviceWithReadiness(grpcContext, config.grpcListenAddress, resources.gateway.server)
 	handler = handler.WithGatewayReadiness(grpcReadiness)
+	startTalkbackLifecycleObserver(runtimeContext, config)
 	stopMQTT, err := startMQTTAdapter(runtimeContext, config)
 	if err != nil {
 		return err

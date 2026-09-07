@@ -50,6 +50,24 @@ type pathReader struct {
 }
 
 func (c Client) ListStreams(ctx context.Context) ([]domain.StreamDescriptor, error) {
+	items, err := c.listPathItems(ctx)
+	if err != nil {
+		return nil, err
+	}
+	streams := make([]domain.StreamDescriptor, 0, len(items))
+	for _, item := range items {
+		stream, include, err := streamDescriptor(item)
+		if err != nil {
+			return nil, err
+		}
+		if include {
+			streams = append(streams, stream)
+		}
+	}
+	return streams, nil
+}
+
+func (c Client) listPathItems(ctx context.Context) ([]pathItem, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/v3/paths/list", nil)
 	if err != nil {
 		return nil, err
@@ -69,18 +87,7 @@ func (c Client) ListStreams(ctx context.Context) ([]domain.StreamDescriptor, err
 		return nil, err
 	}
 
-	streams := make([]domain.StreamDescriptor, 0, len(payload.Items))
-	for _, item := range payload.Items {
-		stream, include, err := streamDescriptor(item)
-		if err != nil {
-			return nil, err
-		}
-		if !include {
-			continue
-		}
-		streams = append(streams, stream)
-	}
-	return streams, nil
+	return payload.Items, nil
 }
 
 func streamDescriptor(item pathItem) (domain.StreamDescriptor, bool, error) {
