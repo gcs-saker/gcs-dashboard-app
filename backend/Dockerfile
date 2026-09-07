@@ -1,19 +1,23 @@
-FROM python:3.12.13-slim-bookworm@sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b AS wheels
+FROM python:3.12.14-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254 AS wheels
 WORKDIR /build
 COPY requirements-runtime.txt .
 RUN python -m pip install --no-cache-dir --upgrade pip wheel \
     && pip wheel --no-cache-dir --wheel-dir /wheels -r requirements-runtime.txt
 
-FROM python:3.12.13-slim-bookworm@sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b
+FROM python:3.12.14-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254
 ARG SOURCE_COMMIT=unknown
 LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
 ENV TZ=UTC PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
-RUN groupadd --system --gid 10001 gcs \
+RUN apt-get update \
+    && apt-get upgrade --yes \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system --gid 10001 gcs \
     && useradd --system --uid 10001 --gid gcs --home-dir /app --shell /usr/sbin/nologin gcs
 WORKDIR /app
 COPY --from=wheels /wheels /wheels
 COPY requirements-runtime.txt .
-RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements-runtime.txt \
+RUN python -m pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir --no-index --find-links=/wheels -r requirements-runtime.txt \
     && rm -rf /wheels
 COPY --chown=gcs:gcs . .
 USER 10001:10001
