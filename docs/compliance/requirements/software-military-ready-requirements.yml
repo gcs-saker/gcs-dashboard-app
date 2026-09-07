@@ -1,0 +1,94 @@
+schemaVersion: gcs-saker.requirement-catalog.v1
+catalogId: software-military-ready-v1
+requirements:
+  - id: MR-HFE-001
+    title: Operator interface human-engineering baseline
+    statement: Operator controls, displays, warnings, labels, and error recovery shall follow the selected MIL-STD-1472H criteria.
+    sourceStandards: [MIL-STD-1472H]
+    assuranceClass: human-factors
+    owner: dashboard
+    verificationMethods: [analysis, usability-test]
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/653
+  - id: MR-VOICE-001
+    title: Secure and intelligible operational voice
+    statement: Talkback shall preserve authorized routing and demonstrate intelligibility under the selected operational and degraded network conditions.
+    sourceStandards: [MIL-STD-1472H]
+    assuranceClass: safety
+    owner: streaming
+    verificationMethods: [analysis, test]
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/659
+  - id: MR-SYM-001
+    title: Joint military symbology subset
+    statement: Tactical entities and graphics shall use a validated MIL-STD-2525E Change 1 subset with server-owned affiliation and identity.
+    sourceStandards: [MIL-STD-2525E-C1]
+    assuranceClass: interoperability
+    owner: map-and-contracts
+    verificationMethods: [analysis, golden-image-test]
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/660
+  - id: MR-SAF-001
+    title: Closed-loop software system safety
+    statement: Software contributions to hazards shall be identified, controlled, assigned a Level of Rigor, verified, and tracked to residual-risk acceptance.
+    sourceStandards: [MIL-STD-882E-C1]
+    assuranceClass: safety
+    owner: system-safety
+    verificationMethods: [analysis, review, safety-test]
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/658
+  - id: MR-SSDF-001
+    title: Secure software development lifecycle
+    statement: Development shall implement and retain evidence for SSDF PO, PS, PW, and RV practices.
+    sourceStandards: [NIST-SP-800-218]
+    assuranceClass: security
+    owner: product-security
+    verificationMethods: [process-assessment, ci-evidence]
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/655
+  - id: MR-SEC-001
+    title: Application security STIG assessment
+    statement: Applicable DISA ASD STIG findings shall have a disposition, implementation evidence, and repeatable assessment procedure.
+    sourceStandards: [DISA-ASD-STIG]
+    assuranceClass: security
+    owner: product-security
+    verificationMethods: [stig-assessment, security-test]
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/656
+  - id: MR-RMF-001
+    title: RMF-ready security control evidence
+    statement: Tailored NIST controls shall link implementation and assessment evidence to open findings and residual risk.
+    sourceStandards: [NIST-SP-800-53-REV5]
+    assuranceClass: security
+    owner: product-security
+    verificationMethods: [control-assessment]
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/656
+  - id: MR-SDLC-001
+    title: Controlled software lifecycle
+    statement: Requirements, design, implementation, verification, release, operation, and retirement shall use controlled lifecycle records.
+    sourceStandards: [ISO-IEC-IEEE-12207]
+    assuranceClass: lifecycle
+    owner: engineering-management
+    verificationMethods: [process-assessment]
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/655
+  - id: MR-HW-ENV-001
+    title: Future environmental qualification
+    statement: A representative hardware article shall receive an operational-environment-tailored MIL-STD-810H qualification when hardware scope is activated.
+    sourceStandards: [MIL-STD-810H]
+    assuranceClass: hardware
+    owner: future-hardware
+    verificationMethods: [tailored-laboratory-test]
+    status: PLANNED_HARDWARE
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/668
+  - id: MR-HW-EMC-001
+    title: Future electromagnetic compatibility qualification
+    statement: A representative enclosure, cable, port, and power configuration shall receive tailored MIL-STD-461G verification when hardware scope is activated.
+    sourceStandards: [MIL-STD-461G]
+    assuranceClass: hardware
+    owner: future-hardware
+    verificationMethods: [tailored-laboratory-test]
+    status: PLANNED_HARDWARE
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/668
+

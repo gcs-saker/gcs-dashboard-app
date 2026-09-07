@@ -1,0 +1,89 @@
+schemaVersion: gcs-saker.traceability.v1
+catalogId: software-military-ready-v1
+evidencePolicy:
+  storage: manifest-plus-artifact
+  repositoryContents: metadata, hashes, summaries, and non-sensitive compact results
+  externalContents: large raw results, packet captures, audio samples, videos, and controlled evidence
+  immutableBinding: every PASS evidence manifest shall contain a full source commit
+traces:
+  - requirementId: MR-HFE-001
+    threatsOrHazards: [HAZ-HFE-OPERATOR-ERROR]
+    designRefs: [docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md]
+    codeRefs: []
+    testRefs: []
+    evidenceRefs: []
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/653
+  - requirementId: MR-VOICE-001
+    threatsOrHazards: [HAZ-VOICE-MISROUTE, HAZ-VOICE-UNINTELLIGIBLE]
+    designRefs: [docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md]
+    codeRefs: [gcs-dashboard/src/features/streaming/talkback/talkbackPublisherContracts.ts]
+    testRefs: [gcs-dashboard/src/features/streaming/talkback/talkbackWhipSession.test.ts]
+    evidenceRefs: []
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/659
+  - requirementId: MR-SYM-001
+    threatsOrHazards: []
+    designRefs: [docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md]
+    codeRefs: []
+    testRefs: []
+    evidenceRefs: []
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/660
+  - requirementId: MR-SAF-001
+    threatsOrHazards: [HAZ-MISSION-WRONG-TARGET, HAZ-AI-STALE-OVERLAY]
+    designRefs: [docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md]
+    codeRefs: []
+    testRefs: []
+    evidenceRefs: []
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/658
+  - requirementId: MR-SSDF-001
+    threatsOrHazards: [THREAT-INSECURE-DEVELOPMENT]
+    designRefs: [AGENTS.md]
+    codeRefs: [.github/workflows/ci.yml]
+    testRefs: [scripts/gates/critical_code_contract.py]
+    evidenceRefs: []
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/655
+  - requirementId: MR-SEC-001
+    threatsOrHazards: [THREAT-APPLICATION-ATTACK-SURFACE]
+    designRefs: [docs/operations/GCS-Saker_서버보안하드닝_계획_v0.1.md]
+    codeRefs: [.github/workflows/ci.yml]
+    testRefs: [backend/tests/test_authorization_api.py]
+    evidenceRefs: []
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/656
+  - requirementId: MR-RMF-001
+    threatsOrHazards: [THREAT-UNASSESSED-CONTROL]
+    designRefs: [docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md]
+    codeRefs: []
+    testRefs: []
+    evidenceRefs: []
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/656
+  - requirementId: MR-SDLC-001
+    threatsOrHazards: []
+    designRefs: [AGENTS.md]
+    codeRefs: [.github/workflows/ci.yml]
+    testRefs: [scripts/gates/repository_hygiene_contract.py]
+    evidenceRefs: []
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/655
+  - requirementId: MR-HW-ENV-001
+    threatsOrHazards: []
+    designRefs: [docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md]
+    codeRefs: []
+    testRefs: []
+    evidenceRefs: []
+    status: PLANNED_HARDWARE
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/668
+  - requirementId: MR-HW-EMC-001
+    threatsOrHazards: []
+    designRefs: [docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md]
+    codeRefs: []
+    testRefs: []
+    evidenceRefs: []
+    status: PLANNED_HARDWARE
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/668
+
