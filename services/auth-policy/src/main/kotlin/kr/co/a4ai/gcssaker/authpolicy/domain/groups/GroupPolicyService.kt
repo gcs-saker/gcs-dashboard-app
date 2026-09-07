@@ -24,6 +24,7 @@ class GroupPolicyService private constructor(
         principal: AuthenticatedPrincipal,
         stream: StreamSessionDescriptor,
     ): StreamAccessDecision {
+        activeScopeDenial(principal, stream.publisherGroupId)?.let { return it }
         if (stream.path.value == "control/stream-list" || stream.path.value == "control/ice-servers") {
             return StreamAccessDecision.allow("authenticated discovery; each stream is scoped separately")
         }
@@ -58,6 +59,7 @@ class GroupPolicyService private constructor(
         }
 
     fun canSendTalkback(principal: AuthenticatedPrincipal, targetGroupId: GroupId): StreamAccessDecision {
+        activeScopeDenial(principal, targetGroupId)?.let { return it }
         if (principal.role == UserRole.ADMIN) return StreamAccessDecision.allow("admin can send talkback")
         if (principal.groupId == targetGroupId &&
             (principal.role == UserRole.OPERATOR || principal.role == UserRole.GROUP_ADMIN)
@@ -68,6 +70,22 @@ class GroupPolicyService private constructor(
             return StreamAccessDecision.allow("group admin can send descendant talkback")
         }
         return StreamAccessDecision.deny("talkback target is outside principal operational scope")
+    }
+
+    fun isActiveGroup(groupId: GroupId): Boolean = hierarchyProvider().contains(groupId)
+
+    private fun activeScopeDenial(
+        principal: AuthenticatedPrincipal,
+        targetGroupId: GroupId,
+    ): StreamAccessDecision? {
+        val hierarchy = hierarchyProvider()
+        if (!hierarchy.contains(principal.groupId)) {
+            return StreamAccessDecision.deny("principal group is inactive or unknown")
+        }
+        if (!hierarchy.contains(targetGroupId)) {
+            return StreamAccessDecision.deny("target group is inactive or unknown")
+        }
+        return null
     }
 
     private fun routePolicyDecision(
@@ -104,7 +122,7 @@ class GroupPolicyService private constructor(
 
     companion object {
         private fun validatedHierarchyProvider(groups: Collection<OrganizationUnit>): () -> OrganizationHierarchy {
-            val hierarchy = OrganizationHierarchy.of(groups)
+            val hierarchy = OrganizationHierarchy.of(groups.filter { it.status == GroupStatus.ACTIVE })
             return { hierarchy }
         }
     }

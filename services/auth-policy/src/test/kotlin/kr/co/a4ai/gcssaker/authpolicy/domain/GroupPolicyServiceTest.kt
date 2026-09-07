@@ -99,6 +99,37 @@ class GroupPolicyServiceTest {
     }
 
     @Test
+    fun `inactive publisher group is denied before administrator privileges`() {
+        val inactive = OrganizationUnit(
+            GroupId("co-inactive"), "Inactive Company", GroupType.COMPANY, battalion.id, GroupStatus.INACTIVE,
+        )
+        val scopedService = GroupPolicyService(groups + inactive, clock = clock)
+        val principal = AuthenticatedPrincipal("admin", UserRole.ADMIN, companyA.id)
+        val stream = StreamSessionDescriptor(StreamPath("raw/inactive/drone-1"), inactive.id, Instant.EPOCH)
+
+        val decision = scopedService.canViewStream(principal, stream)
+
+        assertFalse(decision.allowed)
+        assertEquals("target group is inactive or unknown", decision.reason)
+        assertFalse(scopedService.canSendTalkback(principal, inactive.id).allowed)
+    }
+
+    @Test
+    fun `inactive principal group is denied before same group privileges`() {
+        val repository = InMemoryOrganizationHierarchyRepository(groups)
+        val scopedService = GroupPolicyService(repository, clock = clock)
+        val principal = AuthenticatedPrincipal("operator-a", UserRole.OPERATOR, companyA.id)
+        val stream = StreamSessionDescriptor(StreamPath("raw/company-a/drone-1"), companyA.id, Instant.EPOCH)
+        repository.update(companyA.copy(status = GroupStatus.INACTIVE))
+
+        val decision = scopedService.canViewStream(principal, stream)
+
+        assertFalse(decision.allowed)
+        assertEquals("principal group is inactive or unknown", decision.reason)
+        assertFalse(scopedService.canSendTalkback(principal, companyA.id).allowed)
+    }
+
+    @Test
     fun `role permissions are explicit`() {
         assertEquals(setOf(Permission.VIEW_STREAM), service.permissionsFor(UserRole.VIEWER))
         assertTrue(Permission.MANAGE_GROUP_MEMBERS in service.permissionsFor(UserRole.GROUP_ADMIN))

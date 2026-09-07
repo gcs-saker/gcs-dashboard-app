@@ -4,6 +4,7 @@ import java.security.MessageDigest
 
 class AccountPublishAuthorizationService(private val groupPolicy: GroupPolicyService) {
     fun authorize(principal: AuthenticatedPrincipal, sensor: String): DevicePublishAuthorization {
+        check(groupPolicy.isActiveGroup(principal.groupId)) { "publisher_group_inactive" }
         check(Permission.PUBLISH_STREAM in groupPolicy.permissionsFor(principal.role)) { "publish_permission_required" }
         val sensorId = sensor.trim().lowercase()
         require(sensorId.matches(Regex("[a-z0-9][a-z0-9_-]{0,127}"))) { "sensor_id_invalid" }

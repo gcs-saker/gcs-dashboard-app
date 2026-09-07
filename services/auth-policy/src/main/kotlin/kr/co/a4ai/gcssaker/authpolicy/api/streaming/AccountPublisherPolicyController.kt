@@ -42,6 +42,9 @@ class AccountPublisherPolicyController(
         @RequestBody request: AccountPublishAuthorizationRequest,
     ): AccountPublishAuthorizationResponse {
         val principal = principalResolver.requirePrincipal(authorization)
+        if (!groupPolicy.isActiveGroup(principal.groupId)) {
+            throw ForbiddenApiError("publisher group is inactive")
+        }
         if (Permission.PUBLISH_STREAM !in groupPolicy.permissionsFor(principal.role)) {
             throw ForbiddenApiError("stream publishing permission is required")
         }
