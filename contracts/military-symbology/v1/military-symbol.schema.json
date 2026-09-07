@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcs-saker.local/contracts/military-symbology/v1/military-symbol.schema.json",
+  "title": "GCS-Saker MIL-STD-2525E C1 selected symbol",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["symbolId", "standard", "sidc", "affiliation", "status", "entityType", "source"],
+  "properties": {
+    "symbolId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "standard": { "const": "MIL-STD-2525E-C1" },
+    "sidc": { "type": "string", "pattern": "^[0-9]{20}$" },
+    "affiliation": { "enum": ["FRIENDLY", "HOSTILE", "NEUTRAL", "UNKNOWN"] },
+    "status": { "enum": ["PRESENT", "PLANNED"] },
+    "entityType": { "enum": ["UAV_FIXED_WING", "UAV_ROTARY_WING", "UGV", "EO_IR_SENSOR", "GCS", "WAYPOINT"] },
+    "source": { "const": "SERVER_POLICY" },
+    "modifiers": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "uniqueDesignation": { "type": "string", "maxLength": 64 },
+        "callSign": { "type": "string", "maxLength": 64 },
+        "headingDeg": { "type": "number", "minimum": 0, "exclusiveMaximum": 360 },
+        "speedMps": { "type": "number", "minimum": 0 },
+        "altitudeM": { "type": "number" },
+        "observedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
+

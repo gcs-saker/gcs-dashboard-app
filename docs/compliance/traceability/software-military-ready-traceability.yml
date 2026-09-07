@@ -30,9 +30,14 @@ traces:
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/659
   - requirementId: MR-SYM-001
     threatsOrHazards: []
-    designRefs: [docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md]
-    codeRefs: []
-    testRefs: []
+    designRefs:
+      - docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md
+      - docs/compliance/symbology/mil-std-2525e-selected-profile.md
+      - contracts/military-symbology/v1/military-symbol.schema.json
+    codeRefs:
+      - gcs-dashboard/src/features/militarySymbology/militarySymbolRenderer.ts
+      - gcs-dashboard/src/features/militarySymbology/militarySymbolValidation.ts
+    testRefs: [gcs-dashboard/src/features/militarySymbology/militarySymbolRenderer.test.ts]
     evidenceRefs: []
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/660
