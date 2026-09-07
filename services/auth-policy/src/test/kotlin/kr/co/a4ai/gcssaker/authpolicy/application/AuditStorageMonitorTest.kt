@@ -4,7 +4,6 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuditStorageReader
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuditStorageSnapshot
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuditStorageStatus
-import kr.co.a4ai.gcssaker.authpolicy.observability.AuditStorageMetrics
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.time.Duration

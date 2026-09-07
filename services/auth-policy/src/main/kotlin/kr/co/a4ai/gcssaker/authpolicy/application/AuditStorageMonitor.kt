@@ -3,7 +3,6 @@ package kr.co.a4ai.gcssaker.authpolicy.application
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuditStorageReader
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuditStorageSnapshot
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuditStorageStatus
-import kr.co.a4ai.gcssaker.authpolicy.observability.AuditStorageMetrics
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.time.Duration

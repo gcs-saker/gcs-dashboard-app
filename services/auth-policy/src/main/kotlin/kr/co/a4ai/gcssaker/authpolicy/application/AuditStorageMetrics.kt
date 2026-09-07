@@ -1,4 +1,4 @@
-package kr.co.a4ai.gcssaker.authpolicy.observability
+package kr.co.a4ai.gcssaker.authpolicy.application
 
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry

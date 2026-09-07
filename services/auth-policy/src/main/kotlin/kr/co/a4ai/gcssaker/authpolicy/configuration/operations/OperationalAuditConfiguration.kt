@@ -10,7 +10,7 @@ import kr.co.a4ai.gcssaker.authpolicy.application.MediaLifecycleAuditService
 import kr.co.a4ai.gcssaker.authpolicy.application.AuditStorageLimits
 import kr.co.a4ai.gcssaker.authpolicy.application.AuditStorageMonitor
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuditStorageReader
-import kr.co.a4ai.gcssaker.authpolicy.observability.AuditStorageMetrics
+import kr.co.a4ai.gcssaker.authpolicy.application.AuditStorageMetrics
 import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.beans.factory.annotation.Value
 import java.time.Duration
