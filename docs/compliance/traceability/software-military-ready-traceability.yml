@@ -48,8 +48,12 @@ traces:
       - docs/compliance/safety/hazard-log.yml
       - docs/compliance/safety/software-level-of-rigor.yml
       - docs/compliance/safety/residual-risk-register.yml
-    codeRefs: []
-    testRefs: [backend/tests/test_system_safety_gate.py]
+      - docs/compliance/mission/mission-safety-contract.md
+      - contracts/mission/v1/mission-dispatch.schema.json
+    codeRefs: [services/media-control/internal/mission/mission.go]
+    testRefs:
+      - backend/tests/test_system_safety_gate.py
+      - services/media-control/internal/mission/mission_test.go
     evidenceRefs: []
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/658
