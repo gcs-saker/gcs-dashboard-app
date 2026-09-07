@@ -16,6 +16,13 @@ retention:
   mediaContentStoredByDefault: false
   access: system-admin-and-auditor
   deletion: authorized-documented-and-audited
+  warningRecordCount: 800000
+  monitoringIntervalSeconds: 60
+  metrics:
+    - gcs.auth_policy.audit.storage.records
+    - gcs.auth_policy.audit.storage.security_age_seconds
+    - gcs.auth_policy.audit.storage.privileged_age_seconds
+    - gcs.auth_policy.audit.storage.warning
 requiredEventFamilies:
   - authentication
   - account-and-group-policy
