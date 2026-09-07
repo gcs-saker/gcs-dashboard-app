@@ -24,4 +24,3 @@ def test_fuzz_targets_exist_in_owned_boundary_packages() -> None:
     }
     for name, path in targets.items():
         assert f"func {name}" in path.read_text(encoding="utf-8")
-

@@ -25,4 +25,3 @@ def test_hardware_gate_requires_tailoring_and_retest_budget() -> None:
     assert "sourceCommit" in template["requiredFields"]
     assert "retestReserve" in template["costScheduleFields"]
     assert "BLOCKED" in template["verdicts"]
-
