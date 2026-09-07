@@ -344,6 +344,9 @@ jobs:
       - name: Validate MIL-STD-882E system-safety records
         run: python scripts/gates/system_safety_gate.py --check
 
+      - name: Validate supply-chain assurance policy
+        run: python scripts/gates/supply_chain_policy_gate.py --check
+
       - name: Validate shell syntax
         run: find scripts deploy -type f -name '*.sh' -print0 | xargs -0 -r bash -n
 

@@ -59,9 +59,15 @@ traces:
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/658
   - requirementId: MR-SSDF-001
     threatsOrHazards: [THREAT-INSECURE-DEVELOPMENT]
-    designRefs: [AGENTS.md, docs/compliance/security/secure-development-plan.md]
+    designRefs:
+      - AGENTS.md
+      - docs/compliance/security/secure-development-plan.md
+      - docs/compliance/supply-chain/supply-chain-policy.yml
+      - docs/compliance/supply-chain/release-attestation-plan.md
     codeRefs: [.github/workflows/ci.yml]
-    testRefs: [scripts/gates/critical_code_contract.py]
+    testRefs:
+      - scripts/gates/critical_code_contract.py
+      - backend/tests/test_supply_chain_policy_gate.py
     evidenceRefs: []
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/655
