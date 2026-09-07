@@ -1,5 +1,7 @@
 # Opt-in local overlay; never pass this file to the Server-01 deployment script.
 services:
+  turn-primary:
+    ports: !reset []
   auth-policy:
     environment:
       GCS_INTERNAL_GRPC_ENABLED: "true"
@@ -18,6 +20,7 @@ services:
         condition: service_healthy
   mqtt-lab:
     image: eclipse-mosquitto:2.0.22
+    user: "1883:1883"
     ports: ["127.0.0.1:18883:1883"]
     volumes:
       - ../mosquitto/mqtt-lab.conf:/mosquitto/config/mosquitto.conf:ro

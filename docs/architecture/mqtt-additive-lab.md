@@ -51,6 +51,11 @@ Prepare an owner-only password file with `mosquitto_passwd` (interactive passwor
    and publish the canonical protobuf envelope with QoS 1 and retain=false.
 6. Rotate the publish token through the existing REST renewal endpoint before expiry and use the new token in payloads.
 
+The repository also contains `services/media-control/cmd/mqtt-simulator`. Run it inside `control-net` with an
+owner-only state JSON containing `deviceUuid`, `sessionId`, `publishToken`, and `mqttPassword`. Supported scenarios
+are `normal`, `duplicate`, `forged-token`, `group-mismatch`, `stale`, `reconnect`, and `ended`. The simulator logs
+only scenario/result/count fields and never prints its identity or tokens.
+
 The loopback lab listener is plaintext for local testing only. Remote devices require a separately configured TLS
 listener/VPN and broker credential provisioning; no public exposure is authorized by this document.
 The adapter uses MQTT 3.1.1, a bounded 64-message queue, 64 KiB limit and bounded operation timeouts.
