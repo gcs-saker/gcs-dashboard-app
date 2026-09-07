@@ -69,6 +69,13 @@ jobs:
         env:
           TEST_REDIS_ADDR: 127.0.0.1:6379
 
+      - name: Run scheduled security fuzz campaigns
+        if: github.event_name == 'schedule'
+        run: |
+          go test -run=^$ -fuzz=FuzzParseStreamID -fuzztime=10s ./internal/domain
+          go test -run=^$ -fuzz=FuzzValidateForRoute -fuzztime=10s ./internal/sessiontoken
+          go test -run=^$ -fuzz=FuzzMissionWaypointBoundary -fuzztime=10s ./internal/mission
+
       - name: Run vet
         run: go vet ./...
 

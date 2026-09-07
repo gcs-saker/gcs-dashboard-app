@@ -83,6 +83,7 @@ traces:
       - docs/compliance/security/secure-communications-profile.yml
       - docs/compliance/security/cryptographic-inventory.yml
       - docs/compliance/security/audit-integrity-policy.yml
+      - docs/compliance/security/security-testing-profile.yml
     codeRefs: [.github/workflows/ci.yml]
     testRefs:
       - backend/tests/test_authorization_api.py
@@ -90,6 +91,7 @@ traces:
       - backend/tests/test_attack_surface_gate.py
       - backend/tests/test_secure_communications_profile.py
       - backend/tests/test_audit_chain_verify.py
+      - backend/tests/test_security_fuzz_profile.py
     evidenceRefs: []
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/656
