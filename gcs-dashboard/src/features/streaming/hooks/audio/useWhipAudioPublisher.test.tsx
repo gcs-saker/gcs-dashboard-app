@@ -29,7 +29,7 @@ afterEach(() => {
 
 describe("useWhipAudioPublisher", () => {
   test("publishes one operator audio WHIP session per selected stream", async () => {
-    const audioTrack = { stop: vi.fn() } as unknown as MediaStreamTrack;
+    const audioTrack = { getSettings: () => ({ sampleRate: 48_000, channelCount: 1 }), stop: vi.fn() } as unknown as MediaStreamTrack;
     const localStream = {
       getAudioTracks: () => [audioTrack],
       getTracks: () => [audioTrack],
@@ -122,7 +122,7 @@ describe("useWhipAudioPublisher", () => {
   });
 
   test("keeps partial target failure visible without stopping successful talkback sessions", async () => {
-    const audioTrack = { stop: vi.fn() } as unknown as MediaStreamTrack;
+    const audioTrack = { getSettings: () => ({ sampleRate: 48_000, channelCount: 1 }), stop: vi.fn() } as unknown as MediaStreamTrack;
     const localStream = {
       getAudioTracks: () => [audioTrack],
       getTracks: () => [audioTrack],

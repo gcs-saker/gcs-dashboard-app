@@ -5,6 +5,7 @@ import type {
   TalkbackPeerConnectionFactory,
   TalkbackTargetState,
 } from "./talkbackPublisherContracts";
+import { applyTalkbackOpusPolicy } from "./talkbackAudioPolicy";
 
 interface PublishTalkbackTargetOptions {
   audioTracks: MediaStreamTrack[];
@@ -33,7 +34,10 @@ export async function publishTalkbackTarget({
     for (const track of audioTracks) {
       peerConnection.addTrack(track);
     }
-    const offer = await peerConnection.createOffer();
+    const createdOffer = await peerConnection.createOffer();
+    const offer = createdOffer.sdp
+      ? { ...createdOffer, sdp: applyTalkbackOpusPolicy(createdOffer.sdp) }
+      : createdOffer;
     await peerConnection.setLocalDescription(offer);
     await waitForIceGatheringComplete(peerConnection);
     const sdp = peerConnection.localDescription?.sdp;

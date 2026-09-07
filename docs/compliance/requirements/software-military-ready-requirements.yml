@@ -17,7 +17,7 @@ requirements:
     assuranceClass: safety
     owner: streaming
     verificationMethods: [analysis, test]
-    status: NOT_RUN
+    status: BLOCKED
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/659
   - id: MR-SYM-001
     title: Joint military symbology subset
@@ -91,4 +91,3 @@ requirements:
     verificationMethods: [tailored-laboratory-test]
     status: PLANNED_HARDWARE
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/668
-

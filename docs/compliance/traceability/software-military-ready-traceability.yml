@@ -16,11 +16,17 @@ traces:
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/653
   - requirementId: MR-VOICE-001
     threatsOrHazards: [HAZ-VOICE-MISROUTE, HAZ-VOICE-UNINTELLIGIBLE]
-    designRefs: [docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md]
-    codeRefs: [gcs-dashboard/src/features/streaming/talkback/talkbackPublisherContracts.ts]
-    testRefs: [gcs-dashboard/src/features/streaming/talkback/talkbackWhipSession.test.ts]
+    designRefs:
+      - docs/architecture/GCS-Saker_M8_local_protocol_migration_plan.md
+      - docs/compliance/voice/voice-qualification-plan.md
+    codeRefs:
+      - gcs-dashboard/src/features/streaming/talkback/talkbackPublisherContracts.ts
+      - gcs-dashboard/src/features/streaming/talkback/talkbackAudioPolicy.ts
+    testRefs:
+      - gcs-dashboard/src/features/streaming/talkback/talkbackWhipSession.test.ts
+      - gcs-dashboard/src/features/streaming/talkback/talkbackAudioPolicy.test.ts
     evidenceRefs: []
-    status: NOT_RUN
+    status: BLOCKED
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/659
   - requirementId: MR-SYM-001
     threatsOrHazards: []

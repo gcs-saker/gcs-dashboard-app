@@ -6,6 +6,7 @@ import { TALKBACK_AUDIO_CONSTRAINTS, type TalkbackPublisherSnapshot, type Talkba
   type TalkbackTargetState, type UseWhipAudioPublisherOptions } from "@streaming/talkback/talkbackPublisherContracts";
 import { monitorLocalMicLevel } from "@streaming/talkback/talkbackMicLevel";
 import { publishTalkbackTarget } from "@streaming/talkback/talkbackWhipSession";
+import { inspectTalkbackAudioSettings } from "@streaming/talkback/talkbackAudioPolicy";
 
 export type { UseWhipAudioPublisherOptions } from "@streaming/talkback/talkbackPublisherContracts";
 
@@ -60,6 +61,10 @@ async function startTalkback(
     runtime.localStreamRef.current = stream;
     const audioTracks = stream.getAudioTracks();
     if (audioTracks.length === 0) throw new Error("마이크 audio track을 얻지 못했습니다.");
+    const settingsResult = inspectTalkbackAudioSettings(audioTracks[0]?.getSettings?.() ?? {});
+    if (!settingsResult.compliant) {
+      throw new Error(`마이크 설정이 음성 프로파일과 다릅니다: ${settingsResult.mismatches.join(", ")}`);
+    }
     runtime.setHasLocalAudioTrack(true);
     runtime.stopMicLevelMonitorRef.current = monitorLocalMicLevel(stream, runtime.setMicLevel);
     runtime.setStatus("publishing");
