@@ -23,6 +23,7 @@ type runtimeConfig struct {
 	authPolicyBaseURL   string
 	deviceRPCTarget     string
 	deviceRPCToken      string
+	auditIngestToken    string
 	authzCacheTTL       time.Duration
 	streamCacheTTL      time.Duration
 	redisAddress        string
@@ -77,6 +78,7 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		authPolicyBaseURL:   getenv(runtimeEnv.authPolicyBaseURL, runtimeDefaults.authPolicyBaseURL),
 		deviceRPCTarget:     getenv("AUTH_POLICY_GRPC_TARGET", ""),
 		deviceRPCToken:      getenv("AUTH_POLICY_RPC_TOKEN", ""),
+		auditIngestToken:    getenv("AUTH_POLICY_AUDIT_INGEST_TOKEN", ""),
 		authzCacheTTL:       getenvDuration(runtimeEnv.authzCacheTTLSeconds, runtimeDefaults.authzCacheTTL),
 		streamCacheTTL:      getenvDuration(runtimeEnv.streamCacheTTLSeconds, runtimeDefaults.streamCacheTTL),
 		redisAddress:        getenv(runtimeEnv.redisAddress, runtimeDefaults.redisAddress),

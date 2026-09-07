@@ -73,6 +73,7 @@ object AuthSecurityRouteContract {
         RouteMatcher(HttpMethod.POST, DeviceBootstrapApiRoutes.ROOT + DeviceBootstrapApiRoutes.REGISTER),
         RouteMatcher(HttpMethod.POST, DeviceBootstrapApiRoutes.EDGE_ROOT + DeviceBootstrapApiRoutes.REGISTER),
         RouteMatcher(HttpMethod.POST, "/api/v1/devices/*/telemetry"),
+        RouteMatcher(HttpMethod.POST, InternalMediaAuditRoutes.ROOT + InternalMediaAuditRoutes.LIFECYCLE),
     )
     // Management routes authenticate here; action/resource authorization belongs to the use case policy.
     // Keeping role checks out of the transport filter lets ADMIN and scoped GROUP_ADMIN share one API.

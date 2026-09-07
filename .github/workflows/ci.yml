@@ -371,6 +371,7 @@ jobs:
           MQTT_USERNAME: backend
           MQTT_PASSWORD: contract-only
           MEDIA_CONTROL_PUBLISH_TOKEN: contract-only-secret-at-least-32-characters
+          AUTH_POLICY_AUDIT_INGEST_TOKEN: contract-only-audit-secret-at-least-32-characters
           AUTH_POLICY_BASE_URL: http://auth-policy:8080
           REDIS_PASSWORD: contract-only-secret
         run: |

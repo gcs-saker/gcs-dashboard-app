@@ -6,12 +6,15 @@ import kr.co.a4ai.gcssaker.authpolicy.application.RepositorySecurityAuditPublish
 import kr.co.a4ai.gcssaker.authpolicy.application.RepositorySettingsAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.SettingsAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.application.MediaLifecycleAuditService
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
 class OperationalAuditConfiguration {
+    @Bean
+    fun mediaLifecycleAuditService(repository: OperationalEventRepository) = MediaLifecycleAuditService(repository)
     @Bean
     fun settingsAuditPublisher(repository: OperationalEventRepository): SettingsAuditPublisher =
         RepositorySettingsAuditPublisher(repository)
