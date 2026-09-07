@@ -66,10 +66,13 @@ traces:
       - docs/compliance/security/secure-development-plan.md
       - docs/compliance/supply-chain/supply-chain-policy.yml
       - docs/compliance/supply-chain/release-attestation-plan.md
+      - docs/compliance/security/vulnerability-response-policy.yml
+      - docs/operations/GCS-Saker_secure_update_and_recovery.md
     codeRefs: [.github/workflows/ci.yml]
     testRefs:
       - scripts/gates/critical_code_contract.py
       - backend/tests/test_supply_chain_policy_gate.py
+      - backend/tests/test_vulnerability_response_gate.py
     evidenceRefs: []
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/655
