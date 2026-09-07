@@ -45,6 +45,14 @@ PASS/FAIL/BLOCKED/NOT_RUN - command, test count, log, or artifact
 - Group and authorization boundary impact:
 - Client IP and audit logging impact:
 - Public error sanitization impact:
+- Changed trust boundary or new listener/endpoint/topic:
+- Attacker-controlled inputs and validation boundary:
+- Data classification and external data flow:
+- Secret, certificate, encryption, or key-lifecycle impact:
+- New dependency, license, SBOM, or supply-chain impact:
+- Threat/hazard requirement IDs:
+- Negative, malformed, replay, and cross-scope tests:
+- Security evidence or approved exception:
 
 ## Operational Impact
 - [ ] No runtime/config impact

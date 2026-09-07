@@ -40,7 +40,7 @@ traces:
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/658
   - requirementId: MR-SSDF-001
     threatsOrHazards: [THREAT-INSECURE-DEVELOPMENT]
-    designRefs: [AGENTS.md]
+    designRefs: [AGENTS.md, docs/compliance/security/secure-development-plan.md]
     codeRefs: [.github/workflows/ci.yml]
     testRefs: [scripts/gates/critical_code_contract.py]
     evidenceRefs: []
@@ -86,4 +86,3 @@ traces:
     evidenceRefs: []
     status: PLANNED_HARDWARE
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/668
-
