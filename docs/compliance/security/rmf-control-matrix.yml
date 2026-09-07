@@ -19,7 +19,8 @@ controls:
     implementation: Security-relevant identity, group, stream, Talkback, and operational events use stable event categories.
     assessment: Inspect event taxonomy, redaction, authorized reads, persistence, and failure behavior.
     evidence: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/OperationalAuditPublisherTest.kt]
-    status: IMPLEMENTED_NOT_ASSESSED
+    status: OPEN
+    integrityPolicy: docs/compliance/security/audit-integrity-policy.yml
   - id: IA-2
     family: Identification and Authentication
     implementation: Users authenticate with named credentials and signed short-lived access and rotating refresh tokens.
@@ -62,4 +63,3 @@ controls:
     assessment: Verify artifact signatures, VEX, provenance, license policy, and supplier review gaps.
     evidence: [.github/workflows/ci.yml]
     status: OPEN
-

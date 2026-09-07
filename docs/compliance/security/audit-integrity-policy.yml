@@ -1,0 +1,30 @@
+schemaVersion: gcs-saker.audit-integrity.v1
+time:
+  internal: UTC
+  requiredFields: [occurredAt, receivedAt, timeSource, clockDriftMs]
+  driftStates: [NORMAL, WARNING, UNSAFE, UNKNOWN]
+integrity:
+  algorithm: SHA-256
+  canonicalization: UTF-8 JSON with sorted keys and compact separators
+  chainFields: [sequence, previousHash, recordHash]
+  externalAnchor: REQUIRED_NOT_IMPLEMENTED
+retention:
+  securityEventsDays: 365
+  privilegedEventsDays: 730
+  mediaContentStoredByDefault: false
+  access: system-admin-and-auditor
+  deletion: authorized-documented-and-audited
+requiredEventFamilies:
+  - authentication
+  - account-and-group-policy
+  - administrator-replacement
+  - device-credential-lifecycle
+  - stream-authorization-denial
+  - talkback-start-stop-denial
+  - mission-save-dispatch-cancel-acknowledgement
+  - geofence-change
+  - ai-model-and-overlay-policy
+  - deployment-and-rollback
+forbiddenFields: [password, bearerToken, refreshToken, deviceCredential, turnPassword, privateKey, rawAudio, privateMediaUrl]
+currentStatus: PRODUCER_INTEGRATION_OPEN
+
