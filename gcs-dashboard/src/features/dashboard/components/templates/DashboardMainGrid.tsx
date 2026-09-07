@@ -39,7 +39,7 @@ export function DashboardMainGrid(props: DashboardMainGridProps) {
     <MapPanel {...props} /><SelectedPanel {...props} /><StreamGridPanel {...props} />
     <SummaryPanel {...props} /><TelemetryWidget {...props} />
     {props.dashboardDensityMode !== "overview" ? <DashboardAudioWaveformWidget analysis={props.audioAnalysis}
-      isMotionEnabled={props.motionEnabled} selectedStream={props.selectedStream} talkback={props.talkback} /> : null}
+      selectedStream={props.selectedStream} /> : null}
     <AiPanel {...props} />
   </section>;
 }

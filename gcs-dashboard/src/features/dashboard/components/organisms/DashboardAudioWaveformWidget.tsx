@@ -4,13 +4,10 @@ import { DashboardErrorBoundary } from "@/features/ui/ErrorBoundary";
 import { AudioWaveformPanel } from "@dashboard/components/AudioWaveformPanel";
 import type { AudioAnalysisSnapshot } from "@dashboard/layout/dashboardPresentation";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
-import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
 
 interface DashboardAudioWaveformWidgetProps {
   analysis: AudioAnalysisSnapshot | null;
-  isMotionEnabled: boolean;
   selectedStream: DashboardStreamSlot;
-  talkback: TalkbackPublisherSnapshot;
 }
 
 export function DashboardAudioWaveformWidget(props: DashboardAudioWaveformWidgetProps) {
