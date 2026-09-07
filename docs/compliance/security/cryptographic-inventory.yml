@@ -1,0 +1,28 @@
+schemaVersion: gcs-saker.cryptographic-inventory.v1
+items:
+  - id: CRYPTO-PUBLIC-TLS
+    purpose: Public dashboard and API transport
+    implementation: host TLS edge
+    validationStatus: TRUSTED_CHAIN_VERIFIED
+    fipsStatus: NOT_ASSESSED
+  - id: CRYPTO-WEBRTC
+    purpose: Video and Talkback media transport
+    implementation: WebRTC DTLS-SRTP terminated by MediaMTX
+    validationStatus: PROTOCOL_CONFIGURED
+    fipsStatus: NOT_ASSESSED
+  - id: CRYPTO-JWT
+    purpose: User access and refresh token integrity
+    implementation: auth-policy signed token service
+    validationStatus: IMPLEMENTED_NOT_INDEPENDENTLY_ASSESSED
+    fipsStatus: NOT_ASSESSED
+  - id: CRYPTO-PASSWORD
+    purpose: User and device credential verification
+    implementation: one-way password hashing with per-record state
+    validationStatus: IMPLEMENTED_NOT_INDEPENDENTLY_ASSESSED
+    fipsStatus: NOT_ASSESSED
+  - id: CRYPTO-ARTIFACT
+    purpose: Release image, SBOM, and provenance signing
+    implementation: not implemented
+    validationStatus: OPEN
+    fipsStatus: NOT_ASSESSED
+

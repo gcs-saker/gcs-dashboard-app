@@ -29,3 +29,6 @@ Internal gRPC/MQTT/database encryption, administrator MFA, short-lived TURN cred
 artifacts, WORM audit retention, AI model trust, waypoint command safety, full STIG tailoring, and
 external assessor independence remain open work tracked by the M12 milestone.
 
+The controlled transition and cryptographic status are recorded in
+`secure-communications-profile.yml` and `cryptographic-inventory.yml`; an OPEN item must not be
+described as implemented merely because its service runs on a private container network.
