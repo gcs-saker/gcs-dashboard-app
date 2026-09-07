@@ -332,7 +332,7 @@ jobs:
           if [ -n "$QUALITY_REFERENCE_REF" ] && [ "$QUALITY_REFERENCE_REF" != "0000000000000000000000000000000000000000" ]; then
             python scripts/gates/code_quality_baseline.py --check --reference-ref "$QUALITY_REFERENCE_REF"
           else
-          python scripts/gates/code_quality_baseline.py --check
+            python scripts/gates/code_quality_baseline.py --check
           fi
 
       - name: Validate military-ready requirement traceability
