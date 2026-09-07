@@ -1,0 +1,147 @@
+schemaVersion: gcs-saker.hazard-log.v1
+standard: MIL-STD-882E Change 1
+classificationStatus: preliminary-analysis
+severityScale: [CATASTROPHIC, CRITICAL, MARGINAL, NEGLIGIBLE]
+probabilityScale: [FREQUENT, PROBABLE, OCCASIONAL, REMOTE, IMPROBABLE, ELIMINATED]
+hazards:
+  - id: HAZ-MISSION-WRONG-TARGET
+    title: Mission command reaches the wrong asset
+    mishap: An unintended vehicle executes movement or flight commands.
+    causes: [client-selected receiver, stale asset binding, group spoofing, session collision]
+    severity: CATASTROPHIC
+    probability: OCCASIONAL
+    initialRisk: HIGH
+    softwareControlCategory: 1
+    swci: SwCI-1
+    safetyRequirements: [SR-MISSION-SERVER-TARGET, SR-MISSION-SESSION-BINDING, SR-MISSION-CONFIRM]
+    verification: [cross-group denial, stale-session replay, target identity confirmation]
+    residualRisk: UNASSESSED
+    acceptedBy: null
+    status: OPEN
+  - id: HAZ-MISSION-STALE-COMMAND
+    title: Expired or duplicate command executes
+    mishap: An asset repeats or performs an obsolete operation.
+    causes: [missing expiry, replay, duplicate broker delivery, reconnect backlog]
+    severity: CRITICAL
+    probability: OCCASIONAL
+    initialRisk: SERIOUS
+    softwareControlCategory: 1
+    swci: SwCI-1
+    safetyRequirements: [SR-COMMAND-IDEMPOTENCY, SR-COMMAND-EXPIRY, SR-MISSION-SESSION-BINDING]
+    verification: [duplicate delivery, expired command, reconnect replay]
+    residualRisk: UNASSESSED
+    acceptedBy: null
+    status: OPEN
+  - id: HAZ-MISSION-GEOFENCE-BYPASS
+    title: Planned route crosses a prohibited area
+    mishap: An asset enters a prohibited or unsafe geographic volume.
+    causes: [point-only validation, coordinate error, AGL-MSL confusion, stale geofence]
+    severity: CATASTROPHIC
+    probability: REMOTE
+    initialRisk: SERIOUS
+    softwareControlCategory: 1
+    swci: SwCI-1
+    safetyRequirements: [SR-GEOFENCE-SEGMENT, SR-ALTITUDE-DATUM, SR-GEOFENCE-VERSION]
+    verification: [segment intersection, boundary values, stale geofence version]
+    residualRisk: UNASSESSED
+    acceptedBy: null
+    status: OPEN
+  - id: HAZ-VOICE-MISROUTE
+    title: Talkback audio reaches an unauthorized group
+    mishap: Personnel receive an unintended operational voice message.
+    causes: [cross-group selection, forged stream ID, stale session, authorization cache error]
+    severity: CRITICAL
+    probability: REMOTE
+    initialRisk: SERIOUS
+    softwareControlCategory: 2
+    swci: SwCI-2
+    safetyRequirements: [SR-VOICE-SERVER-TARGET, SR-VOICE-GROUP-SCOPE, SR-VOICE-SESSION-BINDING]
+    verification: [same-group success, descendant denial, sibling denial, stale-session denial]
+    residualRisk: UNASSESSED
+    acceptedBy: null
+    status: OPEN
+  - id: HAZ-VOICE-UNINTELLIGIBLE
+    title: Degraded voice is mistaken for a valid instruction
+    mishap: Personnel act on an incomplete or misunderstood message.
+    causes: [packet loss, clipping, excessive latency, noise, echo, missing quality warning]
+    severity: CRITICAL
+    probability: OCCASIONAL
+    initialRisk: SERIOUS
+    softwareControlCategory: 3
+    swci: SwCI-3
+    safetyRequirements: [SR-VOICE-INTELLIGIBILITY, SR-VOICE-DEGRADED-STATE, SR-VOICE-REPEAT]
+    verification: [MRT-STI, loss-jitter matrix, clipping and dropout, repeat control]
+    residualRisk: UNASSESSED
+    acceptedBy: null
+    status: OPEN
+  - id: HAZ-TELEMETRY-STALE
+    title: Stale telemetry appears current
+    mishap: An operator makes a mission decision using obsolete position or state.
+    causes: [clock drift, reconnect cache, absent freshness indicator, out-of-order event]
+    severity: CRITICAL
+    probability: OCCASIONAL
+    initialRisk: SERIOUS
+    softwareControlCategory: 3
+    swci: SwCI-3
+    safetyRequirements: [SR-DATA-FRESHNESS, SR-DATA-ORDERING, SR-DATA-STALE-UI]
+    verification: [out-of-order event, reconnect, clock drift, stale-state screenshot]
+    residualRisk: UNASSESSED
+    acceptedBy: null
+    status: OPEN
+  - id: HAZ-AI-STALE-OVERLAY
+    title: AI overlay is rendered on the wrong or stale frame
+    mishap: An operator misidentifies an object location or threat state.
+    causes: [missing frame binding, model delay, cross-stream event, replayed result]
+    severity: CRITICAL
+    probability: OCCASIONAL
+    initialRisk: SERIOUS
+    softwareControlCategory: 3
+    swci: SwCI-3
+    safetyRequirements: [SR-AI-FRAME-BINDING, SR-AI-STALE-HIDE, SR-AI-UNKNOWN-AFFILIATION]
+    verification: [cross-stream rejection, stale timeout, model provenance, overlay alignment]
+    residualRisk: UNASSESSED
+    acceptedBy: null
+    status: OPEN
+  - id: HAZ-HFE-OPERATOR-ERROR
+    title: Interface ambiguity causes an operator error
+    mishap: An operator selects the wrong stream, asset, group, or high-risk action.
+    causes: [ambiguous label, inconsistent state, hidden target, inadequate confirmation]
+    severity: CRITICAL
+    probability: OCCASIONAL
+    initialRisk: SERIOUS
+    softwareControlCategory: 3
+    swci: SwCI-3
+    safetyRequirements: [SR-HFE-TARGET-VISIBLE, SR-HFE-STATE-CONSISTENT, SR-HFE-HIGH-RISK-CONFIRM]
+    verification: [usability test, target confirmation, keyboard and mobile test]
+    residualRisk: UNASSESSED
+    acceptedBy: null
+    status: OPEN
+  - id: HAZ-TIME-ORDER
+    title: Clock error reverses operational event order
+    mishap: The operator or audit reviewer reconstructs an incorrect sequence of actions.
+    causes: [clock drift, mixed time source, local time use, missing receive timestamp]
+    severity: MARGINAL
+    probability: OCCASIONAL
+    initialRisk: MEDIUM
+    softwareControlCategory: 3
+    swci: SwCI-3
+    safetyRequirements: [SR-TIME-UTC, SR-TIME-SOURCE, SR-TIME-DRIFT-STATE]
+    verification: [drift threshold, out-of-order input, UTC serialization]
+    residualRisk: UNASSESSED
+    acceptedBy: null
+    status: OPEN
+  - id: HAZ-POLICY-FAIL-OPEN
+    title: Policy service failure permits a protected operation
+    mishap: An unauthorized user views media or executes an operational action.
+    causes: [success fallback, stale allow cache, exception swallowing, transport ambiguity]
+    severity: CRITICAL
+    probability: REMOTE
+    initialRisk: SERIOUS
+    softwareControlCategory: 2
+    swci: SwCI-2
+    safetyRequirements: [SR-POLICY-FAIL-CLOSED, SR-POLICY-CACHE-BOUND, SR-POLICY-DENIAL-AUDIT]
+    verification: [policy timeout, malformed decision, unavailable service, expired cache]
+    residualRisk: UNASSESSED
+    acceptedBy: null
+    status: OPEN
+

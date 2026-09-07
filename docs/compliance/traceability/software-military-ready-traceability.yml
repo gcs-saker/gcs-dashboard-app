@@ -32,9 +32,13 @@ traces:
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/660
   - requirementId: MR-SAF-001
     threatsOrHazards: [HAZ-MISSION-WRONG-TARGET, HAZ-AI-STALE-OVERLAY]
-    designRefs: [docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md]
+    designRefs:
+      - docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md
+      - docs/compliance/safety/hazard-log.yml
+      - docs/compliance/safety/software-level-of-rigor.yml
+      - docs/compliance/safety/residual-risk-register.yml
     codeRefs: []
-    testRefs: []
+    testRefs: [backend/tests/test_system_safety_gate.py]
     evidenceRefs: []
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/658

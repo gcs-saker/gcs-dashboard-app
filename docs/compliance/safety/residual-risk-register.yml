@@ -1,0 +1,6 @@
+schemaVersion: gcs-saker.residual-risk.v1
+policy:
+  unassessedIsAccepted: false
+  closeRequires: [verified controls, residual risk rating, named acceptance authority, dated decision, evidence manifest]
+records: []
+

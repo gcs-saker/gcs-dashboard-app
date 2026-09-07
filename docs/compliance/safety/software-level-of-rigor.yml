@@ -1,0 +1,36 @@
+schemaVersion: gcs-saker.software-lor.v1
+standard: MIL-STD-882E Change 1 paragraph 4.4
+classificationRule: Preliminary SwCI assignments require independent system-safety review before acceptance.
+levels:
+  SwCI-1:
+    minimumActivities: [requirements analysis, architecture analysis, design analysis, code analysis, in-depth safety-specific testing]
+  SwCI-2:
+    minimumActivities: [requirements analysis, architecture analysis, design analysis, in-depth safety-specific testing]
+  SwCI-3:
+    minimumActivities: [requirements analysis, architecture analysis, in-depth safety-specific testing]
+  SwCI-4:
+    minimumActivities: [safety-specific testing]
+  SwCI-5:
+    minimumActivities: [documented not-safety determination]
+assignments:
+  - hazardId: HAZ-MISSION-WRONG-TARGET
+    swci: SwCI-1
+  - hazardId: HAZ-MISSION-STALE-COMMAND
+    swci: SwCI-1
+  - hazardId: HAZ-MISSION-GEOFENCE-BYPASS
+    swci: SwCI-1
+  - hazardId: HAZ-VOICE-MISROUTE
+    swci: SwCI-2
+  - hazardId: HAZ-VOICE-UNINTELLIGIBLE
+    swci: SwCI-3
+  - hazardId: HAZ-TELEMETRY-STALE
+    swci: SwCI-3
+  - hazardId: HAZ-AI-STALE-OVERLAY
+    swci: SwCI-3
+  - hazardId: HAZ-HFE-OPERATOR-ERROR
+    swci: SwCI-3
+  - hazardId: HAZ-TIME-ORDER
+    swci: SwCI-3
+  - hazardId: HAZ-POLICY-FAIL-OPEN
+    swci: SwCI-2
+

@@ -341,6 +341,9 @@ jobs:
       - name: Validate threat model and attack-surface inventory
         run: python scripts/gates/attack_surface_gate.py --check
 
+      - name: Validate MIL-STD-882E system-safety records
+        run: python scripts/gates/system_safety_gate.py --check
+
       - name: Validate shell syntax
         run: find scripts deploy -type f -name '*.sh' -print0 | xargs -0 -r bash -n
 
