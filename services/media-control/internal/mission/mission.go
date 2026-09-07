@@ -85,45 +85,81 @@ func (s Service) Dispatch(ctx context.Context, principal string, request Dispatc
 	if err := validateRequest(request, s.Now()); err != nil {
 		return DispatchEnvelope{}, err
 	}
-	session, err := s.Sessions.ResolveActiveSession(ctx, request.AssetSessionID)
-	if err != nil || !session.Active || session.AssetUUID != request.AssetUUID || session.SessionID != request.AssetSessionID {
-		return DispatchEnvelope{}, ErrSessionMismatch
+	session, err := s.resolveAuthorizedSession(ctx, principal, request)
+	if err != nil {
+		return DispatchEnvelope{}, err
 	}
-	allowed, err := s.Policy.CanControl(ctx, principal, session.GroupID)
-	if err != nil || !allowed {
-		return DispatchEnvelope{}, ErrAccessDenied
-	}
-	inside, err := s.Geofence.AllowsRoute(ctx, request.Waypoints, request.AltitudeDatum)
-	if err != nil || !inside {
-		return DispatchEnvelope{}, ErrGeofenceViolation
-	}
-	reserved, err := s.Commands.Reserve(ctx, request.CommandID, request.ExpiresAt)
-	if err != nil || !reserved {
-		return DispatchEnvelope{}, ErrDuplicateCommand
+	if err := s.reserveSafeRoute(ctx, request); err != nil {
+		return DispatchEnvelope{}, err
 	}
 	return DispatchEnvelope{Request: request, GroupID: session.GroupID}, nil
 }
 
+func (s Service) resolveAuthorizedSession(ctx context.Context, principal string, request DispatchRequest) (ActiveAssetSession, error) {
+	session, err := s.Sessions.ResolveActiveSession(ctx, request.AssetSessionID)
+	if err != nil || !session.Active || session.AssetUUID != request.AssetUUID || session.SessionID != request.AssetSessionID {
+		return ActiveAssetSession{}, ErrSessionMismatch
+	}
+	allowed, err := s.Policy.CanControl(ctx, principal, session.GroupID)
+	if err != nil || !allowed {
+		return ActiveAssetSession{}, ErrAccessDenied
+	}
+	return session, nil
+}
+
+func (s Service) reserveSafeRoute(ctx context.Context, request DispatchRequest) error {
+	inside, err := s.Geofence.AllowsRoute(ctx, request.Waypoints, request.AltitudeDatum)
+	if err != nil || !inside {
+		return ErrGeofenceViolation
+	}
+	reserved, err := s.Commands.Reserve(ctx, request.CommandID, request.ExpiresAt)
+	if err != nil || !reserved {
+		return ErrDuplicateCommand
+	}
+	return nil
+}
+
 func validateRequest(request DispatchRequest, now time.Time) error {
-	if request.MissionID == "" || request.MissionRevision < 1 || request.CommandID == "" || request.AssetUUID == "" || request.AssetSessionID == "" {
+	if hasMissingIdentity(request) {
 		return ErrInvalidMission
 	}
 	if !request.OperatorConfirmed {
 		return ErrConfirmation
 	}
-	if request.IssuedAt.After(now) || !request.ExpiresAt.After(now) || !request.ExpiresAt.After(request.IssuedAt) {
+	if hasInvalidLifetime(request, now) {
 		return ErrCommandExpired
 	}
 	if request.AltitudeDatum != AltitudeAGL && request.AltitudeDatum != AltitudeMSL {
 		return ErrInvalidMission
 	}
-	if len(request.Waypoints) == 0 || len(request.Waypoints) > 200 {
+	if !hasValidWaypoints(request.Waypoints) {
 		return ErrInvalidMission
 	}
-	for index, waypoint := range request.Waypoints {
-		if waypoint.Sequence != index+1 || waypoint.Latitude < -90 || waypoint.Latitude > 90 || waypoint.Longitude < -180 || waypoint.Longitude > 180 || waypoint.HoldSeconds < 0 || waypoint.HoldSeconds > 3600 {
-			return ErrInvalidMission
+	return nil
+}
+
+func hasMissingIdentity(request DispatchRequest) bool {
+	return request.MissionID == "" || request.MissionRevision < 1 || request.CommandID == "" ||
+		request.AssetUUID == "" || request.AssetSessionID == ""
+}
+
+func hasInvalidLifetime(request DispatchRequest, now time.Time) bool {
+	return request.IssuedAt.After(now) || !request.ExpiresAt.After(now) || !request.ExpiresAt.After(request.IssuedAt)
+}
+
+func hasValidWaypoints(waypoints []Waypoint) bool {
+	if len(waypoints) == 0 || len(waypoints) > 200 {
+		return false
+	}
+	for index, waypoint := range waypoints {
+		if !isValidWaypoint(waypoint, index+1) {
+			return false
 		}
 	}
-	return nil
+	return true
+}
+
+func isValidWaypoint(waypoint Waypoint, expectedSequence int) bool {
+	return waypoint.Sequence == expectedSequence && waypoint.Latitude >= -90 && waypoint.Latitude <= 90 &&
+		waypoint.Longitude >= -180 && waypoint.Longitude <= 180 && waypoint.HoldSeconds >= 0 && waypoint.HoldSeconds <= 3600
 }
