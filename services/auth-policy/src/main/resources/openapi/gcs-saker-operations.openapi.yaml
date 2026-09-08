@@ -7,7 +7,7 @@ info:
     credential 원문은 문서화하거나 노출하지 않는다. Swagger UI는 조회 전용이며 실제 변경
     요청은 승인된 운영 절차와 전용 클라이언트에서 수행한다.
 servers:
-  - url: https://a4ai.121-159-26-245.sslip.io
+  - url: https://gcs-saker.com
     description: Production edge
 tags:
   - { name: Auth }

@@ -14,7 +14,7 @@ const sourcePath = (relativePath: string): string => {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "");
-  const devProxyTarget = env.VITE_DEV_PROXY_TARGET || "https://a4ai.121-159-26-245.sslip.io";
+  const devProxyTarget = env.VITE_DEV_PROXY_TARGET || "https://gcs-saker.com";
 
   return {
     plugins: [react()],

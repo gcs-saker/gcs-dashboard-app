@@ -21,7 +21,7 @@
 ```bash
 WEBRTC_TURN_USERNAME=... \
 WEBRTC_TURN_PASSWORD=... \
-EDGE_BASE_URL=https://a4ai.tplinkdns.com \
+EDGE_BASE_URL=https://gcs-saker.com \
 STREAM_PATH=raw/nat/smoke \
 scripts/smoke/m7_external_nat_webrtc_smoke.sh --run
 ```

@@ -176,7 +176,7 @@ def test_env_example_documents_ice_server_values_without_real_turn_secret():
     env_example = DOCKER_ENV_EXAMPLE.read_text(encoding="utf-8")
 
     assert "WEBRTC_STUN_URL=stun:stun.l.google.com:19302" in env_example
-    assert "WEBRTC_TURN_URL=turn:a4ai.tplinkdns.com:3478?transport=udp" in env_example
+    assert "WEBRTC_TURN_URL=turn:turn.gcs-saker.com:3478?transport=udp" in env_example
     assert "WEBRTC_TURN_USERNAME=gcs-turn" in env_example
     assert "WEBRTC_TURN_PASSWORD=replace-with-secret-outside-git" in env_example
     assert "Do not commit real TURN credentials" in env_example
