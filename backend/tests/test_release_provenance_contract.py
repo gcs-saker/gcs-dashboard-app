@@ -175,7 +175,7 @@ def test_server01_smoke_is_fail_closed_to_the_production_identity() -> None:
     script = SERVER01_SMOKE.read_text(encoding="utf-8")
 
     assert "gcs-saker-m2-production" in script
-    assert "https://a4ai.121-159-26-245.sslip.io" in script
+    assert "https://gcs-saker.com" in script
     assert "55122" not in script
     assert "staging" not in script.lower()
     assert "/healthz" in script and "/readyz" in script
@@ -193,5 +193,5 @@ def test_current_scope_excludes_server02_from_managed_operations() -> None:
 def test_scheduled_public_tls_probe_targets_server01_production_only() -> None:
     source = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
-    assert "scripts/ops/check_public_tls.sh a4ai.121-159-26-245.sslip.io 443" in source
+    assert "scripts/ops/check_public_tls.sh gcs-saker.com 443" in source
     assert "staging-a4ai.121-159-26-245.sslip.io" not in source

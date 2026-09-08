@@ -7,7 +7,8 @@
 
 | 환경 | origin | upstream |
 | --- | --- | --- |
-| production canonical | `https://a4ai.121-159-26-245.sslip.io` | Server-01 edge |
+| production canonical | `https://gcs-saker.com` | Server-01 edge |
+| production transition alias | `https://a4ai.121-159-26-245.sslip.io` | Server-01 edge |
 | staging | `https://staging-a4ai.121-159-26-245.sslip.io` | Server-02 edge |
 | legacy DDNS (비활성) | `a4ai.tplinkdns.com` | 안정적인 권한 DNS 확보 전 사용 금지 |
 
@@ -28,13 +29,21 @@ Server-01 주소만 허용하는 LAN 전용 relay를 통과한다.
 `127.0.0.1:80` application upstream만 제공하며 443을 listen하지 않는다. 전환 전후에
 `ss -ltnp 'sport = :443'`과 `docker ps`로 포트 소유자를 확인한다.
 
+Server-01 전환 기간에는 `PUBLIC_TLS_HOST`를 쉼표로 구분한 두 호스트로 설정한다.
+`gcs-saker.com` 인증서 발급과 공개 검증이 끝난 뒤에도 기존 북마크의 전환 시간을 위해
+`sslip.io` 별칭을 즉시 제거하지 않는다.
+
+```dotenv
+PUBLIC_TLS_HOST=gcs-saker.com, a4ai.121-159-26-245.sslip.io
+```
+
 환경별 media-control 설정은 다음 origin을 함께 사용한다.
 
 ```dotenv
 # production
-MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL=https://a4ai.121-159-26-245.sslip.io/webrtc
-MEDIA_CONTROL_PUBLIC_HLS_BASE_URL=https://a4ai.121-159-26-245.sslip.io/hls
-MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN=https://a4ai.121-159-26-245.sslip.io
+MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL=https://gcs-saker.com/webrtc
+MEDIA_CONTROL_PUBLIC_HLS_BASE_URL=https://gcs-saker.com/hls
+MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN=https://gcs-saker.com
 
 # staging
 MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL=https://staging-a4ai.121-159-26-245.sslip.io/webrtc
@@ -47,9 +56,9 @@ MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN=https://staging-a4ai.121-159-26-245.sslip.i
 ## 검증
 
 ```bash
-scripts/ops/check_public_tls.sh a4ai.121-159-26-245.sslip.io 443
+scripts/ops/check_public_tls.sh gcs-saker.com 443
 scripts/ops/check_public_tls.sh staging-a4ai.121-159-26-245.sslip.io 443
-curl -fsS https://a4ai.121-159-26-245.sslip.io/ >/dev/null
+curl -fsS https://gcs-saker.com/ >/dev/null
 curl -fsS https://staging-a4ai.121-159-26-245.sslip.io/ >/dev/null
 ```
 

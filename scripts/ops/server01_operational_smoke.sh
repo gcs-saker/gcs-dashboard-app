@@ -2,13 +2,13 @@
 set -euo pipefail
 
 project_name="${COMPOSE_PROJECT_NAME:-gcs-saker-m2-production}"
-public_origin="${PUBLIC_ORIGIN:-https://a4ai.121-159-26-245.sslip.io}"
+public_origin="${PUBLIC_ORIGIN:-https://gcs-saker.com}"
 compose_file="${COMPOSE_FILE:?Set COMPOSE_FILE to the active absolute Compose file}"
 env_file="${ENV_FILE:?Set ENV_FILE to the Server-01 private environment file}"
 expected_commit="${EXPECTED_COMMIT:?Set EXPECTED_COMMIT to the deployed source commit}"
 
 [[ "${project_name}" == "gcs-saker-m2-production" ]] || { echo "unexpected project" >&2; exit 2; }
-[[ "${public_origin}" == "https://a4ai.121-159-26-245.sslip.io" ]] || { echo "unexpected public origin" >&2; exit 2; }
+[[ "${public_origin}" == "https://gcs-saker.com" ]] || { echo "unexpected public origin" >&2; exit 2; }
 [[ "${compose_file}" = /* && -f "${compose_file}" && "${env_file}" = /* && -f "${env_file}" ]] || {
   echo "Compose and environment files must be existing absolute paths" >&2
   exit 2
