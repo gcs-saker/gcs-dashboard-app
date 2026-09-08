@@ -19,6 +19,20 @@ MIGRATION_ROOTS = (
     ROOT / "services/auth-policy/src/main/resources/db/migration",
     ROOT / "services/auth-policy/src/main/resources/db/postgresql-migration",
 )
+RETIRED_PUBLIC_HOSTS = ("a4ai.tplinkdns.com", "a4ai.121-159-26-245.sslip.io")
+PUBLIC_ENDPOINT_ENV_KEYS = {
+    "MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN",
+    "MEDIA_CONTROL_PUBLIC_HLS_BASE_URL",
+    "MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL",
+    "MEDIA_CONTROL_STUN_URL",
+    "MEDIA_CONTROL_TURN_PRIMARY_URL",
+    "MEDIAMTX_PUBLIC_HLS_BASE_URL",
+    "MEDIAMTX_PUBLIC_WEBRTC_BASE_URL",
+    "MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS",
+    "VITE_DEV_PROXY_TARGET",
+    "VITE_LOCAL_WEBCAM_WHIP_URL",
+    "VITE_WEBRTC_STUN_URL",
+}
 
 
 def run(*args: str, secret_output: bool = False) -> str:
@@ -67,6 +81,18 @@ def require_private_file(path: pathlib.Path, *, allowed_read_uid: str | None = N
     }
     if acl_entries != expected_acl:
         raise RuntimeError(f"secret file ACL grants access beyond owner and runtime uid {allowed_read_uid}: {path}")
+
+
+def validate_public_endpoint_environment(path: pathlib.Path) -> None:
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        if key not in PUBLIC_ENDPOINT_ENV_KEYS:
+            continue
+        if any(host in value for host in RETIRED_PUBLIC_HOSTS):
+            raise RuntimeError(f"{key} references a retired production hostname")
 
 
 def migration_inventory() -> list[dict[str, str]]:
@@ -136,6 +162,7 @@ def main() -> int:
     mqtt_file = args.mqtt_password_file.resolve()
     require_private_file(env_file)
     require_private_file(mqtt_file, allowed_read_uid=os.environ.get("MOSQUITTO_RUNTIME_UID", "1883"))
+    validate_public_endpoint_environment(env_file)
     status = run("git", "status", "--porcelain")
     if status and not args.allow_dirty:
         raise RuntimeError("release checkout is dirty; commit the source before deployment")
