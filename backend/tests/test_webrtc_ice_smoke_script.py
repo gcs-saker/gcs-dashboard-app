@@ -1,6 +1,7 @@
 import importlib.util
 import subprocess
 import sys
+from enum import Enum
 from pathlib import Path
 
 import pytest
@@ -233,6 +234,51 @@ def test_relay_requirement_fails_closed_without_proven_relay_pair() -> None:
         module.require_ice_path(None, relay_required=True)
     with pytest.raises(RuntimeError, match="selected a direct ICE path"):
         module.require_ice_path(direct, relay_required=True)
+
+
+def test_relay_only_sdp_removes_direct_candidates() -> None:
+    module = load_observation_module()
+    offer = "\r\n".join(
+        [
+            "v=0",
+            "a=candidate:1 1 udp 1 192.168.0.50 5000 typ host",
+            "a=candidate:2 1 udp 2 121.159.26.245 49160 typ relay raddr 0.0.0.0 rport 0",
+            "a=end-of-candidates",
+        ]
+    )
+
+    filtered = module.relay_only_sdp(offer)
+
+    assert " typ host" not in filtered
+    assert " typ relay" in filtered
+
+
+def test_relay_only_sdp_fails_without_relay_candidate() -> None:
+    module = load_observation_module()
+
+    with pytest.raises(RuntimeError, match="no relay candidate"):
+        module.relay_only_sdp("v=0\r\na=candidate:1 1 udp 1 192.168.0.50 5000 typ host\r\n")
+
+
+def test_relay_only_policy_configures_aiortc_connection() -> None:
+    module = load_observation_module()
+
+    class Policy(Enum):
+        ALL = 0
+        RELAY = 1
+
+    connection = type("Connection", (), {"_transport_policy": Policy.ALL, "_use_ipv4": True, "_use_ipv6": True})()
+    ice_transport = type("IceTransport", (), {"_connection": connection})()
+    dtls_transport = type("DtlsTransport", (), {"transport": ice_transport})()
+    endpoint = type("Endpoint", (), {"transport": dtls_transport})()
+    transceiver = type("Transceiver", (), {"sender": endpoint, "receiver": endpoint})()
+    peer_connection = type("PeerConnection", (), {"getTransceivers": lambda self: [transceiver]})()
+
+    module.enforce_aiortc_relay_policy(peer_connection)
+
+    assert connection._transport_policy.name == "RELAY"
+    assert connection._use_ipv4 is False
+    assert connection._use_ipv6 is False
 
 
 def test_webrtc_ice_smoke_script_documents_live_whep_ice_run() -> None:

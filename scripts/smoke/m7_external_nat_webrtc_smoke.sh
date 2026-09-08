@@ -269,7 +269,7 @@ run_live() {
   if [[ "$RELAY_ONLY" == "1" ]]; then
     ice_server_for_media="$TURN_PRIMARY_URL"
     auth_args=(--ice-username "$TURN_USERNAME" --ice-credential "$TURN_PASSWORD")
-    ice_path_args=(--require-relay-path)
+    ice_path_args=(--relay-only)
   fi
 
   started_ms="$(now_ms)"

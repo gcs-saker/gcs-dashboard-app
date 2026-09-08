@@ -52,6 +52,32 @@ def require_ice_path(observation: IcePairObservation | None, *, relay_required: 
         raise RuntimeError(f"relay-only validation selected a {observation.path} ICE path")
 
 
+def relay_only_sdp(sdp: str) -> str:
+    lines = sdp.replace("\r\n", "\n").split("\n")
+    relay_candidates = [line for line in lines if line.startswith("a=candidate:") and " typ relay " in f" {line} "]
+    if not relay_candidates:
+        raise RuntimeError("relay-only SDP has no relay candidate")
+    filtered = [line for line in lines if not line.startswith("a=candidate:") or line in relay_candidates]
+    return "\r\n".join(filtered)
+
+
+def enforce_aiortc_relay_policy(peer_connection: object) -> None:
+    transports = _ice_transports(peer_connection)
+    if not transports:
+        raise RuntimeError("relay-only policy could not find an ICE transport")
+    for ice_transport in transports:
+        connection = getattr(ice_transport, "_connection", None)
+        if connection is None or not hasattr(connection, "_transport_policy"):
+            raise RuntimeError("relay-only policy is unsupported by this aiortc runtime")
+        current_policy = connection._transport_policy
+        relay_policy = getattr(type(current_policy), "RELAY", None)
+        if relay_policy is None:
+            raise RuntimeError("relay-only policy enum is unavailable")
+        connection._transport_policy = relay_policy
+        connection._use_ipv4 = False
+        connection._use_ipv6 = False
+
+
 def print_ice_pair_observation(observation: IcePairObservation | None) -> None:
     if observation is None:
         print("Selected ICE pair: unavailable")
