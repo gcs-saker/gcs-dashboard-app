@@ -8,13 +8,13 @@
 
 ## 접속 주소
 
-- Dashboard: `https://a4ai.tplinkdns.com/`
-- Login: `https://a4ai.tplinkdns.com/login`
-- Webcam publisher: `https://a4ai.tplinkdns.com/?webcamPublisher=1`
+- Dashboard: `https://gcs-saker.com/`
+- Login: `https://gcs-saker.com/login`
+- Webcam publisher: `https://gcs-saker.com/?webcamPublisher=1`
 - Test stream id: `raw.local.webcam`
-- WHIP endpoint: `https://a4ai.tplinkdns.com/webrtc/raw/local/webcam/whip`
-- WHEP endpoint: `https://a4ai.tplinkdns.com/webrtc/raw/local/webcam/whep`
-- HLS fallback: `https://a4ai.tplinkdns.com/hls/raw/local/webcam/index.m3u8`
+- WHIP endpoint: `https://gcs-saker.com/webrtc/raw/local/webcam/whip`
+- WHEP endpoint: `https://gcs-saker.com/webrtc/raw/local/webcam/whep`
+- HLS fallback: `https://gcs-saker.com/hls/raw/local/webcam/index.m3u8`
 
 ## 현재 주의사항
 
@@ -27,7 +27,7 @@
 임시 회원가입 API 형식:
 
 ```bash
-curl -k -X POST https://a4ai.tplinkdns.com/auth/signup \
+curl -X POST https://gcs-saker.com/auth-policy/auth/signup \
   -H 'Content-Type: application/json' \
   -d '{
     "username": "tester01",
@@ -46,16 +46,16 @@ curl -k -X POST https://a4ai.tplinkdns.com/auth/signup \
 
 ## Publisher 노트북 절차
 
-1. `https://a4ai.tplinkdns.com/login`에 접속한다.
+1. `https://gcs-saker.com/login`에 접속한다.
 2. 테스트 계정으로 로그인한다.
-3. `https://a4ai.tplinkdns.com/?webcamPublisher=1`로 이동한다.
+3. `https://gcs-saker.com/?webcamPublisher=1`로 이동한다.
 4. `Start preview`를 눌러 카메라와 마이크 권한을 허용한다.
 5. preview 화면이 보이면 `Publish WebRTC`를 누른다.
 6. 상태 badge가 `published`가 되는지 확인한다.
 
 ## Viewer 노트북 절차
 
-1. `https://a4ai.tplinkdns.com/login`에 접속한다.
+1. `https://gcs-saker.com/login`에 접속한다.
 2. 테스트 계정으로 로그인한다.
 3. dashboard에서 `raw.local.webcam` 또는 local webcam stream card를 선택한다.
 4. player mode가 `webrtc`로 진입하는지 확인한다.
