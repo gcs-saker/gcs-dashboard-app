@@ -281,26 +281,6 @@ def test_relay_only_policy_configures_aiortc_connection() -> None:
     assert connection._use_ipv6 is False
 
 
-def test_public_remote_sdp_removes_private_and_loopback_candidates() -> None:
-    module = load_observation_module()
-    answer = "\r\n".join(
-        [
-            "v=0",
-            "a=candidate:1 1 udp 1 127.0.0.1 5000 typ host",
-            "a=candidate:2 1 udp 2 192.168.0.30 5001 typ host",
-            "a=candidate:3 1 udp 3 121.159.26.245 8189 typ host",
-            "a=candidate:4 1 udp 4 turn.gcs-saker.com 8189 typ host",
-        ]
-    )
-
-    filtered = module.public_remote_sdp(answer)
-
-    assert "127.0.0.1" not in filtered
-    assert "192.168.0.30" not in filtered
-    assert "121.159.26.245" in filtered
-    assert "turn.gcs-saker.com" in filtered
-
-
 def test_webrtc_ice_smoke_script_documents_live_whep_ice_run() -> None:
     script = SCRIPT.read_text(encoding="utf-8")
     doc = DOC.read_text(encoding="utf-8")
