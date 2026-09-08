@@ -19,6 +19,20 @@ MIGRATION_ROOTS = (
     ROOT / "services/auth-policy/src/main/resources/db/migration",
     ROOT / "services/auth-policy/src/main/resources/db/postgresql-migration",
 )
+RETIRED_PUBLIC_HOSTS = ("a4ai.tplinkdns.com", "a4ai.121-159-26-245.sslip.io")
+PUBLIC_ENDPOINT_ENV_KEYS = {
+    "MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN",
+    "MEDIA_CONTROL_PUBLIC_HLS_BASE_URL",
+    "MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL",
+    "MEDIA_CONTROL_STUN_URL",
+    "MEDIA_CONTROL_TURN_PRIMARY_URL",
+    "MEDIAMTX_PUBLIC_HLS_BASE_URL",
+    "MEDIAMTX_PUBLIC_WEBRTC_BASE_URL",
+    "MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS",
+    "VITE_DEV_PROXY_TARGET",
+    "VITE_LOCAL_WEBCAM_WHIP_URL",
+    "VITE_WEBRTC_STUN_URL",
+}
 
 
 def run(*args: str, secret_output: bool = False) -> str:
@@ -32,7 +46,11 @@ def run(*args: str, secret_output: bool = False) -> str:
         errors="replace",
     )
     if result.returncode:
-        message = "command failed" if secret_output else (result.stderr.strip() or result.stdout.strip())
+        message = (
+            "command failed"
+            if secret_output
+            else (result.stderr.strip() or result.stdout.strip())
+        )
         raise RuntimeError(f"{args[0]}: {message}")
     return result.stdout.strip()
 
@@ -45,7 +63,9 @@ def sha256(path: pathlib.Path) -> str:
     return digest.hexdigest()
 
 
-def require_private_file(path: pathlib.Path, *, allowed_read_uid: str | None = None) -> None:
+def require_private_file(
+    path: pathlib.Path, *, allowed_read_uid: str | None = None
+) -> None:
     if not path.is_file() or path.stat().st_size == 0:
         raise RuntimeError(f"required non-empty file is missing: {path}")
     if os.name == "nt" or not path.stat().st_mode & 0o077:
@@ -55,7 +75,9 @@ def require_private_file(path: pathlib.Path, *, allowed_read_uid: str | None = N
 
     acl_entries = {
         line.strip()
-        for line in run("getfacl", "--absolute-names", "--omit-header", str(path)).splitlines()
+        for line in run(
+            "getfacl", "--absolute-names", "--omit-header", str(path)
+        ).splitlines()
         if line.strip()
     }
     expected_acl = {
@@ -66,7 +88,21 @@ def require_private_file(path: pathlib.Path, *, allowed_read_uid: str | None = N
         "other::---",
     }
     if acl_entries != expected_acl:
-        raise RuntimeError(f"secret file ACL grants access beyond owner and runtime uid {allowed_read_uid}: {path}")
+        raise RuntimeError(
+            f"secret file ACL grants access beyond owner and runtime uid {allowed_read_uid}: {path}"
+        )
+
+
+def validate_public_endpoint_environment(path: pathlib.Path) -> None:
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        if key not in PUBLIC_ENDPOINT_ENV_KEYS:
+            continue
+        if any(host in value for host in RETIRED_PUBLIC_HOSTS):
+            raise RuntimeError(f"{key} references a retired production hostname")
 
 
 def migration_inventory() -> list[dict[str, str]]:
@@ -76,7 +112,9 @@ def migration_inventory() -> list[dict[str, str]]:
     inventory = []
     for path in files:
         # Flyway ChecksumCalculator reads UTF-8 text line-by-line and does not feed line separators to CRC32.
-        flyway_bytes = "".join(path.read_text(encoding="utf-8-sig").splitlines()).encode("utf-8")
+        flyway_bytes = "".join(
+            path.read_text(encoding="utf-8-sig").splitlines()
+        ).encode("utf-8")
         checksum = zlib.crc32(flyway_bytes)
         if checksum >= 2**31:
             checksum -= 2**32
@@ -90,18 +128,29 @@ def migration_inventory() -> list[dict[str, str]]:
     return inventory
 
 
-def validate_applied_migrations(applied_path: pathlib.Path, inventory: list[dict[str, object]]) -> None:
+def validate_applied_migrations(
+    applied_path: pathlib.Path, inventory: list[dict[str, object]]
+) -> None:
     applied = []
     for line in applied_path.read_text(encoding="utf-8").splitlines():
         version, checksum = line.split("|", 1)
-        applied.append({"version": version, "checksum": int(checksum) if checksum else None})
-    source_by_version = {pathlib.Path(str(item["path"])).name.split("__", 1)[0][1:]: item for item in inventory}
+        applied.append(
+            {"version": version, "checksum": int(checksum) if checksum else None}
+        )
+    source_by_version = {
+        pathlib.Path(str(item["path"])).name.split("__", 1)[0][1:]: item
+        for item in inventory
+    }
     for row in applied:
         version = str(row["version"])
         source = source_by_version.get(version)
         if source is None:
-            raise RuntimeError(f"applied Flyway migration V{version} is absent from checkout")
-        if row.get("checksum") is not None and int(row["checksum"]) != int(source["flywayChecksum"]):
+            raise RuntimeError(
+                f"applied Flyway migration V{version} is absent from checkout"
+            )
+        if row.get("checksum") is not None and int(row["checksum"]) != int(
+            source["flywayChecksum"]
+        ):
             raise RuntimeError(f"Flyway checksum drift detected for V{version}")
 
 
@@ -118,7 +167,9 @@ def application_image_inventory(commit: str) -> dict[str, str]:
         if not reference:
             raise RuntimeError(f"{variable} must identify the release image")
         if "@sha256:" not in reference and not reference.endswith(f":{commit}"):
-            raise RuntimeError(f"{variable} must use a digest or the exact source commit tag")
+            raise RuntimeError(
+                f"{variable} must use a digest or the exact source commit tag"
+            )
         images[service] = reference
     return images
 
@@ -135,10 +186,15 @@ def main() -> int:
     env_file = args.env_file.resolve()
     mqtt_file = args.mqtt_password_file.resolve()
     require_private_file(env_file)
-    require_private_file(mqtt_file, allowed_read_uid=os.environ.get("MOSQUITTO_RUNTIME_UID", "1883"))
+    require_private_file(
+        mqtt_file, allowed_read_uid=os.environ.get("MOSQUITTO_RUNTIME_UID", "1883")
+    )
+    validate_public_endpoint_environment(env_file)
     status = run("git", "status", "--porcelain")
     if status and not args.allow_dirty:
-        raise RuntimeError("release checkout is dirty; commit the source before deployment")
+        raise RuntimeError(
+            "release checkout is dirty; commit the source before deployment"
+        )
     commit = run("git", "rev-parse", "HEAD")
     branch = run("git", "branch", "--show-current")
     compose_rendered = run(
