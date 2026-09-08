@@ -1,5 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy.domain
 
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.devices.InMemoryRegisteredDeviceRepository
+
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

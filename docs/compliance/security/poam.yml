@@ -1,0 +1,36 @@
+schemaVersion: gcs-saker.poam.v1
+updatedAt: 2026-09-07
+items:
+  - id: POAM-SEC-001
+    weakness: Internal service channels do not all provide mutually authenticated encryption.
+    controls: [SC-8]
+    issue: https://github.com/gcs-saker/gcs-dashboard-app/issues/662
+    severity: HIGH
+    mitigation: Keep services private and authenticate application requests while mTLS is implemented.
+    dueBy: 2026-10-31
+    status: OPEN
+  - id: POAM-SEC-002
+    weakness: System Administrator authentication does not require a second factor.
+    controls: [IA-2]
+    issue: https://github.com/gcs-saker/gcs-dashboard-app/issues/662
+    severity: HIGH
+    mitigation: Restrict production administration and retain complete privileged audit events.
+    dueBy: 2026-10-31
+    status: OPEN
+  - id: POAM-SEC-003
+    weakness: Release images and SBOMs are not signed with verifiable provenance.
+    controls: [SR-4]
+    issue: https://github.com/gcs-saker/gcs-dashboard-app/issues/663
+    severity: MEDIUM
+    mitigation: Continue digest pinning, immutable commit labels, SBOM, and vulnerability gates.
+    dueBy: 2026-11-30
+    status: OPEN
+  - id: POAM-SEC-004
+    weakness: Audit retention is not yet tamper-evident or WORM-backed.
+    controls: [AU-2]
+    issue: https://github.com/gcs-saker/gcs-dashboard-app/issues/664
+    severity: MEDIUM
+    mitigation: Restrict audit access and preserve immutable deployment evidence pending hash chaining.
+    dueBy: 2026-11-30
+    status: OPEN
+

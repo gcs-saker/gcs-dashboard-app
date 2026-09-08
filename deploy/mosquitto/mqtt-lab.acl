@@ -1,0 +1,7 @@
+user mqtt-ingress
+topic read gcs/device/+/telemetry
+topic write gcs/device/+/result
+
+# Each device's broker username is its server-issued session ID.
+pattern write gcs/device/%u/telemetry
+pattern read gcs/device/%u/result

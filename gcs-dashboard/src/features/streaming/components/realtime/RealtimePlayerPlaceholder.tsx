@@ -1,4 +1,4 @@
-import { playbackErrorDescription, playbackErrorTitle } from "@streaming/realtimePlayerPresentation";
+import { playbackErrorDescription, playbackErrorTitle } from "@streaming/presentation/realtimePlayerPresentation";
 
 type RealtimePlayerPlaceholderMode = "loading" | "reconnecting" | "offline" | "error";
 

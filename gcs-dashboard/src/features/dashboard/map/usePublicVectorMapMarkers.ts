@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type * as L from "leaflet";
 
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import { DEFAULT_MAP_CENTER } from "./mapContracts";
 import type { StreamMarkerPosition } from "./PublicMapMarkers";
 

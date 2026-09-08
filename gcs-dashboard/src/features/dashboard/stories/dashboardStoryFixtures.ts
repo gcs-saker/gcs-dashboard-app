@@ -1,7 +1,7 @@
 import { DASHBOARD_GEOMETRY_SOURCE, DASHBOARD_SERVER_HEALTH, DASHBOARD_STREAM_MODE, DASHBOARD_STREAM_STATUS } from "@/features/stateContracts";
-import type { AudioAnalysisSnapshot } from "@dashboard/dashboardPresentation";
-import type { SystemServiceCard } from "@dashboard/systemStatusViewModel";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { AudioAnalysisSnapshot } from "@dashboard/layout/dashboardPresentation";
+import type { SystemServiceCard } from "@dashboard/operations/systemStatusViewModel";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import { MOCK_OPERATIONAL_EVENTS } from "@mocks/fixtures";
 
 export const STORY_STREAM_SLOTS = Object.freeze({

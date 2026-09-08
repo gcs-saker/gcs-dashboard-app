@@ -35,7 +35,6 @@
 
 .hls-fallback-player__status,
 .hls-fallback-player__reason,
-.hls-fallback-player__stream,
 .hls-fallback-player__mode,
 .hls-fallback-player__latency,
 .hls-fallback-player__error {
@@ -72,7 +71,6 @@
   white-space: nowrap;
 }
 
-.hls-fallback-player__stream,
 .hls-fallback-player__mode {
   display: none;
 }

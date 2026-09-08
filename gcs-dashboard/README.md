@@ -73,7 +73,7 @@ VITE_AUTH_API_BASE_URL=/auth-policy/auth
 VITE_STREAM_API_BASE_URL=/media-control
 VITE_HLS_BASE_URL=/hls
 VITE_LOCAL_WEBCAM_WHIP_URL=/webrtc/raw/local/webcam/whip
-VITE_DEV_PROXY_TARGET=https://a4ai.tplinkdns.com
+VITE_DEV_PROXY_TARGET=https://a4ai.121-159-26-245.sslip.io
 ```
 
 If DevTools shows `http://localhost:8001/auth/login` or `/api/auth/login`, an old `.env` or shell-level `VITE_AUTH_API_BASE_URL` is still active.

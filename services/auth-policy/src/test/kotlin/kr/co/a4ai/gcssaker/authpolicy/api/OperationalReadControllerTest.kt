@@ -11,7 +11,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceCredentialAuthenticationService
-import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryRegisteredDeviceRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.devices.InMemoryRegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDevice
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceStatus
 import org.junit.jupiter.api.Assertions.assertEquals

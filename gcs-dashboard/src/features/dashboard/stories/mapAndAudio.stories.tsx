@@ -1,6 +1,6 @@
 import type { StoryDefault } from "@ladle/react";
 
-import "@/features/dashboard/DashboardPage.scss";
+import "@dashboard/layout/DashboardPage.scss";
 import { AudioWaveformPanel } from "@dashboard/components/AudioWaveformPanel";
 import { StreamMapPopup } from "@dashboard/map/StreamMapPopup";
 import { STORY_AUDIO_ANALYSIS, STORY_STREAM_SLOTS } from "./dashboardStoryFixtures";
@@ -35,7 +35,6 @@ export function AudioWaveform() {
       <AudioWaveformPanel
         analysis={STORY_AUDIO_ANALYSIS}
         selectedStream={STORY_STREAM_SLOTS.live}
-        talkback={{ status: "idle", errorMessage: null, hasLocalAudioTrack: false, micLevel: null, targets: [], start: async () => undefined, stop: noop }}
       />
     </DashboardStoryShell>
   );

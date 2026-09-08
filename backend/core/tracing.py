@@ -28,13 +28,12 @@ class TraceExporters:
 
 class TraceAttributeNames:
     COMPONENT = "gcs.component"
-    STREAM_ID = "gcs.stream_id"
     SCHEMA_VERSION = "gcs.schema_version"
     HTTP_METHOD = "http.request.method"
     HTTP_ROUTE = "http.route"
     HTTP_STATUS_CODE = "http.response.status_code"
     MESSAGING_SYSTEM = "messaging.system"
-    MESSAGING_DESTINATION = "messaging.destination.name"
+    MESSAGING_DESTINATION_CHANNEL = "messaging.destination.channel"
 
 
 class TracingSettings(BackendBaseSettings):
@@ -141,20 +140,18 @@ def route_template(request: Request) -> str:
 @contextmanager
 def trace_ai_sidecar_call(
     *,
-    stream_id: str,
     schema_version: str,
     provider: TracerProvider | None = None,
 ) -> Any:
     with tracer_for(provider).start_as_current_span("ai.sidecar.detect", kind=SpanKind.INTERNAL) as span:
         span.set_attribute(TraceAttributeNames.COMPONENT, "ai-sidecar")
-        span.set_attribute(TraceAttributeNames.STREAM_ID, stream_id)
         span.set_attribute(TraceAttributeNames.SCHEMA_VERSION, schema_version)
         yield span
 
 
 @contextmanager
-def trace_mqtt_publish(*, topic: str, provider: TracerProvider | None = None) -> Any:
+def trace_mqtt_publish(*, destination_channel: str, provider: TracerProvider | None = None) -> Any:
     with tracer_for(provider).start_as_current_span("mqtt.publish", kind=SpanKind.PRODUCER) as span:
         span.set_attribute(TraceAttributeNames.MESSAGING_SYSTEM, "mqtt")
-        span.set_attribute(TraceAttributeNames.MESSAGING_DESTINATION, topic)
+        span.set_attribute(TraceAttributeNames.MESSAGING_DESTINATION_CHANNEL, destination_channel)
         yield span

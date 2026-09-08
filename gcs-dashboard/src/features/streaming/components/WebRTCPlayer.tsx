@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 
 import { WebRTCPlayerFigure } from "./webrtc/WebRTCPlayerFigure";
-import { useWhepPlayback } from "@streaming/hooks/useWhepPlayback";
-import { EMPTY_ICE_CANDIDATE_STATS } from "@streaming/webrtcPlayerPresentation";
+import { useWhepPlayback } from "@streaming/hooks/playback/useWhepPlayback";
+import { EMPTY_ICE_CANDIDATE_STATS } from "@streaming/presentation/webrtcPlayerPresentation";
 import type { WebRTCPlayerProps } from "@streaming/types";
 import "./WebRTCPlayer.css";
 
@@ -20,28 +20,26 @@ export function WebRTCPlayer({
   autoPlay = true,
   muted = false,
   controls = true,
+  showDiagnostics = true,
   className,
   onStatusChange,
 }: WebRTCPlayerProps) {
-  const onStatusChangeRef = useRef(onStatusChange);
   const playback = useWhepPlayback({ whepUrl, isOnline });
-  const {
-    videoRef,
-    status,
-    connectionState,
-    iceConnectionState,
-    errorMessage,
-    hasVideoFrame,
-    hasAudioTrack,
-    isAudioActive,
-    audioPlaybackState,
-    audioDiagnosticMessage,
-    firstFrameLatencyMs,
-    signalingTimings,
-    audioStats,
-    iceCandidateStats = EMPTY_ICE_CANDIDATE_STATS,
-  } = playback;
+  useWebRTCStatusNotification(playback, onStatusChange);
+  return <WebRTCPlayerFigure {...playback} audioStats={playback.audioStats} autoPlay={autoPlay}
+    className={className} controls={controls} showDiagnostics={showDiagnostics}
+    iceCandidateStats={playback.iceCandidateStats ?? EMPTY_ICE_CANDIDATE_STATS}
+    muted={muted} streamId={streamId} title={title} videoRef={playback.videoRef} />;
+}
 
+function useWebRTCStatusNotification(
+  playback: ReturnType<typeof useWhepPlayback>,
+  onStatusChange: WebRTCPlayerProps["onStatusChange"],
+): void {
+  const onStatusChangeRef = useRef(onStatusChange);
+  const { audioDiagnosticMessage, audioPlaybackState, audioStats, connectionState, errorMessage,
+    firstFrameLatencyMs, hasAudioTrack, hasVideoFrame, iceCandidateStats = EMPTY_ICE_CANDIDATE_STATS,
+    iceConnectionState, isAudioActive, signalingTimings, status } = playback;
   useEffect(() => {
     onStatusChangeRef.current = onStatusChange;
   }, [onStatusChange]);
@@ -78,30 +76,6 @@ export function WebRTCPlayer({
     status,
   ]);
 
-  return (
-    <WebRTCPlayerFigure
-      audioDiagnosticMessage={audioDiagnosticMessage}
-      audioPlaybackState={audioPlaybackState}
-      audioStats={audioStats}
-      autoPlay={autoPlay}
-      className={className}
-      connectionState={connectionState}
-      controls={controls}
-      errorMessage={errorMessage}
-      firstFrameLatencyMs={firstFrameLatencyMs}
-      hasAudioTrack={hasAudioTrack}
-      hasVideoFrame={hasVideoFrame}
-      iceCandidateStats={iceCandidateStats}
-      iceConnectionState={iceConnectionState}
-      isAudioActive={isAudioActive}
-      muted={muted}
-      signalingTimings={signalingTimings}
-      status={status}
-      streamId={streamId}
-      title={title}
-      videoRef={videoRef}
-    />
-  );
 }
 
 export default WebRTCPlayer;

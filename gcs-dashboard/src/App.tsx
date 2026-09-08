@@ -4,13 +4,19 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./features/auth/AuthProvider";
 import { RequireAuth } from "./features/auth/RequireAuth";
 import { createDashboardQueryClient } from "./features/queryClient";
+import { clearSessionScopedCaches } from "./features/sessionScopedCache";
 
 const dashboardQueryClient = createDashboardQueryClient();
 
-const DashboardPage = lazy(() => import("./features/dashboard/DashboardPage").then((module) => ({ default: module.DashboardPage })));
+function clearDashboardSessionState(): void {
+  dashboardQueryClient.clear();
+  clearSessionScopedCaches();
+}
+
+const DashboardPage = lazy(() => import("./features/dashboard/layout/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const LoginPage = lazy(() => import("./features/auth/LoginPage").then((module) => ({ default: module.LoginPage })));
 const SignupPage = lazy(() => import("./features/auth/SignupPage").then((module) => ({ default: module.SignupPage })));
-const StreamPage = lazy(() => import("./features/streaming/StreamPage").then((module) => ({ default: module.StreamPage })));
+const StreamPage = lazy(() => import("./features/dashboard/layout/StreamPage").then((module) => ({ default: module.StreamPage })));
 const LocalWebcamPublisher = lazy(() =>
   import("./features/streaming/components/LocalWebcamPublisher").then((module) => ({ default: module.LocalWebcamPublisher })),
 );
@@ -41,7 +47,7 @@ function App() {
   return (
     <QueryClientProvider client={dashboardQueryClient}>
       <BrowserRouter>
-        <AuthProvider>
+        <AuthProvider onSessionCleared={clearDashboardSessionState}>
           <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />

@@ -1,0 +1,45 @@
+schemaVersion: gcs-saker.secure-communications.v1
+defaultPolicy: plaintext-denied-outside-local-test
+channels:
+  - id: CH-PUBLIC-HTTPS
+    endpoints: [browser, edge]
+    target: TLS 1.2 or 1.3 with trusted certificate and expiry monitoring
+    currentStatus: IMPLEMENTED_NOT_FIPS_ASSESSED
+    issue: 662
+  - id: CH-GRPC-POLICY
+    endpoints: [media-control, auth-policy]
+    target: mutual TLS with service identity, private CA, rotation, and hostname verification
+    currentStatus: OPEN
+    issue: 662
+  - id: CH-MQTT-DEVICE
+    endpoints: [field-device, mqtt-broker]
+    target: per-device mutual TLS plus topic ACL and credential revocation
+    currentStatus: OPEN
+    issue: 662
+  - id: CH-POSTGRES
+    endpoints: [auth-policy, PostgreSQL]
+    target: TLS with server identity and least-privilege database identity
+    currentStatus: OPEN
+    issue: 662
+  - id: CH-REDIS
+    endpoints: [application-services, Redis]
+    target: TLS or equivalently isolated local transport with authenticated least privilege
+    currentStatus: OPEN
+    issue: 662
+  - id: CH-TURN
+    endpoints: [browser-or-device, TURN]
+    target: HMAC-derived per-session credentials with bounded expiry and revocation policy
+    currentStatus: OPEN
+    issue: 662
+  - id: CH-ADMIN-MFA
+    endpoints: [system-admin, auth-policy]
+    target: phishing-resistant MFA preferred, TOTP recovery profile only when approved
+    currentStatus: BLOCKED_IDENTITY_ENROLLMENT_DESIGN
+    issue: 662
+rolloutGates:
+  - private CA hierarchy, certificate profiles, SANs, ownership, and expiry alerts approved
+  - dual-trust rotation and rollback tested before plaintext is disabled
+  - every service has readiness and authorization-denial evidence over mTLS
+  - administrator enrollment and break-glass recovery are tested before MFA enforcement
+  - no production credential, private key, or recovery code enters source or public evidence
+

@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import type { DashboardWidgetDefinition } from "@dashboard/dashboardLayout";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
-import type { AudioAnalysisSnapshot } from "@dashboard/dashboardPresentation";
-import { buildOpsSummaryViewModel } from "@dashboard/opsSummaryViewModel";
+import type { DashboardWidgetDefinition } from "@dashboard/layout/dashboardLayout";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
+import type { AudioAnalysisSnapshot } from "@dashboard/layout/dashboardPresentation";
+import { buildOpsSummaryViewModel } from "@dashboard/operations/opsSummaryViewModel";
 
 interface OpsSummaryPanelProps {
   audioAnalysis: AudioAnalysisSnapshot | null;
@@ -34,7 +34,20 @@ export function OpsSummaryPanel({
         <h2 id="ops-summary-title">운용 요약</h2>
         {controls}
       </div>
-      <div className="ops-summary__body">
+      <OpsSummaryBody selectedStream={selectedStream} viewModel={viewModel} />
+    </section>
+  );
+}
+
+function OpsSummaryBody({
+  selectedStream,
+  viewModel,
+}: {
+  selectedStream: DashboardStreamSlot;
+  viewModel: ReturnType<typeof buildOpsSummaryViewModel>;
+}) {
+  return (
+    <div className="ops-summary__body">
         <div className={`ops-summary__mission is-${viewModel.missionTone}`}>
           <span>현재 운용 상태</span>
           <strong>{viewModel.missionText}</strong>
@@ -49,6 +62,14 @@ export function OpsSummaryPanel({
           <strong>{viewModel.focusTitle}</strong>
           <span>{viewModel.focusDetail}</span>
         </div>
+        <dl className="ops-summary__telemetry" aria-label="선택 스트림 텔레메트리">
+          {viewModel.telemetryTiles.map((tile) => (
+            <div className={`is-${tile.tone}`} key={tile.label}>
+              <dt>{tile.label}</dt>
+              <dd>{tile.value}</dd>
+            </div>
+          ))}
+        </dl>
         <dl className="ops-summary__tiles">
           {viewModel.statusTiles.map((tile) => (
             <div className={`is-${tile.tone}`} key={tile.label}>
@@ -73,7 +94,6 @@ export function OpsSummaryPanel({
             ))}
           </ul>
         </div>
-      </div>
-    </section>
+    </div>
   );
 }

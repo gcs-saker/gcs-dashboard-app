@@ -3,6 +3,7 @@ package kr.co.a4ai.gcssaker.authpolicy
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPageLimit
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventCursor
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPageQuery
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventReadModel
@@ -76,6 +77,38 @@ class JdbcOperationalEventRepositoryTest {
         assertTrue("IX_OPERATIONAL_EVENTS_GROUP_OCCURRED" in indexes)
         assertTrue("IX_OPERATIONAL_EVENTS_GROUP_SEVERITY_OCCURRED" in indexes)
         assertTrue("IX_OPERATIONAL_EVENTS_GROUP_STREAM_OCCURRED" in indexes)
+        assertTrue("IX_OPERATIONAL_EVENTS_AUDIT_CHAIN" in indexes)
+    }
+
+    @Test
+    fun `security events persist an ordered sha256 integrity chain`() {
+        val dataSource = h2DataSource()
+        val repository = JdbcOperationalEventRepository(dataSource, emptyList())
+        val first = event("audit-1", "info", "security", "login", GroupId("co-a"), "2026-06-01T00:00:00Z").copy(
+            receivedAt = Instant.parse("2026-06-01T00:00:00.010Z"),
+            timeSource = "ntp-unauthenticated:time.test:123",
+            clockStatus = "NORMAL",
+            clockDriftMs = 10,
+            clockMeasuredAt = Instant.parse("2026-06-01T00:00:00Z"),
+        )
+        val second = event("audit-2", "warn", "security", "denied", GroupId("co-a"), "2026-06-01T00:00:01Z")
+
+        repository.append(first)
+        repository.append(second)
+
+        val jdbc = JdbcTemplate(dataSource)
+        val firstHash = jdbc.queryForObject("SELECT event_hash FROM operational_events WHERE id = 'audit-1'", String::class.java)
+        val secondPrevious = jdbc.queryForObject("SELECT previous_hash FROM operational_events WHERE id = 'audit-2'", String::class.java)
+        val secondHash = jdbc.queryForObject("SELECT event_hash FROM operational_events WHERE id = 'audit-2'", String::class.java)
+        assertEquals("0".repeat(64), jdbc.queryForObject("SELECT previous_hash FROM operational_events WHERE id = 'audit-1'", String::class.java))
+        assertEquals(firstHash, secondPrevious)
+        assertEquals(64, secondHash?.length)
+        val stored = repository.eventsFor(
+            AuthenticatedPrincipal("admin", UserRole.ADMIN, GroupId("co-a")), OperationalEventQuery(),
+        ).first { it.id == "audit-1" }
+        assertEquals("NORMAL", stored.clockStatus)
+        assertEquals(10, stored.clockDriftMs)
+        assertEquals("ntp-unauthenticated:time.test:123", stored.timeSource)
     }
 
     @Test
@@ -135,6 +168,30 @@ class JdbcOperationalEventRepositoryTest {
 
         assertEquals(listOf("evt-c"), firstPage.events.map { it.id })
         assertEquals(listOf("evt-b", "evt-a"), secondPage.events.map { it.id })
+    }
+
+    @Test
+    fun `jdbc operational event tail reads only bounded rows newer than watermark`() {
+        val dataSource = h2DataSource()
+        val repository = JdbcOperationalEventRepository(
+            dataSource,
+            listOf(
+                event("evt-004", "info", "api", "네 번째", GroupId("co-a"), "2026-06-01T00:04:00Z"),
+                event("evt-003", "info", "api", "세 번째", GroupId("co-a"), "2026-06-01T00:03:00Z"),
+                event("evt-002", "info", "api", "두 번째", GroupId("co-a"), "2026-06-01T00:02:00Z"),
+                event("evt-001", "info", "api", "첫 번째", GroupId("co-a"), "2026-06-01T00:01:00Z"),
+            ),
+        )
+        val principal = AuthenticatedPrincipal("viewer-a", UserRole.VIEWER, GroupId("co-a"))
+
+        val events = repository.eventsAfter(
+            principal,
+            OperationalEventQuery(),
+            OperationalEventCursor(Instant.parse("2026-06-01T00:01:00Z"), "evt-001"),
+            OperationalEventPageLimit(2),
+        )
+
+        assertEquals(listOf("evt-002", "evt-003"), events.map { it.id })
     }
 
     @Test

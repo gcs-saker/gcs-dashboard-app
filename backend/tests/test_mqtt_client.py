@@ -1,6 +1,6 @@
 import mqtt.client as mqtt_client
 from core.settings_base import SettingsConfigurationError
-from mqtt.client import MqttSettings, get_mqtt_client, publish_control_command
+from mqtt.client import MqttSettings, get_mqtt_client, mqtt_destination_channel, publish_control_command
 
 
 class FakeMqttClient:
@@ -97,6 +97,11 @@ def test_publish_control_command_uses_injected_client() -> None:
     publish_control_command("robot/control/CID001", "forward", client=client)
 
     assert client.published == [("robot/control/CID001", "forward")]
+
+
+def test_mqtt_destination_channel_does_not_expose_asset_identity() -> None:
+    assert mqtt_destination_channel("gcs/a4ai/co-a/device-uuid/command") == "command"
+    assert mqtt_destination_channel("gcs/a4ai/co-a/device-uuid/private-route") == "unknown"
 
 
 def test_publish_control_command_raises_on_publish_backpressure() -> None:

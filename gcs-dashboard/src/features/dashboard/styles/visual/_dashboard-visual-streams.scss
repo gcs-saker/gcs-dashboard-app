@@ -1,0 +1,103 @@
+@use "../shared/dashboard-shared" as *;
+
+.selected-stream,
+.stream-card,
+.cctv-channel-card {
+  @include hover-surface;
+}
+
+.selected-stream__viewport {
+  background:
+    linear-gradient(rgba(190, 213, 226, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(190, 213, 226, 0.04) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(61, 184, 255, 0.1), transparent 34%, rgba(86, 211, 124, 0.07)),
+    #071018;
+  background-size: 42px 42px, 42px 42px, auto, auto;
+}
+
+.selected-stream__empty {
+  align-content: center;
+  display: grid;
+  gap: 10px;
+  height: 100%;
+  justify-items: center;
+  min-height: 260px;
+  padding: 28px;
+  position: relative;
+  text-align: center;
+}
+
+.selected-stream__empty::after {
+  background:
+    linear-gradient(90deg, transparent 0 43%, rgba(190, 213, 226, 0.55) 44% 56%, transparent 57%),
+    linear-gradient(0deg, transparent 0 43%, rgba(190, 213, 226, 0.55) 44% 56%, transparent 57%);
+  content: "";
+  height: 124px;
+  opacity: 0.48;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 124px;
+}
+
+.selected-stream__empty-kicker,
+.stream-card__visual-status,
+.cctv-channel-card__channel {
+  @include pill-label;
+}
+
+.selected-stream__empty strong {
+  color: var(--heading);
+  font-size: clamp(1.05rem, 1.6vw, 1.42rem);
+  font-weight: 900;
+  position: relative;
+  z-index: 2;
+}
+
+.selected-stream__empty p {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 420px;
+  position: relative;
+  z-index: 2;
+}
+
+.selected-stream__meta {
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.24);
+}
+
+.stream-card {
+  outline: 1px solid rgba(255, 255, 255, 0.015);
+}
+
+.stream-card__topline {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.stream-card__topline strong {
+  color: var(--heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stream-card__visual-status {
+  bottom: 12px;
+  left: 12px;
+  position: absolute;
+  z-index: 2;
+}
+
+.stream-card__talkback {
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.stream-card__talkback:hover:not(:disabled) {
+  background: rgba(61, 184, 255, 0.1);
+}
+

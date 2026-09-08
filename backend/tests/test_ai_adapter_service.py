@@ -92,3 +92,23 @@ def test_adapter_rejects_noncanonical_stream_id() -> None:
         asyncio.run(AIAdapterService(settings()).analyze(session, "../secret", "detector", "co-a"))
 
     assert session.query(AIResultEvent).count() == 0
+
+
+def test_adapter_rejects_cross_stream_processor_response() -> None:
+    async def handler(_: httpx.Request) -> httpx.Response:
+        payload = response_payload()
+        payload["streamId"] = "raw.other.front"
+        payload["frame"] = {"streamId": "raw.other.front", "capturedAt": datetime.now(timezone.utc).isoformat()}
+        return httpx.Response(200, json=payload)
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine)()
+
+    async def run() -> None:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            await AIAdapterService(settings(), client).analyze(session, "raw.robot.front", "detector", "co-a")
+
+    with pytest.raises(AIProcessorUnavailableError):
+        asyncio.run(run())
+    assert session.query(AIResultEvent).count() == 0

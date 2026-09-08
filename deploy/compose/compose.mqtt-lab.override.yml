@@ -1,0 +1,39 @@
+# Opt-in local overlay; never pass this file to the Server-01 deployment script.
+services:
+  turn-primary:
+    ports: !reset []
+  auth-policy:
+    environment:
+      GCS_INTERNAL_GRPC_ENABLED: "true"
+      GCS_INTERNAL_GRPC_PORT: "9091"
+      GCS_INTERNAL_GRPC_TOKEN: ${AUTH_POLICY_RPC_TOKEN:?Set a random private service token of at least 32 characters}
+  media-control:
+    environment:
+      AUTH_POLICY_GRPC_TARGET: auth-policy:9091
+      AUTH_POLICY_RPC_TOKEN: ${AUTH_POLICY_RPC_TOKEN:?Set AUTH_POLICY_RPC_TOKEN}
+      MQTT_GATEWAY_URL: tcp://mqtt-lab:1883
+      MQTT_GATEWAY_USERNAME: mqtt-ingress
+      MQTT_GATEWAY_PASSWORD: ${MQTT_LAB_INGRESS_PASSWORD:?Set MQTT_LAB_INGRESS_PASSWORD}
+      MQTT_GATEWAY_ALLOW_PLAINTEXT: "true"
+    depends_on:
+      mqtt-lab:
+        condition: service_healthy
+  mqtt-lab:
+    image: eclipse-mosquitto:2.0.22
+    user: "1883:1883"
+    ports: ["127.0.0.1:18883:1883"]
+    volumes:
+      - ../mosquitto/mqtt-lab.conf:/mosquitto/config/mosquitto.conf:ro
+      - ../mosquitto/mqtt-lab.acl:/mosquitto/config/mqtt-lab.acl:ro
+      - ${MQTT_LAB_PASSWORD_FILE:?Set owner-only Mosquitto password file}:/mosquitto/secrets/passwords:ro
+    networks: [control-net]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 1883"]
+      interval: 3s
+      timeout: 2s
+      retries: 10

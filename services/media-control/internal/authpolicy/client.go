@@ -31,41 +31,14 @@ func (c Client) AuthorizeAccountPublish(
 	ctx context.Context,
 	command domain.AccountPublishCommand,
 ) (domain.DevicePublishAuthorization, error) {
-	if c.baseURL == "" {
-		return domain.DevicePublishAuthorization{}, fmt.Errorf("auth-policy base URL is not configured")
-	}
-	body, err := json.Marshal(struct {
+	response, err := c.postJSON(ctx, authPolicyAccountPublishPath, struct {
 		SensorID string `json:"sensorId"`
-	}{SensorID: command.SensorID})
-	if err != nil {
-		return domain.DevicePublishAuthorization{}, err
-	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+authPolicyAccountPublishPath, bytes.NewReader(body))
-	if err != nil {
-		return domain.DevicePublishAuthorization{}, err
-	}
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("Accept", "application/json")
-	request.Header.Set("Authorization", command.Authorization)
-	response, err := c.httpClient.Do(request)
+	}{SensorID: command.SensorID}, command.Authorization)
 	if err != nil {
 		return domain.DevicePublishAuthorization{}, err
 	}
 	defer response.Body.Close()
-	if response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden {
-		return domain.DevicePublishAuthorization{}, domain.ErrDevicePublishAccessDenied
-	}
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return domain.DevicePublishAuthorization{}, fmt.Errorf("auth-policy account publish returned status %d", response.StatusCode)
-	}
-	var authorization domain.DevicePublishAuthorization
-	if err := json.NewDecoder(response.Body).Decode(&authorization); err != nil {
-		return domain.DevicePublishAuthorization{}, err
-	}
-	if authorization.PublisherGroupID == "" {
-		return domain.DevicePublishAuthorization{}, domain.ErrDevicePublishAccessDenied
-	}
-	return authorization, nil
+	return decodePublishAuthorization(response, "account")
 }
 
 func NewAuthorizer(mode string, baseURL string, httpClient *http.Client) (Authorizer, error) {
@@ -105,37 +78,65 @@ func (c Client) AuthorizeStream(ctx context.Context, authorization string, targe
 		return domain.DenyStream(target.StreamID, "authentication required"), domain.ErrStreamAuthenticationRequired
 	}
 
-	body, err := json.Marshal(target)
-	if err != nil {
-		return domain.StreamAccessDecision{}, err
-	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+authPolicyStreamAccessPath, bytes.NewReader(body))
-	if err != nil {
-		return domain.StreamAccessDecision{}, err
-	}
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("Accept", "application/json")
-	request.Header.Set("Authorization", authorization)
-
-	response, err := c.httpClient.Do(request)
+	response, err := c.postJSON(ctx, authPolicyStreamAccessPath, target, authorization)
 	if err != nil {
 		return domain.StreamAccessDecision{}, err
 	}
 	defer response.Body.Close()
 
+	return decodeStreamDecision(response, target.StreamID)
+}
+
+func (c Client) postJSON(ctx context.Context, path string, payload any, authorization string) (*http.Response, error) {
+	if c.baseURL == "" {
+		return nil, fmt.Errorf("auth-policy base URL is not configured")
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
+	if authorization != "" {
+		request.Header.Set("Authorization", authorization)
+	}
+	return c.httpClient.Do(request)
+}
+
+func decodePublishAuthorization(response *http.Response, operation string) (domain.DevicePublishAuthorization, error) {
+	if response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden {
+		return domain.DevicePublishAuthorization{}, domain.ErrDevicePublishAccessDenied
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return domain.DevicePublishAuthorization{}, fmt.Errorf("auth-policy %s publish returned status %d", operation, response.StatusCode)
+	}
+	var authorization domain.DevicePublishAuthorization
+	if err := json.NewDecoder(response.Body).Decode(&authorization); err != nil {
+		return authorization, err
+	}
+	if authorization.PublisherGroupID == "" {
+		return authorization, domain.ErrDevicePublishAccessDenied
+	}
+	return authorization, nil
+}
+
+func decodeStreamDecision(response *http.Response, streamID string) (domain.StreamAccessDecision, error) {
 	if response.StatusCode == http.StatusUnauthorized {
-		return domain.DenyStream(target.StreamID, "authentication required"), domain.ErrStreamAuthenticationRequired
+		return domain.DenyStream(streamID, "authentication required"), domain.ErrStreamAuthenticationRequired
 	}
 	if response.StatusCode == http.StatusForbidden {
-		return domain.DenyStream(target.StreamID, "stream access denied"), domain.ErrStreamAccessDenied
+		return domain.DenyStream(streamID, "stream access denied"), domain.ErrStreamAccessDenied
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return domain.StreamAccessDecision{}, fmt.Errorf("auth-policy stream access returned status %d", response.StatusCode)
 	}
-
 	var decision domain.StreamAccessDecision
 	if err := json.NewDecoder(response.Body).Decode(&decision); err != nil {
-		return domain.StreamAccessDecision{}, err
+		return decision, err
 	}
 	if !decision.Allowed {
 		return decision, domain.ErrStreamAccessDenied
@@ -147,26 +148,15 @@ func (c Client) AuthorizeDevicePublish(
 	ctx context.Context,
 	command domain.DevicePublishCommand,
 ) (domain.DevicePublishAuthorization, error) {
-	if c.baseURL == "" {
-		return domain.DevicePublishAuthorization{}, fmt.Errorf("auth-policy base URL is not configured")
-	}
-	body, err := json.Marshal(command)
-	if err != nil {
-		return domain.DevicePublishAuthorization{}, err
-	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+authPolicyDevicePublishPath, bytes.NewReader(body))
-	if err != nil {
-		return domain.DevicePublishAuthorization{}, err
-	}
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("Accept", "application/json")
-
-	response, err := c.httpClient.Do(request)
+	response, err := c.postJSON(ctx, authPolicyDevicePublishPath, command, "")
 	if err != nil {
 		return domain.DevicePublishAuthorization{}, err
 	}
 	defer response.Body.Close()
+	return decodeDevicePublishAuthorization(response)
+}
 
+func decodeDevicePublishAuthorization(response *http.Response) (domain.DevicePublishAuthorization, error) {
 	if response.StatusCode == http.StatusForbidden {
 		return domain.DevicePublishAuthorization{}, domain.ErrDevicePublishAccessDenied
 	}

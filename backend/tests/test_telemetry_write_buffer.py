@@ -9,6 +9,7 @@ from modules.telemetry_buffer import (
     InMemoryTelemetryWriteBuffer,
     RedisTelemetryBufferConfig,
     RedisTelemetryWriteBuffer,
+    TelemetryBufferFullError,
     TelemetryBufferRecord,
 )
 from modules.telemetry_buffer.bulk_sql import (
@@ -146,6 +147,18 @@ def test_buffered_sink_can_auto_flush_when_threshold_is_reached() -> None:
         "raw.mobile.front",
         "raw.mobile.rear",
     ]
+
+
+def test_in_memory_buffer_rejects_new_history_at_bounded_capacity() -> None:
+    buffer = InMemoryTelemetryWriteBuffer(max_pending_history=1)
+    first = TelemetryBufferRecord.create(telemetry("raw.mobile.front", 35.87))
+    second = TelemetryBufferRecord.create(telemetry("raw.mobile.rear", 35.88))
+    buffer.append_history(first)
+
+    with pytest.raises(TelemetryBufferFullError, match="buffer is full"):
+        buffer.append_history(second)
+
+    assert [record.telemetry.uuid for record in buffer.drain_history(10)] == ["raw.mobile.front"]
 
 
 def test_redis_buffer_keeps_latest_and_history_contract_without_key_scan() -> None:

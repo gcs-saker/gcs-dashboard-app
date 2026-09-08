@@ -1,0 +1,33 @@
+schemaVersion: gcs-saker.supply-chain-policy.v1
+requirements:
+  lockfilesRequired: true
+  containerBaseDigestRequired: true
+  sbomFormats: [SPDX-JSON]
+  vulnerabilityGate: Critical and supported fix-available High findings block release
+  eolRuntimeBlocked: true
+  unusedDependencyRemovalRequired: true
+  imageSignature: KEYLESS_COSIGN_WORKFLOW_CONFIGURED_NOT_RUN
+  sbomSignature: GITHUB_ATTESTATION_WORKFLOW_CONFIGURED_NOT_RUN
+  provenance: SLSA_ATTESTATION_WORKFLOW_CONFIGURED_NOT_RUN
+  vex: REQUIRED_FOR_EVERY_EXCEPTION
+  licenseDecision: ALLOWLIST_REQUIRED
+allowedLicenses: [Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MIT, MPL-2.0, Python-2.0]
+reviewRequiredLicenses: [LGPL-2.1-only, LGPL-2.1-or-later, LGPL-3.0-only, LGPL-3.0-or-later]
+deniedLicenses: [AGPL-3.0-only, AGPL-3.0-or-later, SSPL-1.0, BUSL-1.1, UNKNOWN]
+artifacts:
+  - id: backend-image
+    sbom: IMPLEMENTED
+    signature: CONFIGURED_NOT_RUN
+    provenance: CONFIGURED_NOT_RUN
+  - id: auth-policy-image
+    sbom: IMPLEMENTED
+    signature: CONFIGURED_NOT_RUN
+    provenance: CONFIGURED_NOT_RUN
+  - id: media-control-image
+    sbom: IMPLEMENTED
+    signature: CONFIGURED_NOT_RUN
+    provenance: CONFIGURED_NOT_RUN
+  - id: dashboard-image
+    sbom: IMPLEMENTED
+    signature: CONFIGURED_NOT_RUN
+    provenance: CONFIGURED_NOT_RUN

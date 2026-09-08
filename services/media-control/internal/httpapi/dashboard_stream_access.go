@@ -69,6 +69,33 @@ func (s Server) requireStreamAccess(
 	authorization string,
 	parsed domain.ParsedStreamPath,
 ) error {
-	_, err := s.authorizer.AuthorizeStream(ctx, authorization, s.groups.TargetFor(parsed))
+	target, err := s.resolveStreamTarget(ctx, parsed)
+	if err != nil {
+		return err
+	}
+	_, err = s.authorizer.AuthorizeStream(ctx, authorization, target)
+	return err
+}
+
+func (s Server) requireTalkbackSendAccess(
+	ctx context.Context,
+	authorization string,
+	parsed domain.ParsedStreamPath,
+) error {
+	return s.requireTalkbackAction(ctx, authorization, parsed, "send_talkback")
+}
+
+func (s Server) requireTalkbackAction(
+	ctx context.Context,
+	authorization string,
+	parsed domain.ParsedStreamPath,
+	action string,
+) error {
+	target, err := s.resolveStreamTarget(ctx, parsed)
+	if err != nil {
+		return err
+	}
+	target.Action = action
+	_, err = s.authorizer.AuthorizeStream(ctx, authorization, target)
 	return err
 }

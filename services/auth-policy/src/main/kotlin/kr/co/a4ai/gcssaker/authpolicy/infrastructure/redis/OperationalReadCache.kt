@@ -21,8 +21,8 @@ class RedisOperationalReadRepository(
     private val policy: RedisCachePolicy = RedisCachePolicy.OPERATIONAL_READ,
     private val jitterSource: () -> Double = { ThreadLocalRandom.current().nextDouble() },
 ) : OperationalReadRepository {
-    override fun telemetryFor(principal: AuthenticatedPrincipal): List<TelemetryReadModel> =
-        delegate.telemetryFor(principal)
+    override fun telemetryFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<TelemetryReadModel> =
+        delegate.telemetryFor(principal, limit, offset)
 
     override fun upsertTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel =
         delegate.upsertTelemetry(telemetry)
@@ -34,8 +34,9 @@ class RedisOperationalReadRepository(
     ): List<TelemetryHistoryReadModel> =
         delegate.telemetryHistoryFor(principal, uuid, limit)
 
-    override fun assetsForGateway(principal: AuthenticatedPrincipal, gatewayUuid: String): List<AssetReadModel> =
-        delegate.assetsForGateway(principal, gatewayUuid)
+    override fun assetsForGateway(
+        principal: AuthenticatedPrincipal, gatewayUuid: String, limit: Int, offset: Int,
+    ): List<AssetReadModel> = delegate.assetsForGateway(principal, gatewayUuid, limit, offset)
 
     override fun recordServerHealthSnapshot(snapshot: ServerHealthSnapshotReadModel): ServerHealthSnapshotReadModel =
         delegate.recordServerHealthSnapshot(snapshot)
@@ -51,13 +52,13 @@ class RedisOperationalReadRepository(
             invalidateStreamSessionCache(it.groupId)
         }
 
-    override fun streamSessionsFor(principal: AuthenticatedPrincipal): List<StreamSessionReadModel> {
-        if (!policy.cacheable) {
-            return delegate.streamSessionsFor(principal)
+    override fun streamSessionsFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<StreamSessionReadModel> {
+        if (!policy.cacheable || limit != DEFAULT_STREAM_SESSION_PAGE_SIZE || offset != 0) {
+            return delegate.streamSessionsFor(principal, limit, offset)
         }
         val key = streamSessionCacheKey(principal)
         readCachedStreamSessions(key)?.let { return it }
-        return runCatching { delegate.streamSessionsFor(principal) }
+        return runCatching { delegate.streamSessionsFor(principal, limit, offset) }
             .onSuccess { sessions -> writeCachedStreamSessions(key, sessions) }
             .getOrElse { cause ->
                 readCachedStreamSessions(staleCacheKey(key)) ?: throw cause
@@ -100,6 +101,7 @@ class RedisOperationalReadRepository(
     }
 
     private companion object {
+        const val DEFAULT_STREAM_SESSION_PAGE_SIZE = 200
         val streamSessionListType = object : TypeReference<List<StreamSessionReadModel>>() {}
 
         fun sha256(value: String): String =

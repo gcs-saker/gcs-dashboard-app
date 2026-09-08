@@ -1,5 +1,4 @@
-@use "./dashboard-events-hero-summary";
-@use "./dashboard-events-filters-workspace";
-@use "./dashboard-events-chart-categories";
-@use "./dashboard-events-list";
-@use "./dashboard-events-detail";
+@use "./events/dashboard-events-hero-summary";
+@use "./events/dashboard-events-filters-workspace";
+@use "./events/dashboard-events-chart-categories";
+@use "./events/dashboard-events-detail";

@@ -1,6 +1,8 @@
 import { memo } from "react";
 import { RealtimePlayer } from "@streaming/components/RealtimePlayer";
-import { getDashboardStreamDisplayName, type DashboardStreamSlot } from "@dashboard/streamTypes";
+import { StreamTelemetryOverlay } from "@streaming/components/StreamTelemetryOverlay";
+import { getStreamDisplayName } from "@streaming/presentation/streamPresentation";
+import type { StreamSlot as DashboardStreamSlot } from "@streaming/layout/streamModel";
 
 interface StreamWallTileProps {
   readonly index: number;
@@ -16,10 +18,10 @@ export const StreamWallTile = memo(function StreamWallTile({ index, onSelect, on
       {stream?.streamPath ? (
         <RealtimePlayer
           className="stream-wall-tile__player"
-          controls
+          controls={false}
           muted={index !== 0}
           streamId={stream.streamPath}
-          title={getDashboardStreamDisplayName(stream)}
+          title={getStreamDisplayName(stream)}
         />
       ) : (
         <div className="stream-wall-tile__empty" aria-hidden="true">
@@ -28,6 +30,8 @@ export const StreamWallTile = memo(function StreamWallTile({ index, onSelect, on
         </div>
       )}
 
+      {stream?.streamPath && stream.status === "online" ? <StreamTelemetryOverlay geometry={stream.geometry} /> : null}
+
       <div className="stream-wall-tile__toolbar">
         <span className={`stream-wall-tile__status is-${stream?.status ?? "empty"}`} aria-hidden="true" />
         <label className="stream-wall-tile__picker">
@@ -35,7 +39,7 @@ export const StreamWallTile = memo(function StreamWallTile({ index, onSelect, on
           <select value={stream?.id ?? ""} onChange={(event) => onSelect(index, event.target.value || null)}>
             <option value="">스트림 선택</option>
             {streams.map((option) => (
-              <option key={option.id} value={option.id}>{getDashboardStreamDisplayName(option)}</option>
+              <option key={option.id} value={option.id}>{getStreamDisplayName(option)}</option>
             ))}
           </select>
         </label>

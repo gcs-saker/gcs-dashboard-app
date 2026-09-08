@@ -1,6 +1,23 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { AUTH_ACCEPT_HEADERS, CSRF_HEADER_NAME, CSRF_HEADER_VALUE, authenticatedFetch, logoutRequest } from "./authApi";
+import {
+  AUTH_ACCEPT_HEADERS, CSRF_HEADER_NAME, CSRF_HEADER_VALUE,
+  authenticatedFetch, loginRequest, logoutRequest, refreshSessionRequest,
+} from "./authApi";
 import { clearAuthSession, getStoredAccessToken, storeAuthSession } from "./authStorage";
+
+const AUTH_RESPONSE_DETAILS = {
+  group_id: "co-a",
+  securityVersion: 1,
+  capabilities: {
+    canView: true,
+    canControl: true,
+    canManage: false,
+    canSendTalkback: true,
+    canPublish: true,
+    canManageMembers: false,
+    canManageDevices: false,
+  },
+};
 
 describe("authenticatedFetch", () => {
   afterEach(() => {
@@ -8,6 +25,7 @@ describe("authenticatedFetch", () => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   test("refreshes the httpOnly cookie session once after a 401 and retries the original request", async () => {
@@ -21,6 +39,7 @@ describe("authenticatedFetch", () => {
           expires_in_minutes: 30,
           username: "operator01",
           role: "operator",
+          ...AUTH_RESPONSE_DETAILS,
         }),
       )
       .mockResolvedValueOnce(Response.json({ ok: true }));
@@ -56,6 +75,7 @@ describe("authenticatedFetch", () => {
           expires_in_minutes: 30,
           username: "operator01",
           role: "operator",
+          ...AUTH_RESPONSE_DETAILS,
         });
       }
 
@@ -136,5 +156,38 @@ describe("authenticatedFetch", () => {
       }),
     );
     expect(getStoredAccessToken()).toBeNull();
+  });
+
+  test("clears the local session even when the logout request fails", async () => {
+    storeAuthSession({
+      accessToken: "logout-access-token",
+      expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+      user: { username: "operator01", role: "operator" },
+    });
+
+    await expect(logoutRequest(vi.fn(async () => { throw new TypeError("offline"); }))).rejects.toThrow("offline");
+
+    expect(getStoredAccessToken()).toBeNull();
+  });
+
+  test("rejects malformed auth payloads at the response boundary", async () => {
+    const malformedFetcher = vi.fn(async () => Response.json({ access_token: "incomplete" }));
+
+    await expect(refreshSessionRequest(malformedFetcher)).rejects.toThrow();
+    expect(getStoredAccessToken()).toBeNull();
+  });
+
+  test("aborts authentication requests after the bounded timeout", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")), { once: true });
+      })));
+
+    const request = loginRequest({ username: "operator01", password: "password" });
+    const rejection = expect(request).rejects.toMatchObject({ name: "AbortError" });
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    await rejection;
   });
 });

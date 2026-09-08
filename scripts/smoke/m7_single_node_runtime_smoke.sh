@@ -270,18 +270,20 @@ run_live() {
     --username "${TURN_USERNAME:-gcs-turn}" \
     --password "${TURN_PASSWORD:?TURN_PASSWORD is required}"
 
-  python3 "${REPO_ROOT}/scripts/smoke/turn_relay_smoke.py" \
-    --run \
-    --turn-url "turn:127.0.0.1:${TURN_SECONDARY_HOST_PORT:-3479}?transport=udp" \
-    --username "${TURN_USERNAME:-gcs-turn}" \
-    --password "${TURN_PASSWORD:?TURN_PASSWORD is required}"
+  if [[ -n "$(compose ps -q turn-secondary 2>/dev/null)" ]]; then
+    python3 "${REPO_ROOT}/scripts/smoke/turn_relay_smoke.py" \
+      --run \
+      --turn-url "turn:127.0.0.1:${TURN_SECONDARY_HOST_PORT:-3479}?transport=udp" \
+      --username "${TURN_USERNAME:-gcs-turn}" \
+      --password "${TURN_PASSWORD:?TURN_PASSWORD is required}"
+  fi
 
   curl -fsS "${edge_base_url}/webrtc/" >/dev/null 2>&1 || true
   curl -fsS "${edge_base_url}/hls/" >/dev/null 2>&1 || true
 
   echo "M7 single-node runtime smoke run passed"
   echo "Edge URL: ${edge_base_url}"
-  echo "Verified active cutover: auth-policy health/ready/telemetry ingest-read/asset reads, unauthenticated telemetry rejection, media-control stream status/ICE servers, MediaMTX API, TURN primary/secondary allocation"
+  echo "Verified active cutover: auth-policy health/ready/telemetry ingest-read/asset reads, unauthenticated telemetry rejection, media-control stream status/ICE servers, MediaMTX API, primary TURN allocation"
 
   if [[ "$STOP_STACK" == "1" ]]; then
     compose down

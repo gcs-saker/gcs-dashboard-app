@@ -1,0 +1,27 @@
+{
+  "version": "gcs-error-v1",
+  "rest": {
+    "authentication_required": 401,
+    "permission_denied": 403,
+    "group_administrator_role_required": 403,
+    "group_management_scope_required": 403,
+    "system_administrator_required": 403,
+    "resource_not_found": 404,
+    "group_member_not_found": 404,
+    "invalid_request": 400,
+    "group_member_role_invalid": 400,
+    "password_too_short": 400,
+    "state_conflict": 409,
+    "administrator_replacement_required": 409
+  },
+  "grpc": {
+    "unauthorized_gateway_metadata": "UNAUTHENTICATED",
+    "device_identity_mismatch": "REJECTED",
+    "malformed_protobuf": "REJECTED",
+    "telemetry_semantic_invalid": "REJECTED",
+    "payload_too_large": "BACKPRESSURE",
+    "telemetry_store_failed": "BACKPRESSURE",
+    "reconnect_requested": "RECONNECT",
+    "accepted": "ACCEPTED"
+  }
+}

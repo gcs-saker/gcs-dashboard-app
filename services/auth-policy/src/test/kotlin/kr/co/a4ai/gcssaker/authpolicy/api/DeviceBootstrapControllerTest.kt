@@ -5,7 +5,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceBootstrapToken
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceBootstrapTokens
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceLifecycleService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
-import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryRegisteredDeviceRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.devices.InMemoryRegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

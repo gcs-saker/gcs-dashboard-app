@@ -2,7 +2,7 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.DevicePublishAuthorizationService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
-import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryRegisteredDeviceRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.devices.InMemoryRegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDevice
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceStatus

@@ -136,7 +136,7 @@ requiredGates:
       - contracts/proto/gcs/saker/v1/ai_overlay.proto
       - backend/modules/protocol_v2/ai_overlay.py
       - scripts/smoke/ai_overlay_sidecar_smoke.py
-      - gcs-dashboard/src/features/streaming/webCodecsPipelinePlan.ts
+      - gcs-dashboard/src/features/streaming/runtime/webCodecsPipelinePlan.ts
       - docs/architecture/GCS-Saker_M8_ai_sidecar_overlay_contract.md
     missing:
       - "separate FastAPI AI sidecar process"

@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
@@ -25,15 +26,39 @@ func (s Server) dashboardStreamItem(w http.ResponseWriter, r *http.Request) {
 		s.writeDashboardTalkbackPlayback(w, r, route.streamID)
 		return
 	}
+	if route.suffix == "talkback-stop" {
+		s.writeDashboardTalkbackStop(w, r, route.streamID)
+		return
+	}
+	if route.suffix == routeSuffixCameraControl {
+		s.writeDashboardCameraControl(w, r, route.streamID)
+		return
+	}
 	s.writeDashboardStreamRead(w, r, route.streamID, route.suffix)
 }
 
+func (s Server) writeDashboardTalkbackStop(w http.ResponseWriter, r *http.Request, streamID string) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	parsed, err := domain.ParseStreamID(streamID)
+	if err != nil || parsed.Prefix != "raw" {
+		writeJSON(w, http.StatusUnprocessableEntity, errorPayload("talkback target must be a raw stream"))
+		return
+	}
+	if err := s.requireTalkbackAction(r.Context(), r.Header.Get(authorizationHeader), parsed, "stop_talkback"); err != nil {
+		s.writeStreamAccessError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (s Server) writeDashboardTalkbackPlayback(w http.ResponseWriter, r *http.Request, streamID string) {
-	parsed, talkback, publisherGroupID, ok := s.authorizeTalkbackRoute(w, r, streamID)
+	talkback, publisherGroupID, ok := s.authorizeTalkbackRoute(w, r, streamID, false)
 	if !ok {
 		return
 	}
-	_ = parsed
 	playbackURLs := s.withPlaybackTokenForGroup(s.playback.Build(talkback), talkback, publisherGroupID)
 	writeJSON(w, http.StatusOK, streamPlaybackResponse{
 		StreamID: talkback.StreamID, Status: domain.StreamStatusOnline, PlaybackURLs: playbackURLs,
@@ -41,22 +66,28 @@ func (s Server) writeDashboardTalkbackPlayback(w http.ResponseWriter, r *http.Re
 }
 
 func (s Server) writeDashboardTalkbackPublish(w http.ResponseWriter, r *http.Request, streamID string) {
-	_, talkback, publisherGroupID, ok := s.authorizeTalkbackRoute(w, r, streamID)
+	talkback, publisherGroupID, ok := s.authorizeTalkbackRoute(w, r, streamID, true)
 	if !ok {
 		return
 	}
 	s.writeStreamPublishResponseForGroup(w, talkback, publisherGroupID)
 }
 
-func (s Server) authorizeTalkbackRoute(w http.ResponseWriter, r *http.Request, streamID string) (domain.ParsedStreamPath, domain.ParsedStreamPath, string, bool) {
+func (s Server) authorizeTalkbackRoute(w http.ResponseWriter, r *http.Request, streamID string, sendsAudio bool) (domain.ParsedStreamPath, string, bool) {
 	parsed, err := domain.ParseStreamID(streamID)
 	if err != nil || parsed.Prefix != "raw" {
 		writeJSON(w, http.StatusUnprocessableEntity, errorPayload("talkback target must be a raw stream"))
-		return domain.ParsedStreamPath{}, domain.ParsedStreamPath{}, "", false
+		return domain.ParsedStreamPath{}, "", false
 	}
-	if err := s.requireStreamAccess(r.Context(), r.Header.Get(authorizationHeader), parsed); err != nil {
-		s.writeStreamAccessError(w, err)
-		return domain.ParsedStreamPath{}, domain.ParsedStreamPath{}, "", false
+	var accessError error
+	if sendsAudio {
+		accessError = s.requireTalkbackSendAccess(r.Context(), r.Header.Get(authorizationHeader), parsed)
+	} else {
+		accessError = s.requireStreamAccess(r.Context(), r.Header.Get(authorizationHeader), parsed)
+	}
+	if accessError != nil {
+		s.writeStreamAccessError(w, accessError)
+		return domain.ParsedStreamPath{}, "", false
 	}
 	operatorID := strings.TrimSpace(r.URL.Query().Get("operatorId"))
 	if operatorID == "" {
@@ -65,9 +96,14 @@ func (s Server) authorizeTalkbackRoute(w http.ResponseWriter, r *http.Request, s
 	talkback, err := domain.ParseStreamPath("talkback/" + parsed.Path + "/" + operatorID)
 	if err != nil {
 		writeJSON(w, http.StatusUnprocessableEntity, errorPayload("operator id is invalid"))
-		return domain.ParsedStreamPath{}, domain.ParsedStreamPath{}, "", false
+		return domain.ParsedStreamPath{}, "", false
 	}
-	return parsed, talkback, s.groups.TargetFor(parsed).PublisherGroupID, true
+	target, err := s.resolveStreamTarget(r.Context(), parsed)
+	if err != nil {
+		s.writeStreamAccessError(w, err)
+		return domain.ParsedStreamPath{}, "", false
+	}
+	return talkback, target.PublisherGroupID, true
 }
 
 func (s Server) writeDashboardStreamPublish(w http.ResponseWriter, r *http.Request, streamID string) {
@@ -84,7 +120,7 @@ func (s Server) writeDashboardStreamPublish(w http.ResponseWriter, r *http.Reque
 		s.writeStreamAccessError(w, err)
 		return
 	}
-	s.writeStreamPublishResponse(w, parsed)
+	s.writeStreamPublishResponse(w, r, parsed)
 }
 
 func (s Server) writeDeviceStreamPublish(w http.ResponseWriter, r *http.Request, parsed domain.ParsedStreamPath) {
@@ -106,7 +142,20 @@ func (s Server) writeDeviceStreamPublish(w http.ResponseWriter, r *http.Request,
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
 		return
 	}
-	s.writeStreamPublishResponseForGroup(w, parsed, authorization.PublisherGroupID)
+	if s.publishSessions == nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
+	response, err := s.createPublishSession(r.Context(), authorization)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store, private")
+	writeJSON(w, http.StatusOK, streamPublishResponse{
+		StreamID: response.StreamID, WhipURL: response.PublishURL + "?" + publisherTokenQueryKey + "=" + url.QueryEscape(response.PublishToken),
+		IceServers: response.IceServers,
+	})
 }
 
 func requestHasDeviceCredential(r *http.Request) bool {
@@ -149,7 +198,12 @@ func (s Server) writeDashboardStreamSuffix(
 	case "":
 		writeJSON(w, http.StatusOK, s.streamDescriptorResponseFromParsed(stream, parsed))
 	case routeSuffixPlayback:
-		writeJSON(w, http.StatusOK, s.streamPlaybackResponseFromParsed(stream, parsed))
+		response, err := s.streamPlaybackResponseFromParsed(r.Context(), stream, parsed)
+		if err != nil {
+			s.writeStreamAccessError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, response)
 	case routeSuffixStatus:
 		writeJSON(w, http.StatusOK, streamStatusResponse{StreamID: parsed.StreamID, Status: stream.Status})
 	default:

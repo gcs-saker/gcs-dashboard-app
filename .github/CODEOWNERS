@@ -3,6 +3,9 @@
 
 # Backend service
 /backend/ @taetaehoo
+/services/auth-policy/ @taetaehoo
+/services/media-control/ @taetaehoo
+/contracts/ @taetaehoo
 
 # Dashboard frontend
 /gcs-dashboard/ @taetaehoo
@@ -13,7 +16,10 @@
 /**/nginx.conf @taetaehoo
 /**/mediamtx.yml @taetaehoo
 /.github/workflows/ @taetaehoo
+/.github/CODEOWNERS @taetaehoo
+/scripts/gates/ @taetaehoo
 
 # Documentation and runbooks
 /*.md @taetaehoo
 /docs/ @taetaehoo
+/docs/compliance/ @taetaehoo

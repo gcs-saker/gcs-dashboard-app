@@ -29,6 +29,7 @@ class AdminProvisioningTokenControllerTest {
         InMemoryAuthUserRepository(
             listOf(
                 authUser(AdminProvisioningTokenFixtures.ADMIN_USERNAME, UserRole.ADMIN),
+                authUser(AdminProvisioningTokenFixtures.GROUP_ADMIN_USERNAME, UserRole.GROUP_ADMIN),
                 authUser(AdminProvisioningTokenFixtures.VIEWER_USERNAME, UserRole.VIEWER),
             ),
         ),
@@ -77,6 +78,28 @@ class AdminProvisioningTokenControllerTest {
         assertEquals(HttpStatus.FORBIDDEN, error.statusCode)
     }
 
+    @Test
+    fun `group admin issues and lists provisioning tokens for exact group`() {
+        val authorization = bearer(accessToken(AdminProvisioningTokenFixtures.GROUP_ADMIN_USERNAME))
+
+        val issued = controller.issue(authorization, AdminProvisioningTokenFixtures.request())
+
+        assertEquals(AdminProvisioningTokenFixtures.GROUP_ID, issued.groupId)
+        assertEquals(listOf(AdminProvisioningTokenFixtures.TOKEN_ID), controller.list(authorization).map { it.tokenId })
+    }
+
+    @Test
+    fun `group admin cannot issue provisioning token for another group`() {
+        val error = assertThrows<ResponseStatusException> {
+            controller.issue(
+                bearer(accessToken(AdminProvisioningTokenFixtures.GROUP_ADMIN_USERNAME)),
+                AdminProvisioningTokenFixtures.request().copy(groupId = AdminProvisioningTokenFixtures.OTHER_GROUP_ID),
+            )
+        }
+
+        assertEquals(HttpStatus.FORBIDDEN, error.statusCode)
+    }
+
     private fun authUser(username: String, role: UserRole): AuthUser =
         AuthUser(
             username = username,
@@ -96,10 +119,12 @@ class AdminProvisioningTokenControllerTest {
 
 private object AdminProvisioningTokenFixtures {
     const val ADMIN_USERNAME = "admin-provisioning"
+    const val GROUP_ADMIN_USERNAME = "group-admin-provisioning"
     const val VIEWER_USERNAME = "viewer-provisioning"
     const val PASSWORD = "pass"
     const val TOKEN_ID = "provisioning-token-001"
     const val GROUP_ID = "co-a"
+    const val OTHER_GROUP_ID = "co-b"
     const val LABEL = "Daegu field bootstrap"
     val NOW: Instant = Instant.parse("2026-07-20T01:00:00Z")
 

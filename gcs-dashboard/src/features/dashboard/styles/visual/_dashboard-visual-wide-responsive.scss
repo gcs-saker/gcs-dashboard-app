@@ -1,0 +1,140 @@
+@media (max-width: 1500px) {
+  .ops-dashboard {
+    overflow: auto;
+  }
+
+  .ops-dashboard__grid {
+    grid-template-columns: minmax(260px, 0.72fr) minmax(560px, 1.28fr);
+    grid-template-rows: minmax(220px, auto) minmax(360px, 54vh) minmax(260px, auto) 220px minmax(160px, auto);
+    overflow: visible;
+  }
+
+  .asset-tree,
+  .selected-stream,
+  .stream-grid,
+  .ops-summary,
+  .telemetry-panel,
+  .audio-waveform,
+  .ai-panel {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .telemetry-panel {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .ops-summary {
+    grid-column: 1;
+    grid-row: 2 / 5;
+  }
+
+  .selected-stream {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .tactical-map {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .stream-grid,
+  .audio-waveform,
+  .ai-panel {
+    grid-column: 1 / -1;
+  }
+
+  .stream-grid {
+    grid-row: 3;
+    min-height: 260px;
+  }
+
+  .audio-waveform {
+    grid-row: 4;
+  }
+
+  .ai-panel {
+    grid-row: 5;
+  }
+
+  .ops-dashboard[data-layout-density="expanded"][data-layout-priority="map"] .ops-dashboard__grid {
+    grid-template-columns: minmax(0, 0.42fr) minmax(0, 1.58fr);
+  }
+
+  .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .ops-dashboard__grid {
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 0.45fr);
+  }
+
+  .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .selected-stream { display: block; grid-column: 1; grid-row: 1; }
+  .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .stream-grid {
+    grid-column: 1;
+    grid-row: 2;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .tactical-map { display: block; grid-column: 2; grid-row: 1 / 3; }
+  .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .telemetry-panel { grid-column: 1 / -1; grid-row: 3; }
+  .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .ops-summary { grid-column: 1 / -1; grid-row: 4; }
+  .ops-dashboard[data-layout-density="expanded"][data-layout-priority="stream"] .audio-waveform { grid-column: 1 / -1; grid-row: 5; }
+
+  .ops-dashboard[data-layout-density="overview"] .ops-dashboard__grid {
+    grid-template-columns: minmax(240px, 0.46fr) minmax(560px, 1.54fr);
+    grid-template-rows: minmax(180px, 0.42fr) minmax(220px, 0.58fr);
+    overflow: hidden;
+  }
+
+  .ops-dashboard[data-layout-density="overview"] .telemetry-panel { grid-column: 1; grid-row: 1 / 3; }
+  .ops-dashboard[data-layout-density="overview"] .ops-summary { grid-column: 1; grid-row: 1 / 3; }
+  .ops-dashboard[data-layout-density="overview"] .selected-stream { display: none; }
+  .ops-dashboard[data-layout-density="overview"] .tactical-map { grid-column: 2; grid-row: 1; }
+  .ops-dashboard[data-layout-density="overview"] .stream-grid {
+    grid-column: 2;
+    grid-row: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 0;
+  }
+
+  .ops-dashboard[data-layout-density="overview"][data-layout-priority="map"] .ops-dashboard__grid {
+    grid-template-rows: minmax(240px, 0.62fr) minmax(160px, 0.38fr);
+  }
+
+  .ops-dashboard[data-layout-density="overview"][data-layout-priority="stream"] .ops-dashboard__grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(380px, 0.76fr) minmax(150px, 0.24fr);
+  }
+
+  .ops-dashboard[data-layout-density="overview"][data-layout-priority="stream"] .telemetry-panel,
+  .ops-dashboard[data-layout-density="overview"][data-layout-priority="stream"] .ops-summary,
+  .ops-dashboard[data-layout-density="overview"][data-layout-priority="stream"] .tactical-map { display: none; }
+  .ops-dashboard[data-layout-density="overview"][data-layout-priority="stream"] .selected-stream {
+    display: block;
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .ops-dashboard[data-layout-density="overview"][data-layout-priority="stream"] .stream-grid {
+    grid-column: 1;
+    grid-row: 2;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-height: 860px) and (min-width: 1501px) {
+  .ops-dashboard__tabs {
+    min-height: 64px;
+    padding-top: 8px;
+  }
+
+  .ops-dashboard[data-layout-density="expanded"] .ops-dashboard__grid {
+    grid-template-rows: minmax(190px, 0.24fr) minmax(190px, 0.24fr) minmax(150px, 0.18fr) 210px;
+  }
+
+  .ops-dashboard[data-layout-density="expanded"] .stream-grid {
+    min-height: 300px;
+  }
+
+  .ops-dashboard[data-layout-density="expanded"] .audio-waveform__scope,
+  .ops-dashboard[data-layout-density="expanded"] .audio-waveform__body {
+    min-height: 0;
+  }
+}

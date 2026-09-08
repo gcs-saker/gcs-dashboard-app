@@ -1,0 +1,28 @@
+schemaVersion: gcs-saker.ai-overlay-assurance.v1
+role: advisory-only
+automation:
+  directDeviceCommand: prohibited
+  humanApprovalRequired: true
+binding:
+  clientGroupId: prohibited
+  required: [streamId, activeSessionId, serverResolvedGroupId, frameId, ptsMs, capturedAt]
+  currentStatus: BLOCKED_SERVER_BINDING_RESOLVER
+provenance:
+  required: [modelId, modelVersion, modelArtifactHash, datasetOrBuildId, inferenceConfigHash]
+  currentStatus: OPEN
+rendering:
+  staleResult: hide-overlay-keep-video
+  crossStreamResult: reject
+  unconfirmedAffiliation: UNKNOWN
+  confidenceVisible: true
+  currentStatus: OPEN
+security:
+  processorEndpoint: private-allowlist
+  timeoutRequired: true
+  responseSchemaValidation: true
+  malformedOrMismatchedResponse: reject
+qualification:
+  required: [frame-alignment, replay, cross-stream, stale-timeout, false-positive, false-negative, degraded-environment]
+  status: NOT_RUN
+linkedRendererIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/456
+

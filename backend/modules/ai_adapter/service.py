@@ -53,6 +53,8 @@ class AIAdapterService:
                     response = await client.post(endpoint, json=request)
             response.raise_for_status()
             result = AIEndpointResponse.model_validate(response.json())
+            if result.stream_id != stream_id or result.frame.stream_id != stream_id:
+                raise ValueError("AI processor response does not match the requested stream")
         except (httpx.HTTPError, ValueError) as exc:
             raise AIProcessorUnavailableError("AI processor request failed") from exc
 

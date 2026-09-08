@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { AuthProvider } from "@/features/auth/AuthProvider";
@@ -38,7 +38,7 @@ describe("ProvisioningTokenPanel", () => {
     expect(await screen.findByText("복사됨")).toBeInTheDocument();
 
     const postRequest = fetcher.mock.calls.find(([, init]) => init?.method === "POST");
-    expect(postRequest?.[0]).toBe("/auth-policy/admin/provisioning-tokens");
+    expect(postRequest?.[0]).toBe("/auth-policy/api/v1/provisioning-tokens");
     expect(JSON.parse(String(postRequest?.[1]?.body))).toEqual({
       groupId: "co-a",
       label: "현장 장비 등록",
@@ -66,7 +66,10 @@ function renderPanel(role: UserRole) {
   storeAuthSession({
     accessToken: "test-access-token",
     expiresAt: new Date(Date.now() + 60_000).toISOString(),
-    user: { role, username: `${role}-user` },
+    user: { role, username: `${role}-user`, groupId: "co-a", securityVersion: 1,
+      capabilities: { canView: true, canControl: role !== "viewer", canManage: role === "admin",
+        canSendTalkback: role !== "viewer", canPublish: role !== "viewer",
+        canManageMembers: role === "admin", canManageDevices: role === "admin" } },
   });
   render(
     <AuthProvider>

@@ -10,6 +10,9 @@ import {
   withAuth,
 } from "./authHeaders";
 import type { AuthenticatedUser, LoginRequest, SignupRequest, SignupResponse, TokenResponse } from "./types";
+import { authSessionStore } from "./authSessionStore";
+import { parseAuthenticatedUser, parseSignupResponse, parseTokenResponse } from "./authResponseValidation";
+import { authFetchWithTimeout } from "./authFetch";
 
 export {
   AUTH_ACCEPT_HEADERS,
@@ -21,10 +24,8 @@ export {
 } from "./authHeaders";
 export { AuthApiError } from "./authErrors";
 
-let refreshInFlight: Promise<TokenResponse> | null = null;
-
 export async function loginRequest(credentials: LoginRequest): Promise<TokenResponse> {
-  const response = await fetch(authUrl(AUTH_ROUTES.login), {
+  const response = await authFetchWithTimeout(fetch, authUrl(AUTH_ROUTES.login), {
     method: "POST",
     credentials: "include",
     headers: AUTH_JSON_HEADERS,
@@ -35,11 +36,11 @@ export async function loginRequest(credentials: LoginRequest): Promise<TokenResp
     throw new AuthApiError(response.status, await parseAuthError(response));
   }
 
-  return (await response.json()) as TokenResponse;
+  return parseTokenResponse(await response.json() as unknown);
 }
 
 export async function refreshSessionRequest(fetcher: typeof fetch = fetch): Promise<TokenResponse> {
-  const response = await fetcher(authUrl(AUTH_ROUTES.refresh), {
+  const response = await authFetchWithTimeout(fetcher, authUrl(AUTH_ROUTES.refresh), {
     method: "POST",
     credentials: "include",
     headers: AUTH_ACCEPT_HEADERS,
@@ -50,22 +51,25 @@ export async function refreshSessionRequest(fetcher: typeof fetch = fetch): Prom
     throw new AuthApiError(response.status, await parseAuthError(response));
   }
 
-  const token = (await response.json()) as TokenResponse;
+  const token = parseTokenResponse(await response.json() as unknown);
   persistTokenResponse(token);
   return token;
 }
 
 export async function logoutRequest(fetcher: typeof fetch = fetch): Promise<void> {
-  await fetcher(authUrl(AUTH_ROUTES.logout), {
-    method: "POST",
-    credentials: "include",
-    headers: buildAuthHeaders(AUTH_CSRF_HEADERS),
-  });
-  clearAuthSession();
+  try {
+    await authFetchWithTimeout(fetcher, authUrl(AUTH_ROUTES.logout), {
+      method: "POST",
+      credentials: "include",
+      headers: buildAuthHeaders(AUTH_CSRF_HEADERS),
+    });
+  } finally {
+    clearAuthSession();
+  }
 }
 
 export async function signupRequest(payload: SignupRequest): Promise<SignupResponse> {
-  const response = await fetch(authUrl(AUTH_ROUTES.signup), {
+  const response = await authFetchWithTimeout(fetch, authUrl(AUTH_ROUTES.signup), {
     method: "POST",
     credentials: "include",
     headers: AUTH_JSON_HEADERS,
@@ -76,11 +80,11 @@ export async function signupRequest(payload: SignupRequest): Promise<SignupRespo
     throw new AuthApiError(response.status, await parseAuthError(response));
   }
 
-  return (await response.json()) as SignupResponse;
+  return parseSignupResponse(await response.json() as unknown);
 }
 
 export async function fetchCurrentUser(accessToken: string): Promise<AuthenticatedUser> {
-  const response = await fetch(authUrl(AUTH_ROUTES.me), {
+  const response = await authFetchWithTimeout(fetch, authUrl(AUTH_ROUTES.me), {
     credentials: "include",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -89,7 +93,7 @@ export async function fetchCurrentUser(accessToken: string): Promise<Authenticat
     throw new AuthApiError(response.status, await parseAuthError(response));
   }
 
-  return (await response.json()) as AuthenticatedUser;
+  return parseAuthenticatedUser(await response.json() as unknown);
 }
 
 export async function authenticatedFetch(
@@ -97,28 +101,37 @@ export async function authenticatedFetch(
   init: RequestInit = {},
   fetcher: typeof fetch = fetch,
 ): Promise<Response> {
-  const firstResponse = await fetcher(input, withAuth(init));
+  const firstResponse = await authFetchWithTimeout(fetcher, input, withAuth(init));
   if (firstResponse.status !== 401) {
     return firstResponse;
   }
 
   await refreshSessionOnce(fetcher);
-  return fetcher(input, withAuth(init));
+  return authFetchWithTimeout(fetcher, input, withAuth(init));
 }
 
 export async function refreshSessionOnce(fetcher: typeof fetch = fetch): Promise<TokenResponse> {
-  if (!refreshInFlight) {
-    refreshInFlight = refreshSessionRequest(fetcher).finally(() => {
-      refreshInFlight = null;
-    });
-  }
-  return refreshInFlight;
+  const currentRefresh = authSessionStore.getState().refreshInFlight;
+  if (currentRefresh) return currentRefresh;
+  const refreshRequest = refreshSessionRequest(fetcher).finally(() => {
+    if (authSessionStore.getState().refreshInFlight === refreshRequest) {
+      authSessionStore.setState({ refreshInFlight: null });
+    }
+  });
+  authSessionStore.setState({ refreshInFlight: refreshRequest });
+  return refreshRequest;
 }
 
 export function persistTokenResponse(token: TokenResponse): void {
   storeAuthSession({
     accessToken: token.access_token,
     expiresAt: new Date(Date.now() + token.expires_in_minutes * 60_000).toISOString(),
-    user: { username: token.username, role: token.role },
+    user: {
+      username: token.username,
+      role: token.role,
+      groupId: token.group_id,
+      securityVersion: token.securityVersion,
+      capabilities: token.capabilities,
+    },
   });
 }

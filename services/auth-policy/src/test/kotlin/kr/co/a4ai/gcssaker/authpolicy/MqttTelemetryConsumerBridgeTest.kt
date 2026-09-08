@@ -2,6 +2,8 @@ package kr.co.a4ai.gcssaker.authpolicy
 
 import kr.co.a4ai.gcssaker.authpolicy.application.MqttTelemetryConsumerBridge
 import kr.co.a4ai.gcssaker.authpolicy.application.MqttAssetTopic
+import kr.co.a4ai.gcssaker.authpolicy.application.MqttIdentityResolver
+import kr.co.a4ai.gcssaker.authpolicy.application.MqttAuthenticatedIdentity
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalReadRepository
@@ -19,10 +21,13 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 class MqttTelemetryConsumerBridgeTest {
+    private fun authenticatedBridge(repository: InMemoryOperationalReadRepository) = MqttTelemetryConsumerBridge(
+        repository, identityResolver = MqttIdentityResolver { MqttAuthenticatedIdentity("raw.mobile.front", GroupId("co-a")) },
+    )
     @Test
     fun `spring bridge decodes protobuf telemetry and upserts read model`() {
         val repository = InMemoryOperationalReadRepository(telemetry = emptyList(), assetsByGateway = emptyMap())
-        val bridge = MqttTelemetryConsumerBridge(repository)
+        val bridge = authenticatedBridge(repository)
         val payload = telemetryPayload(assetId = "raw.mobile.front")
 
         val result = bridge.handle("gcs/a4ai/co-a/raw.mobile.front/telemetry", payload)
@@ -40,7 +45,7 @@ class MqttTelemetryConsumerBridgeTest {
     @Test
     fun `spring bridge ignores non telemetry mqtt channels`() {
         val repository = InMemoryOperationalReadRepository(telemetry = emptyList(), assetsByGateway = emptyMap())
-        val bridge = MqttTelemetryConsumerBridge(repository)
+        val bridge = authenticatedBridge(repository)
 
         val result = bridge.handle("gcs/a4ai/co-a/raw.mobile.front/status", telemetryPayload())
 
@@ -51,7 +56,7 @@ class MqttTelemetryConsumerBridgeTest {
     @Test
     fun `spring bridge rejects payload identity mismatch`() {
         val repository = InMemoryOperationalReadRepository(telemetry = emptyList(), assetsByGateway = emptyMap())
-        val bridge = MqttTelemetryConsumerBridge(repository)
+        val bridge = authenticatedBridge(repository)
 
         val error = assertThrows<IllegalArgumentException> {
             bridge.handle("gcs/a4ai/co-a/raw.other/telemetry", telemetryPayload(assetId = "raw.mobile.front"))

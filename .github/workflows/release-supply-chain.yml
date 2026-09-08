@@ -1,0 +1,153 @@
+name: Signed release supply chain
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: signed-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  verified-ci:
+    name: verify-source-ci
+    runs-on: ubuntu-latest
+    permissions:
+      checks: read
+      contents: read
+    steps:
+      - name: Require successful source checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          required=(backend-test frontend-build auth-policy-test media-control-test repository-contracts)
+          checks="$(gh api --paginate "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs?per_page=100")"
+          for name in "${required[@]}"; do
+            jq -e --arg name "$name" \
+              '[.check_runs[] | select(.name == $name and .conclusion == "success")] | length > 0' \
+              <<<"$checks" >/dev/null || {
+                echo "required successful check is missing: $name" >&2
+                exit 1
+              }
+          done
+
+  signed-images:
+    name: sign-${{ matrix.image }}
+    runs-on: ubuntu-latest
+    environment: military-release
+    needs: verified-ci
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: backend
+            context: backend
+            file: backend/Dockerfile
+            build_contexts: ""
+          - image: auth-policy
+            context: services/auth-policy
+            file: services/auth-policy/Dockerfile
+            build_contexts: contracts=contracts
+          - image: media-control
+            context: services/media-control
+            file: services/media-control/Dockerfile
+            build_contexts: ""
+          - image: dashboard
+            context: gcs-dashboard
+            file: gcs-dashboard/Dockerfile
+            build_contexts: ""
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Authenticate to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Define immutable image name
+        shell: bash
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/gcs-saker-${{ matrix.image }}" >> "$GITHUB_ENV"
+
+      - name: Build and push digest-addressable image
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          build-contexts: ${{ matrix.build_contexts }}
+          push: true
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          build-args: SOURCE_COMMIT=${{ github.sha }}
+          provenance: mode=max
+          sbom: false
+
+      - name: Generate SPDX SBOM for immutable image
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          image: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          output-file: ${{ runner.temp }}/${{ matrix.image }}.spdx.json
+          artifact-name: ${{ matrix.image }}-release-sbom.spdx.json
+
+      - name: Attest SLSA build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      - name: Attest SPDX SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          sbom-path: ${{ runner.temp }}/${{ matrix.image }}.spdx.json
+          push-to-registry: true
+
+      - name: Install verified Cosign release
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Sign immutable image with GitHub OIDC
+        shell: bash
+        run: |
+          cosign sign --yes \
+            --bundle "${RUNNER_TEMP}/${{ matrix.image }}.cosign.bundle.json" \
+            "${IMAGE}@${{ steps.build.outputs.digest }}"
+
+      - name: Verify signer identity and immutable digest
+        shell: bash
+        run: |
+          cosign verify \
+            --bundle "${RUNNER_TEMP}/${{ matrix.image }}.cosign.bundle.json" \
+            --certificate-identity-regexp '^https://github.com/gcs-saker/gcs-dashboard-app/.github/workflows/release-supply-chain.yml@refs/(tags|heads)/' \
+            --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+            "${IMAGE}@${{ steps.build.outputs.digest }}"
+
+      - name: Upload signed release evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.image }}-signed-release-evidence
+          if-no-files-found: error
+          retention-days: 90
+          path: |
+            ${{ runner.temp }}/${{ matrix.image }}.spdx.json
+            ${{ runner.temp }}/${{ matrix.image }}.cosign.bundle.json

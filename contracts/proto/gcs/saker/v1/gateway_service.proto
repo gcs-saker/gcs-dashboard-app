@@ -31,7 +31,9 @@ message CommandAck {
 
 message GatewayStreamRequest {
   string request_id = 1;
+  // Compatibility hints only. Device scope is resolved from authenticated server state.
   string org_id = 2;
+  // May be omitted; if supplied it must match the authenticated device group.
   string group_id = 3;
   string asset_id = 4;
 

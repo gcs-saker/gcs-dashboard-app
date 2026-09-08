@@ -1,5 +1,5 @@
-@use "./dashboard-status-shell";
-@use "./dashboard-status-state-alert";
-@use "./dashboard-status-service-cards";
-@use "./dashboard-status-rtt";
-@use "./dashboard-status-impact-runbook";
+@use "./status/dashboard-status-shell";
+@use "./status/dashboard-status-state-alert";
+@use "./status/dashboard-status-service-cards";
+@use "./status/dashboard-status-rtt";
+@use "./status/dashboard-status-impact-runbook";

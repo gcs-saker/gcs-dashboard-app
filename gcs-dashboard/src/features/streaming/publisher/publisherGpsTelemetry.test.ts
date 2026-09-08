@@ -32,6 +32,7 @@ describe("publisherGpsTelemetry", () => {
       }),
       "raw.local.front",
       12,
+      1_720_000_000_000,
     );
 
     expect(payload).toEqual({
@@ -41,6 +42,7 @@ describe("publisherGpsTelemetry", () => {
       altitude: 23.5,
       velocity: 7.2,
       epochTime: 12,
+      observedUnixMillis: 1_720_000_000_000,
     });
   });
 

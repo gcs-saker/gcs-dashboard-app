@@ -21,6 +21,9 @@ type runtimeConfig struct {
 	iceServers          []domain.IceServer
 	authMode            string
 	authPolicyBaseURL   string
+	deviceRPCTarget     string
+	deviceRPCToken      string
+	auditIngestToken    string
 	authzCacheTTL       time.Duration
 	streamCacheTTL      time.Duration
 	redisAddress        string
@@ -73,6 +76,9 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		iceServers:          loadIceServers(),
 		authMode:            getenv(runtimeEnv.authMode, authpolicy.AuthModeRequired),
 		authPolicyBaseURL:   getenv(runtimeEnv.authPolicyBaseURL, runtimeDefaults.authPolicyBaseURL),
+		deviceRPCTarget:     getenv("AUTH_POLICY_GRPC_TARGET", ""),
+		deviceRPCToken:      getenv("AUTH_POLICY_RPC_TOKEN", ""),
+		auditIngestToken:    getenv("AUTH_POLICY_AUDIT_INGEST_TOKEN", ""),
 		authzCacheTTL:       getenvDuration(runtimeEnv.authzCacheTTLSeconds, runtimeDefaults.authzCacheTTL),
 		streamCacheTTL:      getenvDuration(runtimeEnv.streamCacheTTLSeconds, runtimeDefaults.streamCacheTTL),
 		redisAddress:        getenv(runtimeEnv.redisAddress, runtimeDefaults.redisAddress),
@@ -96,14 +102,22 @@ func validateExpectedPublicOrigin(expected string, publicBaseURLs ...string) err
 		return nil
 	}
 	expectedURL, err := url.Parse(expected)
-	if err != nil || expectedURL.Scheme == "" || expectedURL.Host == "" || expectedURL.Path != "" || expectedURL.RawQuery != "" {
+	if err != nil || !isOriginURL(expectedURL) {
 		return fmt.Errorf("MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN must be an origin without path or query")
 	}
 	for _, raw := range publicBaseURLs {
 		parsed, parseErr := url.Parse(strings.TrimSpace(raw))
-		if parseErr != nil || parsed.Scheme != expectedURL.Scheme || !strings.EqualFold(parsed.Host, expectedURL.Host) {
+		if parseErr != nil || !hasOrigin(parsed, expectedURL) {
 			return fmt.Errorf("public media base URL origin does not match MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN")
 		}
 	}
 	return nil
+}
+
+func isOriginURL(candidate *url.URL) bool {
+	return candidate.Scheme != "" && candidate.Host != "" && candidate.Path == "" && candidate.RawQuery == ""
+}
+
+func hasOrigin(candidate *url.URL, expected *url.URL) bool {
+	return candidate.Scheme == expected.Scheme && strings.EqualFold(candidate.Host, expected.Host)
 }

@@ -33,7 +33,7 @@ BUILD_SERVICES=(backend auth-policy media-control dashboard)
 # replaced. Recreating it makes the host Caddy upstream (127.0.0.1:80)
 # disappear and turns every concurrent request into a 502. Edge configuration
 # changes use a separate, explicitly planned ingress rollout.
-UNCHANGED_SERVICES=(edge mobile-publisher postgres-geo redis mqtt mediamtx turn-primary turn-secondary)
+UNCHANGED_SERVICES=(edge mobile-publisher postgres-geo redis mqtt mediamtx turn-primary)
 
 [[ "${RELEASE_DIR}" = /* && -d "${RELEASE_DIR}" ]] || { echo "RELEASE_DIR must be an existing absolute directory" >&2; exit 2; }
 root_real="$(realpath "${ROOT}")"
@@ -70,6 +70,7 @@ python3 "${ROOT}/scripts/ops/release_gate.py" \
 
 previous_file="${RELEASE_DIR}/previous-images.env"
 stateful_file="${RELEASE_DIR}/stateful-containers.before.env"
+canonical_edge_config="${RELEASE_DIR}/edge-nginx.before.conf"
 : > "${previous_file}"
 : > "${stateful_file}"
 for service in "${STATELESS_SERVICES[@]}"; do
@@ -85,31 +86,193 @@ for service in "${UNCHANGED_SERVICES[@]}"; do
   printf '%s=%s\n' "${service}" "${container_id}" >> "${stateful_file}"
 done
 
+short_commit="${SOURCE_COMMIT:0:12}"
+green_auth="gcs-green-${short_commit}-auth"
+green_media="gcs-green-${short_commit}-media"
+green_backend="gcs-green-${short_commit}-backend"
+green_dashboard="gcs-green-${short_commit}-dashboard"
+green_containers=("${green_auth}" "${green_media}" "${green_backend}" "${green_dashboard}")
+edge_container="$(${previous_compose[@]} ps -q edge)"
+edge_config_source="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/etc/nginx/nginx.conf"}}{{.Source}}{{end}}{{end}}' "${edge_container}")"
+[[ "${edge_config_source}" = /* && -f "${edge_config_source}" ]] || {
+  echo "edge nginx bind source is unavailable" >&2
+  exit 2
+}
+docker cp "${edge_container}:/etc/nginx/nginx.conf" "${canonical_edge_config}"
+edge_uses_green=0
+official_replace_started=0
+deployment_complete=0
+probe_pid=""
+probe_stop_file="${RELEASE_DIR}/availability-probe.stop"
+probe_output="${RELEASE_DIR}/availability-probe.tsv"
+probe_address=""
+
+wait_container_healthy() {
+  local container="$1" status=""
+  for _ in $(seq 1 60); do
+    status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "${container}")"
+    [[ "${status}" == "healthy" ]] && return 0
+    [[ "${status}" == "unhealthy" || "${status}" == "exited" ]] && return 1
+    sleep 2
+  done
+  echo "container did not become healthy: ${container} (${status})" >&2
+  return 1
+}
+
+wait_official_services() {
+  local service container
+  for service in "${STATELESS_SERVICES[@]}"; do
+    container="$(${compose[@]} ps -q "${service}")"
+    [[ -n "${container}" ]] && wait_container_healthy "${container}" || return 1
+  done
+  local auth_container="$(${compose[@]} ps -q auth-policy)"
+  for _ in $(seq 1 30); do
+    docker exec "${auth_container}" wget -q -O- http://127.0.0.1:8080/readyz >/dev/null && return 0
+    sleep 1
+  done
+  echo "official auth-policy did not become ready" >&2
+  return 1
+}
+
+remove_green_containers() {
+  local container
+  for container in "${green_containers[@]}"; do
+    docker rm -f "${container}" >/dev/null 2>&1 || true
+  done
+}
+
+render_green_edge_config() {
+  local output="$1"
+  sed \
+    -e 's/set \$dashboard_host dashboard;/set \$dashboard_host '"${green_dashboard}"';/' \
+    -e 's/set \$backend_host backend;/set \$backend_host '"${green_backend}"';/' \
+    -e 's/set \$auth_policy_host auth-policy;/set \$auth_policy_host '"${green_auth}"';/' \
+    -e 's/set \$media_control_host media-control;/set \$media_control_host '"${green_media}"';/' \
+    -e "s/server media-control:9090;/server ${green_media}:9090;/" \
+    "${canonical_edge_config}" > "${output}"
+}
+
+reload_edge_config() {
+  local config="$1"
+  local master old_workers
+  master="$(docker exec "${edge_container}" sh -c 'cat /tmp/nginx.pid')"
+  old_workers="$(docker exec "${edge_container}" sh -c "cat /proc/${master}/task/${master}/children")"
+  cp "${config}" "${edge_config_source}"
+  docker exec "${edge_container}" nginx -t
+  docker exec "${edge_container}" nginx -s reload
+  wait_edge_workers_drained "${old_workers}"
+}
+
+wait_edge_workers_drained() {
+  local workers="$1" worker active
+  for _ in $(seq 1 150); do
+    active=0
+    for worker in ${workers}; do
+      docker exec "${edge_container}" sh -c "test ! -d /proc/${worker}" || active=1
+    done
+    (( active == 0 )) && return 0
+    sleep 0.2
+  done
+  echo "previous edge workers did not drain" >&2
+  return 1
+}
+
+start_availability_probe() {
+  [[ -n "${PUBLIC_TLS_HOST:-}" ]] || return 0
+  probe_address="$(getent ahostsv4 "${PUBLIC_TLS_HOST}" | awk 'NR == 1 { print $1 }')"
+  [[ -n "${probe_address}" ]] || { echo "public probe address did not resolve" >&2; return 1; }
+  rm -f "${probe_stop_file}"
+  : > "${probe_output}"
+  (
+    while [[ ! -e "${probe_stop_file}" ]]; do
+      health="$(curl -ksS --resolve "${PUBLIC_TLS_HOST}:${PUBLIC_TLS_PORT:-443}:${probe_address}" --max-time 2 -o /dev/null -w '%{http_code}' "https://${PUBLIC_TLS_HOST}:${PUBLIC_TLS_PORT:-443}/healthz" || true)"
+      ready="$(curl -ksS --resolve "${PUBLIC_TLS_HOST}:${PUBLIC_TLS_PORT:-443}:${probe_address}" --max-time 2 -o /dev/null -w '%{http_code}' "https://${PUBLIC_TLS_HOST}:${PUBLIC_TLS_PORT:-443}/readyz" || true)"
+      printf '%s\t%s\t%s\n' "$(date -u +%FT%T.%3NZ)" "${health}" "${ready}" >> "${probe_output}"
+      sleep 0.2
+    done
+  ) &
+  probe_pid="$!"
+}
+
+stop_availability_probe() {
+  [[ -n "${probe_pid}" ]] || return 0
+  : > "${probe_stop_file}"
+  wait "${probe_pid}" || true
+  probe_pid=""
+}
+
+assert_availability_probe() {
+  [[ -s "${probe_output}" ]] || return 0
+  awk -F '\t' '$2 != "200" || $3 != "200" { failed++ } END { exit failed > 0 }' "${probe_output}"
+}
+
+start_green_containers() {
+  "${compose[@]}" run -d --no-deps --name "${green_auth}" auth-policy >/dev/null
+  "${compose[@]}" run -d --no-deps --name "${green_media}" \
+    -e "AUTH_POLICY_BASE_URL=http://${green_auth}:8080" media-control >/dev/null
+  "${compose[@]}" run -d --no-deps --name "${green_backend}" \
+    -e "CONTROL_GRPC_TARGET=${green_media}:9090" backend >/dev/null
+  "${compose[@]}" run -d --no-deps --name "${green_dashboard}" dashboard >/dev/null
+  local container
+  for container in "${green_containers[@]}"; do
+    wait_container_healthy "${container}"
+    [[ "$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "${container}")" == "${SOURCE_COMMIT}" ]]
+  done
+}
+
 rollback() {
-  original_status=$?
-  trap - ERR
+  original_status="${1:-$?}"
+  trap - ERR EXIT
   set +e
-  echo "stateless deployment failed; restoring captured images with ${previous_compose_file}" >&2
-  while IFS='=' read -r service image_id; do
-    [[ -n "${service}" && -n "${image_id}" ]] || continue
-    docker tag "${image_id}" "gcs-saker-rollback:${service}"
-  done < "${previous_file}"
-  BACKEND_IMAGE=gcs-saker-rollback:backend \
-  AUTH_POLICY_IMAGE=gcs-saker-rollback:auth-policy \
-  MEDIA_CONTROL_IMAGE=gcs-saker-rollback:media-control \
-  DASHBOARD_IMAGE=gcs-saker-rollback:dashboard \
-    "${previous_compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"
-  rollback_status=$?
+  stop_availability_probe
+  rollback_status=0
+  if (( official_replace_started == 1 && edge_uses_green == 1 )); then
+    reload_edge_config "${green_edge_config}"
+  fi
+  if (( official_replace_started == 1 )); then
+    echo "stateless deployment failed; restoring captured images with ${previous_compose_file}" >&2
+    while IFS='=' read -r service image_id; do
+      [[ -n "${service}" && -n "${image_id}" ]] || continue
+      docker tag "${image_id}" "gcs-saker-rollback:${service}"
+    done < "${previous_file}"
+    BACKEND_IMAGE=gcs-saker-rollback:backend \
+    AUTH_POLICY_IMAGE=gcs-saker-rollback:auth-policy \
+    MEDIA_CONTROL_IMAGE=gcs-saker-rollback:media-control \
+    DASHBOARD_IMAGE=gcs-saker-rollback:dashboard \
+      "${previous_compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"
+    rollback_status=$?
+    wait_official_services
+  fi
+  if (( edge_uses_green == 1 )) || ! cmp -s "${canonical_edge_config}" "${edge_config_source}"; then
+    reload_edge_config "${canonical_edge_config}"
+  fi
+  remove_green_containers
   if (( rollback_status != 0 )); then
     echo "rollback failed; use previous Compose file: ${previous_compose_file}" >&2
   fi
   exit "${original_status}"
 }
 
+on_exit() {
+  local status=$?
+  (( deployment_complete == 1 )) && return
+  rollback "${status}"
+}
+
 "${compose[@]}" build "${BUILD_SERVICES[@]}"
 "${compose[@]}" images --format json > "${RELEASE_DIR}/deployment-images.json"
-trap rollback ERR
+trap on_exit EXIT
+start_availability_probe
+start_green_containers
+green_edge_config="${RELEASE_DIR}/edge-nginx.green.conf"
+render_green_edge_config "${green_edge_config}"
+reload_edge_config "${green_edge_config}"
+edge_uses_green=1
+"${compose[@]}" exec -T edge wget --timeout=10 --tries=1 -q -O- http://127.0.0.1:8080/readyz >/dev/null
+assert_availability_probe
+official_replace_started=1
 "${compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"
+wait_official_services
 for service in "${BUILD_SERVICES[@]}"; do
   container_id="$("${compose[@]}" ps -q "${service}")"
   actual_revision="$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "${container_id}")"
@@ -125,6 +288,12 @@ while IFS='=' read -r service previous_id; do
     exit 1
   }
 done < "${stateful_file}"
+reload_edge_config "${canonical_edge_config}"
+stop_availability_probe
+assert_availability_probe
+cmp -s "${canonical_edge_config}" "${edge_config_source}"
+edge_uses_green=0
+remove_green_containers
 "${compose[@]}" exec -T edge nginx -t
 # Verify through the deployed edge without assuming which host port each
 # environment publishes. Public TLS is terminated by the host reverse proxy;
@@ -148,5 +317,9 @@ ln -sfn "${ROOT}" "${runtime_root}/current"
   echo "failed to update active release pointer" >&2
   exit 1
 }
-trap - ERR
+deployment_complete=1
+trap - EXIT
+if [[ "${DOCKER_RETENTION_ENABLED:-1}" == "1" ]]; then
+  bash "${ROOT}/scripts/ops/prune_deployment_artifacts.sh"
+fi
 echo "stateless deployment completed; stateful and external-image services were not recreated"

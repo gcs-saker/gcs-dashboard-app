@@ -6,7 +6,7 @@ import { TalkbackAudioReceiver } from "./TalkbackAudioReceiver";
 
 const useWhepPlayback = vi.fn();
 
-vi.mock("../hooks/useWhepPlayback", () => ({
+vi.mock("@streaming/hooks/playback/useWhepPlayback", () => ({
   useWhepPlayback: (options: unknown) => useWhepPlayback(options),
 }));
 

@@ -1,19 +1,21 @@
 import { TalkbackControlPanel } from "@dashboard/components/TalkbackControlPanel";
 import type { AuthenticatedUser } from "@auth/types";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
-import type { DashboardView } from "@dashboard/userPreferences";
-import type { TalkbackPublisherSnapshot } from "@streaming/talkbackPublisherContracts";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
+import type { DashboardDensityMode, DashboardPriorityMode, DashboardView } from "@dashboard/preferences/userPreferences";
+import type { TalkbackPublisherSnapshot } from "@streaming/talkback/talkbackPublisherContracts";
+import { DashboardLayoutModeSelect } from "./DashboardLayoutModeSelect";
 
 export interface DashboardHeaderProps {
   activeView: DashboardView;
   currentUser: AuthenticatedUser | null;
+  dashboardDensityMode: DashboardDensityMode;
+  dashboardPriorityMode: DashboardPriorityMode;
   isAssetDrawerOpen: boolean;
-  layoutMessage: string;
   onChangeView: (view: DashboardView) => void;
   onLogout: () => void;
   onOpenAssetDrawer: () => void;
-  onOpenWidgetDialog: () => void;
-  onResetLayout: () => void;
+  onSetDashboardDensityMode: (mode: DashboardDensityMode) => void;
+  onSetDashboardPriorityMode: (mode: DashboardPriorityMode) => void;
   streams: DashboardStreamSlot[];
   selectedStreamId: string;
   talkbackTargetStreamIds: string[];
@@ -31,46 +33,36 @@ const DASHBOARD_TABS: readonly { id: DashboardView; label: string }[] = [
 export function DashboardHeader({
   activeView,
   currentUser,
+  dashboardDensityMode,
+  dashboardPriorityMode,
   isAssetDrawerOpen,
-  layoutMessage,
   onChangeView,
   onLogout,
   onOpenAssetDrawer,
-  onOpenWidgetDialog,
-  onResetLayout,
-  streams,
-  selectedStreamId,
+  onSetDashboardDensityMode,
+  onSetDashboardPriorityMode,
+  streams, selectedStreamId,
   talkbackTargetStreamIds,
   talkback,
 }: DashboardHeaderProps) {
   return (
     <header className="ops-dashboard__tabs" aria-label="주요 탭">
-      <nav className="ops-dashboard__tab-list">
-        {DASHBOARD_TABS.map((tab) => (
-          <button
-            className={`ops-tab ${activeView === tab.id ? "is-active" : ""}`}
-            key={tab.id}
-            onClick={() => onChangeView(tab.id)}
-            type="button"
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      <DashboardTabs activeView={activeView} currentUser={currentUser} onChangeView={onChangeView} />
       <div className="ops-dashboard__actions">
-        <div className="ops-dashboard__action-group">
-          <button
-            aria-controls="asset-tree-drawer"
-            aria-expanded={isAssetDrawerOpen}
-            className="ops-command-button asset-menu-button"
-            onClick={onOpenAssetDrawer}
-            type="button"
-          >
-            <span aria-hidden="true">☰</span>
-            자산
-          </button>
-          <span className="ops-layout-status" role="status">{layoutMessage}</span>
-        </div>
+        {activeView === "dashboard" ? <DashboardLayoutModeSelect densityMode={dashboardDensityMode}
+          onDensityChange={onSetDashboardDensityMode} onPriorityChange={onSetDashboardPriorityMode}
+          priorityMode={dashboardPriorityMode} /> : null}
+        <button
+          aria-controls="asset-tree-drawer"
+          aria-expanded={activeView === "dashboard" && isAssetDrawerOpen}
+          className="ops-command-button asset-menu-button"
+          onClick={onOpenAssetDrawer}
+          disabled={activeView !== "dashboard"}
+          type="button"
+        >
+          <span aria-hidden="true">☰</span>
+          자산
+        </button>
         <TalkbackControlPanel selectedStreamId={selectedStreamId} selectedStreamIds={talkbackTargetStreamIds} streams={streams} talkback={talkback} />
         <div className="ops-dashboard__action-group">
           <a
@@ -81,12 +73,6 @@ export function DashboardHeader({
           >
             스트림 화면
           </a>
-          <button aria-label="위젯 추가" className="ops-command-button" onClick={onOpenWidgetDialog} type="button">
-            레이아웃
-          </button>
-          <button className="ops-command-button" onClick={onResetLayout} type="button">
-            초기화
-          </button>
         </div>
         <details className="ops-user-menu">
           <summary>{currentUser ? currentUser.username : "미리보기"}</summary>
@@ -94,5 +80,24 @@ export function DashboardHeader({
         </details>
       </div>
     </header>
+  );
+}
+
+function DashboardTabs({ activeView, currentUser, onChangeView }:
+  Pick<DashboardHeaderProps, "activeView" | "currentUser" | "onChangeView">) {
+  const visibleTabs = currentUser?.role === "admin"
+    ? DASHBOARD_TABS
+    : DASHBOARD_TABS.filter((tab) => tab.id !== "events");
+  return (
+    <nav className="ops-dashboard__tab-list">
+      {visibleTabs.map((tab) => (
+        <button
+          className={`ops-tab ${activeView === tab.id ? "is-active" : ""}`}
+          key={tab.id}
+          onClick={() => onChangeView(tab.id)}
+          type="button"
+        >{tab.label}</button>
+      ))}
+    </nav>
   );
 }

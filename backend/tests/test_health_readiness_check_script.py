@@ -9,7 +9,7 @@ BACKEND_PYPROJECT = REPO_ROOT / "backend" / "pyproject.toml"
 BACKEND_PYTHON_VERSION = REPO_ROOT / "backend" / ".python-version"
 MEDIAMTX_CONFIG = REPO_ROOT / "gcs-dashboard" / "mediamtx.yml"
 EXPECTED_BACKEND_RUNTIME = (
-    "python:3.12.13-slim-bookworm@sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b"
+    "python:3.12.14-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254"
 )
 
 

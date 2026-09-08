@@ -1,7 +1,7 @@
 import { streamApiV1Url } from "@/config";
 import { STREAM_API_ROUTES } from "@/features/apiRoutes";
 import { authenticatedFetch } from "@auth/authApi";
-import { STREAM_JSON_ACCEPT_HEADERS } from "@streaming/streamingProtocolHeaders";
+import { STREAM_JSON_ACCEPT_HEADERS } from "@streaming/protocol/streamingProtocolHeaders";
 
 export interface AuthorizedPublishSession {
   iceServers: RTCIceServer[];
@@ -81,4 +81,12 @@ export async function fetchAuthorizedTalkbackPlayback(
     throw new Error("Talkback playback authorization response did not include a WHEP URL");
   }
   return whepUrl;
+}
+
+export async function notifyTalkbackStopped(streamId: string, fetcher: typeof fetch): Promise<void> {
+  await authenticatedFetch(
+    streamApiV1Url(`${STREAM_API_ROUTES.streams}/${streamId}/talkback-stop`),
+    { method: "POST", headers: STREAM_JSON_ACCEPT_HEADERS, keepalive: true },
+    fetcher,
+  );
 }

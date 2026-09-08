@@ -1,4 +1,4 @@
-import { serverHealthText, type DashboardServerStatusSnapshot } from "@dashboard/serverStatus";
+import { serverHealthText, type DashboardServerStatusSnapshot } from "@dashboard/operations/serverStatus";
 import { DASHBOARD_SERVER_HEALTH } from "@/features/stateContracts";
 
 interface SystemStatusPageHeroProps {

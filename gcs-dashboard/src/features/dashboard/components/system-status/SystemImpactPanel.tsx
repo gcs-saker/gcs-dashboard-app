@@ -1,5 +1,5 @@
-import { serverHealthText, type DashboardServerStatusSnapshot } from "@dashboard/serverStatus";
-import type { SystemImpactItem } from "@dashboard/systemStatusViewModel";
+import { serverHealthText, type DashboardServerStatusSnapshot } from "@dashboard/operations/serverStatus";
+import type { SystemImpactItem } from "@dashboard/operations/systemStatusViewModel";
 import { DASHBOARD_SERVER_HEALTH } from "@/features/stateContracts";
 
 interface SystemImpactPanelProps {

@@ -33,10 +33,9 @@ async def run_mock_ai_detection(
     if latency_ms:
         await asyncio.sleep(latency_ms / 1000)
 
-    with trace_ai_sidecar_call(stream_id=request.stream_id, schema_version=request.schema_version):
+    with trace_ai_sidecar_call(schema_version=request.schema_version):
         logger.info(
             "ai_detection_requested",
-            stream_id=request.stream_id,
             schema_version=request.schema_version,
             simulate_error=simulate_error,
         )

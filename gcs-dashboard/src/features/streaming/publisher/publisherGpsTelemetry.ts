@@ -5,12 +5,14 @@ export interface PublisherGpsTelemetryPayload {
   altitude: number;
   velocity: number;
   epochTime: number;
+  observedUnixMillis: number;
 }
 
 export function buildPublisherGpsTelemetryPayload(
   position: GeolocationPosition,
   streamId: string,
   elapsedSeconds: number,
+  observedUnixMillis = Date.now(),
 ): PublisherGpsTelemetryPayload {
   return {
     uuid: streamId,
@@ -19,5 +21,6 @@ export function buildPublisherGpsTelemetryPayload(
     altitude: position.coords.altitude ?? 0,
     velocity: position.coords.speed ?? 0,
     epochTime: elapsedSeconds,
+    observedUnixMillis,
   };
 }

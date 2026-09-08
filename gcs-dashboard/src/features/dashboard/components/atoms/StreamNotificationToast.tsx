@@ -1,4 +1,4 @@
-import type { StreamAvailabilityNotification } from "@dashboard/hooks/useStreamAvailabilityNotification";
+import type { StreamAvailabilityNotification } from "@dashboard/hooks/shared/useStreamAvailabilityNotification";
 
 export interface StreamNotificationToastProps {
   notification: StreamAvailabilityNotification;

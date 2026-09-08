@@ -1,6 +1,8 @@
 spring:
   application:
     name: gcs-saker-auth-policy
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   threads:
     virtual:
       enabled: true
@@ -9,6 +11,8 @@ spring:
     locations: classpath:db/migration,classpath:db/{vendor}-migration
     baseline-on-migrate: true
     baseline-version: 0
+  jpa:
+    open-in-view: false
 
 server:
   shutdown: graceful
@@ -33,3 +37,12 @@ management:
 logging:
   pattern:
     level: "%5p [traceId:%X{traceId:-},correlationId:%X{correlationId:-}]"
+
+gcs:
+  audit:
+    anchor:
+      enabled: ${AUTH_POLICY_AUDIT_ANCHOR_ENABLED:false}
+      directory: ${AUTH_POLICY_AUDIT_ANCHOR_DIRECTORY:/var/lib/gcs-audit-anchor}
+      hmac-key: ${AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY:}
+      source-commit: ${SOURCE_COMMIT:unknown}
+      interval-millis: ${AUTH_POLICY_AUDIT_ANCHOR_INTERVAL_MILLIS:300000}

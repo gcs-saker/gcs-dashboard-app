@@ -1,4 +1,4 @@
-export type UserRole = "viewer" | "operator" | "admin";
+export type UserRole = "viewer" | "operator" | "group_admin" | "admin";
 
 export interface LoginRequest {
   username: string;
@@ -26,9 +26,25 @@ export interface TokenResponse {
   expires_in_minutes: number;
   username: string;
   role: UserRole;
+  group_id: string;
+  securityVersion: number;
+  capabilities: AuthCapabilities;
+}
+
+export interface AuthCapabilities {
+  canView: boolean;
+  canControl: boolean;
+  canManage: boolean;
+  canSendTalkback: boolean;
+  canPublish: boolean;
+  canManageMembers: boolean;
+  canManageDevices: boolean;
 }
 
 export interface AuthenticatedUser {
   username: string;
   role: UserRole;
+  groupId: string;
+  securityVersion: number;
+  capabilities: AuthCapabilities;
 }

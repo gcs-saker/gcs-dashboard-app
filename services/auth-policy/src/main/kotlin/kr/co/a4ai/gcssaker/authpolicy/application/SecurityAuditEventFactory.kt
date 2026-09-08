@@ -4,9 +4,12 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventReadModel
 import java.time.Instant
+import org.slf4j.MDC
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuditClockEvidence
 
 class SecurityAuditEventFactory(
     private val nextSequence: () -> Long,
+    private val clockEvidence: () -> AuditClockEvidence = { AuditClockEvidence.unknown() },
 ) {
     fun loginSucceeded(principal: AuthenticatedPrincipal, occurredAt: Instant): OperationalEventReadModel =
         event(
@@ -54,6 +57,7 @@ class SecurityAuditEventFactory(
         allowed: Boolean,
         reason: String,
         occurredAt: Instant,
+        action: String = "view_stream",
     ): OperationalEventReadModel =
         event(
             principal = principal,
@@ -63,7 +67,8 @@ class SecurityAuditEventFactory(
             } else {
                 SecurityAuditEventContract.EVENT_TYPE_STREAM_ACCESS_DENIED
             },
-            message = SecurityAuditEventContract.streamAccessMessage(
+            message = "[action=${SecurityAuditEventContract.safeReason(action)}] " +
+                SecurityAuditEventContract.streamAccessMessage(
                 allowed = allowed,
                 streamId = streamId,
                 viewerGroupId = principal.groupId,
@@ -71,8 +76,25 @@ class SecurityAuditEventFactory(
                 reason = reason,
             ),
             severity = if (allowed) SecurityAuditEventContract.SEVERITY_INFO else SecurityAuditEventContract.SEVERITY_WARN,
-            streamId = streamId,
+            streamId = null,
         )
+
+    fun groupManagement(
+        principal: AuthenticatedPrincipal,
+        targetGroupId: GroupId,
+        action: String,
+        target: String,
+        clientIp: String,
+        occurredAt: Instant,
+    ): OperationalEventReadModel = event(
+        principal = principal,
+        occurredAt = occurredAt,
+        eventType = SecurityAuditEventContract.EVENT_TYPE_GROUP_MANAGEMENT,
+        message = "group management: ${SecurityAuditEventContract.safeReason(action)} " +
+            "[target=${SecurityAuditEventContract.maskUsername(target)}, ip=${SecurityAuditEventContract.safeClientIp(clientIp)}]",
+        severity = SecurityAuditEventContract.SEVERITY_INFO,
+        groupId = targetGroupId,
+    )
 
     private fun event(
         principal: AuthenticatedPrincipal,
@@ -81,8 +103,9 @@ class SecurityAuditEventFactory(
         message: String,
         severity: String,
         streamId: String? = null,
+        groupId: GroupId = principal.groupId,
     ): OperationalEventReadModel =
-        OperationalEventReadModel(
+        clockEvidence().let { clock -> OperationalEventReadModel(
             id = "${SecurityAuditEventContract.ID_PREFIX}${occurredAt.toEpochMilli()}-${nextSequence()}",
             occurredAt = occurredAt,
             severity = severity,
@@ -94,7 +117,27 @@ class SecurityAuditEventFactory(
             connections = SecurityAuditEventContract.NO_CONNECTIONS,
             latencyMs = SecurityAuditEventContract.NO_LATENCY_MS,
             throughputMbps = SecurityAuditEventContract.NO_THROUGHPUT_MBPS,
-            groupId = principal.groupId,
+            groupId = groupId,
             streamId = streamId,
-        )
+            traceId = MDC.get("traceId")?.take(64),
+            actorId = SecurityAuditEventContract.auditActor(principal),
+            operation = eventType,
+            result = auditResult(eventType),
+            errorCode = auditErrorCode(eventType),
+            clockStatus = clock.status.name,
+            receivedAt = occurredAt,
+            timeSource = clock.timeSource,
+            clockDriftMs = clock.clockDriftMs,
+            clockMeasuredAt = clock.measuredAt,
+        ) }
+
+    private fun auditResult(eventType: String): String =
+        if (eventType.endsWith("failed") || eventType.endsWith("denied")) {
+            SecurityAuditEventContract.RESULT_DENIED
+        } else {
+            SecurityAuditEventContract.RESULT_SUCCESS
+        }
+
+    private fun auditErrorCode(eventType: String): String =
+        if (eventType.endsWith("failed") || eventType.endsWith("denied")) eventType else SecurityAuditEventContract.ERROR_NONE
 }

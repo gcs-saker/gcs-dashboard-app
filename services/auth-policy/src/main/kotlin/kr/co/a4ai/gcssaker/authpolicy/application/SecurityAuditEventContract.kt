@@ -17,11 +17,15 @@ object SecurityAuditEventContract {
     const val EVENT_TYPE_REFRESH_FAILED = "auth.refresh.failed"
     const val EVENT_TYPE_STREAM_ACCESS_ALLOWED = "stream.access.allowed"
     const val EVENT_TYPE_STREAM_ACCESS_DENIED = "stream.access.denied"
+    const val EVENT_TYPE_GROUP_MANAGEMENT = "group.management"
     const val UNKNOWN_USERNAME = "unknown"
     const val UNKNOWN_GROUP_ID = "security"
     const val NO_CONNECTIONS = 0
     const val NO_LATENCY_MS = 0L
     const val NO_THROUGHPUT_MBPS = 0.0
+    const val RESULT_SUCCESS = "success"
+    const val RESULT_DENIED = "denied"
+    const val ERROR_NONE = "none"
 
     val UNKNOWN_PRINCIPAL = AuthenticatedPrincipal(UNKNOWN_USERNAME, UserRole.ADMIN, GroupId(UNKNOWN_GROUP_ID))
 
@@ -31,14 +35,15 @@ object SecurityAuditEventContract {
         return "${trimmed.first()}***${trimmed.last()}"
     }
 
-    fun maskStreamId(streamId: String): String =
-        streamId.take(96)
-
     fun maskGroupId(groupId: GroupId): String =
         groupId.value.take(64)
 
     fun safeReason(reason: String): String =
         reason.take(160)
+
+    fun safeClientIp(clientIp: String): String = clientIp.take(64)
+
+    fun auditActor(principal: AuthenticatedPrincipal): String = maskUsername(principal.username)
 
     fun streamAccessMessage(
         allowed: Boolean,
@@ -47,7 +52,10 @@ object SecurityAuditEventContract {
         publisherGroupId: GroupId,
         reason: String,
     ): String =
-        "스트림 접근 ${if (allowed) "허용" else "거부"}: ${maskStreamId(streamId)} " +
+        "스트림 접근 ${if (allowed) "허용" else "거부"}: ${privateStreamReference(streamId)} " +
             "[viewerGroup=${maskGroupId(viewerGroupId)}, publisherGroup=${maskGroupId(publisherGroupId)}] " +
             "(${safeReason(reason)})"
+
+    private fun privateStreamReference(streamId: String): String =
+        if (streamId.isBlank()) "stream=unknown" else "stream=redacted"
 }

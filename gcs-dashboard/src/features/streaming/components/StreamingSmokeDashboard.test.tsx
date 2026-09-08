@@ -4,6 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 import { StreamingSmokeDashboard } from "./StreamingSmokeDashboard";
 
 vi.mock("./RealtimePlayer", () => ({
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- Vitest requires this component inside its hoisted mock factory.
   RealtimePlayer: function MockRealtimePlayer({
     streamId,
     title,

@@ -37,9 +37,10 @@ intents:
         - postgres-geo
         - mediamtx
         - turn-primary
-        - turn-secondary
         - dashboard
         - edge
+      composeProfileServices:
+        turn-secondary: same-host-turn-redundancy
       evidencePaths:
         - deploy/compose/compose.single-node.poc.yml
         - docs/architecture/GCS-Saker_runtime_stack_status.yml
@@ -68,7 +69,7 @@ intents:
         - scripts/smoke/grpc_runtime_smoke.py
         - scripts/smoke/dragonfly_profile_smoke.py
         - scripts/smoke/postgis_runtime_smoke.py
-        - gcs-dashboard/src/features/streaming/webCodecsPipelinePlan.ts
+        - gcs-dashboard/src/features/streaming/runtime/webCodecsPipelinePlan.ts
 
   - id: ARCH-EDGE-001
     title: "외부 요청은 Nginx edge를 통해 의도한 서비스로 라우팅한다"
@@ -173,7 +174,7 @@ intents:
           text: "AuthorizeStream"
         - path: services/media-control/internal/domain/access.go
           text: "StreamListTarget"
-        - path: services/media-control/internal/httpapi/server_test.go
+        - path: services/media-control/internal/httpapi/dashboard_streams_test.go
           text: "TestDashboardStreamListRequiresAuthorizationBeforeQueryingRegistry"
         - path: services/media-control/internal/httpapi/server_test.go
           text: "TestIceServersRequiresAuthorizationBeforeReturningTurnCredentials"
@@ -193,11 +194,11 @@ intents:
     rationale: "스트리밍 시스템은 HTTP 200만으로 성공을 판단할 수 없다."
     assertions:
       requiredTexts:
-        - path: gcs-dashboard/src/features/streaming/hooks/whepPlaybackStateContract.ts
+        - path: gcs-dashboard/src/features/streaming/hooks/playback/whepPlaybackStateContract.ts
           text: "first-frame"
-        - path: gcs-dashboard/src/features/streaming/hooks/whepAudioStats.ts
+        - path: gcs-dashboard/src/features/streaming/hooks/audio/whepAudioStats.ts
           text: "selectedPair"
-        - path: gcs-dashboard/src/features/streaming/webrtcRuntimeEvidence.ts
+        - path: gcs-dashboard/src/features/streaming/runtime/webrtcRuntimeEvidence.ts
           text: "buildWebRTCRuntimeEvidence"
         - path: gcs-dashboard/src/features/streaming/components/WebRTCPlayer.tsx
           text: "data-first-frame-latency-ms"

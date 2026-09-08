@@ -112,7 +112,7 @@ class OperationalReadCacheTest {
         private val sessions = mutableListOf(streamSession())
         var streamReads = 0
 
-        override fun telemetryFor(principal: AuthenticatedPrincipal): List<TelemetryReadModel> = emptyList()
+        override fun telemetryFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<TelemetryReadModel> = emptyList()
 
         override fun upsertTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel = telemetry
 
@@ -122,7 +122,9 @@ class OperationalReadCacheTest {
             limit: Int,
         ): List<TelemetryHistoryReadModel> = emptyList()
 
-        override fun assetsForGateway(principal: AuthenticatedPrincipal, gatewayUuid: String): List<AssetReadModel> = emptyList()
+        override fun assetsForGateway(
+            principal: AuthenticatedPrincipal, gatewayUuid: String, limit: Int, offset: Int,
+        ): List<AssetReadModel> = emptyList()
 
         override fun recordServerHealthSnapshot(snapshot: ServerHealthSnapshotReadModel): ServerHealthSnapshotReadModel =
             snapshot
@@ -137,17 +139,18 @@ class OperationalReadCacheTest {
             return session
         }
 
-        override fun streamSessionsFor(principal: AuthenticatedPrincipal): List<StreamSessionReadModel> {
+        override fun streamSessionsFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<StreamSessionReadModel> {
             streamReads += 1
             return sessions
                 .groupBy { "${it.streamId}|${it.sessionId.orEmpty()}" }
                 .values
-                .map { entries -> entries.maxBy { it.lastHeartbeatAt } }
+                .map { entries -> entries.maxBy { it.lastHeartbeatAt } }.drop(offset).take(limit)
         }
     }
 
     private object FailingOperationalReadRepository : OperationalReadRepository {
-        override fun telemetryFor(principal: AuthenticatedPrincipal): List<TelemetryReadModel> = error("database unavailable")
+        override fun telemetryFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<TelemetryReadModel> =
+            error("database unavailable")
 
         override fun upsertTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel = error("database unavailable")
 
@@ -157,7 +160,9 @@ class OperationalReadCacheTest {
             limit: Int,
         ): List<TelemetryHistoryReadModel> = error("database unavailable")
 
-        override fun assetsForGateway(principal: AuthenticatedPrincipal, gatewayUuid: String): List<AssetReadModel> =
+        override fun assetsForGateway(
+            principal: AuthenticatedPrincipal, gatewayUuid: String, limit: Int, offset: Int,
+        ): List<AssetReadModel> =
             error("database unavailable")
 
         override fun recordServerHealthSnapshot(snapshot: ServerHealthSnapshotReadModel): ServerHealthSnapshotReadModel =
@@ -170,7 +175,7 @@ class OperationalReadCacheTest {
 
         override fun recordStreamSession(session: StreamSessionReadModel): StreamSessionReadModel = error("database unavailable")
 
-        override fun streamSessionsFor(principal: AuthenticatedPrincipal): List<StreamSessionReadModel> =
+        override fun streamSessionsFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<StreamSessionReadModel> =
             error("database unavailable")
     }
 

@@ -5,7 +5,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
 import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceLifecycleService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
-import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryRegisteredDeviceRepository
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.devices.InMemoryRegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceStatus
@@ -26,6 +26,7 @@ class AdminDeviceControllerTest {
         InMemoryAuthUserRepository(
             listOf(
                 authUser(AdminDeviceControllerFixtures.ADMIN_USERNAME, UserRole.ADMIN),
+                authUser(AdminDeviceControllerFixtures.GROUP_ADMIN_USERNAME, UserRole.GROUP_ADMIN),
                 authUser(AdminDeviceControllerFixtures.VIEWER_USERNAME, UserRole.VIEWER),
             ),
         ),
@@ -67,6 +68,36 @@ class AdminDeviceControllerTest {
             controller.register(
                 authorization = bearer(accessToken(AdminDeviceControllerFixtures.VIEWER_USERNAME)),
                 request = AdminDeviceControllerFixtures.registerRequest(),
+            )
+        }
+
+        assertEquals(HttpStatus.FORBIDDEN, error.statusCode)
+    }
+
+    @Test
+    fun `group admin manages devices only in exact group`() {
+        val authorization = bearer(accessToken(AdminDeviceControllerFixtures.GROUP_ADMIN_USERNAME))
+        val registered = controller.register(authorization, AdminDeviceControllerFixtures.registerRequest())
+
+        assertEquals(AdminDeviceControllerFixtures.GROUP_ID, registered.groupId)
+        assertEquals(listOf(registered.deviceUuid), controller.list(authorization).map { it.deviceUuid })
+
+        val error = assertThrows<ResponseStatusException> {
+            controller.update(
+                authorization,
+                registered.deviceUuid,
+                AdminDeviceControllerFixtures.updateRequest(),
+            )
+        }
+        assertEquals(HttpStatus.FORBIDDEN, error.statusCode)
+    }
+
+    @Test
+    fun `group admin cannot register a device in another group`() {
+        val error = assertThrows<ResponseStatusException> {
+            controller.register(
+                bearer(accessToken(AdminDeviceControllerFixtures.GROUP_ADMIN_USERNAME)),
+                AdminDeviceControllerFixtures.registerRequest().copy(groupId = AdminDeviceControllerFixtures.UPDATED_GROUP_ID),
             )
         }
 
@@ -147,6 +178,7 @@ class AdminDeviceControllerTest {
 
 private object AdminDeviceControllerFixtures {
     const val ADMIN_USERNAME = "admin-device"
+    const val GROUP_ADMIN_USERNAME = "group-admin-device"
     const val VIEWER_USERNAME = "viewer-device"
     const val PASSWORD = "pass"
     const val DEVICE_UUID = "00000000-0000-4000-8000-000000000002"

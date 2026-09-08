@@ -64,6 +64,28 @@ func TestCachedAuthorizerSeparatesStreams(t *testing.T) {
 	}
 }
 
+func TestCachedAuthorizerSeparatesAccessActions(t *testing.T) {
+	next := &countingAuthorizer{}
+	authorizer := NewCachedAuthorizer(next, time.Minute)
+	target := domain.StreamAccessTarget{
+		StreamID:         "raw.sample.front",
+		Path:             "raw/sample/front",
+		PublisherGroupID: "co-a",
+	}
+
+	if _, err := authorizer.AuthorizeStream(context.Background(), "Bearer viewer", target); err != nil {
+		t.Fatal(err)
+	}
+	target.Action = "send_talkback"
+	if _, err := authorizer.AuthorizeStream(context.Background(), "Bearer viewer", target); err != nil {
+		t.Fatal(err)
+	}
+
+	if next.calls != 2 {
+		t.Fatalf("expected separate policy calls per action, got %d", next.calls)
+	}
+}
+
 func TestCachedAuthorizerHonorsDecisionExpiresAt(t *testing.T) {
 	now := time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC)
 	expiresAt := now.Add(100 * time.Millisecond)

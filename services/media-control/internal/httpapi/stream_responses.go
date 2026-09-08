@@ -1,13 +1,14 @@
 package httpapi
 
 import (
+	"context"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessiontoken"
 )
 
 func (s Server) streamDescriptorResponse(stream domain.StreamDescriptor) (streamDescriptorResponse, error) {
@@ -22,19 +23,12 @@ func (s Server) streamDescriptorResponseFromParsed(
 	stream domain.StreamDescriptor,
 	parsed domain.ParsedStreamPath,
 ) streamDescriptorResponse {
-	playbackURLs := s.playback.Build(parsed)
-	playbackURLs = s.withPlaybackToken(playbackURLs, parsed)
 	return streamDescriptorResponse{
-		StreamID:     parsed.StreamID,
-		Path:         parsed.Path,
-		Prefix:       parsed.Prefix,
-		AssetID:      parsed.AssetID,
-		SensorID:     parsed.SensorID,
-		ProcessorID:  emptyAsNil(parsed.ProcessorID),
-		Date:         emptyAsNil(parsed.ArchiveDate),
-		Status:       stream.Status,
-		DisplayName:  emptyAsNil(displayName(stream, parsed)),
-		PlaybackURLs: playbackURLs,
+		StreamID:    parsed.StreamID,
+		AssetID:     parsed.AssetID,
+		SensorID:    parsed.SensorID,
+		Status:      stream.Status,
+		DisplayName: nil,
 	}
 }
 
@@ -43,23 +37,34 @@ func (s Server) streamPlaybackResponse(stream domain.StreamDescriptor) (streamPl
 	if err != nil {
 		return streamPlaybackResponse{}, err
 	}
-	return s.streamPlaybackResponseFromParsed(stream, parsed), nil
+	ctx, cancel := context.WithTimeout(context.Background(), sessionLookupTimeout)
+	defer cancel()
+	return s.streamPlaybackResponseFromParsed(ctx, stream, parsed)
 }
 
 func (s Server) streamPlaybackResponseFromParsed(
+	ctx context.Context,
 	stream domain.StreamDescriptor,
 	parsed domain.ParsedStreamPath,
-) streamPlaybackResponse {
-	descriptor := s.streamDescriptorResponseFromParsed(stream, parsed)
-	return streamPlaybackResponse{
-		StreamID:     descriptor.StreamID,
-		Status:       descriptor.Status,
-		PlaybackURLs: descriptor.PlaybackURLs,
+) (streamPlaybackResponse, error) {
+	target, err := s.resolveStreamTarget(ctx, parsed)
+	if err != nil {
+		return streamPlaybackResponse{}, err
 	}
+	playbackURLs := s.withPlaybackTokenForGroup(s.playback.Build(parsed), parsed, target.PublisherGroupID)
+	return streamPlaybackResponse{
+		StreamID:     parsed.StreamID,
+		Status:       stream.Status,
+		PlaybackURLs: playbackURLs,
+	}, nil
 }
 
-func (s Server) writeStreamPublishResponse(w http.ResponseWriter, parsed domain.ParsedStreamPath) {
-	target := s.groups.TargetFor(parsed)
+func (s Server) writeStreamPublishResponse(w http.ResponseWriter, r *http.Request, parsed domain.ParsedStreamPath) {
+	target, err := s.resolveStreamTarget(r.Context(), parsed)
+	if err != nil {
+		s.writeStreamAccessError(w, err)
+		return
+	}
 	s.writeStreamPublishResponseForGroup(w, parsed, target.PublisherGroupID)
 }
 
@@ -73,7 +78,7 @@ func (s Server) writeStreamPublishResponseForGroup(
 		return
 	}
 	playbackURLs := s.playback.Build(parsed)
-	token, err := issueMediaToken(
+	token, err := sessiontoken.Issue(
 		s.publishToken,
 		mediaMTXActionPublish,
 		parsed.StreamID,
@@ -106,19 +111,11 @@ func (s Server) iceServerResponses() []iceServerResponse {
 	return payload
 }
 
-func (s Server) withPlaybackToken(playbackURLs domain.PlaybackURLs, parsed domain.ParsedStreamPath) domain.PlaybackURLs {
-	if s.publishToken == "" {
-		return playbackURLs
-	}
-	target := s.groups.TargetFor(parsed)
-	return s.withPlaybackTokenForGroup(playbackURLs, parsed, target.PublisherGroupID)
-}
-
 func (s Server) withPlaybackTokenForGroup(playbackURLs domain.PlaybackURLs, parsed domain.ParsedStreamPath, publisherGroupID string) domain.PlaybackURLs {
 	if s.publishToken == "" {
 		return playbackURLs
 	}
-	token, err := issueMediaToken(
+	token, err := sessiontoken.Issue(
 		s.publishToken,
 		mediaMTXActionPlayback,
 		parsed.StreamID,
@@ -147,13 +144,6 @@ func appendQueryToken(rawURL string, key string, token string) string {
 	values.Set(key, token)
 	parsed.RawQuery = values.Encode()
 	return parsed.String()
-}
-
-func displayName(stream domain.StreamDescriptor, parsed domain.ParsedStreamPath) string {
-	if stream.Source == "" {
-		return parsed.StreamID
-	}
-	return parsed.StreamID + " (" + stream.Source + ", readers " + strconv.Itoa(stream.ReaderCount) + ")"
 }
 
 func emptyAsNil(value string) *string {

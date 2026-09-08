@@ -1,9 +1,17 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
-import { DEFAULT_DASHBOARD_STREAMS, type DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
+import { SAMPLE_DASHBOARD_STREAMS as DEFAULT_DASHBOARD_STREAMS } from "@dashboard/stories/dashboardSampleStreams";
 import { SelectedStreamPanel } from "./SelectedStreamPanel";
 import { StreamGrid } from "./StreamGrid";
+
+function BrokenCard(stream: DashboardStreamSlot) {
+  if (stream.id === "raw.sample.thermal") {
+    throw new Error("mock stream card failure");
+  }
+  return <button type="button">{stream.title}</button>;
+}
 
 describe("StreamGrid", () => {
   test("renders default stream slots offline until registry discovery", () => {
@@ -40,13 +48,6 @@ describe("StreamGrid", () => {
   test("contains a broken stream card without collapsing the grid", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    function BrokenCard(stream: DashboardStreamSlot) {
-      if (stream.id === "raw.sample.thermal") {
-        throw new Error("mock stream card failure");
-      }
-      return <button type="button">{stream.title}</button>;
-    }
-
     render(
       <StreamGrid
         onSelectStream={() => undefined}
@@ -70,6 +71,21 @@ describe("SelectedStreamPanel", () => {
     expect(screen.getByRole("heading", { name: "선택 스트림" })).toBeInTheDocument();
     expect(screen.getByText("스트리밍 3")).toBeInTheDocument();
     expect(screen.getByText("AI 감지 overlay")).toBeInTheDocument();
+  });
+
+  test("hides internal stream diagnostics in the selected stream header and overlay", () => {
+    render(
+      <SelectedStreamPanel
+        stream={{
+          ...DEFAULT_DASHBOARD_STREAMS[0],
+          status: "online",
+          detail: "raw.device.pub_secret (webRTCSession, readers 3)",
+        }}
+      />,
+    );
+
+    expect(screen.queryByText(/raw\.device|webRTCSession|readers 3/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText("스트리밍 1").length).toBeGreaterThan(0);
   });
 
   test("marks the stream card that is receiving audio", () => {
@@ -105,6 +121,6 @@ describe("SelectedStreamPanel", () => {
 
     expect(onToggleTalkbackTarget).toHaveBeenCalledWith("raw.sample.front");
     expect(onSelectStream).not.toHaveBeenCalled();
-    expect(screen.getAllByRole("button", { name: "음성 송신 대상" })[2]).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "송신 대상 선택됨" })).toHaveAttribute("aria-pressed", "true");
   });
 });

@@ -13,7 +13,7 @@ type envName string
 type runtimeEnvContract struct {
 	publicWebRTCBaseURL   envName
 	publicHLSBaseURL      envName
-	expectedPublicOrigin envName
+	expectedPublicOrigin  envName
 	defaultPublisherGroup envName
 	streamGroupMap        envName
 	publishToken          envName
@@ -47,7 +47,7 @@ type runtimeEnvContract struct {
 var runtimeEnv = runtimeEnvContract{
 	publicWebRTCBaseURL:   "MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL",
 	publicHLSBaseURL:      "MEDIA_CONTROL_PUBLIC_HLS_BASE_URL",
-	expectedPublicOrigin: "MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN",
+	expectedPublicOrigin:  "MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN",
 	defaultPublisherGroup: "MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID",
 	streamGroupMap:        "MEDIA_CONTROL_STREAM_GROUP_MAP",
 	publishToken:          "MEDIA_CONTROL_PUBLISH_TOKEN",
@@ -128,7 +128,7 @@ var runtimeDefaults = runtimeDefaultsContract{
 	turnPassword:          "replace-with-secret",
 	stunURL:               "stun:turn-primary:3478",
 	turnPrimaryURL:        "turn:turn-primary:3478",
-	turnSecondaryURL:      "turn:turn-secondary:3478",
+	turnSecondaryURL:      "",
 	authzCacheTTL:         2 * time.Second,
 	streamCacheTTL:        time.Second,
 	redisTimeout:          500 * time.Millisecond,

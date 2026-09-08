@@ -6,6 +6,9 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfig
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicLong
+import org.slf4j.MDC
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuditClockEvidence
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuditClockEvidenceProvider
 
 interface SettingsAuditPublisher {
     fun publishTimeSyncConfigChanged(
@@ -26,6 +29,7 @@ object NoopSettingsAuditPublisher : SettingsAuditPublisher {
 class RepositorySettingsAuditPublisher(
     private val repository: OperationalEventRepository,
     private val now: () -> Instant = Instant::now,
+    private val clockEvidence: AuditClockEvidenceProvider = AuditClockEvidenceProvider { AuditClockEvidence.unknown() },
 ) : SettingsAuditPublisher {
     private val sequence = AtomicLong()
 
@@ -34,6 +38,7 @@ class RepositorySettingsAuditPublisher(
         previous: TimeSyncConfig,
         next: TimeSyncConfig,
     ) {
+        val clock = clockEvidence.current()
         repository.append(
             OperationalEventReadModel(
                 id = "${SettingsAuditEventContract.TIME_SYNC_ID_PREFIX}${now().toEpochMilli()}-${sequence.incrementAndGet()}",
@@ -48,6 +53,16 @@ class RepositorySettingsAuditPublisher(
                 latencyMs = SettingsAuditEventContract.NO_LATENCY_MS,
                 throughputMbps = SettingsAuditEventContract.NO_THROUGHPUT_MBPS,
                 groupId = principal.groupId,
+                traceId = MDC.get("traceId")?.take(64),
+                actorId = SecurityAuditEventContract.auditActor(principal),
+                operation = SettingsAuditEventContract.EVENT_TYPE_TIME_SYNC_UPDATED,
+                result = SecurityAuditEventContract.RESULT_SUCCESS,
+                errorCode = SecurityAuditEventContract.ERROR_NONE,
+                clockStatus = clock.status.name,
+                receivedAt = now(),
+                timeSource = clock.timeSource,
+                clockDriftMs = clock.clockDriftMs,
+                clockMeasuredAt = clock.measuredAt,
             ),
         )
     }
@@ -65,5 +80,6 @@ object SettingsAuditEventContract {
     const val NO_THROUGHPUT_MBPS = 0.0
 
     fun timeSyncMessage(previous: TimeSyncConfig, next: TimeSyncConfig, username: String): String =
-        "시간 동기화 설정 변경: ${previous.mode.name.lowercase()} -> ${next.mode.name.lowercase()} by $username"
+        "시간 동기화 설정 변경: ${previous.mode.name.lowercase()} -> ${next.mode.name.lowercase()} " +
+            "by ${SecurityAuditEventContract.maskUsername(username)}"
 }

@@ -1,0 +1,29 @@
+name: gcs-mqtt-contract-test
+services:
+  redis:
+    image: redis:7.4-alpine
+    networks: [test-net]
+  mqtt:
+    image: eclipse-mosquitto:2.0.22
+    user: "1883:1883"
+    volumes:
+      - ../mqtt-test/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    networks: [test-net]
+  tests:
+    image: golang:1.26.6-alpine
+    working_dir: /workspace/services/media-control
+    volumes:
+      - ../..:/workspace
+      - go-mod:/go/pkg/mod
+      - go-build:/root/.cache/go-build
+    environment:
+      TEST_REDIS_ADDR: redis:6379
+      TEST_MQTT_URL: tcp://mqtt:1883
+    command: ["go", "test", "./...", "-count=1"]
+    depends_on: [redis, mqtt]
+    networks: [test-net]
+networks:
+  test-net: {}
+volumes:
+  go-mod: {}
+  go-build: {}

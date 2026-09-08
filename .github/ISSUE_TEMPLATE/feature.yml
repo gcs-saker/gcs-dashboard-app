@@ -1,8 +1,18 @@
 name: Feature request
 description: Plan a new product or platform capability
-title: "[Feature]: "
+title: "[P?][Area] "
 labels: ["type: feature"]
 body:
+  - type: markdown
+    attributes:
+      value: Describe the user or device outcome before proposing implementation details.
+  - type: textarea
+    id: problem
+    attributes:
+      label: User or operational need
+      description: Who needs this capability and what can they not achieve today?
+    validations:
+      required: true
   - type: textarea
     id: summary
     attributes:
@@ -22,6 +32,18 @@ body:
         - Documentation is updated if needed
     validations:
       required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Architecture and security boundaries
+      description: Identify the owning service, affected contracts, authorization boundary, and data that must remain server-owned.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and migration
+      description: Existing clients, APIs, protobuf, database, environment, or rollout considerations.
   - type: dropdown
     id: area
     attributes:

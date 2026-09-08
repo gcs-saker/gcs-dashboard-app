@@ -23,6 +23,7 @@ type StreamAccessTarget struct {
 	StreamID         string `json:"streamId"`
 	Path             string `json:"path"`
 	PublisherGroupID string `json:"publisherGroupId"`
+	Action           string `json:"action,omitempty"`
 }
 
 type StreamAccessDecision struct {

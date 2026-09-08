@@ -9,9 +9,10 @@ export const AUTH_ROUTES = Object.freeze({
 export const BACKEND_ROOT_ROUTES = Object.freeze({
   healthz: "/healthz",
   readyz: "/readyz",
-  adminDevices: "/auth-policy/admin/devices",
-  provisioningTokens: "/auth-policy/admin/provisioning-tokens",
-  signupTokens: "/auth-policy/admin/signup-tokens",
+  adminDevices: "/auth-policy/api/v1/devices",
+  groups: "/auth-policy/api/v1/groups",
+  provisioningTokens: "/auth-policy/api/v1/provisioning-tokens",
+  signupTokens: "/auth-policy/api/v1/signup-tokens",
   mediaControlHealthz: "/media-control/healthz",
   mediaControlReadyz: "/media-control/readyz",
   streamStatus: "/stream/status",

@@ -2,22 +2,18 @@ package httpapi
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 )
 
 type streamDescriptorResponse struct {
-	StreamID     string              `json:"streamId"`
-	Path         string              `json:"path"`
-	Prefix       string              `json:"prefix"`
-	AssetID      string              `json:"assetId"`
-	SensorID     string              `json:"sensorId"`
-	ProcessorID  *string             `json:"processorId"`
-	Date         *string             `json:"date"`
-	Status       domain.StreamStatus `json:"status"`
-	DisplayName  *string             `json:"displayName"`
-	PlaybackURLs domain.PlaybackURLs `json:"playbackUrls"`
+	StreamID    string              `json:"streamId"`
+	AssetID     string              `json:"assetId"`
+	SensorID    string              `json:"sensorId"`
+	Status      domain.StreamStatus `json:"status"`
+	DisplayName *string             `json:"displayName"`
 }
 
 type streamPlaybackResponse struct {
@@ -35,10 +31,6 @@ type streamPublishResponse struct {
 	StreamID   string              `json:"streamId"`
 	WhipURL    string              `json:"whipUrl"`
 	IceServers []iceServerResponse `json:"iceServers"`
-}
-
-type streamListResponse struct {
-	Streams []domain.StreamDescriptor `json:"streams"`
 }
 
 type legacyStreamStatusResponse struct {
@@ -116,7 +108,9 @@ func (w *statusRecordingWriter) WriteHeader(status int) {
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set(contentTypeHeader, jsonContentType)
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		slog.Error("http_response_encode_failed", "errorCode", "json_encode_failed")
+	}
 }
 
 func errorPayload(detail string) map[string]string {

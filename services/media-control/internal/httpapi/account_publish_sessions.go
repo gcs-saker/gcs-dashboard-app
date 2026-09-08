@@ -15,25 +15,10 @@ func (s Server) accountPublishSessions(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
 		return
 	}
-	if r.URL.Path == routeAccountPublishSessions {
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		s.createAccountPublishSession(w, r)
-		return
-	}
-	trimmed := strings.TrimPrefix(r.URL.Path, routeAccountPublishSessionPrefix)
-	parts := strings.Split(strings.Trim(trimmed, "/"), "/")
-	if len(parts) == 2 && parts[1] == "renew" && r.Method == http.MethodPost {
-		s.renewDevicePublishSession(w, r, parts[0])
-		return
-	}
-	if len(parts) == 1 && r.Method == http.MethodDelete {
-		s.endDevicePublishSession(w, r, parts[0])
-		return
-	}
-	http.NotFound(w, r)
+	s.routePublishSessionRequest(w, r, publishSessionRoutes{
+		collection: routeAccountPublishSessions,
+		prefix:     routeAccountPublishSessionPrefix,
+	}, s.createAccountPublishSession)
 }
 
 func (s Server) createAccountPublishSession(w http.ResponseWriter, r *http.Request) {

@@ -27,6 +27,7 @@ READ_SQL = (
     / "authpolicy"
     / "infrastructure"
     / "persistence"
+    / "operations"
     / "JdbcOperationalReadSql.kt"
 )
 

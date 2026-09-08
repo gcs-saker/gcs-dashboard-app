@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { SystemStatusRow } from "@dashboard/systemStatusViewModel";
+import type { SystemStatusRow } from "@dashboard/operations/systemStatusViewModel";
 
 interface SystemStatusPrimaryPanelProps {
   checkedText: string;

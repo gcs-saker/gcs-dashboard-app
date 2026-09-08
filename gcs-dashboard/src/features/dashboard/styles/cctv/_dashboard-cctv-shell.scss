@@ -1,0 +1,65 @@
+.ops-dashboard__placeholder-view,
+.event-log-view,
+.server-status-view {
+  border: 1px solid var(--line);
+  min-height: calc(100vh - 118px);
+  padding: 10px;
+}
+
+.cctv-view {
+  background: rgba(3, 10, 15, 0.72);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  width: 100%;
+}
+
+.cctv-view__header {
+  align-items: center;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  display: flex;
+  gap: 12px;
+  grid-column: 1;
+  grid-row: 1;
+  justify-content: space-between;
+  min-height: 54px;
+  padding: 0 14px;
+}
+
+.cctv-view__header h2 {
+  color: #dce8f2;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.cctv-view__header span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.cctv-view__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.cctv-view__controls button {
+  background: rgba(5, 13, 17, 0.74);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 900;
+  min-height: 28px;
+  padding: 0 10px;
+}
+
+.cctv-view__controls button.is-active {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}

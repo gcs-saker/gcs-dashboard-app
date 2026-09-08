@@ -1,0 +1,6 @@
+coverage.out
+*.test
+*.prof
+.idea/
+.vscode/
+.git/

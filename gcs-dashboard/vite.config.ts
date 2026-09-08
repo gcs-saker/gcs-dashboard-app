@@ -14,7 +14,7 @@ const sourcePath = (relativePath: string): string => {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "");
-  const devProxyTarget = env.VITE_DEV_PROXY_TARGET || "https://a4ai.tplinkdns.com";
+  const devProxyTarget = env.VITE_DEV_PROXY_TARGET || "https://a4ai.121-159-26-245.sslip.io";
 
   return {
     plugins: [react()],
@@ -83,7 +83,13 @@ export default defineConfig(({ mode }) => {
         provider: "istanbul",
         reporter: ["text", "text-summary"],
         include: ["src/**/*.{ts,tsx}"],
-        exclude: ["src/index.tsx", "src/setupTests.ts"]
+        exclude: ["src/index.tsx", "src/setupTests.ts", "src/**/*.stories.tsx"],
+        thresholds: {
+          statements: 88,
+          branches: 78,
+          functions: 88,
+          lines: 90
+        }
       }
     }
   };

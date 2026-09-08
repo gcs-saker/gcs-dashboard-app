@@ -5,7 +5,7 @@ import {
   RTT_CHART_WIDTH,
   type RttChart,
   type RttStats,
-} from "@dashboard/systemStatusRtt";
+} from "@dashboard/operations/systemStatusRtt";
 
 interface SystemRttPanelProps {
   latestRttText: string;

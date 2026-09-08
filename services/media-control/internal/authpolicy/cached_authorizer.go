@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"io"
 	"sync"
 	"time"
 
@@ -44,6 +45,13 @@ type CachedAuthorizer struct {
 }
 
 const defaultAuthorizationCacheMaxEntries = 4096
+
+func (c *CachedAuthorizer) Close() error {
+	if closer, ok := c.next.(io.Closer); ok {
+		return closer.Close()
+	}
+	return nil
+}
 
 type cachedDecision struct {
 	decision  domain.StreamAccessDecision
@@ -147,6 +155,6 @@ func (c *CachedAuthorizer) AuthorizeAccountPublish(
 }
 
 func cacheKey(authorization string, target domain.StreamAccessTarget) string {
-	sum := sha256.Sum256([]byte(authorization + "\x00" + target.StreamID + "\x00" + target.Path + "\x00" + target.PublisherGroupID))
+	sum := sha256.Sum256([]byte(authorization + "\x00" + target.StreamID + "\x00" + target.Path + "\x00" + target.PublisherGroupID + "\x00" + target.Action))
 	return hex.EncodeToString(sum[:])
 }

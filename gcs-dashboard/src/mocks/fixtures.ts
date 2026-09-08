@@ -1,5 +1,5 @@
-import type { OperationalEvent, OperationalEventMetrics, OperationalEventTimeBucket } from "@/features/dashboard/operationalEvents";
-import type { StreamRegistryResponse, TelemetryReadResponse } from "@/features/dashboard/streamDevices";
+import type { OperationalEvent, OperationalEventMetrics, OperationalEventTimeBucket } from "@dashboard/operations/operationalEvents";
+import type { StreamRegistryResponse, TelemetryReadResponse } from "@dashboard/assets/streamDevices";
 import type { TokenResponse } from "@/features/auth/types";
 import type { DashboardMapConfig } from "@/config";
 
@@ -9,6 +9,12 @@ export const MOCK_OPERATOR_TOKEN: TokenResponse = Object.freeze({
   expires_in_minutes: 30,
   username: "operator01",
   role: "operator",
+  group_id: "co-a",
+  securityVersion: 1,
+  capabilities: {
+    canView: true, canControl: true, canManage: false, canSendTalkback: true,
+    canPublish: true, canManageMembers: false, canManageDevices: false,
+  },
 });
 
 export const MOCK_STREAM_REGISTRY: readonly StreamRegistryResponse[] = Object.freeze([

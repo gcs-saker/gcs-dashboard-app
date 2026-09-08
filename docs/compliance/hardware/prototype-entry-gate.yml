@@ -1,0 +1,31 @@
+schemaVersion: gcs-saker.hardware-entry-gate.v1
+currentPhase: SOFTWARE_ONLY
+allowedCurrentStatus: PLANNED_HARDWARE
+activationInputs:
+  - representative enclosure and thermal design
+  - production-equivalent compute, storage, and network interfaces
+  - power source and protection design
+  - cable, connector, grounding, and shielding configuration
+  - designated microphone, headset, speaker, and field peripherals
+  - operational climate, altitude, transport, vibration, shock, dust, rain, and salt environment
+  - maintenance, storage, transport, and service-life profile
+requirements:
+  - id: MR-HW-ENV-001
+    standard: MIL-STD-810H Change 1
+    status: PLANNED_HARDWARE
+    selectionRule: Tailor methods and severities from the documented lifecycle environment; never claim blanket 810H certification.
+    prerequisites: [environmental lifecycle profile, representative articles, calibrated laboratory, test procedure approval]
+  - id: MR-HW-EMC-001
+    standard: MIL-STD-461G
+    status: PLANNED_HARDWARE
+    selectionRule: Select emission and susceptibility tests after enclosure, ports, cables, grounding, and power are frozen.
+    prerequisites: [interface control document, cable and port matrix, grounding diagram, representative articles, accredited laboratory]
+futureProfiles:
+  airbornePower: activate applicable MIL-STD-704 profile only when aircraft power integration is selected
+  vehiclePower: activate applicable MIL-STD-1275 profile only when military vehicle power integration is selected
+  reliability: use MIL-HDBK-338 methods when hardware architecture and mission reliability targets exist
+testPlanningTemplate:
+  requiredFields: [standardRevision, tailoredMethods, rationale, articleConfiguration, quantity, laboratory, calibration, preconditioning, procedure, acceptanceCriteria, rawData, anomalies, disposition, sourceCommit]
+  verdicts: [PASS, FAIL, BLOCKED, NOT_RUN, NOT_APPLICABLE]
+  costScheduleFields: [articleCost, laboratoryCost, fixtureCost, engineeringDays, leadTimeDays, retestReserve]
+

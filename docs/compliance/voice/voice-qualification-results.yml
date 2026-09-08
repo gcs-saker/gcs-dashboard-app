@@ -1,0 +1,25 @@
+schemaVersion: gcs-saker.voice-qualification.v1
+requirementId: MR-VOICE-001
+overallStatus: BLOCKED
+reason: Representative audio hardware, calibrated acoustic environment, Korean MRT material, and listener panel are unavailable.
+softwareChecks:
+  - id: VOICE-SW-CAPTURE-POLICY
+    status: PASS
+    evidence: gcs-dashboard/src/features/streaming/talkback/talkbackAudioPolicy.test.ts
+  - id: VOICE-SW-OPUS-POLICY
+    status: PASS
+    evidence: gcs-dashboard/src/features/streaming/talkback/talkbackAudioPolicy.test.ts
+  - id: VOICE-SW-AUTHORIZED-ROUTING
+    status: PASS
+    evidence: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/StreamPolicyControllerTest.kt
+qualificationMatrix:
+  paths: [direct, stun-direct, turn-relay]
+  packetLossPercent: [0, 1, 3, 5]
+  jitterMs: [20, 50, 100]
+  roundTripTimeMs: [50, 150, 300, 600]
+  status: NOT_RUN
+humanIntelligibility:
+  methods: [MRT, STI]
+  status: BLOCKED
+  missing: [representative microphone, designated headset, calibrated noise environment, Korean test material, listener panel]
+

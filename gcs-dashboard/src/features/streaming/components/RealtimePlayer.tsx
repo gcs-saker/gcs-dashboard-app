@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 
-import { useRealtimePlayback } from "@streaming/hooks/useRealtimePlayback";
-import type { RealtimePlayerProps } from "@streaming/types";
+import { useRealtimePlayback } from "@streaming/hooks/playback/useRealtimePlayback";
+import type { RealtimePlayerProps, RealtimePlayerSnapshot, WebRTCPlaybackSnapshot } from "@streaming/types";
 import {
   describeWebRTCFailure,
   isRecoverableWebRTCFailure,
   shouldSkipWebRTCRetryAfterRelayFailure,
-} from "@streaming/streamReconnectPolicy";
-import { buildWebRTCRuntimeEvidence } from "@streaming/webrtcRuntimeEvidence";
+} from "@streaming/runtime/streamReconnectPolicy";
+import { buildWebRTCRuntimeEvidence } from "@streaming/runtime/webrtcRuntimeEvidence";
 import { HLSFallbackPlayer } from "./HLSFallbackPlayer";
 import "./RealtimePlayer.css";
 import { RealtimePlayerPlaceholder } from "./realtime/RealtimePlayerPlaceholder";
@@ -19,6 +19,7 @@ export function RealtimePlayer({
   className,
   muted = false,
   controls = true,
+  showDiagnostics = false,
   fetcher,
   reconnectDelaysMs,
   playbackReadyRetryDelaysMs,
@@ -30,8 +31,6 @@ export function RealtimePlayer({
     streamStatus,
     errorMessage,
     playback: playbackResponse,
-    fallbackReason,
-    reconnectDelayMs,
     webrtcRetryAttempt,
   } = playback;
   const playbackUrls = playbackResponse?.playbackUrls;
@@ -46,70 +45,44 @@ export function RealtimePlayer({
     });
   }, [errorMessage, mode, onStatusChange, streamStatus, webrtcRetryAttempt]);
 
+  return <RealtimePlayerContent {...{ className, controls, isOnline, muted, onStatusChange, playback,
+    playbackUrls, showDiagnostics, streamId, title }} />;
+}
+
+interface RealtimePlayerContentProps {
+  className?: string;
+  controls: boolean;
+  isOnline: boolean;
+  muted: boolean;
+  onStatusChange?: (snapshot: RealtimePlayerSnapshot) => void;
+  playback: ReturnType<typeof useRealtimePlayback>;
+  playbackUrls: NonNullable<ReturnType<typeof useRealtimePlayback>["playback"]>["playbackUrls"] | undefined;
+  showDiagnostics: boolean;
+  streamId: string;
+  title: string;
+}
+
+function RealtimePlayerContent(props: RealtimePlayerContentProps) {
+  const { playback } = props;
+  const { errorMessage, fallbackReason, mode, reconnectDelayMs, streamStatus, webrtcRetryAttempt } = playback;
   return (
-    <section className={["realtime-player", className].filter(Boolean).join(" ")} aria-label={title}>
-      <header className="realtime-player__header">
+    <section className={["realtime-player", props.className].filter(Boolean).join(" ")} aria-label={props.title}>
+      {props.showDiagnostics ? <header className="realtime-player__header">
         <span className={`realtime-player__badge realtime-player__badge--${streamStatus}`}>
           {streamStatus}
         </span>
         <span className="realtime-player__latency">저지연</span>
-        <span className="realtime-player__stream">{streamId}</span>
         <span className="realtime-player__mode">mode: {mode}</span>
-      </header>
+      </header> : null}
 
       {mode === "loading" ? <RealtimePlayerPlaceholder mode="loading" /> : null}
 
       {mode === "webrtc" ? (
         <WebRTCPlayer
-          key={`${streamId}-${webrtcRetryAttempt}`}
-          whepUrl={playbackUrls?.webrtc ?? null}
-          streamId={streamId}
-          title={`${title} WebRTC`}
-          isOnline={isOnline}
-          muted={muted}
-          controls={controls}
-          onStatusChange={(snapshot) => {
-            const evidence = buildWebRTCRuntimeEvidence(snapshot);
-            onStatusChange?.({
-              mode,
-              streamStatus,
-              errorMessage,
-              webrtcRetryAttempt,
-              webrtcIcePath: evidence.icePath,
-              webrtcSignalingComplete: evidence.signalingComplete,
-              hasAudioTrack: snapshot.hasAudioTrack,
-              isAudioActive: snapshot.isAudioActive,
-              audioPlaybackState: snapshot.audioPlaybackState,
-              audioDiagnosticMessage: snapshot.audioDiagnosticMessage,
-              audioLevel: snapshot.audioStats.audioLevel,
-              webrtcFirstFrameLatencyMs: snapshot.firstFrameLatencyMs,
-              webrtcWhepResponseMs: snapshot.signalingTimings.whepResponseMs,
-              audioJitterMs: snapshot.audioStats.jitterMs,
-              audioPacketsLost: snapshot.audioStats.packetsLost,
-              iceRoundTripTimeMs: snapshot.audioStats.roundTripTimeMs,
-              localCandidateType: snapshot.audioStats.localCandidateType,
-              remoteCandidateType: snapshot.audioStats.remoteCandidateType,
-              iceTransportProtocol: snapshot.audioStats.transportProtocol,
-              relayFallbackReason: snapshot.audioStats.relayFallbackReason,
-              iceCandidateTotal: snapshot.iceCandidateStats?.total,
-              iceCandidateRelay: snapshot.iceCandidateStats?.relay,
-              iceCandidateSrflx: snapshot.iceCandidateStats?.srflx,
-            });
-
-            if (snapshot.status === "playing") {
-              playback.useWebRTC();
-              return;
-            }
-
-            if (isRecoverableWebRTCFailure(snapshot)) {
-              const reason = describeWebRTCFailure(snapshot);
-              if (shouldSkipWebRTCRetryAfterRelayFailure(snapshot)) {
-                playback.useHLSFallback(reason);
-                return;
-              }
-              playback.scheduleWebRTCRetry(reason);
-            }
-          }}
+          key={`${props.streamId}-${webrtcRetryAttempt}`} whepUrl={props.playbackUrls?.webrtc ?? null}
+          streamId={props.streamId} title={`${props.title} WebRTC`} isOnline={props.isOnline}
+          muted={props.muted} controls={props.controls} showDiagnostics={props.showDiagnostics}
+          onStatusChange={(snapshot) => handleWebRTCStatus(playback, snapshot, props.onStatusChange)}
         />
       ) : null}
 
@@ -117,13 +90,14 @@ export function RealtimePlayer({
 
       {mode === "hls" ? (
         <HLSFallbackPlayer
-          hlsUrl={playbackUrls?.hls ?? null}
-          streamId={streamId}
-          title={`${title} HLS fallback`}
+          hlsUrl={props.playbackUrls?.hls ?? null}
+          streamId={props.streamId}
+          title={`${props.title} HLS fallback`}
           fallbackReason={fallbackReason}
           latencyMode="stable"
-          muted={muted}
-          controls={controls}
+          muted={props.muted}
+          controls={props.controls}
+          showDiagnostics={props.showDiagnostics}
         />
       ) : null}
 
@@ -132,6 +106,31 @@ export function RealtimePlayer({
       {mode === "error" ? <RealtimePlayerPlaceholder errorMessage={errorMessage} mode="error" /> : null}
     </section>
   );
+}
+
+function handleWebRTCStatus(
+  playback: ReturnType<typeof useRealtimePlayback>,
+  snapshot: WebRTCPlaybackSnapshot,
+  notify?: (snapshot: RealtimePlayerSnapshot) => void,
+): void {
+  const evidence = buildWebRTCRuntimeEvidence(snapshot);
+  notify?.({ mode: playback.mode, streamStatus: playback.streamStatus, errorMessage: playback.errorMessage,
+    webrtcRetryAttempt: playback.webrtcRetryAttempt, webrtcIcePath: evidence.icePath,
+    webrtcSignalingComplete: evidence.signalingComplete, hasAudioTrack: snapshot.hasAudioTrack,
+    isAudioActive: snapshot.isAudioActive, audioPlaybackState: snapshot.audioPlaybackState,
+    audioDiagnosticMessage: snapshot.audioDiagnosticMessage, audioLevel: snapshot.audioStats.audioLevel,
+    webrtcFirstFrameLatencyMs: snapshot.firstFrameLatencyMs,
+    webrtcWhepResponseMs: snapshot.signalingTimings.whepResponseMs, audioJitterMs: snapshot.audioStats.jitterMs,
+    audioPacketsLost: snapshot.audioStats.packetsLost, iceRoundTripTimeMs: snapshot.audioStats.roundTripTimeMs,
+    localCandidateType: snapshot.audioStats.localCandidateType, remoteCandidateType: snapshot.audioStats.remoteCandidateType,
+    iceTransportProtocol: snapshot.audioStats.transportProtocol, relayFallbackReason: snapshot.audioStats.relayFallbackReason,
+    iceCandidateTotal: snapshot.iceCandidateStats?.total, iceCandidateRelay: snapshot.iceCandidateStats?.relay,
+    iceCandidateSrflx: snapshot.iceCandidateStats?.srflx });
+  if (snapshot.status === "playing") return playback.useWebRTC();
+  if (!isRecoverableWebRTCFailure(snapshot)) return;
+  const reason = describeWebRTCFailure(snapshot);
+  if (shouldSkipWebRTCRetryAfterRelayFailure(snapshot)) return playback.useHLSFallback(reason);
+  playback.scheduleWebRTCRetry(reason);
 }
 
 export default RealtimePlayer;

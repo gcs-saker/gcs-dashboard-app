@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"strings"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 )
@@ -27,6 +28,9 @@ type iceServerConfig struct {
 func mustIceServers(configs []iceServerConfig) []domain.IceServer {
 	servers := make([]domain.IceServer, 0, len(configs))
 	for _, config := range configs {
+		if strings.TrimSpace(config.URL) == "" {
+			continue
+		}
 		server, err := domain.NewIceServer(config.URL, config.Kind, config.Username, config.Credential, config.Healthy)
 		if err != nil {
 			log.Fatal(err)

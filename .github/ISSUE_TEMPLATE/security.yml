@@ -1,0 +1,58 @@
+name: Security change
+description: Track authentication, authorization, credential, privacy, or trust-boundary work
+title: "[P?][Security] "
+labels: ["area: security"]
+body:
+  - type: markdown
+    attributes:
+      value: Never paste live credentials, tokens, cookies, UUIDs, private routes, or exploitable secret material.
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk or security objective
+      description: Describe the exposure or security property without including a usable secret.
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Trust and authorization boundary
+      description: Identify actors, owning service, group boundary, server-owned routing, and protected data.
+    validations:
+      required: true
+  - type: textarea
+    id: scenarios
+    attributes:
+      label: Success and denial scenarios
+      placeholder: |
+        Success:
+        - Authorized actor can ...
+
+        Denial:
+        - Cross-group request is rejected with ...
+        - Expired or invalid credential is rejected with ...
+    validations:
+      required: true
+  - type: textarea
+    id: logging
+    attributes:
+      label: Logging and privacy requirements
+      description: State what may be audited and what must be redacted or omitted.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Completion criteria
+      placeholder: |
+        - [ ] Positive authorization test passes
+        - [ ] Negative and cross-group tests pass
+        - [ ] Credential and private route exposure tests pass
+        - [ ] Contract and operational documentation is updated
+    validations:
+      required: true
+  - type: textarea
+    id: disclosure
+    attributes:
+      label: Disclosure handling
+      description: If public discussion creates risk, stop and use the repository's private security reporting path.

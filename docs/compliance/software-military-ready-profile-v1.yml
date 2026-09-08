@@ -1,0 +1,174 @@
+schemaVersion: gcs-saker.military-ready-profile.v1
+profileId: gcs-saker-software-military-ready
+version: 1.0.0
+profileStatus: draft
+verifiedAt: 2026-09-07
+nextReviewBy: 2026-12-07
+owner: architecture-and-assurance
+scope:
+  included:
+    - server software
+    - browser dashboard
+    - REST, gRPC, MQTT, and WebRTC boundaries
+    - voice and talkback
+    - military symbology and waypoint planning
+    - AI overlay metadata
+    - build, release, deployment, and operational evidence
+  excluded:
+    - physical enclosure qualification
+    - electromagnetic compatibility laboratory testing
+    - platform power-interface qualification
+statusVocabulary:
+  - PASS
+  - FAIL
+  - BLOCKED
+  - NOT_RUN
+  - NOT_APPLICABLE
+  - PLANNED_HARDWARE
+claimPolicy:
+  certified:
+    allowedWhen: an authorized external authority has issued a certificate for the named revision and scope
+    currentUse: prohibited
+  conformant:
+    allowedWhen: every selected mandatory requirement has PASS evidence and an independent review
+    currentUse: prohibited
+  aligned:
+    allowedWhen: the named process is implemented but qualification findings may remain
+    currentUse: allowed-with-scope
+  assessed:
+    allowedWhen: a dated assessment identifies the scope, method, evidence, and open findings
+    currentUse: allowed-with-scope
+  ready:
+    allowedWhen: prerequisites and a qualification plan exist but the qualification has not completed
+    currentUse: allowed-with-scope
+standards:
+  - id: MIL-STD-1472H
+    title: Human Engineering
+    revision: H Notice 1
+    documentDate: 2026-04-10
+    source: https://quicksearch.dla.mil/qsdocdetails.aspx?ident_number=36903
+    applicability: APPLICABLE
+    rationale: Operator UI, warnings, voice communication, and speech intelligibility are product functions.
+    owner: dashboard-and-media
+    verification: analysis-and-test
+    requirementIds: [MR-HFE-001, MR-VOICE-001]
+    clauseScope:
+      - human engineering design criteria for controls, displays, labels, warnings, and errors
+      - voice communications and speech intelligibility provisions
+    status: NOT_RUN
+  - id: MIL-STD-2525E-C1
+    title: Joint Military Symbology
+    revision: E Change 1
+    documentDate: 2025-03-02
+    source: https://quicksearch.dla.mil/qsdocdetails.aspx?ident_number=114934
+    applicability: APPLICABLE
+    rationale: The tactical map will display military entities, affiliations, status, routes, and areas.
+    owner: map-and-contracts
+    verification: analysis-and-golden-image-test
+    requirementIds: [MR-SYM-001]
+    clauseScope:
+      - symbol identification, affiliation, status, and modifier rules
+      - point, line, and area tactical graphics used by the selected product subset
+    status: NOT_RUN
+  - id: MIL-STD-882E-C1
+    title: System Safety
+    revision: E Change 1
+    documentDate: 2023-09-27
+    source: https://quicksearch.dla.mil/qsDocDetails.aspx?ident_number=36027
+    applicability: APPLICABLE
+    rationale: Waypoint, remote control, talkback, stale data, and AI can contribute to system hazards.
+    owner: system-safety
+    verification: analysis-review-and-safety-test
+    requirementIds: [MR-SAF-001]
+    clauseScope:
+      - section 4 system safety requirements
+      - paragraph 4.4 software contribution and Level of Rigor
+      - Task 106 hazard tracking
+    status: NOT_RUN
+  - id: NIST-SP-800-218
+    title: Secure Software Development Framework
+    revision: 1.1
+    documentDate: 2022-02-03
+    source: https://csrc.nist.gov/pubs/sp/800/218/final
+    applicability: APPLICABLE
+    rationale: Secure development controls must cover the complete software lifecycle.
+    owner: product-security
+    verification: process-assessment-and-ci-evidence
+    requirementIds: [MR-SSDF-001]
+    clauseScope: [PO Prepare the Organization, PS Protect the Software, PW Produce Well-Secured Software, RV Respond to Vulnerabilities]
+    status: NOT_RUN
+  - id: DISA-ASD-STIG
+    title: Application Security and Development STIG
+    revision: Version 6 Release 4
+    documentDate: 2025-09-09
+    source: https://public.cyber.mil/stigs/downloads/
+    applicability: APPLICABLE
+    rationale: The product exposes browser, API, identity, and application-server attack surfaces.
+    owner: product-security
+    verification: stig-checklist-and-security-test
+    requirementIds: [MR-SEC-001]
+    clauseScope: [all V-IDs after applicability tailoring]
+    status: NOT_RUN
+  - id: NIST-SP-800-53-REV5
+    title: Security and Privacy Controls for Information Systems and Organizations
+    revision: Revision 5
+    documentDate: 2020-09-23
+    source: https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final
+    applicability: APPLICABLE
+    rationale: The profile needs a reusable RMF-ready security control baseline and supply-chain controls.
+    owner: product-security
+    verification: control-assessment
+    requirementIds: [MR-RMF-001]
+    clauseScope: [tailored control baseline, supply-chain risk management controls]
+    status: NOT_RUN
+  - id: ISO-IEC-IEEE-12207
+    title: Systems and software engineering - Software life cycle processes
+    revision: 2017
+    documentDate: 2017-11
+    source: https://www.iso.org/standard/63712.html
+    applicability: APPLICABLE
+    rationale: MIL-STD-498 is canceled and the product needs a current lifecycle and evidence structure.
+    owner: engineering-management
+    verification: process-assessment
+    requirementIds: [MR-SDLC-001]
+    clauseScope: [agreement, organizational project-enabling, technical management, and technical processes]
+    status: NOT_RUN
+  - id: MIL-STD-810H
+    title: Environmental Engineering Considerations and Laboratory Tests
+    revision: H Change 1
+    documentDate: 2022-05-18
+    source: https://quicksearch.dla.mil/qsDocDetails.aspx?ident_number=35978
+    applicability: PLANNED_HARDWARE
+    rationale: No controlled enclosure, power design, or representative hardware test article exists.
+    owner: future-hardware
+    verification: tailored-laboratory-test
+    requirementIds: [MR-HW-ENV-001]
+    clauseScope: [environmental tailoring to be selected after the operational profile and test article are fixed]
+    status: PLANNED_HARDWARE
+  - id: MIL-STD-461G
+    title: Control of Electromagnetic Interference Characteristics
+    revision: G
+    documentDate: 2015-12-11
+    source: https://quicksearch.dla.mil/qsDocDetails.aspx?ident_number=35789
+    applicability: PLANNED_HARDWARE
+    rationale: EMI emission and susceptibility require a representative enclosure, ports, cables, and power interface.
+    owner: future-hardware
+    verification: tailored-laboratory-test
+    requirementIds: [MR-HW-EMC-001]
+    clauseScope: [equipment and subsystem emission and susceptibility tests selected after hardware design freeze]
+    status: PLANNED_HARDWARE
+nonApplicableFamilies:
+  - id: MIL-STD-188-FAMILY
+    applicability: NOT_APPLICABLE
+    rationale: No named radio, modem, or SATCOM interoperability profile is currently part of the product boundary.
+    activationTrigger: a specific external tactical communications interface and exact MIL-STD-188 sheet are selected
+reviewPolicy:
+  cadenceDays: 90
+  triggers:
+    - standard revision or validation notice changes
+    - product trust boundary or safety-critical function changes
+    - qualification claim or external assessment is planned
+  requiredActions:
+    - verify status and revision against the authoritative publisher
+    - record changed clauses and impacted requirement IDs
+    - invalidate stale PASS evidence until impact analysis completes

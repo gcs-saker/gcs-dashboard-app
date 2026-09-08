@@ -3,7 +3,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OPENAPI = REPO_ROOT / "services/auth-policy/src/main/resources/openapi/gcs-saker-operations.openapi.yaml"
 AUTH_SECURITY = (
-    REPO_ROOT / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthSecurityRouteContract.kt"
+    REPO_ROOT
+    / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/identity/AuthSecurityRouteContract.kt"
 )
 EDGE_CONFIG = REPO_ROOT / "deploy/nginx/single-node.poc.conf"
 
@@ -14,9 +15,9 @@ PUBLIC_EDGE_PATHS = (
     "/auth-policy/auth/refresh",
     "/auth-policy/auth/me",
     "/auth-policy/auth/logout",
-    "/auth-policy/admin/signup-tokens",
-    "/auth-policy/admin/provisioning-tokens",
-    "/auth-policy/admin/devices",
+    "/auth-policy/api/v1/signup-tokens",
+    "/auth-policy/api/v1/provisioning-tokens",
+    "/auth-policy/api/v1/devices",
     "/api/v1/groups",
     "/api/v1/geofences",
     "/api/telemetry/all",
@@ -64,7 +65,7 @@ def test_operational_swagger_exposes_sanitized_spec_and_keeps_ui_read_only() -> 
     security = AUTH_SECURITY.read_text(encoding="utf-8")
     controller = (
         REPO_ROOT
-        / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalApiDocumentationController.kt"
+        / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/operations/documentation/OperationalApiDocumentationController.kt"
     ).read_text(encoding="utf-8")
     initializer = (
         REPO_ROOT / "services/auth-policy/src/main/resources/openapi/gcs-saker-operations-swagger.js"
@@ -73,7 +74,7 @@ def test_operational_swagger_exposes_sanitized_spec_and_keeps_ui_read_only() -> 
         REPO_ROOT / "services/auth-policy/src/main/resources/openapi/gcs-saker-operations-swagger.html"
     ).read_text(encoding="utf-8")
 
-    assert 'private const val ADMIN_PREFIX = "/admin/**"' in security
+    assert "val ADMIN_MATCHERS = emptyList<RouteMatcher>()" in security
     assert 'const val ROOT = "/admin/api-docs"' in controller
     assert "OperationalApiDocumentationRoutes.OPENAPI" in security
     assert "OperationalApiDocumentationRoutes.INITIALIZER" in security
@@ -88,7 +89,7 @@ def test_operational_swagger_exposes_sanitized_spec_and_keeps_ui_read_only() -> 
 
     catalog_renderer = (
         REPO_ROOT
-        / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalApiCatalogRenderer.kt"
+        / "services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/operations/documentation/OperationalApiCatalogRenderer.kt"
     ).read_text(encoding="utf-8")
     assert "span>별칭</span>" in catalog_renderer
     assert 'aria-label="별칭:' in catalog_renderer

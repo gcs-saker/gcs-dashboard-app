@@ -1,0 +1,47 @@
+schemaVersion: gcs-saker.audit-integrity.v1
+time:
+  internal: UTC
+  requiredFields: [occurredAt, receivedAt, timeSource, clockDriftMs]
+  driftStates: [NORMAL, WARNING, UNSAFE, UNKNOWN]
+  measurement: SNTP four-timestamp offset over UDP with 2 second timeout
+  publicSourceTrust: unauthenticated; source is explicitly marked ntp-unauthenticated
+  warningThreshold: configured TIME_SYNC_DRIFT_WARN_MS
+  unsafeThreshold: five times the warning threshold
+  probeFailureState: UNKNOWN
+integrity:
+  algorithm: SHA-256
+  canonicalization: UTF-8 length-prefixed ordered fields
+  chainFields: [previousHash, eventHash]
+  protectedCategories: [security, audit]
+  databaseMutationPolicy: PostgreSQL trigger rejects update and delete
+  externalAnchor: SOFTWARE_WORM_STAGING_IMPLEMENTED
+  anchorIntervalSeconds: 300
+  anchorSignature: HMAC-SHA-256
+  anchorStorage: dedicated append-only mounted volume
+  externalImmutableStorage: REQUIRED_NOT_IMPLEMENTED
+retention:
+  securityEventsDays: 365
+  privilegedEventsDays: 730
+  mediaContentStoredByDefault: false
+  access: system-admin-and-auditor
+  deletion: authorized-documented-and-audited
+  warningRecordCount: 800000
+  monitoringIntervalSeconds: 60
+  metrics:
+    - gcs.auth_policy.audit.storage.records
+    - gcs.auth_policy.audit.storage.security_age_seconds
+    - gcs.auth_policy.audit.storage.privileged_age_seconds
+    - gcs.auth_policy.audit.storage.warning
+requiredEventFamilies:
+  - authentication
+  - account-and-group-policy
+  - administrator-replacement
+  - device-credential-lifecycle
+  - stream-authorization-denial
+  - talkback-start-stop-denial
+  - mission-save-dispatch-cancel-acknowledgement
+  - geofence-change
+  - ai-model-and-overlay-policy
+  - deployment-and-rollback
+forbiddenFields: [password, bearerToken, refreshToken, deviceCredential, turnPassword, privateKey, rawAudio, privateMediaUrl]
+currentStatus: SOFTWARE_WORM_STAGING_EXTERNAL_IMMUTABILITY_OPEN

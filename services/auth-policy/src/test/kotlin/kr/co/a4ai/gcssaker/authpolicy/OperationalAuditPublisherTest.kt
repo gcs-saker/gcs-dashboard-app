@@ -14,9 +14,11 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.core.task.SyncTaskExecutor
 import org.springframework.core.task.TaskExecutor
+import org.slf4j.MDC
 import java.time.Instant
 import java.util.concurrent.RejectedExecutionException
 
@@ -113,6 +115,31 @@ class OperationalAuditPublisherTest {
     }
 
     @Test
+    fun `security audit records trace actor operation result error and clock status`() {
+        val repository = InMemoryOperationalEventRepository(emptyList())
+        val publisher = RepositorySecurityAuditPublisher(repository, now = { Instant.parse("2026-06-01T00:00:00Z") })
+        MDC.put("traceId", "0123456789abcdef0123456789abcdef")
+        try {
+            publisher.publishLoginFailed("operator01")
+        } finally {
+            MDC.clear()
+        }
+
+        val event = repository.eventsFor(
+            SecurityAuditEventContract.UNKNOWN_PRINCIPAL,
+            OperationalEventQuery(query = SecurityAuditEventContract.EVENT_TYPE_LOGIN_FAILED),
+        ).single()
+        assertEquals("0123456789abcdef0123456789abcdef", event.traceId)
+        assertEquals("u***n", event.actorId)
+        assertEquals(SecurityAuditEventContract.EVENT_TYPE_LOGIN_FAILED, event.operation)
+        assertEquals("denied", event.result)
+        assertEquals(SecurityAuditEventContract.EVENT_TYPE_LOGIN_FAILED, event.errorCode)
+        assertEquals("UNKNOWN", event.clockStatus)
+        assertEquals("unverified", event.timeSource)
+        assertEquals(null, event.clockDriftMs)
+    }
+
+    @Test
     fun `security audit records viewer and publisher group for stream access`() {
         val repository = InMemoryOperationalEventRepository(emptyList())
         val publisher = RepositorySecurityAuditPublisher(
@@ -135,6 +162,28 @@ class OperationalAuditPublisherTest {
         assertEquals(SecurityAuditEventContract.EVENT_TYPE_STREAM_ACCESS_ALLOWED, event.eventType)
         assertEquals(true, event.message.contains("viewerGroup=co-a"))
         assertEquals(true, event.message.contains("publisherGroup=co-b"))
+        assertEquals(true, event.message.contains("stream=redacted"))
+        assertEquals(false, event.message.contains("raw.company-b.front"))
+        assertEquals(null, event.streamId)
+    }
+
+    @Test
+    fun `security audit distinguishes talkback and records trusted client ip for management`() {
+        val repository = InMemoryOperationalEventRepository(emptyList())
+        val publisher = RepositorySecurityAuditPublisher(repository, now = { Instant.parse("2026-06-01T00:00:00Z") })
+
+        publisher.publishStreamAction(
+            OperationalAuditFixtures.principal, "raw.company-b.front", GroupId("co-b"),
+            "send_talkback", true, "same group talkback",
+        )
+        publisher.publishGroupManagement(
+            OperationalAuditFixtures.principal, GroupId("co-a"), "member.update", "operator02", "203.0.113.20",
+        )
+
+        val events = repository.eventsFor(OperationalAuditFixtures.principal, OperationalEventQuery())
+        assertTrue(events.any { it.message.contains("action=send_talkback") })
+        assertTrue(events.any { it.message.contains("ip=203.0.113.20") })
+        assertTrue(events.none { it.message.contains("operator02") })
     }
 
     private object OperationalAuditFixtures {

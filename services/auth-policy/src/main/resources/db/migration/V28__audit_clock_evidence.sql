@@ -1,0 +1,4 @@
+ALTER TABLE operational_events ADD COLUMN IF NOT EXISTS received_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE operational_events ADD COLUMN IF NOT EXISTS time_source VARCHAR(160);
+ALTER TABLE operational_events ADD COLUMN IF NOT EXISTS clock_drift_ms BIGINT;
+ALTER TABLE operational_events ADD COLUMN IF NOT EXISTS clock_measured_at TIMESTAMP WITH TIME ZONE;

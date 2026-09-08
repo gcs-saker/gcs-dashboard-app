@@ -1,6 +1,6 @@
 import { WEBRTC_ICE_SERVERS } from "@/config";
-import { loadWebRtcIceServers } from "@streaming/iceServers";
-import { SDP_OFFER_HEADERS } from "@streaming/streamingProtocolHeaders";
+import { loadWebRtcIceServers } from "@streaming/protocol/iceServers";
+import { SDP_OFFER_HEADERS } from "@streaming/protocol/streamingProtocolHeaders";
 import { fetchAuthorizedPublishSession } from "./publisherApi";
 import type { PublisherStepId, WebcamPublisherStatus } from "./publisherContracts";
 import { waitForIceGatheringComplete, waitForPeerConnectionReady } from "./publisherWebRtc";

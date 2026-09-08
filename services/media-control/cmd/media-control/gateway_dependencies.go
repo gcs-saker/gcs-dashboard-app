@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -9,13 +10,24 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/authpolicy"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/grpcgateway"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/httpapi"
 )
 
-type gatewayAuthAdapter struct{ client authpolicy.Client }
+const (
+	gatewayTelemetryEventKeyPrefix = "gcs-saker:gateway:v1:telemetry-event:"
+	gatewayTelemetryPendingTTL     = 30 * time.Second
+	gatewayTelemetryStoredTTL      = 7 * 24 * time.Hour
+)
+
+type gatewayAuthAdapter struct {
+	client authpolicy.Client
+	rpc    *authpolicy.DeviceRPCClient
+}
 
 func (a gatewayAuthAdapter) AuthenticateGateway(ctx context.Context, credentials grpcgateway.GatewayCredentials) (grpcgateway.GatewayIdentity, error) {
-	authorization, err := a.client.AuthenticateDevice(ctx, credentials.DeviceUUID, credentials.Credential)
+	authorization, err := a.authenticateDevice(ctx, credentials)
 	if err != nil {
 		return grpcgateway.GatewayIdentity{}, err
 	}
@@ -23,6 +35,13 @@ func (a gatewayAuthAdapter) AuthenticateGateway(ctx context.Context, credentials
 		DeviceUUID: authorization.DeviceUUID, GroupID: authorization.GroupID,
 		CredentialVersion: authorization.CredentialVersion, PolicyVersion: authorization.DevicePolicyVersion,
 	}, nil
+}
+
+func (a gatewayAuthAdapter) authenticateDevice(ctx context.Context, credentials grpcgateway.GatewayCredentials) (authpolicy.DeviceAuthentication, error) {
+	if a.rpc != nil {
+		return a.rpc.AuthenticateDevice(ctx, credentials.DeviceUUID, credentials.Credential)
+	}
+	return a.client.AuthenticateDevice(ctx, credentials.DeviceUUID, credentials.Credential)
 }
 
 type gatewayTelemetryStore struct {
@@ -43,20 +62,50 @@ func (s gatewayTelemetryStore) StoreTelemetry(ctx context.Context, identity grpc
 	})
 }
 
-func newGatewayServer(config runtimeConfig) grpcgateway.Server {
+type gatewayRuntime struct {
+	server      grpcgateway.Server
+	idempotency *redis.Client
+	rpc         *authpolicy.DeviceRPCClient
+}
+
+func (r gatewayRuntime) Close() error {
+	var rpcError error
+	if r.rpc != nil {
+		rpcError = r.rpc.Close()
+	}
+	return errors.Join(r.idempotency.Close(), rpcError)
+}
+
+func newGatewayRuntime(config runtimeConfig, metrics *httpapi.Metrics, sessions domain.PublishSessionStore) (gatewayRuntime, error) {
 	client := authpolicy.NewClient(config.authPolicyBaseURL, &http.Client{Timeout: 3 * time.Second})
-	authenticator := gatewayAuthAdapter{client: client}
+	var rpc *authpolicy.DeviceRPCClient
+	if config.deviceRPCTarget != "" {
+		var err error
+		rpc, err = authpolicy.NewDeviceRPCClient(config.deviceRPCTarget, config.deviceRPCToken)
+		if err != nil {
+			return gatewayRuntime{}, err
+		}
+	}
+	authenticator := gatewayAuthAdapter{client: client, rpc: rpc}
 	idempotency := redis.NewClient(&redis.Options{
 		Addr: config.redisAddress, Password: config.redisPassword, DialTimeout: config.redisTimeout,
+		ReadTimeout: config.redisTimeout, WriteTimeout: config.redisTimeout,
 	})
-	return grpcgateway.NewDeviceServer(authenticator, config.grpcMaxPayloadBytes, grpcgateway.NewTelemetryHandler(
-		gatewayContextTelemetryStore{client: client, idempotency: idempotency},
-	))
+	return gatewayRuntime{
+		server: grpcgateway.NewDeviceServer(authenticator, config.grpcMaxPayloadBytes, grpcgateway.NewTelemetryHandler(
+			gatewayContextTelemetryStore{client: client, idempotency: idempotency, rpc: rpc},
+		)).WithMetrics(metrics).WithSessionAuthenticator(grpcgateway.PublishSessionAuthenticator{
+			Store: sessions, Validator: rpc, Secret: config.publishToken, Now: time.Now,
+		}),
+		idempotency: idempotency,
+		rpc:         rpc,
+	}, nil
 }
 
 type gatewayContextTelemetryStore struct {
 	client      authpolicy.Client
 	idempotency *redis.Client
+	rpc         *authpolicy.DeviceRPCClient
 }
 
 func (s gatewayContextTelemetryStore) StoreTelemetry(ctx context.Context, identity grpcgateway.GatewayIdentity, telemetry grpcgateway.Telemetry) error {
@@ -64,8 +113,8 @@ func (s gatewayContextTelemetryStore) StoreTelemetry(ctx context.Context, identi
 	if !ok {
 		return fmt.Errorf("gateway credentials missing")
 	}
-	key := "gcs-saker:gateway:telemetry-event:" + identity.DeviceUUID + ":" + telemetry.EventID
-	acquired, err := s.idempotency.SetNX(ctx, key, "pending", 30*time.Second).Result()
+	key := gatewayTelemetryEventKeyPrefix + identity.DeviceUUID + ":" + telemetry.EventID
+	acquired, err := s.idempotency.SetNX(ctx, key, "pending", gatewayTelemetryPendingTTL).Result()
 	if err != nil {
 		return fmt.Errorf("reserve telemetry event: %w", err)
 	}
@@ -76,12 +125,26 @@ func (s gatewayContextTelemetryStore) StoreTelemetry(ctx context.Context, identi
 		}
 		return fmt.Errorf("telemetry event is already being stored")
 	}
-	if err := (gatewayTelemetryStore{client: s.client, credentials: credentials}).StoreTelemetry(ctx, identity, telemetry); err != nil {
-		_ = s.idempotency.Del(ctx, key).Err()
+	if err := s.persistTelemetry(ctx, identity, credentials, telemetry); err != nil {
+		if deleteErr := s.idempotency.Del(ctx, key).Err(); deleteErr != nil {
+			return errors.Join(err, fmt.Errorf("release telemetry reservation: %w", deleteErr))
+		}
 		return err
 	}
-	if err := s.idempotency.Set(ctx, key, "stored", 7*24*time.Hour).Err(); err != nil {
+	if err := s.idempotency.Set(ctx, key, "stored", gatewayTelemetryStoredTTL).Err(); err != nil {
 		return fmt.Errorf("commit telemetry event idempotency: %w", err)
 	}
 	return nil
+}
+
+func (s gatewayContextTelemetryStore) persistTelemetry(ctx context.Context, identity grpcgateway.GatewayIdentity, credentials grpcgateway.GatewayCredentials, telemetry grpcgateway.Telemetry) error {
+	if s.rpc != nil {
+		binding := domain.PublishSession{DeviceUUID: identity.DeviceUUID, GroupID: identity.GroupID,
+			CredentialVersion: identity.CredentialVersion, DevicePolicyVersion: identity.PolicyVersion}
+		if identity.Session != nil {
+			binding = *identity.Session
+		}
+		return s.rpc.IngestBoundTelemetry(ctx, binding, telemetry.Envelope)
+	}
+	return (gatewayTelemetryStore{client: s.client, credentials: credentials}).StoreTelemetry(ctx, identity, telemetry)
 }

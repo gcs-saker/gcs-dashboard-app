@@ -49,13 +49,50 @@ jobs:
           go-version-file: services/media-control/go.mod
           cache-dependency-path: services/media-control/go.sum
 
+      - name: Verify generated Go protobuf contracts
+        working-directory: .
+        run: |
+          python -m pip install grpcio-tools==1.76.0
+          GOBIN="$RUNNER_TEMP/proto-bin" go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
+          GOBIN="$RUNNER_TEMP/proto-bin" go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.1
+          mkdir -p "$RUNNER_TEMP/go-contracts"
+          python -m grpc_tools.protoc -Icontracts/proto \
+            --plugin=protoc-gen-go="$RUNNER_TEMP/proto-bin/protoc-gen-go" \
+            --plugin=protoc-gen-go-grpc="$RUNNER_TEMP/proto-bin/protoc-gen-go-grpc" \
+            --go_out="$RUNNER_TEMP/go-contracts" --go_opt=paths=source_relative \
+            --go-grpc_out="$RUNNER_TEMP/go-contracts" --go-grpc_opt=paths=source_relative \
+            contracts/proto/gcs/saker/v1/{common,stream_control,telemetry,gateway_service,device_policy_service,mqtt_gateway}.proto
+          diff -ru services/media-control/internal/generated "$RUNNER_TEMP/go-contracts"
+
       - name: Run race tests
         run: go test -race -cover ./...
         env:
           TEST_REDIS_ADDR: 127.0.0.1:6379
 
+      - name: Run scheduled security fuzz campaigns
+        if: github.event_name == 'schedule'
+        run: |
+          go test -run=^$ -fuzz=FuzzParseStreamID -fuzztime=10s ./internal/domain
+          go test -run=^$ -fuzz=FuzzValidateForRoute -fuzztime=10s ./internal/sessiontoken
+          go test -run=^$ -fuzz=FuzzMissionWaypointBoundary -fuzztime=10s ./internal/mission
+
       - name: Run vet
         run: go vet ./...
+
+      - name: Start isolated MQTT contract broker
+        run: |
+          docker run -d --name mqtt-contract-broker -p 127.0.0.1:18883:1883 \
+            -v "$GITHUB_WORKSPACE/deploy/mqtt-test/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro" \
+            eclipse-mosquitto:2.0.22
+
+      - name: Verify MQTT to gRPC session boundary
+        run: go test ./internal/mqttgateway -count=1
+        env:
+          TEST_MQTT_URL: tcp://127.0.0.1:18883
+
+      - name: Stop isolated MQTT contract broker
+        if: always()
+        run: docker rm -f mqtt-contract-broker
 
       - name: Build runtime image
         run: docker build -t gcs-saker-media-control:ci .
@@ -98,10 +135,10 @@ jobs:
             services/auth-policy/gradle/wrapper/gradle-wrapper.properties
 
       - name: Run auth-policy tests
-        run: ./gradlew test --no-daemon
+        run: ./gradlew check --no-daemon
 
       - name: Build auth-policy runtime image
-        run: docker build -t gcs-saker-auth-policy:ci .
+        run: docker build --build-context contracts=../../contracts -t gcs-saker-auth-policy:ci .
 
       - name: Generate auth-policy SBOM
         uses: anchore/sbom-action@v0
@@ -145,6 +182,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Verify generated Python protobuf contracts
+        working-directory: .
+        run: |
+          temp_dir="$(mktemp -d)"
+          python -m grpc_tools.protoc -Icontracts/proto --python_out="$temp_dir" \
+            contracts/proto/gcs/saker/v1/{common,stream_control,telemetry,gateway_service}.proto
+          diff -ru backend/gcs "$temp_dir/gcs"
+
       - name: Audit backend dependencies
         run: |
           python -m pip_audit -r requirements.txt --no-deps --disable-pip
@@ -157,12 +202,14 @@ jobs:
         run: |
           python -m ruff check . ../scripts
           python -m ruff format --check . ../scripts
+          python ../scripts/gates/source_size_contract.py
+          python ../scripts/gates/frontend_boundary_contract.py
 
       - name: Typecheck all backend modules and tests
         run: python -m mypy .
 
       - name: Run backend tests with coverage
-        run: python -m pytest tests --cov=. --cov-report=term-missing
+        run: python -m pytest tests --cov=. --cov-report=term-missing --cov-fail-under=85
 
       - name: Build backend runtime image
         run: docker build -t gcs-saker-backend:ci .
@@ -207,7 +254,10 @@ jobs:
         run: npm run audit
 
       - name: Typecheck frontend
-        run: npm run typecheck
+        run: |
+          npm run lint:hooks
+          npm run lint:quality
+          npm run typecheck
 
       - name: Run frontend tests with coverage
         run: npm run test:coverage
@@ -260,6 +310,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Reject CRLF in Linux runtime files
         run: |
@@ -277,6 +329,34 @@ jobs:
       - name: Validate repository structure and naming
         run: python scripts/gates/repository_hygiene_contract.py
 
+      - name: Reject critical security and resource anti-patterns
+        run: python scripts/gates/critical_code_contract.py
+
+      - name: Prevent code quality baseline growth
+        env:
+          QUALITY_REFERENCE_REF: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+        run: |
+          if [ -n "$QUALITY_REFERENCE_REF" ] && [ "$QUALITY_REFERENCE_REF" != "0000000000000000000000000000000000000000" ]; then
+            python scripts/gates/code_quality_baseline.py --check --reference-ref "$QUALITY_REFERENCE_REF"
+          else
+            python scripts/gates/code_quality_baseline.py --check
+          fi
+
+      - name: Validate military-ready requirement traceability
+        run: python scripts/gates/military_ready_traceability_gate.py --check
+
+      - name: Validate threat model and attack-surface inventory
+        run: python scripts/gates/attack_surface_gate.py --check
+
+      - name: Validate MIL-STD-882E system-safety records
+        run: python scripts/gates/system_safety_gate.py --check
+
+      - name: Validate supply-chain assurance policy
+        run: python scripts/gates/supply_chain_policy_gate.py --check
+
+      - name: Validate vulnerability response and recovery policy
+        run: python scripts/gates/vulnerability_response_gate.py --check
+
       - name: Validate shell syntax
         run: find scripts deploy -type f -name '*.sh' -print0 | xargs -0 -r bash -n
 
@@ -291,6 +371,7 @@ jobs:
           MQTT_USERNAME: backend
           MQTT_PASSWORD: contract-only
           MEDIA_CONTROL_PUBLISH_TOKEN: contract-only-secret-at-least-32-characters
+          AUTH_POLICY_AUDIT_INGEST_TOKEN: contract-only-audit-secret-at-least-32-characters
           AUTH_POLICY_BASE_URL: http://auth-policy:8080
           REDIS_PASSWORD: contract-only-secret
         run: |

@@ -21,6 +21,25 @@ class JdbcOperationalReadRepositoryTest {
     private val timestamp = Instant.parse("2026-05-29T00:00:00Z")
 
     @Test
+    fun `descendant telemetry is visible to group admin but not operator or sibling`() {
+        val source = h2DataSource()
+        val repository = JdbcOperationalReadRepository(
+            source, listOf(telemetry("child-drone", GroupId("child"))), emptyMap(),
+        )
+        val jdbc = JdbcTemplate(source)
+        listOf("parent", "child").forEach { id ->
+            jdbc.update("INSERT INTO organization_groups (id, name, type) VALUES (?, ?, ?)", id, id, "COMPANY")
+        }
+        jdbc.update(
+            "INSERT INTO organization_group_closure (ancestor_group_id, descendant_group_id, depth) VALUES (?, ?, ?)",
+            "parent", "child", 1,
+        )
+        assertEquals(1, repository.telemetryFor(AuthenticatedPrincipal("parent-admin", UserRole.GROUP_ADMIN, GroupId("parent"))).size)
+        assertTrue(repository.telemetryFor(AuthenticatedPrincipal("parent-op", UserRole.OPERATOR, GroupId("parent"))).isEmpty())
+        assertTrue(repository.telemetryFor(AuthenticatedPrincipal("sibling-admin", UserRole.GROUP_ADMIN, GroupId("sibling"))).isEmpty())
+    }
+
+    @Test
     fun `jdbc operational read repository persists latest telemetry and filters by group`() {
         val repository = JdbcOperationalReadRepository(
             h2DataSource(),
@@ -42,6 +61,8 @@ class JdbcOperationalReadRepositoryTest {
                 yawDeg = 120.0,
                 linkQualityPercent = 92.0,
                 observedAt = timestamp,
+                sessionId = "ps_sample",
+                streamId = "raw.device.sample",
             ),
         )
         val after = repository.telemetryFor(principal)
@@ -56,6 +77,8 @@ class JdbcOperationalReadRepositoryTest {
         assertEquals(120.0, mobile.yawDeg)
         assertEquals(92.0, mobile.linkQualityPercent)
         assertEquals(timestamp, mobile.observedAt)
+        assertEquals("ps_sample", mobile.sessionId)
+        assertEquals("raw.device.sample", mobile.streamId)
         assertTrue(after.none { it.uuid == "raw.b" })
     }
 

@@ -20,6 +20,8 @@ type Metrics struct {
 	streamCacheEvents      *prometheus.CounterVec
 	iceCacheEvents         *prometheus.CounterVec
 	errors                 *prometheus.CounterVec
+	gatewayMessages        *prometheus.CounterVec
+	gatewayDuration        *prometheus.HistogramVec
 }
 
 func NewMetrics() *Metrics {
@@ -67,6 +69,11 @@ func (m *Metrics) ObserveIceCache(result string) {
 
 func (m *Metrics) ObserveError(source string, reason string) {
 	m.errors.WithLabelValues(source, reason).Inc()
+}
+
+func (m *Metrics) ObserveGateway(status string, reason string, elapsed time.Duration) {
+	m.gatewayMessages.WithLabelValues(status, reason).Inc()
+	m.gatewayDuration.WithLabelValues(status).Observe(elapsed.Seconds())
 }
 
 func cacheMetricResult(result string) string {

@@ -42,7 +42,6 @@
 
 .realtime-player__badge,
 .realtime-player__latency,
-.realtime-player__stream,
 .realtime-player__mode {
   min-height: 24px;
   padding: 4px 8px;
@@ -51,7 +50,6 @@
   transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
 }
 
-.realtime-player__stream,
 .realtime-player__mode {
   display: none;
 }

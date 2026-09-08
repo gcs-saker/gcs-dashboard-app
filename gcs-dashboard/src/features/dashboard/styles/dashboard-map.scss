@@ -1,5 +1,5 @@
-@use "./dashboard-map-shell";
-@use "./dashboard-map-offline-basemap";
-@use "./dashboard-map-markers";
-@use "./dashboard-map-popup";
-@use "./dashboard-map-overlay";
+@use "./map/dashboard-map-shell";
+@use "./map/dashboard-map-offline-basemap";
+@use "./map/dashboard-map-markers";
+@use "./map/dashboard-map-popup";
+@use "./map/dashboard-map-overlay";

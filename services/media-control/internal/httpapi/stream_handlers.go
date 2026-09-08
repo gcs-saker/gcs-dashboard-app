@@ -4,13 +4,10 @@ import (
 	"net/http"
 )
 
-func (s Server) streamList(w http.ResponseWriter, r *http.Request) {
-	streams, err := s.listStreams(r.Context())
-	if err != nil {
-		writeJSON(w, http.StatusBadGateway, errorPayload(errStreamRegistryQueryFailed))
-		return
-	}
-	writeJSON(w, http.StatusOK, streamListResponse{Streams: streams})
+func (_ Server) streamList(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set(deprecationHeader, legacyStreamStatusDeprecatedFlag)
+	w.Header().Set(replacementRouteHeader, legacyStreamStatusReplacement)
+	writeJSON(w, http.StatusGone, errorPayload("legacy stream registry is disabled"))
 }
 
 func (s Server) legacyStreamStatus(w http.ResponseWriter, _ *http.Request) {

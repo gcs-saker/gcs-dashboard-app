@@ -1,0 +1,108 @@
+schemaVersion: gcs-saker.attack-surface.v1
+inventoryId: software-military-ready-v1
+surfaces:
+  - id: AS-PUBLIC-TLS
+    kind: network-listener
+    exposure: public
+    interface: HTTPS 443
+    inputs: [path, method, headers, cookies, query, JSON body, SDP]
+    protections: [TLS, edge allowlist, request limits, authentication, sanitized errors]
+    owner: deploy
+    evidence: [deploy/nginx/single-node.poc.conf]
+  - id: AS-PRODUCTION-SSH
+    kind: management-listener
+    exposure: restricted
+    interface: SSH 55121 on Server-01
+    inputs: [administrator identity, command, key authentication]
+    protections: [named operator, restricted port, managed-host policy, audit]
+    owner: operations
+    evidence: [docs/operations/GCS-Saker_Server01_managed_scope.md]
+  - id: AS-BROWSER
+    kind: untrusted-client
+    exposure: public
+    interface: dashboard, local storage, media permissions, WebRTC
+    inputs: [user input, URL state, browser storage, microphone, remote media, server JSON]
+    protections: [schema validation, CSP, CORS, user gesture, server authorization]
+    owner: dashboard
+    evidence: [gcs-dashboard/src]
+  - id: AS-AUTH-REST
+    kind: application-api
+    exposure: edge-routed
+    interface: auth-policy REST, GraphQL, and telemetry WebSocket
+    inputs: [bearer token, refresh cookie, CSRF header, query, JSON, WebSocket messages]
+    protections: [principal verification, role and group policy, validation, rate limit, audit]
+    owner: auth-policy
+    evidence: [services/auth-policy/src/main]
+  - id: AS-MEDIA-REST
+    kind: application-api
+    exposure: edge-routed
+    interface: media-control stream, publish, playback, Talkback, and ICE API
+    inputs: [stream ID, session ID, device UUID, credential, bearer token, operator ID]
+    protections: [opaque identity, auth-policy decision, scoped token, path parser, timeout]
+    owner: media-control
+    evidence: [services/media-control/internal/httpapi]
+  - id: AS-COMPAT-REST
+    kind: application-api
+    exposure: restricted-edge
+    interface: Python compatibility API and future AI adapter
+    inputs: [bearer token, JSON, query, stream ID, processor ID]
+    protections: [legacy route disable, role check, schema validation, timeout]
+    owner: backend
+    evidence: [backend/main.py]
+  - id: AS-GRPC-GATEWAY
+    kind: service-api
+    exposure: private
+    interface: device gateway and internal policy gRPC
+    inputs: [protobuf, metadata device UUID, credential, session ID, token]
+    protections: [exact metadata cardinality, message validation, timeout, session binding]
+    owner: media-control
+    evidence: [services/media-control/internal/grpcgateway]
+  - id: AS-MQTT
+    kind: broker
+    exposure: private-or-field-profile
+    interface: telemetry publish and command subscription topics
+    inputs: [client ID, credential, topic segments, protobuf payload, QoS, retained flag]
+    protections: [broker authentication, topic parser, server-owned group binding, session checks]
+    owner: media-control
+    evidence: [services/media-control/internal/mqttgateway]
+  - id: AS-MEDIA-TRANSPORT
+    kind: media-service
+    exposure: edge-and-udp
+    interface: MediaMTX WHIP/WHEP, DTLS-SRTP, STUN, and TURN
+    inputs: [SDP, ICE candidates, media token, RTP, RTCP, TURN credential]
+    protections: [DTLS-SRTP, scoped token, path authorization, relay limits]
+    owner: media-control
+    evidence: [gcs-dashboard/mediamtx.yml]
+  - id: AS-DATA-STORES
+    kind: data-service
+    exposure: private
+    interface: PostgreSQL and Redis
+    inputs: [SQL, cache keys and values, credentials, migrations]
+    protections: [private network, authentication, transactions, TTL, backup]
+    owner: auth-policy
+    evidence: [deploy/compose/compose.single-node.poc.yml]
+  - id: AS-FILES-SECRETS
+    kind: file-input
+    exposure: host-private
+    interface: environment, certificates, keys, MQTT password file, backup, release evidence
+    inputs: [configuration, secret material, signed or hashed artifact]
+    protections: [owner permissions, repository exclusion, hash, release gate]
+    owner: operations
+    evidence: [scripts/ops/release_gate.py]
+  - id: AS-SUPPLY-CHAIN
+    kind: build-input
+    exposure: external-supplier
+    interface: GitHub actions, package registries, base images, source contributions
+    inputs: [source, workflow, dependency, generated code, container layer]
+    protections: [review, CI, lockfile, digest pin, audit, SBOM, scan]
+    owner: product-security
+    evidence: [.github/workflows/ci.yml]
+  - id: AS-AI-SIDECAR
+    kind: future-service-api
+    exposure: private-planned
+    interface: AI frame reference and overlay metadata
+    inputs: [stream ID, session ID, frame ID, image/frame reference, model output]
+    protections: [schema, server-owned binding, timeout, model provenance, stale rejection]
+    owner: ai-adapter
+    evidence: [backend/modules/ai_adapter]
+

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/authpolicy"
-	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/httpapi"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/mediamtx"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessionstore"
@@ -16,6 +15,13 @@ import (
 )
 
 func newAuthorizer(config runtimeConfig) (authpolicy.CachedAuthorizer, error) {
+	if config.deviceRPCTarget != "" {
+		client, err := authpolicy.NewDeviceRPCClient(config.deviceRPCTarget, config.deviceRPCToken)
+		if err != nil {
+			return authpolicy.CachedAuthorizer{}, err
+		}
+		return authpolicy.NewCachedAuthorizer(client, config.authzCacheTTL), nil
+	}
 	baseAuthorizer, err := authpolicy.NewAuthorizer(
 		config.authMode,
 		config.authPolicyBaseURL,
@@ -27,7 +33,7 @@ func newAuthorizer(config runtimeConfig) (authpolicy.CachedAuthorizer, error) {
 	return authpolicy.NewCachedAuthorizer(baseAuthorizer, config.authzCacheTTL), nil
 }
 
-func newPublishSessionStore(config runtimeConfig) (domain.PublishSessionStore, error) {
+func newPublishSessionStore(config runtimeConfig) (*sessionstore.RedisStore, error) {
 	if config.redisAddress == "" {
 		return nil, fmt.Errorf("REDIS_ADDRESS is required for durable publish sessions")
 	}

@@ -1,0 +1,114 @@
+@use "../shared/dashboard-shared" as *;
+
+.event-log-view {
+  background:
+    linear-gradient(180deg, rgba(7, 22, 28, 0.72), rgba(3, 10, 15, 0.86)),
+    rgba(3, 10, 15, 0.72);
+}
+
+.event-log-view__hero,
+.system-status-page__hero,
+.time-sync-view__header {
+  box-shadow: var(--shadow-panel);
+}
+
+.event-log-view__filters input,
+.event-log-view__filters select,
+.time-sync-view__form input,
+.time-sync-view__form button,
+.time-sync-view__tabs button,
+.cctv-view__controls button,
+.event-log-view__quickbar button,
+.event-log-view__categories button,
+.event-log-view__detail-actions button {
+  @include control-transition;
+}
+
+.ops-tab,
+.stream-card__talkback,
+.event-log-view__quickbar button,
+.event-log-view__categories button,
+.event-log-view__detail-actions button,
+.time-sync-view__tabs button,
+.time-sync-view__form button,
+.cctv-view__controls button,
+.widget-dialog__item {
+  @include action-sheen;
+}
+
+.event-log-view__filters input:focus,
+.event-log-view__filters select:focus,
+.time-sync-view__form input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px rgba(61, 184, 255, 0.16);
+  outline: 0;
+}
+
+.event-log-item {
+  position: relative;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 120ms ease;
+}
+
+.event-log-item::before {
+  background: var(--cyan);
+  border-radius: 999px;
+  content: "";
+  inset: 10px auto 10px 0;
+  opacity: 0.42;
+  position: absolute;
+  width: 3px;
+}
+
+.event-log-item.is-warn::before {
+  background: var(--amber);
+}
+
+.event-log-item.is-error::before {
+  background: var(--red);
+}
+
+.event-log-item:hover {
+  background: rgba(8, 28, 42, 0.68);
+  transform: translateY(-1px);
+}
+
+.event-log-view__bar i {
+  border-radius: 5px 5px 0 0;
+  box-shadow: 0 0 18px rgba(61, 184, 255, 0.18);
+}
+
+.system-service-card {
+  position: relative;
+  transition: border-color 160ms ease, transform 120ms ease;
+}
+
+.system-service-card:hover {
+  border-color: rgba(61, 184, 255, 0.54);
+  transform: translateY(-1px);
+}
+
+.system-rtt-chart {
+  box-shadow: inset 0 0 0 1px rgba(220, 232, 242, 0.02);
+}
+
+.time-sync-view {
+  background:
+    linear-gradient(180deg, rgba(7, 22, 28, 0.62), transparent 220px),
+    rgba(3, 10, 15, 0.28);
+}
+
+.time-sync-view__tabs button,
+.time-sync-view__form button,
+.ops-command-button,
+.widget-icon-button {
+  border-radius: 6px;
+}
+
+.time-sync-view__policy article {
+  transition: border-color 160ms ease, transform 120ms ease;
+}
+
+.time-sync-view__policy article:hover {
+  border-color: rgba(61, 184, 255, 0.5);
+  transform: translateY(-1px);
+}

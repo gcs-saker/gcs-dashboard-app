@@ -1,0 +1,42 @@
+name: Refactoring task
+description: Improve structure, naming, boundaries, or resource ownership without changing public behavior
+title: "[P?][Architecture] "
+labels: ["type: refactor"]
+body:
+  - type: textarea
+    id: debt
+    attributes:
+      label: Structural problem
+      description: Describe duplicated responsibility, naming debt, oversized files, boundary leakage, or lifecycle/resource ownership problem.
+    validations:
+      required: true
+  - type: textarea
+    id: preserved
+    attributes:
+      label: Behavior and contracts to preserve
+      description: List public API, protobuf, database, UI, authorization, and runtime behavior that must not change.
+    validations:
+      required: true
+  - type: textarea
+    id: target
+    attributes:
+      label: Target structure
+      description: State the intended ownership, reusable abstraction, naming, and folder boundary.
+    validations:
+      required: true
+  - type: textarea
+    id: removal
+    attributes:
+      label: Duplicate or obsolete code removal
+      description: Identify what will be deleted, delegated, or retained with a documented consumer and removal plan.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Completion criteria
+      placeholder: |
+        - [ ] Existing public behavior remains covered
+        - [ ] New architecture contract prevents regression
+        - [ ] Production files remain below 350 lines
+        - [ ] Formatting, lint, typecheck, tests, and builds pass
+    validations:
+      required: true

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { TimelineAndMetrics } from "./eventLog.stories";
+import { Metrics } from "./eventLog.stories";
 import { AudioWaveform, MapMarkerPopup } from "./mapAndAudio.stories";
 import { PlayerPlaceholders, StreamCards } from "./streamStates.stories";
 import { ServiceCards } from "./systemStatus.stories";
@@ -28,9 +28,9 @@ describe("dashboard Ladle stories", () => {
   });
 
   it("render event log scenarios", () => {
-    render(<TimelineAndMetrics />);
+    render(<Metrics />);
     expect(screen.getByText("운영 이벤트 로그")).toBeInTheDocument();
-    expect(screen.getByText("WHEP 세션이 비정상 종료되어 재연결 대기 상태로 전환했습니다.")).toBeInTheDocument();
+    expect(screen.getByText("평균 RTT")).toBeInTheDocument();
   });
 
   it("render map and audio scenarios", () => {

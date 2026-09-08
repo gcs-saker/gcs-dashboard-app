@@ -5,6 +5,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupPolicyService
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupType
+import kr.co.a4ai.gcssaker.authpolicy.domain.GroupStatus
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationUnit
@@ -46,6 +47,23 @@ class AccountPublisherPolicyControllerTest {
     fun `viewer cannot publish`() {
         assertThrows(ForbiddenApiError::class.java) {
             controller.authorize(bearer("viewer-a"), AccountPublishAuthorizationRequest())
+        }
+    }
+
+    @Test
+    fun `operator cannot publish from an inactive group`() {
+        val inactivePolicy = GroupPolicyService(
+            listOf(
+                OrganizationUnit(GroupId("active-root"), "Root", GroupType.BATTALION),
+                OrganizationUnit(
+                    GroupId("co-a"), "A Company", GroupType.COMPANY, GroupId("active-root"), GroupStatus.INACTIVE,
+                ),
+            ),
+        )
+        val inactiveController = AccountPublisherPolicyController(BearerPrincipalResolver(sessions), inactivePolicy)
+
+        assertThrows(ForbiddenApiError::class.java) {
+            inactiveController.authorize(bearer("publisher-a"), AccountPublishAuthorizationRequest("front"))
         }
     }
 

@@ -1,0 +1,18 @@
+schemaVersion: gcs-saker.vex.v1
+vulnerability: CVE-or-GHSA-required
+component:
+  name: required
+  version: required
+  purl: required
+status: under_investigation
+justification: required
+impactStatement: required
+mitigation: required
+owner: required
+approvedBy: required
+createdAt: required
+expiresAt: required
+removalCondition: required
+affectedArtifacts: []
+evidenceRefs: []
+

@@ -216,7 +216,16 @@ class AuthControllerTest {
 
         val currentUser = controller.me("${AuthTokenContract.BEARER_PREFIX}${login.accessToken}")
 
-        assertEquals(CurrentUserResponse("operator01", "operator"), currentUser)
+        assertEquals(
+            CurrentUserResponse(
+                "operator01",
+                "operator",
+                "co-a",
+                1,
+                GroupCapabilitiesResponse(true, true, false, true, true, false, false),
+            ),
+            currentUser,
+        )
     }
 
     @Test

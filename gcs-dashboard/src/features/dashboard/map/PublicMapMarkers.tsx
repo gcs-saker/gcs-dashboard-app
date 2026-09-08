@@ -1,4 +1,4 @@
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import { coordinateText, markerClassForStream } from "./mapContracts";
 import { StreamMapMarkerContent } from "./StreamMapMarkerContent";
 

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
-import type { DashboardStreamSlot } from "@dashboard/streamTypes";
+import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import { StreamCard } from "./StreamCard";
 
 vi.mock("@streaming/components/RealtimePlayer", () => ({
@@ -38,10 +38,33 @@ describe("StreamCard", () => {
     expect(onSelect).toHaveBeenCalledWith("stream-2");
   });
 
+  test("selects the stream when any non-control area of the card is clicked", () => {
+    const onSelect = vi.fn();
+    render(<StreamCard stream={STREAM} isSelected={false} onSelect={onSelect} />);
+
+    fireEvent.click(screen.getByTestId("player-raw.drone-02.front"));
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith("stream-2");
+  });
+
   test("does not request playback for an offline registry path", () => {
     render(<StreamCard stream={{ ...STREAM, status: "offline" }} isSelected={false} onSelect={vi.fn()} />);
 
     expect(screen.queryByTestId("player-raw.drone-02.front")).not.toBeInTheDocument();
     expect(screen.getByText("상태: 스트림 선택 대기")).toBeInTheDocument();
+  });
+
+  test("never renders internal stream routes or session diagnostics as a label", () => {
+    render(
+      <StreamCard
+        stream={{ ...STREAM, detail: "raw.device.pub_secret (webRTCSession, readers 3)" }}
+        isSelected={false}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/raw\.device|webRTCSession|readers 3/i)).not.toBeInTheDocument();
+    expect(screen.getByText("스트리밍 2")).toBeInTheDocument();
   });
 });

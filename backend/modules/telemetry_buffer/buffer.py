@@ -10,6 +10,10 @@ from typing import Protocol
 from model.telemetry_model import TelemetryCreate
 
 
+class TelemetryBufferFullError(RuntimeError):
+    """Raised when bounded telemetry history cannot accept another record."""
+
+
 @dataclass(frozen=True)
 class TelemetryBufferRecord:
     key: str
@@ -43,9 +47,12 @@ class TelemetryWriteBuffer(Protocol):
 
 
 class InMemoryTelemetryWriteBuffer:
-    def __init__(self) -> None:
+    def __init__(self, max_pending_history: int = 10_000) -> None:
+        if max_pending_history <= 0:
+            raise ValueError("max pending telemetry history must be positive")
         self._latest: dict[str, TelemetryBufferRecord] = {}
         self._history: deque[TelemetryBufferRecord] = deque()
+        self._max_pending_history = max_pending_history
         self._lock = RLock()
 
     def put_latest(self, record: TelemetryBufferRecord) -> None:
@@ -54,6 +61,8 @@ class InMemoryTelemetryWriteBuffer:
 
     def append_history(self, record: TelemetryBufferRecord) -> None:
         with self._lock:
+            if len(self._history) >= self._max_pending_history:
+                raise TelemetryBufferFullError("telemetry history buffer is full")
             self._history.append(record)
 
     def latest_for(self, key: str) -> TelemetryBufferRecord | None:

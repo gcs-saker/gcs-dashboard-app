@@ -1,0 +1,17 @@
+schemaVersion: gcs-saker.evidence-manifest.v1
+evidenceId: required
+requirementIds: []
+controlIds: []
+hazardIds: []
+sourceCommit: 0000000000000000000000000000000000000000
+generatedAt: required
+environment: required
+toolVersions: {}
+procedure: required
+expectedResult: required
+actualResult: required
+verdict: NOT_RUN
+reviewer: required
+artifacts: []
+limitations: []
+

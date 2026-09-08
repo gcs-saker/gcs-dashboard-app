@@ -9,6 +9,12 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.JwtTokenService
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventReadModel
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPage
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPageQuery
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventCursor
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventPageLimit
 import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -35,7 +41,7 @@ class OperationalEventControllerTest {
                     username = "viewer-a",
                     email = "viewer-a@example.test",
                     passwordHash = passwordHasher.hash("pass"),
-                    role = UserRole.VIEWER,
+                    role = UserRole.ADMIN,
                     groupId = GroupId("co-a"),
                 ),
                 AuthUser(
@@ -100,11 +106,10 @@ class OperationalEventControllerTest {
     )
 
     @Test
-    fun `events returns authenticated group events with operational metrics`() {
+    fun `events returns system-wide events to the administrator`() {
         val response = controller.events(bearer(accessToken("viewer-a")), null, null, null, null)
 
-        assertEquals(2, response.size)
-        assertTrue(response.all { it.id.startsWith("evt-a") })
+        assertEquals(3, response.size)
         assertTrue(response.any { it.connections == 7 && it.throughputMbps == 20.0 })
     }
 
@@ -150,10 +155,15 @@ class OperationalEventControllerTest {
             limit = 1,
             after = firstPage.nextCursor,
         )
+        val thirdPage = controller.eventPage(
+            authorization = token, query = null, severity = null, from = null, to = null,
+            limit = 1, after = secondPage.nextCursor,
+        )
 
         assertEquals(listOf("evt-a-warn"), firstPage.events.map { it.id })
-        assertEquals(listOf("evt-a-info"), secondPage.events.map { it.id })
-        assertEquals(null, secondPage.nextCursor)
+        assertEquals(listOf("evt-b-error"), secondPage.events.map { it.id })
+        assertEquals(listOf("evt-a-info"), thirdPage.events.map { it.id })
+        assertEquals(null, thirdPage.nextCursor)
     }
 
     @Test
@@ -176,11 +186,54 @@ class OperationalEventControllerTest {
         assertTrue(payload.contains("event: heartbeat"))
         assertTrue(payload.contains("\"id\":\"evt-a-warn\""))
         assertTrue(payload.contains("\"id\":\"evt-a-info\""))
-        assertTrue(!payload.contains("evt-b-error"))
+        assertTrue(payload.contains("evt-b-error"))
     }
 
     @Test
-    fun `metrics returns dashboard aggregate without exposing other group events`() {
+    fun `event stream follows bounded watermark batches without full event reads`() {
+        val initial = event("evt-initial", "info", "api", "초기", "초기", GroupId("co-a"), 1, 10, 1.0)
+        val incremental = event("evt-next", "info", "api", "증분", "증분", GroupId("co-a"), 1, 11, 1.1)
+        val tailRepository = TailOnlyOperationalEventRepository(initial, incremental)
+        val tailController = OperationalEventController(
+            repository = tailRepository,
+            principalResolver = BearerPrincipalResolver(sessions),
+            objectMapper = jacksonObjectMapper().registerModule(JavaTimeModule()),
+            streamPolicy = OperationalEventStreamPolicy(pollCount = 1, pollIntervalMillis = 0),
+        )
+        val output = ByteArrayOutputStream()
+
+        tailController.eventStream(bearer(accessToken("viewer-a")), null, null, null, null).body?.writeTo(output)
+
+        assertTrue(output.toString(Charsets.UTF_8).contains("evt-initial"))
+        assertTrue(output.toString(Charsets.UTF_8).contains("evt-next"))
+        assertEquals(OperationalEventStreamContract.BATCH_LIMIT, tailRepository.requestedLimit)
+    }
+
+    @Test
+    fun `event stream resumes after composite cursor without replaying initial page`() {
+        val initial = event("evt-initial", "info", "api", "초기", "초기", GroupId("co-a"), 1, 10, 1.0)
+        val incremental = event("evt-next", "info", "api", "증분", "증분", GroupId("co-a"), 1, 11, 1.1)
+        val tailRepository = TailOnlyOperationalEventRepository(initial, incremental)
+        val tailController = OperationalEventController(
+            repository = tailRepository,
+            principalResolver = BearerPrincipalResolver(sessions),
+            objectMapper = jacksonObjectMapper().registerModule(JavaTimeModule()),
+            streamPolicy = OperationalEventStreamPolicy(pollCount = 1, pollIntervalMillis = 0),
+        )
+        val output = ByteArrayOutputStream()
+
+        tailController.eventStream(
+            bearer(accessToken("viewer-a")), null, null, null, null,
+            afterOccurredAt = "2026-06-01T00:00:00Z", afterId = "evt-initial",
+        ).body?.writeTo(output)
+
+        assertTrue(!output.toString(Charsets.UTF_8).contains("evt-initial"))
+        assertTrue(output.toString(Charsets.UTF_8).contains("evt-next"))
+        assertEquals(0, tailRepository.initialPageReads)
+    }
+
+    @Test
+    fun `metrics returns the administrator system-wide aggregate`() {
         val response = controller.metrics(
             authorization = bearer(accessToken("viewer-a")),
             query = null,
@@ -189,13 +242,13 @@ class OperationalEventControllerTest {
             to = null,
         )
 
-        assertEquals(2, response.totalEvents)
-        assertEquals(10, response.totalConnections)
+        assertEquals(3, response.totalEvents)
+        assertEquals(109, response.totalConnections)
         assertEquals(40, response.minLatencyMs)
-        assertEquals(60.0, response.avgLatencyMs)
-        assertEquals(80, response.maxLatencyMs)
-        assertEquals(15.0, response.avgThroughputMbps)
-        assertEquals(listOf("info", "warn"), response.severityCounts.map { it.severity })
+        assertEquals(373.0, response.avgLatencyMs)
+        assertEquals(999, response.maxLatencyMs)
+        assertEquals(343.0, response.avgThroughputMbps)
+        assertEquals(listOf("error", "info", "warn"), response.severityCounts.map { it.severity })
         assertEquals(listOf("relay"), response.icePathCounts.map { it.icePath })
         assertEquals(listOf("raw/local/webcam"), response.streamSessions.map { it.streamId })
         assertEquals("conn-whep-001", response.streamSessions.single().connectionId)
@@ -213,9 +266,9 @@ class OperationalEventControllerTest {
 
         assertEquals(2, response.size)
         assertEquals(Instant.parse("2026-06-01T00:00:00Z"), response[0].bucketStart)
-        assertEquals(1, response[0].eventCount)
-        assertEquals(3, response[0].totalConnections)
-        assertEquals(40.0, response[0].avgLatencyMs)
+        assertEquals(2, response[0].eventCount)
+        assertEquals(102, response[0].totalConnections)
+        assertEquals(519.5, response[0].avgLatencyMs)
         assertEquals(Instant.parse("2026-06-01T00:10:00Z"), response[1].bucketStart)
         assertEquals(7, response[1].totalConnections)
     }
@@ -236,6 +289,15 @@ class OperationalEventControllerTest {
         }
 
         assertEquals(HttpStatus.UNAUTHORIZED, error.statusCode)
+    }
+
+    @Test
+    fun `events reject non administrator accounts`() {
+        val error = assertThrows<ResponseStatusException> {
+            controller.events(bearer(accessToken("viewer-b")), null, null, null, null)
+        }
+
+        assertEquals(HttpStatus.FORBIDDEN, error.statusCode)
     }
 
     private fun event(
@@ -280,4 +342,35 @@ class OperationalEventControllerTest {
 
     private fun bearer(token: String): String =
         "${AuthTokenContract.BEARER_PREFIX}$token"
+}
+
+private class TailOnlyOperationalEventRepository(
+    private val initial: OperationalEventReadModel,
+    private val incremental: OperationalEventReadModel,
+) : OperationalEventRepository {
+    var requestedLimit: Int? = null
+    var initialPageReads: Int = 0
+
+    override fun eventsFor(principal: kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal, query: OperationalEventQuery) =
+        error("full operational event reads are prohibited for SSE")
+
+    override fun eventPageFor(
+        principal: kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal,
+        query: OperationalEventPageQuery,
+    ): OperationalEventPage {
+        initialPageReads += 1
+        return OperationalEventPage(listOf(initial), null)
+    }
+
+    override fun eventsAfter(
+        principal: kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal,
+        query: OperationalEventQuery,
+        cursor: OperationalEventCursor,
+        limit: OperationalEventPageLimit,
+    ): List<OperationalEventReadModel> {
+        requestedLimit = limit.value
+        return listOf(incremental)
+    }
+
+    override fun append(event: OperationalEventReadModel) = Unit
 }

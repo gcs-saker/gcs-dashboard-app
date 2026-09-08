@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessiontoken"
 )
 
 func (s Server) mediaMTXAuth(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +48,7 @@ func (s Server) authorizeMediaMTXPublish(w http.ResponseWriter, payload mediaMTX
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
 		return
 	}
-	tokenPayload, err := validateMediaTokenForRoute(
+	tokenPayload, err := sessiontoken.ValidateForRoute(
 		s.publishToken,
 		values.Get(publisherTokenQueryKey),
 		mediaMTXActionPublish,
@@ -72,28 +74,35 @@ func (s Server) authorizeMediaMTXPlayback(w http.ResponseWriter, payload mediaMT
 		writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
 		return
 	}
-	target := s.groups.TargetFor(parsed)
 	values, err := url.ParseQuery(strings.TrimPrefix(payload.Query, "?"))
 	if err != nil {
 		writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
 		return
 	}
 	if parsed.Prefix == "talkback" {
-		if _, err := validateMediaTokenForRoute(
+		token, err := sessiontoken.ValidateForRoute(
 			s.publishToken,
 			values.Get(playbackTokenQueryKey),
 			mediaMTXActionPlayback,
 			parsed.StreamID,
 			payload.Path,
 			time.Now(),
-		); err != nil {
+		)
+		if err != nil || !s.legacyTokenHasActiveScope(token) {
 			writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	if validateMediaToken(
+	ctx, cancel := context.WithTimeout(context.Background(), sessionLookupTimeout)
+	defer cancel()
+	target, err := s.resolveStreamTarget(ctx, parsed)
+	if err != nil {
+		writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
+		return
+	}
+	if sessiontoken.Validate(
 		s.publishToken,
 		values.Get(playbackTokenQueryKey),
 		mediaMTXActionPlayback,

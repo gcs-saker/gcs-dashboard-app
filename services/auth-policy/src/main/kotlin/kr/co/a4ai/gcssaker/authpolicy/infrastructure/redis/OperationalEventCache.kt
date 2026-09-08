@@ -123,8 +123,8 @@ data class RedisCachePolicy(
     companion object {
         val OPERATIONAL_EVENTS = RedisCachePolicy(
             keyPrefix = "gcs:ops-events:",
-            ttl = Duration.ofSeconds(5),
-            ttlJitterRatio = 0.2,
+            ttl = Duration.ZERO,
+            staleTtl = Duration.ZERO,
         )
         val OPERATIONAL_READ = RedisCachePolicy(
             keyPrefix = "gcs:ops-read:",

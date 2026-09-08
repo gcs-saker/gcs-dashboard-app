@@ -5,6 +5,8 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicLong
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuditClockEvidence
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuditClockEvidenceProvider
 
 interface SecurityAuditPublisher {
     fun publishLoginSucceeded(principal: AuthenticatedPrincipal)
@@ -18,6 +20,21 @@ interface SecurityAuditPublisher {
         allowed: Boolean,
         reason: String,
     )
+    fun publishGroupManagement(
+        principal: AuthenticatedPrincipal,
+        targetGroupId: GroupId,
+        action: String,
+        target: String,
+        clientIp: String,
+    ) = Unit
+    fun publishStreamAction(
+        principal: AuthenticatedPrincipal,
+        streamId: String,
+        publisherGroupId: GroupId,
+        action: String,
+        allowed: Boolean,
+        reason: String,
+    ) = publishStreamAccess(principal, streamId, publisherGroupId, allowed, reason)
 }
 
 object NoopSecurityAuditPublisher : SecurityAuditPublisher {
@@ -37,9 +54,10 @@ object NoopSecurityAuditPublisher : SecurityAuditPublisher {
 class RepositorySecurityAuditPublisher(
     private val repository: OperationalEventRepository,
     private val now: () -> Instant = Instant::now,
+    clockEvidence: AuditClockEvidenceProvider = AuditClockEvidenceProvider { AuditClockEvidence.unknown() },
 ) : SecurityAuditPublisher {
     private val sequence = AtomicLong()
-    private val events = SecurityAuditEventFactory(sequence::incrementAndGet)
+    private val events = SecurityAuditEventFactory(sequence::incrementAndGet, clockEvidence::current)
 
     override fun publishLoginSucceeded(principal: AuthenticatedPrincipal) {
         repository.append(events.loginSucceeded(principal, now()))
@@ -74,5 +92,26 @@ class RepositorySecurityAuditPublisher(
                 occurredAt = now(),
             ),
         )
+    }
+
+    override fun publishGroupManagement(
+        principal: AuthenticatedPrincipal,
+        targetGroupId: GroupId,
+        action: String,
+        target: String,
+        clientIp: String,
+    ) {
+        repository.append(events.groupManagement(principal, targetGroupId, action, target, clientIp, now()))
+    }
+
+    override fun publishStreamAction(
+        principal: AuthenticatedPrincipal,
+        streamId: String,
+        publisherGroupId: GroupId,
+        action: String,
+        allowed: Boolean,
+        reason: String,
+    ) {
+        repository.append(events.streamAccess(principal, streamId, publisherGroupId, allowed, reason, now(), action))
     }
 }
