@@ -17,8 +17,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
-DEFAULT_WHIP_URL = "https://a4ai.tplinkdns.com/webrtc/raw/nat/smoke/whip"
-DEFAULT_ICE_SERVER_URL = "stun:a4ai.tplinkdns.com:3478"
+DEFAULT_WHIP_URL = "https://gcs-saker.com/webrtc/raw/nat/smoke/whip"
+DEFAULT_ICE_SERVER_URL = "stun:turn.gcs-saker.com:3478"
 REDACTED_QUERY = "<redacted-query>"
 CONNECTED_ICE_STATES = {"connected", "completed"}
 FAILED_ICE_STATES = {"failed", "closed", "disconnected"}

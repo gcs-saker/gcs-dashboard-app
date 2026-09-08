@@ -3,12 +3,12 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MODE="check"
-EDGE_BASE_URL="${EDGE_BASE_URL:-https://a4ai.tplinkdns.com}"
+EDGE_BASE_URL="${EDGE_BASE_URL:-https://gcs-saker.com}"
 STREAM_PATH="${STREAM_PATH:-raw/nat/smoke}"
 STREAM_ID="${STREAM_ID:-${STREAM_PATH//\//.}}"
-STUN_URL="${STUN_URL:-stun:a4ai.tplinkdns.com:3478}"
-TURN_PRIMARY_URL="${TURN_PRIMARY_URL:-turn:a4ai.tplinkdns.com:3478?transport=udp}"
-TURN_SECONDARY_URL="${TURN_SECONDARY_URL:-turn:a4ai.tplinkdns.com:3479?transport=udp}"
+STUN_URL="${STUN_URL:-stun:turn.gcs-saker.com:3478}"
+TURN_PRIMARY_URL="${TURN_PRIMARY_URL:-turn:turn.gcs-saker.com:3478?transport=udp}"
+TURN_SECONDARY_URL="${TURN_SECONDARY_URL:-}"
 TURN_USERNAME="${TURN_USERNAME:-${WEBRTC_TURN_USERNAME:-}}"
 TURN_PASSWORD="${TURN_PASSWORD:-${WEBRTC_TURN_PASSWORD:-}}"
 AUTH_BEARER_TOKEN="${AUTH_BEARER_TOKEN:-}"
@@ -36,11 +36,11 @@ Modes:
   --run    Validate public edge, TURN allocation, WHIP publish, WHEP first frame, and candidate summary.
 
 Environment:
-  EDGE_BASE_URL         Default: https://a4ai.tplinkdns.com
+  EDGE_BASE_URL         Default: https://gcs-saker.com
   STREAM_PATH           Default: raw/nat/smoke
-  STUN_URL              Default: stun:a4ai.tplinkdns.com:3478
-  TURN_PRIMARY_URL      Default: turn:a4ai.tplinkdns.com:3478?transport=udp
-  TURN_SECONDARY_URL    Default: turn:a4ai.tplinkdns.com:3479?transport=udp
+  STUN_URL              Default: stun:turn.gcs-saker.com:3478
+  TURN_PRIMARY_URL      Default: turn:turn.gcs-saker.com:3478?transport=udp
+  TURN_SECONDARY_URL    Default: empty (single-host deployment)
   TURN_USERNAME         Defaults to WEBRTC_TURN_USERNAME
   TURN_PASSWORD         Defaults to WEBRTC_TURN_PASSWORD
   AUTH_BEARER_TOKEN     Optional token for auth-protected ICE server API readiness.

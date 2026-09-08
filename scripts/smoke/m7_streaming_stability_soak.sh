@@ -3,10 +3,10 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MODE="check"
-EDGE_BASE_URL="${EDGE_BASE_URL:-https://a4ai.121-159-26-245.sslip.io}"
+EDGE_BASE_URL="${EDGE_BASE_URL:-https://gcs-saker.com}"
 STREAM_PATH="${STREAM_PATH:-raw/nat/soak}"
-STUN_URL="${STUN_URL:-stun:a4ai.121-159-26-245.sslip.io:3478}"
-TURN_PRIMARY_URL="${TURN_PRIMARY_URL:-turn:a4ai.121-159-26-245.sslip.io:3478?transport=udp}"
+STUN_URL="${STUN_URL:-stun:turn.gcs-saker.com:3478}"
+TURN_PRIMARY_URL="${TURN_PRIMARY_URL:-turn:turn.gcs-saker.com:3478?transport=udp}"
 TURN_SECONDARY_URL="${TURN_SECONDARY_URL:-}"
 TURN_USERNAME="${TURN_USERNAME:-${WEBRTC_TURN_USERNAME:-}}"
 TURN_PASSWORD="${TURN_PASSWORD:-${WEBRTC_TURN_PASSWORD:-}}"
@@ -34,10 +34,10 @@ Modes:
   --run    Keep one WHIP publisher open and sample WHEP first-frame stability.
 
 Environment:
-  EDGE_BASE_URL                 Default: https://a4ai.121-159-26-245.sslip.io
+  EDGE_BASE_URL                 Default: https://gcs-saker.com
   STREAM_PATH                   Default: raw/nat/soak
-  STUN_URL                      Default: stun:a4ai.121-159-26-245.sslip.io:3478
-  TURN_PRIMARY_URL              Default: turn:a4ai.121-159-26-245.sslip.io:3478?transport=udp
+  STUN_URL                      Default: stun:turn.gcs-saker.com:3478
+  TURN_PRIMARY_URL              Default: turn:turn.gcs-saker.com:3478?transport=udp
   TURN_SECONDARY_URL            Optional external failover TURN endpoint
   TURN_USERNAME                 Defaults to WEBRTC_TURN_USERNAME
   TURN_PASSWORD                 Defaults to WEBRTC_TURN_PASSWORD

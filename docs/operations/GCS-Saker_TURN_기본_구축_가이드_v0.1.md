@@ -23,10 +23,10 @@ flowchart LR
 
 ```bash
 WEBRTC_STUN_URL=stun:stun.l.google.com:19302
-WEBRTC_TURN_URL=turn:a4ai.tplinkdns.com:3478?transport=udp
+WEBRTC_TURN_URL=turn:turn.gcs-saker.com:3478?transport=udp
 WEBRTC_TURN_USERNAME=gcs-turn
 WEBRTC_TURN_PASSWORD=<secret>
-TURN_REALM=a4ai.tplinkdns.com
+TURN_REALM=turn.gcs-saker.com
 TURN_EXTERNAL_IP=<router-public-ip>
 ```
 

@@ -85,7 +85,7 @@ def check_network_profile_split() -> list[str]:
     mixed_content = DEPLOY_MIXED_NETWORK_ENV.read_text(encoding="utf-8")
     errors: list[str] = []
     required_public_values = (
-        "MEDIA_CONTROL_STUN_URL=stun:a4ai.tplinkdns.com:3478",
+        "MEDIA_CONTROL_STUN_URL=stun:turn.gcs-saker.com:3478",
         "MEDIA_CONTROL_TURN_MAX_HEALTHY_SERVERS=1",
     )
     errors.extend(f"public ICE env missing {value}" for value in required_public_values if value not in public_content)
