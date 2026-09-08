@@ -117,7 +117,7 @@ class OperationalAuditPublisherTest {
     @Test
     fun `security audit records trace actor operation result error and clock status`() {
         val repository = InMemoryOperationalEventRepository(emptyList())
-        val publisher = RepositorySecurityAuditPublisher(repository) { Instant.parse("2026-06-01T00:00:00Z") }
+        val publisher = RepositorySecurityAuditPublisher(repository, now = { Instant.parse("2026-06-01T00:00:00Z") })
         MDC.put("traceId", "0123456789abcdef0123456789abcdef")
         try {
             publisher.publishLoginFailed("operator01")
@@ -134,7 +134,9 @@ class OperationalAuditPublisherTest {
         assertEquals(SecurityAuditEventContract.EVENT_TYPE_LOGIN_FAILED, event.operation)
         assertEquals("denied", event.result)
         assertEquals(SecurityAuditEventContract.EVENT_TYPE_LOGIN_FAILED, event.errorCode)
-        assertEquals("unverified", event.clockStatus)
+        assertEquals("UNKNOWN", event.clockStatus)
+        assertEquals("unverified", event.timeSource)
+        assertEquals(null, event.clockDriftMs)
     }
 
     @Test
@@ -168,7 +170,7 @@ class OperationalAuditPublisherTest {
     @Test
     fun `security audit distinguishes talkback and records trusted client ip for management`() {
         val repository = InMemoryOperationalEventRepository(emptyList())
-        val publisher = RepositorySecurityAuditPublisher(repository) { Instant.parse("2026-06-01T00:00:00Z") }
+        val publisher = RepositorySecurityAuditPublisher(repository, now = { Instant.parse("2026-06-01T00:00:00Z") })
 
         publisher.publishStreamAction(
             OperationalAuditFixtures.principal, "raw.company-b.front", GroupId("co-b"),

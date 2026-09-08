@@ -32,6 +32,10 @@ data class TimeSyncStatus(
     val checkedAt: Instant,
     val health: TimeSyncHealth,
     val message: String,
+    val clockStatus: AuditClockStatus = AuditClockStatus.UNKNOWN,
+    val clockDriftMs: Long? = null,
+    val timeSource: String = "unverified",
+    val clockMeasuredAt: Instant = Instant.EPOCH,
 )
 
 data class UpdateTimeSyncConfigCommand(
@@ -78,10 +82,12 @@ class TimeSyncStatusService(
     private val repository: TimeSyncConfigRepository,
     private val now: () -> Instant = Instant::now,
     private val monotonicMs: () -> Long = { System.nanoTime() / 1_000_000 },
+    private val evidence: AuditClockEvidenceProvider = AuditClockEvidenceProvider { AuditClockEvidence.unknown() },
 ) {
     fun status(): TimeSyncStatus {
         val checkedAt = now()
         val config = repository.current()
+        val clockEvidence = evidence.current()
         val health = when {
             config.mode == TimeSyncMode.MANUAL -> TimeSyncHealth.WARN
             config.sourceHost.isNullOrBlank() -> TimeSyncHealth.ERROR
@@ -95,6 +101,10 @@ class TimeSyncStatusService(
             checkedAt = checkedAt,
             health = health,
             message = messageFor(config, health),
+            clockStatus = clockEvidence.status,
+            clockDriftMs = clockEvidence.clockDriftMs,
+            timeSource = clockEvidence.timeSource,
+            clockMeasuredAt = clockEvidence.measuredAt,
         )
     }
 

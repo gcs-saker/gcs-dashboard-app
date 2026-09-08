@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
+import kr.co.a4ai.gcssaker.authpolicy.application.AuditClockMonitor
 
 @RestController
 class TimeSyncController(
@@ -25,6 +26,7 @@ class TimeSyncController(
     private val statusService: TimeSyncStatusService,
     private val principalResolver: BearerPrincipalResolver,
     private val settingsAuditPublisher: SettingsAuditPublisher = NoopSettingsAuditPublisher,
+    private val clockMonitor: AuditClockMonitor? = null,
 ) {
     @GetMapping(TimeSyncApiRoutes.STATUS)
     @RequiresBearerAuth
@@ -41,6 +43,7 @@ class TimeSyncController(
         @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
     ): TimeSyncStatusResponse {
         principalResolver.requirePrincipal(authorization)
+        clockMonitor?.refresh()
         return statusService.status().toResponse()
     }
 
@@ -92,6 +95,10 @@ private fun TimeSyncStatus.toResponse(): TimeSyncStatusResponse =
         checkedAt = checkedAt,
         health = health.toResponseValue(),
         message = message,
+        clockStatus = clockStatus.name.lowercase(),
+        clockDriftMs = clockDriftMs,
+        timeSource = timeSource,
+        clockMeasuredAt = clockMeasuredAt,
     )
 
 private fun TimeSyncMode.toResponseValue(): String =

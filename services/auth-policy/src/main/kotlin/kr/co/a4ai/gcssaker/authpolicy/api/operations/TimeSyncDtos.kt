@@ -22,4 +22,8 @@ data class TimeSyncStatusResponse(
     val checkedAt: Instant,
     val health: String,
     val message: String,
+    val clockStatus: String,
+    val clockDriftMs: Long?,
+    val timeSource: String,
+    val clockMeasuredAt: Instant,
 )

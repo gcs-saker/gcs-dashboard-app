@@ -46,6 +46,10 @@ internal object AuditHashChain {
         event.result,
         event.errorCode,
         event.clockStatus,
+        event.receivedAt?.toString(),
+        event.timeSource,
+        event.clockDriftMs?.toString(),
+        event.clockMeasuredAt?.toString(),
     )
 
     private fun encode(vararg values: String?): String = values.joinToString(separator = "") { value ->

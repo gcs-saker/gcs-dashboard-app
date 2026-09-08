@@ -27,6 +27,10 @@ data class OperationalEventReadModel(
     val clockStatus: String? = null,
     val previousHash: String? = null,
     val eventHash: String? = null,
+    val receivedAt: Instant? = null,
+    val timeSource: String? = null,
+    val clockDriftMs: Long? = null,
+    val clockMeasuredAt: Instant? = null,
 )
 
 data class OperationalEventQuery(

@@ -14,6 +14,10 @@ const status = {
   checkedAt: "2026-06-01T00:00:00Z",
   health: "ok",
   message: "pool.ntp.org:123 기준으로 시간 소스가 설정되었습니다.",
+  clockStatus: "normal",
+  clockDriftMs: 23,
+  timeSource: "ntp-unauthenticated:pool.ntp.org:123",
+  clockMeasuredAt: "2026-06-01T00:00:00Z",
 };
 
 describe("timeSyncApi", () => {

@@ -1,5 +1,6 @@
 export type TimeSyncMode = "public" | "closed_network" | "manual";
 export type TimeSyncHealth = "ok" | "warn" | "error";
+export type AuditClockStatus = "normal" | "warning" | "unsafe" | "unknown";
 
 export interface TimeSyncStatus {
   mode: TimeSyncMode;
@@ -14,6 +15,10 @@ export interface TimeSyncStatus {
   checkedAt: string;
   health: TimeSyncHealth;
   message: string;
+  clockStatus: AuditClockStatus;
+  clockDriftMs: number | null;
+  timeSource: string;
+  clockMeasuredAt: string;
 }
 
 export interface TimeSyncConfigInput {

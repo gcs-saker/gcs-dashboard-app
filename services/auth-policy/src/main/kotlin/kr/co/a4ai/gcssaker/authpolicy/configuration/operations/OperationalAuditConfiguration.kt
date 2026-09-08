@@ -9,6 +9,7 @@ import kr.co.a4ai.gcssaker.authpolicy.application.SettingsAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.application.MediaLifecycleAuditService
 import kr.co.a4ai.gcssaker.authpolicy.application.AuditStorageLimits
 import kr.co.a4ai.gcssaker.authpolicy.application.AuditStorageMonitor
+import kr.co.a4ai.gcssaker.authpolicy.application.AuditClockState
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuditStorageReader
 import kr.co.a4ai.gcssaker.authpolicy.application.AuditStorageMetrics
 import io.micrometer.core.instrument.MeterRegistry
@@ -41,14 +42,15 @@ class OperationalAuditConfiguration {
     )
 
     @Bean
-    fun mediaLifecycleAuditService(repository: OperationalEventRepository) = MediaLifecycleAuditService(repository)
+    fun mediaLifecycleAuditService(repository: OperationalEventRepository, clock: AuditClockState) =
+        MediaLifecycleAuditService(repository, clockEvidence = clock)
     @Bean
-    fun settingsAuditPublisher(repository: OperationalEventRepository): SettingsAuditPublisher =
-        RepositorySettingsAuditPublisher(repository)
+    fun settingsAuditPublisher(repository: OperationalEventRepository, clock: AuditClockState): SettingsAuditPublisher =
+        RepositorySettingsAuditPublisher(repository, clockEvidence = clock)
 
     @Bean
-    fun securityAuditPublisher(repository: OperationalEventRepository): SecurityAuditPublisher =
-        RepositorySecurityAuditPublisher(repository)
+    fun securityAuditPublisher(repository: OperationalEventRepository, clock: AuditClockState): SecurityAuditPublisher =
+        RepositorySecurityAuditPublisher(repository, clockEvidence = clock)
 
     @Bean
     fun operationalFailureLogger(repository: OperationalEventRepository): OperationalFailureLoggerFacade =

@@ -52,6 +52,10 @@ class JdbcOperationalEventWriter(
             event.clockStatus,
             event.previousHash,
             event.eventHash,
+            event.receivedAt?.let(Timestamp::from),
+            event.timeSource,
+            event.clockDriftMs,
+            event.clockMeasuredAt?.let(Timestamp::from),
         )
     }
 

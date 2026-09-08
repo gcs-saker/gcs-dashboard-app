@@ -6,6 +6,8 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import org.slf4j.MDC
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicLong
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuditClockEvidence
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuditClockEvidenceProvider
 
 data class MediaLifecycleAuditCommand(
     val groupId: String,
@@ -17,6 +19,7 @@ data class MediaLifecycleAuditCommand(
 class MediaLifecycleAuditService(
     private val repository: OperationalEventRepository,
     private val now: () -> Instant = Instant::now,
+    private val clockEvidence: AuditClockEvidenceProvider = AuditClockEvidenceProvider { AuditClockEvidence.unknown() },
 ) {
     private val sequence = AtomicLong()
 
@@ -28,10 +31,14 @@ class MediaLifecycleAuditService(
         require(command.occurredAt in receivedAt.minusSeconds(MAX_CLOCK_SKEW_SECONDS)..receivedAt.plusSeconds(MAX_CLOCK_SKEW_SECONDS)) {
             "lifecycle event time outside accepted window"
         }
-        repository.append(command.toEvent(receivedAt, sequence.incrementAndGet()))
+        repository.append(command.toEvent(receivedAt, sequence.incrementAndGet(), clockEvidence.current()))
     }
 
-    private fun MediaLifecycleAuditCommand.toEvent(receivedAt: Instant, sequence: Long) = OperationalEventReadModel(
+    private fun MediaLifecycleAuditCommand.toEvent(
+        receivedAt: Instant,
+        sequence: Long,
+        clock: AuditClockEvidence,
+    ) = OperationalEventReadModel(
         id = "audit-media-${receivedAt.toEpochMilli()}-$sequence",
         occurredAt = occurredAt,
         severity = "info",
@@ -49,7 +56,11 @@ class MediaLifecycleAuditService(
         operation = operation,
         result = "observed",
         errorCode = "none",
-        clockStatus = "unverified",
+        clockStatus = clock.status.name,
+        receivedAt = receivedAt,
+        timeSource = clock.timeSource,
+        clockDriftMs = clock.clockDriftMs,
+        clockMeasuredAt = clock.measuredAt,
     )
 
     private companion object {

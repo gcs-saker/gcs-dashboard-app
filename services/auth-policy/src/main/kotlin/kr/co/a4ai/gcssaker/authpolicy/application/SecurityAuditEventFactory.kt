@@ -5,9 +5,11 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventReadModel
 import java.time.Instant
 import org.slf4j.MDC
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuditClockEvidence
 
 class SecurityAuditEventFactory(
     private val nextSequence: () -> Long,
+    private val clockEvidence: () -> AuditClockEvidence = { AuditClockEvidence.unknown() },
 ) {
     fun loginSucceeded(principal: AuthenticatedPrincipal, occurredAt: Instant): OperationalEventReadModel =
         event(
@@ -103,7 +105,7 @@ class SecurityAuditEventFactory(
         streamId: String? = null,
         groupId: GroupId = principal.groupId,
     ): OperationalEventReadModel =
-        OperationalEventReadModel(
+        clockEvidence().let { clock -> OperationalEventReadModel(
             id = "${SecurityAuditEventContract.ID_PREFIX}${occurredAt.toEpochMilli()}-${nextSequence()}",
             occurredAt = occurredAt,
             severity = severity,
@@ -122,8 +124,12 @@ class SecurityAuditEventFactory(
             operation = eventType,
             result = auditResult(eventType),
             errorCode = auditErrorCode(eventType),
-            clockStatus = SecurityAuditEventContract.CLOCK_STATUS_UNVERIFIED,
-        )
+            clockStatus = clock.status.name,
+            receivedAt = occurredAt,
+            timeSource = clock.timeSource,
+            clockDriftMs = clock.clockDriftMs,
+            clockMeasuredAt = clock.measuredAt,
+        ) }
 
     private fun auditResult(eventType: String): String =
         if (eventType.endsWith("failed") || eventType.endsWith("denied")) {

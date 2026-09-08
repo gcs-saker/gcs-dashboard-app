@@ -26,7 +26,6 @@ object SecurityAuditEventContract {
     const val RESULT_SUCCESS = "success"
     const val RESULT_DENIED = "denied"
     const val ERROR_NONE = "none"
-    const val CLOCK_STATUS_UNVERIFIED = "unverified"
 
     val UNKNOWN_PRINCIPAL = AuthenticatedPrincipal(UNKNOWN_USERNAME, UserRole.ADMIN, GroupId(UNKNOWN_GROUP_ID))
 

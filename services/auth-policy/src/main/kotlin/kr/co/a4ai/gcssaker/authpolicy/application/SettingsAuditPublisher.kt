@@ -7,6 +7,8 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfig
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicLong
 import org.slf4j.MDC
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuditClockEvidence
+import kr.co.a4ai.gcssaker.authpolicy.domain.AuditClockEvidenceProvider
 
 interface SettingsAuditPublisher {
     fun publishTimeSyncConfigChanged(
@@ -27,6 +29,7 @@ object NoopSettingsAuditPublisher : SettingsAuditPublisher {
 class RepositorySettingsAuditPublisher(
     private val repository: OperationalEventRepository,
     private val now: () -> Instant = Instant::now,
+    private val clockEvidence: AuditClockEvidenceProvider = AuditClockEvidenceProvider { AuditClockEvidence.unknown() },
 ) : SettingsAuditPublisher {
     private val sequence = AtomicLong()
 
@@ -35,6 +38,7 @@ class RepositorySettingsAuditPublisher(
         previous: TimeSyncConfig,
         next: TimeSyncConfig,
     ) {
+        val clock = clockEvidence.current()
         repository.append(
             OperationalEventReadModel(
                 id = "${SettingsAuditEventContract.TIME_SYNC_ID_PREFIX}${now().toEpochMilli()}-${sequence.incrementAndGet()}",
@@ -54,7 +58,11 @@ class RepositorySettingsAuditPublisher(
                 operation = SettingsAuditEventContract.EVENT_TYPE_TIME_SYNC_UPDATED,
                 result = SecurityAuditEventContract.RESULT_SUCCESS,
                 errorCode = SecurityAuditEventContract.ERROR_NONE,
-                clockStatus = SecurityAuditEventContract.CLOCK_STATUS_UNVERIFIED,
+                clockStatus = clock.status.name,
+                receivedAt = now(),
+                timeSource = clock.timeSource,
+                clockDriftMs = clock.clockDriftMs,
+                clockMeasuredAt = clock.measuredAt,
             ),
         )
     }

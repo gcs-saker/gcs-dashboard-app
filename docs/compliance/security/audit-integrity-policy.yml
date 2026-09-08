@@ -3,6 +3,11 @@ time:
   internal: UTC
   requiredFields: [occurredAt, receivedAt, timeSource, clockDriftMs]
   driftStates: [NORMAL, WARNING, UNSAFE, UNKNOWN]
+  measurement: SNTP four-timestamp offset over UDP with 2 second timeout
+  publicSourceTrust: unauthenticated; source is explicitly marked ntp-unauthenticated
+  warningThreshold: configured TIME_SYNC_DRIFT_WARN_MS
+  unsafeThreshold: five times the warning threshold
+  probeFailureState: UNKNOWN
 integrity:
   algorithm: SHA-256
   canonicalization: UTF-8 length-prefixed ordered fields

@@ -15,7 +15,7 @@ class InternalMediaAuditControllerTest {
     private val now = Instant.parse("2026-09-07T00:00:00Z")
     private val token = "internal-audit-token-with-32-characters"
     private val repository = InMemoryOperationalEventRepository(emptyList())
-    private val controller = InternalMediaAuditController(MediaLifecycleAuditService(repository) { now }, token)
+    private val controller = InternalMediaAuditController(MediaLifecycleAuditService(repository, now = { now }), token)
 
     @Test
     fun `authenticated lifecycle event is persisted without private route`() {

@@ -36,6 +36,10 @@ internal object JdbcOperationalEventRowMappers {
             clockStatus = rs.getString(OperationalEventColumns.clockStatus),
             previousHash = rs.getString(OperationalEventColumns.previousHash),
             eventHash = rs.getString(OperationalEventColumns.eventHash),
+            receivedAt = rs.getTimestamp(OperationalEventColumns.receivedAt)?.toInstant(),
+            timeSource = rs.getString(OperationalEventColumns.timeSource),
+            clockDriftMs = rs.getLong(OperationalEventColumns.clockDriftMs).takeUnless { rs.wasNull() },
+            clockMeasuredAt = rs.getTimestamp(OperationalEventColumns.clockMeasuredAt)?.toInstant(),
         )
     }
 
@@ -121,6 +125,10 @@ internal object OperationalEventColumns {
     const val clockStatus = "clock_status"
     const val previousHash = "previous_hash"
     const val eventHash = "event_hash"
+    const val receivedAt = "received_at"
+    const val timeSource = "time_source"
+    const val clockDriftMs = "clock_drift_ms"
+    const val clockMeasuredAt = "clock_measured_at"
 }
 
 internal object OperationalEventMetricColumns {

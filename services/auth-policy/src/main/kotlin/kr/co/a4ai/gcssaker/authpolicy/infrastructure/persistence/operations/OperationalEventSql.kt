@@ -6,7 +6,7 @@ internal object OperationalEventSql {
                connections, latency_ms, throughput_mbps, group_id,
                stream_id, connection_id, ice_path, relay_fallback_reason,
                trace_id, actor_id, operation, result, error_code, clock_status,
-               previous_hash, event_hash
+               previous_hash, event_hash, received_at, time_source, clock_drift_ms, clock_measured_at
         FROM operational_events
         WHERE (group_id = ? OR ? = ? OR (? = 'GROUP_ADMIN' AND EXISTS (
             SELECT 1 FROM organization_group_closure c
@@ -97,9 +97,9 @@ internal object OperationalEventSql {
             connections, latency_ms, throughput_mbps, group_id,
             stream_id, connection_id, ice_path, relay_fallback_reason,
             trace_id, actor_id, operation, result, error_code, clock_status,
-            previous_hash, event_hash
+            previous_hash, event_hash, received_at, time_source, clock_drift_ms, clock_measured_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     const val existsById = "SELECT COUNT(1) FROM operational_events WHERE id = ?"
     const val latestAuditHash = """

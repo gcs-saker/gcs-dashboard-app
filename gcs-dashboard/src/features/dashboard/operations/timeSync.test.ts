@@ -14,6 +14,10 @@ const status: TimeSyncStatus = {
   checkedAt: "2026-06-01T00:00:00Z",
   health: "ok",
   message: "ok",
+  clockStatus: "normal",
+  clockDriftMs: 23,
+  timeSource: "ntp-unauthenticated:pool.ntp.org:123",
+  clockMeasuredAt: "2026-06-01T00:00:00Z",
 };
 
 describe("timeSync", () => {

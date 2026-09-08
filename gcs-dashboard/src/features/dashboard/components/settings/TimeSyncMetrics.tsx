@@ -7,17 +7,17 @@ interface TimeSyncMetricsProps {
 
 export function TimeSyncMetrics({ browserOffsetMs, status }: TimeSyncMetricsProps) {
   const browserTime = status ? Date.parse(status.serverTime) + browserOffsetMs : null;
-  const drifted = status ? Math.abs(browserOffsetMs) > status.driftWarnMs : false;
+  const drifted = status ? status.clockStatus === "warning" || status.clockStatus === "unsafe" : false;
   return (
     <div className="time-sync-view__metrics" aria-label="시간 상태">
       <Metric label="서버 시각" value={status ? formatDateTime(status.serverTime) : "-"} detail={status?.timezone} />
       <Metric label="브라우저 시각" value={browserTime === null ? "-" : formatDateTime(browserTime)} detail="현재 브라우저 기준" />
-      <Metric className={drifted ? "is-warning" : "is-ok"} label="시각 차이"
-        value={status ? formatClockOffset(browserOffsetMs) : "-"}
-        detail={status ? `${formatMilliseconds(browserOffsetMs)} · 허용 ${status.driftWarnMs.toLocaleString("ko-KR")} ms` : undefined} />
-      <Metric label="동기화 소스" value={status?.sourceHost ? `${status.sourceHost}:${status.sourcePort}` : "설정 없음"} detail="NTP endpoint" />
-      <Metric label="마지막 점검" value={status ? formatDateTime(status.checkedAt) : "-"}
-        detail={status?.health === "ok" ? "정상" : status?.health === "warn" ? "주의" : status ? "오류" : undefined} />
+      <Metric className={drifted ? "is-warning" : status?.clockStatus === "normal" ? "is-ok" : ""} label="서버 Drift"
+        value={status?.clockDriftMs === null || !status ? "측정 불가" : formatMilliseconds(status.clockDriftMs)}
+        detail={status ? `${clockStatusLabel(status.clockStatus)} · 허용 ${status.driftWarnMs.toLocaleString("ko-KR")} ms` : undefined} />
+      <Metric label="동기화 소스" value={status?.timeSource ?? "설정 없음"} detail="감사 시각 기준" />
+      <Metric label="마지막 점검" value={status ? formatDateTime(status.clockMeasuredAt) : "-"}
+        detail={status ? clockStatusLabel(status.clockStatus) : undefined} />
     </div>
   );
 }
@@ -34,3 +34,6 @@ export function formatClockOffset(offsetMs: number): string {
 
 const formatDateTime = (value: string | number): string => new Date(value).toLocaleString("ko-KR");
 const formatMilliseconds = (value: number): string => `${Math.round(value).toLocaleString("ko-KR")} ms`;
+const clockStatusLabel = (status: TimeSyncStatus["clockStatus"]): string => ({
+  normal: "정상", warning: "주의", unsafe: "위험", unknown: "미확인",
+})[status];

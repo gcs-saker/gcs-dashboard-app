@@ -4,16 +4,18 @@ import { fetchValidatedJson } from "@features/apiClient";
 import {
   isNullableString,
   isNumber,
+  isNullableNumber,
   isString,
   matchesPayloadSchema,
   type PayloadSchema,
 } from "@/features/payloadValidation";
-import type { TimeSyncConfigInput, TimeSyncHealth, TimeSyncMode, TimeSyncStatus } from "@dashboard/operations/timeSync";
+import type { AuditClockStatus, TimeSyncConfigInput, TimeSyncHealth, TimeSyncMode, TimeSyncStatus } from "@dashboard/operations/timeSync";
 
 const TIME_SYNC_REQUEST_DESCRIPTION = "Time sync request";
 const TIME_SYNC_RESPONSE_DESCRIPTION = "Time sync response";
 const TIME_SYNC_MODES = new Set<unknown>(["public", "closed_network", "manual"]);
 const TIME_SYNC_HEALTH = new Set<unknown>(["ok", "warn", "error"]);
+const AUDIT_CLOCK_STATUS = new Set<unknown>(["normal", "warning", "unsafe", "unknown"]);
 const TIME_SYNC_STATUS_SCHEMA: PayloadSchema = {
   mode: isMode,
   sourceHost: isNullableString,
@@ -27,6 +29,10 @@ const TIME_SYNC_STATUS_SCHEMA: PayloadSchema = {
   checkedAt: isString,
   health: isHealth,
   message: isString,
+  clockStatus: isClockStatus,
+  clockDriftMs: isNullableNumber,
+  timeSource: isString,
+  clockMeasuredAt: isString,
 };
 
 export async function fetchTimeSyncStatus(fetcher: typeof fetch = fetch): Promise<TimeSyncStatus> {
@@ -82,4 +88,8 @@ function isMode(value: unknown): value is TimeSyncMode {
 
 function isHealth(value: unknown): value is TimeSyncHealth {
   return TIME_SYNC_HEALTH.has(value);
+}
+
+function isClockStatus(value: unknown): value is AuditClockStatus {
+  return AUDIT_CLOCK_STATUS.has(value);
 }
