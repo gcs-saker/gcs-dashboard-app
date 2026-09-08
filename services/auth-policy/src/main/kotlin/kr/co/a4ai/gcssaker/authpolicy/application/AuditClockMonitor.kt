@@ -4,6 +4,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AuditClockEvidence
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuditClockEvidenceProvider
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuditClockStatus
 import kr.co.a4ai.gcssaker.authpolicy.domain.NtpTimeProbe
+import kr.co.a4ai.gcssaker.authpolicy.domain.NtpProbeError
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfig
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfigRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncMode
@@ -51,7 +52,7 @@ class AuditClockMonitor(
             driftMs,
             measurement.measuredAt,
         )
-    } catch (error: RuntimeException) {
+    } catch (error: NtpProbeError) {
         logger.warn("clock_probe_failed error_code=ntp_probe_failed error_type={}", error.javaClass.simpleName)
         AuditClockEvidence.unknown(now(), "ntp-unreachable")
     }

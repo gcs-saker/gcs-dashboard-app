@@ -36,3 +36,5 @@ fun interface AuditClockEvidenceProvider {
 fun interface NtpTimeProbe {
     fun measure(host: String, port: Int, timeout: Duration): NtpMeasurement
 }
+
+class NtpProbeError(message: String, cause: Throwable? = null) : RuntimeException(message, cause)

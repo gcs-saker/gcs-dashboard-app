@@ -2,6 +2,8 @@ package kr.co.a4ai.gcssaker.authpolicy.infrastructure.time
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.NtpMeasurement
 import kr.co.a4ai.gcssaker.authpolicy.domain.NtpTimeProbe
+import kr.co.a4ai.gcssaker.authpolicy.domain.NtpProbeError
+import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetSocketAddress
@@ -10,6 +12,16 @@ import java.time.Instant
 
 class UdpNtpTimeProbe : NtpTimeProbe {
     override fun measure(host: String, port: Int, timeout: Duration): NtpMeasurement {
+        try {
+            return measureNtp(host, port, timeout)
+        } catch (error: IOException) {
+            throw NtpProbeError("NTP network request failed", error)
+        } catch (error: IllegalArgumentException) {
+            throw NtpProbeError("NTP response validation failed", error)
+        }
+    }
+
+    private fun measureNtp(host: String, port: Int, timeout: Duration): NtpMeasurement {
         val address = InetSocketAddress(host, port)
         val requestBytes = NtpPacketCodec.request(Instant.now())
         val responseBytes = ByteArray(NtpPacketCodec.PACKET_SIZE)

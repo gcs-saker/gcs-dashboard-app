@@ -6,6 +6,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryTimeSyncConfigRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.NtpMeasurement
 import kr.co.a4ai.gcssaker.authpolicy.domain.NtpTimeProbe
+import kr.co.a4ai.gcssaker.authpolicy.domain.NtpProbeError
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncConfig
 import kr.co.a4ai.gcssaker.authpolicy.domain.TimeSyncMode
 import kr.co.a4ai.gcssaker.authpolicy.domain.UpdateTimeSyncConfigCommand
@@ -29,7 +30,9 @@ class AuditClockMonitorTest {
     @Test
     fun `probe failure and manual mode remain unknown`() {
         val state = AuditClockState()
-        val failure = AuditClockMonitor(repository(1_000), NtpTimeProbe { _, _, _ -> error("offline") }, state) { now }
+        val failure = AuditClockMonitor(
+            repository(1_000), NtpTimeProbe { _, _, _ -> throw NtpProbeError("offline") }, state,
+        ) { now }
         assertEquals(AuditClockStatus.UNKNOWN, failure.refresh().status)
         assertEquals("ntp-unreachable", state.current().timeSource)
 
