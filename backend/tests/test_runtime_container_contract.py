@@ -188,6 +188,10 @@ def test_single_node_turn_services_use_coturn_supported_runtime_flags() -> None:
             "TURN_PRIMARY_ALLOWED_PEER_IP" if service_name == "turn-primary" else "TURN_SECONDARY_ALLOWED_PEER_IP"
         )
         assert f"--allowed-peer-ip=${{{allowed_variable}:-127.255.255.254}}" in command
+        self_variable = (
+            "TURN_PRIMARY_SELF_RELAY_IP" if service_name == "turn-primary" else "TURN_SECONDARY_SELF_RELAY_IP"
+        )
+        assert f"--allowed-peer-ip=${{{self_variable}:-127.255.255.253}}" in command
 
 
 def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
