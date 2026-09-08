@@ -1,6 +1,7 @@
 import importlib.util
 import subprocess
 import sys
+from enum import Enum
 from pathlib import Path
 
 import pytest
@@ -261,7 +262,12 @@ def test_relay_only_sdp_fails_without_relay_candidate() -> None:
 
 def test_relay_only_policy_configures_aiortc_connection() -> None:
     module = load_observation_module()
-    connection = type("Connection", (), {"_transport_policy": None, "_use_ipv4": True, "_use_ipv6": True})()
+
+    class Policy(Enum):
+        ALL = 0
+        RELAY = 1
+
+    connection = type("Connection", (), {"_transport_policy": Policy.ALL, "_use_ipv4": True, "_use_ipv6": True})()
     ice_transport = type("IceTransport", (), {"_connection": connection})()
     dtls_transport = type("DtlsTransport", (), {"transport": ice_transport})()
     endpoint = type("Endpoint", (), {"transport": dtls_transport})()

@@ -62,8 +62,6 @@ def relay_only_sdp(sdp: str) -> str:
 
 
 def enforce_aiortc_relay_policy(peer_connection: object) -> None:
-    from aioice.ice import TransportPolicy
-
     transports = _ice_transports(peer_connection)
     if not transports:
         raise RuntimeError("relay-only policy could not find an ICE transport")
@@ -71,7 +69,11 @@ def enforce_aiortc_relay_policy(peer_connection: object) -> None:
         connection = getattr(ice_transport, "_connection", None)
         if connection is None or not hasattr(connection, "_transport_policy"):
             raise RuntimeError("relay-only policy is unsupported by this aiortc runtime")
-        connection._transport_policy = TransportPolicy.RELAY
+        current_policy = connection._transport_policy
+        relay_policy = getattr(type(current_policy), "RELAY", None)
+        if relay_policy is None:
+            raise RuntimeError("relay-only policy enum is unavailable")
+        connection._transport_policy = relay_policy
         connection._use_ipv4 = False
         connection._use_ipv6 = False
 
