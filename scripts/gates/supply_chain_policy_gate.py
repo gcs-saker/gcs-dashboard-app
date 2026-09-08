@@ -13,6 +13,7 @@ POLICY = REPO_ROOT / "docs/compliance/supply-chain/supply-chain-policy.yml"
 VEX = REPO_ROOT / "docs/compliance/supply-chain/vex-template.yml"
 REQUIRED_ARTIFACTS = {"backend-image", "auth-policy-image", "media-control-image", "dashboard-image"}
 RELEASE_WORKFLOW = REPO_ROOT / ".github/workflows/release-supply-chain.yml"
+RELEASE_EVIDENCE = REPO_ROOT / "docs/compliance/evidence/signed-release-2026-09-08.md"
 
 
 class SupplyChainPolicyError(AssertionError):
@@ -44,6 +45,7 @@ def validate_supply_chain(policy: dict[str, Any], vex: dict[str, Any]) -> int:
     artifacts = {item.get("id"): item for item in policy.get("artifacts", [])}
     if set(artifacts) != REQUIRED_ARTIFACTS:
         raise SupplyChainPolicyError("all release images require a supply-chain disposition")
+    validate_verified_release(policy, RELEASE_EVIDENCE.read_text(encoding="utf-8"))
     validate_vex(vex)
     return len(artifacts)
 
@@ -66,6 +68,19 @@ def validate_release_workflow(workflow: str) -> None:
     mutable_action = re.search(r"uses:\s+[^\s]+@(main|master|v\d+)\s*(?:#.*)?$", workflow, re.MULTILINE)
     if mutable_action:
         raise SupplyChainPolicyError("release workflow actions must use immutable commit pins")
+
+
+def validate_verified_release(policy: dict[str, Any], evidence: str) -> None:
+    requirements = policy.get("requirements", {})
+    if not all(
+        "VERIFIED" in str(requirements.get(field, "")) for field in ("imageSignature", "sbomSignature", "provenance")
+    ):
+        return
+    required = ("Source commit:", "Signed release run:", "Cosign", "SLSA provenance", "SPDX SBOM attestation")
+    if any(token not in evidence for token in required):
+        raise SupplyChainPolicyError("verified release evidence is incomplete")
+    if evidence.count("sha256:") < len(REQUIRED_ARTIFACTS):
+        raise SupplyChainPolicyError("verified release evidence is missing immutable digests")
 
 
 def validate_vex(vex: dict[str, Any]) -> None:

@@ -6,9 +6,9 @@ requirements:
   vulnerabilityGate: Critical and supported fix-available High findings block release
   eolRuntimeBlocked: true
   unusedDependencyRemovalRequired: true
-  imageSignature: KEYLESS_COSIGN_WORKFLOW_CONFIGURED_NOT_RUN
-  sbomSignature: GITHUB_ATTESTATION_WORKFLOW_CONFIGURED_NOT_RUN
-  provenance: SLSA_ATTESTATION_WORKFLOW_CONFIGURED_NOT_RUN
+  imageSignature: KEYLESS_COSIGN_VERIFIED
+  sbomSignature: GITHUB_ATTESTATION_VERIFIED
+  provenance: SLSA_ATTESTATION_VERIFIED
   vex: REQUIRED_FOR_EVERY_EXCEPTION
   licenseDecision: ALLOWLIST_REQUIRED
 allowedLicenses: [Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MIT, MPL-2.0, Python-2.0]
@@ -17,17 +17,17 @@ deniedLicenses: [AGPL-3.0-only, AGPL-3.0-or-later, SSPL-1.0, BUSL-1.1, UNKNOWN]
 artifacts:
   - id: backend-image
     sbom: IMPLEMENTED
-    signature: CONFIGURED_NOT_RUN
-    provenance: CONFIGURED_NOT_RUN
+    signature: VERIFIED
+    provenance: VERIFIED
   - id: auth-policy-image
     sbom: IMPLEMENTED
-    signature: CONFIGURED_NOT_RUN
-    provenance: CONFIGURED_NOT_RUN
+    signature: VERIFIED
+    provenance: VERIFIED
   - id: media-control-image
     sbom: IMPLEMENTED
-    signature: CONFIGURED_NOT_RUN
-    provenance: CONFIGURED_NOT_RUN
+    signature: VERIFIED
+    provenance: VERIFIED
   - id: dashboard-image
     sbom: IMPLEMENTED
-    signature: CONFIGURED_NOT_RUN
-    provenance: CONFIGURED_NOT_RUN
+    signature: VERIFIED
+    provenance: VERIFIED

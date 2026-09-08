@@ -12,6 +12,7 @@ SupplyChainPolicyError = cast(type[BaseException], MODULE["SupplyChainPolicyErro
 load_yaml = cast(Callable[[Path], dict[str, Any]], MODULE["load_yaml"])
 validate_supply_chain = cast(Callable[..., int], MODULE["validate_supply_chain"])
 validate_release_workflow = cast(Callable[[str], None], MODULE["validate_release_workflow"])
+validate_verified_release = cast(Callable[[dict[str, Any], str], None], MODULE["validate_verified_release"])
 POLICY = REPO_ROOT / "docs/compliance/supply-chain/supply-chain-policy.yml"
 VEX = REPO_ROOT / "docs/compliance/supply-chain/vex-template.yml"
 
@@ -43,3 +44,8 @@ def test_release_workflow_rejects_mutable_action_tags() -> None:
 
     with pytest.raises(SupplyChainPolicyError, match="immutable commit pins"):
         validate_release_workflow(workflow + "\n      - uses: example/action@v1\n")
+
+
+def test_verified_policy_rejects_missing_release_evidence() -> None:
+    with pytest.raises(SupplyChainPolicyError, match="evidence is incomplete"):
+        validate_verified_release(load_yaml(POLICY), "Source commit: missing")
