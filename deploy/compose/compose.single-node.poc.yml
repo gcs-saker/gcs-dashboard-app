@@ -336,7 +336,7 @@ services:
       - media-net
 
   turn-primary:
-    image: coturn/coturn@sha256:71c3c990283385567f11794ee692e3a47b66fd9b0bb39e42afbe776e331dd888
+    image: coturn/coturn@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e
     pids_limit: 256
     mem_limit: ${TURN_MEMORY_LIMIT:-256m}
     cpus: ${TURN_CPU_LIMIT:-0.5}
@@ -355,6 +355,10 @@ services:
       - --max-port=${TURN_RELAY_MAX_PORT:-49200}
       - --external-ip=${TURN_EXTERNAL_IP:-127.0.0.1}
       - --no-cli
+      - --no-multicast-peers
+      - --denied-peer-ip=10.0.0.0-10.255.255.255
+      - --denied-peer-ip=172.16.0.0-172.31.255.255
+      - --denied-peer-ip=192.168.0.0-192.168.255.255
     ports:
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/tcp"
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/udp"
@@ -368,7 +372,7 @@ services:
 
   turn-secondary:
     profiles: [same-host-turn-redundancy]
-    image: coturn/coturn@sha256:71c3c990283385567f11794ee692e3a47b66fd9b0bb39e42afbe776e331dd888
+    image: coturn/coturn@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e
     pids_limit: 256
     mem_limit: ${TURN_MEMORY_LIMIT:-256m}
     cpus: ${TURN_CPU_LIMIT:-0.5}
@@ -387,6 +391,10 @@ services:
       - --max-port=${TURN_RELAY_MAX_PORT:-49200}
       - --external-ip=${TURN_EXTERNAL_IP:-127.0.0.1}
       - --no-cli
+      - --no-multicast-peers
+      - --denied-peer-ip=10.0.0.0-10.255.255.255
+      - --denied-peer-ip=172.16.0.0-172.31.255.255
+      - --denied-peer-ip=192.168.0.0-192.168.255.255
     ports:
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/tcp"
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/udp"

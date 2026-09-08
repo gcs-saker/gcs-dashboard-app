@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 from dataclasses import dataclass
 
 
@@ -59,6 +60,31 @@ def relay_only_sdp(sdp: str) -> str:
         raise RuntimeError("relay-only SDP has no relay candidate")
     filtered = [line for line in lines if not line.startswith("a=candidate:") or line in relay_candidates]
     return "\r\n".join(filtered)
+
+
+def public_remote_sdp(sdp: str) -> str:
+    lines = sdp.replace("\r\n", "\n").split("\n")
+    candidates = [line for line in lines if line.startswith("a=candidate:")]
+    public_candidates = [line for line in candidates if _candidate_address_is_public(line)]
+    if not public_candidates:
+        raise RuntimeError("remote SDP has no public candidate")
+    filtered = [line for line in lines if not line.startswith("a=candidate:") or line in public_candidates]
+    return "\r\n".join(filtered)
+
+
+def filter_remote_sdp(sdp: str, relay_only: bool) -> str:
+    return public_remote_sdp(sdp) if relay_only else sdp
+
+
+def _candidate_address_is_public(candidate_line: str) -> bool:
+    tokens = candidate_line.split()
+    if len(tokens) < 6:
+        return False
+    address = tokens[4]
+    try:
+        return ipaddress.ip_address(address).is_global
+    except ValueError:
+        return not address.lower().endswith(".local")
 
 
 def enforce_aiortc_relay_policy(peer_connection: object) -> None:

@@ -4,6 +4,13 @@
 
 휴대폰, 외부 노트북, 현장 장비가 서로 다른 NAT 환경에 있을 때 STUN만으로 WebRTC ICE media path가 붙지 않을 수 있다. 이 경우 TURN은 미디어를 서버가 중계하게 만들어 송출/재생 성공률을 높인다.
 
+## 운영 보안 기준
+
+- 운영 coturn은 `4.17.2-r0`의 immutable multi-architecture digest를 사용한다.
+- `allow-loopback-peers`는 사용하지 않으며 RFC1918 peer 대역과 multicast peer를 명시적으로 거부한다.
+- 외부 WebRTC에서는 MediaMTX interface 후보 광고를 끄고 `turn.gcs-saker.com`만 additional host로 둔다.
+- relay-only 검증은 local relay 후보와 public remote 후보만 남기고 selected pair가 relay인지 확인한다.
+
 ## 적용 구조
 
 ```mermaid

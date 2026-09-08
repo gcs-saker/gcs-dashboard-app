@@ -186,7 +186,7 @@ def test_compose_declares_profiled_coturn_service_with_limited_relay_range():
     compose = load_yaml(DOCKER_COMPOSE)
     turn = compose["services"]["turn"]
 
-    assert turn["image"] == "${COTURN_IMAGE:-coturn/coturn:4.6.3}"
+    assert turn["image"] == "${COTURN_IMAGE:-coturn/coturn:4.17.2-r0}"
     assert turn["profiles"] == ["turn"]
     assert "--lt-cred-mech" in turn["command"]
     assert (
