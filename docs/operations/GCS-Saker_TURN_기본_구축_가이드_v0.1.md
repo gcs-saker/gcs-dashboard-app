@@ -12,6 +12,8 @@
 - relay-only 검증은 local relay 후보만 광고하고 selected pair가 relay인지 확인한다.
 - 같은 호스트의 MediaMTX로 relay할 때는 실행 중 MediaMTX 컨테이너의 media-network IP 하나만
   `TURN_PRIMARY_ALLOWED_PEER_IP`로 허용하고, 재생성 후 실제 MediaMTX IP와 일치하는지 확인한다.
+- 같은 coturn의 allocation 간 relay에는 TURN 컨테이너 IP를 `TURN_PRIMARY_SELF_RELAY_IP`로
+  추가하며, 이 두 개의 정확한 주소 외 RFC1918 peer는 계속 차단한다.
 
 ## 적용 구조
 
