@@ -61,6 +61,8 @@ def validate_release_workflow(workflow: str) -> None:
         "actions/attest@",
         "subject-digest: ${{ steps.build.outputs.digest }}",
         "required successful check is missing",
+        "scripts/reports/license_compliance.py",
+        "THIRD_PARTY_NOTICES.md",
     )
     for token in required:
         if token not in workflow:
