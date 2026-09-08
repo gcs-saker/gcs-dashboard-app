@@ -17,7 +17,13 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
-from ice_pair_observation import observe_aiortc_selected_pair, print_ice_pair_observation, require_ice_path
+from ice_pair_observation import (
+    enforce_aiortc_relay_policy,
+    observe_aiortc_selected_pair,
+    print_ice_pair_observation,
+    relay_only_sdp,
+    require_ice_path,
+)
 
 DEFAULT_WHIP_URL = "https://gcs-saker.com/webrtc/raw/nat/smoke/whip"
 DEFAULT_ICE_SERVER_URL = "stun:turn.gcs-saker.com:3478"
@@ -234,6 +240,11 @@ def sine_pcm_s16le(
     return values.tobytes()
 
 
+def configure_relay_policy(peer_connection: object, relay_only: bool) -> None:
+    if relay_only:
+        enforce_aiortc_relay_policy(peer_connection)
+
+
 async def run_publish_smoke(args: argparse.Namespace) -> int:
     try:
         from aiortc import (
@@ -272,6 +283,7 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         peer_connection.addTrack(track.track)
     if audio_track is not None:
         peer_connection.addTrack(audio_track.track)
+    configure_relay_policy(peer_connection, args.relay_only)
     started = time.perf_counter()
     connected_ms: float | None = None
 
@@ -283,7 +295,8 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         if not local_description or not local_description.sdp:
             raise RuntimeError("Local WHIP offer SDP was not created")
         offer_ready_ms = (time.perf_counter() - started) * 1000
-        answer_sdp = post_whip_offer(args.whip_url, local_description.sdp, args.insecure, args.publish_token)
+        offer_sdp = relay_only_sdp(local_description.sdp) if args.relay_only else local_description.sdp
+        answer_sdp = post_whip_offer(args.whip_url, offer_sdp, args.insecure, args.publish_token)
         answer_ms = (time.perf_counter() - started) * 1000
         await peer_connection.setRemoteDescription(RTCSessionDescription(sdp=answer_sdp, type="answer"))
         if args.require_connected:
@@ -350,7 +363,10 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--require-connected", action="store_true")
     parser.add_argument("--require-selected-pair", action="store_true")
     parser.add_argument("--require-relay-path", action="store_true")
+    parser.add_argument("--relay-only", action="store_true")
     args = parser.parse_args(argv)
+    if args.relay_only:
+        args.require_relay_path = True
     if args.require_relay_path:
         args.require_selected_pair = True
     if args.audio_tone_frequency_hz <= 0:

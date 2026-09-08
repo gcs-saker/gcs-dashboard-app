@@ -16,7 +16,12 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
-from ice_pair_observation import observe_aiortc_selected_pair, require_ice_path
+from ice_pair_observation import (
+    enforce_aiortc_relay_policy,
+    observe_aiortc_selected_pair,
+    relay_only_sdp,
+    require_ice_path,
+)
 
 DEFAULT_WHEP_URL = "http://127.0.0.1:8889/raw/sample/front/whep"
 DEFAULT_STUN_URL = "stun:stun.l.google.com:19302"
@@ -498,6 +503,8 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
         peer_connection.addTransceiver("video", direction="recvonly")
         if args.require_audio_frame:
             peer_connection.addTransceiver("audio", direction="recvonly")
+        if args.relay_only:
+            enforce_aiortc_relay_policy(peer_connection)
 
         started = time.perf_counter()
         offer = await peer_connection.createOffer()
@@ -510,7 +517,8 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
 
         local_inspection = require_webrtc_sdp(local_description.sdp, "local offer")
         offer_ready_elapsed_ms = (time.perf_counter() - started) * 1000
-        answer_sdp = post_whep_offer(args.whep_url, local_description.sdp, args.insecure)
+        offer_sdp = relay_only_sdp(local_description.sdp) if args.relay_only else local_description.sdp
+        answer_sdp = post_whep_offer(args.whep_url, offer_sdp, args.insecure)
         answer_elapsed_ms = (time.perf_counter() - started) * 1000
         answer_inspection = require_webrtc_sdp(answer_sdp, "WHEP answer")
 
@@ -706,6 +714,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     )
     parser.add_argument("--require-selected-pair", action="store_true")
     parser.add_argument("--require-relay-path", action="store_true")
+    parser.add_argument("--relay-only", action="store_true")
     parser.add_argument(
         "--require-video-frame",
         action="store_true",
@@ -722,6 +731,8 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         help="When video is required, also receive first audio frame and print audio/video sync offset.",
     )
     args = parser.parse_args(argv)
+    if args.relay_only:
+        args.require_relay_path = True
     if args.require_relay_path:
         args.require_selected_pair = True
     args.ice_server_url = args.ice_server_url or args.stun_url or DEFAULT_STUN_URL

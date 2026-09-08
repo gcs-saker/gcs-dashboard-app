@@ -46,7 +46,7 @@ def test_m7_external_nat_webrtc_smoke_reports_required_metrics() -> None:
     assert "Security gate: WHIP publish URL was issued by media-control authorization" in script
     assert "ice server API auth gate: enforced" in script
     assert "RELAY_ONLY" in script
-    assert "--require-relay-path" in script
+    assert "--relay-only" in script
     assert "--require-selected-pair" in script
     assert "--require-video-frame" in script
     assert "--measure-audio-video-sync" in script
