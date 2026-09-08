@@ -23,6 +23,7 @@ WHEP_RETRY_COUNT="${WHEP_RETRY_COUNT:-5}"
 WHEP_RETRY_DELAY_SECONDS="${WHEP_RETRY_DELAY_SECONDS:-2}"
 REPORT_FILE="${REPORT_FILE:-}"
 PUBLISHER_PID=""
+PUBLISHER_STARTED_MS=""
 auth_args=()
 insecure_arg=()
 ice_path_args=(--require-selected-pair)
@@ -154,6 +155,9 @@ resolve_playback_whep_url_with_retry() {
     status=$?
     set -e
     if [[ "$status" -eq 0 && -n "$output" ]]; then
+      if [[ -n "$PUBLISHER_STARTED_MS" ]]; then
+        append_report "Stream visibility latency ms: $(($(now_ms) - PUBLISHER_STARTED_MS))" >&2
+      fi
       printf '%s\n' "$output"
       return 0
     fi
@@ -200,6 +204,9 @@ run_whep_playback_with_retry() {
         "${ice_path_args[@]}" \
         --require-video-frame \
         --measure-audio-video-sync \
+        --latency-profile playback \
+        --enforce-latency-budget \
+        --measure-keyframe-interval \
         --whep-url "$whep_url" \
         --ice-server-url "$ice_server_for_media" \
         ${auth_args+"${auth_args[@]}"} \
@@ -309,8 +316,11 @@ run_live() {
   fi
 
   if [[ "$RUN_WHIP_PUBLISH" == "1" ]]; then
+    publish_auth_started_ms="$(now_ms)"
     whip_url="$(resolve_publish_whip_url)"
+    append_report "Publish authorization latency ms: $(($(now_ms) - publish_auth_started_ms))"
     append_report "authorized WHIP publish URL resolved through media-control"
+    PUBLISHER_STARTED_MS="$(now_ms)"
     python3 "${REPO_ROOT}/scripts/smoke/webrtc_whip_publish_smoke.py" \
       --run \
       --whip-url "$whip_url" \

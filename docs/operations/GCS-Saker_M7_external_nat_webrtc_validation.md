@@ -13,6 +13,8 @@
 - WHIP publish: `https://<host>/webrtc/<stream>/whip`
 - WHEP playback: `https://<host>/webrtc/<stream>/whep`
 - first-frame latency, first-audio latency, audio/video sync offset, WHEP answer latency, ICE gathering/connection state
+- publish authorization, stream visibility, WHEP signaling round trip, receiver ICE, ICE-to-first-frame 구간 시간
+- 첫 video frame의 keyframe 여부와 playback/talkback 지연 예산 판정
 - WHEP/WHIP SDP candidate summary: host/srflx/relay, private-or-loopback/public-or-DNS count
 - WHIP/WHEP selected ICE pair: local/remote candidate type, protocol, RTT, direct/relay path
 - UDP 제한/relay-only 모드: `RELAY_ONLY=1`로 TURN primary URL만 ICE server로 사용한다.
@@ -46,6 +48,8 @@ scripts/smoke/m7_external_nat_webrtc_smoke.sh --run
 - WHIP answer를 받고 publisher ICE state가 connected/completed에 도달한다.
 - WHEP answer를 받고 receiver ICE state가 connected/completed에 도달한다.
 - receiver가 첫 video frame을 수신하고 latency 수치를 출력한다.
+- playback first frame은 1,000 ms부터 WARN, 2,000 ms부터 FAIL로 판정한다.
+- talkback first audio는 500 ms부터 WARN, 1,000 ms부터 FAIL로 판정한다.
 
 ## 결과 해석
 

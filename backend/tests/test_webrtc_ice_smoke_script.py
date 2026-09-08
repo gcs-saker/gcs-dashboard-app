@@ -296,6 +296,12 @@ def test_webrtc_ice_smoke_script_documents_live_whep_ice_run() -> None:
     assert "--require-connected" in script
     assert "--measure-audio-video-sync" in script
     assert "Audio/video sync offset ms" in script
+    assert "WHEP signaling round trip ms" in script
+    assert "Receiver ICE connected latency ms" in script
+    assert "ICE-to-first-video-frame ms" in script
+    assert "First video frame keyframe" in script
+    assert "Video keyframe interval ms" in script
+    assert "Latency budget" in script
     assert "WHEP offer/answer" in doc
     assert "ICE candidate" in doc
     assert "stun:stun.l.google.com:19302" in doc

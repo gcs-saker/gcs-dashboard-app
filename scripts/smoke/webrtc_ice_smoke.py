@@ -22,6 +22,7 @@ from ice_pair_observation import (
     relay_only_sdp,
     require_ice_path,
 )
+from latency_budget import BUDGETS, classify_latency, require_latency_budget
 
 DEFAULT_WHEP_URL = "http://127.0.0.1:8889/raw/sample/front/whep"
 DEFAULT_STUN_URL = "stun:stun.l.google.com:19302"
@@ -405,9 +406,25 @@ async def wait_for_ice_connected(peer_connection: object, timeout_seconds: float
         raise RuntimeError(f"ICE connection did not reach connected/completed: state={final_state}")
 
 
-async def wait_for_track_frame(track_queue: asyncio.Queue[object], timeout_seconds: float) -> object:
+@dataclass(frozen=True)
+class FrameReceipt:
+    track: object
+    frame: object
+
+
+async def wait_for_track_frame(track_queue: asyncio.Queue[object], timeout_seconds: float) -> FrameReceipt:
     track = await asyncio.wait_for(track_queue.get(), timeout=timeout_seconds)
-    return await asyncio.wait_for(track.recv(), timeout=timeout_seconds)  # type: ignore[attr-defined]
+    frame = await asyncio.wait_for(track.recv(), timeout=timeout_seconds)  # type: ignore[attr-defined]
+    return FrameReceipt(track, frame)
+
+
+async def measure_keyframe_interval_ms(receipt: FrameReceipt, timeout_seconds: float) -> float:
+    started = time.perf_counter()
+    async with asyncio.timeout(timeout_seconds):
+        while True:
+            frame = await receipt.track.recv()  # type: ignore[attr-defined]
+            if bool(getattr(frame, "key_frame", False)):
+                return (time.perf_counter() - started) * 1000
 
 
 def load_aiortc_runtime() -> tuple[Any, Any, Any, Any]:
@@ -428,6 +445,8 @@ class FirstFrameResult:
     video_frame: object | None = None
     video_elapsed_ms: float | None = None
     audio_elapsed_ms: float | None = None
+    video_is_keyframe: bool | None = None
+    keyframe_interval_ms: float | None = None
 
 
 @dataclass(frozen=True)
@@ -438,6 +457,7 @@ class WebRTCSmokeResult:
     path_summary: IcePathSummary
     offer_ready_elapsed_ms: float
     answer_elapsed_ms: float
+    ice_connected_elapsed_ms: float | None
     frames: FirstFrameResult
 
 
@@ -459,12 +479,29 @@ async def receive_required_frames(
         if args.require_audio_frame
         else None
     )
-    frame = await video_task if video_task is not None else None
-    video_elapsed_ms = (time.perf_counter() - started) * 1000 if frame is not None else None
+    video_receipt = await video_task if video_task is not None else None
+    frame = video_receipt.frame if video_receipt is not None else None
+    video_elapsed_ms = (time.perf_counter() - started) * 1000 if video_receipt is not None else None
+    keyframe_interval_ms = (
+        await measure_keyframe_interval_ms(video_receipt, args.timeout_seconds)
+        if video_receipt is not None and args.measure_keyframe_interval
+        else None
+    )
     if audio_task is None:
-        return FirstFrameResult(frame, video_elapsed_ms)
+        return FirstFrameResult(
+            frame,
+            video_elapsed_ms,
+            video_is_keyframe=bool(getattr(frame, "key_frame", False)),
+            keyframe_interval_ms=keyframe_interval_ms,
+        )
     await audio_task
-    return FirstFrameResult(frame, video_elapsed_ms, (time.perf_counter() - started) * 1000)
+    return FirstFrameResult(
+        frame,
+        video_elapsed_ms,
+        (time.perf_counter() - started) * 1000,
+        bool(getattr(frame, "key_frame", False)) if frame is not None else None,
+        keyframe_interval_ms,
+    )
 
 
 async def hold_connection_if_requested(args: argparse.Namespace) -> None:
@@ -526,8 +563,10 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
             RTCSessionDescription(sdp=answer_sdp, type="answer"),
         )
 
+        ice_connected_elapsed_ms = None
         if args.require_connected or args.require_video_frame:
             await wait_for_ice_connected(peer_connection, args.timeout_seconds)
+            ice_connected_elapsed_ms = (time.perf_counter() - started) * 1000
         else:
             await asyncio.sleep(0.2)
 
@@ -556,6 +595,7 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
                 path_summary,
                 offer_ready_elapsed_ms,
                 answer_elapsed_ms,
+                ice_connected_elapsed_ms,
                 frames,
             ),
         )
@@ -575,6 +615,9 @@ def print_webrtc_smoke_result(args: argparse.Namespace, peer_connection: Any, re
     print_candidate_summary("WHEP answer", result.answer_inspection.candidates)
     print(f"Local offer ready ms: {result.offer_ready_elapsed_ms:.1f}")
     print(f"WHEP answer latency ms: {result.answer_elapsed_ms:.1f}")
+    print(f"WHEP signaling round trip ms: {result.answer_elapsed_ms - result.offer_ready_elapsed_ms:.1f}")
+    if result.ice_connected_elapsed_ms is not None:
+        print(f"Receiver ICE connected latency ms: {result.ice_connected_elapsed_ms:.1f}")
     print(f"ICE gathering state: {peer_connection.iceGatheringState}")
     print(f"ICE connection state: {peer_connection.iceConnectionState}")
     print_selected_ice_pair(result.selected_pair)
@@ -585,19 +628,42 @@ def print_webrtc_smoke_result(args: argparse.Namespace, peer_connection: Any, re
     )
     print(f"Direct ICE path ratio: {result.path_summary.direct_ratio:.4f}")
     print(f"Relay ICE path ratio: {result.path_summary.relay_ratio:.4f}")
-    print_first_frame_result(result.frames)
+    print_first_frame_result(result.frames, result.ice_connected_elapsed_ms, args.latency_profile)
+    enforce_latency_budget(args, result.frames)
 
 
-def print_first_frame_result(frames: FirstFrameResult) -> None:
+def print_first_frame_result(
+    frames: FirstFrameResult, ice_connected_elapsed_ms: float | None = None, latency_profile: str = "none"
+) -> None:
     if frames.video_frame is not None and frames.video_elapsed_ms is not None:
         print(f"First video frame latency ms: {frames.video_elapsed_ms:.1f}")
         print(
             f"First video frame size: {frames.video_frame.width}x{frames.video_frame.height}"  # type: ignore[attr-defined]
         )
+        print(f"First video frame keyframe: {str(frames.video_is_keyframe).lower()}")
+        if frames.keyframe_interval_ms is not None:
+            print(f"Video keyframe interval ms: {frames.keyframe_interval_ms:.1f}")
+        if ice_connected_elapsed_ms is not None:
+            print(f"ICE-to-first-video-frame ms: {frames.video_elapsed_ms - ice_connected_elapsed_ms:.1f}")
+        if latency_profile != "none":
+            budget = BUDGETS[latency_profile]
+            print(
+                f"Latency budget: profile={latency_profile}, result={classify_latency(latency_profile, frames.video_elapsed_ms)}, "
+                f"warning_ms={budget.warning_ms:.0f}, failure_ms={budget.failure_ms:.0f}"
+            )
     if frames.audio_elapsed_ms is not None:
         print(f"First audio frame latency ms: {frames.audio_elapsed_ms:.1f}")
     if frames.video_elapsed_ms is not None and frames.audio_elapsed_ms is not None:
         print(f"Audio/video sync offset ms: {abs(frames.audio_elapsed_ms - frames.video_elapsed_ms):.1f}")
+
+
+def enforce_latency_budget(args: argparse.Namespace, frames: FirstFrameResult) -> None:
+    if not args.enforce_latency_budget or args.latency_profile == "none":
+        return
+    elapsed_ms = frames.video_elapsed_ms if frames.video_elapsed_ms is not None else frames.audio_elapsed_ms
+    if elapsed_ms is None:
+        raise RuntimeError("latency budget requires a decoded media frame")
+    require_latency_budget(args.latency_profile, elapsed_ms)
 
 
 def print_candidate_summary(label: str, summary: CandidateSummary) -> None:
@@ -715,6 +781,9 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--require-selected-pair", action="store_true")
     parser.add_argument("--require-relay-path", action="store_true")
     parser.add_argument("--relay-only", action="store_true")
+    parser.add_argument("--latency-profile", choices=("none", "playback", "talkback"), default="none")
+    parser.add_argument("--enforce-latency-budget", action="store_true")
+    parser.add_argument("--measure-keyframe-interval", action="store_true")
     parser.add_argument(
         "--require-video-frame",
         action="store_true",

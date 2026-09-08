@@ -55,6 +55,11 @@ def test_m7_external_nat_webrtc_smoke_reports_required_metrics() -> None:
     assert 'printf \'%s\\n\' "$output" >>"$REPORT_FILE"' in script
     assert "waiting for WHIP path visibility" in script
     assert "External NAT smoke wall latency ms" in script
+    assert "Publish authorization latency ms" in script
+    assert "Stream visibility latency ms" in script
+    assert "--latency-profile playback" in script
+    assert "--enforce-latency-budget" in script
+    assert "--measure-keyframe-interval" in script
     assert "first-frame latency" in doc
     assert "audio/video sync offset" in doc
     assert "UDP 제한/relay-only" in doc
