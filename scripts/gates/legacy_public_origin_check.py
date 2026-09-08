@@ -3,7 +3,6 @@
 
 from pathlib import Path
 
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 FORBIDDEN_HOSTS = ("a4ai.tplinkdns.com", "a4ai.121-159-26-245.sslip.io")
 ACTIVE_PATHS = (
