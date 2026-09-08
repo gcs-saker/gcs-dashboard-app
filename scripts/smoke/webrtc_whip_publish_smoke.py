@@ -19,6 +19,7 @@ from urllib.request import Request, urlopen
 
 from ice_pair_observation import (
     enforce_aiortc_relay_policy,
+    filter_remote_sdp,
     observe_aiortc_selected_pair,
     print_ice_pair_observation,
     relay_only_sdp,
@@ -296,7 +297,9 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
             raise RuntimeError("Local WHIP offer SDP was not created")
         offer_ready_ms = (time.perf_counter() - started) * 1000
         offer_sdp = relay_only_sdp(local_description.sdp) if args.relay_only else local_description.sdp
-        answer_sdp = post_whip_offer(args.whip_url, offer_sdp, args.insecure, args.publish_token)
+        answer_sdp = filter_remote_sdp(
+            post_whip_offer(args.whip_url, offer_sdp, args.insecure, args.publish_token), args.relay_only
+        )
         answer_ms = (time.perf_counter() - started) * 1000
         await peer_connection.setRemoteDescription(RTCSessionDescription(sdp=answer_sdp, type="answer"))
         if args.require_connected:

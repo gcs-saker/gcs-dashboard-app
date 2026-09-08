@@ -185,7 +185,7 @@ services:
     restart: always
 
   turn:
-    image: ${COTURN_IMAGE:-coturn/coturn:4.6.3}
+    image: ${COTURN_IMAGE:-coturn/coturn:4.17.2-r0}
     container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-turn
     profiles: ["turn"]
     env_file: *service_env_files

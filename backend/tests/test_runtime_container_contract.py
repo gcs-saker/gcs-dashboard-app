@@ -156,7 +156,7 @@ def test_compose_declares_turn_service_as_opt_in_profile() -> None:
     turn = compose["services"]["turn"]
 
     assert turn["profiles"] == ["turn"]
-    assert turn["image"] == "${COTURN_IMAGE:-coturn/coturn:4.6.3}"
+    assert turn["image"] == "${COTURN_IMAGE:-coturn/coturn:4.17.2-r0}"
     assert "${TURN_BIND_ADDR:-0.0.0.0}:${TURN_PORT:-3478}:3478/tcp" in turn["ports"]
     assert "${TURN_BIND_ADDR:-0.0.0.0}:${TURN_PORT:-3478}:3478/udp" in turn["ports"]
     assert "${TURN_BIND_ADDR:-0.0.0.0}:49160-49200:49160-49200/udp" in turn["ports"]
@@ -174,10 +174,16 @@ def test_single_node_turn_services_use_coturn_supported_runtime_flags() -> None:
     compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
 
     for service_name in ("turn-primary", "turn-secondary"):
-        command = compose["services"][service_name]["command"]
+        service = compose["services"][service_name]
+        command = service["command"]
+        assert service["image"].endswith("@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e")
         assert "--lt-cred-mech" in command
         assert "--no-cli" in command
-        assert "--no-multicast-peers" not in command
+        assert "--no-multicast-peers" in command
+        assert "--allow-loopback-peers" not in command
+        assert "--denied-peer-ip=10.0.0.0-10.255.255.255" in command
+        assert "--denied-peer-ip=172.16.0.0-172.31.255.255" in command
+        assert "--denied-peer-ip=192.168.0.0-192.168.255.255" in command
 
 
 def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
