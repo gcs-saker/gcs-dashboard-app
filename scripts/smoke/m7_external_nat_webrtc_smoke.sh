@@ -25,6 +25,7 @@ REPORT_FILE="${REPORT_FILE:-}"
 PUBLISHER_PID=""
 auth_args=()
 insecure_arg=()
+ice_path_args=(--require-selected-pair)
 
 usage() {
   cat <<'EOF'
@@ -196,6 +197,7 @@ run_whep_playback_with_retry() {
       python3 "${REPO_ROOT}/scripts/smoke/webrtc_ice_smoke.py" \
         --run \
         --require-connected \
+        "${ice_path_args[@]}" \
         --require-video-frame \
         --measure-audio-video-sync \
         --whep-url "$whep_url" \
@@ -267,6 +269,7 @@ run_live() {
   if [[ "$RELAY_ONLY" == "1" ]]; then
     ice_server_for_media="$TURN_PRIMARY_URL"
     auth_args=(--ice-username "$TURN_USERNAME" --ice-credential "$TURN_PASSWORD")
+    ice_path_args=(--require-relay-path)
   fi
 
   started_ms="$(now_ms)"
@@ -315,6 +318,7 @@ run_live() {
       ${auth_args+"${auth_args[@]}"} \
       "${insecure_arg[@]}" \
       --require-connected \
+      "${ice_path_args[@]}" \
       --publish-seconds "$PUBLISH_SECONDS" \
       --timeout-seconds "$TIMEOUT_SECONDS" &
     PUBLISHER_PID=$!

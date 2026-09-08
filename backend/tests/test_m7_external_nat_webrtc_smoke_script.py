@@ -10,6 +10,7 @@ DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_M7_external_nat_webrtc_vali
 
 
 def load_publish_module():
+    sys.path.insert(0, str(PUBLISHER_SCRIPT.parent))
     spec = importlib.util.spec_from_file_location("webrtc_whip_publish_smoke", PUBLISHER_SCRIPT)
     assert spec is not None
     assert spec.loader is not None
@@ -45,6 +46,8 @@ def test_m7_external_nat_webrtc_smoke_reports_required_metrics() -> None:
     assert "Security gate: WHIP publish URL was issued by media-control authorization" in script
     assert "ice server API auth gate: enforced" in script
     assert "RELAY_ONLY" in script
+    assert "--require-relay-path" in script
+    assert "--require-selected-pair" in script
     assert "--require-video-frame" in script
     assert "--measure-audio-video-sync" in script
     assert "candidate summary" in script

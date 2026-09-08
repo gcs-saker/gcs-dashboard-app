@@ -16,6 +16,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
+from ice_pair_observation import observe_aiortc_selected_pair, require_ice_path
+
 DEFAULT_WHEP_URL = "http://127.0.0.1:8889/raw/sample/front/whep"
 DEFAULT_STUN_URL = "stun:stun.l.google.com:19302"
 REDACTED_QUERY = "<redacted-query>"
@@ -207,7 +209,20 @@ async def collect_selected_ice_pair(peer_connection: object) -> SelectedIcePair 
     if get_stats is None:
         return None
     stats_report = await get_stats()
-    return extract_selected_ice_pair(stats_report)
+    selected_pair = extract_selected_ice_pair(stats_report)
+    if selected_pair is not None:
+        return selected_pair
+    observation = observe_aiortc_selected_pair(peer_connection)
+    if observation is None:
+        return None
+    return SelectedIcePair(
+        local_candidate_type=observation.local_candidate_type,
+        remote_candidate_type=observation.remote_candidate_type,
+        protocol=observation.protocol,
+        rtt_ms=observation.rtt_ms,
+        path=observation.path,
+        relay_fallback_reason=None,
+    )
 
 
 def extract_selected_ice_pair(stats_report: object) -> SelectedIcePair | None:
@@ -509,6 +524,8 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
             await asyncio.sleep(0.2)
 
         selected_pair = await collect_selected_ice_pair(peer_connection)
+        if args.require_selected_pair:
+            require_ice_path(selected_pair, relay_required=args.require_relay_path)
         if selected_pair is not None:
             selected_pair = SelectedIcePair(
                 local_candidate_type=selected_pair.local_candidate_type,
@@ -687,6 +704,8 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         action="store_true",
         help="Fail unless ICE reaches connected/completed after applying the WHEP answer.",
     )
+    parser.add_argument("--require-selected-pair", action="store_true")
+    parser.add_argument("--require-relay-path", action="store_true")
     parser.add_argument(
         "--require-video-frame",
         action="store_true",
@@ -703,6 +722,8 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         help="When video is required, also receive first audio frame and print audio/video sync offset.",
     )
     args = parser.parse_args(argv)
+    if args.require_relay_path:
+        args.require_selected_pair = True
     args.ice_server_url = args.ice_server_url or args.stun_url or DEFAULT_STUN_URL
     if args.hold_seconds < 0:
         parser.error("--hold-seconds must be >= 0")

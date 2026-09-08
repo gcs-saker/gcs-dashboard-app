@@ -3,13 +3,27 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "smoke" / "webrtc_ice_smoke.py"
 DOC = REPO_ROOT / "docs" / "m1" / "streaming-e2e-smoke-test.md"
 
 
 def load_smoke_module():
+    sys.path.insert(0, str(SCRIPT.parent))
     spec = importlib.util.spec_from_file_location("webrtc_ice_smoke", SCRIPT)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_observation_module():
+    path = SCRIPT.parent / "ice_pair_observation.py"
+    spec = importlib.util.spec_from_file_location("ice_pair_observation", path)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -180,6 +194,45 @@ def test_webrtc_ice_smoke_classifies_relay_and_fallback_reason() -> None:
     assert summary.direct == 0
     assert summary.relay == 1
     assert summary.relay_ratio == 1.0
+
+
+def test_aiortc_private_fallback_observes_nominated_relay_without_addresses() -> None:
+    module = load_observation_module()
+
+    class Candidate:
+        def __init__(self, candidate_type: str):
+            self.type = candidate_type
+            self.transport = "UDP"
+
+    class Pair:
+        local_candidate = Candidate("relay")
+        remote_candidate = Candidate("host")
+
+    connection = type("Connection", (), {"_nominated": {1: Pair()}})()
+    ice_transport = type("IceTransport", (), {"_connection": connection})()
+    dtls_transport = type("DtlsTransport", (), {"transport": ice_transport})()
+    endpoint = type("Endpoint", (), {"transport": dtls_transport})()
+    transceiver = type("Transceiver", (), {"sender": endpoint, "receiver": endpoint})()
+    peer_connection = type("PeerConnection", (), {"getTransceivers": lambda self: [transceiver]})()
+
+    observation = module.observe_aiortc_selected_pair(peer_connection)
+
+    assert observation is not None
+    assert observation.local_candidate_type == "relay"
+    assert observation.remote_candidate_type == "host"
+    assert observation.protocol == "udp"
+    assert observation.path == "relay"
+    assert "121.159.26.245" not in repr(observation)
+
+
+def test_relay_requirement_fails_closed_without_proven_relay_pair() -> None:
+    module = load_observation_module()
+    direct = module.IcePairObservation("host", "host", "udp")
+
+    with pytest.raises(RuntimeError, match="selected ICE pair"):
+        module.require_ice_path(None, relay_required=True)
+    with pytest.raises(RuntimeError, match="selected a direct ICE path"):
+        module.require_ice_path(direct, relay_required=True)
 
 
 def test_webrtc_ice_smoke_script_documents_live_whep_ice_run() -> None:
