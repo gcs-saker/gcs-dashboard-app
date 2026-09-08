@@ -8,6 +8,10 @@ each digest with Cosign, and immediately verify its repository workflow identity
 `CONFIGURED_NOT_RUN` until the protected `military-release` environment is configured and a run
 produces retrievable evidence for all four images.
 
+The workflow also runs the repository-owned SPDX license classifier and retains a per-image JSON
+disposition plus generated third-party notice. Enforcement remains OPEN while current SBOM metadata
+contains unresolved `NOASSERTION` and review-required reciprocal or custom license expressions.
+
 The target design uses a protected GitHub environment and OIDC/keyless signing or an approved
 hardware-backed key. Production accepts only artifacts whose signature, identity, repository,
 workflow, source revision, and transparency or private verification record match policy. The
