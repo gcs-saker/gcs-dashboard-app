@@ -1,6 +1,5 @@
-from pathlib import Path
 import runpy
-
+from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 GATE = REPOSITORY_ROOT / "scripts" / "gates" / "legacy_public_origin_check.py"
