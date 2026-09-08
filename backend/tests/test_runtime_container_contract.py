@@ -184,14 +184,24 @@ def test_single_node_turn_services_use_coturn_supported_runtime_flags() -> None:
         assert "--denied-peer-ip=10.0.0.0-10.255.255.255" in command
         assert "--denied-peer-ip=172.16.0.0-172.31.255.255" in command
         assert "--denied-peer-ip=192.168.0.0-192.168.255.255" in command
-        allowed_variable = (
-            "TURN_PRIMARY_ALLOWED_PEER_IP" if service_name == "turn-primary" else "TURN_SECONDARY_ALLOWED_PEER_IP"
-        )
-        assert f"--allowed-peer-ip=${{{allowed_variable}:-127.255.255.254}}" in command
-        self_variable = (
-            "TURN_PRIMARY_SELF_RELAY_IP" if service_name == "turn-primary" else "TURN_SECONDARY_SELF_RELAY_IP"
-        )
-        assert f"--allowed-peer-ip=${{{self_variable}:-127.255.255.253}}" in command
+        assert not any("--allowed-peer-ip=" in argument for argument in command)
+        assert service["entrypoint"] == ["/bin/sh", "/usr/local/bin/gcs-turnserver-entrypoint"]
+        assert {
+            "type": "bind",
+            "source": "../coturn/turnserver-entrypoint.sh",
+            "target": "/usr/local/bin/gcs-turnserver-entrypoint",
+            "read_only": True,
+        } in service["volumes"]
+
+
+def test_turn_entrypoint_resolves_service_references_fail_closed() -> None:
+    source = (REPO_ROOT / "deploy/coturn/turnserver-entrypoint.sh").read_text(encoding="utf-8")
+
+    assert 'resolve_ipv4 "${TURN_MEDIA_PEER_SERVICE:-mediamtx}"' in source
+    assert "hostname -i" in source
+    assert '"--allowed-peer-ip=${mediamtx_ip}"' in source
+    assert '"--allowed-peer-ip=${self_ip}"' in source
+    assert "TURN peer reference resolution failed" in source
 
 
 def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
