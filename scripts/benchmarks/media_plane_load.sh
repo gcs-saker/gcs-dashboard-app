@@ -3,11 +3,11 @@ set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 mode="${1:---check}"
-edge_base_url="${EDGE_BASE_URL:-https://a4ai.121-159-26-245.sslip.io}"
+edge_base_url="${EDGE_BASE_URL:-https://gcs-saker.com}"
 stage_levels="${MEDIA_LOAD_STAGES:-1,2,4}"
 stage_seconds="${MEDIA_LOAD_STAGE_SECONDS:-20}"
 fps="${MEDIA_LOAD_FPS:-15}"
-ice_url="${MEDIA_LOAD_ICE_URL:-stun:a4ai.121-159-26-245.sslip.io:3478}"
+ice_url="${MEDIA_LOAD_ICE_URL:-stun:turn.gcs-saker.com:3478}"
 relay_only="${MEDIA_LOAD_RELAY_ONLY:-0}"
 turn_username="${TURN_USERNAME:-}"
 turn_password="${TURN_PASSWORD:-}"

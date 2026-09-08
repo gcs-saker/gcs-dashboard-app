@@ -6,7 +6,7 @@ The only accepted deployment identity is:
 
 - `DEPLOYMENT_TARGET=server01-production`
 - `COMPOSE_PROJECT_NAME=gcs-saker-m2-production`
-- public origin `https://a4ai.121-159-26-245.sslip.io`
+- public origin `https://gcs-saker.com`
 
 Every release must preserve the container identities of PostgreSQL, Redis, MQTT, MediaMTX, both TURN services, and the externally supplied mobile publisher during stateless deployment. Intentional stateful maintenance is a separate operation with a backup, explicit service list, and post-maintenance smoke evidence.
 

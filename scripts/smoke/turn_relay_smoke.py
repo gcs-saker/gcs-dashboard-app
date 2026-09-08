@@ -29,7 +29,7 @@ ATTR_REQUESTED_TRANSPORT = 0x0019
 ATTR_XOR_RELAYED_ADDRESS = 0x0016
 ATTR_FINGERPRINT = 0x8028
 TRANSPORT_UDP = 17
-DEFAULT_TURN_URL = "turn:a4ai.tplinkdns.com:3478?transport=udp"
+DEFAULT_TURN_URL = "turn:turn.gcs-saker.com:3478?transport=udp"
 
 
 @dataclass(frozen=True)
