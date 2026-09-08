@@ -9,9 +9,9 @@
 - 운영 coturn은 `4.17.2-r0`의 immutable multi-architecture digest를 사용한다.
 - `allow-loopback-peers`는 사용하지 않으며 RFC1918 peer 대역과 multicast peer를 명시적으로 거부한다.
 - 외부 WebRTC에서는 MediaMTX interface 후보 광고를 끄고 `turn.gcs-saker.com`만 additional host로 둔다.
-- relay-only 검증은 local relay 후보와 public remote 후보만 남기고 selected pair가 relay인지 확인한다.
-- 같은 coturn의 두 allocation을 연결할 때는 실행 중 TURN 컨테이너의 media-network IP 하나만
-  `TURN_PRIMARY_ALLOWED_PEER_IP`로 허용하고, 재생성 후 실제 컨테이너 IP와 일치하는지 확인한다.
+- relay-only 검증은 local relay 후보만 광고하고 selected pair가 relay인지 확인한다.
+- 같은 호스트의 MediaMTX로 relay할 때는 실행 중 MediaMTX 컨테이너의 media-network IP 하나만
+  `TURN_PRIMARY_ALLOWED_PEER_IP`로 허용하고, 재생성 후 실제 MediaMTX IP와 일치하는지 확인한다.
 
 ## 적용 구조
 

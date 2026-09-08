@@ -18,7 +18,6 @@ from urllib.request import Request, urlopen
 
 from ice_pair_observation import (
     enforce_aiortc_relay_policy,
-    filter_remote_sdp,
     observe_aiortc_selected_pair,
     relay_only_sdp,
     require_ice_path,
@@ -519,7 +518,7 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
         local_inspection = require_webrtc_sdp(local_description.sdp, "local offer")
         offer_ready_elapsed_ms = (time.perf_counter() - started) * 1000
         offer_sdp = relay_only_sdp(local_description.sdp) if args.relay_only else local_description.sdp
-        answer_sdp = filter_remote_sdp(post_whep_offer(args.whep_url, offer_sdp, args.insecure), args.relay_only)
+        answer_sdp = post_whep_offer(args.whep_url, offer_sdp, args.insecure)
         answer_elapsed_ms = (time.perf_counter() - started) * 1000
         answer_inspection = require_webrtc_sdp(answer_sdp, "WHEP answer")
 
