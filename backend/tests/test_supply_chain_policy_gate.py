@@ -11,6 +11,7 @@ MODULE = runpy.run_path(str(SCRIPT))
 SupplyChainPolicyError = cast(type[BaseException], MODULE["SupplyChainPolicyError"])
 load_yaml = cast(Callable[[Path], dict[str, Any]], MODULE["load_yaml"])
 validate_supply_chain = cast(Callable[..., int], MODULE["validate_supply_chain"])
+validate_release_workflow = cast(Callable[[str], None], MODULE["validate_release_workflow"])
 POLICY = REPO_ROOT / "docs/compliance/supply-chain/supply-chain-policy.yml"
 VEX = REPO_ROOT / "docs/compliance/supply-chain/vex-template.yml"
 
@@ -35,3 +36,10 @@ def test_supply_chain_policy_rejects_unknown_license_allowance() -> None:
 
     with pytest.raises(SupplyChainPolicyError, match="unknown licenses"):
         validate_supply_chain(broken, load_yaml(VEX))
+
+
+def test_release_workflow_rejects_mutable_action_tags() -> None:
+    workflow = (REPO_ROOT / ".github/workflows/release-supply-chain.yml").read_text(encoding="utf-8")
+
+    with pytest.raises(SupplyChainPolicyError, match="immutable commit pins"):
+        validate_release_workflow(workflow + "\n      - uses: example/action@v1\n")
