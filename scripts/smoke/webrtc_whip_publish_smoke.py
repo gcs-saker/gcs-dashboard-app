@@ -17,6 +17,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
+from ice_pair_observation import observe_aiortc_selected_pair, print_ice_pair_observation, require_ice_path
+
 DEFAULT_WHIP_URL = "https://gcs-saker.com/webrtc/raw/nat/smoke/whip"
 DEFAULT_ICE_SERVER_URL = "stun:turn.gcs-saker.com:3478"
 REDACTED_QUERY = "<redacted-query>"
@@ -287,6 +289,9 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         if args.require_connected:
             await wait_for_ice_connected(peer_connection, args.timeout_seconds)
             connected_ms = (time.perf_counter() - started) * 1000
+        selected_pair = observe_aiortc_selected_pair(peer_connection)
+        if args.require_selected_pair:
+            require_ice_path(selected_pair, relay_required=args.require_relay_path)
         await asyncio.sleep(args.publish_seconds)
 
         print("WebRTC WHIP publish smoke run passed")
@@ -298,6 +303,7 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         print(f"ICE connection state: {peer_connection.iceConnectionState}")
         if connected_ms is not None:
             print(f"ICE connected latency ms: {connected_ms:.1f}")
+        print_ice_pair_observation(selected_pair)
         if track is not None:
             print(f"Synthetic frames attempted: {track.sequence}")
         if audio_track is not None:
@@ -342,7 +348,11 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--audio-tone-amplitude", type=float, default=0.25)
     parser.add_argument("--insecure", action="store_true")
     parser.add_argument("--require-connected", action="store_true")
+    parser.add_argument("--require-selected-pair", action="store_true")
+    parser.add_argument("--require-relay-path", action="store_true")
     args = parser.parse_args(argv)
+    if args.require_relay_path:
+        args.require_selected_pair = True
     if args.audio_tone_frequency_hz <= 0:
         parser.error("--audio-tone-frequency-hz must be positive")
     if not 0 < args.audio_tone_amplitude <= 1:

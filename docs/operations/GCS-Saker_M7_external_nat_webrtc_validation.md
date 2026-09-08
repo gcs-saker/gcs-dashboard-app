@@ -14,7 +14,9 @@
 - WHEP playback: `https://<host>/webrtc/<stream>/whep`
 - first-frame latency, first-audio latency, audio/video sync offset, WHEP answer latency, ICE gathering/connection state
 - WHEP/WHIP SDP candidate summary: host/srflx/relay, private-or-loopback/public-or-DNS count
+- WHIP/WHEP selected ICE pair: local/remote candidate type, protocol, RTT, direct/relay path
 - UDP 제한/relay-only 모드: `RELAY_ONLY=1`로 TURN primary URL만 ICE server로 사용한다.
+  이 모드는 selected ICE pair를 relay로 증명하지 못하면 실패한다.
 
 ## 실행
 
