@@ -137,7 +137,6 @@ jobs:
         shell: bash
         run: |
           cosign verify \
-            --bundle "${RUNNER_TEMP}/${{ matrix.image }}.cosign.bundle.json" \
             --certificate-identity-regexp '^https://github.com/gcs-saker/gcs-dashboard-app/.github/workflows/release-supply-chain.yml@refs/(tags|heads)/' \
             --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
             "${IMAGE}@${{ steps.build.outputs.digest }}"
