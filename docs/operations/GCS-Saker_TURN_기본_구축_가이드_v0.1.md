@@ -10,10 +10,10 @@
 - `allow-loopback-peers`는 사용하지 않으며 RFC1918 peer 대역과 multicast peer를 명시적으로 거부한다.
 - 외부 WebRTC에서는 MediaMTX interface 후보 광고를 끄고 `turn.gcs-saker.com`만 additional host로 둔다.
 - relay-only 검증은 local relay 후보만 광고하고 selected pair가 relay인지 확인한다.
-- 같은 호스트의 MediaMTX로 relay할 때는 실행 중 MediaMTX 컨테이너의 media-network IP 하나만
-  `TURN_PRIMARY_ALLOWED_PEER_IP`로 허용하고, 재생성 후 실제 MediaMTX IP와 일치하는지 확인한다.
-- 같은 coturn의 allocation 간 relay에는 TURN 컨테이너 IP를 `TURN_PRIMARY_SELF_RELAY_IP`로
-  추가하며, 이 두 개의 정확한 주소 외 RFC1918 peer는 계속 차단한다.
+- TURN entrypoint는 Docker DNS의 `mediamtx` 서비스 참조와 자신의 media-network 주소를 시작 시점에
+  숫자 IP로 해석해 두 주소만 허용한다. 해석 실패나 동일 주소는 fail-closed로 coturn 시작을 중단한다.
+- 운영자는 변동 가능한 Docker IP를 환경 파일에 저장하지 않는다. 두 서비스 참조 외 RFC1918 peer는
+  계속 차단한다.
 
 ## 적용 구조
 

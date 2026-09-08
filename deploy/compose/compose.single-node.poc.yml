@@ -342,7 +342,7 @@ services:
     cpus: ${TURN_CPU_LIMIT:-0.5}
     logging: *logging_defaults
     env_file: *service_env_files
-    entrypoint: ["turnserver"]
+    entrypoint: ["/bin/sh", "/usr/local/bin/gcs-turnserver-entrypoint"]
     command:
       - -n
       - --log-file=stdout
@@ -359,8 +359,11 @@ services:
       - --denied-peer-ip=10.0.0.0-10.255.255.255
       - --denied-peer-ip=172.16.0.0-172.31.255.255
       - --denied-peer-ip=192.168.0.0-192.168.255.255
-      - --allowed-peer-ip=${TURN_PRIMARY_ALLOWED_PEER_IP:-127.255.255.254}
-      - --allowed-peer-ip=${TURN_PRIMARY_SELF_RELAY_IP:-127.255.255.253}
+    volumes:
+      - type: bind
+        source: ../coturn/turnserver-entrypoint.sh
+        target: /usr/local/bin/gcs-turnserver-entrypoint
+        read_only: true
     ports:
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/tcp"
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/udp"
@@ -380,7 +383,7 @@ services:
     cpus: ${TURN_CPU_LIMIT:-0.5}
     logging: *logging_defaults
     env_file: *service_env_files
-    entrypoint: ["turnserver"]
+    entrypoint: ["/bin/sh", "/usr/local/bin/gcs-turnserver-entrypoint"]
     command:
       - -n
       - --log-file=stdout
@@ -397,8 +400,11 @@ services:
       - --denied-peer-ip=10.0.0.0-10.255.255.255
       - --denied-peer-ip=172.16.0.0-172.31.255.255
       - --denied-peer-ip=192.168.0.0-192.168.255.255
-      - --allowed-peer-ip=${TURN_SECONDARY_ALLOWED_PEER_IP:-127.255.255.254}
-      - --allowed-peer-ip=${TURN_SECONDARY_SELF_RELAY_IP:-127.255.255.253}
+    volumes:
+      - type: bind
+        source: ../coturn/turnserver-entrypoint.sh
+        target: /usr/local/bin/gcs-turnserver-entrypoint
+        read_only: true
     ports:
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/tcp"
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/udp"
