@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import zlib
@@ -33,6 +34,9 @@ PUBLIC_ENDPOINT_ENV_KEYS = {
     "VITE_LOCAL_WEBCAM_WHIP_URL",
     "VITE_WEBRTC_STUN_URL",
 }
+APPLICATION_IMAGE_REFERENCE = re.compile(
+    r"^ghcr\.io/gcs-saker/gcs-saker-(backend|auth-policy|media-control|dashboard)@sha256:[0-9a-f]{64}$"
+)
 
 
 def run(*args: str, secret_output: bool = False) -> str:
@@ -143,8 +147,9 @@ def application_image_inventory(commit: str) -> dict[str, str]:
         reference = os.environ.get(variable, "")
         if not reference:
             raise RuntimeError(f"{variable} must identify the release image")
-        if "@sha256:" not in reference and not reference.endswith(f":{commit}"):
-            raise RuntimeError(f"{variable} must use a digest or the exact source commit tag")
+        expected_prefix = f"ghcr.io/gcs-saker/gcs-saker-{service}@sha256:"
+        if not APPLICATION_IMAGE_REFERENCE.fullmatch(reference) or not reference.startswith(expected_prefix):
+            raise RuntimeError(f"{variable} must use a verified digest")
         images[service] = reference
     return images
 

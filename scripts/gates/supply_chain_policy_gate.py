@@ -11,7 +11,13 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 POLICY = REPO_ROOT / "docs/compliance/supply-chain/supply-chain-policy.yml"
 VEX = REPO_ROOT / "docs/compliance/supply-chain/vex-template.yml"
-REQUIRED_ARTIFACTS = {"backend-image", "auth-policy-image", "media-control-image", "dashboard-image"}
+ACTIVE_VEX = REPO_ROOT / "docs/compliance/supply-chain/active-vex.json"
+REQUIRED_ARTIFACTS = {
+    "backend-image",
+    "auth-policy-image",
+    "media-control-image",
+    "dashboard-image",
+}
 RELEASE_WORKFLOW = REPO_ROOT / ".github/workflows/release-supply-chain.yml"
 RELEASE_EVIDENCE = REPO_ROOT / "docs/compliance/evidence/signed-release-2026-09-08.md"
 
@@ -39,6 +45,10 @@ def validate_supply_chain(policy: dict[str, Any], vex: dict[str, Any]) -> int:
             raise SupplyChainPolicyError(f"{field} must fail closed")
     if requirements.get("vex") != "REQUIRED_FOR_EVERY_EXCEPTION":
         raise SupplyChainPolicyError("every vulnerability exception requires VEX")
+    if requirements.get("licenseScanner") != "RELEASE_ENFORCED":
+        raise SupplyChainPolicyError("release license decisions must fail closed")
+    if requirements.get("thirdPartyNotices") != "GENERATED_AND_MANIFEST_BOUND":
+        raise SupplyChainPolicyError("third-party notices must be bound to the signed manifest")
     if "UNKNOWN" not in policy.get("deniedLicenses", []):
         raise SupplyChainPolicyError("unknown licenses must be denied")
     validate_release_workflow(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
@@ -47,6 +57,8 @@ def validate_supply_chain(policy: dict[str, Any], vex: dict[str, Any]) -> int:
         raise SupplyChainPolicyError("all release images require a supply-chain disposition")
     validate_verified_release(policy, RELEASE_EVIDENCE.read_text(encoding="utf-8"))
     validate_vex(vex)
+    if not ACTIVE_VEX.is_file():
+        raise SupplyChainPolicyError("active VEX inventory is missing")
     return len(artifacts)
 
 
@@ -62,7 +74,12 @@ def validate_release_workflow(workflow: str) -> None:
         "subject-digest: ${{ steps.build.outputs.digest }}",
         "required successful check is missing",
         "scripts/reports/license_compliance.py",
+        "--enforce",
         "THIRD_PARTY_NOTICES.md",
+        "sign-release-manifest",
+        "release_manifest.py assemble",
+        "cosign sign-blob",
+        "anchore/scan-action@",
     )
     for token in required:
         if token not in workflow:
@@ -78,7 +95,13 @@ def validate_verified_release(policy: dict[str, Any], evidence: str) -> None:
         "VERIFIED" in str(requirements.get(field, "")) for field in ("imageSignature", "sbomSignature", "provenance")
     ):
         return
-    required = ("Source commit:", "Signed release run:", "Cosign", "SLSA provenance", "SPDX SBOM attestation")
+    required = (
+        "Source commit:",
+        "Signed release run:",
+        "Cosign",
+        "SLSA provenance",
+        "SPDX SBOM attestation",
+    )
     if any(token not in evidence for token in required):
         raise SupplyChainPolicyError("verified release evidence is incomplete")
     if evidence.count("sha256:") < len(REQUIRED_ARTIFACTS):

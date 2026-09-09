@@ -69,7 +69,7 @@ jobs:
             build_contexts: ""
     steps:
       - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
 
@@ -117,7 +117,16 @@ jobs:
             --policy docs/compliance/supply-chain/supply-chain-policy.yml \
             --approvals docs/compliance/supply-chain/license-approvals.yml \
             --report "${RUNNER_TEMP}/${{ matrix.image }}.license-report.json" \
-            --notices "${RUNNER_TEMP}/${{ matrix.image }}.THIRD_PARTY_NOTICES.md"
+            --notices "${RUNNER_TEMP}/${{ matrix.image }}.THIRD_PARTY_NOTICES.md" \
+            --enforce
+
+      - name: Block fixed high and critical vulnerabilities
+        uses: anchore/scan-action@1638637db639e0ade3258b51db49a9a137574c3e # v6
+        with:
+          image: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
+          fail-build: true
+          severity-cutoff: high
+          only-fixed: true
 
       - name: Attest SLSA build provenance
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
@@ -152,8 +161,20 @@ jobs:
             --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
             "${IMAGE}@${{ steps.build.outputs.digest }}"
 
+      - name: Create signed release manifest entry
+        shell: bash
+        run: |
+          python scripts/ops/release_manifest.py entry \
+            --service "${{ matrix.image }}" \
+            --image "${IMAGE}" \
+            --digest "${{ steps.build.outputs.digest }}" \
+            --sbom "${RUNNER_TEMP}/${{ matrix.image }}.spdx.json" \
+            --license-report "${RUNNER_TEMP}/${{ matrix.image }}.license-report.json" \
+            --notices "${RUNNER_TEMP}/${{ matrix.image }}.THIRD_PARTY_NOTICES.md" \
+            --output "${RUNNER_TEMP}/release-entry.json"
+
       - name: Upload signed release evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: ${{ matrix.image }}-signed-release-evidence
           if-no-files-found: error
@@ -163,3 +184,58 @@ jobs:
             ${{ runner.temp }}/${{ matrix.image }}.cosign.bundle.json
             ${{ runner.temp }}/${{ matrix.image }}.license-report.json
             ${{ runner.temp }}/${{ matrix.image }}.THIRD_PARTY_NOTICES.md
+            ${{ runner.temp }}/release-entry.json
+
+  signed-manifest:
+    name: sign-release-manifest
+    runs-on: ubuntu-latest
+    environment: military-release
+    needs: signed-images
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Download verified image evidence
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          pattern: "*-signed-release-evidence"
+          path: ${{ runner.temp }}/release-evidence
+
+      - name: Assemble release manifest
+        shell: bash
+        run: |
+          python scripts/ops/release_manifest.py assemble \
+            --entries-root "${RUNNER_TEMP}/release-evidence" \
+            --source-commit "${GITHUB_SHA}" \
+            --workflow-run "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --output "${RUNNER_TEMP}/release-manifest.json"
+
+      - name: Install verified Cosign release
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Sign and verify release manifest
+        shell: bash
+        run: |
+          cosign sign-blob --yes --bundle "${RUNNER_TEMP}/release-manifest.cosign.bundle.json" \
+            "${RUNNER_TEMP}/release-manifest.json"
+          cosign verify-blob \
+            --bundle "${RUNNER_TEMP}/release-manifest.cosign.bundle.json" \
+            --certificate-identity-regexp '^https://github.com/gcs-saker/gcs-dashboard-app/.github/workflows/release-supply-chain.yml@refs/(tags|heads)/' \
+            --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+            "${RUNNER_TEMP}/release-manifest.json"
+
+      - name: Upload deployable signed manifest
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: signed-release-manifest
+          if-no-files-found: error
+          retention-days: 90
+          path: |
+            ${{ runner.temp }}/release-manifest.json
+            ${{ runner.temp }}/release-manifest.cosign.bundle.json
