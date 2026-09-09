@@ -19,6 +19,8 @@ integrity:
   anchorSignature: HMAC-SHA-256
   anchorStorage: dedicated append-only mounted volume
   externalImmutableStorage: REQUIRED_NOT_IMPLEMENTED
+  externalAnchorOffload: IMPLEMENTED_NOT_DEPLOYED
+  recoveryVerification: CHAIN_EQUALITY_AND_SIGNED_ANCHOR
 retention:
   securityEventsDays: 365
   privilegedEventsDays: 730
