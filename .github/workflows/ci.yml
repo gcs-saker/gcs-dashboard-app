@@ -75,6 +75,8 @@ jobs:
           go test -run=^$ -fuzz=FuzzParseStreamID -fuzztime=10s ./internal/domain
           go test -run=^$ -fuzz=FuzzValidateForRoute -fuzztime=10s ./internal/sessiontoken
           go test -run=^$ -fuzz=FuzzMissionWaypointBoundary -fuzztime=10s ./internal/mission
+          go test -run=^$ -fuzz=FuzzGatewayMetadata -fuzztime=10s ./internal/grpcgateway
+          go test -run=^$ -fuzz=FuzzSessionFromTopic -fuzztime=10s ./internal/mqttgateway
 
       - name: Run vet
         run: go vet ./...

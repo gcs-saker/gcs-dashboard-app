@@ -57,3 +57,11 @@ items:
     mitigation: Preserve NIST mappings and block CCI claims until the official XCCDF or data stream is retained and hash-verified.
     dueBy: 2026-10-15
     status: OPEN
+  - id: POAM-SEC-008
+    weakness: Authentication-focused DAST and independent penetration execution evidence are not retained.
+    controls: [CA-8, SA-11]
+    issue: https://github.com/gcs-saker/gcs-dashboard-app/issues/665
+    severity: HIGH
+    mitigation: Run the bounded DAST only against an approved disposable target and retain sanitized results; commission independent retest before release.
+    dueBy: 2026-10-31
+    status: OPEN
