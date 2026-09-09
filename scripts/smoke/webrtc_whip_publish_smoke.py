@@ -125,7 +125,7 @@ async def wait_for_ice_connected(peer_connection: object, timeout_seconds: float
 
 
 class SyntheticVideoTrack:  # aiortc VideoStreamTrack subclass at runtime.
-    def __init__(self, width: int, height: int, fps: int) -> None:
+    def __init__(self, width: int, height: int, fps: int, keyframe_interval_frames: int) -> None:
         from aiortc import VideoStreamTrack
 
         class _Track(VideoStreamTrack):
@@ -140,6 +140,7 @@ class SyntheticVideoTrack:  # aiortc VideoStreamTrack subclass at runtime.
         self.width = width
         self.height = height
         self.fps = fps
+        self.keyframe_interval_frames = keyframe_interval_frames
         self.sequence = 0
         self.started_at = time.perf_counter()
 
@@ -149,6 +150,7 @@ class SyntheticVideoTrack:  # aiortc VideoStreamTrack subclass at runtime.
 
     async def recv(self):  # type: ignore[no-untyped-def]
         from av import VideoFrame
+        from av.video.frame import PictureType
 
         frame_interval = 1 / self.fps
         target = self.started_at + (self.sequence * frame_interval)
@@ -163,6 +165,8 @@ class SyntheticVideoTrack:  # aiortc VideoStreamTrack subclass at runtime.
             plane.update(bytes([value]) * plane.buffer_size)
         frame.pts = self.sequence
         frame.time_base = fractions.Fraction(1, self.fps)
+        if self.sequence % self.keyframe_interval_frames == 0:
+            frame.pict_type = PictureType.I
         self.sequence += 1
         return frame
 
@@ -276,7 +280,11 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         ]
     )
     peer_connection = RTCPeerConnection(RTCConfiguration(iceServers=ice_servers))
-    track = None if args.no_video else SyntheticVideoTrack(args.width, args.height, args.fps)
+    track = (
+        None
+        if args.no_video
+        else SyntheticVideoTrack(args.width, args.height, args.fps, args.keyframe_interval_frames)
+    )
     audio_track = (
         None
         if args.no_audio
@@ -327,6 +335,7 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         print_ice_pair_observation(selected_pair)
         if track is not None:
             print(f"Synthetic frames attempted: {track.sequence}")
+            print(f"Requested keyframe interval ms: {track.keyframe_interval_frames / track.fps * 1000:.1f}")
         if audio_track is not None:
             print(f"Synthetic audio frames attempted: {audio_track.sequence}")
         return 0
@@ -361,6 +370,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--width", type=int, default=640)
     parser.add_argument("--height", type=int, default=360)
     parser.add_argument("--fps", type=int, default=15)
+    parser.add_argument("--keyframe-interval-frames", type=int, default=15)
     parser.add_argument("--no-audio", action="store_true")
     parser.add_argument("--no-video", action="store_true")
     parser.add_argument("--audio-sample-rate", type=int, default=48000)
@@ -383,6 +393,8 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         parser.error("--audio-tone-amplitude must be in the range (0, 1]")
     if args.no_audio and args.no_video:
         parser.error("audio and video cannot both be disabled")
+    if args.keyframe_interval_frames <= 0:
+        parser.error("--keyframe-interval-frames must be positive")
     if not args.check and not args.run:
         args.check = True
     return args

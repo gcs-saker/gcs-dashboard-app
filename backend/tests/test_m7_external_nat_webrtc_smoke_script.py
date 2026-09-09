@@ -115,3 +115,11 @@ def test_webrtc_whip_publish_smoke_supports_audio_only_mode() -> None:
 
     assert args.no_video is True
     assert args.no_audio is False
+
+
+def test_webrtc_whip_publish_smoke_sets_bounded_keyframe_interval() -> None:
+    module = load_publish_module()
+
+    args = module.parse_args(["--run", "--keyframe-interval-frames", "30"])
+
+    assert args.keyframe_interval_frames == 30
