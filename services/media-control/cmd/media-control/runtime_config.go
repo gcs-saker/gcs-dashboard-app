@@ -23,6 +23,10 @@ type runtimeConfig struct {
 	authPolicyBaseURL   string
 	deviceRPCTarget     string
 	deviceRPCToken      string
+	deviceRPCCAFile     string
+	deviceRPCCertFile   string
+	deviceRPCKeyFile    string
+	deviceRPCServerName string
 	auditIngestToken    string
 	authzCacheTTL       time.Duration
 	streamCacheTTL      time.Duration
@@ -33,6 +37,7 @@ type runtimeConfig struct {
 	streamPresenceKey   string
 	streamPresenceTTL   time.Duration
 	turnMaxHealthy      int
+	turnSharedSecret    string
 	iceServerCacheTTL   time.Duration
 	iceServerCacheKey   string
 	publishToken        string
@@ -78,6 +83,10 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		authPolicyBaseURL:   getenv(runtimeEnv.authPolicyBaseURL, runtimeDefaults.authPolicyBaseURL),
 		deviceRPCTarget:     getenv("AUTH_POLICY_GRPC_TARGET", ""),
 		deviceRPCToken:      getenv("AUTH_POLICY_RPC_TOKEN", ""),
+		deviceRPCCAFile:     getenv("AUTH_POLICY_GRPC_CA_FILE", ""),
+		deviceRPCCertFile:   getenv("AUTH_POLICY_GRPC_CERT_FILE", ""),
+		deviceRPCKeyFile:    getenv("AUTH_POLICY_GRPC_KEY_FILE", ""),
+		deviceRPCServerName: getenv("AUTH_POLICY_GRPC_SERVER_NAME", ""),
 		auditIngestToken:    getenv("AUTH_POLICY_AUDIT_INGEST_TOKEN", ""),
 		authzCacheTTL:       getenvDuration(runtimeEnv.authzCacheTTLSeconds, runtimeDefaults.authzCacheTTL),
 		streamCacheTTL:      getenvDuration(runtimeEnv.streamCacheTTLSeconds, runtimeDefaults.streamCacheTTL),
@@ -88,12 +97,20 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		streamPresenceKey:   getenv(runtimeEnv.streamPresencePrefix, runtimeDefaults.streamPresencePrefix),
 		streamPresenceTTL:   getenvDuration(runtimeEnv.streamPresenceTTL, runtimeDefaults.streamPresenceTTL),
 		turnMaxHealthy:      getenvInt(runtimeEnv.turnMaxHealthyServers, runtimeDefaults.turnMaxHealthyServers),
+		turnSharedSecret:    getenv(runtimeEnv.turnPassword, runtimeDefaults.turnPassword),
 		iceServerCacheTTL:   getenvDuration(runtimeEnv.iceServerCacheTTL, runtimeDefaults.iceServerCacheTTL),
 		iceServerCacheKey:   getenv(runtimeEnv.iceServerCacheKey, runtimeDefaults.iceServerCacheKey),
 		publishToken:        publishToken,
 		grpcToken:           getenv(runtimeEnv.grpcToken, publishToken),
 		grpcMaxPayloadBytes: getenvInt(runtimeEnv.grpcMaxPayloadBytes, runtimeDefaults.grpcMaxPayloadBytes),
 	}, nil
+}
+
+func (c runtimeConfig) authPolicyTLS() authpolicy.RPCClientTLSConfig {
+	return authpolicy.RPCClientTLSConfig{
+		CAFile: c.deviceRPCCAFile, CertFile: c.deviceRPCCertFile,
+		KeyFile: c.deviceRPCKeyFile, ServerName: c.deviceRPCServerName,
+	}
 }
 
 func validateExpectedPublicOrigin(expected string, publicBaseURLs ...string) error {

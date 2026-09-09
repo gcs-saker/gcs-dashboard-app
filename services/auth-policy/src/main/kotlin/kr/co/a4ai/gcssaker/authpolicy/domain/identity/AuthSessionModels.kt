@@ -16,14 +16,17 @@ class AuthSessionService(
     private val principalCache: PrincipalCache = NoopPrincipalCache,
     private val refreshSessions: RefreshSessionStore = StatelessRefreshSessionStore,
     private val hierarchyRepository: OrganizationHierarchyRepository? = null,
+    private val adminMfa: AdminMfaVerifier = MfaDisabled,
 ) {
-    fun login(username: String, password: String): IssuedTokenSet? {
+    fun login(username: String, password: String, mfaCode: String? = null): IssuedTokenSet? {
         val user = users.findByUsername(username) ?: return null
         if (!user.active || !isGroupActive(user.groupId)) return null
         if (!passwordHasher.verify(password, user.passwordHash)) {
             return null
         }
-        return issueTokens(user.principal())
+        val principal = user.principal()
+        if (!adminMfa.verify(principal, mfaCode)) return null
+        return issueTokens(principal)
     }
 
     fun refresh(refreshToken: String): IssuedTokenSet? {

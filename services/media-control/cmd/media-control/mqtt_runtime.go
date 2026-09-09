@@ -21,7 +21,9 @@ func startMQTTAdapter(parent context.Context, config runtimeConfig) (func(), err
 		return nil, fmt.Errorf("MQTT requires private device policy RPC")
 	}
 	settings := mqttgateway.Config{URL: broker, Username: getenv("MQTT_GATEWAY_USERNAME", ""),
-		Password: getenv("MQTT_GATEWAY_PASSWORD", ""), AllowPlaintext: getenv("MQTT_GATEWAY_ALLOW_PLAINTEXT", "false") == "true"}
+		Password: getenv("MQTT_GATEWAY_PASSWORD", ""), AllowPlaintext: getenv("MQTT_GATEWAY_ALLOW_PLAINTEXT", "false") == "true",
+		TLS: mqttgateway.TLSFiles{CAFile: getenv("MQTT_GATEWAY_CA_FILE", ""), CertFile: getenv("MQTT_GATEWAY_CERT_FILE", ""),
+			KeyFile: getenv("MQTT_GATEWAY_KEY_FILE", ""), ServerName: getenv("MQTT_GATEWAY_SERVER_NAME", "")}}
 	if err := settings.Validate(); err != nil {
 		return nil, err
 	}

@@ -68,7 +68,7 @@ class AuthController(
         @RequestHeader(AuthSecurityHeaders.CSRF_HEADER_NAME, required = false) csrfHeader: String?,
     ): ResponseEntity<TokenResponse> {
         requestGuard.assertBrowserWrite(origin, referer, csrfHeader)
-        val tokens = sessions.login(request.username, request.password)
+        val tokens = sessions.login(request.username, request.password, request.mfaCode)
         if (tokens == null) {
             securityAuditPublisher.publishLoginFailed(request.username)
             throw UnauthorizedApiError(AuthApiErrors.INVALID_CREDENTIALS)

@@ -9,12 +9,12 @@ channels:
   - id: CH-GRPC-POLICY
     endpoints: [media-control, auth-policy]
     target: mutual TLS with service identity, private CA, rotation, and hostname verification
-    currentStatus: OPEN
+    currentStatus: IMPLEMENTED_NOT_DEPLOYED
     issue: 662
   - id: CH-MQTT-DEVICE
     endpoints: [field-device, mqtt-broker]
     target: per-device mutual TLS plus topic ACL and credential revocation
-    currentStatus: OPEN
+    currentStatus: IMPLEMENTED_NOT_DEPLOYED
     issue: 662
   - id: CH-POSTGRES
     endpoints: [auth-policy, PostgreSQL]
@@ -29,12 +29,12 @@ channels:
   - id: CH-TURN
     endpoints: [browser-or-device, TURN]
     target: HMAC-derived per-session credentials with bounded expiry and revocation policy
-    currentStatus: OPEN
+    currentStatus: IMPLEMENTED_NOT_DEPLOYED
     issue: 662
   - id: CH-ADMIN-MFA
     endpoints: [system-admin, auth-policy]
     target: phishing-resistant MFA preferred, TOTP recovery profile only when approved
-    currentStatus: BLOCKED_IDENTITY_ENROLLMENT_DESIGN
+    currentStatus: IMPLEMENTED_ENROLLMENT_PENDING
     issue: 662
 rolloutGates:
   - private CA hierarchy, certificate profiles, SANs, ownership, and expiry alerts approved
@@ -42,4 +42,3 @@ rolloutGates:
   - every service has readiness and authorization-denial evidence over mTLS
   - administrator enrollment and break-glass recovery are tested before MFA enforcement
   - no production credential, private key, or recovery code enters source or public evidence
-

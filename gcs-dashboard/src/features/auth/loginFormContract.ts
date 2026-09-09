@@ -9,13 +9,16 @@ export const LOGIN_FORM_ERROR_MESSAGES = Object.freeze({
 export const loginFormSchema = z.object({
   username: z.string().trim().min(1, LOGIN_FORM_ERROR_MESSAGES.usernameRequired),
   password: z.string().min(1, LOGIN_FORM_ERROR_MESSAGES.passwordRequired),
+  mfaCode: z.string().trim().max(128).optional(),
 });
 
 export type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 export function toLoginRequest(values: LoginFormValues): LoginRequest {
-  return {
+  const request: LoginRequest = {
     username: values.username,
     password: values.password,
   };
+  if (values.mfaCode) request.mfaCode = values.mfaCode;
+  return request;
 }

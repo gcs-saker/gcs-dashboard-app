@@ -27,7 +27,7 @@
 | Method | Path | Auth | Headers | Params | Body | Response | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | POST | `/auth-policy/auth/signup` | none | `Content-Type: application/json`, `X-GCS-CSRF` | none | `username`, `password`, `email`, `inviteCode`, optional `displayName`, `groupId` | `user`, `accessToken`, `tokenType`, `expiresInSeconds` | 초대 코드 정책 필요 |
-| POST | `/auth-policy/auth/login` | none | `Content-Type: application/json`, `X-GCS-CSRF` | none | `username`, `password` | `user`, `accessToken`, `tokenType`, `expiresInSeconds` | refresh token은 httpOnly cookie |
+| POST | `/auth-policy/auth/login` | none | `Content-Type: application/json`, `X-GCS-CSRF` | none | `username`, `password`, optional `mfaCode` | `user`, `accessToken`, `tokenType`, `expiresInSeconds` | System Admin은 TOTP 또는 미사용 복구 코드 필수, refresh token은 httpOnly cookie |
 | POST | `/auth-policy/auth/refresh` | refresh cookie | `X-GCS-CSRF` | none | none | `accessToken`, `tokenType`, `expiresInSeconds` | access token 재발급 |
 | GET | `/auth-policy/auth/me` | bearer | `Authorization` | none | none | `username`, `role`, `groupId`, `permissions` | URL 직접 진입 guard 기준 |
 | POST | `/auth-policy/auth/logout` | bearer + refresh cookie | `Authorization`, `X-GCS-CSRF` | none | none | empty/ok | refresh session 폐기 |

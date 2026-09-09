@@ -25,6 +25,10 @@ class MqttEnv:
     RECONNECT_MIN_DELAY = "MQTT_RECONNECT_MIN_DELAY_SECONDS"
     RECONNECT_MAX_DELAY = "MQTT_RECONNECT_MAX_DELAY_SECONDS"
     MAX_INFLIGHT_MESSAGES = "MQTT_MAX_INFLIGHT_MESSAGES"
+    TLS_ENABLED = "MQTT_TLS_ENABLED"
+    TLS_CA_FILE = "MQTT_TLS_CA_FILE"
+    TLS_CERT_FILE = "MQTT_TLS_CERT_FILE"
+    TLS_KEY_FILE = "MQTT_TLS_KEY_FILE"
 
 
 class MqttSettings(BackendBaseSettings):
@@ -37,6 +41,10 @@ class MqttSettings(BackendBaseSettings):
     reconnect_min_delay_seconds: int = Field(1, validation_alias=MqttEnv.RECONNECT_MIN_DELAY, gt=0)
     reconnect_max_delay_seconds: int = Field(30, validation_alias=MqttEnv.RECONNECT_MAX_DELAY, gt=0)
     max_inflight_messages: int = Field(20, validation_alias=MqttEnv.MAX_INFLIGHT_MESSAGES, gt=0)
+    tls_enabled: bool = Field(False, validation_alias=MqttEnv.TLS_ENABLED)
+    tls_ca_file: str | None = Field(None, validation_alias=MqttEnv.TLS_CA_FILE)
+    tls_cert_file: str | None = Field(None, validation_alias=MqttEnv.TLS_CERT_FILE)
+    tls_key_file: str | None = Field(None, validation_alias=MqttEnv.TLS_KEY_FILE)
 
     @field_validator("host", "client_id", mode="before")
     @classmethod
@@ -45,7 +53,7 @@ class MqttSettings(BackendBaseSettings):
             return empty_to_none(value)
         return value
 
-    @field_validator("username", "password", mode="before")
+    @field_validator("username", "password", "tls_ca_file", "tls_cert_file", "tls_key_file", mode="before")
     @classmethod
     def blank_optional_string_to_none(cls, value: object) -> object:
         if isinstance(value, str):
@@ -56,6 +64,12 @@ class MqttSettings(BackendBaseSettings):
     def normalize_reconnect_window(self) -> "MqttSettings":
         if self.reconnect_max_delay_seconds < self.reconnect_min_delay_seconds:
             self.reconnect_max_delay_seconds = self.reconnect_min_delay_seconds
+        return self
+
+    @model_validator(mode="after")
+    def require_mtls_identity(self) -> "MqttSettings":
+        if self.tls_enabled and not all((self.tls_ca_file, self.tls_cert_file, self.tls_key_file)):
+            raise ValueError("MQTT mTLS certificate paths are required")
         return self
 
     @classmethod
@@ -89,6 +103,12 @@ def get_mqtt_client() -> PublishableMqttClient:
     configure_mqtt_resilience(client, settings)
     if settings.username is not None:
         client.username_pw_set(settings.username, settings.password)
+    if settings.tls_enabled:
+        client.tls_set(
+            ca_certs=settings.tls_ca_file,
+            certfile=settings.tls_cert_file,
+            keyfile=settings.tls_key_file,
+        )
     client.connect(settings.host, settings.port, keepalive=settings.keepalive)
     client.loop_start()
     return client

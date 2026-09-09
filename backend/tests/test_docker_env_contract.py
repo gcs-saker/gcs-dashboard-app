@@ -195,16 +195,13 @@ def test_single_node_mqtt_is_hardened_by_default_and_healthcheck_authenticates()
     } in mqtt["volumes"]
     assert {
         "type": "bind",
-        "source": "${MQTT_PASSWORD_FILE:?Set MQTT_PASSWORD_FILE}",
-        "target": "/mosquitto/config/passwords",
+        "source": "${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}",
+        "target": "/run/secrets/gcs-pki",
         "read_only": True,
     } in mqtt["volumes"]
-    assert mqtt["environment"]["MQTT_HEALTH_USERNAME"] == "${MQTT_HEALTH_USERNAME:?Set MQTT_HEALTH_USERNAME}"
-    assert mqtt["environment"]["MQTT_HEALTH_PASSWORD"] == "${MQTT_HEALTH_PASSWORD:?Set MQTT_HEALTH_PASSWORD}"
     assert "mosquitto_sub" in healthcheck_command
     assert "$$SYS/broker/version" in healthcheck_command
-    assert "$${MQTT_HEALTH_USERNAME}" in healthcheck_command
-    assert "$${MQTT_HEALTH_PASSWORD}" in healthcheck_command
+    assert "--cert /run/secrets/gcs-pki/mqtt-health.crt" in healthcheck_command
     assert "/dev/tcp" not in " ".join(mqtt_healthcheck)
     assert "nc -z" not in healthcheck_command
 

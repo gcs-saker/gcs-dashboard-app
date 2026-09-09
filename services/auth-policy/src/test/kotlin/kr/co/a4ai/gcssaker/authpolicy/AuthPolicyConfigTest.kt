@@ -7,6 +7,7 @@ import org.springframework.beans.factory.ObjectProvider
 import org.springframework.data.redis.core.StringRedisTemplate
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AllowedOrigins
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthPolicyConfig
+import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthSessionInfrastructure
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
 import kr.co.a4ai.gcssaker.authpolicy.configuration.OperationalPersistenceConfiguration
 import kr.co.a4ai.gcssaker.authpolicy.configuration.RuntimeEnvReader
@@ -14,6 +15,7 @@ import kr.co.a4ai.gcssaker.authpolicy.configuration.TimeSyncPolicyConfiguration
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.NoopPrincipalCache
+import kr.co.a4ai.gcssaker.authpolicy.domain.MfaDisabled
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventQuery
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvite
 import kr.co.a4ai.gcssaker.authpolicy.domain.SignupInvites
@@ -219,9 +221,7 @@ class AuthPolicyConfigTest {
             repository,
             passwordHasher,
             tokenService,
-            NoopPrincipalCache,
-            StatelessRefreshSessionStore,
-            EmptyObjectProvider(),
+            AuthSessionInfrastructure(NoopPrincipalCache, StatelessRefreshSessionStore, null, MfaDisabled),
         )
 
         assertNotNull(repository.findByUsername("admin01"))

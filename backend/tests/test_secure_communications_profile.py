@@ -21,8 +21,10 @@ def test_secure_channel_profile_fails_closed_without_overstating_completion() ->
         "CH-TURN",
         "CH-ADMIN-MFA",
     }
-    assert channels["CH-GRPC-POLICY"]["currentStatus"] == "OPEN"
-    assert channels["CH-ADMIN-MFA"]["currentStatus"].startswith("BLOCKED_")
+    assert channels["CH-GRPC-POLICY"]["currentStatus"] == "IMPLEMENTED_NOT_DEPLOYED"
+    assert channels["CH-MQTT-DEVICE"]["currentStatus"] == "IMPLEMENTED_NOT_DEPLOYED"
+    assert channels["CH-TURN"]["currentStatus"] == "IMPLEMENTED_NOT_DEPLOYED"
+    assert channels["CH-ADMIN-MFA"]["currentStatus"] == "IMPLEMENTED_ENROLLMENT_PENDING"
     assert all(item["issue"] == 662 for item in channels.values())
 
 

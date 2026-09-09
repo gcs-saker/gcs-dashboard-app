@@ -44,7 +44,7 @@ class GrpcRuntimeSmokeConfig:
             f"--proto_path={self.proto_root}",
             f"--descriptor_set_out={self.descriptor_set}",
             "--include_imports",
-            str(self.gateway_proto.relative_to(self.proto_root)),
+            self.gateway_proto.relative_to(self.proto_root).as_posix(),
         ]
 
     def grpc_tools_descriptor_command(self) -> list[str]:
@@ -55,7 +55,7 @@ class GrpcRuntimeSmokeConfig:
             f"--proto_path={self.proto_root}",
             f"--descriptor_set_out={self.descriptor_set}",
             "--include_imports",
-            str(self.gateway_proto.relative_to(self.proto_root)),
+            self.gateway_proto.relative_to(self.proto_root).as_posix(),
         ]
 
 

@@ -10,6 +10,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.PasswordHasher
 import kr.co.a4ai.gcssaker.authpolicy.domain.PrincipalCache
 import kr.co.a4ai.gcssaker.authpolicy.domain.RefreshSessionStore
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.AdminMfaVerifier
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcAuthUserRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.AuthPolicyDatabaseInitializer
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.AuthUserSeeder
@@ -61,13 +62,19 @@ class AuthPolicyConfig {
         users: AuthUserRepository,
         passwordHasher: PasswordHasher,
         tokenService: JwtTokenService,
-        principalCache: PrincipalCache,
-        refreshSessionStore: RefreshSessionStore,
-        hierarchyRepository: ObjectProvider<OrganizationHierarchyRepository>,
+        infrastructure: AuthSessionInfrastructure,
     ): AuthSessionService = AuthSessionService(
-        users, passwordHasher, tokenService, principalCache, refreshSessionStore,
-        hierarchyRepository.getIfAvailable(),
+        users, passwordHasher, tokenService, infrastructure.principalCache, infrastructure.refreshSessions,
+        infrastructure.hierarchy, infrastructure.adminMfa,
     )
+
+    @Bean
+    fun authSessionInfrastructure(
+        principalCache: PrincipalCache,
+        refreshSessions: RefreshSessionStore,
+        hierarchy: ObjectProvider<OrganizationHierarchyRepository>,
+        adminMfa: AdminMfaVerifier,
+    ) = AuthSessionInfrastructure(principalCache, refreshSessions, hierarchy.getIfAvailable(), adminMfa)
 
     @Bean
     fun groupMemberAdministrationService(
@@ -78,3 +85,10 @@ class AuthPolicyConfig {
         users, passwordHasher, refreshSessions = refreshSessionStore,
     )
 }
+
+data class AuthSessionInfrastructure(
+    val principalCache: PrincipalCache,
+    val refreshSessions: RefreshSessionStore,
+    val hierarchy: OrganizationHierarchyRepository?,
+    val adminMfa: AdminMfaVerifier,
+)

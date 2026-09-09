@@ -3,6 +3,7 @@ export type UserRole = "viewer" | "operator" | "group_admin" | "admin";
 export interface LoginRequest {
   username: string;
   password: string;
+  mfaCode?: string;
 }
 
 export interface SignupRequest {

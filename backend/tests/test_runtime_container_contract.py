@@ -177,7 +177,9 @@ def test_single_node_turn_services_use_coturn_supported_runtime_flags() -> None:
         service = compose["services"][service_name]
         command = service["command"]
         assert service["image"].endswith("@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e")
-        assert "--lt-cred-mech" in command
+        assert "--use-auth-secret" in command
+        assert "--static-auth-secret=${TURN_SHARED_SECRET:?Set TURN_SHARED_SECRET}" in command
+        assert not any(argument.startswith("--user=") for argument in command)
         assert "--no-cli" in command
         assert "--no-multicast-peers" in command
         assert "--allow-loopback-peers" not in command

@@ -33,6 +33,13 @@ class AuthSessionServiceTest {
                 role = UserRole.OPERATOR,
                 groupId = GroupId("co-a"),
             ),
+            AuthUser(
+                username = "admin01",
+                email = "admin01@example.test",
+                passwordHash = passwordHasher.hash("admin-password"),
+                role = UserRole.ADMIN,
+                groupId = GroupId("root"),
+            ),
         ),
     )
     private val principalCache = RecordingPrincipalCache()
@@ -58,6 +65,17 @@ class AuthSessionServiceTest {
     fun `login rejects unknown user or invalid password`() {
         assertNull(service.login("missing", "correct-password"))
         assertNull(service.login("operator01", "wrong-password"))
+    }
+
+    @Test
+    fun `admin MFA is checked before tokens are issued`() {
+        val protected = AuthSessionService(
+            users, passwordHasher, tokenService, principalCache, refreshSessions,
+            adminMfa = AdminMfaVerifier { _, code -> code == "valid-second-factor" },
+        )
+
+        assertNull(protected.login("admin01", "admin-password"))
+        assertNotNull(protected.login("admin01", "admin-password", "valid-second-factor"))
     }
 
     @Test

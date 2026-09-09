@@ -2,7 +2,6 @@ package mqttgateway
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -22,18 +21,30 @@ type Config struct {
 	Username       string
 	Password       string
 	AllowPlaintext bool
+	TLS            TLSFiles
 	Ready          func()
 }
 
 func (c Config) Validate() error {
 	u, err := url.Parse(c.URL)
-	if err != nil || u.Host == "" || u.User != nil || c.Username == "" || c.Password == "" {
+	if invalidBrokerURL(u, err) || (u.Scheme == "tcp" && (c.Username == "" || c.Password == "")) {
 		return errors.New("mqtt_config_invalid")
 	}
-	if u.Scheme != "ssl" && !(c.AllowPlaintext && u.Scheme == "tcp") {
+	if !c.allowedTransport(u.Scheme) {
 		return errors.New("mqtt_tls_required")
 	}
+	if u.Scheme == "ssl" && !c.TLS.Complete() {
+		return errors.New("mqtt_mtls_required")
+	}
 	return nil
+}
+
+func invalidBrokerURL(broker *url.URL, err error) bool {
+	return err != nil || broker.Host == "" || broker.User != nil
+}
+
+func (c Config) allowedTransport(scheme string) bool {
+	return scheme == "ssl" || (c.AllowPlaintext && scheme == "tcp")
 }
 
 // Run owns the connection and its bounded queue. Failure stops this opt-in adapter,
@@ -44,11 +55,17 @@ func Run(ctx context.Context, config Config, exchange Exchange) error {
 	}
 	queue := make(chan mqtt.Message, queueCapacity)
 	lost := make(chan struct{}, 1)
-	options := mqtt.NewClientOptions().AddBroker(config.URL).SetClientID("gcs-mqtt-lab-ingress").
+	tlsConfig, err := config.TLS.Config()
+	if err != nil {
+		return err
+	}
+	options := mqtt.NewClientOptions().AddBroker(config.URL).SetClientID("gcs-media-control").
 		SetUsername(config.Username).SetPassword(config.Password).SetCleanSession(true).
 		SetAutoReconnect(false).SetConnectRetry(false).SetAutoAckDisabled(true).
-		SetConnectTimeout(operationTimeout).SetWriteTimeout(operationTimeout).SetPingTimeout(operationTimeout).
-		SetTLSConfig(&tls.Config{MinVersion: tls.VersionTLS12})
+		SetConnectTimeout(operationTimeout).SetWriteTimeout(operationTimeout).SetPingTimeout(operationTimeout)
+	if tlsConfig != nil {
+		options.SetTLSConfig(tlsConfig)
+	}
 	options.SetConnectionLostHandler(func(mqtt.Client, error) {
 		select {
 		case lost <- struct{}{}:

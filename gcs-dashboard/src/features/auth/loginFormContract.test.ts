@@ -10,11 +10,13 @@ describe("login form contract", () => {
     const values = loginFormSchema.parse({
       password: " password-with-space ",
       username: " operator01 ",
+      mfaCode: " 123456 ",
     });
 
     expect(toLoginRequest(values)).toEqual({
       password: " password-with-space ",
       username: "operator01",
+      mfaCode: "123456",
     });
   });
 

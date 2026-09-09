@@ -5,6 +5,7 @@ import argparse
 import json
 import shutil
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -195,8 +196,9 @@ def run_command(command: EvidenceCommand, timeout_seconds: int) -> EvidenceResul
             stderr="docker CLI is not available",
         )
     started = time.perf_counter()
+    executable_command = [sys.executable, *command.command[1:]] if command.command[0] == "python3" else command.command
     process = subprocess.run(
-        command.command,
+        executable_command,
         cwd=REPO_ROOT,
         check=False,
         capture_output=True,
