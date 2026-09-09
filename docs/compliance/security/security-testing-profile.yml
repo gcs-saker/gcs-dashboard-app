@@ -4,7 +4,8 @@ static:
   methods: [type checking, lint, critical pattern gate, dependency audit, image scan]
 dynamic:
   dast:
-    status: NOT_RUN
+    status: IMPLEMENTED_NOT_RUN
+    harness: scripts/smoke/auth_boundary_dast.py
     targets: [REST, GraphQL, WebSocket, WHIP-WHEP signaling]
     requiredScenarios: [unauthenticated, unauthorized, object-scope, injection, oversized-input, rate-limit, error-sanitization]
   penetrationTest:
@@ -22,3 +23,4 @@ failureConditions: [panic, crash, race, resource leak, secret disclosure, author
 evidencePolicy: Findings and corpora exclude credentials, private routes, controlled data, and raw private media.
 retestPolicy: Critical and High findings are retested after remediation and before release; all other findings are retested within 30 days.
 penetrationScope: [public authentication and authorization, REST, GraphQL, WebSocket, WHIP-WHEP signaling, gRPC metadata, MQTT topic and payload boundaries]
+resultBinding: [docs/compliance/security/poam.yml, docs/compliance/evidence/qualification-package-plan.md]
