@@ -1,0 +1,11 @@
+schemaVersion: gcs-saker.delivery-readiness.v1
+targetVersion: v1.0.0
+overallStatus: BLOCKED
+items:
+  - {id: DLV-01, name: software CI and security contracts, status: PASS, evidence: [.github/workflows/ci.yml]}
+  - {id: DLV-02, name: signed digest release and license disposition, status: BLOCKED, evidence: [docs/compliance/evidence/license-audit-2026-09-08.md]}
+  - {id: DLV-03, name: Server-01 MFA PKI and mTLS deployment, status: BLOCKED, evidence: [docs/compliance/security/secure-communications-profile.yml]}
+  - {id: DLV-04, name: 16-stream 30-minute load acceptance, status: NOT_RUN, evidence: [scripts/m5_sixteen_stream_acceptance.sh]}
+  - {id: DLV-05, name: Server-01 restart and rollback rehearsal, status: NOT_RUN, evidence: [docs/operations/GCS-Saker_운영장애대응_Runbook_v0.1.md]}
+  - {id: DLV-06, name: physical voice intelligibility qualification, status: BLOCKED, evidence: [docs/compliance/voice/voice-qualification-results.yml]}
+releaseTagAllowed: false

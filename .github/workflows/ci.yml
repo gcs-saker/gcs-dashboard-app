@@ -359,6 +359,7 @@ jobs:
           python scripts/gates/runtime_lifecycle_gate.py
           python scripts/gates/stig_assessment_gate.py
           python scripts/gates/voice_qualification_gate.py
+          python scripts/gates/delivery_readiness_gate.py
 
       - name: Validate vulnerability response and recovery policy
         run: python scripts/gates/vulnerability_response_gate.py --check

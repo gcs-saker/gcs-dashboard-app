@@ -30,8 +30,8 @@ if [[ "${1:---check}" == "--check" ]]; then
   [[ "$STREAM_COUNT" -eq 16 ]]
   [[ "$DURATION_SECONDS" -ge 1800 ]]
   [[ "$LATENCY_SAMPLES" -ge 10 ]]
-  grep -q 'First video frame latency ms:' "$ROOT/scripts/webrtc_ice_smoke.py"
-  grep -q 'WHIP answer latency ms:' "$ROOT/scripts/webrtc_whip_publish_smoke.py"
+  grep -q 'First video frame latency ms:' "$ROOT/scripts/smoke/webrtc_ice_smoke.py"
+  grep -q 'WHIP answer latency ms:' "$ROOT/scripts/smoke/webrtc_whip_publish_smoke.py"
   echo "16-stream acceptance contract passed"
   exit 0
 elif [[ "$1" != "--run" ]]; then
@@ -67,7 +67,7 @@ started_epoch="$(date +%s)"
 initial_rx="$(cat "/sys/class/net/$NETWORK_INTERFACE/statistics/rx_bytes")"
 for index in $(seq -w 1 "$STREAM_COUNT"); do
   stream_path="${STREAM_PREFIX}/${index}"
-  "$PYTHON_BIN" "$ROOT/scripts/webrtc_whip_publish_smoke.py" --run \
+  "$PYTHON_BIN" "$ROOT/scripts/smoke/webrtc_whip_publish_smoke.py" --run \
     --whip-url "${EDGE_BASE_URL}/webrtc/${stream_path}/whip" \
     --publish-seconds "$((DURATION_SECONDS + 20))" --require-connected --no-audio \
     "${auth_args[@]}" > "/tmp/gcs-saker-publisher-${index}.log" 2>&1 &
@@ -80,7 +80,7 @@ latency_total=0
 for sample in $(seq 1 "$LATENCY_SAMPLES"); do
   index="$(printf '%02d' "$(( (sample - 1) % STREAM_COUNT + 1 ))")"
   probe="/tmp/gcs-saker-whep-${sample}.log"
-  "$PYTHON_BIN" "$ROOT/scripts/webrtc_ice_smoke.py" --run --require-connected --require-video-frame \
+  "$PYTHON_BIN" "$ROOT/scripts/smoke/webrtc_ice_smoke.py" --run --require-connected --require-video-frame \
     --whep-url "${EDGE_BASE_URL}/webrtc/${STREAM_PREFIX}/${index}/whep" > "$probe" 2>&1
   latency="$(awk -F': ' '/First video frame latency ms:/ {print $2; exit}' "$probe")"
   [[ "$latency" =~ ^[0-9]+([.][0-9]+)?$ ]] || { echo "missing latency sample $sample" >&2; exit 1; }
