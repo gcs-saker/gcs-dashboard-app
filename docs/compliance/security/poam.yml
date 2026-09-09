@@ -46,7 +46,7 @@ items:
     controls: [AU-4, AU-5, AU-9]
     issue: https://github.com/gcs-saker/gcs-dashboard-app/issues/664
     severity: MEDIUM
-    mitigation: Retain local hash-chain evidence and bounded log rotation until external/WORM storage is deployed.
+    mitigation: Use the distinct-device read-only anchor off-load and signed recovery verifier pending actual external/WORM deployment evidence.
     dueBy: 2026-11-30
     status: OPEN
   - id: POAM-SEC-007
