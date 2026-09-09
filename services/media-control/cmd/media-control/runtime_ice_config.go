@@ -9,7 +9,7 @@ import (
 
 func loadIceServers() []domain.IceServer {
 	turnUsername := getenv(runtimeEnv.turnUsername, runtimeDefaults.turnUsername)
-	turnPassword := getenv(runtimeEnv.turnPassword, runtimeDefaults.turnPassword)
+	turnPassword := "issued-per-request"
 	return mustIceServers([]iceServerConfig{
 		{URL: getenv(runtimeEnv.stunURL, runtimeDefaults.stunURL), Kind: domain.IceServerSTUN, Healthy: true},
 		{URL: getenv(runtimeEnv.turnPrimaryURL, runtimeDefaults.turnPrimaryURL), Kind: domain.IceServerTURN, Username: turnUsername, Credential: turnPassword, Healthy: true},

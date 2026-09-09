@@ -72,7 +72,7 @@ var runtimeEnv = runtimeEnvContract{
 	grpcToken:             "MEDIA_CONTROL_GRPC_TOKEN",
 	grpcMaxPayloadBytes:   "MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES",
 	turnUsername:          "TURN_USERNAME",
-	turnPassword:          "TURN_PASSWORD",
+	turnPassword:          "TURN_SHARED_SECRET",
 	stunURL:               "MEDIA_CONTROL_STUN_URL",
 	turnPrimaryURL:        "MEDIA_CONTROL_TURN_PRIMARY_URL",
 	turnSecondaryURL:      "MEDIA_CONTROL_TURN_SECONDARY_URL",

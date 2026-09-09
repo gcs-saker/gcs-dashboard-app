@@ -262,8 +262,7 @@ services:
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIA_CONTROL_GRPC_HOST_PORT:-9090}:9090"
     environment:
       MEDIAMTX_API_BASE_URL: ${MEDIAMTX_API_BASE_URL:-http://mediamtx:9997}
-      TURN_USERNAME: ${TURN_USERNAME:-gcs-turn}
-      TURN_PASSWORD: ${TURN_PASSWORD:?Set TURN_PASSWORD}
+      TURN_SHARED_SECRET: ${TURN_SHARED_SECRET:?Set TURN_SHARED_SECRET}
       MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL: ${MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8080/webrtc}
       MEDIA_CONTROL_PUBLIC_HLS_BASE_URL: ${MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://localhost:8080/hls}
       MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN: ${MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN:-}
@@ -347,9 +346,9 @@ services:
       - -n
       - --log-file=stdout
       - --fingerprint
-      - --lt-cred-mech
+      - --use-auth-secret
       - --realm=${TURN_REALM:-gcs-saker.closed}
-      - --user=${TURN_USERNAME:-gcs-turn}:${TURN_PASSWORD:?Set TURN_PASSWORD}
+      - --static-auth-secret=${TURN_SHARED_SECRET:?Set TURN_SHARED_SECRET}
       - --listening-port=3478
       - --min-port=${TURN_RELAY_MIN_PORT:-49160}
       - --max-port=${TURN_RELAY_MAX_PORT:-49200}
@@ -388,9 +387,9 @@ services:
       - -n
       - --log-file=stdout
       - --fingerprint
-      - --lt-cred-mech
+      - --use-auth-secret
       - --realm=${TURN_REALM:-gcs-saker.closed}
-      - --user=${TURN_USERNAME:-gcs-turn}:${TURN_PASSWORD:?Set TURN_PASSWORD}
+      - --static-auth-secret=${TURN_SHARED_SECRET:?Set TURN_SHARED_SECRET}
       - --listening-port=3478
       - --min-port=49181
       - --max-port=${TURN_RELAY_MAX_PORT:-49200}

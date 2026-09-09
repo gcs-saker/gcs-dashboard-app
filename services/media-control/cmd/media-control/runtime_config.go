@@ -33,6 +33,7 @@ type runtimeConfig struct {
 	streamPresenceKey   string
 	streamPresenceTTL   time.Duration
 	turnMaxHealthy      int
+	turnSharedSecret    string
 	iceServerCacheTTL   time.Duration
 	iceServerCacheKey   string
 	publishToken        string
@@ -88,6 +89,7 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		streamPresenceKey:   getenv(runtimeEnv.streamPresencePrefix, runtimeDefaults.streamPresencePrefix),
 		streamPresenceTTL:   getenvDuration(runtimeEnv.streamPresenceTTL, runtimeDefaults.streamPresenceTTL),
 		turnMaxHealthy:      getenvInt(runtimeEnv.turnMaxHealthyServers, runtimeDefaults.turnMaxHealthyServers),
+		turnSharedSecret:    getenv(runtimeEnv.turnPassword, runtimeDefaults.turnPassword),
 		iceServerCacheTTL:   getenvDuration(runtimeEnv.iceServerCacheTTL, runtimeDefaults.iceServerCacheTTL),
 		iceServerCacheKey:   getenv(runtimeEnv.iceServerCacheKey, runtimeDefaults.iceServerCacheKey),
 		publishToken:        publishToken,

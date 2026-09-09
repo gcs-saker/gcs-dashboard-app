@@ -71,16 +71,16 @@ func newIceServerProvider(config runtimeConfig, metrics *httpapi.Metrics) httpap
 		turn.StaticProbe{},
 		config.turnMaxHealthy,
 	)
-	if config.redisAddress == "" || config.iceServerCacheTTL <= 0 {
-		return provider
+	if config.redisAddress != "" && config.iceServerCacheTTL > 0 {
+		provider = turn.NewCachedIceServerProviderWithObserver(
+			provider,
+			newRedisStringCache(config),
+			config.iceServerCacheKey,
+			config.iceServerCacheTTL,
+			metrics,
+		)
 	}
-	return turn.NewCachedIceServerProviderWithObserver(
-		provider,
-		newRedisStringCache(config),
-		config.iceServerCacheKey,
-		config.iceServerCacheTTL,
-		metrics,
-	)
+	return turn.NewEphemeralCredentialProvider(provider, config.turnSharedSecret, 5*time.Minute)
 }
 
 func newRedisStringCache(config runtimeConfig) streamcache.StringCache {
