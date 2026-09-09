@@ -1,6 +1,7 @@
 schemaVersion: gcs-saker.rmf-control-matrix.v1
 baseline: NIST SP 800-53 Rev.5 tailored software baseline
 assessmentMethod: NIST SP 800-53A Rev.5
+cciMappingStatus: BLOCKED_OFFICIAL_ASD_STIG_XCCDF_NOT_RETAINED
 controls:
   - id: AC-2
     family: Access Control
@@ -62,4 +63,34 @@ controls:
     implementation: Lockfiles, exact versions, base-image digests, SBOM generation, dependency audits, and image scans are required.
     assessment: Verify artifact signatures, VEX, provenance, license policy, and supplier review gaps.
     evidence: [.github/workflows/ci.yml]
+    status: OPEN
+  - id: AC-12
+    family: Access Control
+    implementation: Explicit logout and bounded access/refresh tokens exist; STIG idle-session limits are not implemented.
+    assessment: Verify logout and token expiry, then test 10-minute admin and 15-minute user idle termination.
+    evidence: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/AuthSessionServiceTest.kt]
+    status: OPEN
+  - id: AU-3
+    family: Audit and Accountability
+    implementation: Security events carry UTC time, stable action/category, result, and authenticated or redacted process identity.
+    assessment: Sample login, account, stream, Talkback, and denial records and verify every required field and redaction.
+    evidence: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/SecurityAuditEventFactory.kt]
+    status: IMPLEMENTED_NOT_ASSESSED
+  - id: AU-5
+    family: Audit and Accountability
+    implementation: Audit failures are recorded, but a 75-percent volume warning is not demonstrated.
+    assessment: Fill an isolated audit volume past 75 percent and verify immediate SA/ISSO notification without losing records.
+    evidence: [docs/compliance/security/poam.yml]
+    status: OPEN
+  - id: SC-13
+    family: System and Communications Protection
+    implementation: Public TLS and internal mTLS profiles define protocol floors, identities, rotation, and plaintext denial.
+    assessment: Execute cipher, SAN, missing-client-certificate, revoked-certificate, and plaintext denial tests.
+    evidence: [scripts/ops/check_secure_channels.sh, scripts/ops/check_internal_pki.sh]
+    status: IMPLEMENTED_NOT_DEPLOYED
+  - id: CA-2
+    family: Assessment, Authorization, and Monitoring
+    implementation: The ASD STIG assessment overlay binds conservative verdicts to NIST controls and repository evidence.
+    assessment: Obtain the official V6R4 XCCDF/data stream, verify its hash, restore CCI mappings, and review every Open verdict.
+    evidence: [docs/compliance/security/asd-stig-v6r4-assessment.yml]
     status: OPEN

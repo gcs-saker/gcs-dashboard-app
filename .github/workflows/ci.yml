@@ -355,6 +355,7 @@ jobs:
         run: |
           python scripts/gates/supply_chain_policy_gate.py --check
           python scripts/gates/runtime_lifecycle_gate.py
+          python scripts/gates/stig_assessment_gate.py
 
       - name: Validate vulnerability response and recovery policy
         run: python scripts/gates/vulnerability_response_gate.py --check

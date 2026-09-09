@@ -14,7 +14,11 @@ def test_qualification_report_includes_failures_blockers_and_open_work() -> None
     assert report["requirements"]["total"] == 10
     assert report["requirements"]["byStatus"]["BLOCKED"] >= 1
     assert report["hazards"] == {"total": 10, "byStatus": {"OPEN": 10}}
-    assert report["stig"] == {"revision": "V6R4", "total": 286, "byStatus": {"NOT_RUN": 286}}
+    assert report["stig"] == {
+        "revision": "V6R4",
+        "total": 286,
+        "byStatus": {"NOT_A_FINDING": 9, "NOT_APPLICABLE": 1, "OPEN": 276},
+    }
     assert report["poam"]["byStatus"]["OPEN"] >= 1
     assert report["claim"] == "assessment baseline only; not certified or conformant"
 

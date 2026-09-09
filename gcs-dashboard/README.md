@@ -73,8 +73,13 @@ VITE_AUTH_API_BASE_URL=/auth-policy/auth
 VITE_STREAM_API_BASE_URL=/media-control
 VITE_HLS_BASE_URL=/hls
 VITE_LOCAL_WEBCAM_WHIP_URL=/webrtc/raw/local/webcam/whip
-VITE_DEV_PROXY_TARGET=https://gcs-saker.com
+VITE_DEV_PROXY_TARGET=http://127.0.0.1:8080
 ```
+
+개발 서버는 기본적으로 `127.0.0.1`에만 바인딩하고 위 로컬 edge만 사용한다. 운영
+`gcs-saker.com` 프록시는 `VITE_ALLOW_PRODUCTION_PROXY=true` 없이는 시작되지 않는다. TLS 검증
+해제는 `VITE_DEV_PROFILE=local-test`, loopback target, `VITE_DEV_ALLOW_INSECURE_TLS=true`를 모두
+명시한 격리 테스트에서만 허용한다.
 
 If DevTools shows `http://localhost:8001/auth/login` or `/api/auth/login`, an old `.env` or shell-level `VITE_AUTH_API_BASE_URL` is still active.
 
