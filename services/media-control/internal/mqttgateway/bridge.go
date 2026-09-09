@@ -27,16 +27,24 @@ type Config struct {
 
 func (c Config) Validate() error {
 	u, err := url.Parse(c.URL)
-	if err != nil || u.Host == "" || u.User != nil || c.Username == "" || c.Password == "" {
+	if invalidBrokerURL(u, err) || (u.Scheme == "tcp" && (c.Username == "" || c.Password == "")) {
 		return errors.New("mqtt_config_invalid")
 	}
-	if u.Scheme != "ssl" && !(c.AllowPlaintext && u.Scheme == "tcp") {
+	if !c.allowedTransport(u.Scheme) {
 		return errors.New("mqtt_tls_required")
 	}
 	if u.Scheme == "ssl" && !c.TLS.Complete() {
 		return errors.New("mqtt_mtls_required")
 	}
 	return nil
+}
+
+func invalidBrokerURL(broker *url.URL, err error) bool {
+	return err != nil || broker.Host == "" || broker.User != nil
+}
+
+func (c Config) allowedTransport(scheme string) bool {
+	return scheme == "ssl" || (c.AllowPlaintext && scheme == "tcp")
 }
 
 // Run owns the connection and its bounded queue. Failure stops this opt-in adapter,

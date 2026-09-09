@@ -1,1 +1,1 @@
-{"schemaVersion":1,"limits":{"maxFunctionLines":60,"maxComplexity":10},"summary":{"functionCount":2441,"functionCountByLanguage":{"go":383,"kotlin":761,"python":473,"typescript":824},"longFunctionCount":0,"complexFunctionCount":0,"maxFunctionLines":60,"maxComplexity":10},"functions":{}}
+{"schemaVersion":1,"limits":{"maxFunctionLines":60,"maxComplexity":10},"summary":{"functionCount":2456,"functionCountByLanguage":{"go":394,"kotlin":764,"python":474,"typescript":824},"longFunctionCount":0,"complexFunctionCount":0,"maxFunctionLines":60,"maxComplexity":10},"functions":{}}
