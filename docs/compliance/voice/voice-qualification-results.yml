@@ -12,6 +12,18 @@ softwareChecks:
   - id: VOICE-SW-AUTHORIZED-ROUTING
     status: PASS
     evidence: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/StreamPolicyControllerTest.kt
+  - id: VOICE-SW-INBOUND-WAVEFORM
+    status: PASS
+    evidence: gcs-dashboard/src/features/streaming/components/WebRTCPlayerMedia.test.tsx
+  - id: VOICE-SW-JITTER-LOSS-CONCEALMENT
+    status: PASS
+    evidence: gcs-dashboard/src/features/streaming/hooks/audio/whepAudioStats.test.ts
+  - id: VOICE-SW-RECONNECT-STATE
+    status: PASS
+    evidence: gcs-dashboard/src/features/streaming/runtime/streamReconnectPolicy.test.ts
+  - id: VOICE-SW-TALKBACK-LATENCY-BUDGET
+    status: PASS
+    evidence: backend/tests/test_stream_latency_budget.py
 qualificationMatrix:
   paths: [direct, stun-direct, turn-relay]
   packetLossPercent: [0, 1, 3, 5]
@@ -22,4 +34,3 @@ humanIntelligibility:
   methods: [MRT, STI]
   status: BLOCKED
   missing: [representative microphone, designated headset, calibrated noise environment, Korean test material, listener panel]
-
