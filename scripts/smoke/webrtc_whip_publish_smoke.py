@@ -281,9 +281,7 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
     )
     peer_connection = RTCPeerConnection(RTCConfiguration(iceServers=ice_servers))
     track = (
-        None
-        if args.no_video
-        else SyntheticVideoTrack(args.width, args.height, args.fps, args.keyframe_interval_frames)
+        None if args.no_video else SyntheticVideoTrack(args.width, args.height, args.fps, args.keyframe_interval_frames)
     )
     audio_track = (
         None

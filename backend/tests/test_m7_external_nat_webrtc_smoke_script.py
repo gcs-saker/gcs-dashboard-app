@@ -86,9 +86,7 @@ def test_webrtc_whip_publish_smoke_redacts_media_token_query() -> None:
     assert redacted == "https://edge.example/webrtc/raw/nat/smoke/whip?<redacted-query>"
     assert "secret" not in redacted
 
-    safe_url = module.redact_media_url(
-        "https://edge.example/webrtc/raw/private/stream/whip?publisherToken=secret"
-    )
+    safe_url = module.redact_media_url("https://edge.example/webrtc/raw/private/stream/whip?publisherToken=secret")
     assert safe_url == "https://edge.example/webrtc/<redacted-media-path>/whip?<redacted-query>"
 
 
