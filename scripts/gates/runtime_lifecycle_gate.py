@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 POLICY = ROOT / "docs/compliance/supply-chain/runtime-lifecycle-policy.yml"
 CI = ROOT / ".github/workflows/ci.yml"
 DASHBOARD_DOCKERFILE = ROOT / "gcs-dashboard/Dockerfile"
+RELEASE_WORKFLOW = ROOT / ".github/workflows/release-supply-chain.yml"
 
 
 class RuntimeLifecycleError(RuntimeError):
@@ -56,6 +57,19 @@ def validate(policy: dict[str, Any]) -> None:
         raise RuntimeLifecycleError(
             "unused dependency exceptions require explicit policy support"
         )
+    workflows = CI.read_text(encoding="utf-8") + RELEASE_WORKFLOW.read_text(
+        encoding="utf-8"
+    )
+    for obsolete in (
+        "actions/checkout@v4",
+        "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+        "actions/setup-node@v4",
+        "actions/setup-python@v5",
+    ):
+        if obsolete in workflows:
+            raise RuntimeLifecycleError(
+                f"workflow uses an obsolete action runtime: {obsolete}"
+            )
 
 
 def main() -> int:

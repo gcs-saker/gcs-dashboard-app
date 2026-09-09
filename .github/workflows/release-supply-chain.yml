@@ -69,7 +69,7 @@ jobs:
             build_contexts: ""
     steps:
       - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
 
@@ -174,7 +174,7 @@ jobs:
             --output "${RUNNER_TEMP}/release-entry.json"
 
       - name: Upload signed release evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: ${{ matrix.image }}-signed-release-evidence
           if-no-files-found: error
@@ -197,12 +197,12 @@ jobs:
       id-token: write
     steps:
       - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
 
       - name: Download verified image evidence
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           pattern: "*-signed-release-evidence"
           path: ${{ runner.temp }}/release-evidence
@@ -231,7 +231,7 @@ jobs:
             "${RUNNER_TEMP}/release-manifest.json"
 
       - name: Upload deployable signed manifest
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: signed-release-manifest
           if-no-files-found: error
