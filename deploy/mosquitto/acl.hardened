@@ -25,6 +25,9 @@ topic write gcs/+/+/+/command
 topic read gcs/+/+/+/command_ack
 topic write gcs/ops/media-control/event
 
+user mqtt-health
+topic read $SYS/#
+
 # Device certificate CN is the server-owned asset UUID. A device can only use
 # the asset segment matching its authenticated certificate identity.
 pattern write gcs/+/+/%u/telemetry
