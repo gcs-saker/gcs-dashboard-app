@@ -14,6 +14,7 @@ PROFILE = REPO_ROOT / "docs/compliance/software-military-ready-profile-v1.yml"
 CATALOG = REPO_ROOT / "docs/compliance/requirements/software-military-ready-requirements.yml"
 HAZARDS = REPO_ROOT / "docs/compliance/safety/hazard-log.yml"
 STIG = REPO_ROOT / "docs/compliance/security/asd-stig-v6r4-checklist.json"
+STIG_ASSESSMENT = REPO_ROOT / "docs/compliance/security/asd-stig-v6r4-assessment.yml"
 POAM = REPO_ROOT / "docs/compliance/security/poam.yml"
 
 
@@ -33,6 +34,9 @@ def build_report(source_commit: str) -> dict[str, Any]:
     requirements = load_yaml(CATALOG)["requirements"]
     hazards = load_yaml(HAZARDS)["hazards"]
     stig = json.loads(STIG.read_text(encoding="utf-8"))
+    assessed_rules = load_yaml(STIG_ASSESSMENT)["rules"]
+    assessed_counts = Counter(str(rule["status"]) for rule in assessed_rules)
+    assessed_counts["OPEN"] += len(stig["rules"]) - len(assessed_rules)
     poam = load_yaml(POAM)["items"]
     return {
         "schemaVersion": "gcs-saker.qualification-summary.v1",
@@ -42,7 +46,11 @@ def build_report(source_commit: str) -> dict[str, Any]:
         "sourceCommit": source_commit,
         "requirements": {"total": len(requirements), "byStatus": status_counts(requirements)},
         "hazards": {"total": len(hazards), "byStatus": status_counts(hazards)},
-        "stig": {"revision": stig["revision"], "total": len(stig["rules"]), "byStatus": status_counts(stig["rules"])},
+        "stig": {
+            "revision": stig["revision"],
+            "total": len(stig["rules"]),
+            "byStatus": dict(sorted(assessed_counts.items())),
+        },
         "poam": {"total": len(poam), "byStatus": status_counts(poam)},
         "claim": "assessment baseline only; not certified or conformant",
     }

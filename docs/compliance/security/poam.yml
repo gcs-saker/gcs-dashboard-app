@@ -33,4 +33,27 @@ items:
     mitigation: Restrict audit access and preserve immutable deployment evidence pending hash chaining.
     dueBy: 2026-11-30
     status: OPEN
-
+  - id: POAM-SEC-005
+    weakness: Administrator and non-privileged browser sessions do not enforce the STIG idle limits.
+    controls: [AC-12]
+    issue: https://github.com/gcs-saker/gcs-dashboard-app/issues/656
+    severity: MEDIUM
+    mitigation: Access and refresh token limits, explicit logout, and administrator MFA reduce exposure pending idle enforcement.
+    dueBy: 2026-10-15
+    status: OPEN
+  - id: POAM-SEC-006
+    weakness: Audit off-load and the 75 percent storage warning lack production evidence.
+    controls: [AU-4, AU-5, AU-9]
+    issue: https://github.com/gcs-saker/gcs-dashboard-app/issues/664
+    severity: MEDIUM
+    mitigation: Retain local hash-chain evidence and bounded log rotation until external/WORM storage is deployed.
+    dueBy: 2026-11-30
+    status: OPEN
+  - id: POAM-SEC-007
+    weakness: The retained ASD STIG V6R4 extraction omits authoritative CCI identifiers.
+    controls: [CA-2, CA-7]
+    issue: https://github.com/gcs-saker/gcs-dashboard-app/issues/656
+    severity: MEDIUM
+    mitigation: Preserve NIST mappings and block CCI claims until the official XCCDF or data stream is retained and hash-verified.
+    dueBy: 2026-10-15
+    status: OPEN

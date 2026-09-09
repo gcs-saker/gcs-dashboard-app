@@ -31,6 +31,16 @@ raw artifact hashes, expected result, actual result, verdict, reviewer, and time
 PASS, FAIL, BLOCKED, NOT_RUN, and NOT_APPLICABLE. A FAIL, expired waiver, missing artifact, or
 hash mismatch cannot be reported as PASS.
 
+## Execution schedule and acceptance
+
+| Stage | Environment | Tools | Timing | Acceptance |
+| --- | --- | --- | --- | --- |
+| Pull request | isolated GitHub runner | Ruff, mypy, Gradle, Go race/vet, Vitest, Playwright, Syft/Grype | every change | all required jobs pass |
+| Security campaign | disposable containers | DAST, REST/protobuf/MQTT fuzz harnesses | scheduled and before release | no Critical or fix-available High; no auth bypass |
+| Release | protected GitHub environment | Cosign, SLSA/SPDX attestation, license/VEX gates | every candidate | signed digest manifest and approved disposition |
+| Production | Server-01 SSH 55121 only | health, denial, TLS, revision, backup/restore probes | after approved deploy | public readiness, negative authorization, container health, exact revision |
+| Physical audio | approved handset and microphone set | PESQ/POLQA-equivalent, latency/loss capture | qualification window | measured threshold evidence; absent equipment is BLOCKED |
+
 ## Release gates
 
 - Critical or supported fix-available High vulnerabilities block release.

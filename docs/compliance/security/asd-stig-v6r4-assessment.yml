@@ -1,0 +1,23 @@
+schemaVersion: gcs-saker.asd-stig-assessment.v1
+sourceRevision: V6R4
+assessmentDate: 2026-09-09
+scope: software-only internal assessment; not an authorization decision
+cciSourceStatus: BLOCKED_OFFICIAL_XCCDF_NOT_RETAINED
+unassessedDefault: OPEN
+unassessedRationale: No rule-specific implementation and assessment evidence has been approved; fail closed as Open.
+unassessedEvidence: [docs/compliance/security/poam.yml]
+rules:
+  - {findingId: V-222389, stigId: APSC-DV-000070, status: OPEN, applicability: APPLICABLE, nistControls: [AC-12], cciRefs: [], evidence: [gcs-dashboard/src/features/auth/AuthProvider.tsx], rationale: Non-privileged 15-minute idle termination is not implemented.}
+  - {findingId: V-222390, stigId: APSC-DV-000080, status: OPEN, applicability: APPLICABLE, nistControls: [AC-12], cciRefs: [], evidence: [gcs-dashboard/src/features/auth/AuthProvider.tsx], rationale: Administrator 10-minute idle termination is not implemented.}
+  - {findingId: V-222391, stigId: APSC-DV-000090, status: NOT_A_FINDING, applicability: APPLICABLE, nistControls: [AC-12], cciRefs: [], evidence: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/identity/AuthController.kt], rationale: Logout revokes the refresh session and clears the cookie.}
+  - {findingId: V-222396, stigId: APSC-DV-000160, status: NOT_A_FINDING, applicability: APPLICABLE, nistControls: [SC-8, SC-13], cciRefs: [], evidence: [scripts/ops/check_secure_channels.sh], rationale: Public remote access negotiates TLS 1.2 or 1.3 and rejects obsolete protocols.}
+  - {findingId: V-222397, stigId: APSC-DV-000170, status: NOT_A_FINDING, applicability: APPLICABLE, nistControls: [SC-8, SC-13], cciRefs: [], evidence: [scripts/ops/check_secure_channels.sh], rationale: Trusted TLS protects remote-session integrity.}
+  - {findingId: V-222406, stigId: APSC-DV-000260, status: NOT_APPLICABLE, applicability: NOT_APPLICABLE, nistControls: [SC-8], cciRefs: [], evidence: [docs/architecture/GCS-Saker_M7_auth_policy_cutover.md], rationale: The product does not use SAML SessionIndex messages.}
+  - {findingId: V-222413, stigId: APSC-DV-000340, status: NOT_A_FINDING, applicability: APPLICABLE, nistControls: [AU-2, AU-12], cciRefs: [], evidence: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/SecurityAuditPublisher.kt], rationale: Account creation emits a security audit event.}
+  - {findingId: V-222462, stigId: APSC-DV-000830, status: NOT_A_FINDING, applicability: APPLICABLE, nistControls: [AU-2, IA-2], cciRefs: [], evidence: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/SecurityAuditPublisher.kt], rationale: Successful and unsuccessful login attempts are audited.}
+  - {findingId: V-222473, stigId: APSC-DV-000980, status: NOT_A_FINDING, applicability: APPLICABLE, nistControls: [AU-3], cciRefs: [], evidence: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/SecurityAuditEventFactory.kt], rationale: Security events include UTC occurrence time.}
+  - {findingId: V-222474, stigId: APSC-DV-000990, status: NOT_A_FINDING, applicability: APPLICABLE, nistControls: [AU-3], cciRefs: [], evidence: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/SecurityAuditEventFactory.kt], rationale: Events carry stable category and action identifiers.}
+  - {findingId: V-222476, stigId: APSC-DV-001010, status: NOT_A_FINDING, applicability: APPLICABLE, nistControls: [AU-3], cciRefs: [], evidence: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/SecurityAuditEventFactory.kt], rationale: Events record a stable result value.}
+  - {findingId: V-222477, stigId: APSC-DV-001020, status: NOT_A_FINDING, applicability: APPLICABLE, nistControls: [AU-3], cciRefs: [], evidence: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/SecurityAuditEventFactory.kt], rationale: Events associate the authenticated principal or redacted process identity.}
+  - {findingId: V-222481, stigId: APSC-DV-001070, status: OPEN, applicability: APPLICABLE, nistControls: [AU-4, AU-9], cciRefs: [], evidence: [docs/compliance/security/poam.yml], rationale: External or WORM audit off-load is not deployed.}
+  - {findingId: V-222483, stigId: APSC-DV-001090, status: OPEN, applicability: APPLICABLE, nistControls: [AU-5], cciRefs: [], evidence: [docs/compliance/security/poam.yml], rationale: A volume-capacity warning at 75 percent is not proven.}
