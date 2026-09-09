@@ -39,6 +39,15 @@ def test_supply_chain_policy_rejects_unknown_license_allowance() -> None:
         validate_supply_chain(broken, load_yaml(VEX))
 
 
+def test_supply_chain_policy_requires_enforced_license_decisions() -> None:
+    policy = load_yaml(POLICY)
+    broken = deepcopy(policy)
+    broken["requirements"]["licenseScanner"] = "AUDIT_ONLY"
+
+    with pytest.raises(SupplyChainPolicyError, match="license decisions"):
+        validate_supply_chain(broken, load_yaml(VEX))
+
+
 def test_release_workflow_rejects_mutable_action_tags() -> None:
     workflow = (REPO_ROOT / ".github/workflows/release-supply-chain.yml").read_text(encoding="utf-8")
 

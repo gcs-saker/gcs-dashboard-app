@@ -20,7 +20,7 @@ def load_release_gate():
     return module
 
 
-def test_application_images_must_match_the_exact_release_commit(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_application_images_must_use_immutable_digests(monkeypatch: pytest.MonkeyPatch) -> None:
     release_gate = load_release_gate()
     commit = "a" * 40
     for variable, image in {
@@ -29,7 +29,7 @@ def test_application_images_must_match_the_exact_release_commit(monkeypatch: pyt
         "MEDIA_CONTROL_IMAGE": "gcs-saker-media-control",
         "DASHBOARD_IMAGE": "gcs-saker-dashboard",
     }.items():
-        monkeypatch.setenv(variable, f"{image}:{commit}")
+        monkeypatch.setenv(variable, f"ghcr.io/gcs-saker/{image}@sha256:{'1' * 64}")
 
     inventory = release_gate.application_image_inventory(commit)
 
@@ -42,7 +42,7 @@ def test_mutable_application_image_tag_is_rejected(monkeypatch: pytest.MonkeyPat
     for variable in ["BACKEND_IMAGE", "AUTH_POLICY_IMAGE", "MEDIA_CONTROL_IMAGE", "DASHBOARD_IMAGE"]:
         monkeypatch.setenv(variable, f"example/{variable.lower()}:latest")
 
-    with pytest.raises(RuntimeError, match="exact source commit tag"):
+    with pytest.raises(RuntimeError, match="verified digest"):
         release_gate.application_image_inventory(commit)
 
 
@@ -80,8 +80,10 @@ def test_private_file_rejects_any_additional_acl_principal(tmp_path: Path, monke
 def test_deploy_verifies_every_rebuilt_container_revision() -> None:
     script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
 
-    assert 'export BACKEND_IMAGE="gcs-saker-backend:${SOURCE_COMMIT}"' in script
-    assert 'for service in "${BUILD_SERVICES[@]}"' in script
+    assert "verify_signed_release.sh" in script
+    assert 'for service in "${STATELESS_SERVICES[@]}"' in script
+    assert 'docker pull "${BACKEND_IMAGE}"' in script
+    assert '"${compose[@]}" build' not in script
     assert "org.opencontainers.image.revision" in script
     assert "release provenance mismatch" in script
 
@@ -94,7 +96,7 @@ def test_deploy_is_server01_only_and_rolls_back_with_previous_compose() -> None:
     assert "com.docker.compose.project.config_files" in script
     assert "previous_compose=(docker compose" in script
     assert '"${previous_compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"' in script
-    assert script.index('"${compose[@]}" build') < script.index("trap on_exit EXIT")
+    assert script.index('docker pull "${BACKEND_IMAGE}"') < script.index("trap on_exit EXIT")
     assert "RELEASE_DIR must be outside the immutable source checkout" in script
     assert script.index("release_dir_real") < script.index("flyway_file=")
 

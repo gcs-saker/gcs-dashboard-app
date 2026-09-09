@@ -17,15 +17,7 @@ DEPLOYMENT_TARGET="${DEPLOYMENT_TARGET:?Set DEPLOYMENT_TARGET=server01-productio
   exit 2
 }
 export SOURCE_COMMIT="$(git -C "${ROOT}" rev-parse HEAD)"
-export BACKEND_IMAGE="gcs-saker-backend:${SOURCE_COMMIT}"
-export AUTH_POLICY_IMAGE="gcs-saker-auth-policy:${SOURCE_COMMIT}"
-export MEDIA_CONTROL_IMAGE="gcs-saker-media-control:${SOURCE_COMMIT}"
-export DASHBOARD_IMAGE="gcs-saker-dashboard:${SOURCE_COMMIT}"
 STATELESS_SERVICES=(backend auth-policy media-control dashboard)
-# Only services with a Compose build definition belong here. The publisher and
-# edge images are supplied by the deployment environment; passing them to
-# `compose build` makes Compose attempt an unauthenticated registry pull.
-BUILD_SERVICES=(backend auth-policy media-control dashboard)
 # The publisher is an externally supplied local image. It is verified but not
 # recreated by this source release, because there is no reproducible build
 # definition or registry artifact for it in this repository.
@@ -44,6 +36,13 @@ case "${release_dir_real}" in
     exit 2
     ;;
 esac
+verified_images="${RELEASE_DIR}/verified-images.env"
+RELEASE_MANIFEST="${RELEASE_MANIFEST:-${RELEASE_DIR}/release-manifest.json}" \
+RELEASE_MANIFEST_BUNDLE="${RELEASE_MANIFEST_BUNDLE:-${RELEASE_DIR}/release-manifest.cosign.bundle.json}" \
+  bash "${ROOT}/scripts/ops/verify_signed_release.sh" > "${verified_images}"
+# shellcheck disable=SC1090
+source "${verified_images}"
+export BACKEND_IMAGE AUTH_POLICY_IMAGE MEDIA_CONTROL_IMAGE DASHBOARD_IMAGE
 compose=(docker compose --project-name "${PROJECT_NAME}" --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
 previous_container_id="$("${compose[@]}" ps -q backend)"
 [[ -n "${previous_container_id}" ]] || { echo "running backend container is required" >&2; exit 2; }
@@ -66,7 +65,7 @@ python3 "${ROOT}/scripts/ops/release_gate.py" \
   --env-file "${ENV_FILE}" \
   --mqtt-password-file "${MQTT_PASSWORD_FILE}" \
   --applied-flyway-tsv "${flyway_file}" \
-  --output "${RELEASE_DIR}/release-manifest.json"
+  --output "${RELEASE_DIR}/deployment-manifest.json"
 
 previous_file="${RELEASE_DIR}/previous-images.env"
 stateful_file="${RELEASE_DIR}/stateful-containers.before.env"
@@ -259,7 +258,10 @@ on_exit() {
   rollback "${status}"
 }
 
-"${compose[@]}" build "${BUILD_SERVICES[@]}"
+docker pull "${BACKEND_IMAGE}"
+docker pull "${AUTH_POLICY_IMAGE}"
+docker pull "${MEDIA_CONTROL_IMAGE}"
+docker pull "${DASHBOARD_IMAGE}"
 "${compose[@]}" images --format json > "${RELEASE_DIR}/deployment-images.json"
 trap on_exit EXIT
 start_availability_probe
@@ -273,7 +275,7 @@ assert_availability_probe
 official_replace_started=1
 "${compose[@]}" up -d --no-deps "${STATELESS_SERVICES[@]}"
 wait_official_services
-for service in "${BUILD_SERVICES[@]}"; do
+for service in "${STATELESS_SERVICES[@]}"; do
   container_id="$("${compose[@]}" ps -q "${service}")"
   actual_revision="$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "${container_id}")"
   [[ "${actual_revision}" == "${SOURCE_COMMIT}" ]] || {
