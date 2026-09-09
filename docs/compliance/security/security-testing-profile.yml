@@ -13,11 +13,12 @@ dynamic:
 fuzzing:
   pullRequestSeeds:
     status: IMPLEMENTED
-    targets: [stream ID and path, media token, mission waypoint]
+    targets: [stream ID and path, media token, mission waypoint, gRPC metadata, MQTT topic]
   scheduledCampaign:
     status: IMPLEMENTED
     durationPerTarget: 10s
-    targets: [FuzzParseStreamID, FuzzValidateForRoute, FuzzMissionWaypointBoundary]
+    targets: [FuzzParseStreamID, FuzzValidateForRoute, FuzzMissionWaypointBoundary, FuzzGatewayMetadata, FuzzSessionFromTopic]
 failureConditions: [panic, crash, race, resource leak, secret disclosure, authorization bypass, unbounded retry, inconsistent accepted round-trip]
 evidencePolicy: Findings and corpora exclude credentials, private routes, controlled data, and raw private media.
-
+retestPolicy: Critical and High findings are retested after remediation and before release; all other findings are retested within 30 days.
+penetrationScope: [public authentication and authorization, REST, GraphQL, WebSocket, WHIP-WHEP signaling, gRPC metadata, MQTT topic and payload boundaries]

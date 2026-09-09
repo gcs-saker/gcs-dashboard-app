@@ -21,6 +21,8 @@ def test_fuzz_targets_exist_in_owned_boundary_packages() -> None:
         "FuzzParseStreamID": REPO_ROOT / "services/media-control/internal/domain/stream_path_fuzz_test.go",
         "FuzzValidateForRoute": REPO_ROOT / "services/media-control/internal/sessiontoken/token_fuzz_test.go",
         "FuzzMissionWaypointBoundary": REPO_ROOT / "services/media-control/internal/mission/mission_fuzz_test.go",
+        "FuzzGatewayMetadata": REPO_ROOT / "services/media-control/internal/grpcgateway/auth_fuzz_test.go",
+        "FuzzSessionFromTopic": REPO_ROOT / "services/media-control/internal/mqttgateway/message_fuzz_test.go",
     }
     for name, path in targets.items():
         assert f"func {name}" in path.read_text(encoding="utf-8")
