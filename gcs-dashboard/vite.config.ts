@@ -1,6 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
+import { devProxyPolicy, LOCAL_DEV_PROXY } from "./viteSecurityPolicy";
 
 const manualChunkRules: Array<[chunkName: string, packageNames: string[]]> = [
   ["vendor-react", ["react", "react-dom", "react-router-dom"]],
@@ -14,7 +15,8 @@ const sourcePath = (relativePath: string): string => {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "");
-  const devProxyTarget = env.VITE_DEV_PROXY_TARGET || "https://gcs-saker.com";
+  const devProxyTarget = env.VITE_DEV_PROXY_TARGET || LOCAL_DEV_PROXY;
+  const proxyPolicy = devProxyPolicy(devProxyTarget, env);
 
   return {
     plugins: [react()],
@@ -44,33 +46,33 @@ export default defineConfig(({ mode }) => {
       }
     },
     server: {
-      host: "0.0.0.0",
+      host: env.VITE_DEV_HOST || "127.0.0.1",
       port: Number(env.PORT || 5173),
       proxy: {
         "/api": {
           target: devProxyTarget,
           changeOrigin: true,
-          secure: false
+          secure: proxyPolicy.secure
         },
         "/auth-policy": {
           target: devProxyTarget,
           changeOrigin: true,
-          secure: false
+          secure: proxyPolicy.secure
         },
         "/media-control": {
           target: devProxyTarget,
           changeOrigin: true,
-          secure: false
+          secure: proxyPolicy.secure
         },
         "/hls": {
           target: devProxyTarget,
           changeOrigin: true,
-          secure: false
+          secure: proxyPolicy.secure
         },
         "/webrtc": {
           target: devProxyTarget,
           changeOrigin: true,
-          secure: false
+          secure: proxyPolicy.secure
         }
       }
     },
