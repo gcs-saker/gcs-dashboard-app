@@ -58,8 +58,8 @@ def test_mqtt_acl_and_guide_keep_dashboard_outside_broker_and_health_readable() 
 
     assert "user gcs_backend_pub" in acl
     assert "topic read $SYS/#" in acl
-    assert "user gcs_device_gateway" in acl
-    assert "topic write gcs/+/+/+/telemetry" in acl
+    assert "pattern write gcs/+/+/%u/telemetry" in acl
+    assert "pattern read gcs/+/+/%u/command" in acl
     assert "The dashboard must never receive MQTT credentials" in readme
     assert "Media frames must not be carried by MQTT" in readme
     assert "python3 scripts/smoke/mqtt_hardened_profile_smoke.py --run" in readme
@@ -71,9 +71,9 @@ def test_single_node_compose_uses_hardened_mqtt_by_default() -> None:
     assert "mosquitto-no-auth.conf" not in compose
     assert "mosquitto.hardened.conf" in compose
     assert "acl.hardened" in compose
-    assert "MQTT_PASSWORD_FILE" in compose
-    assert "MQTT_HEALTH_USERNAME" in compose
-    assert "MQTT_USERNAME: ${MQTT_USERNAME:?Set MQTT_USERNAME}" in compose
+    assert "INTERNAL_PKI_DIR" in compose
+    assert 'MQTT_TLS_ENABLED: "true"' in compose
+    assert "mqtt-health.crt" in compose
 
 
 def test_local_compose_uses_hardened_mqtt_and_keeps_no_auth_in_explicit_profile() -> None:

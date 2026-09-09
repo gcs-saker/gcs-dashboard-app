@@ -25,8 +25,9 @@ topic write gcs/+/+/+/command
 topic read gcs/+/+/+/command_ack
 topic write gcs/ops/media-control/event
 
-user gcs_device_gateway
-topic write gcs/+/+/+/telemetry
-topic write gcs/+/+/+/status
-topic read gcs/+/+/+/command
-topic write gcs/+/+/+/command_ack
+# Device certificate CN is the server-owned asset UUID. A device can only use
+# the asset segment matching its authenticated certificate identity.
+pattern write gcs/+/+/%u/telemetry
+pattern write gcs/+/+/%u/status
+pattern read gcs/+/+/%u/command
+pattern write gcs/+/+/%u/command_ack

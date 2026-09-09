@@ -86,9 +86,6 @@ services:
     cpus: ${MQTT_CPU_LIMIT:-0.5}
     logging: *logging_defaults
     command: ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
-    environment:
-      MQTT_HEALTH_USERNAME: ${MQTT_HEALTH_USERNAME:?Set MQTT_HEALTH_USERNAME}
-      MQTT_HEALTH_PASSWORD: ${MQTT_HEALTH_PASSWORD:?Set MQTT_HEALTH_PASSWORD}
     volumes:
       - type: bind
         source: ../mosquitto/mosquitto.hardened.conf
@@ -98,17 +95,17 @@ services:
         source: ../mosquitto/acl.hardened
         target: /mosquitto/config/acl
         read_only: true
-      - type: bind
-        source: ${MQTT_PASSWORD_FILE:?Set MQTT_PASSWORD_FILE}
-        target: /mosquitto/config/passwords
-        read_only: true
       - mqtt-data:/mosquitto/data
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
+        target: /run/secrets/gcs-pki
+        read_only: true
     healthcheck:
       <<: *health_defaults
       test:
         [
           "CMD-SHELL",
-          "mosquitto_sub -h 127.0.0.1 -p 1883 -u \"$${MQTT_HEALTH_USERNAME}\" -P \"$${MQTT_HEALTH_PASSWORD}\" -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null",
+          "mosquitto_sub -h 127.0.0.1 -p 8883 --cafile /run/secrets/gcs-pki/ca.crt --cert /run/secrets/gcs-pki/mqtt-health.crt --key /run/secrets/gcs-pki/mqtt-health.key -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null",
         ]
     restart: unless-stopped
     networks:
@@ -139,14 +136,16 @@ services:
       AI_STREAM_BASE_URL: ${AI_STREAM_BASE_URL:-http://mediamtx:8889}
       AI_ADAPTER_TIMEOUT_SECONDS: ${AI_ADAPTER_TIMEOUT_SECONDS:-2.0}
       MQTT_HOST: ${MQTT_HOST:-mqtt}
-      MQTT_PORT: ${MQTT_PORT:-1883}
+      MQTT_PORT: 8883
       MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-gcs_backend_pub}
       MQTT_KEEPALIVE: ${MQTT_KEEPALIVE:-60}
       MQTT_RECONNECT_MIN_DELAY_SECONDS: ${MQTT_RECONNECT_MIN_DELAY_SECONDS:-1}
       MQTT_RECONNECT_MAX_DELAY_SECONDS: ${MQTT_RECONNECT_MAX_DELAY_SECONDS:-30}
       MQTT_MAX_INFLIGHT_MESSAGES: ${MQTT_MAX_INFLIGHT_MESSAGES:-20}
-      MQTT_USERNAME: ${MQTT_USERNAME:?Set MQTT_USERNAME}
-      MQTT_PASSWORD: ${MQTT_PASSWORD:?Set MQTT_PASSWORD}
+      MQTT_TLS_ENABLED: "true"
+      MQTT_TLS_CA_FILE: /run/secrets/gcs-pki/ca.crt
+      MQTT_TLS_CERT_FILE: /run/secrets/gcs-pki/backend.crt
+      MQTT_TLS_KEY_FILE: /run/secrets/gcs-pki/backend.key
       TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS: ${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}
       TELEMETRY_BUFFER_MAX_PENDING_HISTORY: ${TELEMETRY_BUFFER_MAX_PENDING_HISTORY:-10000}
       CONTROL_MESSAGE_SENDER: ${CONTROL_MESSAGE_SENDER:-mqtt}
@@ -161,8 +160,6 @@ services:
       DASHBOARD_MAP_ATTRIBUTION: ${DASHBOARD_MAP_ATTRIBUTION:-Esri World Imagery}
       DASHBOARD_MAP_REQUIRES_API_KEY: ${DASHBOARD_MAP_REQUIRES_API_KEY:-false}
       WEBRTC_TURN_URL: ${WEBRTC_TURN_URL:-turn:turn-primary:3478?transport=udp}
-      WEBRTC_TURN_USERNAME: ${TURN_USERNAME:-gcs-turn}
-      WEBRTC_TURN_PASSWORD: ${TURN_PASSWORD:?Set TURN_PASSWORD}
     depends_on:
       postgres-geo:
         condition: service_healthy
@@ -173,6 +170,11 @@ services:
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request\nurllib.request.urlopen('http://127.0.0.1:8001/healthz', timeout=2).read()\nPY"]
+    volumes:
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
+        target: /run/secrets/gcs-pki
+        read_only: true
     restart: unless-stopped
     networks:
       - control-net
@@ -218,6 +220,12 @@ services:
       AUTH_POLICY_AUDIT_ANCHOR_DIRECTORY: /var/lib/gcs-audit-anchor
       AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY: ${AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY:?Set AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY}
       AUTH_POLICY_AUDIT_ANCHOR_INTERVAL_MILLIS: ${AUTH_POLICY_AUDIT_ANCHOR_INTERVAL_MILLIS:-300000}
+      GCS_INTERNAL_GRPC_ENABLED: "true"
+      GCS_INTERNAL_GRPC_PORT: 9091
+      GCS_INTERNAL_GRPC_TOKEN: ${AUTH_POLICY_RPC_TOKEN:?Set AUTH_POLICY_RPC_TOKEN}
+      GCS_INTERNAL_GRPC_CA_FILE: /run/secrets/gcs-pki/ca.crt
+      GCS_INTERNAL_GRPC_CERT_FILE: /run/secrets/gcs-pki/auth-policy.crt
+      GCS_INTERNAL_GRPC_KEY_FILE: /run/secrets/gcs-pki/auth-policy.key
       SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
       SPRING_DATASOURCE_URL: ${AUTH_POLICY_DATASOURCE_URL:-jdbc:postgresql://postgres-geo:5432/${POSTGRES_DB:-gcs_geo}}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-gcs_geo}
@@ -239,6 +247,10 @@ services:
         condition: service_healthy
     volumes:
       - audit-anchor-data:/var/lib/gcs-audit-anchor
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
+        target: /run/secrets/gcs-pki
+        read_only: true
     restart: unless-stopped
     networks:
       - control-net
@@ -268,6 +280,12 @@ services:
       MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN: ${MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN:-}
       MEDIA_CONTROL_AUTH_MODE: ${MEDIA_CONTROL_AUTH_MODE:-required}
       AUTH_POLICY_BASE_URL: ${AUTH_POLICY_BASE_URL:-http://auth-policy:8080}
+      AUTH_POLICY_GRPC_TARGET: auth-policy:9091
+      AUTH_POLICY_RPC_TOKEN: ${AUTH_POLICY_RPC_TOKEN:?Set AUTH_POLICY_RPC_TOKEN}
+      AUTH_POLICY_GRPC_CA_FILE: /run/secrets/gcs-pki/ca.crt
+      AUTH_POLICY_GRPC_CERT_FILE: /run/secrets/gcs-pki/media-control.crt
+      AUTH_POLICY_GRPC_KEY_FILE: /run/secrets/gcs-pki/media-control.key
+      AUTH_POLICY_GRPC_SERVER_NAME: auth-policy
       AUTH_POLICY_AUDIT_INGEST_TOKEN: ${AUTH_POLICY_AUDIT_INGEST_TOKEN:?Set AUTH_POLICY_AUDIT_INGEST_TOKEN}
       MEDIA_CONTROL_AUTHZ_CACHE_TTL_SECONDS: ${MEDIA_CONTROL_AUTHZ_CACHE_TTL_SECONDS:-2}
       MEDIA_CONTROL_STUN_URL: ${MEDIA_CONTROL_STUN_URL:-stun:stun.l.google.com:19302}
@@ -291,6 +309,11 @@ services:
       MEDIA_CONTROL_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
       MEDIA_CONTROL_STREAM_CACHE_TTL_SECONDS: ${MEDIA_CONTROL_STREAM_CACHE_TTL_SECONDS:-1}
       MEDIA_CONTROL_STREAM_PRESENCE_TTL_SECONDS: ${MEDIA_CONTROL_STREAM_PRESENCE_TTL_SECONDS:-6}
+    volumes:
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
+        target: /run/secrets/gcs-pki
+        read_only: true
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8081/healthz >/dev/null"]

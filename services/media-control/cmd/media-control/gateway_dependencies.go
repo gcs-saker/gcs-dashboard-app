@@ -81,7 +81,9 @@ func newGatewayRuntime(config runtimeConfig, metrics *httpapi.Metrics, sessions 
 	var rpc *authpolicy.DeviceRPCClient
 	if config.deviceRPCTarget != "" {
 		var err error
-		rpc, err = authpolicy.NewDeviceRPCClient(config.deviceRPCTarget, config.deviceRPCToken)
+		rpc, err = authpolicy.NewMTLSDeviceRPCClient(
+			config.deviceRPCTarget, config.deviceRPCToken, config.authPolicyTLS(),
+		)
 		if err != nil {
 			return gatewayRuntime{}, err
 		}

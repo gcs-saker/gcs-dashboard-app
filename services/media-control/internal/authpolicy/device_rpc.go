@@ -8,7 +8,7 @@ import (
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 	pb "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -21,15 +21,26 @@ type DeviceRPCClient struct {
 }
 
 // The plaintext hop is confined to the private container network in the opt-in lab.
-func NewDeviceRPCClient(target, token string) (*DeviceRPCClient, error) {
+func NewDeviceRPCClient(target, token string, transport credentials.TransportCredentials) (*DeviceRPCClient, error) {
 	if target == "" || len(token) < 32 {
 		return nil, fmt.Errorf("private device RPC configuration invalid")
 	}
-	connection, err := grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if transport == nil {
+		return nil, fmt.Errorf("private device RPC requires mTLS")
+	}
+	connection, err := grpc.NewClient(target, grpc.WithTransportCredentials(transport))
 	if err != nil {
 		return nil, err
 	}
 	return &DeviceRPCClient{connection: connection, client: pb.NewDevicePolicyServiceClient(connection), token: token}, nil
+}
+
+func NewMTLSDeviceRPCClient(target, token string, config RPCClientTLSConfig) (*DeviceRPCClient, error) {
+	transport, err := config.transportCredentials()
+	if err != nil {
+		return nil, err
+	}
+	return NewDeviceRPCClient(target, token, transport)
 }
 
 func (c *DeviceRPCClient) Close() error { return c.connection.Close() }

@@ -12,6 +12,7 @@ class FakeMqttClient:
         self.reconnect_delays: tuple[int, int] | None = None
         self.max_inflight: int | None = None
         self.publish_rc = 0
+        self.tls_identity: tuple[str | None, str | None, str | None] | None = None
 
     def connect(self, host: str, port: int, keepalive: int) -> None:
         self.connected = (host, port, keepalive)
@@ -31,6 +32,9 @@ class FakeMqttClient:
 
     def max_inflight_messages_set(self, inflight: int) -> None:
         self.max_inflight = inflight
+
+    def tls_set(self, ca_certs=None, certfile=None, keyfile=None) -> None:
+        self.tls_identity = (ca_certs, certfile, keyfile)
 
 
 def test_mqtt_settings_from_env(monkeypatch) -> None:
@@ -79,6 +83,18 @@ def test_mqtt_settings_rejects_invalid_numeric_env(monkeypatch) -> None:
         assert "MQTT_PORT" in str(error)
     else:
         raise AssertionError("expected invalid MQTT_PORT to fail settings loading")
+
+
+def test_mqtt_settings_rejects_incomplete_mtls_identity(monkeypatch) -> None:
+    monkeypatch.setenv("MQTT_TLS_ENABLED", "true")
+    monkeypatch.setenv("MQTT_TLS_CA_FILE", "/run/secrets/ca.crt")
+
+    try:
+        MqttSettings.from_env()
+    except SettingsConfigurationError as error:
+        assert "MQTT mTLS certificate paths are required" in str(error)
+    else:
+        raise AssertionError("expected incomplete MQTT mTLS identity to fail")
 
 
 def test_mqtt_settings_normalizes_reconnect_window(monkeypatch) -> None:

@@ -16,7 +16,9 @@ import (
 
 func newAuthorizer(config runtimeConfig) (authpolicy.CachedAuthorizer, error) {
 	if config.deviceRPCTarget != "" {
-		client, err := authpolicy.NewDeviceRPCClient(config.deviceRPCTarget, config.deviceRPCToken)
+		client, err := authpolicy.NewMTLSDeviceRPCClient(
+			config.deviceRPCTarget, config.deviceRPCToken, config.authPolicyTLS(),
+		)
 		if err != nil {
 			return authpolicy.CachedAuthorizer{}, err
 		}
