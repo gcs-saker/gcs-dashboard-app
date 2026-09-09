@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size
 data class LoginRequest(
     val username: String,
     val password: String,
+    val mfaCode: String? = null,
 )
 
 data class SignupRequest(

@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS admin_mfa_recovery_use (
+    code_hash VARCHAR(64) PRIMARY KEY,
+    used_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

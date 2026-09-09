@@ -4,6 +4,8 @@ set -euo pipefail
 pki_dir="${1:?Usage: check_internal_pki.sh <absolute-pki-directory>}"
 warn_seconds="${PKI_EXPIRY_WARN_SECONDS:-1209600}"
 [[ "${pki_dir}" = /* && -d "${pki_dir}" ]] || { echo "PKI directory must be absolute" >&2; exit 2; }
+[[ -s "${pki_dir}/ca.crl" ]] || { echo "certificate revocation list is missing" >&2; exit 1; }
+openssl crl -in "${pki_dir}/ca.crl" -noout -nextupdate >/dev/null
 
 for name in auth-policy media-control mqtt mqtt-health backend; do
   cert="${pki_dir}/${name}.crt"
