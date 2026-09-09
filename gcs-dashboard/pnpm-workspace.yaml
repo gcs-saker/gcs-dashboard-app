@@ -3,3 +3,5 @@ allowBuilds:
   '@swc/core': set this to true or false
   esbuild: set this to true or false
   msw: set this to true or false
+overrides:
+  decode-uri-component: 0.5.0
