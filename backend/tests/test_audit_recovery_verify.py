@@ -43,7 +43,7 @@ def write_fixture(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
     }
     payload = "|".join(str(anchor[field]) for field in anchor).encode()
     anchor["anchorHash"] = hashlib.sha256(payload).hexdigest()
-    anchor["signature"] = hmac.new(key.read_bytes(), anchor["anchorHash"].encode(), hashlib.sha256).hexdigest()
+    anchor["signature"] = hmac.new(key.read_bytes(), str(anchor["anchorHash"]).encode(), hashlib.sha256).hexdigest()
     anchor_path = tmp_path / "anchor.json"
     anchor_path.write_text(json.dumps(anchor), encoding="utf-8")
     return original, restored, anchor_path, key
