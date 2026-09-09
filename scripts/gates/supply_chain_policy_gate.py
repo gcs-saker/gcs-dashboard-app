@@ -48,17 +48,13 @@ def validate_supply_chain(policy: dict[str, Any], vex: dict[str, Any]) -> int:
     if requirements.get("licenseScanner") != "RELEASE_ENFORCED":
         raise SupplyChainPolicyError("release license decisions must fail closed")
     if requirements.get("thirdPartyNotices") != "GENERATED_AND_MANIFEST_BOUND":
-        raise SupplyChainPolicyError(
-            "third-party notices must be bound to the signed manifest"
-        )
+        raise SupplyChainPolicyError("third-party notices must be bound to the signed manifest")
     if "UNKNOWN" not in policy.get("deniedLicenses", []):
         raise SupplyChainPolicyError("unknown licenses must be denied")
     validate_release_workflow(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
     artifacts = {item.get("id"): item for item in policy.get("artifacts", [])}
     if set(artifacts) != REQUIRED_ARTIFACTS:
-        raise SupplyChainPolicyError(
-            "all release images require a supply-chain disposition"
-        )
+        raise SupplyChainPolicyError("all release images require a supply-chain disposition")
     validate_verified_release(policy, RELEASE_EVIDENCE.read_text(encoding="utf-8"))
     validate_vex(vex)
     if not ACTIVE_VEX.is_file():
@@ -88,20 +84,15 @@ def validate_release_workflow(workflow: str) -> None:
     for token in required:
         if token not in workflow:
             raise SupplyChainPolicyError(f"release workflow is missing {token}")
-    mutable_action = re.search(
-        r"uses:\s+[^\s]+@(main|master|v\d+)\s*(?:#.*)?$", workflow, re.MULTILINE
-    )
+    mutable_action = re.search(r"uses:\s+[^\s]+@(main|master|v\d+)\s*(?:#.*)?$", workflow, re.MULTILINE)
     if mutable_action:
-        raise SupplyChainPolicyError(
-            "release workflow actions must use immutable commit pins"
-        )
+        raise SupplyChainPolicyError("release workflow actions must use immutable commit pins")
 
 
 def validate_verified_release(policy: dict[str, Any], evidence: str) -> None:
     requirements = policy.get("requirements", {})
     if not all(
-        "VERIFIED" in str(requirements.get(field, ""))
-        for field in ("imageSignature", "sbomSignature", "provenance")
+        "VERIFIED" in str(requirements.get(field, "")) for field in ("imageSignature", "sbomSignature", "provenance")
     ):
         return
     required = (
@@ -114,9 +105,7 @@ def validate_verified_release(policy: dict[str, Any], evidence: str) -> None:
     if any(token not in evidence for token in required):
         raise SupplyChainPolicyError("verified release evidence is incomplete")
     if evidence.count("sha256:") < len(REQUIRED_ARTIFACTS):
-        raise SupplyChainPolicyError(
-            "verified release evidence is missing immutable digests"
-        )
+        raise SupplyChainPolicyError("verified release evidence is missing immutable digests")
 
 
 def validate_vex(vex: dict[str, Any]) -> None:

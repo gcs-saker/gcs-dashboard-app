@@ -34,12 +34,7 @@ def node_versions() -> list[int]:
     )
     versions = []
     for source in sources:
-        versions.extend(
-            int(value)
-            for value in re.findall(
-                r"(?:node-version:\s*[\"']?|FROM node:)(\d+)", source
-            )
-        )
+        versions.extend(int(value) for value in re.findall(r"(?:node-version:\s*[\"']?|FROM node:)(\d+)", source))
     return versions
 
 
@@ -47,19 +42,11 @@ def validate(policy: dict[str, Any]) -> None:
     minimum = int(policy.get("minimumSupported", {}).get("node", 0))
     denied = {int(value) for value in policy.get("deniedMajors", {}).get("node", [])}
     versions = node_versions()
-    if not versions or any(
-        version < minimum or version in denied for version in versions
-    ):
-        raise RuntimeLifecycleError(
-            f"Node runtime must be supported and at least {minimum}: {versions}"
-        )
+    if not versions or any(version < minimum or version in denied for version in versions):
+        raise RuntimeLifecycleError(f"Node runtime must be supported and at least {minimum}: {versions}")
     if policy.get("unusedDependencyExceptions") != []:
-        raise RuntimeLifecycleError(
-            "unused dependency exceptions require explicit policy support"
-        )
-    workflows = CI.read_text(encoding="utf-8") + RELEASE_WORKFLOW.read_text(
-        encoding="utf-8"
-    )
+        raise RuntimeLifecycleError("unused dependency exceptions require explicit policy support")
+    workflows = CI.read_text(encoding="utf-8") + RELEASE_WORKFLOW.read_text(encoding="utf-8")
     for obsolete in (
         "actions/checkout@v4",
         "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
@@ -67,9 +54,7 @@ def validate(policy: dict[str, Any]) -> None:
         "actions/setup-python@v5",
     ):
         if obsolete in workflows:
-            raise RuntimeLifecycleError(
-                f"workflow uses an obsolete action runtime: {obsolete}"
-            )
+            raise RuntimeLifecycleError(f"workflow uses an obsolete action runtime: {obsolete}")
 
 
 def main() -> int:
