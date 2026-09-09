@@ -55,6 +55,11 @@ def test_m7_external_nat_webrtc_smoke_reports_required_metrics() -> None:
     assert 'printf \'%s\\n\' "$output" >>"$REPORT_FILE"' in script
     assert "waiting for WHIP path visibility" in script
     assert "External NAT smoke wall latency ms" in script
+    assert "Publish authorization latency ms" in script
+    assert "Stream visibility latency ms" in script
+    assert "--latency-profile playback" in script
+    assert "--enforce-latency-budget" in script
+    assert "--measure-keyframe-interval" in script
     assert "first-frame latency" in doc
     assert "audio/video sync offset" in doc
     assert "UDP 제한/relay-only" in doc
@@ -81,6 +86,9 @@ def test_webrtc_whip_publish_smoke_redacts_media_token_query() -> None:
     assert redacted == "https://edge.example/webrtc/raw/nat/smoke/whip?<redacted-query>"
     assert "secret" not in redacted
 
+    safe_url = module.redact_media_url("https://edge.example/webrtc/raw/private/stream/whip?publisherToken=secret")
+    assert safe_url == "https://edge.example/webrtc/<redacted-media-path>/whip?<redacted-query>"
+
 
 def test_webrtc_whip_publish_smoke_generates_audible_nonzero_pcm() -> None:
     module = load_publish_module()
@@ -105,3 +113,11 @@ def test_webrtc_whip_publish_smoke_supports_audio_only_mode() -> None:
 
     assert args.no_video is True
     assert args.no_audio is False
+
+
+def test_webrtc_whip_publish_smoke_sets_bounded_keyframe_interval() -> None:
+    module = load_publish_module()
+
+    args = module.parse_args(["--run", "--keyframe-interval-frames", "30"])
+
+    assert args.keyframe_interval_frames == 30

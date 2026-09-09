@@ -28,6 +28,7 @@ from ice_pair_observation import (
 DEFAULT_WHIP_URL = "https://gcs-saker.com/webrtc/raw/nat/smoke/whip"
 DEFAULT_ICE_SERVER_URL = "stun:turn.gcs-saker.com:3478"
 REDACTED_QUERY = "<redacted-query>"
+REDACTED_MEDIA_PATH = "<redacted-media-path>"
 CONNECTED_ICE_STATES = {"connected", "completed"}
 FAILED_ICE_STATES = {"failed", "closed", "disconnected"}
 
@@ -74,6 +75,13 @@ def redact_url_query(raw_url: str) -> str:
     return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, REDACTED_QUERY, parsed.fragment))
 
 
+def redact_media_url(raw_url: str) -> str:
+    parsed = urlsplit(redact_url_query(raw_url))
+    suffix = "/whip" if parsed.path.endswith("/whip") else ""
+    path = f"/webrtc/{REDACTED_MEDIA_PATH}{suffix}" if suffix else parsed.path
+    return urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, parsed.fragment))
+
+
 async def wait_for_ice_gathering_complete(peer_connection: object, timeout_seconds: float) -> None:
     if getattr(peer_connection, "iceGatheringState") == "complete":
         return
@@ -117,7 +125,7 @@ async def wait_for_ice_connected(peer_connection: object, timeout_seconds: float
 
 
 class SyntheticVideoTrack:  # aiortc VideoStreamTrack subclass at runtime.
-    def __init__(self, width: int, height: int, fps: int) -> None:
+    def __init__(self, width: int, height: int, fps: int, keyframe_interval_frames: int) -> None:
         from aiortc import VideoStreamTrack
 
         class _Track(VideoStreamTrack):
@@ -132,6 +140,7 @@ class SyntheticVideoTrack:  # aiortc VideoStreamTrack subclass at runtime.
         self.width = width
         self.height = height
         self.fps = fps
+        self.keyframe_interval_frames = keyframe_interval_frames
         self.sequence = 0
         self.started_at = time.perf_counter()
 
@@ -141,6 +150,7 @@ class SyntheticVideoTrack:  # aiortc VideoStreamTrack subclass at runtime.
 
     async def recv(self):  # type: ignore[no-untyped-def]
         from av import VideoFrame
+        from av.video.frame import PictureType
 
         frame_interval = 1 / self.fps
         target = self.started_at + (self.sequence * frame_interval)
@@ -155,6 +165,8 @@ class SyntheticVideoTrack:  # aiortc VideoStreamTrack subclass at runtime.
             plane.update(bytes([value]) * plane.buffer_size)
         frame.pts = self.sequence
         frame.time_base = fractions.Fraction(1, self.fps)
+        if self.sequence % self.keyframe_interval_frames == 0:
+            frame.pict_type = PictureType.I
         self.sequence += 1
         return frame
 
@@ -268,7 +280,9 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         ]
     )
     peer_connection = RTCPeerConnection(RTCConfiguration(iceServers=ice_servers))
-    track = None if args.no_video else SyntheticVideoTrack(args.width, args.height, args.fps)
+    track = (
+        None if args.no_video else SyntheticVideoTrack(args.width, args.height, args.fps, args.keyframe_interval_frames)
+    )
     audio_track = (
         None
         if args.no_audio
@@ -308,7 +322,7 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         await asyncio.sleep(args.publish_seconds)
 
         print("WebRTC WHIP publish smoke run passed")
-        print(f"WHIP URL: {redact_url_query(args.whip_url)}")
+        print(f"WHIP URL: {redact_media_url(args.whip_url)}")
         print(f"ICE server URL: {args.ice_server_url}")
         print(f"Local offer ready ms: {offer_ready_ms:.1f}")
         print(f"WHIP answer latency ms: {answer_ms:.1f}")
@@ -319,6 +333,7 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         print_ice_pair_observation(selected_pair)
         if track is not None:
             print(f"Synthetic frames attempted: {track.sequence}")
+            print(f"Requested keyframe interval ms: {track.keyframe_interval_frames / track.fps * 1000:.1f}")
         if audio_track is not None:
             print(f"Synthetic audio frames attempted: {audio_track.sequence}")
         return 0
@@ -353,6 +368,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--width", type=int, default=640)
     parser.add_argument("--height", type=int, default=360)
     parser.add_argument("--fps", type=int, default=15)
+    parser.add_argument("--keyframe-interval-frames", type=int, default=15)
     parser.add_argument("--no-audio", action="store_true")
     parser.add_argument("--no-video", action="store_true")
     parser.add_argument("--audio-sample-rate", type=int, default=48000)
@@ -375,6 +391,8 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         parser.error("--audio-tone-amplitude must be in the range (0, 1]")
     if args.no_audio and args.no_video:
         parser.error("audio and video cannot both be disabled")
+    if args.keyframe_interval_frames <= 0:
+        parser.error("--keyframe-interval-frames must be positive")
     if not args.check and not args.run:
         args.check = True
     return args
