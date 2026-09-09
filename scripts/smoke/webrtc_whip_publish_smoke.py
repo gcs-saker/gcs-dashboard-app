@@ -28,6 +28,7 @@ from ice_pair_observation import (
 DEFAULT_WHIP_URL = "https://gcs-saker.com/webrtc/raw/nat/smoke/whip"
 DEFAULT_ICE_SERVER_URL = "stun:turn.gcs-saker.com:3478"
 REDACTED_QUERY = "<redacted-query>"
+REDACTED_MEDIA_PATH = "<redacted-media-path>"
 CONNECTED_ICE_STATES = {"connected", "completed"}
 FAILED_ICE_STATES = {"failed", "closed", "disconnected"}
 
@@ -72,6 +73,13 @@ def redact_url_query(raw_url: str) -> str:
     if not parsed.query:
         return raw_url
     return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, REDACTED_QUERY, parsed.fragment))
+
+
+def redact_media_url(raw_url: str) -> str:
+    parsed = urlsplit(redact_url_query(raw_url))
+    suffix = "/whip" if parsed.path.endswith("/whip") else ""
+    path = f"/webrtc/{REDACTED_MEDIA_PATH}{suffix}" if suffix else parsed.path
+    return urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, parsed.fragment))
 
 
 async def wait_for_ice_gathering_complete(peer_connection: object, timeout_seconds: float) -> None:
@@ -308,7 +316,7 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         await asyncio.sleep(args.publish_seconds)
 
         print("WebRTC WHIP publish smoke run passed")
-        print(f"WHIP URL: {redact_url_query(args.whip_url)}")
+        print(f"WHIP URL: {redact_media_url(args.whip_url)}")
         print(f"ICE server URL: {args.ice_server_url}")
         print(f"Local offer ready ms: {offer_ready_ms:.1f}")
         print(f"WHIP answer latency ms: {answer_ms:.1f}")

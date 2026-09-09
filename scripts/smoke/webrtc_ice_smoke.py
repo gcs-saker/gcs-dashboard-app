@@ -27,6 +27,7 @@ from latency_budget import BUDGETS, classify_latency, require_latency_budget
 DEFAULT_WHEP_URL = "http://127.0.0.1:8889/raw/sample/front/whep"
 DEFAULT_STUN_URL = "stun:stun.l.google.com:19302"
 REDACTED_QUERY = "<redacted-query>"
+REDACTED_MEDIA_PATH = "<redacted-media-path>"
 REQUIRED_SDP_MARKERS = ("ice-ufrag", "ice-pwd", "fingerprint")
 CONNECTED_ICE_STATES = {"connected", "completed"}
 FAILED_ICE_STATES = {"failed", "closed", "disconnected"}
@@ -356,6 +357,13 @@ def redact_url_query(raw_url: str) -> str:
     return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, REDACTED_QUERY, parsed.fragment))
 
 
+def redact_media_url(raw_url: str) -> str:
+    parsed = urlsplit(redact_url_query(raw_url))
+    suffix = "/whep" if parsed.path.endswith("/whep") else ""
+    path = f"/webrtc/{REDACTED_MEDIA_PATH}{suffix}" if suffix else parsed.path
+    return urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, parsed.fragment))
+
+
 async def wait_for_ice_gathering_complete(peer_connection: object, timeout_seconds: float) -> None:
     if getattr(peer_connection, "iceGatheringState") == "complete":
         return
@@ -410,21 +418,32 @@ async def wait_for_ice_connected(peer_connection: object, timeout_seconds: float
 class FrameReceipt:
     track: object
     frame: object
+    received_at: float
+
+
+def is_keyframe(frame: object) -> bool:
+    if bool(getattr(frame, "key_frame", False)):
+        return True
+    picture_type = getattr(frame, "pict_type", None)
+    return str(picture_type).upper() in {"I", "1", "PICTURETYPE.I"}
 
 
 async def wait_for_track_frame(track_queue: asyncio.Queue[object], timeout_seconds: float) -> FrameReceipt:
     track = await asyncio.wait_for(track_queue.get(), timeout=timeout_seconds)
     frame = await asyncio.wait_for(track.recv(), timeout=timeout_seconds)  # type: ignore[attr-defined]
-    return FrameReceipt(track, frame)
+    return FrameReceipt(track, frame, time.perf_counter())
 
 
-async def measure_keyframe_interval_ms(receipt: FrameReceipt, timeout_seconds: float) -> float:
+async def measure_keyframe_interval_ms(receipt: FrameReceipt, timeout_seconds: float) -> float | None:
     started = time.perf_counter()
-    async with asyncio.timeout(timeout_seconds):
-        while True:
-            frame = await receipt.track.recv()  # type: ignore[attr-defined]
-            if bool(getattr(frame, "key_frame", False)):
-                return (time.perf_counter() - started) * 1000
+    try:
+        async with asyncio.timeout(timeout_seconds):
+            while True:
+                frame = await receipt.track.recv()  # type: ignore[attr-defined]
+                if is_keyframe(frame):
+                    return (time.perf_counter() - started) * 1000
+    except TimeoutError:
+        return None
 
 
 def load_aiortc_runtime() -> tuple[Any, Any, Any, Any]:
@@ -447,6 +466,7 @@ class FirstFrameResult:
     audio_elapsed_ms: float | None = None
     video_is_keyframe: bool | None = None
     keyframe_interval_ms: float | None = None
+    keyframe_observation_ms: float | None = None
 
 
 @dataclass(frozen=True)
@@ -480,27 +500,31 @@ async def receive_required_frames(
         else None
     )
     video_receipt = await video_task if video_task is not None else None
+    audio_receipt = await audio_task if audio_task is not None else None
     frame = video_receipt.frame if video_receipt is not None else None
-    video_elapsed_ms = (time.perf_counter() - started) * 1000 if video_receipt is not None else None
+    video_elapsed_ms = (video_receipt.received_at - started) * 1000 if video_receipt is not None else None
+    audio_elapsed_ms = (audio_receipt.received_at - started) * 1000 if audio_receipt is not None else None
     keyframe_interval_ms = (
         await measure_keyframe_interval_ms(video_receipt, args.timeout_seconds)
         if video_receipt is not None and args.measure_keyframe_interval
         else None
     )
-    if audio_task is None:
+    keyframe_observation_ms = args.timeout_seconds * 1000 if args.measure_keyframe_interval else None
+    if audio_receipt is None:
         return FirstFrameResult(
             frame,
             video_elapsed_ms,
-            video_is_keyframe=bool(getattr(frame, "key_frame", False)),
+            video_is_keyframe=is_keyframe(frame),
             keyframe_interval_ms=keyframe_interval_ms,
+            keyframe_observation_ms=keyframe_observation_ms,
         )
-    await audio_task
     return FirstFrameResult(
         frame,
         video_elapsed_ms,
-        (time.perf_counter() - started) * 1000,
-        bool(getattr(frame, "key_frame", False)) if frame is not None else None,
+        audio_elapsed_ms,
+        is_keyframe(frame) if frame is not None else None,
         keyframe_interval_ms,
+        keyframe_observation_ms,
     )
 
 
@@ -607,7 +631,7 @@ async def run_webrtc_smoke(args: argparse.Namespace) -> int:
 
 def print_webrtc_smoke_result(args: argparse.Namespace, peer_connection: Any, result: WebRTCSmokeResult) -> None:
     print("WebRTC ICE smoke run passed")
-    print(f"WHEP URL: {redact_url_query(args.whep_url)}")
+    print(f"WHEP URL: {redact_media_url(args.whep_url)}")
     print(f"ICE server URL: {args.ice_server_url}")
     print(f"Local offer candidates: {result.local_inspection.candidate_count}")
     print_candidate_summary("Local offer", result.local_inspection.candidates)
@@ -643,6 +667,8 @@ def print_first_frame_result(
         print(f"First video frame keyframe: {str(frames.video_is_keyframe).lower()}")
         if frames.keyframe_interval_ms is not None:
             print(f"Video keyframe interval ms: {frames.keyframe_interval_ms:.1f}")
+        elif frames.keyframe_observation_ms is not None:
+            print(f"Video keyframe interval ms: not-observed-within-{frames.keyframe_observation_ms:.0f}")
         if ice_connected_elapsed_ms is not None:
             print(f"ICE-to-first-video-frame ms: {frames.video_elapsed_ms - ice_connected_elapsed_ms:.1f}")
         if latency_profile != "none":

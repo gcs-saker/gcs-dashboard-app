@@ -1,3 +1,4 @@
+import asyncio
 import importlib.util
 import subprocess
 import sys
@@ -58,6 +59,28 @@ def test_webrtc_ice_smoke_supports_audio_only_frame_requirement() -> None:
 
     assert args.require_audio_frame is True
     assert args.require_video_frame is False
+
+
+def test_webrtc_ice_smoke_recognizes_pyav_picture_type_keyframes() -> None:
+    module = load_smoke_module()
+    keyframe = type("Frame", (), {"key_frame": False, "pict_type": "I"})()
+    predicted_frame = type("Frame", (), {"key_frame": False, "pict_type": "P"})()
+
+    assert module.is_keyframe(keyframe) is True
+    assert module.is_keyframe(predicted_frame) is False
+
+
+def test_keyframe_interval_observation_is_bounded() -> None:
+    module = load_smoke_module()
+
+    class PredictedFrameTrack:
+        async def recv(self):
+            await asyncio.sleep(0.001)
+            return type("Frame", (), {"key_frame": False, "pict_type": "P"})()
+
+    receipt = module.FrameReceipt(PredictedFrameTrack(), object(), 0.0)
+
+    assert asyncio.run(module.measure_keyframe_interval_ms(receipt, 0.01)) is None
 
 
 def test_webrtc_ice_smoke_parser_requires_answer_ice_data() -> None:
@@ -314,3 +337,8 @@ def test_webrtc_ice_smoke_redacts_media_token_query() -> None:
 
     assert redacted == "https://edge.example/webrtc/raw/nat/smoke/whep?<redacted-query>"
     assert "secret" not in redacted
+
+    safe_url = module.redact_media_url(
+        "https://edge.example/webrtc/raw/private/stream/whep?playbackToken=secret"
+    )
+    assert safe_url == "https://edge.example/webrtc/<redacted-media-path>/whep?<redacted-query>"

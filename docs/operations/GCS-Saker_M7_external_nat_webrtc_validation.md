@@ -15,6 +15,7 @@
 - first-frame latency, first-audio latency, audio/video sync offset, WHEP answer latency, ICE gathering/connection state
 - publish authorization, stream visibility, WHEP signaling round trip, receiver ICE, ICE-to-first-frame 구간 시간
 - 첫 video frame의 keyframe 여부와 playback/talkback 지연 예산 판정
+- keyframe interval은 제한 시간 내 관찰하며, 없으면 정확한 값 대신 `not-observed-within-N` 하한을 기록한다.
 - WHEP/WHIP SDP candidate summary: host/srflx/relay, private-or-loopback/public-or-DNS count
 - WHIP/WHEP selected ICE pair: local/remote candidate type, protocol, RTT, direct/relay path
 - UDP 제한/relay-only 모드: `RELAY_ONLY=1`로 TURN primary URL만 ICE server로 사용한다.
