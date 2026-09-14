@@ -1,4 +1,6 @@
 import com.google.protobuf.gradle.*
+import groovy.json.JsonOutput
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 
 plugins {
     kotlin("jvm") version "2.3.20"
@@ -117,4 +119,22 @@ tasks.jacocoTestCoverageVerification {
 
 tasks.check {
     dependsOn(tasks.jacocoTestCoverageVerification)
+}
+
+tasks.register("writeRuntimeDependencyManifest") {
+    val runtimeClasspath = configurations.named("runtimeClasspath")
+    val manifestFile = layout.buildDirectory.file("reports/runtime-dependencies.json")
+    inputs.files(runtimeClasspath)
+    outputs.file(manifestFile)
+
+    doLast {
+        val dependencies = runtimeClasspath.get().incoming.resolutionResult.allComponents
+            .mapNotNull { it.id as? ModuleComponentIdentifier }
+            .map { mapOf("group" to it.group, "name" to it.module, "version" to it.version) }
+            .distinct()
+            .sortedWith(compareBy({ it["group"] }, { it["name"] }, { it["version"] }))
+        val output = manifestFile.get().asFile
+        output.parentFile.mkdirs()
+        output.writeText(JsonOutput.prettyPrint(JsonOutput.toJson(mapOf("dependencies" to dependencies))) + "\n")
+    }
 }

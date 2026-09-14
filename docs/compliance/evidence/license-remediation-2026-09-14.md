@@ -128,3 +128,12 @@ The scanner upgrade is retained for immutable, consistent generation and current
 issue `#710` remains open. Its next implementation must reconcile the scanner output against an
 authoritative, version-pinned Gradle runtime dependency manifest. It must reject ambiguous matches
 and preserve the original scanner record as provenance rather than guessing group names.
+
+The follow-up implementation exports Gradle's resolved `runtimeClasspath` as the authoritative
+group, artifact, and version manifest. A deterministic reconciler matches only a unique artifact
+and version, writes a separate normalized SPDX document, and retains every original-to-canonical
+PURL mapping in a reconciliation report. Ambiguous matches fail closed; unmatched scanner records
+remain unchanged. Replaying run `34811482293` corrected exactly all 27 baseline coordinates, and CI
+plus signed release now enforce that count so a dependency or scanner change requires reviewed
+evidence rather than silently weakening coverage. Raw scanner output is retained separately, while
+license decisions and release attestation consume the normalized SPDX document.
