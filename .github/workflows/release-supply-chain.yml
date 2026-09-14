@@ -116,6 +116,7 @@ jobs:
             --sbom "${RUNNER_TEMP}/${{ matrix.image }}.spdx.json" \
             --policy docs/compliance/supply-chain/supply-chain-policy.yml \
             --approvals docs/compliance/supply-chain/license-approvals.yml \
+            --resolutions docs/compliance/supply-chain/license-resolutions.yml \
             --report "${RUNNER_TEMP}/${{ matrix.image }}.license-report.json" \
             --notices "${RUNNER_TEMP}/${{ matrix.image }}.THIRD_PARTY_NOTICES.md" \
             --enforce

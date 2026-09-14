@@ -74,6 +74,7 @@ def validate_release_workflow(workflow: str) -> None:
         "subject-digest: ${{ steps.build.outputs.digest }}",
         "required successful check is missing",
         "scripts/reports/license_compliance.py",
+        "--resolutions docs/compliance/supply-chain/license-resolutions.yml",
         "--enforce",
         "THIRD_PARTY_NOTICES.md",
         "sign-release-manifest",
