@@ -17,6 +17,9 @@ func TestMetricsEndpointExposesPrometheusText(t *testing.T) {
 	metrics.ObserveIceCache(metricResultMiss)
 	metrics.ObserveError(metricSourceHTTP, "access_denied")
 	metrics.ObserveGateway("GATEWAY_ACK_STATUS_ACCEPTED", "accepted", 3*time.Millisecond)
+	metrics.ObserveTalkbackSnapshot(nil, 4*time.Millisecond)
+	metrics.ObserveTalkbackTransition("talkback.session.started", nil)
+	metrics.ObserveTalkbackTransition("private-session-reference", assertiveError{})
 	recorder := httptest.NewRecorder()
 
 	metrics.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/metrics", nil))
@@ -27,12 +30,20 @@ func TestMetricsEndpointExposesPrometheusText(t *testing.T) {
 		"gcs_media_control_ice_cache_events_total{result=\"miss\"} 1",
 		"gcs_media_control_errors_total{reason=\"access_denied\",source=\"http\"} 1",
 		"gcs_media_control_gateway_messages_total{reason=\"accepted\",status=\"GATEWAY_ACK_STATUS_ACCEPTED\"} 1",
+		"gcs_media_control_talkback_snapshot_total{result=\"success\"} 1",
+		"gcs_media_control_talkback_transitions_total{operation=\"started\",result=\"success\"} 1",
+		"gcs_media_control_talkback_transitions_total{operation=\"unknown\",result=\"error\"} 1",
+		"gcs_media_control_errors_total{reason=\"audit_sink_failed\",source=\"talkback_lifecycle\"} 1",
 	} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected metric line %q in:\n%s", expected, body)
 		}
 	}
 }
+
+type assertiveError struct{}
+
+func (assertiveError) Error() string { return "test failure" }
 
 func TestMetricsIncreaseAfterStreamAndIceRequests(t *testing.T) {
 	path, _ := domain.NewStreamPath("raw/local/webcam")

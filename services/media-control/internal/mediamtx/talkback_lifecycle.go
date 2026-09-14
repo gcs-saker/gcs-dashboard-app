@@ -27,6 +27,11 @@ type TalkbackLifecycleSink interface {
 	RecordTalkbackLifecycle(context.Context, TalkbackLifecycleEvent) error
 }
 
+type TalkbackLifecycleMetrics interface {
+	ObserveTalkbackSnapshot(error, time.Duration)
+	ObserveTalkbackTransition(string, error)
+}
+
 type TalkbackLifecycleObserver struct {
 	client   Client
 	groups   domain.StreamGroupResolver
@@ -34,6 +39,12 @@ type TalkbackLifecycleObserver struct {
 	interval time.Duration
 	timeout  time.Duration
 	now      func() time.Time
+	metrics  TalkbackLifecycleMetrics
+}
+
+func (o TalkbackLifecycleObserver) WithMetrics(metrics TalkbackLifecycleMetrics) TalkbackLifecycleObserver {
+	o.metrics = metrics
+	return o
 }
 
 func NewTalkbackLifecycleObserver(
@@ -70,9 +81,13 @@ func (o TalkbackLifecycleObserver) Run(ctx context.Context) {
 }
 
 func (o TalkbackLifecycleObserver) snapshot(ctx context.Context) (map[string]TalkbackSession, bool) {
+	started := time.Now()
 	queryContext, cancel := context.WithTimeout(ctx, o.timeout)
 	defer cancel()
 	sessions, err := o.client.ListTalkbackSessions(queryContext, o.groups)
+	if o.metrics != nil {
+		o.metrics.ObserveTalkbackSnapshot(err, time.Since(started))
+	}
 	if err != nil {
 		return nil, false
 	}
@@ -107,6 +122,9 @@ func (o TalkbackLifecycleObserver) publish(ctx context.Context, session Talkback
 	err := o.sink.RecordTalkbackLifecycle(ctx, TalkbackLifecycleEvent{
 		Reference: session.Reference, GroupID: session.GroupID, Operation: operation, OccurredAt: o.now().UTC(),
 	})
+	if o.metrics != nil {
+		o.metrics.ObserveTalkbackTransition(operation, err)
+	}
 	if err != nil {
 		log.Printf("talkback lifecycle audit failed error_code=audit_sink_failed error_type=%T", err)
 	}

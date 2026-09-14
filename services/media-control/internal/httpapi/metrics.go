@@ -22,6 +22,9 @@ type Metrics struct {
 	errors                 *prometheus.CounterVec
 	gatewayMessages        *prometheus.CounterVec
 	gatewayDuration        *prometheus.HistogramVec
+	talkbackSnapshots      *prometheus.CounterVec
+	talkbackSnapshotTime   *prometheus.HistogramVec
+	talkbackTransitions    *prometheus.CounterVec
 }
 
 func NewMetrics() *Metrics {
@@ -74,6 +77,36 @@ func (m *Metrics) ObserveError(source string, reason string) {
 func (m *Metrics) ObserveGateway(status string, reason string, elapsed time.Duration) {
 	m.gatewayMessages.WithLabelValues(status, reason).Inc()
 	m.gatewayDuration.WithLabelValues(status).Observe(elapsed.Seconds())
+}
+
+func (m *Metrics) ObserveTalkbackSnapshot(err error, elapsed time.Duration) {
+	result := metricResultSuccess
+	if err != nil {
+		result = metricResultError
+		m.ObserveError(metricSourceTalkback, metricErrorSnapshotFailed)
+	}
+	m.talkbackSnapshots.WithLabelValues(result).Inc()
+	m.talkbackSnapshotTime.WithLabelValues(result).Observe(elapsed.Seconds())
+}
+
+func (m *Metrics) ObserveTalkbackTransition(operation string, err error) {
+	result := metricResultSuccess
+	if err != nil {
+		result = metricResultError
+		m.ObserveError(metricSourceTalkback, metricErrorAuditFailed)
+	}
+	m.talkbackTransitions.WithLabelValues(talkbackOperation(operation), result).Inc()
+}
+
+func talkbackOperation(operation string) string {
+	switch operation {
+	case "talkback.session.started":
+		return "started"
+	case "talkback.session.disconnected":
+		return "disconnected"
+	default:
+		return "unknown"
+	}
 }
 
 func cacheMetricResult(result string) string {

@@ -31,7 +31,10 @@ func TestListTalkbackSessionsUsesOpaqueReferenceAndServerGroup(t *testing.T) {
 
 func TestTalkbackLifecycleObserverPublishesOnlyTransitions(t *testing.T) {
 	sink := &recordingLifecycleSink{}
-	observer := TalkbackLifecycleObserver{sink: sink, now: func() time.Time { return time.Unix(10, 0) }}
+	metrics := &recordingLifecycleMetrics{}
+	observer := TalkbackLifecycleObserver{
+		sink: sink, metrics: metrics, now: func() time.Time { return time.Unix(10, 0) },
+	}
 	first := TalkbackSession{Reference: "opaque-a", GroupID: "co-a"}
 	second := TalkbackSession{Reference: "opaque-b", GroupID: "co-b"}
 
@@ -43,6 +46,39 @@ func TestTalkbackLifecycleObserverPublishesOnlyTransitions(t *testing.T) {
 	if sink.events[0].Operation != "talkback.session.started" || sink.events[1].Operation != "talkback.session.disconnected" {
 		t.Fatalf("unexpected lifecycle operations %#v", sink.events)
 	}
+	if len(metrics.transitions) != 2 || metrics.transitions[0] != "talkback.session.started" {
+		t.Fatalf("expected low-cardinality lifecycle metrics, got %#v", metrics.transitions)
+	}
+}
+
+func TestTalkbackLifecycleObserverMeasuresFailedSnapshot(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "unavailable", http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+	metrics := &recordingLifecycleMetrics{}
+	observer := NewTalkbackLifecycleObserver(
+		NewClient(server.URL, server.Client()), domain.StreamGroupResolver{}, nil, time.Second,
+	).WithMetrics(metrics)
+
+	_, loaded := observer.snapshot(context.Background())
+
+	if loaded || len(metrics.snapshotErrors) != 1 || metrics.snapshotErrors[0] == nil {
+		t.Fatalf("expected failed snapshot metric, got loaded=%v metrics=%#v", loaded, metrics)
+	}
+}
+
+type recordingLifecycleMetrics struct {
+	snapshotErrors []error
+	transitions    []string
+}
+
+func (m *recordingLifecycleMetrics) ObserveTalkbackSnapshot(err error, _ time.Duration) {
+	m.snapshotErrors = append(m.snapshotErrors, err)
+}
+
+func (m *recordingLifecycleMetrics) ObserveTalkbackTransition(operation string, _ error) {
+	m.transitions = append(m.transitions, operation)
 }
 
 type recordingLifecycleSink struct {
