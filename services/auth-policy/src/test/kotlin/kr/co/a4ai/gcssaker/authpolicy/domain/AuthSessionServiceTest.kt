@@ -4,6 +4,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -17,12 +18,13 @@ import kotlin.test.assertFailsWith
 
 class AuthSessionServiceTest {
     private val passwordHasher = PasswordHasher()
+    private val tokenClock = Clock.fixed(Instant.now().truncatedTo(ChronoUnit.SECONDS).minusSeconds(30), ZoneOffset.UTC)
     private val tokenService = JwtTokenService(
         secret = "test-secret-must-be-at-least-32-characters",
         issuer = "gcs-saker-test",
         accessTokenTtl = Duration.ofMinutes(30),
         refreshTokenTtl = Duration.ofDays(7),
-        clock = Clock.fixed(Instant.now().minusSeconds(30), ZoneOffset.UTC),
+        clock = tokenClock,
     )
     private val users = InMemoryAuthUserRepository(
         listOf(
@@ -98,6 +100,19 @@ class AuthSessionServiceTest {
         assertNotNull(service.refresh(loginTokens.refreshToken))
 
         assertNull(service.refresh(loginTokens.refreshToken))
+    }
+
+    @Test
+    fun `refresh session ttl is capped by the original login deadline`() {
+        val principal = requireNotNull(users.findByUsername("operator01")).principal()
+        val deadline = tokenClock.instant().plus(Duration.ofMinutes(15))
+        val refreshToken = tokenService.issueRefreshToken(principal, deadline)
+        refreshSessions.putRefreshSession(refreshToken, principal, Duration.ofDays(7))
+
+        val refreshed = requireNotNull(service.refresh(refreshToken))
+
+        assertEquals(Duration.ofMinutes(15), refreshSessions.ttl(refreshed.refreshToken))
+        assertEquals(900, refreshed.refreshExpiresInSeconds)
     }
 
     @Test
@@ -223,6 +238,7 @@ class AuthSessionServiceTest {
 
     private class RecordingRefreshSessionStore : RefreshSessionStore {
         private val values = mutableMapOf<String, AuthenticatedPrincipal>()
+        private val ttls = mutableMapOf<String, Duration>()
         override val authoritative = true
 
         override fun putRefreshSession(
@@ -231,15 +247,19 @@ class AuthSessionServiceTest {
             ttl: Duration,
         ) {
             values[refreshToken] = principal
+            ttls[refreshToken] = ttl
         }
 
         override fun consumeRefreshSession(refreshToken: String): AuthenticatedPrincipal? =
-            values.remove(refreshToken)
+            values.remove(refreshToken).also { ttls.remove(refreshToken) }
 
         override fun revokeRefreshSession(refreshToken: String) {
             values.remove(refreshToken)
+            ttls.remove(refreshToken)
         }
 
         fun peek(refreshToken: String): AuthenticatedPrincipal? = values[refreshToken]
+
+        fun ttl(refreshToken: String): Duration? = ttls[refreshToken]
     }
 }

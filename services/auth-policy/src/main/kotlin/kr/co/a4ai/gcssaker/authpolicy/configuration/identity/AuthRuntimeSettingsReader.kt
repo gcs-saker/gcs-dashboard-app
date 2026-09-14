@@ -15,6 +15,7 @@ object AuthRuntimeSettingsReader {
                 ?: AuthRuntimeDefaults.JWT_ISSUER,
             accessTokenExpireMinutes = reader.long(AuthRuntimeEnvKeys.AUTH_POLICY_ACCESS_TOKEN_EXPIRE_MINUTES, AuthRuntimeDefaults.ACCESS_TOKEN_EXPIRE_MINUTES),
             refreshTokenExpireMinutes = reader.long(AuthRuntimeEnvKeys.AUTH_POLICY_REFRESH_TOKEN_EXPIRE_MINUTES, AuthRuntimeDefaults.REFRESH_TOKEN_EXPIRE_MINUTES),
+            absoluteSessionExpireMinutes = reader.long(AuthRuntimeEnvKeys.AUTH_POLICY_ABSOLUTE_SESSION_EXPIRE_MINUTES, AuthRuntimeDefaults.ABSOLUTE_SESSION_EXPIRE_MINUTES),
             refreshCookieName = reader.first(AuthRuntimeEnvKeys.AUTH_POLICY_REFRESH_COOKIE_NAME, AuthRuntimeEnvKeys.AUTH_REFRESH_COOKIE_NAME)
                 ?: AuthRuntimeDefaults.REFRESH_COOKIE_NAME,
             refreshCookieSecure = reader.bool(AuthRuntimeEnvKeys.AUTH_POLICY_REFRESH_COOKIE_SECURE, false),

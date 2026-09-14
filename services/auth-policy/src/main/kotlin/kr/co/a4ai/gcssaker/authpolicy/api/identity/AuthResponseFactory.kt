@@ -3,6 +3,7 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthUser
+import kr.co.a4ai.gcssaker.authpolicy.domain.IssuedTokenSet
 import kr.co.a4ai.gcssaker.authpolicy.domain.ownGroupAccess
 import org.springframework.http.CacheControl
 import org.springframework.http.HttpHeaders
@@ -11,25 +12,20 @@ import org.springframework.http.ResponseEntity
 import java.time.Duration
 
 internal class AuthResponseFactory(private val settings: AuthRuntimeSettings) {
-    fun tokenResponse(
-        principal: AuthenticatedPrincipal,
-        accessToken: String,
-        refreshToken: String,
-        expiresInMinutes: Long,
-    ): ResponseEntity<TokenResponse> =
+    fun tokenResponse(tokens: IssuedTokenSet): ResponseEntity<TokenResponse> =
         ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, refreshCookie(refreshToken).toString())
+            .header(HttpHeaders.SET_COOKIE, refreshCookie(tokens).toString())
             .cacheControl(CacheControl.noStore())
             .header(AuthResponseHeaders.PRAGMA_HEADER_NAME, AuthResponseHeaders.PRAGMA_NO_CACHE)
             .body(
                 TokenResponse(
-                    accessToken = accessToken,
-                    expiresInMinutes = expiresInMinutes,
-                    username = principal.username,
-                    role = principal.role.name.lowercase(),
-                    groupId = principal.groupId.value,
-                    securityVersion = principal.securityVersion,
-                    capabilities = principal.toCapabilitiesResponse(),
+                    accessToken = tokens.accessToken,
+                    expiresInMinutes = tokens.expiresInMinutes,
+                    username = tokens.principal.username,
+                    role = tokens.principal.role.name.lowercase(),
+                    groupId = tokens.principal.groupId.value,
+                    securityVersion = tokens.principal.securityVersion,
+                    capabilities = tokens.principal.toCapabilitiesResponse(),
                 ),
             )
 
@@ -54,13 +50,13 @@ internal class AuthResponseFactory(private val settings: AuthRuntimeSettings) {
             role = user.role.name.lowercase(),
         )
 
-    private fun refreshCookie(refreshToken: String): ResponseCookie =
-        ResponseCookie.from(settings.refreshCookieName, refreshToken)
+    private fun refreshCookie(tokens: IssuedTokenSet): ResponseCookie =
+        ResponseCookie.from(settings.refreshCookieName, tokens.refreshToken)
             .httpOnly(true)
             .secure(settings.refreshCookieSecure)
             .sameSite(settings.refreshCookieSameSite)
             .path(AuthCookieContract.PATH)
-            .maxAge(Duration.ofMinutes(settings.refreshTokenExpireMinutes))
+            .maxAge(Duration.ofSeconds(tokens.refreshExpiresInSeconds))
             .build()
 
     private fun clearRefreshCookie(): ResponseCookie =

@@ -37,6 +37,7 @@ class AuthPolicyConfig {
             issuer = settings.jwtIssuer,
             accessTokenTtl = Duration.ofMinutes(settings.accessTokenExpireMinutes),
             refreshTokenTtl = Duration.ofMinutes(settings.refreshTokenExpireMinutes),
+            absoluteSessionTtl = Duration.ofMinutes(settings.absoluteSessionExpireMinutes),
         )
 
     @Bean

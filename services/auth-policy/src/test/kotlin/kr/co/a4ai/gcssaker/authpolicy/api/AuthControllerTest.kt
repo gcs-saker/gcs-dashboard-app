@@ -44,6 +44,7 @@ class AuthControllerTest {
         jwtIssuer = "gcs-saker-test",
         accessTokenExpireMinutes = 30,
         refreshTokenExpireMinutes = 10_080,
+        absoluteSessionExpireMinutes = 40_320,
         refreshCookieName = REFRESH_COOKIE_NAME,
         refreshCookieSecure = false,
         refreshCookieSameSite = "lax",

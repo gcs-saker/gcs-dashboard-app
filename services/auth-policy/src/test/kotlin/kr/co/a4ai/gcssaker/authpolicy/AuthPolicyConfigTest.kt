@@ -54,6 +54,7 @@ class AuthPolicyConfigTest {
                     "AUTH_POLICY_JWT_ISSUER" to "policy-issuer",
                     "AUTH_POLICY_ACCESS_TOKEN_EXPIRE_MINUTES" to "15",
                     "AUTH_POLICY_REFRESH_TOKEN_EXPIRE_MINUTES" to "1440",
+                    "AUTH_POLICY_ABSOLUTE_SESSION_EXPIRE_MINUTES" to "2880",
                     "AUTH_POLICY_REFRESH_COOKIE_NAME" to "policy_refresh",
                     "AUTH_POLICY_REFRESH_COOKIE_SECURE" to "true",
                     "AUTH_POLICY_REFRESH_COOKIE_SAMESITE" to "strict",
@@ -79,6 +80,7 @@ class AuthPolicyConfigTest {
         assertEquals("policy-issuer", settings.jwtIssuer)
         assertEquals(15, settings.accessTokenExpireMinutes)
         assertEquals(1440, settings.refreshTokenExpireMinutes)
+        assertEquals(2880, settings.absoluteSessionExpireMinutes)
         assertEquals("policy_refresh", settings.refreshCookieName)
         assertTrue(settings.refreshCookieSecure)
         assertEquals("strict", settings.refreshCookieSameSite)
@@ -207,7 +209,36 @@ class AuthPolicyConfigTest {
         assertEquals("correct-password", settings.operatorPassword)
         assertEquals("m7-smoke-pass", settings.smokePassword)
         assertEquals(120, settings.refreshTokenExpireMinutes)
+        assertEquals(480, settings.absoluteSessionExpireMinutes)
         assertEquals(GroupId("co-a"), settings.deviceBootstrapTokens.groupIdFor("LOCAL-DEVICE-BOOTSTRAP"))
+    }
+
+    @Test
+    fun `refresh lifetime cannot be shorter than access lifetime`() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            AuthRuntimeSettings.fromEnvironment(
+                localEnvironmentWith(
+                    "AUTH_POLICY_ACCESS_TOKEN_EXPIRE_MINUTES" to "60",
+                    "AUTH_POLICY_REFRESH_TOKEN_EXPIRE_MINUTES" to "30",
+                ),
+            )
+        }
+
+        assertTrue(error.message.orEmpty().contains("refresh token expiry"))
+    }
+
+    @Test
+    fun `absolute session lifetime cannot be shorter than refresh lifetime`() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            AuthRuntimeSettings.fromEnvironment(
+                localEnvironmentWith(
+                    "AUTH_POLICY_REFRESH_TOKEN_EXPIRE_MINUTES" to "120",
+                    "AUTH_POLICY_ABSOLUTE_SESSION_EXPIRE_MINUTES" to "60",
+                ),
+            )
+        }
+
+        assertTrue(error.message.orEmpty().contains("absolute session expiry"))
     }
 
     @Test
@@ -324,6 +355,11 @@ class AuthPolicyConfigTest {
 private fun localEnvironment(): StandardEnvironment =
     StandardEnvironment().apply {
         setActiveProfiles("local")
+    }
+
+private fun localEnvironmentWith(vararg values: Pair<String, String>): StandardEnvironment =
+    localEnvironment().apply {
+        propertySources.addFirst(MapPropertySource("test", mapOf(*values)))
     }
 
 private fun productionEnvironment(vararg values: Pair<String, String>): StandardEnvironment =
