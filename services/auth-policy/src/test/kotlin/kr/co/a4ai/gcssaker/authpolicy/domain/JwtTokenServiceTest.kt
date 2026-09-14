@@ -4,12 +4,13 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class JwtTokenServiceTest {
-    private val fixedClock = Clock.fixed(Instant.now().minusSeconds(60), ZoneOffset.UTC)
+    private val fixedClock = Clock.fixed(Instant.now().truncatedTo(ChronoUnit.SECONDS).minusSeconds(60), ZoneOffset.UTC)
     private val service = JwtTokenService(
         secret = "test-secret-must-be-at-least-32-characters",
         issuer = "gcs-saker-test",
@@ -36,5 +37,28 @@ class JwtTokenServiceTest {
                 accessTokenTtl = Duration.ofMinutes(30),
             )
         }
+    }
+
+    @Test
+    fun `refresh rotation preserves the original absolute session deadline`() {
+        val principal = AuthenticatedPrincipal("operator", UserRole.OPERATOR, GroupId("co-a"))
+        val initial = service.issueRefreshToken(principal)
+        val initialSession = service.verifyRefreshTokenWithTtl(initial)
+
+        val rotated = service.issueRefreshToken(principal, initialSession.sessionExpiresAt)
+        val rotatedSession = service.verifyRefreshTokenWithTtl(rotated)
+
+        assertEquals(initialSession.sessionExpiresAt, rotatedSession.sessionExpiresAt)
+    }
+
+    @Test
+    fun `refresh expiry is capped by the absolute session deadline`() {
+        val principal = AuthenticatedPrincipal("operator", UserRole.OPERATOR, GroupId("co-a"))
+        val deadline = fixedClock.instant().plus(Duration.ofMinutes(15))
+
+        val token = service.issueRefreshToken(principal, deadline)
+        val verified = service.verifyRefreshTokenWithTtl(token)
+
+        assertEquals(Duration.ofMinutes(15), verified.remainingTtl)
     }
 }

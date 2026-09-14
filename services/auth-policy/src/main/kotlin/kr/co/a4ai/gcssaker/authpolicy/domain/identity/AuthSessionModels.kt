@@ -6,6 +6,7 @@ data class IssuedTokenSet(
     val accessToken: String,
     val refreshToken: String,
     val expiresInMinutes: Long,
+    val refreshExpiresInSeconds: Long,
     val principal: AuthenticatedPrincipal,
 )
 
@@ -30,14 +31,11 @@ class AuthSessionService(
     }
 
     fun refresh(refreshToken: String): IssuedTokenSet? {
-        val principal = if (refreshSessions.authoritative) {
-            refreshSessions.consumeRefreshSession(refreshToken) ?: return null
-        } else {
-            tokenService.verifyRefreshToken(refreshToken)
-        }
+        val verified = tokenService.verifyRefreshTokenWithTtl(refreshToken)
+        val principal = authoritativePrincipal(refreshToken, verified.principal) ?: return null
         val user = users.findByUsername(principal.username) ?: return null
         if (!user.active || !isGroupActive(user.groupId) || user.securityVersion != principal.securityVersion) return null
-        return issueTokens(user.principal())
+        return issueTokens(user.principal(), verified.sessionExpiresAt)
     }
 
     fun revokeRefreshToken(refreshToken: String) {
@@ -62,25 +60,39 @@ class AuthSessionService(
         return currentUser.principal()
     }
 
-    private fun issueTokens(principal: AuthenticatedPrincipal): IssuedTokenSet {
+    private fun issueTokens(
+        principal: AuthenticatedPrincipal,
+        sessionExpiresAt: java.time.Instant? = null,
+    ): IssuedTokenSet {
         val accessToken = tokenService.issueAccessToken(principal)
         principalCache.putAccessPrincipal(
             accessToken = accessToken,
             principal = principal,
             ttl = Duration.ofMinutes(tokenService.accessTokenExpiresInMinutes()),
         )
-        val refreshToken = tokenService.issueRefreshToken(principal)
+        val refreshToken = tokenService.issueRefreshToken(principal, sessionExpiresAt)
+        val refreshTtl = tokenService.verifyRefreshTokenWithTtl(refreshToken).remainingTtl
         refreshSessions.putRefreshSession(
             refreshToken = refreshToken,
             principal = principal,
-            ttl = Duration.ofMinutes(tokenService.refreshTokenExpiresInMinutes()),
+            ttl = refreshTtl,
         )
         return IssuedTokenSet(
             accessToken = accessToken,
             refreshToken = refreshToken,
             expiresInMinutes = tokenService.accessTokenExpiresInMinutes(),
+            refreshExpiresInSeconds = refreshTtl.seconds,
             principal = principal,
         )
+    }
+
+    private fun authoritativePrincipal(
+        refreshToken: String,
+        signedPrincipal: AuthenticatedPrincipal,
+    ): AuthenticatedPrincipal? {
+        if (!refreshSessions.authoritative) return signedPrincipal
+        val storedPrincipal = refreshSessions.consumeRefreshSession(refreshToken) ?: return null
+        return storedPrincipal.takeIf { it == signedPrincipal }
     }
 
     private fun isGroupActive(groupId: GroupId): Boolean =

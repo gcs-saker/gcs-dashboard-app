@@ -48,6 +48,16 @@ GCS-Saker dashboard는 access token을 브라우저 영구 저장소에 저장�
 - HTTP 개발 서버에서는 `AUTH_REFRESH_COOKIE_SECURE=false`가 가능하다.
 - 운영 배포에는 사용하지 않는다.
 
+## 세션 수명과 연장
+
+- access token 기본 수명은 30분이며 브라우저 메모리에서만 사용한다.
+- refresh token은 1회 사용 후 즉시 폐기하고 회전하며, 기본 유휴 수명은 120분이다.
+- refresh를 반복해도 최초 로그인 기준 절대 세션 수명 480분을 넘길 수 없다.
+- 회전된 refresh JWT 만료와 Redis authoritative session TTL은 `120분`과 절대 세션 잔여 시간 중 짧은 값이다.
+- 절대 수명이 끝난 뒤에는 자동 갱신하지 않고 다시 로그인해야 한다.
+- 운영 조정 변수는 `AUTH_ACCESS_TOKEN_EXPIRE_MINUTES`, `AUTH_REFRESH_TOKEN_EXPIRE_MINUTES`,
+  `AUTH_ABSOLUTE_SESSION_EXPIRE_MINUTES`이며 `access <= refresh <= absolute session` 관계를 강제한다.
+
 ## 좋아진 점
 
 - XSS 발생 시 localStorage에서 token을 훔치는 경로를 제거한다.

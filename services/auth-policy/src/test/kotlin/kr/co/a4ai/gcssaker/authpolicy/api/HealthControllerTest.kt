@@ -116,6 +116,7 @@ class HealthControllerTest {
             jwtIssuer = "gcs-saker-test",
             accessTokenExpireMinutes = 30,
             refreshTokenExpireMinutes = 10_080,
+            absoluteSessionExpireMinutes = 40_320,
             refreshCookieName = "gcs_saker_refresh",
             refreshCookieSecure = false,
             refreshCookieSameSite = "lax",

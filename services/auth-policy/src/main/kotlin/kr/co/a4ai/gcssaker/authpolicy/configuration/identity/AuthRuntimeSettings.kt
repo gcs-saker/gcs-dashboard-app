@@ -9,6 +9,7 @@ data class AuthRuntimeSettings(
     val jwtIssuer: String,
     val accessTokenExpireMinutes: Long,
     val refreshTokenExpireMinutes: Long,
+    val absoluteSessionExpireMinutes: Long,
     val refreshCookieName: String,
     val refreshCookieSecure: Boolean,
     val refreshCookieSameSite: String,
@@ -52,6 +53,9 @@ data class AuthRuntimeSettings(
     val postProcessingQueueCapacity: Int = AuthRuntimeDefaults.POST_PROCESSING_QUEUE_CAPACITY,
 ) {
     init {
+        require(accessTokenExpireMinutes > 0) { "access token expiry must be positive" }
+        require(refreshTokenExpireMinutes >= accessTokenExpireMinutes) { "refresh token expiry must not be shorter than access token expiry" }
+        require(absoluteSessionExpireMinutes >= refreshTokenExpireMinutes) { "absolute session expiry must not be shorter than refresh token expiry" }
         require(!refreshCookieSameSite.equals("none", ignoreCase = true) || refreshCookieSecure) {
             "SameSite=None refresh cookies require Secure=true"
         }

@@ -74,7 +74,7 @@ class AuthController(
             throw UnauthorizedApiError(AuthApiErrors.INVALID_CREDENTIALS)
         }
         securityAuditPublisher.publishLoginSucceeded(tokens.principal)
-        return responses.tokenResponse(tokens.principal, tokens.accessToken, tokens.refreshToken, tokens.expiresInMinutes)
+        return responses.tokenResponse(tokens)
     }
 
     @PostMapping(AuthApiRoutes.REFRESH)
@@ -96,12 +96,15 @@ class AuthController(
         } catch (_: JWTVerificationException) {
             securityAuditPublisher.publishRefreshFailed(AuthApiErrors.INVALID_TOKEN)
             throw UnauthorizedApiError(AuthApiErrors.INVALID_TOKEN)
+        } catch (_: IllegalArgumentException) {
+            securityAuditPublisher.publishRefreshFailed(AuthApiErrors.INVALID_TOKEN)
+            throw UnauthorizedApiError(AuthApiErrors.INVALID_TOKEN)
         }
         if (tokens == null) {
             securityAuditPublisher.publishRefreshFailed(AuthApiErrors.INVALID_TOKEN)
             return responses.unauthorizedWithClearedRefreshCookie()
         }
-        return responses.tokenResponse(tokens.principal, tokens.accessToken, tokens.refreshToken, tokens.expiresInMinutes)
+        return responses.tokenResponse(tokens)
     }
 
     @GetMapping(AuthApiRoutes.ME)

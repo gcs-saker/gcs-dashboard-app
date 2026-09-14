@@ -15,9 +15,15 @@ class JwtTokenService(
     private val accessTokenTtl: Duration,
     private val refreshTokenTtl: Duration = Duration.ofDays(7),
     private val clock: Clock = Clock.systemUTC(),
+    private val absoluteSessionTtl: Duration = refreshTokenTtl.multipliedBy(4),
 ) {
     data class VerifiedAccessToken(
         val principal: AuthenticatedPrincipal,
+        val remainingTtl: Duration,
+    )
+    data class VerifiedRefreshToken(
+        val principal: AuthenticatedPrincipal,
+        val sessionExpiresAt: Instant,
         val remainingTtl: Duration,
     )
     private val algorithm: Algorithm = Algorithm.HMAC256(secret)
@@ -35,14 +41,19 @@ class JwtTokenService(
         require(issuer.isNotBlank()) { "issuer must not be blank" }
         require(!accessTokenTtl.isNegative && !accessTokenTtl.isZero) { "access token ttl must be positive" }
         require(!refreshTokenTtl.isNegative && !refreshTokenTtl.isZero) { "refresh token ttl must be positive" }
+        require(!absoluteSessionTtl.isNegative && !absoluteSessionTtl.isZero) { "absolute session ttl must be positive" }
+        require(absoluteSessionTtl >= refreshTokenTtl) { "absolute session ttl must not be shorter than refresh token ttl" }
     }
 
     fun issueAccessToken(principal: AuthenticatedPrincipal): String {
         return issueToken(principal, "access", accessTokenTtl)
     }
 
-    fun issueRefreshToken(principal: AuthenticatedPrincipal): String {
-        return issueToken(principal, "refresh", refreshTokenTtl)
+    fun issueRefreshToken(principal: AuthenticatedPrincipal, sessionExpiresAt: Instant? = null): String {
+        val now = clock.instant()
+        val deadline = sessionExpiresAt ?: now.plus(absoluteSessionTtl)
+        require(deadline.isAfter(now)) { "session is expired" }
+        return issueToken(principal, "refresh", minOf(now.plus(refreshTokenTtl), deadline), deadline)
     }
 
     fun verifyAccessToken(token: String): AuthenticatedPrincipal {
@@ -59,7 +70,21 @@ class JwtTokenService(
     }
 
     fun verifyRefreshToken(token: String): AuthenticatedPrincipal {
-        return principalFromVerifiedToken(refreshVerifier.verify(token))
+        return verifyRefreshTokenWithTtl(token).principal
+    }
+
+    fun verifyRefreshTokenWithTtl(token: String): VerifiedRefreshToken {
+        val decoded = refreshVerifier.verify(token)
+        val expiresAt = decoded.expiresAtAsInstant ?: throw IllegalArgumentException("exp claim is required")
+        // Tokens issued before the absolute-session policy are bounded by their
+        // existing expiry on first rotation instead of being invalidated at deploy.
+        val sessionExpiresAt = decoded.getClaim("session_expires_at").asLong()?.let(Instant::ofEpochSecond)
+            ?: expiresAt
+        val now = clock.instant()
+        require(sessionExpiresAt.isAfter(now)) { "session is expired" }
+        val remainingTtl = Duration.between(now, minOf(expiresAt, sessionExpiresAt))
+        require(!remainingTtl.isZero && !remainingTtl.isNegative) { "refresh token is expired" }
+        return VerifiedRefreshToken(principalFromVerifiedToken(decoded), sessionExpiresAt, remainingTtl)
     }
 
     fun accessTokenExpiresInMinutes(): Long = accessTokenTtl.toMinutes()
@@ -72,6 +97,16 @@ class JwtTokenService(
         ttl: Duration,
     ): String {
         val now = Instant.now(clock)
+        return issueToken(principal, tokenUse, now.plus(ttl), null)
+    }
+
+    private fun issueToken(
+        principal: AuthenticatedPrincipal,
+        tokenUse: String,
+        expiresAt: Instant,
+        sessionExpiresAt: Instant?,
+    ): String {
+        val now = Instant.now(clock)
         return JWT.create()
             .withIssuer(issuer)
             .withSubject(principal.username)
@@ -79,9 +114,10 @@ class JwtTokenService(
             .withClaim("group_id", principal.groupId.value)
             .withClaim("security_version", principal.securityVersion)
             .withClaim("token_use", tokenUse)
+            .apply { sessionExpiresAt?.let { withClaim("session_expires_at", it.epochSecond) } }
             .withJWTId(UUID.randomUUID().toString())
             .withIssuedAt(Date.from(now))
-            .withExpiresAt(Date.from(now.plus(ttl)))
+            .withExpiresAt(Date.from(expiresAt))
             .sign(algorithm)
     }
 
