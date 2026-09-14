@@ -1,0 +1,110 @@
+schemaVersion: gcs-saker.architecture-views.v1
+status: CONTROLLED_DRAFT_NOT_ASSESSED
+systemOfInterest: GCS-Saker software product on the Server-01 single-node deployment profile
+externalActors: [browser, device-gateway, external-integrator]
+sourceOfTruth:
+  runtime: deploy/compose/compose.single-node.poc.yml
+  edge: deploy/nginx/single-node.poc.conf
+  contracts: contracts/proto/gcs/saker/v1
+components:
+  - id: CMP-EDGE
+    owner: deploy
+    responsibilities: [public TLS termination, route allowlisting, private service isolation]
+  - id: CMP-DASHBOARD
+    owner: gcs-dashboard
+    responsibilities: [browser presentation, operator interaction, opaque stream selection]
+  - id: CMP-AUTH-POLICY
+    owner: services/auth-policy
+    responsibilities: [identity, authorization, group policy, token lifecycle, operational reads]
+  - id: CMP-MEDIA-CONTROL
+    owner: services/media-control
+    responsibilities: [stream discovery, opaque media sessions, gRPC gateway, Redis media state]
+  - id: CMP-BACKEND
+    owner: backend
+    responsibilities: [Python compatibility API, legacy adapters, telemetry adapters]
+  - id: CMP-MEDIAMTX
+    owner: deploy
+    responsibilities: [WHIP-WHEP signaling, WebRTC media, HLS fallback]
+  - id: CMP-TURN
+    owner: deploy
+    responsibilities: [ICE relay]
+  - id: CMP-POSTGRES
+    owner: services/auth-policy
+    responsibilities: [authoritative identity, group, policy, telemetry persistence]
+  - id: CMP-REDIS
+    owner: owning-application-service
+    responsibilities: [bounded session and cache state]
+  - id: CMP-MQTT
+    owner: deploy
+    responsibilities: [authenticated device telemetry and command transport]
+trustBoundaries:
+  - {id: TB-PUBLIC, classification: untrusted, members: [browser, device, external-integrator]}
+  - {id: TB-EDGE, classification: controlled-ingress, members: [CMP-EDGE]}
+  - {id: TB-APPLICATION, classification: private-application, members: [CMP-DASHBOARD, CMP-AUTH-POLICY, CMP-MEDIA-CONTROL, CMP-BACKEND]}
+  - {id: TB-DATA-MEDIA, classification: private-state-and-media, members: [CMP-MEDIAMTX, CMP-TURN, CMP-POSTGRES, CMP-REDIS, CMP-MQTT]}
+interfaces:
+  - {id: IF-PUBLIC-HTTPS, owner: CMP-EDGE, from: TB-PUBLIC, to: TB-EDGE, protocol: HTTPS, contract: deploy/nginx/single-node.poc.conf, exposure: public}
+  - {id: IF-BROWSER-REST, owner: CMP-AUTH-POLICY, from: CMP-DASHBOARD, to: CMP-AUTH-POLICY, protocol: HTTPS-JSON, contract: docs/architecture/GCS-Saker_M10_endpoint_catalogue.md, exposure: edge-routed}
+  - {id: IF-MEDIA-REST, owner: CMP-MEDIA-CONTROL, from: CMP-DASHBOARD, to: CMP-MEDIA-CONTROL, protocol: HTTPS-JSON, contract: docs/api/GCS-Saker_API_Device_Streaming_Contract_v0.1.md, exposure: edge-routed}
+  - {id: IF-WEBRTC, owner: CMP-MEDIAMTX, from: TB-PUBLIC, to: CMP-MEDIAMTX, protocol: WHIP-WHEP-DTLS-SRTP, contract: docs/api/GCS-Saker_API_Device_Streaming_Contract_v0.1.md, exposure: edge-routed}
+  - {id: IF-GRPC-GATEWAY, owner: CMP-MEDIA-CONTROL, from: device-gateway, to: CMP-MEDIA-CONTROL, protocol: gRPC-protobuf, contract: contracts/proto/gcs/saker/v1/gateway_service.proto, exposure: private}
+  - {id: IF-MQTT-DEVICE, owner: CMP-AUTH-POLICY, from: device-gateway, to: CMP-MQTT, protocol: MQTT-TLS-protobuf, contract: contracts/proto/gcs/saker/v1/telemetry.proto, exposure: private-device-profile}
+  - {id: IF-AUTH-DB, owner: CMP-AUTH-POLICY, from: CMP-AUTH-POLICY, to: CMP-POSTGRES, protocol: PostgreSQL, contract: service-owned-schema, exposure: private}
+  - {id: IF-REDIS, owner: owning-application-service, from: application-service, to: CMP-REDIS, protocol: RESP, contract: versioned-service-cache-key, exposure: private}
+authoritativeState:
+  - id: STATE-IDENTITY-GROUP-POLICY
+    owner: CMP-AUTH-POLICY
+    store: CMP-POSTGRES
+    ttl: persistent
+    invalidation: committed policy mutation
+    degradedBehavior: deny policy-dependent commands and expose readiness degradation
+  - id: STATE-REFRESH-SESSION
+    owner: CMP-AUTH-POLICY
+    store: CMP-REDIS
+    ttl: bounded-by-refresh-and-absolute-session-expiry
+    invalidation: rotation logout expiry or administrator revocation
+    degradedBehavior: reject refresh; never synthesize a session
+  - id: STATE-MEDIA-SESSION
+    owner: CMP-MEDIA-CONTROL
+    store: CMP-REDIS
+    ttl: bounded-short-lived-session
+    invalidation: expiry disconnect or policy revocation
+    degradedBehavior: reject new opaque session issuance when authoritative policy cannot be checked
+  - id: STATE-TELEMETRY-HISTORY
+    owner: CMP-AUTH-POLICY
+    store: CMP-POSTGRES
+    ttl: retention-policy-controlled
+    invalidation: approved retention operation
+    degradedBehavior: preserve accepted queued records or return typed failure; never report unpersisted data as stored
+views:
+  - {id: AV-CONTEXT, viewpoint: context, elements: [components, trustBoundaries, interfaces]}
+  - {id: AV-FUNCTIONAL, viewpoint: functional, elements: [components, interfaces, operationalFlows]}
+  - {id: AV-DEPLOYMENT, viewpoint: deployment, elements: [sourceOfTruth, trustBoundaries, interfaces]}
+  - {id: AV-INFORMATION, viewpoint: information, elements: [authoritativeState, operationalFlows]}
+  - {id: AV-SECURITY, viewpoint: security, elements: [trustBoundaries, interfaces, authoritativeState]}
+  - {id: AV-SAFETY, viewpoint: safety, elements: [operationalFlows, degradedBehavior]}
+  - {id: AV-OPERATIONS, viewpoint: operations, elements: [sourceOfTruth, degradedBehavior]}
+operationalFlows:
+  - id: FLOW-DEVICE-PUBLISH
+    sequence: [IF-PUBLIC-HTTPS, CMP-AUTH-POLICY, CMP-MEDIA-CONTROL, IF-WEBRTC]
+    invariant: device UUID and authenticated session resolve group and opaque media route on the server
+  - id: FLOW-BROWSER-PLAYBACK
+    sequence: [IF-PUBLIC-HTTPS, IF-BROWSER-REST, IF-MEDIA-REST, IF-WEBRTC]
+    invariant: browser supplies an opaque stream ID and never derives a private route or receiver
+  - id: FLOW-TELEMETRY
+    transportAlternatives: [IF-GRPC-GATEWAY, IF-MQTT-DEVICE]
+    sequence: [device-gateway, CMP-AUTH-POLICY, STATE-TELEMETRY-HISTORY]
+    invariant: transport identity is validated before server-owned group resolution and idempotent persistence
+degradedBehavior:
+  - {id: DEG-AUTH-UNAVAILABLE, trigger: policy-service-unavailable, result: deny-new-policy-dependent-operations, recovery: readiness-and-operator-runbook}
+  - {id: DEG-REDIS-UNAVAILABLE, trigger: cache-or-session-store-unavailable, result: no-fabricated-session-and-owned-cache-fallback-only, recovery: bounded-reconnect-and-readiness}
+  - {id: DEG-MEDIA-UNAVAILABLE, trigger: MediaMTX-or-TURN-unavailable, result: preserve-control-plane-and-report-media-degraded, recovery: health-check-and-controlled-restart}
+  - {id: DEG-PERSISTENCE-UNAVAILABLE, trigger: PostgreSQL-unavailable, result: typed-failure-or-bounded-owned-buffer, recovery: restore-and-reconcile-idempotency-identifiers}
+correspondences:
+  - {id: COR-OWNERSHIP, source: interfaces, rule: every interface names exactly one owner component}
+  - {id: COR-TRUST, source: interfaces, rule: every interface maps to an exposure and trust-boundary crossing}
+  - {id: COR-STATE, source: authoritativeState, rule: every authoritative state names owner store TTL invalidation and degraded behavior}
+  - {id: COR-ASSURANCE, source: degradedBehavior, rule: security and safety behavior maps to controlled requirements and verification evidence}
+limitations:
+  - Diagram rendering is derived from this catalogue and is not itself authoritative.
+  - External assessor review and correspondence review have not been performed.

@@ -128,6 +128,7 @@ traces:
     threatsOrHazards: []
     designRefs:
       - docs/compliance/architecture/iso-42010-architecture-description.yml
+      - docs/compliance/architecture/system-architecture-views.yml
       - docs/compliance/GCS-Saker_Software_Military_Ready_Profile_v1.0.md
     codeRefs: []
     testRefs:
@@ -138,7 +139,9 @@ traces:
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/717
   - requirementId: MR-QUALITY-001
     threatsOrHazards: []
-    designRefs: [docs/compliance/quality/software-quality-evaluation-profile.yml]
+    designRefs:
+      - docs/compliance/quality/software-quality-evaluation-profile.yml
+      - docs/compliance/quality/software-quality-evaluation-plan.yml
     codeRefs: []
     testRefs:
       - scripts/gates/iso_assurance_gate.py
@@ -148,7 +151,9 @@ traces:
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/717
   - requirementId: MR-MEASURE-001
     threatsOrHazards: []
-    designRefs: [docs/compliance/quality/software-quality-evaluation-profile.yml]
+    designRefs:
+      - docs/compliance/quality/software-quality-evaluation-profile.yml
+      - docs/compliance/quality/software-quality-evaluation-plan.yml
     codeRefs: []
     testRefs:
       - scripts/gates/iso_assurance_gate.py
@@ -160,6 +165,7 @@ traces:
     threatsOrHazards: []
     designRefs:
       - docs/compliance/quality/software-quality-evaluation-profile.yml
+      - docs/compliance/quality/software-quality-evaluation-plan.yml
       - docs/compliance/evidence/qualification-package-plan.md
     codeRefs: []
     testRefs:

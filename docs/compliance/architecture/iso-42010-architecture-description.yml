@@ -17,6 +17,9 @@ viewpoints:
   - {id: security, concerns: [authentication, authorization, encryption, audit], modelKinds: [threat-model, control-view]}
   - {id: safety, concerns: [hazards, controls, degraded-behavior], modelKinds: [hazard-control-view]}
   - {id: operations, concerns: [health, recovery, rollback, evidence], modelKinds: [operations-view]}
+views:
+  catalogue: docs/compliance/architecture/system-architecture-views.yml
+  requiredViewIds: [AV-CONTEXT, AV-FUNCTIONAL, AV-DEPLOYMENT, AV-INFORMATION, AV-SECURITY, AV-SAFETY, AV-OPERATIONS]
 correspondenceRules:
   - every public interface maps to one owning component and one trust boundary
   - every authoritative state maps to one owning service and documented degraded behavior
