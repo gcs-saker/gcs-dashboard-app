@@ -36,3 +36,16 @@ python scripts/ops/recovery_qualification.py --check
 기록한다. 임계값과 독립 판정이 승인되기 전에는 기술 결과가 성공해도 최종 판정은 `BLOCKED`다.
 세부 명령과 중단 기준은 `docs/operations/GCS-Saker_Server01_Recovery_Qualification.md`를 따른다.
 
+## Server-01 performance and stability qualification
+
+성능 프로파일 정적 검증은 운영 부하를 발생시키지 않는다.
+
+```bash
+python scripts/reports/performance_stability_qualification.py --check
+```
+
+실제 측정은 승인된 시험 창에서 기존 M7 benchmark와 streaming soak 수집기를 사용한다. 원시
+지연 샘플, 오류, backpressure, queue depth, 연결 복구, CPU·메모리, 시간 동기화와 source commit을
+정규화한 뒤 새 절대경로에만 판정 결과를 생성한다. 세부 절차는
+`docs/operations/GCS-Saker_Server01_Performance_Qualification.md`를 따른다.
+

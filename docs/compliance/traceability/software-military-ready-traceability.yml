@@ -166,6 +166,8 @@ traces:
       - docs/compliance/security/authorization-denial-matrix.yml
       - docs/compliance/quality/recovery-qualification-profile.yml
       - docs/operations/GCS-Saker_Server01_Recovery_Qualification.md
+      - docs/compliance/quality/performance-stability-qualification-profile.yml
+      - docs/operations/GCS-Saker_Server01_Performance_Qualification.md
     codeRefs: []
     testRefs:
       - scripts/gates/iso_assurance_gate.py
@@ -174,6 +176,8 @@ traces:
       - backend/tests/test_software_quality_measurement.py
       - scripts/ops/recovery_qualification.py
       - backend/tests/test_recovery_qualification.py
+      - scripts/reports/performance_stability_qualification.py
+      - backend/tests/test_performance_stability_qualification.py
     evidenceRefs: []
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/717
@@ -186,10 +190,14 @@ traces:
       - docs/compliance/evidence/qualification-package-plan.md
       - docs/compliance/quality/recovery-qualification-profile.yml
       - docs/operations/GCS-Saker_Server01_Recovery_Qualification.md
+      - docs/compliance/quality/performance-stability-qualification-profile.yml
+      - docs/operations/GCS-Saker_Server01_Performance_Qualification.md
     codeRefs:
       - scripts/ops/recovery_qualification.py
+      - scripts/reports/performance_stability_qualification.py
     testRefs:
       - backend/tests/test_recovery_qualification.py
+      - backend/tests/test_performance_stability_qualification.py
       - scripts/gates/iso_assurance_gate.py
       - backend/tests/test_iso_assurance_gate.py
       - scripts/reports/software_quality_measurement.py
