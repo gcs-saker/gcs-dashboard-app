@@ -56,7 +56,7 @@ func run() error {
 	defer stopGrpc()
 	grpcReadiness := grpcgateway.StartDeviceWithReadiness(grpcContext, config.grpcListenAddress, resources.gateway.server)
 	handler = handler.WithGatewayReadiness(grpcReadiness)
-	if err := startTalkbackLifecycleObserver(runtimeContext, config); err != nil {
+	if err := startTalkbackLifecycleObserver(runtimeContext, config, resources.metrics); err != nil {
 		return err
 	}
 	stopMQTT, err := startMQTTAdapter(runtimeContext, config)
@@ -71,6 +71,7 @@ type runtimeResources struct {
 	authorizer      *authpolicy.CachedAuthorizer
 	publishSessions *sessionstore.RedisStore
 	gateway         gatewayRuntime
+	metrics         *httpapi.Metrics
 }
 
 func (r runtimeResources) Close() {
@@ -110,7 +111,9 @@ func buildRuntime(config runtimeConfig) (httpapi.Server, runtimeResources, error
 	if gateway.rpc != nil {
 		handler = handler.WithSessionBindingValidator(gateway.rpc)
 	}
-	return handler, runtimeResources{publishSessions: publishSessions, gateway: gateway, authorizer: &authorizer}, nil
+	return handler, runtimeResources{
+		publishSessions: publishSessions, gateway: gateway, authorizer: &authorizer, metrics: metrics,
+	}, nil
 }
 
 func newHTTPServer(address string, handler http.Handler) *http.Server {

@@ -17,6 +17,9 @@ func newMetricsRegistry() (*prometheus.Registry, *Metrics) {
 		errors:                 newErrorsMetric(),
 		gatewayMessages:        newGatewayMessagesMetric(),
 		gatewayDuration:        newGatewayDurationMetric(),
+		talkbackSnapshots:      newTalkbackSnapshotsMetric(),
+		talkbackSnapshotTime:   newTalkbackSnapshotDurationMetric(),
+		talkbackTransitions:    newTalkbackTransitionsMetric(),
 	}
 	registry.MustRegister(
 		metrics.httpRequests,
@@ -30,6 +33,9 @@ func newMetricsRegistry() (*prometheus.Registry, *Metrics) {
 		metrics.errors,
 		metrics.gatewayMessages,
 		metrics.gatewayDuration,
+		metrics.talkbackSnapshots,
+		metrics.talkbackSnapshotTime,
+		metrics.talkbackTransitions,
 	)
 	return registry, metrics
 }

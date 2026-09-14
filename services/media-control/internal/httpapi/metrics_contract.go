@@ -1,16 +1,19 @@
 package httpapi
 
 const (
-	metricNamespace        = "gcs"
-	metricSubsystem        = "media_control"
-	metricResultHit        = "hit"
-	metricResultMiss       = "miss"
-	metricResultDegraded   = "degraded"
-	metricResultSuccess    = "success"
-	metricResultError      = "error"
-	metricSourceHTTP       = "http"
-	metricSourceStream     = "stream_registry"
-	metricSourceIceServers = "ice_servers"
+	metricNamespace           = "gcs"
+	metricSubsystem           = "media_control"
+	metricResultHit           = "hit"
+	metricResultMiss          = "miss"
+	metricResultDegraded      = "degraded"
+	metricResultSuccess       = "success"
+	metricResultError         = "error"
+	metricSourceHTTP          = "http"
+	metricSourceStream        = "stream_registry"
+	metricSourceIceServers    = "ice_servers"
+	metricSourceTalkback      = "talkback_lifecycle"
+	metricErrorSnapshotFailed = "snapshot_failed"
+	metricErrorAuditFailed    = "audit_sink_failed"
 )
 
 var (
