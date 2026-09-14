@@ -22,3 +22,17 @@ auth-policy 시험이 JUnit XML을 생성한 뒤 하나 이상의 `--junit` 인�
 운용 프로파일과 임계값이 승인 전이면 판정은
 `BLOCKED`다. 기존 결과를 덮어쓰지 않고 후보 릴리스별 불변 증거 디렉터리에 기록한다.
 
+## Server-01 recovery qualification
+
+복구 프로파일과 실행기 자체의 정적 검증은 운영 서비스에 영향을 주지 않는다.
+
+```bash
+python scripts/ops/recovery_qualification.py --check
+```
+
+실제 장애 주입은 승인된 점검 창, 현재 source commit과 일치하는 검증 백업, 비공개 절대경로
+증거 디렉터리가 모두 있을 때 Server-01에서 시나리오 하나씩 수행한다. 실행기는 컨테이너를
+삭제하거나 재생성하지 않고 중지·시작만 하며, 장애 전·중·후 공개 probe와 동일 컨테이너 ID를
+기록한다. 임계값과 독립 판정이 승인되기 전에는 기술 결과가 성공해도 최종 판정은 `BLOCKED`다.
+세부 명령과 중단 기준은 `docs/operations/GCS-Saker_Server01_Recovery_Qualification.md`를 따른다.
+

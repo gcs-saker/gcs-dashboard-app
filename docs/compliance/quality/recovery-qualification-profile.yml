@@ -1,0 +1,71 @@
+schemaVersion: gcs-saker.recovery-qualification.v1
+status: CONTROLLED_DRAFT_NOT_EXECUTED
+target: server01-production
+composeProject: gcs-saker-m2-production
+composeFile: deploy/compose/compose.single-node.poc.yml
+thresholds:
+  status: PROPOSED_NOT_APPROVED
+  recoveryRatio: 1.0
+  unrecoverableAcceptedRecords: 0
+  duplicateRecoveredRecords: 0
+  recoveryTimeObjectiveSeconds: 120
+preconditions:
+  - immutable source commit matches the deployed revision
+  - CI for the source commit is successful
+  - approved maintenance window identifier is recorded
+  - PostgreSQL restore drill result matches the source commit
+  - private owner-only evidence directory exists
+  - only one fault scenario runs at a time
+  - public health readiness and authorization denial pass before injection
+scenarios:
+  - id: RQ-POSTGRES
+    service: postgres-geo
+    stateful: true
+    expectedDuring: persistence-dependent operations fail closed without false acknowledgement
+    recoveryEvidence: [container-identity, health, readiness, accepted-record-reconciliation]
+  - id: RQ-REDIS
+    service: redis
+    stateful: true
+    expectedDuring: refresh fails closed and owned media caches use documented fallback only
+    recoveryEvidence: [container-identity, health, readiness, session-denial]
+  - id: RQ-MQTT
+    service: mqtt
+    stateful: true
+    expectedDuring: telemetry ingestion reports transport failure and bounded reconnect
+    recoveryEvidence: [container-identity, health, readiness, accepted-record-reconciliation]
+  - id: RQ-MEDIAMTX
+    service: mediamtx
+    stateful: false
+    expectedDuring: media readiness degrades while control-plane liveness remains observable
+    recoveryEvidence: [container-identity, health, readiness, media-session-recovery]
+  - id: RQ-AUTH-POLICY
+    service: auth-policy
+    stateful: false
+    expectedDuring: identity and policy-dependent operations fail closed
+    recoveryEvidence: [container-identity, health, readiness, authorization-denial]
+  - id: RQ-MEDIA-CONTROL
+    service: media-control
+    stateful: false
+    expectedDuring: stream session issuance is unavailable without exposing private routes
+    recoveryEvidence: [container-identity, health, readiness, authorization-denial]
+execution:
+  stopMode: docker-compose-stop-start
+  recreateContainers: false
+  retryIntervalSeconds: 2
+  maximumAttempts: 60
+  publicProbes:
+    - {path: /healthz, expectedStatus: 200}
+    - {path: /readyz, expectedStatus: 200}
+    - {path: /media-control/healthz, expectedStatus: 200}
+    - {path: /media-control/readyz, expectedStatus: 200}
+    - {path: /auth-policy/auth/me, expectedStatus: 401}
+evidence:
+  requiredFields: [scenarioId, sourceCommit, approvedWindowId, backupResultSha256, startedAt, recoveredAt, recoveryDurationSeconds, containerIdPreserved, faultObserved, preProbes, duringProbes, postProbes, technicalResult, verdict, limitations]
+  immutableWrite: true
+  privateArtifacts: [backup, environment, raw logs, accepted IDs, recovered IDs]
+  publicEvidenceProhibits: [credential, token, cookie, private IP, private route, raw personal data]
+verdictRules:
+  PASS: reserved until thresholds and evaluation authority are approved
+  FAIL: recovery exceeds an approved threshold or any invariant is violated
+  BLOCKED: technical checks pass but threshold approval or independent review is absent
+  NOT_RUN: scenario has not executed against the candidate release

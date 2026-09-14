@@ -18,6 +18,8 @@ Server-01 시험 부하와 네트워크 조건은
 [`requirements/software-product-test-requirements.yml`](requirements/software-product-test-requirements.yml),
 권한 거부 전수 항목은
 [`security/authorization-denial-matrix.yml`](security/authorization-denial-matrix.yml)에 둔다.
+장애 복구 시험 시나리오와 판정 계약은
+[`quality/recovery-qualification-profile.yml`](quality/recovery-qualification-profile.yml)에 둔다.
 
 프로파일의 상태는 `PASS`, `FAIL`, `BLOCKED`, `NOT_RUN`, `NOT_APPLICABLE`,
 `PLANNED_HARDWARE`만 사용한다. 공인 또는 독립 평가가 완료되지 않은 작업은 구현 여부와

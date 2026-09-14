@@ -372,6 +372,7 @@ jobs:
           python scripts/gates/military_ready_traceability_gate.py --check
           python scripts/gates/iso_assurance_gate.py --check
           python scripts/reports/software_quality_measurement.py --check
+          python scripts/ops/recovery_qualification.py --check
 
       - name: Validate threat model and attack-surface inventory
         run: python scripts/gates/attack_surface_gate.py --check

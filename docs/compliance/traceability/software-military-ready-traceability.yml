@@ -164,12 +164,16 @@ traces:
       - docs/compliance/quality/server01-software-operational-profile.yml
       - docs/compliance/requirements/software-product-test-requirements.yml
       - docs/compliance/security/authorization-denial-matrix.yml
+      - docs/compliance/quality/recovery-qualification-profile.yml
+      - docs/operations/GCS-Saker_Server01_Recovery_Qualification.md
     codeRefs: []
     testRefs:
       - scripts/gates/iso_assurance_gate.py
       - backend/tests/test_iso_assurance_gate.py
       - scripts/reports/software_quality_measurement.py
       - backend/tests/test_software_quality_measurement.py
+      - scripts/ops/recovery_qualification.py
+      - backend/tests/test_recovery_qualification.py
     evidenceRefs: []
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/717
@@ -180,8 +184,12 @@ traces:
       - docs/compliance/quality/software-quality-evaluation-plan.yml
       - docs/compliance/quality/server01-software-operational-profile.yml
       - docs/compliance/evidence/qualification-package-plan.md
-    codeRefs: []
+      - docs/compliance/quality/recovery-qualification-profile.yml
+      - docs/operations/GCS-Saker_Server01_Recovery_Qualification.md
+    codeRefs:
+      - scripts/ops/recovery_qualification.py
     testRefs:
+      - backend/tests/test_recovery_qualification.py
       - scripts/gates/iso_assurance_gate.py
       - backend/tests/test_iso_assurance_gate.py
       - scripts/reports/software_quality_measurement.py

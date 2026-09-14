@@ -63,13 +63,13 @@ procedures:
     measureId: QM-RECOVERY
     environment: ENV-SERVER01
     method: inject each approved service interruption after recording accepted work IDs then restore and reconcile
-    inputs: [fault scenario, accepted work IDs, before snapshot, after snapshot]
+    inputs: [recovery-qualification-profile.yml, fault scenario, accepted work IDs, before snapshot, after snapshot]
     outputs: [injected count, recovered count, unrecovered IDs, recovery duration]
   - id: QP-DATA-LOSS
     measureId: QM-DATA-LOSS
     environment: ENV-SERVER01
     method: reconcile every acknowledged idempotency ID against authoritative persistence after fault recovery
-    inputs: [acknowledged IDs, database snapshot, queue snapshot]
+    inputs: [recovery-qualification-profile.yml, acknowledged IDs, database snapshot, queue snapshot]
     outputs: [missing IDs, duplicate IDs, unrecoverable count]
   - id: QP-LATENCY-P95
     measureId: QM-LATENCY-P95
