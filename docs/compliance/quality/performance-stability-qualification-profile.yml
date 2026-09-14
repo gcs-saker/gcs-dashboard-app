@@ -1,0 +1,43 @@
+schemaVersion: gcs-saker.performance-stability-qualification.v1
+status: CONTROLLED_DRAFT_NOT_EXECUTED
+target: server01-production
+thresholds:
+  status: PROPOSED_NOT_APPROVED
+  controlPlaneLatencyP95Milliseconds: 500
+  telemetryAcceptanceLatencyP95Milliseconds: 250
+  continuousOperationSeconds: 86400
+  requestErrorCount: 0
+  backpressureEventCount: 0
+  unrecoveredDisconnectCount: 0
+sampling:
+  minimumWarmupSamples: 5
+  minimumMeasuredSamplesPerMetric: 30
+  retainRawSamples: true
+  requiredPercentiles: [p50, p95, p99]
+requiredEnvironmentFields: [deploymentProfile, hostFingerprint, imageDigests, datasetProfile, networkProfile, toolVersions]
+preconditions:
+  - candidate source commit and deployed revision match
+  - candidate CI is successful
+  - approved performance test window and load profile identifiers are recorded
+  - UTC time source and measured drift are recorded
+  - private owner-only evidence directory exists
+  - public health readiness and authorization denial pass before load
+collectors:
+  controlPlane: scripts/benchmarks/m7_performance_benchmark_matrix.py
+  streamingSoak: scripts/smoke/m7_streaming_stability_soak.sh
+requiredMetricCategories: [control-plane, telemetry-acceptance]
+requiredOperationalSignals:
+  - request errors
+  - backpressure events
+  - queue-depth samples
+  - disconnect and reconnect events
+  - CPU and memory samples
+evidence:
+  immutableWrite: true
+  privateArtifacts: [raw samples, environment fingerprint, host fingerprint, account identifiers]
+  publicEvidenceProhibits: [credential, token, cookie, private IP, private route, username, raw query data]
+verdictRules:
+  PASS: reserved until thresholds load profile and evaluation authority are approved
+  FAIL: a proposed engineering threshold is exceeded or required evidence is invalid
+  BLOCKED: technical checks pass but approval independent review or full duration evidence is absent
+  NOT_RUN: qualification has not executed against the candidate release

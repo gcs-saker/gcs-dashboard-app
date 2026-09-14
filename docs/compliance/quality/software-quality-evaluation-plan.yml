@@ -75,7 +75,7 @@ procedures:
     measureId: QM-LATENCY-P95
     environment: ENV-SERVER01
     method: execute the approved load profile with synchronized clocks and calculate p95 from retained raw samples
-    inputs: [load profile, dataset profile, raw timestamps]
+    inputs: [performance-stability-qualification-profile.yml, load profile, dataset profile, raw timestamps]
     outputs: [sample count, rejected samples, p50, p95, p99, raw sample artifact]
   - id: QP-AUTHZ-DENIAL
     measureId: QM-AUTHZ-DENIAL
