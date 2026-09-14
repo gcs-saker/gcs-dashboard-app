@@ -95,9 +95,12 @@ def test_manifest_accepts_complete_unexpired_vex() -> None:
 
 def test_deploy_verifies_manifest_and_all_attestations() -> None:
     verifier = (REPO_ROOT / "scripts/ops/verify_signed_release.sh").read_text(encoding="utf-8")
+    assert 'cosign_bin="${COSIGN_BIN:-}"' in verifier
+    assert '"${HOME}/.local/bin/cosign"' in verifier
+    assert '"${cosign_bin}" verify-blob' in verifier
+    assert '"${cosign_bin}" verify-attestation' in verifier
 
-    assert "cosign verify-blob" in verifier
-    assert "cosign verify-attestation --type slsaprovenance" in verifier
-    assert "cosign verify-attestation --type spdxjson" in verifier
+    assert '"${cosign_bin}" verify-attestation --type slsaprovenance' in verifier
+    assert '"${cosign_bin}" verify-attestation --type spdxjson' in verifier
     assert 'release_manifest.py" verify' in verifier
     assert "55122" not in verifier
