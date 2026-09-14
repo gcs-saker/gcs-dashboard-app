@@ -11,7 +11,7 @@ build_report = cast(Callable[[str], dict[str, Any]], MODULE["build_report"])
 def test_qualification_report_includes_failures_blockers_and_open_work() -> None:
     report = build_report("a" * 40)
 
-    assert report["requirements"]["total"] == 10
+    assert report["requirements"]["total"] == 14
     assert report["requirements"]["byStatus"]["BLOCKED"] >= 1
     assert report["hazards"] == {"total": 10, "byStatus": {"OPEN": 10}}
     assert report["stig"] == {
