@@ -8,10 +8,17 @@ expected_commit="${SOURCE_COMMIT:?Set SOURCE_COMMIT to the immutable checkout re
 identity='^https://github.com/gcs-saker/gcs-dashboard-app/.github/workflows/release-supply-chain.yml@refs/(tags|heads)/'
 issuer='https://token.actions.githubusercontent.com'
 
-command -v cosign >/dev/null || { echo "cosign is required" >&2; exit 127; }
+cosign_bin="${COSIGN_BIN:-}"
+if [[ -z "${cosign_bin}" ]]; then
+  cosign_bin="$(command -v cosign || true)"
+fi
+if [[ -z "${cosign_bin}" && -x "${HOME}/.local/bin/cosign" ]]; then
+  cosign_bin="${HOME}/.local/bin/cosign"
+fi
+[[ -n "${cosign_bin}" && -x "${cosign_bin}" ]] || { echo "cosign is required" >&2; exit 127; }
 [[ -f "${manifest}" && -f "${bundle}" ]] || { echo "signed release manifest evidence is missing" >&2; exit 2; }
 
-cosign verify-blob \
+"${cosign_bin}" verify-blob \
   --bundle "${bundle}" \
   --certificate-identity-regexp "${identity}" \
   --certificate-oidc-issuer "${issuer}" \
@@ -26,10 +33,10 @@ export MEDIA_CONTROL_IMAGE="$(jq -r '."media-control"' <<<"${inventory}")"
 export DASHBOARD_IMAGE="$(jq -r '.dashboard' <<<"${inventory}")"
 
 for image in "${BACKEND_IMAGE}" "${AUTH_POLICY_IMAGE}" "${MEDIA_CONTROL_IMAGE}" "${DASHBOARD_IMAGE}"; do
-  cosign verify --certificate-identity-regexp "${identity}" --certificate-oidc-issuer "${issuer}" "${image}" >/dev/null
-  cosign verify-attestation --type slsaprovenance \
+  "${cosign_bin}" verify --certificate-identity-regexp "${identity}" --certificate-oidc-issuer "${issuer}" "${image}" >/dev/null
+  "${cosign_bin}" verify-attestation --type slsaprovenance \
     --certificate-identity-regexp "${identity}" --certificate-oidc-issuer "${issuer}" "${image}" >/dev/null
-  cosign verify-attestation --type spdxjson \
+  "${cosign_bin}" verify-attestation --type spdxjson \
     --certificate-identity-regexp "${identity}" --certificate-oidc-issuer "${issuer}" "${image}" >/dev/null
 done
 
