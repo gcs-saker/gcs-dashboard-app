@@ -116,3 +116,15 @@ current Syft release containing additional Java group-ID corrections. Success cr
 `#710` remain evidence-based: regenerate the auth-policy SBOM, verify the installed Syft version,
 and compare unresolved Maven coordinates with the retained 27-coordinate baseline. Any coordinates
 still unresolved remain `UNKNOWN`; this action upgrade does not authorize inferred metadata.
+
+PR `#715` CI run `34811482293` installed Syft 1.51.1 and completed all required jobs. Replaying its
+auth-policy SBOM produced `ALLOWED=109`, `FIRST_PARTY=1`, `REVIEW_REQUIRED=15`, and `UNKNOWN=53`.
+The Maven PURL set was identical to the retained Syft 1.42.3 release baseline: none of the 27
+malformed or synthetic coordinates changed. The one first-party count difference is the expected
+CI image PURL (`pkg:oci/gcs-saker-auth-policy...`) rather than the release registry PURL and is not
+a Maven remediation result.
+
+The scanner upgrade is retained for immutable, consistent generation and current parser fixes, but
+issue `#710` remains open. Its next implementation must reconcile the scanner output against an
+authoritative, version-pinned Gradle runtime dependency manifest. It must reject ambiguous matches
+and preserve the original scanner record as provenance rather than guessing group names.
