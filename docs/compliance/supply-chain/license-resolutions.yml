@@ -180,3 +180,98 @@ resolutions:
     source: https://repo1.maven.org/maven2/org/springframework/security/spring-security-core/6.5.11/spring-security-core-6.5.11.pom
     verifiedBy: supply-chain-review
     verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework.security/spring-security-crypto@6.5.11
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/security/spring-security-crypto/6.5.11/spring-security-crypto-6.5.11.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework.security/spring-security-web@6.5.11
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/security/spring-security-web/6.5.11/spring-security-web-6.5.11.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-aop@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-aop/6.2.19/spring-aop-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-aspects@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-aspects/6.2.19/spring-aspects-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-beans@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-beans/6.2.19/spring-beans-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-context-support@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-context-support/6.2.19/spring-context-support-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-context@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-context/6.2.19/spring-context-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-core@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-core/6.2.19/spring-core-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-expression@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-expression/6.2.19/spring-expression-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-jcl@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-jcl/6.2.19/spring-jcl-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-jdbc@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-jdbc/6.2.19/spring-jdbc-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-messaging@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-messaging/6.2.19/spring-messaging-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-orm@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-orm/6.2.19/spring-orm-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-oxm@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-oxm/6.2.19/spring-oxm-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-tx@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-tx/6.2.19/spring-tx-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-web@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-web/6.2.19/spring-web-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-webmvc@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-webmvc/6.2.19/spring-webmvc-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework/spring-websocket@6.2.19
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/spring-websocket/6.2.19/spring-websocket-6.2.19.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/redis.clients.authentication/redis-authx-core@0.1.1-beta2
+    licenseExpression: MIT
+    source: https://repo1.maven.org/maven2/redis/clients/authentication/redis-authx-core/0.1.1-beta2/redis-authx-core-0.1.1-beta2.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14

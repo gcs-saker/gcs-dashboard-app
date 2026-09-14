@@ -97,3 +97,8 @@ inherited-license assumption, or legal exception was introduced.
 Batch 2 records another 15 exact Maven PURLs with direct Apache-2.0 or MIT declarations. One PURL
 occurs in more than one SBOM package record, so the auth-policy replay changes `ALLOWED` from 74 to
 90 and `UNKNOWN` from 87 to 71. The same fail-closed constraints remain in effect.
+
+Batch 3 records the final 19 exact Maven PURLs whose version POM directly declares Apache-2.0 or
+MIT. The auth-policy replay changes `ALLOWED` from 90 to 109 and `UNKNOWN` from 71 to 52. All
+remaining Maven records now require coordinate repair, parent-POM evidence, or explicit policy
+review; none are eligible for automatic allowlisting from their current SBOM metadata.
