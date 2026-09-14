@@ -73,6 +73,20 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up Java for auth-policy dependency evidence
+        if: matrix.image == 'auth-policy'
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+          cache-dependency-path: services/auth-policy/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Export authoritative auth-policy runtime coordinates
+        if: matrix.image == 'auth-policy'
+        working-directory: services/auth-policy
+        run: ./gradlew writeRuntimeDependencyManifest --no-daemon
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
@@ -105,8 +119,24 @@ jobs:
         with:
           image: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
           format: spdx-json
-          output-file: ${{ runner.temp }}/${{ matrix.image }}.spdx.json
-          artifact-name: ${{ matrix.image }}-release-sbom.spdx.json
+          output-file: ${{ runner.temp }}/${{ matrix.image }}.raw.spdx.json
+          artifact-name: ${{ matrix.image }}-release-sbom-raw.spdx.json
+
+      - name: Reconcile auth-policy Maven coordinates
+        if: matrix.image == 'auth-policy'
+        shell: bash
+        run: |
+          python scripts/reports/reconcile_maven_sbom.py \
+            --sbom "${RUNNER_TEMP}/${{ matrix.image }}.raw.spdx.json" \
+            --manifest services/auth-policy/build/reports/runtime-dependencies.json \
+            --output "${RUNNER_TEMP}/${{ matrix.image }}.spdx.json" \
+            --report "${RUNNER_TEMP}/${{ matrix.image }}.maven-reconciliation.json" \
+            --expected-corrections 27
+
+      - name: Preserve unchanged non-Maven SBOM
+        if: matrix.image != 'auth-policy'
+        shell: bash
+        run: cp "${RUNNER_TEMP}/${{ matrix.image }}.raw.spdx.json" "${RUNNER_TEMP}/${{ matrix.image }}.spdx.json"
 
       - name: Generate license disposition and notices
         shell: bash
@@ -125,6 +155,8 @@ jobs:
         with:
           name: ${{ matrix.image }}-license-review-evidence
           path: |
+            ${{ runner.temp }}/${{ matrix.image }}.spdx.json
+            ${{ runner.temp }}/${{ matrix.image }}.maven-reconciliation.json
             ${{ runner.temp }}/${{ matrix.image }}.license-report.json
             ${{ runner.temp }}/${{ matrix.image }}.THIRD_PARTY_NOTICES.md
           if-no-files-found: error

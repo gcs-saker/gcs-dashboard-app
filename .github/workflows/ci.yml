@@ -139,6 +139,9 @@ jobs:
       - name: Run auth-policy tests
         run: ./gradlew check --no-daemon
 
+      - name: Export authoritative runtime dependency coordinates
+        run: ./gradlew writeRuntimeDependencyManifest --no-daemon
+
       - name: Build auth-policy runtime image
         run: docker build --build-context contracts=../../contracts -t gcs-saker-auth-policy:ci .
 
@@ -146,7 +149,27 @@ jobs:
         uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: gcs-saker-auth-policy:ci
-          artifact-name: auth-policy-sbom.spdx.json
+          output-file: ${{ runner.temp }}/auth-policy-sbom.raw.spdx.json
+          artifact-name: auth-policy-sbom-raw.spdx.json
+
+      - name: Reconcile auth-policy Maven coordinates
+        working-directory: .
+        run: |
+          python scripts/reports/reconcile_maven_sbom.py \
+            --sbom "$RUNNER_TEMP/auth-policy-sbom.raw.spdx.json" \
+            --manifest services/auth-policy/build/reports/runtime-dependencies.json \
+            --output "$RUNNER_TEMP/auth-policy-sbom.spdx.json" \
+            --report "$RUNNER_TEMP/auth-policy-maven-reconciliation.json" \
+            --expected-corrections 27
+
+      - name: Upload reconciled auth-policy SBOM
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: auth-policy-sbom.spdx.json
+          path: |
+            ${{ runner.temp }}/auth-policy-sbom.spdx.json
+            ${{ runner.temp }}/auth-policy-maven-reconciliation.json
+          if-no-files-found: error
 
       - name: Scan auth-policy runtime image
         uses: anchore/scan-action@v6
@@ -355,6 +378,7 @@ jobs:
 
       - name: Validate supply-chain assurance policy
         run: |
+          python -m unittest discover -s scripts/reports -p 'test_*.py'
           python scripts/gates/supply_chain_policy_gate.py --check
           python scripts/gates/runtime_lifecycle_gate.py
           python scripts/gates/stig_assessment_gate.py
