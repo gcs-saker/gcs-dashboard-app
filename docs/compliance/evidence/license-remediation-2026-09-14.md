@@ -76,3 +76,9 @@ version, license, and disposition deduplication:
 PyPI version metadata for `protobuf@6.33.6` explicitly identifies the license as the 3-Clause BSD
 License. Its exact PURL is therefore resolved to `BSD-3-Clause`; this is factual metadata
 remediation, not a legal exception.
+
+Version-pinned upstream license files also resolve `itsdangerous@2.2.0` and `jinja2@3.1.6` to
+`BSD-3-Clause`. The `uvloop@0.22.1` upstream release contains both MIT and Apache 2.0 license files
+and identifies the package as dual-licensed, so its effective expression is
+`MIT OR Apache-2.0`. The remaining PyPI records have ambiguous, exceptional, or multi-part terms
+and remain blocked for further review.
