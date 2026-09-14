@@ -55,9 +55,7 @@ def package_purl(package: dict[str, Any]) -> str:
 
 
 def license_tokens(expression: str) -> set[str]:
-    return {
-        token for token in SPDX_TOKEN.findall(expression) if token not in LOGICAL_TOKENS
-    }
+    return {token for token in SPDX_TOKEN.findall(expression) if token not in LOGICAL_TOKENS}
 
 
 def load_resolutions(path: Path) -> dict[str, dict[str, str]]:
@@ -74,30 +72,22 @@ def load_resolutions(path: Path) -> dict[str, dict[str, str]]:
         verified_by = str(entry.get("verifiedBy", "")).strip()
         verified_on = str(entry.get("verifiedOn", "")).strip()
         if not purl.startswith("pkg:") or purl in resolutions:
-            raise LicenseComplianceError(
-                f"invalid or duplicate resolution purl: {purl}"
-            )
+            raise LicenseComplianceError(f"invalid or duplicate resolution purl: {purl}")
         if expression in UNKNOWN_EXPRESSIONS or expression.startswith("LicenseRef-"):
             raise LicenseComplianceError(f"invalid resolved license for {purl}")
         if not source.startswith("https://"):
             raise LicenseComplianceError(f"resolution source must use HTTPS for {purl}")
         if not verified_by or not verified_on:
-            raise LicenseComplianceError(
-                f"resolution audit fields are required for {purl}"
-            )
+            raise LicenseComplianceError(f"resolution audit fields are required for {purl}")
         try:
             date.fromisoformat(verified_on)
         except ValueError as error:
-            raise LicenseComplianceError(
-                f"invalid verifiedOn date for {purl}"
-            ) from error
+            raise LicenseComplianceError(f"invalid verifiedOn date for {purl}") from error
         resolutions[purl] = {"license": expression, "source": source}
     return resolutions
 
 
-def effective_license(
-    package: dict[str, Any], resolutions: dict[str, dict[str, str]]
-) -> tuple[str, str]:
+def effective_license(package: dict[str, Any], resolutions: dict[str, dict[str, str]]) -> tuple[str, str]:
     declared = str(package.get("licenseDeclared", "")).strip()
     resolution = resolutions.get(package_purl(package))
     if declared not in UNKNOWN_EXPRESSIONS and not declared.startswith("LicenseRef-"):
@@ -107,34 +97,20 @@ def effective_license(
     return declared, "SBOM licenseDeclared"
 
 
-def active_approval(
-    approvals: list[dict[str, Any]], purl: str, expression: str, today: date
-) -> dict[str, Any] | None:
+def active_approval(approvals: list[dict[str, Any]], purl: str, expression: str, today: date) -> dict[str, Any] | None:
     for approval in approvals:
-        if (
-            approval.get("purl") != purl
-            or approval.get("licenseExpression") != expression
-        ):
+        if approval.get("purl") != purl or approval.get("licenseExpression") != expression:
             continue
         expires = date.fromisoformat(str(approval.get("expiresAt")))
-        if (
-            expires >= today
-            and approval.get("approvedBy")
-            and approval.get("obligation")
-        ):
+        if expires >= today and approval.get("approvedBy") and approval.get("obligation"):
             return approval
     return None
 
 
-def classify_package(
-    package: dict[str, Any], rules: LicenseRules, today: date
-) -> tuple[str, str, str, str]:
+def classify_package(package: dict[str, Any], rules: LicenseRules, today: date) -> tuple[str, str, str, str]:
     expression, source = effective_license(package, rules.resolutions)
     purl = package_purl(package)
-    if any(
-        purl.startswith(prefix)
-        for prefix in rules.policy.get("firstPartyPurlPrefixes", [])
-    ):
+    if any(purl.startswith(prefix) for prefix in rules.policy.get("firstPartyPurlPrefixes", [])):
         return "FIRST_PARTY", "", expression, source
     if expression in UNKNOWN_EXPRESSIONS or expression.startswith("LicenseRef-"):
         return "UNKNOWN", "license metadata must be resolved", expression, source
@@ -168,9 +144,7 @@ def scan_sbom(path: Path, rules: LicenseRules, today: date) -> list[PackageDecis
         raise LicenseComplianceError(f"{path} has no SPDX packages")
     decisions: list[PackageDecision] = []
     for package in packages:
-        disposition, obligation, expression, source = classify_package(
-            package, rules, today
-        )
+        disposition, obligation, expression, source = classify_package(package, rules, today)
         decisions.append(
             PackageDecision(
                 path.stem,
@@ -188,9 +162,7 @@ def scan_sbom(path: Path, rules: LicenseRules, today: date) -> list[PackageDecis
 
 
 def build_report(paths: list[Path], rules: LicenseRules, today: date) -> dict[str, Any]:
-    decisions = [
-        decision for path in paths for decision in scan_sbom(path, rules, today)
-    ]
+    decisions = [decision for path in paths for decision in scan_sbom(path, rules, today)]
     counts: dict[str, int] = {}
     for decision in decisions:
         counts[decision.disposition] = counts.get(decision.disposition, 0) + 1
@@ -198,13 +170,8 @@ def build_report(paths: list[Path], rules: LicenseRules, today: date) -> dict[st
         "schemaVersion": "gcs-saker.license-compliance.v2",
         "generatedOn": today.isoformat(),
         "counts": dict(sorted(counts.items())),
-        "releaseAllowed": not any(
-            key in counts for key in ("DENIED", "UNKNOWN", "REVIEW_REQUIRED")
-        ),
-        "packages": [
-            decision_document(decision)
-            for decision in sorted(decisions, key=decision_sort_key)
-        ],
+        "releaseAllowed": not any(key in counts for key in ("DENIED", "UNKNOWN", "REVIEW_REQUIRED")),
+        "packages": [decision_document(decision) for decision in sorted(decisions, key=decision_sort_key)],
     }
 
 
@@ -255,9 +222,7 @@ def main() -> int:
     approvals = load_yaml(args.approvals).get("approvals", [])
     rules = LicenseRules(policy, approvals, load_resolutions(args.resolutions))
     report = build_report(args.sbom, rules, date.today())
-    args.report.write_text(
-        json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     args.notices.write_text(notice_markdown(report), encoding="utf-8")
     if args.enforce and not report["releaseAllowed"]:
         raise LicenseComplianceError(f"license release gate failed: {report['counts']}")
