@@ -49,3 +49,16 @@ python scripts/reports/performance_stability_qualification.py --check
 정규화한 뒤 새 절대경로에만 판정 결과를 생성한다. 세부 절차는
 `docs/operations/GCS-Saker_Server01_Performance_Qualification.md`를 따른다.
 
+## Architecture change-impact qualification
+
+두 불변 커밋 사이의 변경 파일을 생산 소유 경계별로 분류하고 교차 경계 변경을 검토 대상으로
+고정한다. 정적 카탈로그 검증은 다음과 같다.
+
+```bash
+python scripts/reports/change_impact_qualification.py --check
+```
+
+실제 보고서는 조상 관계가 확인된 base/candidate commit, 기대 소유자, 통제 change ID와 선택적
+검토 처분을 입력받아 새 절대경로에만 생성한다. 상세 절차는
+`docs/operations/GCS-Saker_Change_Impact_Qualification.md`를 따른다.
+

@@ -22,6 +22,8 @@ Server-01 시험 부하와 네트워크 조건은
 [`quality/recovery-qualification-profile.yml`](quality/recovery-qualification-profile.yml)에 둔다.
 성능·장시간 안정성 시험 시나리오와 판정 계약은
 [`quality/performance-stability-qualification-profile.yml`](quality/performance-stability-qualification-profile.yml)에 둔다.
+변경 영향과 생산 경계 소유권 계약은
+[`architecture/change-impact-ownership.yml`](architecture/change-impact-ownership.yml)에 둔다.
 
 프로파일의 상태는 `PASS`, `FAIL`, `BLOCKED`, `NOT_RUN`, `NOT_APPLICABLE`,
 `PLANNED_HARDWARE`만 사용한다. 공인 또는 독립 평가가 완료되지 않은 작업은 구현 여부와
