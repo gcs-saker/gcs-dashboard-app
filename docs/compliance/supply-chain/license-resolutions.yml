@@ -10,3 +10,8 @@ resolutions:
     source: https://pypi.org/pypi/grpcio/1.76.0/json
     verifiedBy: supply-chain-review
     verifiedOn: 2026-09-14
+  - purl: pkg:pypi/protobuf@6.33.6
+    licenseExpression: BSD-3-Clause
+    source: https://pypi.org/pypi/protobuf/6.33.6/json
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14

@@ -53,3 +53,26 @@ Release run `34806907389` did not reach license evaluation because the newly add
 action referenced an invalid immutable revision. The workflow remained fail-closed, and no image
 was signed or deployed. The reference was corrected to the repository's existing pinned
 `actions/upload-artifact` v5 revision.
+
+## Retained release evidence
+
+Signed release run `34807696915` evaluated commit
+`930d2664e68960c795f8d1025eda172b710bff27`. All four image jobs retained their JSON disposition
+reports and generated notices before enforcement. The counts remained unchanged from run
+`34805861025`; no image or release manifest was signed, and no production deployment occurred.
+
+Across the reports, 321 package records require action and 315 remain after exact package,
+version, license, and disposition deduplication:
+
+| Ecosystem | REVIEW_REQUIRED | UNKNOWN |
+|---|---:|---:|
+| Alpine APK | 54 | 9 |
+| Debian DEB | 83 | 21 |
+| Go modules | 0 | 30 |
+| Maven | 0 | 100 |
+| PyPI | 4 | 8 |
+| Generic / unavailable PURL | 0 | 2 |
+
+PyPI version metadata for `protobuf@6.33.6` explicitly identifies the license as the 3-Clause BSD
+License. Its exact PURL is therefore resolved to `BSD-3-Clause`; this is factual metadata
+remediation, not a legal exception.
