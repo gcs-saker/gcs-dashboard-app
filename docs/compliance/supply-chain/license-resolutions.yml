@@ -15,3 +15,18 @@ resolutions:
     source: https://pypi.org/pypi/protobuf/6.33.6/json
     verifiedBy: supply-chain-review
     verifiedOn: 2026-09-14
+  - purl: pkg:pypi/itsdangerous@2.2.0
+    licenseExpression: BSD-3-Clause
+    source: https://github.com/pallets/itsdangerous/blob/2.2.0/LICENSE.txt
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:pypi/jinja2@3.1.6
+    licenseExpression: BSD-3-Clause
+    source: https://github.com/pallets/jinja/blob/3.1.6/LICENSE.txt
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:pypi/uvloop@0.22.1
+    licenseExpression: MIT OR Apache-2.0
+    source: https://github.com/MagicStack/uvloop/tree/v0.22.1#license
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
