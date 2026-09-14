@@ -29,7 +29,9 @@ class ReconcileMavenSbomTest(unittest.TestCase):
             normalized["packages"][0]["externalRefs"][0]["referenceLocator"],
             "pkg:maven/io.grpc/grpc-core@1.76.0",
         )
-        self.assertEqual(source["packages"][0]["externalRefs"][0]["referenceLocator"], "pkg:maven/io.grpc.internal/grpc-core@1.76.0")
+        self.assertEqual(
+            source["packages"][0]["externalRefs"][0]["referenceLocator"], "pkg:maven/io.grpc.internal/grpc-core@1.76.0"
+        )
         self.assertEqual(changes[0]["originalPurl"], "pkg:maven/io.grpc.internal/grpc-core@1.76.0")
 
     def test_leaves_unmatched_coordinate_unchanged(self) -> None:

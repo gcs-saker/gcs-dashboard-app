@@ -112,7 +112,9 @@ def reconcile_document(
             continue
         replacement = candidates[0].purl
         reference["referenceLocator"] = replacement
-        changes.append({"spdxId": str(package.get("SPDXID", "")), "originalPurl": original, "canonicalPurl": replacement})
+        changes.append(
+            {"spdxId": str(package.get("SPDXID", "")), "originalPurl": original, "canonicalPurl": replacement}
+        )
     return normalized, changes
 
 
@@ -123,9 +125,7 @@ def write_json(path: Path, document: dict[str, Any]) -> None:
 
 def validate_correction_count(changes: list[dict[str, str]], expected: int | None) -> None:
     if expected is not None and len(changes) != expected:
-        raise MavenReconciliationError(
-            f"expected {expected} Maven coordinate corrections, found {len(changes)}"
-        )
+        raise MavenReconciliationError(f"expected {expected} Maven coordinate corrections, found {len(changes)}")
 
 
 def main() -> int:
