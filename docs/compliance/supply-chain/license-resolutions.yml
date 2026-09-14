@@ -1,0 +1,12 @@
+schemaVersion: gcs-saker.license-resolutions.v1
+resolutions:
+  - purl: pkg:pypi/blinker@1.9.0
+    licenseExpression: MIT
+    source: https://pypi.org/pypi/blinker/1.9.0/json
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:pypi/grpcio@1.76.0
+    licenseExpression: Apache-2.0
+    source: https://pypi.org/pypi/grpcio/1.76.0/json
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14

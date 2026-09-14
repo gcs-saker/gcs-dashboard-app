@@ -19,6 +19,7 @@ deniedLicenses: [AGPL-3.0-only, AGPL-3.0-or-later, SSPL-1.0, BUSL-1.1, UNKNOWN]
 firstPartyPurlPrefixes:
   - pkg:golang/github.com/gcs-saker/gcs-dashboard-app/
   - pkg:maven/org.springframework.boot.loader.launch.JarLauncher/auth-policy@
+  - pkg:oci/ghcr.io%2Fgcs-saker%2Fgcs-saker-
 artifacts:
   - id: backend-image
     sbom: IMPLEMENTED
