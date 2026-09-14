@@ -121,7 +121,7 @@ jobs:
             --notices "${RUNNER_TEMP}/${{ matrix.image }}.THIRD_PARTY_NOTICES.md"
 
       - name: Upload license review evidence
-        uses: actions/upload-artifact@330a01c490aca151604b8b47dc98fe5a052 # v5
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: ${{ matrix.image }}-license-review-evidence
           path: |

@@ -48,3 +48,8 @@ Signed release run `34805861025` evaluated commit
 No production deployment occurred. The release workflow now uploads each image's complete JSON
 disposition report and generated third-party notices before enforcing the gate, so future blocked
 runs retain the exact package evidence needed for review.
+
+Release run `34806907389` did not reach license evaluation because the newly added evidence upload
+action referenced an invalid immutable revision. The workflow remained fail-closed, and no image
+was signed or deployed. The reference was corrected to the repository's existing pinned
+`actions/upload-artifact` v5 revision.
