@@ -93,3 +93,7 @@ group field is malformed or synthetic.
 Batch 1 records 15 exact PURL resolutions whose POMs declare Apache-2.0 or MIT. Replaying the
 auth-policy SBOM changes `ALLOWED` from 59 to 74 and `UNKNOWN` from 102 to 87. No wildcard,
 inherited-license assumption, or legal exception was introduced.
+
+Batch 2 records another 15 exact Maven PURLs with direct Apache-2.0 or MIT declarations. One PURL
+occurs in more than one SBOM package record, so the auth-policy replay changes `ALLOWED` from 74 to
+90 and `UNKNOWN` from 87 to 71. The same fail-closed constraints remain in effect.

@@ -105,3 +105,78 @@ resolutions:
     source: https://repo1.maven.org/maven2/io/micrometer/micrometer-tracing-bridge-otel/1.5.12/micrometer-tracing-bridge-otel-1.5.12.pom
     verifiedBy: supply-chain-review
     verifiedOn: 2026-09-14
+  - purl: pkg:maven/io.micrometer/micrometer-tracing@1.5.12
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/io/micrometer/micrometer-tracing/1.5.12/micrometer-tracing-1.5.12.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/io.opentelemetry.semconv/opentelemetry-semconv@1.32.0
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/io/opentelemetry/semconv/opentelemetry-semconv/1.32.0/opentelemetry-semconv-1.32.0.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/io.perfmark/perfmark-api@0.27.0
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/io/perfmark/perfmark-api/0.27.0/perfmark-api-0.27.0.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.apache.logging.log4j/log4j-api@2.25.5
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/apache/logging/log4j/log4j-api/2.25.5/log4j-api-2.25.5.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.apache.logging.log4j/log4j-to-slf4j@2.25.5
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/apache/logging/log4j/log4j-to-slf4j/2.25.5/log4j-to-slf4j-2.25.5.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.jboss.logging/jboss-logging@3.6.3.Final
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/jboss/logging/jboss-logging/3.6.3.Final/jboss-logging-3.6.3.Final.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.jctools/jctools-core@4.0.5
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/jctools/jctools-core/4.0.5/jctools-core-4.0.5.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.jetbrains/annotations@13.0
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/jetbrains/annotations/13.0/annotations-13.0.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework.boot/spring-boot-actuator-autoconfigure@3.5.15
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/boot/spring-boot-actuator-autoconfigure/3.5.15/spring-boot-actuator-autoconfigure-3.5.15.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework.boot/spring-boot-actuator@3.5.15
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/boot/spring-boot-actuator/3.5.15/spring-boot-actuator-3.5.15.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework.boot/spring-boot-autoconfigure@3.5.15
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/boot/spring-boot-autoconfigure/3.5.15/spring-boot-autoconfigure-3.5.15.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework.boot/spring-boot@3.5.15
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/boot/spring-boot/3.5.15/spring-boot-3.5.15.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework.graphql/spring-graphql@1.4.6
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/graphql/spring-graphql/1.4.6/spring-graphql-1.4.6.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework.security/spring-security-config@6.5.11
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/security/spring-security-config/6.5.11/spring-security-config-6.5.11.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/org.springframework.security/spring-security-core@6.5.11
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/org/springframework/security/spring-security-core/6.5.11/spring-security-core-6.5.11.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
