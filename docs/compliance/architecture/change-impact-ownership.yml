@@ -1,0 +1,34 @@
+schemaVersion: gcs-saker.change-impact-ownership.v1
+status: CONTROLLED
+productionOwners:
+  - {id: backend-compatibility, prefix: backend/}
+  - {id: auth-policy, prefix: services/auth-policy/}
+  - {id: media-control, prefix: services/media-control/}
+  - {id: dashboard, prefix: gcs-dashboard/}
+  - {id: contracts, prefix: contracts/}
+  - {id: deployment, prefix: deploy/}
+nonProductionPrefixes: [.github/, docs/, scripts/]
+nonProductionPaths: [AGENTS.md, README.md, .gitignore, .gitattributes, mypy.ini]
+nonProductionPatterns:
+  - backend/tests/*
+  - services/*/src/test/*
+  - services/media-control/**/*_test.go
+  - gcs-dashboard/*.test.*
+  - gcs-dashboard/*.spec.*
+  - gcs-dashboard/**/*.test.*
+  - gcs-dashboard/**/*.spec.*
+rules:
+  unknownPath: FAIL
+  nonAncestorComparison: FAIL
+  expectedOwnerRequired: true
+  crossBoundaryChangesRequireDisposition: true
+  generatedFilesRemainOwnedByTheirProductionBoundary: true
+thresholds:
+  status: PROPOSED_NOT_APPROVED
+  crossBoundaryProductionOwners: 0
+  reviewedExceptions: required
+verdictRules:
+  PASS: reserved until the threshold and independent evaluation are approved
+  FAIL: an unknown path non-ancestor comparison or rejected boundary exception is present
+  BLOCKED: technical result is clean or reviewed but approval or independent evaluation is pending
+  NOT_RUN: no candidate comparison has been evaluated

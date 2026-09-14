@@ -87,7 +87,7 @@ procedures:
     measureId: QM-CHANGE-IMPACT
     environment: ENV-CI
     method: compare the approved adapter change against its merge base and classify modified production modules by owner
-    inputs: [merge base, candidate commit, architecture ownership catalogue]
+    inputs: [change-impact-ownership.yml, merge base, candidate commit, expected owner, reviewer disposition]
     outputs: [modified modules, cross-boundary modifications, count, reviewer disposition]
   - id: QP-HAZARD-CLOSURE
     measureId: QM-HAZARD-CLOSURE
