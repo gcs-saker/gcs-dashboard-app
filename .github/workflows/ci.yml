@@ -100,7 +100,7 @@ jobs:
         run: docker build -t gcs-saker-media-control:ci .
 
       - name: Generate media-control SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: gcs-saker-media-control:ci
           artifact-name: media-control-sbom.spdx.json
@@ -143,7 +143,7 @@ jobs:
         run: docker build --build-context contracts=../../contracts -t gcs-saker-auth-policy:ci .
 
       - name: Generate auth-policy SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: gcs-saker-auth-policy:ci
           artifact-name: auth-policy-sbom.spdx.json
@@ -217,7 +217,7 @@ jobs:
         run: docker build -t gcs-saker-backend:ci .
 
       - name: Generate backend SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: gcs-saker-backend:ci
           artifact-name: backend-sbom.spdx.json
@@ -275,7 +275,7 @@ jobs:
         run: docker build -t gcs-saker-dashboard:ci .
 
       - name: Generate dashboard SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: gcs-saker-dashboard:ci
           artifact-name: dashboard-sbom.spdx.json
