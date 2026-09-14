@@ -102,3 +102,29 @@ Batch 3 records the final 19 exact Maven PURLs whose version POM directly declar
 MIT. The auth-policy replay changes `ALLOWED` from 90 to 109 and `UNKNOWN` from 71 to 52. All
 remaining Maven records now require coordinate repair, parent-POM evidence, or explicit policy
 review; none are eligible for automatic allowlisting from their current SBOM metadata.
+
+## Maven coordinate correction
+
+The retained auth-policy SBOM contains 27 Maven PURLs whose group names do not resolve in Maven
+Central. Inspection of the packaged JARs showed that several omit Maven `pom.properties`; Syft
+1.42.3 then derived synthetic group names from Java module metadata. This is an upstream scanner
+classification defect, not evidence that those coordinates or licenses are valid.
+
+CI and signed-release workflows now use the same immutable `anchore/sbom-action` v0.24.2 commit,
+replacing both the mutable `v0` CI reference and the older release pin. The newer action supplies a
+current Syft release containing additional Java group-ID corrections. Success criteria for issue
+`#710` remain evidence-based: regenerate the auth-policy SBOM, verify the installed Syft version,
+and compare unresolved Maven coordinates with the retained 27-coordinate baseline. Any coordinates
+still unresolved remain `UNKNOWN`; this action upgrade does not authorize inferred metadata.
+
+PR `#715` CI run `34811482293` installed Syft 1.51.1 and completed all required jobs. Replaying its
+auth-policy SBOM produced `ALLOWED=109`, `FIRST_PARTY=1`, `REVIEW_REQUIRED=15`, and `UNKNOWN=53`.
+The Maven PURL set was identical to the retained Syft 1.42.3 release baseline: none of the 27
+malformed or synthetic coordinates changed. The one first-party count difference is the expected
+CI image PURL (`pkg:oci/gcs-saker-auth-policy...`) rather than the release registry PURL and is not
+a Maven remediation result.
+
+The scanner upgrade is retained for immutable, consistent generation and current parser fixes, but
+issue `#710` remains open. Its next implementation must reconcile the scanner output against an
+authoritative, version-pinned Gradle runtime dependency manifest. It must reject ambiguous matches
+and preserve the original scanner record as provenance rather than guessing group names.
