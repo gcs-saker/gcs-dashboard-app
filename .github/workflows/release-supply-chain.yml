@@ -118,6 +118,26 @@ jobs:
             --approvals docs/compliance/supply-chain/license-approvals.yml \
             --resolutions docs/compliance/supply-chain/license-resolutions.yml \
             --report "${RUNNER_TEMP}/${{ matrix.image }}.license-report.json" \
+            --notices "${RUNNER_TEMP}/${{ matrix.image }}.THIRD_PARTY_NOTICES.md"
+
+      - name: Upload license review evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8b47dc98fe5a052 # v5
+        with:
+          name: ${{ matrix.image }}-license-review-evidence
+          path: |
+            ${{ runner.temp }}/${{ matrix.image }}.license-report.json
+            ${{ runner.temp }}/${{ matrix.image }}.THIRD_PARTY_NOTICES.md
+          if-no-files-found: error
+
+      - name: Enforce approved license disposition
+        shell: bash
+        run: |
+          python scripts/reports/license_compliance.py \
+            --sbom "${RUNNER_TEMP}/${{ matrix.image }}.spdx.json" \
+            --policy docs/compliance/supply-chain/supply-chain-policy.yml \
+            --approvals docs/compliance/supply-chain/license-approvals.yml \
+            --resolutions docs/compliance/supply-chain/license-resolutions.yml \
+            --report "${RUNNER_TEMP}/${{ matrix.image }}.license-report.json" \
             --notices "${RUNNER_TEMP}/${{ matrix.image }}.THIRD_PARTY_NOTICES.md" \
             --enforce
 
