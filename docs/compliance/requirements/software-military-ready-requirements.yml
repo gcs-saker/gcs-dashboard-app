@@ -73,6 +73,42 @@ requirements:
     verificationMethods: [process-assessment]
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/655
+  - id: MR-ARCH-001
+    title: Controlled architecture description
+    statement: The architecture description shall identify the system of interest, stakeholders, concerns, viewpoints, views, correspondence rules, and decision rationale.
+    sourceStandards: [ISO-IEC-IEEE-42010]
+    assuranceClass: architecture
+    owner: architecture-and-assurance
+    verificationMethods: [architecture-description-review]
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/717
+  - id: MR-QUALITY-001
+    title: Product quality requirement model
+    statement: Product quality requirements shall be classified against the selected ISO/IEC 25010 characteristics and linked to measurable acceptance criteria.
+    sourceStandards: [ISO-IEC-25010]
+    assuranceClass: quality
+    owner: quality-assurance
+    verificationMethods: [quality-requirement-review]
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/717
+  - id: MR-MEASURE-001
+    title: Repeatable software product quality measurement
+    statement: Each selected quality measure shall define its calculation, unit, evidence source, environment, threshold authority, and repeatable collection procedure.
+    sourceStandards: [ISO-IEC-25023]
+    assuranceClass: quality
+    owner: quality-assurance
+    verificationMethods: [analysis, measurement-test]
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/717
+  - id: MR-EVAL-001
+    title: Controlled product quality evaluation
+    statement: Every qualification evaluation shall define scope, rigor, methods, acceptance authority, evidence retention, findings, and conclusion before execution.
+    sourceStandards: [ISO-IEC-25040]
+    assuranceClass: quality
+    owner: quality-assurance
+    verificationMethods: [evaluation-plan-review, independent-assessment]
+    status: NOT_RUN
+    plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/717
   - id: MR-HW-ENV-001
     title: Future environmental qualification
     statement: A representative hardware article shall receive an operational-environment-tailored MIL-STD-810H qualification when hardware scope is activated.

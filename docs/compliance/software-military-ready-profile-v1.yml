@@ -133,6 +133,54 @@ standards:
     requirementIds: [MR-SDLC-001]
     clauseScope: [agreement, organizational project-enabling, technical management, and technical processes]
     status: NOT_RUN
+  - id: ISO-IEC-IEEE-42010
+    title: Software, systems and enterprise - Architecture description
+    revision: 2022
+    documentDate: 2022-11
+    source: https://www.iso.org/standard/74393.html
+    applicability: APPLICABLE
+    rationale: The product needs a controlled description of stakeholders, concerns, viewpoints, models, and architecture decisions.
+    owner: architecture-and-assurance
+    verification: architecture-description-review
+    requirementIds: [MR-ARCH-001]
+    clauseScope: [architecture description, stakeholders and concerns, viewpoints and views, correspondence and decisions]
+    status: NOT_RUN
+  - id: ISO-IEC-25010
+    title: Systems and software Quality Requirements and Evaluation - Product quality model
+    revision: 2023
+    documentDate: 2023-11
+    source: https://www.iso.org/standard/78176.html
+    applicability: APPLICABLE
+    rationale: Product quality requirements need a consistent model covering software, data, and communications.
+    owner: quality-assurance
+    verification: quality-requirement-review
+    requirementIds: [MR-QUALITY-001]
+    clauseScope: [product quality characteristics and subcharacteristics selected for the product]
+    status: NOT_RUN
+  - id: ISO-IEC-25023
+    title: Systems and software product quality measurement
+    revision: 2016
+    documentDate: 2016-06
+    source: https://www.iso.org/standard/35747.html
+    applicability: APPLICABLE
+    rationale: Quality claims require repeatable measures with product-owned thresholds and raw evidence.
+    owner: quality-assurance
+    verification: measurement-review-and-test
+    requirementIds: [MR-MEASURE-001]
+    clauseScope: [quality measures, quality measure elements, measurement records]
+    status: NOT_RUN
+  - id: ISO-IEC-25040
+    title: Systems and software Quality Requirements and Evaluation - Evaluation framework
+    revision: 2024
+    documentDate: 2024-09
+    source: https://www.iso.org/standard/83467.html
+    applicability: APPLICABLE
+    rationale: Internal and independent evaluations need a defined scope, rigor, acceptance authority, and repeatable verdict process.
+    owner: quality-assurance
+    verification: evaluation-plan-review
+    requirementIds: [MR-EVAL-001]
+    clauseScope: [evaluation requirements, specification, design, execution, and conclusion]
+    status: NOT_RUN
   - id: MIL-STD-810H
     title: Environmental Engineering Considerations and Laboratory Tests
     revision: H Change 1

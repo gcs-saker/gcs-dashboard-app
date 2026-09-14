@@ -24,7 +24,7 @@ def documents() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
 def test_traceability_gate_accepts_the_controlled_baseline() -> None:
     profile, catalog, trace = documents()
 
-    assert validate_documents(profile, catalog, trace) == 10
+    assert validate_documents(profile, catalog, trace) == 14
 
 
 def test_traceability_gate_rejects_an_orphan_requirement() -> None:

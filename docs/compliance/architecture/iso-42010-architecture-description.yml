@@ -1,0 +1,28 @@
+schemaVersion: gcs-saker.architecture-description.v1
+standard: ISO/IEC/IEEE 42010:2022
+status: DRAFT_NOT_ASSESSED
+systemOfInterest: GCS-Saker server, browser dashboard, device ingress, and media-control software
+stakeholders:
+  - {id: operator, concerns: [situational-awareness, response-time, error-recovery]}
+  - {id: administrator, concerns: [identity, group-policy, auditability]}
+  - {id: maintainer, concerns: [modifiability, deployability, recovery]}
+  - {id: security-assessor, concerns: [trust-boundaries, access-control, evidence-integrity]}
+  - {id: safety-reviewer, concerns: [hazard-controls, stale-data, wrong-target-actions]}
+  - {id: external-integrator, concerns: [contracts, interoperability, versioning]}
+viewpoints:
+  - {id: context, concerns: [system-boundary, external-actors, external-systems], modelKinds: [context-diagram]}
+  - {id: functional, concerns: [responsibilities, interfaces, data-flow], modelKinds: [component-model, data-flow-model]}
+  - {id: deployment, concerns: [runtime-nodes, network-zones, trust-boundaries], modelKinds: [deployment-model]}
+  - {id: information, concerns: [authoritative-state, retention, identity-correlation], modelKinds: [information-model]}
+  - {id: security, concerns: [authentication, authorization, encryption, audit], modelKinds: [threat-model, control-view]}
+  - {id: safety, concerns: [hazards, controls, degraded-behavior], modelKinds: [hazard-control-view]}
+  - {id: operations, concerns: [health, recovery, rollback, evidence], modelKinds: [operations-view]}
+correspondenceRules:
+  - every public interface maps to one owning component and one trust boundary
+  - every authoritative state maps to one owning service and documented degraded behavior
+  - every safety or security concern maps to a requirement and verification record
+decisionRecords:
+  requiredFields: [id, status, context, decision, alternatives, consequences, sourceCommit, reviewers]
+conformance:
+  claim: NOT_ASSESSED
+  completionRequires: [all views published, correspondence review, decision review, independent assessment]

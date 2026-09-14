@@ -1,0 +1,65 @@
+schemaVersion: gcs-saker.software-quality-evaluation.v1
+standards: [ISO/IEC 25010:2023, ISO/IEC 25023:2016, ISO/IEC 25040:2024]
+status: DRAFT_NOT_ASSESSED
+qualityCharacteristics:
+  - functional-suitability
+  - performance-efficiency
+  - compatibility
+  - interaction-capability
+  - reliability
+  - security
+  - maintainability
+  - flexibility
+  - safety
+thresholdPolicy:
+  status: PROPOSED_NOT_APPROVED
+  authority: quality-assurance-and-independent-evaluator
+  rule: A proposed value cannot produce PASS until the operational profile and acceptance authority approve it.
+measures:
+  - id: QM-FUNC-COMPLETE
+    characteristic: functional-suitability
+    calculation: verified required functions / applicable required functions
+    unit: ratio
+    proposedThreshold: 1.0
+    evidenceSource: requirements-to-test traceability report
+  - id: QM-RECOVERY
+    characteristic: reliability
+    calculation: successfully recovered interrupted work items / injected interrupted work items
+    unit: ratio
+    proposedThreshold: 1.0
+    evidenceSource: controlled restart and recovery test
+  - id: QM-DATA-LOSS
+    characteristic: reliability
+    calculation: unrecoverable accepted records after fault injection
+    unit: count
+    proposedThreshold: 0
+    evidenceSource: persistence and queue fault-injection report
+  - id: QM-LATENCY-P95
+    characteristic: performance-efficiency
+    calculation: 95th percentile end-to-end latency under the approved load profile
+    unit: milliseconds
+    proposedThreshold: pending-operational-profile
+    evidenceSource: immutable benchmark result
+  - id: QM-AUTHZ-DENIAL
+    characteristic: security
+    calculation: correctly denied unauthorized cases / attempted unauthorized cases
+    unit: ratio
+    proposedThreshold: 1.0
+    evidenceSource: negative authorization test report
+  - id: QM-CHANGE-IMPACT
+    characteristic: maintainability
+    calculation: existing production modules modified for a conforming adapter addition
+    unit: count
+    proposedThreshold: pending-baseline
+    evidenceSource: reviewed change-impact report
+  - id: QM-HAZARD-CLOSURE
+    characteristic: safety
+    calculation: hazards with verified controls and accepted residual risk / identified applicable hazards
+    unit: ratio
+    proposedThreshold: 1.0
+    evidenceSource: closed-loop hazard report
+evaluationProcess:
+  stages: [establish-requirements, specify-evaluation, design-evaluation, execute-evaluation, conclude-evaluation]
+  requiredRecordFields: [scope, sourceCommit, environment, methods, toolVersions, rawEvidence, findings, verdict, reviewer]
+  verdicts: [PASS, FAIL, BLOCKED, NOT_RUN]
+  independentAssessmentRequiredFor: [conformant, certified]
