@@ -30,3 +30,78 @@ resolutions:
     source: https://github.com/MagicStack/uvloop/tree/v0.22.1#license
     verifiedBy: supply-chain-review
     verifiedOn: 2026-09-14
+  - purl: pkg:maven/com.google.android/annotations@4.1.1.4
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/com/google/android/annotations/4.1.1.4/annotations-4.1.1.4.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/com.google.code.gson/gson@2.13.2
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/com.google.errorprone/error_prone_annotations@2.41.0
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/com/google/errorprone/error_prone_annotations/2.41.0/error_prone_annotations-2.41.0.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/com.google.j2objc/j2objc-annotations@3.0.0
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/com/google/j2objc/j2objc-annotations/3.0.0/j2objc-annotations-3.0.0.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/com.graphql-java/graphql-java@24.3
+    licenseExpression: MIT
+    source: https://repo1.maven.org/maven2/com/graphql-java/graphql-java/24.3/graphql-java-24.3.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/com.graphql-java/java-dataloader@5.0.3
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/com/graphql-java/java-dataloader/5.0.3/java-dataloader-5.0.3.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/io.grpc/grpc-api@1.76.0
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/io/grpc/grpc-api/1.76.0/grpc-api-1.76.0.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/io.lettuce/lettuce-core@6.6.0.RELEASE
+    licenseExpression: MIT
+    source: https://repo1.maven.org/maven2/io/lettuce/lettuce-core/6.6.0.RELEASE/lettuce-core-6.6.0.RELEASE.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/io.micrometer/context-propagation@1.1.4
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/io/micrometer/context-propagation/1.1.4/context-propagation-1.1.4.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/io.micrometer/micrometer-commons@1.15.12
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/io/micrometer/micrometer-commons/1.15.12/micrometer-commons-1.15.12.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/io.micrometer/micrometer-core@1.15.12
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/io/micrometer/micrometer-core/1.15.12/micrometer-core-1.15.12.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/io.micrometer/micrometer-jakarta9@1.15.12
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/io/micrometer/micrometer-jakarta9/1.15.12/micrometer-jakarta9-1.15.12.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/io.micrometer/micrometer-observation@1.15.12
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/io/micrometer/micrometer-observation/1.15.12/micrometer-observation-1.15.12.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/io.micrometer/micrometer-registry-prometheus@1.15.12
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/io/micrometer/micrometer-registry-prometheus/1.15.12/micrometer-registry-prometheus-1.15.12.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14
+  - purl: pkg:maven/io.micrometer/micrometer-tracing-bridge-otel@1.5.12
+    licenseExpression: Apache-2.0
+    source: https://repo1.maven.org/maven2/io/micrometer/micrometer-tracing-bridge-otel/1.5.12/micrometer-tracing-bridge-otel-1.5.12.pom
+    verifiedBy: supply-chain-review
+    verifiedOn: 2026-09-14

@@ -82,3 +82,14 @@ Version-pinned upstream license files also resolve `itsdangerous@2.2.0` and `jin
 and identifies the package as dual-licensed, so its effective expression is
 `MIT OR Apache-2.0`. The remaining PyPI records have ambiguous, exceptional, or multi-part terms
 and remain blocked for further review.
+
+## Maven remediation batch 1
+
+The 100 Maven `UNKNOWN` records were queried by exact group, artifact, and version against their
+version-pinned Maven Central POMs. The initial inventory produced 57 POMs with explicit licenses,
+16 without a direct license declaration, and 27 coordinates that did not resolve because the SBOM
+group field is malformed or synthetic.
+
+Batch 1 records 15 exact PURL resolutions whose POMs declare Apache-2.0 or MIT. Replaying the
+auth-policy SBOM changes `ALLOWED` from 59 to 74 and `UNKNOWN` from 102 to 87. No wildcard,
+inherited-license assumption, or legal exception was introduced.
