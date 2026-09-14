@@ -15,6 +15,18 @@ thresholdPolicy:
   status: PROPOSED_NOT_APPROVED
   authority: quality-assurance-and-independent-evaluator
   rule: A proposed value cannot produce PASS until the operational profile and acceptance authority approve it.
+operationalProfile: docs/compliance/quality/server01-software-operational-profile.yml
+proposedAcceptanceThresholds:
+  functionalCompletenessRatio: 1.0
+  authorizationCorrectDenialRatio: 1.0
+  authorizationUnexpectedPermitCount: 0
+  unrecoverableAcceptedRecordCount: 0
+  recoveryRatio: 1.0
+  controlPlaneLatencyP95Milliseconds: 500
+  telemetryAcceptanceLatencyP95Milliseconds: 250
+  recoveryTimeObjectiveSeconds: 120
+  continuousOperationHours: 24
+  rationale: Initial engineering targets for evaluator review; they are not capacity or conformance claims.
 measures:
   - id: QM-FUNC-COMPLETE
     characteristic: functional-suitability
@@ -41,7 +53,7 @@ measures:
     characteristic: performance-efficiency
     calculation: 95th percentile end-to-end latency under the approved load profile
     unit: milliseconds
-    proposedThreshold: pending-operational-profile
+    proposedThreshold: {controlPlaneMilliseconds: 500, telemetryAcceptanceMilliseconds: 250}
     evidenceSource: immutable benchmark result
     procedureRef: QP-LATENCY-P95
   - id: QM-AUTHZ-DENIAL
@@ -55,7 +67,7 @@ measures:
     characteristic: maintainability
     calculation: existing production modules modified for a conforming adapter addition
     unit: count
-    proposedThreshold: pending-baseline
+    proposedThreshold: {crossBoundaryProductionModules: 0, reviewedExceptions: required}
     evidenceSource: reviewed change-impact report
     procedureRef: QP-CHANGE-IMPACT
   - id: QM-HAZARD-CLOSURE
