@@ -32,3 +32,19 @@ artifacts by the existing registry and image-name namespace.
 This replay proves that exact metadata resolution works and remains fail-closed. It is not a new
 signed release, and 176 unknown plus 145 review-required package records remain before a release can
 pass the license gate.
+
+## Current release replay
+
+Signed release run `34805861025` evaluated commit
+`2b44297d647ed3669e0ae509982f6afdba61551b` and remained `BLOCKED` before image signing:
+
+| Image | ALLOWED | FIRST_PARTY | REVIEW_REQUIRED | UNKNOWN |
+|---|---:|---:|---:|---:|
+| backend | 43 | 1 | 87 | 36 |
+| auth-policy | 59 | 2 | 15 | 102 |
+| media-control | 7 | 2 | 10 | 30 |
+| dashboard | 29 | 1 | 33 | 8 |
+
+No production deployment occurred. The release workflow now uploads each image's complete JSON
+disposition report and generated third-party notices before enforcing the gate, so future blocked
+runs retain the exact package evidence needed for review.
