@@ -22,44 +22,52 @@ measures:
     unit: ratio
     proposedThreshold: 1.0
     evidenceSource: requirements-to-test traceability report
+    procedureRef: QP-FUNC-COMPLETE
   - id: QM-RECOVERY
     characteristic: reliability
     calculation: successfully recovered interrupted work items / injected interrupted work items
     unit: ratio
     proposedThreshold: 1.0
     evidenceSource: controlled restart and recovery test
+    procedureRef: QP-RECOVERY
   - id: QM-DATA-LOSS
     characteristic: reliability
     calculation: unrecoverable accepted records after fault injection
     unit: count
     proposedThreshold: 0
     evidenceSource: persistence and queue fault-injection report
+    procedureRef: QP-DATA-LOSS
   - id: QM-LATENCY-P95
     characteristic: performance-efficiency
     calculation: 95th percentile end-to-end latency under the approved load profile
     unit: milliseconds
     proposedThreshold: pending-operational-profile
     evidenceSource: immutable benchmark result
+    procedureRef: QP-LATENCY-P95
   - id: QM-AUTHZ-DENIAL
     characteristic: security
     calculation: correctly denied unauthorized cases / attempted unauthorized cases
     unit: ratio
     proposedThreshold: 1.0
     evidenceSource: negative authorization test report
+    procedureRef: QP-AUTHZ-DENIAL
   - id: QM-CHANGE-IMPACT
     characteristic: maintainability
     calculation: existing production modules modified for a conforming adapter addition
     unit: count
     proposedThreshold: pending-baseline
     evidenceSource: reviewed change-impact report
+    procedureRef: QP-CHANGE-IMPACT
   - id: QM-HAZARD-CLOSURE
     characteristic: safety
     calculation: hazards with verified controls and accepted residual risk / identified applicable hazards
     unit: ratio
     proposedThreshold: 1.0
     evidenceSource: closed-loop hazard report
+    procedureRef: QP-HAZARD-CLOSURE
 evaluationProcess:
   stages: [establish-requirements, specify-evaluation, design-evaluation, execute-evaluation, conclude-evaluation]
   requiredRecordFields: [scope, sourceCommit, environment, methods, toolVersions, rawEvidence, findings, verdict, reviewer]
   verdicts: [PASS, FAIL, BLOCKED, NOT_RUN]
   independentAssessmentRequiredFor: [conformant, certified]
+  planRef: docs/compliance/quality/software-quality-evaluation-plan.yml

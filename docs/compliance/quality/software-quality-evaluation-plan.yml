@@ -1,0 +1,105 @@
+schemaVersion: gcs-saker.quality-evaluation-plan.v1
+status: CONTROLLED_DRAFT_NOT_EXECUTED
+standards: [ISO/IEC 25010:2023, ISO/IEC 25023:2016, ISO/IEC 25040:2024]
+evaluationId: QE-GCS-SAKER-SOFTWARE-V1
+scope:
+  product: GCS-Saker Server-01 single-node software deployment
+  included: [public edge, dashboard, auth-policy, media-control, compatibility backend, PostgreSQL, Redis, MQTT, MediaMTX, TURN]
+  excluded: [physical drone hardware, environmental qualification, EMC qualification, unimplemented AI overlay, unimplemented waypoint control]
+  baselineRule: every execution binds one full immutable source commit and released image digests
+roles:
+  evaluationSponsor: product-owner
+  evaluationManager: quality-assurance
+  evidenceCustodian: configuration-management
+  technicalOperators: [software-test, security-test, operations]
+  acceptanceAuthority: pending-designation
+  independentEvaluator: pending-designation
+independence:
+  rule: authors may collect evidence but cannot independently accept their own finding or declare conformance
+  requiredFor: [threshold-approval, finding-disposition, final-conformance-claim]
+entryCriteria:
+  - evaluation scope and operational profile are approved
+  - acceptance authority and independent evaluator are named
+  - source commit and image digests are immutable
+  - requirements and traceability gates pass
+  - test environment and tool versions are recorded
+  - proposed thresholds are approved or the result remains NOT_RUN
+exitCriteria:
+  - every applicable measure has PASS FAIL or BLOCKED with immutable evidence
+  - every failure has a finding owner disposition and due date
+  - inherited evidence has passed delta-impact review
+  - limitations and excluded scope are disclosed
+  - final conclusion is independently signed
+environmentProfiles:
+  - id: ENV-CI
+    purpose: deterministic contract unit integration build and static assessment
+    requiredFields: [runnerImage, operatingSystem, cpu, memory, toolVersions, sourceCommit]
+  - id: ENV-SERVER01
+    purpose: production-representative runtime performance recovery and security assessment
+    requiredFields: [deploymentProfile, hostFingerprint, imageDigests, datasetProfile, networkProfile, timeSource, sourceCommit]
+sampling:
+  functionalAndAuthorization: all applicable controlled cases
+  recoveryAndFaultInjection: minimum 3 independent repetitions per approved fault scenario
+  performance: warmup followed by minimum 30 measured samples under the approved load profile
+  rule: failed or discarded samples remain recorded with rationale
+evidenceHandling:
+  manifest: docs/compliance/evidence/evidence-manifest-template.yml
+  requiredArtifactMetadata: [artifactId, sha256, mediaType, immutableLocator, createdAt]
+  retention: pending-contractual-and-classification-review
+  confidentiality: raw credentials tokens cookies private routes and personal data are prohibited
+  clock: UTC with recorded synchronization source and measured drift
+rerunPolicy:
+  triggers: [requirement-change, trust-boundary-change, interface-change, safety-or-security-change, dependency-change, failed-or-expired-evidence]
+  inheritanceRule: unaffected evidence may be inherited only with documented impact analysis and identical applicability
+  failedRunRule: a rerun never deletes or overwrites prior raw evidence
+procedures:
+  - id: QP-FUNC-COMPLETE
+    measureId: QM-FUNC-COMPLETE
+    environment: ENV-CI
+    method: compare applicable requirement IDs with executable test and evidence references
+    inputs: [requirements catalogue, traceability catalogue, test reports]
+    outputs: [applicable count, verified count, missing IDs, ratio]
+  - id: QP-RECOVERY
+    measureId: QM-RECOVERY
+    environment: ENV-SERVER01
+    method: inject each approved service interruption after recording accepted work IDs then restore and reconcile
+    inputs: [fault scenario, accepted work IDs, before snapshot, after snapshot]
+    outputs: [injected count, recovered count, unrecovered IDs, recovery duration]
+  - id: QP-DATA-LOSS
+    measureId: QM-DATA-LOSS
+    environment: ENV-SERVER01
+    method: reconcile every acknowledged idempotency ID against authoritative persistence after fault recovery
+    inputs: [acknowledged IDs, database snapshot, queue snapshot]
+    outputs: [missing IDs, duplicate IDs, unrecoverable count]
+  - id: QP-LATENCY-P95
+    measureId: QM-LATENCY-P95
+    environment: ENV-SERVER01
+    method: execute the approved load profile with synchronized clocks and calculate p95 from retained raw samples
+    inputs: [load profile, dataset profile, raw timestamps]
+    outputs: [sample count, rejected samples, p50, p95, p99, raw sample artifact]
+  - id: QP-AUTHZ-DENIAL
+    measureId: QM-AUTHZ-DENIAL
+    environment: ENV-CI
+    method: execute every unauthenticated unauthorized cross-group expired and incompatible-identity case
+    inputs: [authorization matrix, negative test report]
+    outputs: [attempted count, correctly denied count, unexpected permits, ratio]
+  - id: QP-CHANGE-IMPACT
+    measureId: QM-CHANGE-IMPACT
+    environment: ENV-CI
+    method: compare the approved adapter change against its merge base and classify modified production modules by owner
+    inputs: [merge base, candidate commit, architecture ownership catalogue]
+    outputs: [modified modules, cross-boundary modifications, count, reviewer disposition]
+  - id: QP-HAZARD-CLOSURE
+    measureId: QM-HAZARD-CLOSURE
+    environment: ENV-CI
+    method: reconcile applicable hazards with implemented controls verification evidence and residual-risk acceptance
+    inputs: [hazard log, control evidence, residual-risk register]
+    outputs: [applicable hazards, verified closures, unaccepted residual risks, ratio]
+verdictRules:
+  PASS: approved threshold met and evidence complete with required independent review
+  FAIL: approved threshold not met or prohibited behavior observed
+  BLOCKED: required environment equipment authority or evidence unavailable
+  NOT_RUN: procedure has not executed against the candidate baseline
+claim:
+  current: NOT_ASSESSED
+  prohibitedUntilIndependentConclusion: [conformant, certified, qualified]

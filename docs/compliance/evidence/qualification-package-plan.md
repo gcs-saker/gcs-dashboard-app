@@ -18,3 +18,9 @@ Claims distinguish certified, conformant, aligned, assessed, and ready according
 The package always includes open findings, NOT_RUN work, BLOCKED physical tests, waivers, and
 residual risk rather than reporting only successful evidence.
 
+The controlled architecture baseline is
+`docs/compliance/architecture/system-architecture-views.yml`. The controlled software quality
+evaluation baseline is `docs/compliance/quality/software-quality-evaluation-plan.yml`. An
+evaluation package is incomplete when either catalogue does not match the candidate source commit,
+runtime deployment profile, or requirement traceability report.
+
