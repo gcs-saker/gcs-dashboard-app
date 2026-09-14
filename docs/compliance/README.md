@@ -12,6 +12,12 @@ ISO/IEC/IEEE 42010 아키텍처 기준선은
 ISO/IEC 25010·25023·25040 품질 평가 기준선은
 [`quality/software-quality-evaluation-profile.yml`](quality/software-quality-evaluation-profile.yml)과
 [`quality/software-quality-evaluation-plan.yml`](quality/software-quality-evaluation-plan.yml)에서 관리한다.
+Server-01 시험 부하와 네트워크 조건은
+[`quality/server01-software-operational-profile.yml`](quality/server01-software-operational-profile.yml),
+하위 제품 시험 요구사항은
+[`requirements/software-product-test-requirements.yml`](requirements/software-product-test-requirements.yml),
+권한 거부 전수 항목은
+[`security/authorization-denial-matrix.yml`](security/authorization-denial-matrix.yml)에 둔다.
 
 프로파일의 상태는 `PASS`, `FAIL`, `BLOCKED`, `NOT_RUN`, `NOT_APPLICABLE`,
 `PLANNED_HARDWARE`만 사용한다. 공인 또는 독립 평가가 완료되지 않은 작업은 구현 여부와

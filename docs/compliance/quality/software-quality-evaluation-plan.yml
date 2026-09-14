@@ -57,7 +57,7 @@ procedures:
     measureId: QM-FUNC-COMPLETE
     environment: ENV-CI
     method: compare applicable requirement IDs with executable test and evidence references
-    inputs: [requirements catalogue, traceability catalogue, test reports]
+    inputs: [software-product-test-requirements.yml, traceability catalogue, JUnit test reports]
     outputs: [applicable count, verified count, missing IDs, ratio]
   - id: QP-RECOVERY
     measureId: QM-RECOVERY
@@ -81,7 +81,7 @@ procedures:
     measureId: QM-AUTHZ-DENIAL
     environment: ENV-CI
     method: execute every unauthenticated unauthorized cross-group expired and incompatible-identity case
-    inputs: [authorization matrix, negative test report]
+    inputs: [authorization-denial-matrix.yml, JUnit negative test reports]
     outputs: [attempted count, correctly denied count, unexpected permits, ratio]
   - id: QP-CHANGE-IMPACT
     measureId: QM-CHANGE-IMPACT

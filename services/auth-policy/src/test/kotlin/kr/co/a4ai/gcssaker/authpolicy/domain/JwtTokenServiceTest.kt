@@ -1,5 +1,6 @@
 package kr.co.a4ai.gcssaker.authpolicy.domain
 
+import com.auth0.jwt.exceptions.TokenExpiredException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -36,6 +37,21 @@ class JwtTokenServiceTest {
                 issuer = "gcs-saker-test",
                 accessTokenTtl = Duration.ofMinutes(30),
             )
+        }
+    }
+
+    @Test
+    fun `expired access token is rejected`() {
+        val expiredIssuer = JwtTokenService(
+            secret = "test-secret-must-be-at-least-32-characters",
+            issuer = "gcs-saker-test",
+            accessTokenTtl = Duration.ofMinutes(1),
+            clock = Clock.fixed(Instant.parse("2000-01-01T00:00:00Z"), ZoneOffset.UTC),
+        )
+        val principal = AuthenticatedPrincipal("operator", UserRole.OPERATOR, GroupId("co-a"))
+
+        assertFailsWith<TokenExpiredException> {
+            service.verifyAccessToken(expiredIssuer.issueAccessToken(principal))
         }
     }
 

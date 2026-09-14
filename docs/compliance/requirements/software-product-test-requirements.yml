@@ -1,0 +1,91 @@
+schemaVersion: gcs-saker.product-test-requirements.v1
+status: CONTROLLED_DRAFT_NOT_EXECUTED
+operationalProfile: docs/compliance/quality/server01-software-operational-profile.yml
+requirements:
+  - id: PTR-AUTH-LOGIN
+    parentIds: [MR-SEC-001, MR-QUALITY-001]
+    characteristic: functional-suitability
+    statement: Active users in active groups authenticate and invalid credentials are rejected.
+    verification: test
+    testRefs: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/AuthSessionServiceTest.kt]
+    selectors: [AuthSessionServiceTest::login rejects unknown user or invalid password]
+  - id: PTR-SESSION-LIFECYCLE
+    parentIds: [MR-SEC-001, MR-MEASURE-001]
+    characteristic: security
+    statement: Reused revoked expired or invalidated sessions cannot authorize or extend access.
+    verification: test
+    testRefs: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/AuthSessionServiceTest.kt]
+    selectors: [AuthSessionServiceTest::refresh rejects reused refresh token when session store is authoritative, AuthSessionServiceTest::revoked refresh token cannot extend a session]
+  - id: PTR-GROUP-LIFECYCLE
+    parentIds: [MR-SEC-001, MR-SAF-001]
+    characteristic: security
+    statement: Inactive groups and groups without exactly one administrator cannot become operational.
+    verification: test
+    testRefs: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/GroupLifecycleServiceTest.kt]
+    selectors: [GroupLifecycleServiceTest::new group remains inactive until exactly one administrator is assigned]
+  - id: PTR-GROUP-ISOLATION
+    parentIds: [MR-SEC-001, MR-QUALITY-001]
+    characteristic: security
+    statement: Role and hierarchy policy denies unauthorized cross-group access by default.
+    verification: test
+    testRefs: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/HierarchicalAuthorizationContractTest.kt]
+    selectors: [HierarchicalAuthorizationContractTest::role and hierarchy capability matrix remains closed by default]
+  - id: PTR-TALKBACK-SCOPE
+    parentIds: [MR-VOICE-001, MR-SEC-001]
+    characteristic: safety
+    statement: Talkback is restricted to authorized roles in the principal exact operational group.
+    verification: test
+    testRefs: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/StreamPolicyControllerTest.kt]
+    selectors: [StreamPolicyControllerTest::group admin cannot send talkback to descendant group, StreamPolicyControllerTest::viewer cannot send talkback in same group]
+  - id: PTR-DEVICE-IDENTITY
+    parentIds: [MR-SEC-001, MR-SAF-001]
+    characteristic: security
+    statement: Device publish identity and registered group are resolved and enforced by the server.
+    verification: test
+    testRefs: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/DevicePublishAuthorizationServiceTest.kt]
+    selectors: [DevicePublishAuthorizationServiceTest::wrong credential is rejected without exposing group, DevicePublishAuthorizationServiceTest::pending device is rejected before publish authorization]
+  - id: PTR-STREAM-SESSION
+    parentIds: [MR-SEC-001, MR-QUALITY-001]
+    characteristic: functional-suitability
+    statement: Stream discovery and playback use policy-authorized opaque sessions.
+    verification: test
+    testRefs: [services/media-control/internal/httpapi/server_test.go]
+    selectors: [TestServerRejectsUnauthorizedStreamAccess]
+  - id: PTR-TELEMETRY-BOUNDARY
+    parentIds: [MR-SEC-001, MR-QUALITY-001]
+    characteristic: compatibility
+    statement: MQTT and gRPC telemetry reject incompatible identity or malformed boundary input.
+    verification: test
+    testRefs: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/MqttTelemetryConsumerBridgeTest.kt]
+    selectors: [MqttTelemetryConsumerBridgeTest::spring bridge rejects payload identity mismatch]
+  - id: PTR-AUDIT-ACCESS
+    parentIds: [MR-SEC-001, MR-SDLC-001]
+    characteristic: security
+    statement: Operational event access is restricted to administrator roles and produces controlled audit records.
+    verification: test
+    testRefs: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalEventControllerTest.kt]
+    selectors: [OperationalEventControllerTest::events reject non administrator accounts]
+  - id: PTR-RECOVERY-EVIDENCE
+    parentIds: [MR-MEASURE-001, MR-EVAL-001]
+    characteristic: reliability
+    statement: Service interruption recovery preserves accepted work and produces immutable reconciliation evidence.
+    verification: runtime-test
+    testRefs: [docs/operations/GCS-Saker_운영장애대응_Runbook_v0.1.md]
+    selectors: [runtime::server01-recovery-reconciliation]
+    status: BLOCKED
+  - id: PTR-VOICE-INTELLIGIBILITY
+    parentIds: [MR-VOICE-001, MR-HFE-001]
+    characteristic: interaction-capability
+    statement: Selected-stream audio and Talkback meet the approved intelligibility profile.
+    verification: physical-test
+    testRefs: [docs/compliance/voice/voice-qualification-plan.md]
+    selectors: [physical::voice-intelligibility]
+    status: BLOCKED
+  - id: PTR-RELEASE-INTEGRITY
+    parentIds: [MR-SSDF-001, MR-SDLC-001]
+    characteristic: security
+    statement: A release binds source commit image digests SBOM scan and deployment evidence.
+    verification: ci-evidence
+    testRefs: [.github/workflows/ci.yml]
+    selectors: [ci::release-assurance]
+defaultStatus: NOT_RUN

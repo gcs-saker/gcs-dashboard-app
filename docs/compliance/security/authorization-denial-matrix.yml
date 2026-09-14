@@ -1,0 +1,38 @@
+schemaVersion: gcs-saker.authorization-denial-matrix.v1
+status: CONTROLLED_DRAFT_NOT_EXECUTED
+measureId: QM-AUTHZ-DENIAL
+threshold:
+  status: PROPOSED_NOT_APPROVED
+  correctlyDeniedRatio: 1.0
+  unexpectedPermitCount: 0
+categories: [unauthenticated, expired-or-revoked, disabled-principal, inactive-group, role-mismatch, cross-group, hierarchy-scope, device-identity]
+cases:
+  - {id: AD-UNAUTH-001, category: unauthenticated, expected: DENY, selector: 'AuthSecurityConfigTest::protected current user route rejects missing bearer auth before controller work'}
+  - {id: AD-TOKEN-001, category: expired-or-revoked, expected: DENY, selector: 'JwtTokenServiceTest::expired access token is rejected'}
+  - {id: AD-TOKEN-002, category: expired-or-revoked, expected: DENY, selector: 'AuthSessionServiceTest::revoked refresh token cannot extend a session'}
+  - {id: AD-USER-001, category: disabled-principal, expected: DENY, selector: 'AuthSessionServiceTest::disabled user cannot login or continue an existing session'}
+  - {id: AD-GROUP-001, category: inactive-group, expected: DENY, selector: 'AuthSessionServiceTest::inactive group prevents login and existing token use'}
+  - {id: AD-ROLE-001, category: role-mismatch, expected: DENY, selector: 'AdminDeviceControllerTest::viewer cannot register device'}
+  - {id: AD-GROUP-002, category: cross-group, expected: DENY, selector: 'StreamPolicyControllerTest::viewer outside group receives deny decision'}
+  - {id: AD-HIER-001, category: hierarchy-scope, expected: DENY, selector: 'StreamPolicyControllerTest::operator cannot access descendant group stream'}
+  - {id: AD-TALKBACK-001, category: hierarchy-scope, expected: DENY, selector: 'StreamPolicyControllerTest::group admin cannot send talkback to descendant group'}
+  - {id: AD-TALKBACK-002, category: role-mismatch, expected: DENY, selector: 'StreamPolicyControllerTest::viewer cannot send talkback in same group'}
+  - {id: AD-DEVICE-001, category: device-identity, expected: DENY, selector: 'DevicePublishAuthorizationServiceTest::wrong credential is rejected without exposing group'}
+  - {id: AD-DEVICE-002, category: device-identity, expected: DENY, selector: 'DevicePublishAuthorizationServiceTest::pending device is rejected before publish authorization'}
+evidence:
+  framework: JUnit-XML
+  resultsGlob: services/auth-policy/build/test-results/test/*.xml
+  sourceCommitRequired: true
+  rule: only an executed passing selector counts as correctly denied
+selectorSources:
+  AuthSecurityConfigTest: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthSecurityConfigTest.kt
+  JwtTokenServiceTest: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/JwtTokenServiceTest.kt
+  AuthSessionServiceTest: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/AuthSessionServiceTest.kt
+  AdminDeviceControllerTest: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AdminDeviceControllerTest.kt
+  StreamPolicyControllerTest: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/StreamPolicyControllerTest.kt
+  DevicePublishAuthorizationServiceTest: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/DevicePublishAuthorizationServiceTest.kt
+verdictRules:
+  PASS: every case executed and passed with no unexpected permit
+  FAIL: any case failed or reported an unexpected permit
+  NOT_RUN: no matching execution evidence exists
+  BLOCKED: required environment or authority is unavailable

@@ -1,0 +1,68 @@
+schemaVersion: gcs-saker.operational-profile.v1
+profileId: OP-SERVER01-SOFTWARE-V1
+status: CONTROLLED_DRAFT_NOT_APPROVED
+target:
+  deployment: Server-01 production
+  sourceOfTruth: deploy/compose/compose.single-node.poc.yml
+  publicOrigin: https://gcs-saker.com
+  hostFacts: captured-at-execution-without-private-addresses
+scope:
+  included:
+    - public TLS edge and browser dashboard
+    - auth-policy identity group authorization and session lifecycle
+    - media-control discovery session and device gateway
+    - compatibility backend adapters
+    - PostgreSQL Redis MQTT MediaMTX and TURN dependencies
+    - REST gRPC MQTT and WebRTC control or media boundaries
+  excluded:
+    - AI overlay until its runtime exists
+    - waypoint control until its runtime exists
+    - physical drone environmental and EMC qualification
+    - classified network accreditation
+actors:
+  concurrentAuthenticatedUsers: 10
+  concurrentAdministrators: 2
+  registeredDevices: 16
+workloads:
+  - id: WL-CONTROL-NOMINAL
+    durationMinutes: 15
+    concurrentUsers: 5
+    requestRatePerSecond: 10
+    operations: [login, refresh, stream-list, telemetry-read, operational-read]
+  - id: WL-CONTROL-PEAK
+    durationMinutes: 15
+    concurrentUsers: 10
+    requestRatePerSecond: 25
+    operations: [stream-list, telemetry-read, session-authorization]
+  - id: WL-STREAM-NOMINAL
+    durationMinutes: 30
+    concurrentPublishers: 3
+    concurrentViewers: 5
+    streamsPerViewer: 4
+    playback: WebRTC-WHEP-primary-HLS-fallback
+  - id: WL-STREAM-ACCEPTANCE
+    durationMinutes: 60
+    concurrentPublishers: 16
+    concurrentViewers: 10
+    streamsPerViewer: 4
+    status: PROPOSED_REQUIRES_TEST_ASSETS
+  - id: WL-TELEMETRY-PEAK
+    durationMinutes: 15
+    devices: 16
+    messagesPerDevicePerSecond: 10
+    transports: [gRPC, MQTT]
+networkConditions:
+  - {id: NET-NOMINAL, latencyMs: 30, jitterMs: 10, packetLossPercent: 0.1}
+  - {id: NET-DEGRADED, latencyMs: 150, jitterMs: 50, packetLossPercent: 2.0}
+  - {id: NET-INTERRUPTED, interruptionSeconds: 30, recoveryObservationSeconds: 120}
+executionCapture:
+  required:
+    - immutable source commit and image digests
+    - sanitized OS kernel CPU memory disk and container limits
+    - dataset revision and generated account or device counts
+    - network condition implementation and clock drift
+    - tool versions and raw sample hashes
+  prohibited: [private IP, credential, token, cookie, private media route, personal data]
+limitations:
+  - Workload numbers are proposed engineering acceptance values, not measured capacity claims.
+  - The acceptance authority and independent evaluator must approve this profile before PASS.
