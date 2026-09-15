@@ -204,6 +204,7 @@ const (
 	MediaPolicyService_AuthorizeStream_FullMethodName         = "/gcs.saker.v1.MediaPolicyService/AuthorizeStream"
 	MediaPolicyService_AuthorizeDevicePublish_FullMethodName  = "/gcs.saker.v1.MediaPolicyService/AuthorizeDevicePublish"
 	MediaPolicyService_AuthorizeAccountPublish_FullMethodName = "/gcs.saker.v1.MediaPolicyService/AuthorizeAccountPublish"
+	MediaPolicyService_CurrentAllowedArea_FullMethodName      = "/gcs.saker.v1.MediaPolicyService/CurrentAllowedArea"
 )
 
 // MediaPolicyServiceClient is the client API for MediaPolicyService service.
@@ -213,6 +214,7 @@ type MediaPolicyServiceClient interface {
 	AuthorizeStream(ctx context.Context, in *StreamAccessInput, opts ...grpc.CallOption) (*StreamAccessOutput, error)
 	AuthorizeDevicePublish(ctx context.Context, in *DevicePublishInput, opts ...grpc.CallOption) (*PublishBindingOutput, error)
 	AuthorizeAccountPublish(ctx context.Context, in *AccountPublishInput, opts ...grpc.CallOption) (*PublishBindingOutput, error)
+	CurrentAllowedArea(ctx context.Context, in *GroupScopeInput, opts ...grpc.CallOption) (*AllowedAreaSnapshotOutput, error)
 }
 
 type mediaPolicyServiceClient struct {
@@ -253,6 +255,16 @@ func (c *mediaPolicyServiceClient) AuthorizeAccountPublish(ctx context.Context, 
 	return out, nil
 }
 
+func (c *mediaPolicyServiceClient) CurrentAllowedArea(ctx context.Context, in *GroupScopeInput, opts ...grpc.CallOption) (*AllowedAreaSnapshotOutput, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AllowedAreaSnapshotOutput)
+	err := c.cc.Invoke(ctx, MediaPolicyService_CurrentAllowedArea_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MediaPolicyServiceServer is the server API for MediaPolicyService service.
 // All implementations must embed UnimplementedMediaPolicyServiceServer
 // for forward compatibility.
@@ -260,6 +272,7 @@ type MediaPolicyServiceServer interface {
 	AuthorizeStream(context.Context, *StreamAccessInput) (*StreamAccessOutput, error)
 	AuthorizeDevicePublish(context.Context, *DevicePublishInput) (*PublishBindingOutput, error)
 	AuthorizeAccountPublish(context.Context, *AccountPublishInput) (*PublishBindingOutput, error)
+	CurrentAllowedArea(context.Context, *GroupScopeInput) (*AllowedAreaSnapshotOutput, error)
 	mustEmbedUnimplementedMediaPolicyServiceServer()
 }
 
@@ -278,6 +291,9 @@ func (UnimplementedMediaPolicyServiceServer) AuthorizeDevicePublish(context.Cont
 }
 func (UnimplementedMediaPolicyServiceServer) AuthorizeAccountPublish(context.Context, *AccountPublishInput) (*PublishBindingOutput, error) {
 	return nil, status.Error(codes.Unimplemented, "method AuthorizeAccountPublish not implemented")
+}
+func (UnimplementedMediaPolicyServiceServer) CurrentAllowedArea(context.Context, *GroupScopeInput) (*AllowedAreaSnapshotOutput, error) {
+	return nil, status.Error(codes.Unimplemented, "method CurrentAllowedArea not implemented")
 }
 func (UnimplementedMediaPolicyServiceServer) mustEmbedUnimplementedMediaPolicyServiceServer() {}
 func (UnimplementedMediaPolicyServiceServer) testEmbeddedByValue()                            {}
@@ -354,6 +370,24 @@ func _MediaPolicyService_AuthorizeAccountPublish_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MediaPolicyService_CurrentAllowedArea_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GroupScopeInput)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MediaPolicyServiceServer).CurrentAllowedArea(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MediaPolicyService_CurrentAllowedArea_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MediaPolicyServiceServer).CurrentAllowedArea(ctx, req.(*GroupScopeInput))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MediaPolicyService_ServiceDesc is the grpc.ServiceDesc for MediaPolicyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -372,6 +406,10 @@ var MediaPolicyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AuthorizeAccountPublish",
 			Handler:    _MediaPolicyService_AuthorizeAccountPublish_Handler,
+		},
+		{
+			MethodName: "CurrentAllowedArea",
+			Handler:    _MediaPolicyService_CurrentAllowedArea_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

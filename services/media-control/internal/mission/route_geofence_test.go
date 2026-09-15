@@ -38,6 +38,21 @@ func TestRouteGeofenceAcceptsBoundaryRoute(t *testing.T) {
 	}
 }
 
+func TestRouteGeofenceRequiresRouteInsideEveryApprovedArea(t *testing.T) {
+	provider := areaProviderStub{snapshot: AllowedAreaSnapshot{
+		GroupID: "co-a", Version: "v7", Polygons: [][]GeoPoint{square(), {
+			point(1, 1), point(1, 6), point(6, 6), point(6, 1),
+		}},
+	}}
+	validator := RouteGeofence{Provider: provider}
+
+	allowed, err := validator.AllowsRoute(context.Background(), "co-a", "v7", route(point(2, 2), point(8, 8)), AltitudeAGL)
+
+	if err != nil || allowed {
+		t.Fatalf("expected intersection-of-approved-areas rejection, got allowed=%v err=%v", allowed, err)
+	}
+}
+
 func TestRouteGeofenceRejectsStaleVersionBeforeGeometry(t *testing.T) {
 	validator := routeValidator(square())
 
@@ -117,7 +132,7 @@ func routeValidator(polygon []GeoPoint) RouteGeofence {
 }
 
 func snapshot(groupID string, polygon []GeoPoint) AllowedAreaSnapshot {
-	return AllowedAreaSnapshot{GroupID: groupID, Version: "v7", Polygon: polygon}
+	return AllowedAreaSnapshot{GroupID: groupID, Version: "v7", Polygons: [][]GeoPoint{polygon}}
 }
 
 func square() []GeoPoint {

@@ -21,6 +21,214 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type GroupScopeInput struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GroupId       string                 `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GroupScopeInput) Reset() {
+	*x = GroupScopeInput{}
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GroupScopeInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GroupScopeInput) ProtoMessage() {}
+
+func (x *GroupScopeInput) ProtoReflect() protoreflect.Message {
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GroupScopeInput.ProtoReflect.Descriptor instead.
+func (*GroupScopeInput) Descriptor() ([]byte, []int) {
+	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *GroupScopeInput) GetGroupId() string {
+	if x != nil {
+		return x.GroupId
+	}
+	return ""
+}
+
+type AllowedAreaPoint struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Latitude      float64                `protobuf:"fixed64,1,opt,name=latitude,proto3" json:"latitude,omitempty"`
+	Longitude     float64                `protobuf:"fixed64,2,opt,name=longitude,proto3" json:"longitude,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AllowedAreaPoint) Reset() {
+	*x = AllowedAreaPoint{}
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AllowedAreaPoint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AllowedAreaPoint) ProtoMessage() {}
+
+func (x *AllowedAreaPoint) ProtoReflect() protoreflect.Message {
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AllowedAreaPoint.ProtoReflect.Descriptor instead.
+func (*AllowedAreaPoint) Descriptor() ([]byte, []int) {
+	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AllowedAreaPoint) GetLatitude() float64 {
+	if x != nil {
+		return x.Latitude
+	}
+	return 0
+}
+
+func (x *AllowedAreaPoint) GetLongitude() float64 {
+	if x != nil {
+		return x.Longitude
+	}
+	return 0
+}
+
+type AllowedAreaPolygon struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GeofenceId    string                 `protobuf:"bytes,1,opt,name=geofence_id,json=geofenceId,proto3" json:"geofence_id,omitempty"`
+	Points        []*AllowedAreaPoint    `protobuf:"bytes,2,rep,name=points,proto3" json:"points,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AllowedAreaPolygon) Reset() {
+	*x = AllowedAreaPolygon{}
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AllowedAreaPolygon) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AllowedAreaPolygon) ProtoMessage() {}
+
+func (x *AllowedAreaPolygon) ProtoReflect() protoreflect.Message {
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AllowedAreaPolygon.ProtoReflect.Descriptor instead.
+func (*AllowedAreaPolygon) Descriptor() ([]byte, []int) {
+	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *AllowedAreaPolygon) GetGeofenceId() string {
+	if x != nil {
+		return x.GeofenceId
+	}
+	return ""
+}
+
+func (x *AllowedAreaPolygon) GetPoints() []*AllowedAreaPoint {
+	if x != nil {
+		return x.Points
+	}
+	return nil
+}
+
+type AllowedAreaSnapshotOutput struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GroupId       string                 `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	Polygons      []*AllowedAreaPolygon  `protobuf:"bytes,3,rep,name=polygons,proto3" json:"polygons,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AllowedAreaSnapshotOutput) Reset() {
+	*x = AllowedAreaSnapshotOutput{}
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AllowedAreaSnapshotOutput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AllowedAreaSnapshotOutput) ProtoMessage() {}
+
+func (x *AllowedAreaSnapshotOutput) ProtoReflect() protoreflect.Message {
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AllowedAreaSnapshotOutput.ProtoReflect.Descriptor instead.
+func (*AllowedAreaSnapshotOutput) Descriptor() ([]byte, []int) {
+	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *AllowedAreaSnapshotOutput) GetGroupId() string {
+	if x != nil {
+		return x.GroupId
+	}
+	return ""
+}
+
+func (x *AllowedAreaSnapshotOutput) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *AllowedAreaSnapshotOutput) GetPolygons() []*AllowedAreaPolygon {
+	if x != nil {
+		return x.Polygons
+	}
+	return nil
+}
+
 type StreamAccessInput struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Authorization    string                 `protobuf:"bytes,1,opt,name=authorization,proto3" json:"authorization,omitempty"`
@@ -34,7 +242,7 @@ type StreamAccessInput struct {
 
 func (x *StreamAccessInput) Reset() {
 	*x = StreamAccessInput{}
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[0]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -46,7 +254,7 @@ func (x *StreamAccessInput) String() string {
 func (*StreamAccessInput) ProtoMessage() {}
 
 func (x *StreamAccessInput) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[0]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -59,7 +267,7 @@ func (x *StreamAccessInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamAccessInput.ProtoReflect.Descriptor instead.
 func (*StreamAccessInput) Descriptor() ([]byte, []int) {
-	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{0}
+	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *StreamAccessInput) GetAuthorization() string {
@@ -110,7 +318,7 @@ type StreamAccessOutput struct {
 
 func (x *StreamAccessOutput) Reset() {
 	*x = StreamAccessOutput{}
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[1]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -122,7 +330,7 @@ func (x *StreamAccessOutput) String() string {
 func (*StreamAccessOutput) ProtoMessage() {}
 
 func (x *StreamAccessOutput) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[1]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -135,7 +343,7 @@ func (x *StreamAccessOutput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamAccessOutput.ProtoReflect.Descriptor instead.
 func (*StreamAccessOutput) Descriptor() ([]byte, []int) {
-	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{1}
+	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *StreamAccessOutput) GetAllowed() bool {
@@ -184,7 +392,7 @@ type DevicePublishInput struct {
 
 func (x *DevicePublishInput) Reset() {
 	*x = DevicePublishInput{}
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[2]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -196,7 +404,7 @@ func (x *DevicePublishInput) String() string {
 func (*DevicePublishInput) ProtoMessage() {}
 
 func (x *DevicePublishInput) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[2]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -209,7 +417,7 @@ func (x *DevicePublishInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DevicePublishInput.ProtoReflect.Descriptor instead.
 func (*DevicePublishInput) Descriptor() ([]byte, []int) {
-	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{2}
+	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *DevicePublishInput) GetDeviceUuid() string {
@@ -243,7 +451,7 @@ type AccountPublishInput struct {
 
 func (x *AccountPublishInput) Reset() {
 	*x = AccountPublishInput{}
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[3]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -255,7 +463,7 @@ func (x *AccountPublishInput) String() string {
 func (*AccountPublishInput) ProtoMessage() {}
 
 func (x *AccountPublishInput) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[3]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -268,7 +476,7 @@ func (x *AccountPublishInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountPublishInput.ProtoReflect.Descriptor instead.
 func (*AccountPublishInput) Descriptor() ([]byte, []int) {
-	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{3}
+	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *AccountPublishInput) GetAuthorization() string {
@@ -300,7 +508,7 @@ type PublishBindingOutput struct {
 
 func (x *PublishBindingOutput) Reset() {
 	*x = PublishBindingOutput{}
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[4]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -312,7 +520,7 @@ func (x *PublishBindingOutput) String() string {
 func (*PublishBindingOutput) ProtoMessage() {}
 
 func (x *PublishBindingOutput) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[4]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -325,7 +533,7 @@ func (x *PublishBindingOutput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishBindingOutput.ProtoReflect.Descriptor instead.
 func (*PublishBindingOutput) Descriptor() ([]byte, []int) {
-	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{4}
+	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *PublishBindingOutput) GetDeviceUuid() string {
@@ -387,7 +595,7 @@ type DeviceCredentialRequest struct {
 
 func (x *DeviceCredentialRequest) Reset() {
 	*x = DeviceCredentialRequest{}
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[5]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -399,7 +607,7 @@ func (x *DeviceCredentialRequest) String() string {
 func (*DeviceCredentialRequest) ProtoMessage() {}
 
 func (x *DeviceCredentialRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[5]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -412,7 +620,7 @@ func (x *DeviceCredentialRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeviceCredentialRequest.ProtoReflect.Descriptor instead.
 func (*DeviceCredentialRequest) Descriptor() ([]byte, []int) {
-	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{5}
+	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeviceCredentialRequest) GetDeviceUuid() string {
@@ -441,7 +649,7 @@ type DeviceBinding struct {
 
 func (x *DeviceBinding) Reset() {
 	*x = DeviceBinding{}
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[6]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -453,7 +661,7 @@ func (x *DeviceBinding) String() string {
 func (*DeviceBinding) ProtoMessage() {}
 
 func (x *DeviceBinding) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[6]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -466,7 +674,7 @@ func (x *DeviceBinding) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeviceBinding.ProtoReflect.Descriptor instead.
 func (*DeviceBinding) Descriptor() ([]byte, []int) {
-	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{6}
+	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DeviceBinding) GetDeviceUuid() string {
@@ -509,7 +717,7 @@ type DeviceTelemetryRequest struct {
 
 func (x *DeviceTelemetryRequest) Reset() {
 	*x = DeviceTelemetryRequest{}
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[7]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -521,7 +729,7 @@ func (x *DeviceTelemetryRequest) String() string {
 func (*DeviceTelemetryRequest) ProtoMessage() {}
 
 func (x *DeviceTelemetryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[7]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -534,7 +742,7 @@ func (x *DeviceTelemetryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeviceTelemetryRequest.ProtoReflect.Descriptor instead.
 func (*DeviceTelemetryRequest) Descriptor() ([]byte, []int) {
-	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{7}
+	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeviceTelemetryRequest) GetBinding() *DeviceBinding {
@@ -574,7 +782,7 @@ type DeviceTelemetryResult struct {
 
 func (x *DeviceTelemetryResult) Reset() {
 	*x = DeviceTelemetryResult{}
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[8]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -586,7 +794,7 @@ func (x *DeviceTelemetryResult) String() string {
 func (*DeviceTelemetryResult) ProtoMessage() {}
 
 func (x *DeviceTelemetryResult) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[8]
+	mi := &file_gcs_saker_v1_device_policy_service_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -599,7 +807,7 @@ func (x *DeviceTelemetryResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeviceTelemetryResult.ProtoReflect.Descriptor instead.
 func (*DeviceTelemetryResult) Descriptor() ([]byte, []int) {
-	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{8}
+	return file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DeviceTelemetryResult) GetStored() bool {
@@ -613,7 +821,20 @@ var File_gcs_saker_v1_device_policy_service_proto protoreflect.FileDescriptor
 
 const file_gcs_saker_v1_device_policy_service_proto_rawDesc = "" +
 	"\n" +
-	"(gcs/saker/v1/device_policy_service.proto\x12\fgcs.saker.v1\x1a\x1cgcs/saker/v1/telemetry.proto\"\xb0\x01\n" +
+	"(gcs/saker/v1/device_policy_service.proto\x12\fgcs.saker.v1\x1a\x1cgcs/saker/v1/telemetry.proto\",\n" +
+	"\x0fGroupScopeInput\x12\x19\n" +
+	"\bgroup_id\x18\x01 \x01(\tR\agroupId\"L\n" +
+	"\x10AllowedAreaPoint\x12\x1a\n" +
+	"\blatitude\x18\x01 \x01(\x01R\blatitude\x12\x1c\n" +
+	"\tlongitude\x18\x02 \x01(\x01R\tlongitude\"m\n" +
+	"\x12AllowedAreaPolygon\x12\x1f\n" +
+	"\vgeofence_id\x18\x01 \x01(\tR\n" +
+	"geofenceId\x126\n" +
+	"\x06points\x18\x02 \x03(\v2\x1e.gcs.saker.v1.AllowedAreaPointR\x06points\"\x8e\x01\n" +
+	"\x19AllowedAreaSnapshotOutput\x12\x19\n" +
+	"\bgroup_id\x18\x01 \x01(\tR\agroupId\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\x12<\n" +
+	"\bpolygons\x18\x03 \x03(\v2 .gcs.saker.v1.AllowedAreaPolygonR\bpolygons\"\xb0\x01\n" +
 	"\x11StreamAccessInput\x12$\n" +
 	"\rauthorization\x18\x01 \x01(\tR\rauthorization\x12\x1b\n" +
 	"\tstream_id\x18\x02 \x01(\tR\bstreamId\x12\x12\n" +
@@ -668,11 +889,12 @@ const file_gcs_saker_v1_device_policy_service_proto_rawDesc = "" +
 	"\x13DevicePolicyService\x12X\n" +
 	"\x12AuthenticateDevice\x12%.gcs.saker.v1.DeviceCredentialRequest\x1a\x1b.gcs.saker.v1.DeviceBinding\x12K\n" +
 	"\x0fValidateBinding\x12\x1b.gcs.saker.v1.DeviceBinding\x1a\x1b.gcs.saker.v1.DeviceBinding\x12\\\n" +
-	"\x0fIngestTelemetry\x12$.gcs.saker.v1.DeviceTelemetryRequest\x1a#.gcs.saker.v1.DeviceTelemetryResult2\xac\x02\n" +
+	"\x0fIngestTelemetry\x12$.gcs.saker.v1.DeviceTelemetryRequest\x1a#.gcs.saker.v1.DeviceTelemetryResult2\x8a\x03\n" +
 	"\x12MediaPolicyService\x12T\n" +
 	"\x0fAuthorizeStream\x12\x1f.gcs.saker.v1.StreamAccessInput\x1a .gcs.saker.v1.StreamAccessOutput\x12^\n" +
 	"\x16AuthorizeDevicePublish\x12 .gcs.saker.v1.DevicePublishInput\x1a\".gcs.saker.v1.PublishBindingOutput\x12`\n" +
-	"\x17AuthorizeAccountPublish\x12!.gcs.saker.v1.AccountPublishInput\x1a\".gcs.saker.v1.PublishBindingOutputBr\n" +
+	"\x17AuthorizeAccountPublish\x12!.gcs.saker.v1.AccountPublishInput\x1a\".gcs.saker.v1.PublishBindingOutput\x12\\\n" +
+	"\x12CurrentAllowedArea\x12\x1d.gcs.saker.v1.GroupScopeInput\x1a'.gcs.saker.v1.AllowedAreaSnapshotOutputBr\n" +
 	" kr.co.a4ai.gcssaker.contracts.v1P\x01ZLgithub.com/gcs-saker/gcs-dashboard-app/contracts/gen/go/gcs/saker/v1;sakerv1b\x06proto3"
 
 var (
@@ -687,39 +909,47 @@ func file_gcs_saker_v1_device_policy_service_proto_rawDescGZIP() []byte {
 	return file_gcs_saker_v1_device_policy_service_proto_rawDescData
 }
 
-var file_gcs_saker_v1_device_policy_service_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_gcs_saker_v1_device_policy_service_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_gcs_saker_v1_device_policy_service_proto_goTypes = []any{
-	(*StreamAccessInput)(nil),       // 0: gcs.saker.v1.StreamAccessInput
-	(*StreamAccessOutput)(nil),      // 1: gcs.saker.v1.StreamAccessOutput
-	(*DevicePublishInput)(nil),      // 2: gcs.saker.v1.DevicePublishInput
-	(*AccountPublishInput)(nil),     // 3: gcs.saker.v1.AccountPublishInput
-	(*PublishBindingOutput)(nil),    // 4: gcs.saker.v1.PublishBindingOutput
-	(*DeviceCredentialRequest)(nil), // 5: gcs.saker.v1.DeviceCredentialRequest
-	(*DeviceBinding)(nil),           // 6: gcs.saker.v1.DeviceBinding
-	(*DeviceTelemetryRequest)(nil),  // 7: gcs.saker.v1.DeviceTelemetryRequest
-	(*DeviceTelemetryResult)(nil),   // 8: gcs.saker.v1.DeviceTelemetryResult
-	(*TelemetryEnvelope)(nil),       // 9: gcs.saker.v1.TelemetryEnvelope
+	(*GroupScopeInput)(nil),           // 0: gcs.saker.v1.GroupScopeInput
+	(*AllowedAreaPoint)(nil),          // 1: gcs.saker.v1.AllowedAreaPoint
+	(*AllowedAreaPolygon)(nil),        // 2: gcs.saker.v1.AllowedAreaPolygon
+	(*AllowedAreaSnapshotOutput)(nil), // 3: gcs.saker.v1.AllowedAreaSnapshotOutput
+	(*StreamAccessInput)(nil),         // 4: gcs.saker.v1.StreamAccessInput
+	(*StreamAccessOutput)(nil),        // 5: gcs.saker.v1.StreamAccessOutput
+	(*DevicePublishInput)(nil),        // 6: gcs.saker.v1.DevicePublishInput
+	(*AccountPublishInput)(nil),       // 7: gcs.saker.v1.AccountPublishInput
+	(*PublishBindingOutput)(nil),      // 8: gcs.saker.v1.PublishBindingOutput
+	(*DeviceCredentialRequest)(nil),   // 9: gcs.saker.v1.DeviceCredentialRequest
+	(*DeviceBinding)(nil),             // 10: gcs.saker.v1.DeviceBinding
+	(*DeviceTelemetryRequest)(nil),    // 11: gcs.saker.v1.DeviceTelemetryRequest
+	(*DeviceTelemetryResult)(nil),     // 12: gcs.saker.v1.DeviceTelemetryResult
+	(*TelemetryEnvelope)(nil),         // 13: gcs.saker.v1.TelemetryEnvelope
 }
 var file_gcs_saker_v1_device_policy_service_proto_depIdxs = []int32{
-	6, // 0: gcs.saker.v1.DeviceTelemetryRequest.binding:type_name -> gcs.saker.v1.DeviceBinding
-	9, // 1: gcs.saker.v1.DeviceTelemetryRequest.telemetry:type_name -> gcs.saker.v1.TelemetryEnvelope
-	5, // 2: gcs.saker.v1.DevicePolicyService.AuthenticateDevice:input_type -> gcs.saker.v1.DeviceCredentialRequest
-	6, // 3: gcs.saker.v1.DevicePolicyService.ValidateBinding:input_type -> gcs.saker.v1.DeviceBinding
-	7, // 4: gcs.saker.v1.DevicePolicyService.IngestTelemetry:input_type -> gcs.saker.v1.DeviceTelemetryRequest
-	0, // 5: gcs.saker.v1.MediaPolicyService.AuthorizeStream:input_type -> gcs.saker.v1.StreamAccessInput
-	2, // 6: gcs.saker.v1.MediaPolicyService.AuthorizeDevicePublish:input_type -> gcs.saker.v1.DevicePublishInput
-	3, // 7: gcs.saker.v1.MediaPolicyService.AuthorizeAccountPublish:input_type -> gcs.saker.v1.AccountPublishInput
-	6, // 8: gcs.saker.v1.DevicePolicyService.AuthenticateDevice:output_type -> gcs.saker.v1.DeviceBinding
-	6, // 9: gcs.saker.v1.DevicePolicyService.ValidateBinding:output_type -> gcs.saker.v1.DeviceBinding
-	8, // 10: gcs.saker.v1.DevicePolicyService.IngestTelemetry:output_type -> gcs.saker.v1.DeviceTelemetryResult
-	1, // 11: gcs.saker.v1.MediaPolicyService.AuthorizeStream:output_type -> gcs.saker.v1.StreamAccessOutput
-	4, // 12: gcs.saker.v1.MediaPolicyService.AuthorizeDevicePublish:output_type -> gcs.saker.v1.PublishBindingOutput
-	4, // 13: gcs.saker.v1.MediaPolicyService.AuthorizeAccountPublish:output_type -> gcs.saker.v1.PublishBindingOutput
-	8, // [8:14] is the sub-list for method output_type
-	2, // [2:8] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	1,  // 0: gcs.saker.v1.AllowedAreaPolygon.points:type_name -> gcs.saker.v1.AllowedAreaPoint
+	2,  // 1: gcs.saker.v1.AllowedAreaSnapshotOutput.polygons:type_name -> gcs.saker.v1.AllowedAreaPolygon
+	10, // 2: gcs.saker.v1.DeviceTelemetryRequest.binding:type_name -> gcs.saker.v1.DeviceBinding
+	13, // 3: gcs.saker.v1.DeviceTelemetryRequest.telemetry:type_name -> gcs.saker.v1.TelemetryEnvelope
+	9,  // 4: gcs.saker.v1.DevicePolicyService.AuthenticateDevice:input_type -> gcs.saker.v1.DeviceCredentialRequest
+	10, // 5: gcs.saker.v1.DevicePolicyService.ValidateBinding:input_type -> gcs.saker.v1.DeviceBinding
+	11, // 6: gcs.saker.v1.DevicePolicyService.IngestTelemetry:input_type -> gcs.saker.v1.DeviceTelemetryRequest
+	4,  // 7: gcs.saker.v1.MediaPolicyService.AuthorizeStream:input_type -> gcs.saker.v1.StreamAccessInput
+	6,  // 8: gcs.saker.v1.MediaPolicyService.AuthorizeDevicePublish:input_type -> gcs.saker.v1.DevicePublishInput
+	7,  // 9: gcs.saker.v1.MediaPolicyService.AuthorizeAccountPublish:input_type -> gcs.saker.v1.AccountPublishInput
+	0,  // 10: gcs.saker.v1.MediaPolicyService.CurrentAllowedArea:input_type -> gcs.saker.v1.GroupScopeInput
+	10, // 11: gcs.saker.v1.DevicePolicyService.AuthenticateDevice:output_type -> gcs.saker.v1.DeviceBinding
+	10, // 12: gcs.saker.v1.DevicePolicyService.ValidateBinding:output_type -> gcs.saker.v1.DeviceBinding
+	12, // 13: gcs.saker.v1.DevicePolicyService.IngestTelemetry:output_type -> gcs.saker.v1.DeviceTelemetryResult
+	5,  // 14: gcs.saker.v1.MediaPolicyService.AuthorizeStream:output_type -> gcs.saker.v1.StreamAccessOutput
+	8,  // 15: gcs.saker.v1.MediaPolicyService.AuthorizeDevicePublish:output_type -> gcs.saker.v1.PublishBindingOutput
+	8,  // 16: gcs.saker.v1.MediaPolicyService.AuthorizeAccountPublish:output_type -> gcs.saker.v1.PublishBindingOutput
+	3,  // 17: gcs.saker.v1.MediaPolicyService.CurrentAllowedArea:output_type -> gcs.saker.v1.AllowedAreaSnapshotOutput
+	11, // [11:18] is the sub-list for method output_type
+	4,  // [4:11] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_gcs_saker_v1_device_policy_service_proto_init() }
@@ -734,7 +964,7 @@ func file_gcs_saker_v1_device_policy_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_gcs_saker_v1_device_policy_service_proto_rawDesc), len(file_gcs_saker_v1_device_policy_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

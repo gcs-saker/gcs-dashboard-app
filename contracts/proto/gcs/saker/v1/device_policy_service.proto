@@ -19,6 +19,19 @@ service MediaPolicyService {
   rpc AuthorizeStream(StreamAccessInput) returns (StreamAccessOutput);
   rpc AuthorizeDevicePublish(DevicePublishInput) returns (PublishBindingOutput);
   rpc AuthorizeAccountPublish(AccountPublishInput) returns (PublishBindingOutput);
+  rpc CurrentAllowedArea(GroupScopeInput) returns (AllowedAreaSnapshotOutput);
+}
+
+message GroupScopeInput { string group_id = 1; }
+message AllowedAreaPoint { double latitude = 1; double longitude = 2; }
+message AllowedAreaPolygon {
+  string geofence_id = 1;
+  repeated AllowedAreaPoint points = 2;
+}
+message AllowedAreaSnapshotOutput {
+  string group_id = 1;
+  string version = 2;
+  repeated AllowedAreaPolygon polygons = 3;
 }
 
 message StreamAccessInput {

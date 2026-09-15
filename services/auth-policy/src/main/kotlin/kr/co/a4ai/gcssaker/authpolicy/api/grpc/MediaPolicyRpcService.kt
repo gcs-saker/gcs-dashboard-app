@@ -10,6 +10,7 @@ class MediaPolicyRpcService(
     private val principals: BearerPrincipalResolver,
     private val groups: GroupPolicyService,
     private val devices: DevicePublishAuthorizationService,
+    private val allowedAreas: AllowedAreaSnapshotService,
 ) : MediaPolicyServiceGrpc.MediaPolicyServiceImplBase() {
     override fun authorizeStream(request: StreamAccessInput, response: StreamObserver<StreamAccessOutput>) = reply(response) {
         val principal = principals.requirePrincipal(request.authorization)
@@ -31,6 +32,17 @@ class MediaPolicyRpcService(
     override fun authorizeAccountPublish(request: AccountPublishInput, response: StreamObserver<PublishBindingOutput>) = reply(response) {
         publishBinding(AccountPublishAuthorizationService(groups).authorize(principals.requirePrincipal(request.authorization), request.sensorId))
     }
+
+    override fun currentAllowedArea(request: GroupScopeInput, response: StreamObserver<AllowedAreaSnapshotOutput>) = reply(response) {
+        val snapshot = allowedAreas.current(GroupId(request.groupId))
+        AllowedAreaSnapshotOutput.newBuilder().setGroupId(snapshot.groupId.value).setVersion(snapshot.version)
+            .addAllPolygons(snapshot.geofences.map(::allowedPolygon)).build()
+    }
+
+    private fun allowedPolygon(geofence: Geofence): AllowedAreaPolygon = AllowedAreaPolygon.newBuilder()
+        .setGeofenceId(geofence.id).addAllPoints(geofence.polygon.map { point ->
+            AllowedAreaPoint.newBuilder().setLatitude(point.latitude).setLongitude(point.longitude).build()
+        }).build()
 
     private fun publishBinding(binding: DevicePublishAuthorization): PublishBindingOutput = PublishBindingOutput.newBuilder()
         .setDeviceUuid(binding.deviceUuid).setGroupId(binding.publisherGroupId.value).setSensorId(binding.sensorId)

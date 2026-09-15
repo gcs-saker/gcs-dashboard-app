@@ -1,6 +1,8 @@
 package kr.co.a4ai.gcssaker.authpolicy.domain
 
 import java.time.Instant
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -49,6 +51,33 @@ interface GeofenceRepository {
     fun findVisible(principal: AuthenticatedPrincipal, limit: Int = 200, offset: Int = 0): List<Geofence>
     fun findEnabled(groupId: GroupId): List<Geofence>
     fun delete(id: String, principal: AuthenticatedPrincipal): Boolean
+}
+
+data class AllowedAreaSnapshot(
+    val groupId: GroupId,
+    val version: String,
+    val geofences: List<Geofence>,
+)
+
+class AllowedAreaSnapshotService(private val geofences: GeofenceRepository) {
+    fun current(groupId: GroupId): AllowedAreaSnapshot {
+        val enabled = geofences.findEnabled(groupId).sortedBy { it.id }
+        check(enabled.isNotEmpty()) { "allowed_area_unavailable" }
+        return AllowedAreaSnapshot(groupId, contentVersion(groupId, enabled), enabled)
+    }
+
+    private fun contentVersion(groupId: GroupId, enabled: List<Geofence>): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        digest.addField(groupId.value)
+        enabled.forEach { geofence ->
+            digest.addField(geofence.id)
+            geofence.polygon.forEach { point ->
+                digest.addField(java.lang.Double.toHexString(point.latitude))
+                digest.addField(java.lang.Double.toHexString(point.longitude))
+            }
+        }
+        return "sha256:" + digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
+    }
 }
 
 class InMemoryGeofenceRepository : GeofenceRepository {
@@ -116,4 +145,18 @@ private fun GeoPoint.onSegment(start: GeoPoint, end: GeoPoint): Boolean {
     if (kotlin.math.abs(cross) > 1e-10) return false
     return latitude in minOf(start.latitude, end.latitude)..maxOf(start.latitude, end.latitude) &&
         longitude in minOf(start.longitude, end.longitude)..maxOf(start.longitude, end.longitude)
+}
+
+private fun MessageDigest.addField(value: String) {
+    val bytes = value.toByteArray(StandardCharsets.UTF_8)
+    val length = bytes.size
+    update(
+        byteArrayOf(
+            (length ushr 24).toByte(),
+            (length ushr 16).toByte(),
+            (length ushr 8).toByte(),
+            length.toByte(),
+        ),
+    )
+    update(bytes)
 }

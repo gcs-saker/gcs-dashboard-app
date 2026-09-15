@@ -21,7 +21,10 @@ ordered route. Every waypoint and every interval created by a segment's polygon-
 must remain inside or on that area, including for concave polygons. Invalid, self-intersecting, degenerate,
 or antimeridian-ambiguous geometry fails closed. The requested immutable version must exactly match the
 provider's current version; a provider failure, group mismatch, or stale version cannot fall back to cached
-browser geometry. The production auth-policy transport is still required before runtime enablement.
+browser geometry. Auth-policy owns the current enabled geometry and exposes a deterministic content-hash
+version over the private token-authenticated mTLS gRPC boundary. Multiple active allowed areas are all
+constraints, so a route must remain in their intersection. The adapter is implemented but mission dispatch
+runtime wiring is still required before enablement.
 
 Altitude volume validation remains separate from horizontal geometry. AGL and MSL are never inferred from
 a number, and dispatch cannot be enabled until the authoritative terrain or geoid conversion is qualified.
