@@ -37,8 +37,9 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def create_entry(args: argparse.Namespace) -> dict[str, Any]:
     license_report = load_json(args.license_report)
-    if license_report.get("releaseAllowed") is not True:
-        raise ReleaseManifestError("license report does not permit release")
+    allowed_field = "internalDeploymentAllowed" if args.license_scope == "internal-service" else "releaseAllowed"
+    if license_report.get(allowed_field) is not True:
+        raise ReleaseManifestError(f"license report does not permit {args.license_scope}")
     reference = f"{args.image}@{args.digest}"
     if not valid_image_reference(args.service, reference):
         raise ReleaseManifestError("image must be an approved GHCR digest reference")
@@ -48,7 +49,9 @@ def create_entry(args: argparse.Namespace) -> dict[str, Any]:
         "sbomSha256": sha256(args.sbom),
         "licenseReportSha256": sha256(args.license_report),
         "noticesSha256": sha256(args.notices),
-        "licenseReleaseAllowed": True,
+        "licenseScope": args.license_scope,
+        "licenseDeploymentAllowed": True,
+        "licenseReleaseAllowed": license_report.get("releaseAllowed") is True,
     }
 
 
@@ -58,7 +61,7 @@ def assemble_manifest(entries_root: Path, source_commit: str, workflow_run: str)
     if services != SERVICES or len(entries) != len(SERVICES):
         raise ReleaseManifestError("release entries must cover each application service exactly once")
     manifest = {
-        "schemaVersion": "gcs-saker.signed-release.v1",
+        "schemaVersion": "gcs-saker.signed-release.v2",
         "sourceCommit": source_commit,
         "workflowRun": workflow_run,
         "createdAt": datetime.now(timezone.utc).isoformat(),
@@ -72,7 +75,7 @@ def assemble_manifest(entries_root: Path, source_commit: str, workflow_run: str)
 
 
 def validate_manifest(manifest: dict[str, Any], expected_commit: str) -> dict[str, str]:
-    if manifest.get("schemaVersion") != "gcs-saker.signed-release.v1":
+    if manifest.get("schemaVersion") != "gcs-saker.signed-release.v2":
         raise ReleaseManifestError("unsupported release manifest schema")
     if not COMMIT.fullmatch(expected_commit) or manifest.get("sourceCommit") != expected_commit:
         raise ReleaseManifestError("release manifest source commit mismatch")
@@ -115,8 +118,12 @@ def validate_entry(entry: dict[str, Any]) -> None:
     for field in ("sbomSha256", "licenseReportSha256", "noticesSha256"):
         if not re.fullmatch(r"[0-9a-f]{64}", str(entry.get(field, ""))):
             raise ReleaseManifestError(f"release manifest contains an invalid {field}")
-    if entry.get("licenseReleaseAllowed") is not True:
-        raise ReleaseManifestError("release manifest contains a blocked license disposition")
+    scope = str(entry.get("licenseScope", "distribution"))
+    if scope == "internal-service":
+        if service == "mobile-publisher" or entry.get("licenseDeploymentAllowed") is not True:
+            raise ReleaseManifestError("invalid internal-service license disposition")
+    elif scope != "distribution" or entry.get("licenseReleaseAllowed") is not True:
+        raise ReleaseManifestError("release manifest contains a blocked distribution disposition")
 
 
 def valid_image_reference(service: str, reference: str) -> bool:
@@ -162,6 +169,7 @@ def parse_args() -> argparse.Namespace:
     entry.add_argument("--sbom", type=Path, required=True)
     entry.add_argument("--license-report", type=Path, required=True)
     entry.add_argument("--notices", type=Path, required=True)
+    entry.add_argument("--license-scope", choices=("distribution", "internal-service"), default="distribution")
     entry.add_argument("--output", type=Path, required=True)
     assemble = subparsers.add_parser("assemble")
     assemble.add_argument("--entries-root", type=Path, required=True)
