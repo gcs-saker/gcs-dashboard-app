@@ -3,7 +3,12 @@
 Mission editing and mission dispatch are separate operations. Saving a draft cannot publish a device
 command. Dispatch requires an explicit operator confirmation, current asset UUID and session ID,
 positive server-side group authorization, current geofence validation, ordered bounded waypoints,
-altitude datum, revision, unique command ID, issue time, and expiry.
+altitude datum, mission revision, immutable geofence version, unique command ID, issue time, and expiry.
+
+Command lifetime is bounded to five minutes. The owned Redis ledger reserves a SHA-256-derived,
+versioned key atomically with a TTL ending at command expiry; Redis failure and expired reservation
+fail closed without exposing the command identifier in the key. The adapter is not enabled on a
+public route until the complete mission dispatch boundary and recovery qualification are approved.
 
 The browser never supplies a receiver, MQTT topic, or authoritative group. Media-control resolves the
 active session and server-owned group, then an owned adapter may derive the private command route.

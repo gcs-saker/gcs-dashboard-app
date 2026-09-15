@@ -61,10 +61,15 @@ traces:
       - docs/compliance/mission/mission-safety-contract.md
       - docs/compliance/ai/ai-overlay-assurance-profile.yml
       - contracts/mission/v1/mission-dispatch.schema.json
-    codeRefs: [services/media-control/internal/mission/mission.go]
+    codeRefs:
+      - services/media-control/internal/mission/mission.go
+      - services/media-control/internal/mission/redis_command_ledger.go
     testRefs:
       - backend/tests/test_system_safety_gate.py
       - services/media-control/internal/mission/mission_test.go
+      - services/media-control/internal/mission/redis_command_ledger_test.go
+      - services/media-control/internal/mission/redis_command_ledger_integration_test.go
+      - backend/tests/test_mission_safety_primitives.py
       - backend/tests/test_ai_adapter_router_security.py
       - scripts/reports/hazard_closure_qualification.py
       - backend/tests/test_hazard_closure_qualification.py

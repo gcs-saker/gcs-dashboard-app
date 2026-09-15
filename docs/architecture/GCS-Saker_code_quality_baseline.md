@@ -17,11 +17,11 @@ The cross-language complexity value is a conservative control-flow estimate. Pyt
 
 | Language | Functions | Over 60 lines | Complexity over 10 |
 | --- | ---: | ---: | ---: |
-| Python | 466 | 0 | 0 |
-| TypeScript/TSX | 740 | 0 | 0 |
-| Kotlin | 634 | 0 | 0 |
-| Go | 286 | 0 | 0 |
-| **Total** | **2,126** | **0** | **0** |
+| Python | 474 | 0 | 0 |
+| TypeScript/TSX | 825 | 0 | 0 |
+| Kotlin | 778 | 0 | 0 |
+| Go | 405 | 0 | 0 |
+| **Total** | **2,482** | **0** | **0** |
 
 Current maxima are 60 lines and complexity 10. The initial strict frontend Oxlint trial reported 25 findings. Production correctness findings were fixed and unavoidable hoisted Vitest factories received local documented suppressions; the strict profile now reports zero findings and runs in CI.
 

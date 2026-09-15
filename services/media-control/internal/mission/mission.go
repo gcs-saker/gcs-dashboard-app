@@ -7,14 +7,17 @@ import (
 )
 
 var (
-	ErrInvalidMission    = errors.New("mission_invalid")
-	ErrConfirmation      = errors.New("operator_confirmation_required")
-	ErrCommandExpired    = errors.New("mission_command_expired")
-	ErrSessionMismatch   = errors.New("mission_session_mismatch")
-	ErrAccessDenied      = errors.New("mission_access_denied")
-	ErrGeofenceViolation = errors.New("mission_geofence_violation")
-	ErrDuplicateCommand  = errors.New("mission_command_duplicate")
+	ErrInvalidMission       = errors.New("mission_invalid")
+	ErrConfirmation         = errors.New("operator_confirmation_required")
+	ErrCommandExpired       = errors.New("mission_command_expired")
+	ErrSessionMismatch      = errors.New("mission_session_mismatch")
+	ErrAccessDenied         = errors.New("mission_access_denied")
+	ErrGeofenceViolation    = errors.New("mission_geofence_violation")
+	ErrGeofenceVersionStale = errors.New("mission_geofence_version_stale")
+	ErrDuplicateCommand     = errors.New("mission_command_duplicate")
 )
+
+const MaxCommandLifetime = 5 * time.Minute
 
 type AltitudeDatum string
 
@@ -41,6 +44,7 @@ type DispatchRequest struct {
 	IssuedAt          time.Time
 	ExpiresAt         time.Time
 	AltitudeDatum     AltitudeDatum
+	GeofenceVersion   string
 	OperatorConfirmed bool
 	Waypoints         []Waypoint
 }
@@ -66,7 +70,7 @@ type Authorizer interface {
 }
 
 type Geofence interface {
-	AllowsRoute(context.Context, []Waypoint, AltitudeDatum) (bool, error)
+	AllowsRoute(context.Context, string, []Waypoint, AltitudeDatum) (bool, error)
 }
 
 type CommandLedger interface {
@@ -108,12 +112,18 @@ func (s Service) resolveAuthorizedSession(ctx context.Context, principal string,
 }
 
 func (s Service) reserveSafeRoute(ctx context.Context, request DispatchRequest) error {
-	inside, err := s.Geofence.AllowsRoute(ctx, request.Waypoints, request.AltitudeDatum)
+	inside, err := s.Geofence.AllowsRoute(ctx, request.GeofenceVersion, request.Waypoints, request.AltitudeDatum)
+	if errors.Is(err, ErrGeofenceVersionStale) {
+		return ErrGeofenceVersionStale
+	}
 	if err != nil || !inside {
 		return ErrGeofenceViolation
 	}
 	reserved, err := s.Commands.Reserve(ctx, request.CommandID, request.ExpiresAt)
-	if err != nil || !reserved {
+	if err != nil {
+		return ErrCommandLedgerUnavailable
+	}
+	if !reserved {
 		return ErrDuplicateCommand
 	}
 	return nil
@@ -139,12 +149,13 @@ func validateRequest(request DispatchRequest, now time.Time) error {
 }
 
 func hasMissingIdentity(request DispatchRequest) bool {
-	return request.MissionID == "" || request.MissionRevision < 1 || request.CommandID == "" ||
+	return request.MissionID == "" || request.MissionRevision < 1 || request.CommandID == "" || request.GeofenceVersion == "" ||
 		request.AssetUUID == "" || request.AssetSessionID == ""
 }
 
 func hasInvalidLifetime(request DispatchRequest, now time.Time) bool {
-	return request.IssuedAt.After(now) || !request.ExpiresAt.After(now) || !request.ExpiresAt.After(request.IssuedAt)
+	return request.IssuedAt.After(now) || !request.ExpiresAt.After(now) || !request.ExpiresAt.After(request.IssuedAt) ||
+		request.ExpiresAt.Sub(request.IssuedAt) > MaxCommandLifetime
 }
 
 func hasValidWaypoints(waypoints []Waypoint) bool {

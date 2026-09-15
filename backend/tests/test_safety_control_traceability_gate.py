@@ -23,7 +23,7 @@ def documents() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
 def test_catalogue_truthfully_classifies_five_hazards_and_fifteen_controls() -> None:
     counts = validate_catalogue(*documents())
 
-    assert counts == {"hazards": 5, "requirements": 15, "IMPLEMENTED": 7, "PARTIAL": 6, "PLANNED": 2}
+    assert counts == {"hazards": 5, "requirements": 15, "IMPLEMENTED": 7, "PARTIAL": 7, "PLANNED": 1}
 
 
 def test_catalogue_rejects_missing_safety_requirement() -> None:

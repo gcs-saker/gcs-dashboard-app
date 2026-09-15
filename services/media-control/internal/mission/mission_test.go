@@ -2,6 +2,7 @@ package mission
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -26,7 +27,9 @@ func TestDispatchFailsClosedForUnsafeRequests(t *testing.T) {
 		{"wrong asset", func(_ *Service, r *DispatchRequest) { r.AssetUUID = "asset-b" }, ErrSessionMismatch},
 		{"cross group", func(s *Service, _ *DispatchRequest) { s.Policy = policyStub{allowed: false} }, ErrAccessDenied},
 		{"segment violation", func(s *Service, _ *DispatchRequest) { s.Geofence = geofenceStub{allowed: false} }, ErrGeofenceViolation},
+		{"stale geofence", func(s *Service, _ *DispatchRequest) { s.Geofence = geofenceStub{err: ErrGeofenceVersionStale} }, ErrGeofenceVersionStale},
 		{"duplicate", func(s *Service, _ *DispatchRequest) { s.Commands = ledgerStub{reserved: false} }, ErrDuplicateCommand},
+		{"ledger unavailable", func(s *Service, _ *DispatchRequest) { s.Commands = ledgerStub{err: errors.New("store down")} }, ErrCommandLedgerUnavailable},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
@@ -48,12 +51,25 @@ func TestDispatchValidatesOrderedBoundedWaypoints(t *testing.T) {
 	}
 }
 
+func TestDispatchRequiresGeofenceVersionAndBoundedLifetime(t *testing.T) {
+	service, request := fixture()
+	request.GeofenceVersion = ""
+	if _, err := service.Dispatch(context.Background(), "operator-a", request); err != ErrInvalidMission {
+		t.Fatalf("expected missing version rejection, got %v", err)
+	}
+	request.GeofenceVersion = "geofence-v1"
+	request.ExpiresAt = request.IssuedAt.Add(MaxCommandLifetime + time.Second)
+	if _, err := service.Dispatch(context.Background(), "operator-a", request); err != ErrCommandExpired {
+		t.Fatalf("expected excessive lifetime rejection, got %v", err)
+	}
+}
+
 func fixture() (Service, DispatchRequest) {
 	now := time.Date(2026, 9, 7, 0, 0, 0, 0, time.UTC)
 	request := DispatchRequest{
 		MissionID: "mission-1", MissionRevision: 1, CommandID: "550e8400-e29b-41d4-a716-446655440000",
 		AssetUUID: "asset-a", AssetSessionID: "session-a", IssuedAt: now.Add(-time.Second),
-		ExpiresAt: now.Add(time.Minute), AltitudeDatum: AltitudeAGL, OperatorConfirmed: true,
+		ExpiresAt: now.Add(time.Minute), AltitudeDatum: AltitudeAGL, GeofenceVersion: "geofence-v1", OperatorConfirmed: true,
 		Waypoints: []Waypoint{{Sequence: 1, Latitude: 36.1, Longitude: 128.3, AltitudeM: 80, Action: "PASS"}},
 	}
 	service := Service{
@@ -74,14 +90,20 @@ type policyStub struct{ allowed bool }
 
 func (s policyStub) CanControl(_ context.Context, _, _ string) (bool, error) { return s.allowed, nil }
 
-type geofenceStub struct{ allowed bool }
-
-func (s geofenceStub) AllowsRoute(_ context.Context, _ []Waypoint, _ AltitudeDatum) (bool, error) {
-	return s.allowed, nil
+type geofenceStub struct {
+	allowed bool
+	err     error
 }
 
-type ledgerStub struct{ reserved bool }
+func (s geofenceStub) AllowsRoute(_ context.Context, _ string, _ []Waypoint, _ AltitudeDatum) (bool, error) {
+	return s.allowed, s.err
+}
+
+type ledgerStub struct {
+	reserved bool
+	err      error
+}
 
 func (s ledgerStub) Reserve(_ context.Context, _ string, _ time.Time) (bool, error) {
-	return s.reserved, nil
+	return s.reserved, s.err
 }
