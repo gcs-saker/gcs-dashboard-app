@@ -28,13 +28,14 @@ COPY . .
 RUN VITE_AUTH_API_BASE_URL=$VITE_IDENTITY_API_BASE_URL npm run build
 
 # 2단계: Serve with nginx
-FROM nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6
+FROM nginx:1.29-alpine-slim@sha256:c9366b8c560169b101ca0e5422ed063b20779e6454c2326b9c9704225c9b0c08
 ARG SOURCE_COMMIT=unknown
 LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
-USER root
-RUN apk upgrade --no-cache
+RUN apk upgrade --no-cache \
+    && chown -R nginx:nginx /var/cache/nginx /usr/share/nginx/html
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf
 USER 101
 EXPOSE 3000
+ENTRYPOINT []
 CMD ["nginx", "-g", "daemon off;"]

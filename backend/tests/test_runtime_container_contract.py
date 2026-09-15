@@ -222,7 +222,7 @@ def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
     dockerfile = DASHBOARD_DOCKERFILE.read_text(encoding="utf-8")
 
     assert "FROM node:22.18.0-bookworm-slim@sha256:" in dockerfile
-    assert "FROM nginxinc/nginx-unprivileged:1.29-alpine@sha256:" in dockerfile
+    assert "FROM nginx:1.29-alpine-slim@sha256:" in dockerfile
     assert "ARG VITE_API_BASE_URL=/api" in dockerfile
     assert "ARG VITE_IDENTITY_API_BASE_URL=/auth-policy/auth" in dockerfile
     assert "RUN VITE_AUTH_API_BASE_URL=$VITE_IDENTITY_API_BASE_URL npm run build" in dockerfile

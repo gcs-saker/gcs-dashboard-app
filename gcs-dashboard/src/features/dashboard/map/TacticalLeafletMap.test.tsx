@@ -96,9 +96,11 @@ describe("TacticalLeafletMap", () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
 
     expect(await screen.findByTestId("public-tactical-map")).toBeInTheDocument();
-    expect(leafletMock().Map).toHaveBeenCalledWith(expect.any(HTMLElement), {
-      attributionControl: false,
-      zoomControl: false,
+    await waitFor(() => {
+      expect(leafletMock().Map).toHaveBeenCalledWith(expect.any(HTMLElement), {
+        attributionControl: false,
+        zoomControl: false,
+      });
     });
     expect(leafletMock().instances[0].setView).toHaveBeenCalledWith([35.871435, 128.601445], 14, { animate: false });
     expect(leafletMock().tileLayer).toHaveBeenCalledWith(

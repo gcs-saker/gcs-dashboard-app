@@ -320,7 +320,7 @@ services:
         read_only: true
     healthcheck:
       <<: *health_defaults
-      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8081/healthz >/dev/null"]
+      test: ["CMD", "/usr/local/bin/media-control", "healthcheck"]
     depends_on:
       redis:
         condition: service_healthy
