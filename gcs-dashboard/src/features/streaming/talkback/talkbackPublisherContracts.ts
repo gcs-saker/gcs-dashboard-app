@@ -12,7 +12,6 @@ export interface UseWhipAudioPublisherOptions {
   mediaDevices?: MediaDevices;
   peerConnectionFactory?: TalkbackPeerConnectionFactory;
   fetcher?: typeof fetch;
-  operatorId?: string;
 }
 
 export interface TalkbackPublisherSnapshot {

@@ -13,7 +13,6 @@ describe("talkbackWhipSession", () => {
       audioTracks: [audioTrack],
       fetcher,
       iceServers: [{ urls: "stun:example.test:19302" }],
-      operatorId: "operator01",
       peerConnectionFactory: () => peerConnection,
       streamId: "raw.sample.front",
     });

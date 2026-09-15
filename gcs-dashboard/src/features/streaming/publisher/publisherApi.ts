@@ -41,12 +41,10 @@ interface AuthorizedTalkbackPlaybackResponse {
 
 export async function fetchAuthorizedTalkbackSession(
   streamId: string,
-  operatorId: string | undefined,
   fetcher: typeof fetch,
 ): Promise<AuthorizedPublishSession> {
-  const query = operatorId?.trim() ? `?operatorId=${encodeURIComponent(operatorId.trim())}` : "";
   const response = await authenticatedFetch(
-    streamApiV1Url(`${STREAM_API_ROUTES.streams}/${streamId}/talkback-publish${query}`),
+    streamApiV1Url(`${STREAM_API_ROUTES.streams}/${streamId}/talkback-publish`),
     { method: "GET", headers: STREAM_JSON_ACCEPT_HEADERS },
     fetcher,
   );
