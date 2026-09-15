@@ -285,7 +285,15 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/mobile-evidence"
           gh api "/repos/gcs-saker/gcs-mobile-publisher/actions/artifacts/${MOBILE_ARTIFACT_ID}/zip" \
             > "${RUNNER_TEMP}/mobile-evidence.zip"
-          unzip -q "${RUNNER_TEMP}/mobile-evidence.zip" -d "${RUNNER_TEMP}/mobile-evidence"
+          unzip -q "${RUNNER_TEMP}/mobile-evidence.zip" -d "${RUNNER_TEMP}/mobile-evidence-raw"
+          for evidence_name in mobile-release-entry.json mobile-publisher.spdx.json license-report.json THIRD_PARTY_NOTICES.md mobile-publisher.cosign.bundle.json; do
+            evidence_path="$(find "${RUNNER_TEMP}/mobile-evidence-raw" -type f -name "${evidence_name}" -print -quit)"
+            test -n "${evidence_path}" || {
+              echo "mobile publisher evidence file is missing: ${evidence_name}" >&2
+              exit 1
+            }
+            cp "${evidence_path}" "${RUNNER_TEMP}/mobile-evidence/${evidence_name}"
+          done
 
       - name: Verify mobile evidence hashes and disposition
         shell: bash
