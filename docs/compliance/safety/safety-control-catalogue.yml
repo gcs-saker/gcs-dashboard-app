@@ -14,9 +14,9 @@ requirements:
     owner: media-control
     statement: Reserve each command ID atomically before dispatch and reject duplicate delivery.
     status: PARTIAL
-    codeRefs: [services/media-control/internal/mission/mission.go]
-    testRefs: [services/media-control/internal/mission/mission_test.go]
-    gap: A durable production CommandLedger adapter and reconnect replay integration test are not implemented.
+    codeRefs: [services/media-control/internal/mission/mission.go, services/media-control/internal/mission/redis_command_ledger.go]
+    testRefs: [services/media-control/internal/mission/mission_test.go, services/media-control/internal/mission/redis_command_ledger_test.go, services/media-control/internal/mission/redis_command_ledger_integration_test.go]
+    gap: The Redis adapter is atomic and durable across process restart but mission dispatch is not runtime-wired and reconnect replay is not qualified.
     followUpIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/661
   - id: SR-COMMAND-EXPIRY
     hazardId: HAZ-MISSION-STALE-COMMAND
@@ -54,10 +54,10 @@ requirements:
     hazardId: HAZ-MISSION-GEOFENCE-BYPASS
     owner: media-control
     statement: Bind dispatch validation to an immutable current geofence version and reject stale versions.
-    status: PLANNED
-    codeRefs: []
-    testRefs: []
-    gap: Mission requests and the geofence boundary do not carry a version.
+    status: PARTIAL
+    codeRefs: [services/media-control/internal/mission/mission.go, contracts/mission/v1/mission-dispatch.schema.json]
+    testRefs: [services/media-control/internal/mission/mission_test.go]
+    gap: Mission requests now require a version and stale versions fail closed but the authoritative geofence provider is not runtime-wired.
     followUpIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/661
   - id: SR-DATA-FRESHNESS
     hazardId: HAZ-TELEMETRY-STALE

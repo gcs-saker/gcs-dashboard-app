@@ -4,7 +4,7 @@
   "title": "Mission dispatch request",
   "type": "object",
   "additionalProperties": false,
-  "required": ["missionId", "missionRevision", "commandId", "assetUuid", "assetSessionId", "issuedAt", "expiresAt", "altitudeDatum", "operatorConfirmed", "waypoints"],
+  "required": ["missionId", "missionRevision", "commandId", "assetUuid", "assetSessionId", "issuedAt", "expiresAt", "altitudeDatum", "geofenceVersion", "operatorConfirmed", "waypoints"],
   "properties": {
     "missionId": { "type": "string", "minLength": 1, "maxLength": 128 },
     "missionRevision": { "type": "integer", "minimum": 1 },
@@ -14,6 +14,7 @@
     "issuedAt": { "type": "string", "format": "date-time" },
     "expiresAt": { "type": "string", "format": "date-time" },
     "altitudeDatum": { "enum": ["AGL", "MSL"] },
+    "geofenceVersion": { "type": "string", "minLength": 1, "maxLength": 128 },
     "operatorConfirmed": { "const": true },
     "waypoints": {
       "type": "array",
@@ -35,4 +36,3 @@
     }
   }
 }
-

@@ -13,7 +13,7 @@ func FuzzMissionWaypointBoundary(f *testing.F) {
 		request := DispatchRequest{
 			MissionID: "mission", MissionRevision: 1, CommandID: "command", AssetUUID: "asset",
 			AssetSessionID: "session", IssuedAt: now.Add(-time.Second), ExpiresAt: now.Add(time.Minute),
-			AltitudeDatum: AltitudeAGL, OperatorConfirmed: true,
+			AltitudeDatum: AltitudeAGL, GeofenceVersion: "geofence-v1", OperatorConfirmed: true,
 			Waypoints: []Waypoint{{Sequence: sequence, Latitude: latitude, Longitude: longitude, AltitudeM: altitude, HoldSeconds: hold}},
 		}
 		_ = validateRequest(request, now)

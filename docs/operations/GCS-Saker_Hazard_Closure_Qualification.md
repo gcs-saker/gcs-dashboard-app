@@ -12,7 +12,7 @@ python scripts/reports/hazard_closure_qualification.py --check
 
 The controlled baseline currently contains ten open hazards and the residual-risk register contains
 no acceptance records. All hazards now have a top-level requirement trace, while the five hazards
-added during the detailed control audit contain seven implemented, six partial, and two planned
+added during the detailed control audit contain seven implemented, seven partial, and one planned
 controls. Therefore the truthful closure ratio remains zero and the result is `BLOCKED`.
 
 ## Closure inputs
