@@ -15,8 +15,16 @@ active session and server-owned group, then an owned adapter may derive the priv
 The dispatch domain reserves the command ID before publication; duplicate or ambiguous reservation
 fails closed. A future persistence adapter must implement the reservation atomically with bounded TTL.
 
-Geofence validation receives the complete ordered route and datum. Its implementation must check every
-segment and altitude volume, not only waypoint vertices. AGL and MSL are never inferred from a number.
+The existing operational geofence is an approved allowed area, not an exclusion-zone object. Mission
+validation therefore requires the current group-owned allowed-area snapshot and checks the complete
+ordered route. Every waypoint and every interval created by a segment's polygon-boundary intersections
+must remain inside or on that area, including for concave polygons. Invalid, self-intersecting, degenerate,
+or antimeridian-ambiguous geometry fails closed. The requested immutable version must exactly match the
+provider's current version; a provider failure, group mismatch, or stale version cannot fall back to cached
+browser geometry. The production auth-policy transport is still required before runtime enablement.
+
+Altitude volume validation remains separate from horizontal geometry. AGL and MSL are never inferred from
+a number, and dispatch cannot be enabled until the authoritative terrain or geoid conversion is qualified.
 The UI must show asset, group-visible designation, session freshness, waypoint count, total distance,
 altitude datum, and expiry in a final confirmation surface. Dispatch, denial, cancellation, and device
 acknowledgement are auditable events.

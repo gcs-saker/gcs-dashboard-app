@@ -63,10 +63,12 @@ traces:
       - contracts/mission/v1/mission-dispatch.schema.json
     codeRefs:
       - services/media-control/internal/mission/mission.go
+      - services/media-control/internal/mission/route_geofence.go
       - services/media-control/internal/mission/redis_command_ledger.go
     testRefs:
       - backend/tests/test_system_safety_gate.py
       - services/media-control/internal/mission/mission_test.go
+      - services/media-control/internal/mission/route_geofence_test.go
       - services/media-control/internal/mission/redis_command_ledger_test.go
       - services/media-control/internal/mission/redis_command_ledger_integration_test.go
       - backend/tests/test_mission_safety_primitives.py

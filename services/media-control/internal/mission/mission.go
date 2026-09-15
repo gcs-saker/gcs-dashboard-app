@@ -70,7 +70,7 @@ type Authorizer interface {
 }
 
 type Geofence interface {
-	AllowsRoute(context.Context, string, []Waypoint, AltitudeDatum) (bool, error)
+	AllowsRoute(context.Context, string, string, []Waypoint, AltitudeDatum) (bool, error)
 }
 
 type CommandLedger interface {
@@ -93,7 +93,7 @@ func (s Service) Dispatch(ctx context.Context, principal string, request Dispatc
 	if err != nil {
 		return DispatchEnvelope{}, err
 	}
-	if err := s.reserveSafeRoute(ctx, request); err != nil {
+	if err := s.reserveSafeRoute(ctx, session.GroupID, request); err != nil {
 		return DispatchEnvelope{}, err
 	}
 	return DispatchEnvelope{Request: request, GroupID: session.GroupID}, nil
@@ -111,8 +111,8 @@ func (s Service) resolveAuthorizedSession(ctx context.Context, principal string,
 	return session, nil
 }
 
-func (s Service) reserveSafeRoute(ctx context.Context, request DispatchRequest) error {
-	inside, err := s.Geofence.AllowsRoute(ctx, request.GeofenceVersion, request.Waypoints, request.AltitudeDatum)
+func (s Service) reserveSafeRoute(ctx context.Context, groupID string, request DispatchRequest) error {
+	inside, err := s.Geofence.AllowsRoute(ctx, groupID, request.GeofenceVersion, request.Waypoints, request.AltitudeDatum)
 	if errors.Is(err, ErrGeofenceVersionStale) {
 		return ErrGeofenceVersionStale
 	}
