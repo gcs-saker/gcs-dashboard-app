@@ -1,11 +1,16 @@
 import base64
 import json
+import runpy
 from pathlib import Path
+from typing import Callable, cast
 
 import pytest
-from scripts.ops.verify_mobile_release_evidence import MobileEvidenceError, verify
 
 DIGEST = "a" * 64
+SCRIPT = Path(__file__).resolve().parents[2] / "scripts/ops/verify_mobile_release_evidence.py"
+MODULE = runpy.run_path(str(SCRIPT))
+MobileEvidenceError = cast(type[BaseException], MODULE["MobileEvidenceError"])
+verify = cast(Callable[[Path, Path], None], MODULE["verify"])
 
 
 def write_evidence(tmp_path: Path, subject_digest: str = DIGEST) -> tuple[Path, Path]:
