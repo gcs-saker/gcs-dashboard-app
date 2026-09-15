@@ -51,6 +51,10 @@ def test_single_node_keeps_management_ports_local_but_allows_webrtc_ice_public_b
         "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_RELAY_HOST_MIN_PORT:-49160}-"
         "${TURN_PRIMARY_RELAY_HOST_MAX_PORT:-49180}:49160-49180/udp"
     ) in turn_primary_ports
+    assert "--min-port=${TURN_RELAY_MIN_PORT:-49160}" in services["turn-primary"]["command"]
+    assert "--max-port=${TURN_PRIMARY_RELAY_MAX_PORT:-49180}" in services["turn-primary"]["command"]
+    assert "--min-port=${TURN_SECONDARY_RELAY_MIN_PORT:-49181}" in services["turn-secondary"]["command"]
+    assert "--max-port=${TURN_RELAY_MAX_PORT:-49200}" in services["turn-secondary"]["command"]
 
 
 def test_single_node_edge_depends_on_active_cutover_services() -> None:
