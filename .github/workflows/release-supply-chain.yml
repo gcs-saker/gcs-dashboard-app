@@ -253,6 +253,7 @@ jobs:
       actions: read
       contents: read
       id-token: write
+      packages: read
     steps:
       - name: Resolve immutable mobile release run
         env:
@@ -307,6 +308,13 @@ jobs:
 
       - name: Install verified Cosign release
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Authenticate to GHCR for mobile signature verification
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify mobile publisher signer identity
         shell: bash
