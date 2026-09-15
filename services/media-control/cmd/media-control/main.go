@@ -27,6 +27,9 @@ const (
 )
 
 func main() {
+	if isHealthcheckCommand(os.Args) {
+		os.Exit(runHealthcheck())
+	}
 	if err := run(); err != nil {
 		log.Printf("media-control stopped error_code=runtime_failed error_type=%T", err)
 		os.Exit(1)
