@@ -109,6 +109,6 @@ def test_deploy_verifies_manifest_and_all_attestations() -> None:
     assert '"${cosign_bin}" verify-attestation --type slsaprovenance' in verifier
     assert '"${cosign_bin}" verify-attestation --type spdxjson' in verifier
     assert 'release_manifest.py" verify' in verifier
-    assert 'export MOBILE_PUBLISHER_IMAGE=' in verifier
+    assert "export MOBILE_PUBLISHER_IMAGE=" in verifier
     assert "gcs-mobile-publisher/.github/workflows/signed-release.yml" in verifier
     assert "55122" not in verifier
