@@ -105,7 +105,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "mosquitto_sub -h 127.0.0.1 -p 8883 --cafile /run/secrets/gcs-pki/ca.crt --cert /run/secrets/gcs-pki/mqtt-health.crt --key /run/secrets/gcs-pki/mqtt-health.key -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null",
+          "mosquitto_sub -h mqtt -p 8883 --cafile /run/secrets/gcs-pki/ca.crt --cert /run/secrets/gcs-pki/mqtt-health.crt --key /run/secrets/gcs-pki/mqtt-health.key -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null",
         ]
     restart: unless-stopped
     networks:

@@ -57,6 +57,14 @@ def test_single_node_keeps_management_ports_local_but_allows_webrtc_ice_public_b
     assert "--max-port=${TURN_RELAY_MAX_PORT:-49200}" in services["turn-secondary"]["command"]
 
 
+def test_mqtt_healthcheck_uses_the_certificate_dns_identity() -> None:
+    compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
+    healthcheck = compose["services"]["mqtt"]["healthcheck"]["test"]
+
+    assert "mosquitto_sub -h mqtt -p 8883" in healthcheck[-1]
+    assert "mosquitto_sub -h 127.0.0.1" not in healthcheck[-1]
+
+
 def test_single_node_edge_depends_on_active_cutover_services() -> None:
     compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
     edge_depends_on = compose["services"]["edge"]["depends_on"]
