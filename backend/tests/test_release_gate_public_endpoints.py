@@ -68,12 +68,17 @@ def test_release_gate_accepts_valid_runtime_secrets_images_and_turn_ranges(tmp_p
         ({"AUTH_POLICY_ADMIN_MFA_SECRET": "replace-with-base32-secret-outside-git"}, "valid Base32"),
         ({"AUTH_POLICY_ADMIN_MFA_SECRET": "JBSWY3DP"}, "at least 160 bits"),
         ({"MOBILE_PUBLISHER_IMAGE": "gcs-mobile-publisher:latest"}, "immutable sha256 digest"),
-        ({"TURN_PRIMARY_RELAY_HOST_MAX_PORT": "49179", "TURN_SECONDARY_RELAY_HOST_MIN_PORT": "49180"}, "range sizes must match"),
+        (
+            {"TURN_PRIMARY_RELAY_HOST_MAX_PORT": "49179", "TURN_SECONDARY_RELAY_HOST_MIN_PORT": "49180"},
+            "range sizes must match",
+        ),
         ({"TURN_SECONDARY_RELAY_MIN_PORT": "49182"}, "positive and contiguous"),
     ],
 )
 def test_release_gate_rejects_unsafe_runtime_configuration(
-    tmp_path: Path, override: dict[str, str], message: str,
+    tmp_path: Path,
+    override: dict[str, str],
+    message: str,
 ) -> None:
     env_file = tmp_path / "production.env"
     write_runtime_environment(env_file, **override)

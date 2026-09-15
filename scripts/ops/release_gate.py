@@ -131,25 +131,44 @@ def validate_admin_mfa_secret(encoded: str) -> None:
 
 def validate_turn_ranges(values: dict[str, str]) -> None:
     names = (
-        "TURN_RELAY_MIN_PORT", "TURN_PRIMARY_RELAY_MAX_PORT",
-        "TURN_SECONDARY_RELAY_MIN_PORT", "TURN_RELAY_MAX_PORT",
-        "TURN_PRIMARY_RELAY_HOST_MIN_PORT", "TURN_PRIMARY_RELAY_HOST_MAX_PORT",
-        "TURN_SECONDARY_RELAY_HOST_MIN_PORT", "TURN_SECONDARY_RELAY_HOST_MAX_PORT",
+        "TURN_RELAY_MIN_PORT",
+        "TURN_PRIMARY_RELAY_MAX_PORT",
+        "TURN_SECONDARY_RELAY_MIN_PORT",
+        "TURN_RELAY_MAX_PORT",
+        "TURN_PRIMARY_RELAY_HOST_MIN_PORT",
+        "TURN_PRIMARY_RELAY_HOST_MAX_PORT",
+        "TURN_SECONDARY_RELAY_HOST_MIN_PORT",
+        "TURN_SECONDARY_RELAY_HOST_MAX_PORT",
     )
     try:
         ports = {name: int(values[name]) for name in names}
     except (KeyError, ValueError):
         raise RuntimeError("TURN relay ranges must be explicit integer values") from None
-    internal = range_sizes(ports, "TURN_RELAY_MIN_PORT", "TURN_PRIMARY_RELAY_MAX_PORT",
-                           "TURN_SECONDARY_RELAY_MIN_PORT", "TURN_RELAY_MAX_PORT")
-    external = range_sizes(ports, "TURN_PRIMARY_RELAY_HOST_MIN_PORT", "TURN_PRIMARY_RELAY_HOST_MAX_PORT",
-                           "TURN_SECONDARY_RELAY_HOST_MIN_PORT", "TURN_SECONDARY_RELAY_HOST_MAX_PORT")
+    internal = range_sizes(
+        ports,
+        "TURN_RELAY_MIN_PORT",
+        "TURN_PRIMARY_RELAY_MAX_PORT",
+        "TURN_SECONDARY_RELAY_MIN_PORT",
+        "TURN_RELAY_MAX_PORT",
+    )
+    external = range_sizes(
+        ports,
+        "TURN_PRIMARY_RELAY_HOST_MIN_PORT",
+        "TURN_PRIMARY_RELAY_HOST_MAX_PORT",
+        "TURN_SECONDARY_RELAY_HOST_MIN_PORT",
+        "TURN_SECONDARY_RELAY_HOST_MAX_PORT",
+    )
     if internal != external:
         raise RuntimeError("TURN internal and published relay range sizes must match")
 
 
-def range_sizes(values: dict[str, int], first_min: str, first_max: str,
-                second_min: str, second_max: str) -> tuple[int, int]:
+def range_sizes(
+    values: dict[str, int],
+    first_min: str,
+    first_max: str,
+    second_min: str,
+    second_max: str,
+) -> tuple[int, int]:
     first = values[first_max] - values[first_min] + 1
     second = values[second_max] - values[second_min] + 1
     if first <= 0 or second <= 0 or values[second_min] != values[first_max] + 1:
