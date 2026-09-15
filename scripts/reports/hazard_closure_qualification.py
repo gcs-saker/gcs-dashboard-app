@@ -33,11 +33,7 @@ def load_object(path: Path) -> dict[str, Any]:
 def unique(entries: Any, key: str, label: str) -> dict[str, dict[str, Any]]:
     if not isinstance(entries, list):
         raise HazardClosureError(f"{label} must be a list")
-    indexed = {
-        item.get(key): item
-        for item in entries
-        if isinstance(item, dict) and isinstance(item.get(key), str)
-    }
+    indexed = {item.get(key): item for item in entries if isinstance(item, dict) and isinstance(item.get(key), str)}
     if len(indexed) != len(entries):
         raise HazardClosureError(f"{label} IDs must be unique strings")
     return indexed
@@ -49,16 +45,12 @@ def input_path(profile: dict[str, Any], name: str) -> Path:
 
 def validate_profile(profile: dict[str, Any]) -> None:
     if profile.get("status") != "CONTROLLED_DRAFT_NOT_EXECUTED":
-        raise HazardClosureError(
-            "hazard closure profile must remain an unexecuted draft"
-        )
+        raise HazardClosureError("hazard closure profile must remain an unexecuted draft")
     if profile.get("standard") != "MIL-STD-882E Change 1":
         raise HazardClosureError("hazard closure profile has an unsupported standard")
     if profile.get("thresholds", {}).get("status") != "PROPOSED_NOT_APPROVED":
         raise HazardClosureError("hazard closure thresholds must remain proposed")
-    required_fields = profile.get("closureRequirements", {}).get(
-        "residualRiskRequiredFields"
-    )
+    required_fields = profile.get("closureRequirements", {}).get("residualRiskRequiredFields")
     if not isinstance(required_fields, list) or len(required_fields) < 9:
         raise HazardClosureError("residual-risk closure fields are incomplete")
 
@@ -90,9 +82,7 @@ def load_manifests(paths: list[Path], source_commit: str) -> dict[str, dict[str,
     for path in paths:
         document = load_object(path)
         evidence_id = document.get("evidenceId")
-        if document.get(
-            "schemaVersion"
-        ) != "gcs-saker.evidence-manifest.v1" or not isinstance(evidence_id, str):
+        if document.get("schemaVersion") != "gcs-saker.evidence-manifest.v1" or not isinstance(evidence_id, str):
             raise HazardClosureError(f"invalid evidence manifest: {path.name}")
         if evidence_id in manifests:
             raise HazardClosureError(f"duplicate evidence ID: {evidence_id}")
@@ -113,24 +103,14 @@ def validate_manifest_metadata(document: dict[str, Any], evidence_id: str) -> No
         "reviewer",
     )
     if any(not document.get(field) for field in required):
-        raise HazardClosureError(
-            f"evidence manifest metadata is incomplete: {evidence_id}"
-        )
+        raise HazardClosureError(f"evidence manifest metadata is incomplete: {evidence_id}")
     artifacts = document.get("artifacts")
     if not isinstance(artifacts, list) or not artifacts:
-        raise HazardClosureError(
-            f"evidence manifest has no retained artifacts: {evidence_id}"
-        )
+        raise HazardClosureError(f"evidence manifest has no retained artifacts: {evidence_id}")
     for artifact in artifacts:
         digest = artifact.get("sha256") if isinstance(artifact, dict) else None
-        if (
-            not isinstance(digest, str)
-            or len(digest) != 64
-            or not artifact.get("immutableLocator")
-        ):
-            raise HazardClosureError(
-                f"evidence artifact metadata is invalid: {evidence_id}"
-            )
+        if not isinstance(digest, str) or len(digest) != 64 or not artifact.get("immutableLocator"):
+            raise HazardClosureError(f"evidence artifact metadata is invalid: {evidence_id}")
 
 
 def parse_date(value: Any) -> date | None:
@@ -158,10 +138,7 @@ def record_blockers(
         blockers.append("residual-risk-not-accepted")
     if record.get("residualRisk") in {None, "UNASSESSED"}:
         blockers.append("residual-risk-unassessed")
-    if (
-        not record.get("acceptanceAuthority")
-        or parse_date(record.get("acceptedAt")) is None
-    ):
+    if not record.get("acceptanceAuthority") or parse_date(record.get("acceptedAt")) is None:
         blockers.append("acceptance-decision-incomplete")
     review_due = parse_date(record.get("reviewDueAt"))
     if review_due is None:
@@ -172,15 +149,11 @@ def record_blockers(
     verified = set(verified_values) if isinstance(verified_values, list) else set()
     if not set(hazard["safetyRequirements"]).issubset(verified):
         blockers.append("safety-controls-unverified")
-    blockers.extend(
-        manifest_blockers(hazard["id"], record.get("evidenceManifestIds"), manifests)
-    )
+    blockers.extend(manifest_blockers(hazard["id"], record.get("evidenceManifestIds"), manifests))
     return blockers
 
 
-def manifest_blockers(
-    hazard_id: str, evidence_ids: Any, manifests: dict[str, dict[str, Any]]
-) -> list[str]:
+def manifest_blockers(hazard_id: str, evidence_ids: Any, manifests: dict[str, dict[str, Any]]) -> list[str]:
     if not isinstance(evidence_ids, list) or not evidence_ids:
         return ["pass-evidence-missing"]
     blockers: list[str] = []
@@ -188,9 +161,7 @@ def manifest_blockers(
         manifest = manifests.get(evidence_id)
         if manifest is None:
             blockers.append("evidence-manifest-not-supplied")
-        elif manifest.get("verdict") != "PASS" or hazard_id not in manifest.get(
-            "hazardIds", []
-        ):
+        elif manifest.get("verdict") != "PASS" or hazard_id not in manifest.get("hazardIds", []):
             blockers.append("evidence-not-pass-or-hazard-mismatch")
     return sorted(set(blockers))
 
@@ -210,11 +181,7 @@ def evaluate_hazards(
             blockers.append("missing-requirement-trace")
         if hazard.get("status") != "CLOSED":
             blockers.append("hazard-status-open")
-        blockers.extend(
-            record_blockers(
-                hazard, records.get(hazard_id), manifests, source_commit, as_of
-            )
-        )
+        blockers.extend(record_blockers(hazard, records.get(hazard_id), manifests, source_commit, as_of))
         results.append(
             {
                 "hazardId": hazard_id,
@@ -224,23 +191,14 @@ def evaluate_hazards(
         )
     closed_count = sum(item["closed"] for item in results)
     invalid_declared_closed = any(
-        hazards[item["hazardId"]].get("status") == "CLOSED" and item["blockers"]
-        for item in results
+        hazards[item["hazardId"]].get("status") == "CLOSED" and item["blockers"] for item in results
     )
-    technical_result = (
-        "FAIL"
-        if invalid_declared_closed
-        else "PASS"
-        if closed_count == len(results)
-        else "BLOCKED"
-    )
+    technical_result = "FAIL" if invalid_declared_closed else "PASS" if closed_count == len(results) else "BLOCKED"
     return {
         "hazardCount": len(results),
         "closedHazardCount": closed_count,
         "closureRatio": closed_count / len(results) if results else 0.0,
-        "untracedHazardIds": sorted(
-            hazard_id for hazard_id in hazards if not traces.get(hazard_id)
-        ),
+        "untracedHazardIds": sorted(hazard_id for hazard_id in hazards if not traces.get(hazard_id)),
         "hazards": results,
         "technicalResult": technical_result,
         "verdict": "FAIL" if technical_result == "FAIL" else "BLOCKED",
@@ -261,23 +219,17 @@ def build_report(
     if set(assignments) != set(hazards) or any(
         assignments[key].get("swci") != hazards[key].get("swci") for key in hazards
     ):
-        raise HazardClosureError(
-            "hazard LOR assignments are incomplete or inconsistent"
-        )
+        raise HazardClosureError("hazard LOR assignments are incomplete or inconsistent")
     risk_register = load_object(input_path(profile, "residualRiskRegister"))
     records = unique(risk_register.get("records"), "hazardId", "residual-risk records")
     unknown_records = sorted(set(records) - set(hazards))
     if unknown_records:
-        raise HazardClosureError(
-            f"residual-risk records reference unknown hazards: {unknown_records}"
-        )
+        raise HazardClosureError(f"residual-risk records reference unknown hazards: {unknown_records}")
     traceability = load_object(input_path(profile, "traceability"))
     traces = hazard_traces(traceability)
     unknown_traces = sorted(set(traces) - set(hazards))
     if unknown_traces:
-        raise HazardClosureError(
-            f"traceability references unknown hazards: {unknown_traces}"
-        )
+        raise HazardClosureError(f"traceability references unknown hazards: {unknown_traces}")
     result = evaluate_hazards(
         hazards,
         records,
@@ -293,9 +245,7 @@ def build_report(
         "sourceCommit": source_commit,
         "thresholdStatus": profile["thresholds"]["status"],
         **result,
-        "limitations": [
-            "hazard closure threshold and independent system-safety review are not approved"
-        ],
+        "limitations": ["hazard closure threshold and independent system-safety review are not approved"],
     }
 
 
@@ -322,16 +272,10 @@ def main() -> int:
     if not args.as_of_date or not args.output:
         parser.error("--as-of-date and --output are required")
     if any(not path.is_absolute() or not path.is_file() for path in args.manifest):
-        raise HazardClosureError(
-            "every evidence manifest must be an existing absolute file"
-        )
+        raise HazardClosureError("every evidence manifest must be an existing absolute file")
     report = build_report(profile, args.manifest, current_commit(), args.as_of_date)
     write_immutable(args.output, report)
-    print(
-        json.dumps(
-            {"closureRatio": report["closureRatio"], "verdict": report["verdict"]}
-        )
-    )
+    print(json.dumps({"closureRatio": report["closureRatio"], "verdict": report["verdict"]}))
     return 0
 
 
