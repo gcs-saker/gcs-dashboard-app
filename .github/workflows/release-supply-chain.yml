@@ -179,7 +179,19 @@ jobs:
             --enforce \
             --enforce-scope internal-service
 
+      - name: Block fixed high and critical backend vulnerabilities
+        if: matrix.image == 'backend'
+        uses: anchore/scan-action@1638637db639e0ade3258b51db49a9a137574c3e # v6
+        env:
+          GRYPE_CONFIG: ${{ github.workspace }}/.github/grype/backend-python312.yaml
+        with:
+          image: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
+          fail-build: true
+          severity-cutoff: high
+          only-fixed: true
+
       - name: Block fixed high and critical vulnerabilities
+        if: matrix.image != 'backend'
         uses: anchore/scan-action@1638637db639e0ade3258b51db49a9a137574c3e # v6
         with:
           image: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
