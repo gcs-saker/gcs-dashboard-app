@@ -16,13 +16,8 @@ IMAGE_NAMES = {service: f"gcs-saker-{service}" for service in SERVICES}
 IMAGE_NAMES["mobile-publisher"] = "gcs-mobile-publisher"
 DIGEST = re.compile(r"sha256:[0-9a-f]{64}$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
-ACTIVE_VEX = (
-    Path(__file__).resolve().parents[2] / "docs/compliance/supply-chain/active-vex.json"
-)
-RUNTIME_INVENTORY = (
-    Path(__file__).resolve().parents[2]
-    / "docs/compliance/supply-chain/runtime-delivery-inventory.json"
-)
+ACTIVE_VEX = Path(__file__).resolve().parents[2] / "docs/compliance/supply-chain/active-vex.json"
+RUNTIME_INVENTORY = Path(__file__).resolve().parents[2] / "docs/compliance/supply-chain/runtime-delivery-inventory.json"
 
 
 class ReleaseManifestError(RuntimeError):
@@ -57,17 +52,11 @@ def create_entry(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def assemble_manifest(
-    entries_root: Path, source_commit: str, workflow_run: str
-) -> dict[str, Any]:
-    entries = [
-        load_json(path) for path in sorted(entries_root.rglob("release-entry.json"))
-    ]
+def assemble_manifest(entries_root: Path, source_commit: str, workflow_run: str) -> dict[str, Any]:
+    entries = [load_json(path) for path in sorted(entries_root.rglob("release-entry.json"))]
     services = {str(entry.get("service")) for entry in entries}
     if services != SERVICES or len(entries) != len(SERVICES):
-        raise ReleaseManifestError(
-            "release entries must cover each application service exactly once"
-        )
+        raise ReleaseManifestError("release entries must cover each application service exactly once")
     manifest = {
         "schemaVersion": "gcs-saker.signed-release.v1",
         "sourceCommit": source_commit,
@@ -85,10 +74,7 @@ def assemble_manifest(
 def validate_manifest(manifest: dict[str, Any], expected_commit: str) -> dict[str, str]:
     if manifest.get("schemaVersion") != "gcs-saker.signed-release.v1":
         raise ReleaseManifestError("unsupported release manifest schema")
-    if (
-        not COMMIT.fullmatch(expected_commit)
-        or manifest.get("sourceCommit") != expected_commit
-    ):
+    if not COMMIT.fullmatch(expected_commit) or manifest.get("sourceCommit") != expected_commit:
         raise ReleaseManifestError("release manifest source commit mismatch")
     images = manifest.get("images")
     if not isinstance(images, list) or len(images) != len(SERVICES):
@@ -112,46 +98,31 @@ def validate_runtime_inventory(manifest: dict[str, Any]) -> None:
     if not isinstance(components, list) or len(components) < 6:
         raise ReleaseManifestError("release manifest runtime inventory is incomplete")
     if manifest.get("runtimeInventorySha256") != sha256(RUNTIME_INVENTORY):
-        raise ReleaseManifestError(
-            "release manifest runtime inventory digest is invalid"
-        )
+        raise ReleaseManifestError("release manifest runtime inventory digest is invalid")
     expected = load_json(RUNTIME_INVENTORY)
     if runtime_inventory != expected:
-        raise ReleaseManifestError(
-            "release manifest runtime inventory does not match source"
-        )
+        raise ReleaseManifestError("release manifest runtime inventory does not match source")
     for component in components:
         image = str(component.get("image", ""))
-        if (
-            "@sha256:" not in image
-            or not component.get("projectLicenses")
-            or not component.get("licenseSource")
-        ):
-            raise ReleaseManifestError(
-                "release manifest runtime component evidence is incomplete"
-            )
+        if "@sha256:" not in image or not component.get("projectLicenses") or not component.get("licenseSource"):
+            raise ReleaseManifestError("release manifest runtime component evidence is incomplete")
 
 
 def validate_entry(entry: dict[str, Any]) -> None:
     service = str(entry.get("service", ""))
-    if service not in SERVICES or not valid_image_reference(
-        service, str(entry.get("image", ""))
-    ):
+    if service not in SERVICES or not valid_image_reference(service, str(entry.get("image", ""))):
         raise ReleaseManifestError("release manifest contains an invalid image entry")
     for field in ("sbomSha256", "licenseReportSha256", "noticesSha256"):
         if not re.fullmatch(r"[0-9a-f]{64}", str(entry.get(field, ""))):
             raise ReleaseManifestError(f"release manifest contains an invalid {field}")
     if entry.get("licenseReleaseAllowed") is not True:
-        raise ReleaseManifestError(
-            "release manifest contains a blocked license disposition"
-        )
+        raise ReleaseManifestError("release manifest contains a blocked license disposition")
 
 
 def valid_image_reference(service: str, reference: str) -> bool:
     expected_prefix = f"ghcr.io/gcs-saker/{IMAGE_NAMES.get(service, '')}@"
     return (
-        reference.startswith(expected_prefix)
-        and DIGEST.fullmatch(reference.removeprefix(expected_prefix)) is not None
+        reference.startswith(expected_prefix) and DIGEST.fullmatch(reference.removeprefix(expected_prefix)) is not None
     )
 
 
@@ -171,20 +142,14 @@ def validate_vex(records: Any) -> None:
         "removalCondition",
     }
     for record in records:
-        if not isinstance(record, dict) or any(
-            not record.get(field) for field in required
-        ):
-            raise ReleaseManifestError(
-                "vulnerability exception lacks approved VEX fields"
-            )
+        if not isinstance(record, dict) or any(not record.get(field) for field in required):
+            raise ReleaseManifestError("vulnerability exception lacks approved VEX fields")
         if date.fromisoformat(str(record["expiresAt"])) < date.today():
             raise ReleaseManifestError("vulnerability exception VEX has expired")
 
 
 def write_json(path: Path, value: dict[str, Any]) -> None:
-    path.write_text(
-        json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def parse_args() -> argparse.Namespace:
