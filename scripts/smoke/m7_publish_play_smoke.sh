@@ -12,6 +12,7 @@ PYTHON_IMAGE="${PYTHON_IMAGE:-python:3.12-slim}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-gcs-saker-arch-poc}"
 EDGE_BASE_URL="${EDGE_BASE_URL:-http://127.0.0.1:18080}"
 MEDIA_NETWORK="${MEDIA_NETWORK:-${COMPOSE_PROJECT_NAME}_media-net}"
+ENV_FILE="${ENV_FILE:-${REPO_ROOT}/deploy/compose/.env.single-node.example}"
 PUBLISHER_NAME="gcs-saker-m7-publisher-$$"
 SESSION_DIR=""
 PUBLISHER_STARTED_MS=""
@@ -46,6 +47,13 @@ done
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 || { echo "Missing required command: $1" >&2; exit 127; }
+}
+
+load_auth_credentials() {
+  set -a
+  # shellcheck disable=SC1090,SC1091
+  . <(sed 's/\r$//' "$ENV_FILE")
+  set +a
 }
 
 now_ms() {
@@ -197,6 +205,7 @@ run_check() {
 
 run_live() {
   require_command docker; require_command curl; require_command python3
+  load_auth_credentials
   SESSION_DIR="$(mktemp -d)"
   chmod 700 "$SESSION_DIR"
   trap cleanup EXIT
