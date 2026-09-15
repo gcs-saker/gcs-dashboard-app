@@ -71,6 +71,6 @@ python scripts/reports/hazard_closure_qualification.py --check
 ```
 
 실제 보고서는 명시적인 기준일과 비공개 증거 manifest를 받아 새 절대경로에만 생성한다. 현재
-10개 위험은 모두 열려 있으므로 초기 결과는 폐루프 0%, `BLOCKED`가 정상이다. 상세 절차는
+10개 위험은 상위 요구사항에 모두 연결됐지만 아직 모두 열려 있으므로 폐루프 0%, `BLOCKED`가 정상이다. 상세 절차는
 `docs/operations/GCS-Saker_Hazard_Closure_Qualification.md`를 따른다.
 

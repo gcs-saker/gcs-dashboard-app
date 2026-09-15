@@ -1,0 +1,132 @@
+schemaVersion: gcs-saker.safety-control-catalogue.v1
+status: CONTROLLED_PARTIAL_IMPLEMENTATION
+standard: MIL-STD-882E Change 1
+scopeHazards:
+  - HAZ-MISSION-STALE-COMMAND
+  - HAZ-MISSION-GEOFENCE-BYPASS
+  - HAZ-TELEMETRY-STALE
+  - HAZ-TIME-ORDER
+  - HAZ-POLICY-FAIL-OPEN
+allowedStatuses: [IMPLEMENTED, PARTIAL, PLANNED]
+requirements:
+  - id: SR-COMMAND-IDEMPOTENCY
+    hazardId: HAZ-MISSION-STALE-COMMAND
+    owner: media-control
+    statement: Reserve each command ID atomically before dispatch and reject duplicate delivery.
+    status: PARTIAL
+    codeRefs: [services/media-control/internal/mission/mission.go]
+    testRefs: [services/media-control/internal/mission/mission_test.go]
+    gap: A durable production CommandLedger adapter and reconnect replay integration test are not implemented.
+    followUpIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/661
+  - id: SR-COMMAND-EXPIRY
+    hazardId: HAZ-MISSION-STALE-COMMAND
+    owner: media-control
+    statement: Reject commands issued in the future expired at receipt or with an invalid lifetime.
+    status: IMPLEMENTED
+    codeRefs: [services/media-control/internal/mission/mission.go]
+    testRefs: [services/media-control/internal/mission/mission_test.go]
+  - id: SR-MISSION-SESSION-BINDING
+    hazardId: HAZ-MISSION-STALE-COMMAND
+    owner: media-control
+    statement: Resolve and verify the active server-owned asset session before dispatch.
+    status: IMPLEMENTED
+    codeRefs: [services/media-control/internal/mission/mission.go]
+    testRefs: [services/media-control/internal/mission/mission_test.go]
+  - id: SR-GEOFENCE-SEGMENT
+    hazardId: HAZ-MISSION-GEOFENCE-BYPASS
+    owner: media-control
+    statement: Validate every route segment against the current prohibited geometry before dispatch.
+    status: PARTIAL
+    codeRefs: [services/media-control/internal/mission/mission.go]
+    testRefs: [services/media-control/internal/mission/mission_test.go]
+    gap: The boundary exists but the production segment-intersection adapter and boundary-value suite are absent.
+    followUpIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/661
+  - id: SR-ALTITUDE-DATUM
+    hazardId: HAZ-MISSION-GEOFENCE-BYPASS
+    owner: media-control
+    statement: Require an explicit AGL or MSL datum and compare altitude in a normalized datum.
+    status: PARTIAL
+    codeRefs: [services/media-control/internal/mission/mission.go]
+    testRefs: [services/media-control/internal/mission/mission_test.go]
+    gap: Datum presence is validated but terrain or geoid conversion is not implemented.
+    followUpIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/661
+  - id: SR-GEOFENCE-VERSION
+    hazardId: HAZ-MISSION-GEOFENCE-BYPASS
+    owner: media-control
+    statement: Bind dispatch validation to an immutable current geofence version and reject stale versions.
+    status: PLANNED
+    codeRefs: []
+    testRefs: []
+    gap: Mission requests and the geofence boundary do not carry a version.
+    followUpIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/661
+  - id: SR-DATA-FRESHNESS
+    hazardId: HAZ-TELEMETRY-STALE
+    owner: auth-policy
+    statement: Validate observation time and expose timeout state when a current sample is absent.
+    status: PARTIAL
+    codeRefs: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/TelemetryIngestionService.kt, services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/operations/TelemetryAlertRuleEngine.kt]
+    testRefs: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalReadControllerTest.kt, services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/TelemetryAlertRuleEngineTest.kt]
+    gap: A single authoritative freshness state is not yet carried through every dashboard telemetry response.
+    followUpIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/650
+  - id: SR-DATA-ORDERING
+    hazardId: HAZ-TELEMETRY-STALE
+    owner: auth-policy
+    statement: Reject or quarantine telemetry older than the authoritative accepted observation sequence.
+    status: PARTIAL
+    codeRefs: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/TelemetryIngestionService.kt]
+    testRefs: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/OperationalReadControllerTest.kt]
+    gap: Timestamp validation exists but a definitive out-of-order rejection invariant is not proven.
+    followUpIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/650
+  - id: SR-DATA-STALE-UI
+    hazardId: HAZ-TELEMETRY-STALE
+    owner: dashboard
+    statement: Mark stale telemetry visibly and prevent it from appearing as current operational state.
+    status: PLANNED
+    codeRefs: []
+    testRefs: []
+    gap: No end-to-end stale telemetry age indicator and screenshot evidence exists.
+    followUpIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/650
+  - id: SR-TIME-UTC
+    hazardId: HAZ-TIME-ORDER
+    owner: auth-policy
+    statement: Store and exchange operational timestamps as UTC instants.
+    status: IMPLEMENTED
+    codeRefs: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/MediaLifecycleAuditService.kt]
+    testRefs: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/TimeSyncControllerTest.kt]
+  - id: SR-TIME-SOURCE
+    hazardId: HAZ-TIME-ORDER
+    owner: auth-policy
+    statement: Record the active time source with operational clock evidence.
+    status: IMPLEMENTED
+    codeRefs: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/AuditClockMonitor.kt]
+    testRefs: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/AuditClockMonitorTest.kt]
+  - id: SR-TIME-DRIFT-STATE
+    hazardId: HAZ-TIME-ORDER
+    owner: auth-policy
+    statement: Classify normal warning unsafe and unknown clock drift without treating failure as normal.
+    status: IMPLEMENTED
+    codeRefs: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/AuditClockMonitor.kt]
+    testRefs: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/AuditClockMonitorTest.kt]
+  - id: SR-POLICY-FAIL-CLOSED
+    hazardId: HAZ-POLICY-FAIL-OPEN
+    owner: media-control
+    statement: Deny protected media operations when policy is unavailable malformed or denies access.
+    status: IMPLEMENTED
+    codeRefs: [services/media-control/internal/authpolicy/client.go]
+    testRefs: [services/media-control/internal/authpolicy/client_test.go]
+  - id: SR-POLICY-CACHE-BOUND
+    hazardId: HAZ-POLICY-FAIL-OPEN
+    owner: media-control
+    statement: Bound cached authorization by configured TTL and the policy decision expiry.
+    status: IMPLEMENTED
+    codeRefs: [services/media-control/internal/authpolicy/cached_authorizer.go]
+    testRefs: [services/media-control/internal/authpolicy/cached_authorizer_test.go]
+  - id: SR-POLICY-DENIAL-AUDIT
+    hazardId: HAZ-POLICY-FAIL-OPEN
+    owner: auth-policy
+    statement: Record protected-operation denials with controlled low-cardinality audit fields.
+    status: PARTIAL
+    codeRefs: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/SecurityAuditEventFactory.kt]
+    testRefs: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/OperationalAuditPublisherTest.kt]
+    gap: Policy transport failure and every media denial path are not proven to emit the same audit contract.
+    followUpIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/656

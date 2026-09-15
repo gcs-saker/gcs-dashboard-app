@@ -26,6 +26,8 @@ Server-01 시험 부하와 네트워크 조건은
 [`architecture/change-impact-ownership.yml`](architecture/change-impact-ownership.yml)에 둔다.
 위험 통제 폐루프 판정 계약은
 [`safety/hazard-closure-qualification.yml`](safety/hazard-closure-qualification.yml)에 둔다.
+상세 안전 요구사항의 소유자·구현 수준·코드·시험·잔여 gap은
+[`safety/safety-control-catalogue.yml`](safety/safety-control-catalogue.yml)에 둔다.
 
 프로파일의 상태는 `PASS`, `FAIL`, `BLOCKED`, `NOT_RUN`, `NOT_APPLICABLE`,
 `PLANNED_HARDWARE`만 사용한다. 공인 또는 독립 평가가 완료되지 않은 작업은 구현 여부와
