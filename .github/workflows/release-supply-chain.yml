@@ -334,6 +334,8 @@ jobs:
           python scripts/ops/verify_mobile_release_evidence.py \
             --entry "${RUNNER_TEMP}/mobile-evidence/mobile-release-entry.json" \
             --bundle "${RUNNER_TEMP}/mobile-evidence/mobile-publisher.cosign.bundle.json"
+          cp "${RUNNER_TEMP}/mobile-evidence/mobile-release-entry.json" \
+            "${RUNNER_TEMP}/mobile-evidence/release-entry.json"
 
       - name: Upload verified mobile evidence for integration
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5

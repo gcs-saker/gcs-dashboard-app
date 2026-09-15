@@ -55,6 +55,13 @@ def test_release_workflow_rejects_mutable_action_tags() -> None:
         validate_release_workflow(workflow + "\n      - uses: example/action@v1\n")
 
 
+def test_release_workflow_normalizes_mobile_entry_for_manifest_assembly() -> None:
+    workflow = (REPO_ROOT / ".github/workflows/release-supply-chain.yml").read_text(encoding="utf-8")
+
+    assert '"${RUNNER_TEMP}/mobile-evidence/mobile-release-entry.json"' in workflow
+    assert '"${RUNNER_TEMP}/mobile-evidence/release-entry.json"' in workflow
+
+
 def test_verified_policy_rejects_missing_release_evidence() -> None:
     with pytest.raises(SupplyChainPolicyError, match="evidence is incomplete"):
         validate_verified_release(load_yaml(POLICY), "Source commit: missing")
