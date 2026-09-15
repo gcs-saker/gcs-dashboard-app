@@ -35,11 +35,11 @@ requirements:
   - id: SR-GEOFENCE-SEGMENT
     hazardId: HAZ-MISSION-GEOFENCE-BYPASS
     owner: media-control
-    statement: Validate every route segment against the current prohibited geometry before dispatch.
+    statement: Validate every route segment against the current group-owned approved geometry before dispatch.
     status: PARTIAL
-    codeRefs: [services/media-control/internal/mission/mission.go]
-    testRefs: [services/media-control/internal/mission/mission_test.go]
-    gap: The boundary exists but the production segment-intersection adapter and boundary-value suite are absent.
+    codeRefs: [services/media-control/internal/mission/mission.go, services/media-control/internal/mission/route_geofence.go]
+    testRefs: [services/media-control/internal/mission/mission_test.go, services/media-control/internal/mission/route_geofence_test.go]
+    gap: Horizontal allowed-area segment validation exists but the authoritative auth-policy transport and altitude-volume validation are not runtime-wired.
     followUpIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/661
   - id: SR-ALTITUDE-DATUM
     hazardId: HAZ-MISSION-GEOFENCE-BYPASS
@@ -55,9 +55,9 @@ requirements:
     owner: media-control
     statement: Bind dispatch validation to an immutable current geofence version and reject stale versions.
     status: PARTIAL
-    codeRefs: [services/media-control/internal/mission/mission.go, contracts/mission/v1/mission-dispatch.schema.json]
-    testRefs: [services/media-control/internal/mission/mission_test.go]
-    gap: Mission requests now require a version and stale versions fail closed but the authoritative geofence provider is not runtime-wired.
+    codeRefs: [services/media-control/internal/mission/mission.go, services/media-control/internal/mission/route_geofence.go, contracts/mission/v1/mission-dispatch.schema.json]
+    testRefs: [services/media-control/internal/mission/mission_test.go, services/media-control/internal/mission/route_geofence_test.go]
+    gap: Provider identity and immutable version checks fail closed but the authoritative auth-policy transport is not runtime-wired.
     followUpIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/661
   - id: SR-DATA-FRESHNESS
     hazardId: HAZ-TELEMETRY-STALE

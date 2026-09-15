@@ -95,7 +95,7 @@ type geofenceStub struct {
 	err     error
 }
 
-func (s geofenceStub) AllowsRoute(_ context.Context, _ string, _ []Waypoint, _ AltitudeDatum) (bool, error) {
+func (s geofenceStub) AllowsRoute(_ context.Context, _, _ string, _ []Waypoint, _ AltitudeDatum) (bool, error) {
 	return s.allowed, s.err
 }
 
