@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TacticalLeafletMap } from "./TacticalLeafletMap";
 import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 
@@ -75,26 +75,42 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        provider: "custom",
+        styleUrl: "https://maps.example.test/style.json",
+        attribution: "Example Maps",
+        requiresApiKey: false,
+      }),
+    })),
+  );
+});
+
 describe("TacticalLeafletMap", () => {
-  test("renders the public satellite provider by default and fixes stream pins to GPS coordinates", () => {
+  test("renders the server-configured public provider and fixes stream pins to GPS coordinates", async () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
 
-    expect(screen.getByTestId("public-tactical-map")).toBeInTheDocument();
+    expect(await screen.findByTestId("public-tactical-map")).toBeInTheDocument();
     expect(leafletMock().Map).toHaveBeenCalledWith(expect.any(HTMLElement), {
       attributionControl: false,
       zoomControl: false,
     });
     expect(leafletMock().instances[0].setView).toHaveBeenCalledWith([35.871435, 128.601445], 14, { animate: false });
     expect(leafletMock().tileLayer).toHaveBeenCalledWith(
-      "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      "https://maps.example.test/style.json",
       expect.objectContaining({
-        attribution: "Esri World Imagery",
+        attribution: "Example Maps",
         tileSize: 256,
       }),
     );
     expect(screen.getByTestId("map-coordinate-source")).toHaveTextContent("실시간 GPS");
     expect(screen.getByTestId("offline-map-center")).toHaveTextContent("35.871435, 128.601445");
-    const marker = screen.getByRole("button", { name: /로컬 웹캠 위치/ });
+    const marker = await screen.findByRole("button", { name: /로컬 웹캠 위치/ });
     expect(marker).toBeInTheDocument();
     expect(within(marker).getByText("정상")).toBeInTheDocument();
     expect(within(marker).getByText("78%")).toBeInTheDocument();
@@ -128,24 +144,28 @@ describe("TacticalLeafletMap", () => {
     const writeText = vi.fn(async () => undefined);
     vi.stubGlobal("navigator", { clipboard: { writeText } });
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
+    await screen.findByTestId("public-tactical-map");
+    await screen.findByRole("button", { name: /로컬 웹캠 위치/ });
 
     fireEvent.click(screen.getByRole("button", { name: /로컬 웹캠 위치/ }));
     fireEvent.click(screen.getByRole("button", { name: "좌표 복사" }));
 
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("35.871435, 128.601445"));
-    expect(screen.getByRole("status")).toHaveTextContent("복사됨");
+    expect(screen.getByText("복사됨", { selector: "[role='status']" })).toBeInTheDocument();
   });
 
-  test("keeps zoom controls bound to the public vector map renderer", () => {
+  test("keeps zoom controls bound to the public vector map renderer", async () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
+    await screen.findByTestId("public-tactical-map");
+    await waitFor(() => expect(leafletMock().instances.length).toBeGreaterThan(0));
 
     fireEvent.click(screen.getByRole("button", { name: "지도 확대" }));
     fireEvent.click(screen.getByRole("button", { name: "지도 축소" }));
     fireEvent.click(screen.getByRole("button", { name: "지도 중심 초기화" }));
 
-    expect(leafletMock().instances[0].zoomIn).toHaveBeenCalledTimes(1);
-    expect(leafletMock().instances[0].zoomOut).toHaveBeenCalledTimes(1);
-    expect(leafletMock().instances[0].panTo).toHaveBeenCalled();
+    expect(leafletMock().instances.at(-1)?.zoomIn).toHaveBeenCalledTimes(1);
+    expect(leafletMock().instances.at(-1)?.zoomOut).toHaveBeenCalledTimes(1);
+    expect(leafletMock().instances.at(-1)?.panTo).toHaveBeenCalled();
   });
 
   test("resizes the public map when its dashboard panel changes size", async () => {
@@ -163,6 +183,7 @@ describe("TacticalLeafletMap", () => {
     });
 
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
+    await screen.findByTestId("public-tactical-map");
 
     await act(async () => Promise.resolve());
     expect(observe).toHaveBeenCalledWith(expect.objectContaining({ className: "tactical-map__leaflet" }));
@@ -170,8 +191,9 @@ describe("TacticalLeafletMap", () => {
     expect(leafletMock().instances[0].invalidateSize).toHaveBeenCalledWith(false);
   });
 
-  test("disables public map pan animation when motion is off", () => {
+  test("disables public map pan animation when motion is off", async () => {
     render(<TacticalLeafletMap isMotionEnabled={false} selectedStream={stream} streams={[stream]} />);
+    await screen.findByTestId("public-tactical-map");
 
     fireEvent.click(screen.getByRole("button", { name: "지도 중심 초기화" }));
 
@@ -181,8 +203,9 @@ describe("TacticalLeafletMap", () => {
     });
   });
 
-  test("disables auto focus on direct map interaction and restores selected stream focus from the auto button", () => {
+  test("disables auto focus on direct map interaction and restores selected stream focus from the auto button", async () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
+    await screen.findByTestId("public-tactical-map");
 
     act(() => {
       leafletMock().instances[0].emit("dragstart");
@@ -199,8 +222,9 @@ describe("TacticalLeafletMap", () => {
     });
   });
 
-  test("focuses the selected stream GPS while auto focus is enabled", () => {
+  test("focuses the selected stream GPS while auto focus is enabled", async () => {
     const { rerender } = render(<TacticalLeafletMap selectedStream={stream} streams={[stream, remoteStream]} />);
+    await screen.findByTestId("public-tactical-map");
 
     rerender(<TacticalLeafletMap selectedStream={remoteStream} streams={[stream, remoteStream]} />);
 
@@ -210,8 +234,9 @@ describe("TacticalLeafletMap", () => {
     });
   });
 
-  test("falls back to the closed-network offline renderer when public map loading fails", () => {
+  test("falls back to the closed-network offline renderer when public map loading fails", async () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
+    await screen.findByTestId("public-tactical-map");
 
     act(() => {
       leafletMock().tileLayers[0].emitError();
@@ -221,8 +246,9 @@ describe("TacticalLeafletMap", () => {
     expect(screen.getByRole("status")).toHaveTextContent("공개 지도 연결 실패로 오프라인 지도로 전환됨");
   });
 
-  test("opens the same device popup from the closed-network offline map pins", () => {
+  test("opens the same device popup from the closed-network offline map pins", async () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
+    await screen.findByTestId("public-tactical-map");
 
     act(() => {
       leafletMock().tileLayers[0].emitError();
@@ -236,28 +262,14 @@ describe("TacticalLeafletMap", () => {
     expect(within(popup).getByText("실시간 GPS")).toBeInTheDocument();
   });
 
-  test("offers satellite and street map layers over the backend public map mode", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          provider: "custom",
-          styleUrl: "https://maps.example.test/style.json",
-          attribution: "Example Maps",
-          requiresApiKey: true,
-        }),
-      })),
-    );
-
+  test("never replaces the server-configured map URL when layer controls are used", async () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
 
     await waitFor(() => {
       expect(leafletMock().tileLayer).toHaveBeenLastCalledWith(
-        "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        "https://maps.example.test/style.json",
         expect.objectContaining({
-          attribution: "Esri World Imagery",
+          attribution: "Example Maps",
           tileSize: 256,
         }),
       );
@@ -270,8 +282,8 @@ describe("TacticalLeafletMap", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "평면" }));
     await waitFor(() => expect(leafletMock().tileLayer).toHaveBeenLastCalledWith(
-      "https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
-      expect.objectContaining({ attribution: "Esri World Topographic Map" }),
+      "https://maps.example.test/style.json",
+      expect.objectContaining({ attribution: "Example Maps" }),
     ));
     await waitFor(() => expect(leafletMock().instances.at(-1)?.setView).toHaveBeenCalledWith(
       [35.871435, 128.601445], 12, { animate: false },

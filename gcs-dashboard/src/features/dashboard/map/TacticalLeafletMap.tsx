@@ -9,19 +9,6 @@ import { fetchMapConfig } from "./mapConfig";
 import { chooseDashboardMapEngine } from "./mapEngineDecision";
 import { type MapLayerMode } from "./MapLayerSelector";
 
-const SATELLITE_MAP_CONFIG: DashboardMapConfig = {
-  provider: "esri-satellite",
-  styleUrl: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-  attribution: "Esri World Imagery",
-  requiresApiKey: false,
-};
-const STREET_MAP_CONFIG: DashboardMapConfig = {
-  provider: "custom",
-  styleUrl: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
-  attribution: "Esri World Topographic Map",
-  requiresApiKey: false,
-};
-
 interface TacticalLeafletMapProps {
   isMotionEnabled?: boolean;
   onSelectStream?: (streamId: string) => void;
@@ -76,7 +63,7 @@ function useTacticalMapState(onSelectStream?: (streamId: string) => void) {
     let disposed = false;
     void fetchMapConfig().then((config) => {
       if (disposed) return;
-      setMapConfig(config.provider === "offline" ? config : layerMode === "satellite" ? SATELLITE_MAP_CONFIG : STREET_MAP_CONFIG);
+      setMapConfig(config);
       setUseOfflineMap(chooseDashboardMapEngine(config) === "leaflet-offline");
       setMapFallbackNotice(config.provider === "offline" ? "폐쇄망 오프라인 지도 사용 중" : null);
     });

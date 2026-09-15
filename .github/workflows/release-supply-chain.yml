@@ -2,6 +2,11 @@ name: Signed release supply chain
 
 on:
   workflow_dispatch:
+    inputs:
+      mobile_release_run_id:
+        description: Successful gcs-mobile-publisher signed release workflow run ID
+        required: true
+        type: string
   push:
     tags:
       - "v*"
@@ -239,11 +244,84 @@ jobs:
             ${{ runner.temp }}/${{ matrix.image }}.THIRD_PARTY_NOTICES.md
             ${{ runner.temp }}/release-entry.json
 
+  mobile-publisher-evidence:
+    name: verify-mobile-publisher-release
+    runs-on: ubuntu-latest
+    environment: military-release
+    needs: verified-ci
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    steps:
+      - name: Resolve immutable mobile release run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MOBILE_RELEASE_RUN_ID: ${{ inputs.mobile_release_run_id || vars.MOBILE_PUBLISHER_RELEASE_RUN_ID }}
+        shell: bash
+        run: |
+          test -n "${MOBILE_RELEASE_RUN_ID}" || {
+            echo "mobile publisher signed release run ID is required" >&2
+            exit 1
+          }
+          conclusion="$(gh api "/repos/gcs-saker/gcs-mobile-publisher/actions/runs/${MOBILE_RELEASE_RUN_ID}" --jq .conclusion)"
+          test "${conclusion}" = success || {
+            echo "mobile publisher release run did not succeed" >&2
+            exit 1
+          }
+          artifact_id="$(gh api "/repos/gcs-saker/gcs-mobile-publisher/actions/runs/${MOBILE_RELEASE_RUN_ID}/artifacts" \
+            --jq '.artifacts[] | select(.name == "mobile-publisher-signed-release-evidence" and .expired == false) | .id' | head -1)"
+          test -n "${artifact_id}" || {
+            echo "mobile publisher signed evidence is unavailable" >&2
+            exit 1
+          }
+          echo "MOBILE_ARTIFACT_ID=${artifact_id}" >> "$GITHUB_ENV"
+
+      - name: Download mobile signed evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/mobile-evidence"
+          gh api "/repos/gcs-saker/gcs-mobile-publisher/actions/artifacts/${MOBILE_ARTIFACT_ID}/zip" \
+            > "${RUNNER_TEMP}/mobile-evidence.zip"
+          unzip -q "${RUNNER_TEMP}/mobile-evidence.zip" -d "${RUNNER_TEMP}/mobile-evidence"
+
+      - name: Verify mobile evidence hashes and disposition
+        shell: bash
+        run: |
+          cd "${RUNNER_TEMP}/mobile-evidence"
+          jq -e '.service == "mobile-publisher" and .licenseReleaseAllowed == true' mobile-release-entry.json >/dev/null
+          test "$(sha256sum mobile-publisher.spdx.json | cut -d' ' -f1)" = "$(jq -r .sbomSha256 mobile-release-entry.json)"
+          test "$(sha256sum license-report.json | cut -d' ' -f1)" = "$(jq -r .licenseReportSha256 mobile-release-entry.json)"
+          test "$(sha256sum THIRD_PARTY_NOTICES.md | cut -d' ' -f1)" = "$(jq -r .noticesSha256 mobile-release-entry.json)"
+          jq -e '.releaseAllowed == true and (.blockedLicenses | length == 0)' license-report.json >/dev/null
+
+      - name: Install verified Cosign release
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Verify mobile publisher signer identity
+        shell: bash
+        run: |
+          image="$(jq -r .image "${RUNNER_TEMP}/mobile-evidence/mobile-release-entry.json")"
+          cosign verify \
+            --certificate-identity-regexp '^https://github.com/gcs-saker/gcs-mobile-publisher/.github/workflows/signed-release.yml@refs/(tags|heads)/' \
+            --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+            "${image}"
+
+      - name: Upload verified mobile evidence for integration
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: mobile-publisher-signed-release-evidence
+          if-no-files-found: error
+          retention-days: 90
+          path: ${{ runner.temp }}/mobile-evidence/*
+
   signed-manifest:
     name: sign-release-manifest
     runs-on: ubuntu-latest
     environment: military-release
-    needs: signed-images
+    needs: [signed-images, mobile-publisher-evidence]
     permissions:
       actions: read
       contents: read

@@ -96,10 +96,8 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
         "${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:"
     )
     assert services["backend"]["environment"]["WEBRTC_STUN_URL"] == ("${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}")
-    assert services["backend"]["environment"]["DASHBOARD_MAP_PROVIDER"] == "${DASHBOARD_MAP_PROVIDER:-esri-satellite}"
-    assert services["backend"]["environment"]["DASHBOARD_MAP_STYLE_URL"] == (
-        "${DASHBOARD_MAP_STYLE_URL:-https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}}"
-    )
+    assert services["backend"]["environment"]["DASHBOARD_MAP_PROVIDER"] == "${DASHBOARD_MAP_PROVIDER:-offline}"
+    assert services["backend"]["environment"]["DASHBOARD_MAP_STYLE_URL"] == "${DASHBOARD_MAP_STYLE_URL:-}"
     assert services["backend"]["environment"]["DASHBOARD_MAP_REQUIRES_API_KEY"] == (
         "${DASHBOARD_MAP_REQUIRES_API_KEY:-false}"
     )
@@ -123,10 +121,8 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["nginx"]["build"]["args"]["VITE_WEBRTC_STUN_URL"] == (
         "${VITE_WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}"
     )
-    assert services["nginx"]["build"]["args"]["VITE_MAP_PROVIDER"] == "${VITE_MAP_PROVIDER:-esri-satellite}"
-    assert services["nginx"]["build"]["args"]["VITE_MAP_STYLE_URL"] == (
-        "${VITE_MAP_STYLE_URL:-https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}}"
-    )
+    assert services["nginx"]["build"]["args"]["VITE_MAP_PROVIDER"] == "${VITE_MAP_PROVIDER:-offline}"
+    assert services["nginx"]["build"]["args"]["VITE_MAP_STYLE_URL"] == "${VITE_MAP_STYLE_URL:-}"
 
 
 def test_local_compose_uses_hardened_mqtt_by_default() -> None:
@@ -206,13 +202,13 @@ def test_single_node_mqtt_is_hardened_by_default_and_healthcheck_authenticates()
     assert "nc -z" not in healthcheck_command
 
 
-def test_single_node_keeps_redis_as_default_cache_runtime() -> None:
+def test_single_node_uses_valkey_as_default_cache_runtime() -> None:
     compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
     redis = compose["services"]["redis"]
 
-    assert redis["image"] == "redis@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99"
+    assert redis["image"] == "valkey/valkey@sha256:d2e18f3410b6f616de1417f570fa55261af2898b9c5b2cfb6781ce2373ea43d1"
     assert redis["command"] == [
-        "redis-server",
+        "valkey-server",
         "--appendonly",
         "yes",
         "--maxmemory",
@@ -228,7 +224,7 @@ def test_single_node_keeps_redis_as_default_cache_runtime() -> None:
     ]
     assert redis["healthcheck"]["test"] == [
         "CMD-SHELL",
-        'redis-cli -a "$${REDIS_PASSWORD}" ping | grep PONG',
+        'valkey-cli -a "$${REDIS_PASSWORD}" ping | grep PONG',
     ]
 
 
@@ -244,6 +240,10 @@ def test_single_node_bounds_container_logs_and_mobile_publisher_resources() -> N
         }
 
     mobile_publisher = services["mobile-publisher"]
+    assert mobile_publisher["image"] == (
+        "${MOBILE_PUBLISHER_IMAGE:-ghcr.io/gcs-saker/gcs-mobile-publisher@sha256:"
+        "0000000000000000000000000000000000000000000000000000000000000000}"
+    )
     assert mobile_publisher["pids_limit"] == 128
     assert mobile_publisher["mem_limit"] == "${MOBILE_PUBLISHER_MEMORY_LIMIT:-256m}"
     assert mobile_publisher["cpus"] == "${MOBILE_PUBLISHER_CPU_LIMIT:-0.5}"

@@ -69,9 +69,9 @@ describe("config API URL helpers", () => {
     expect(WEBRTC_ICE_SERVERS).toEqual([{ urls: "stun:stun.l.google.com:19302" }]);
   });
 
-  test("defaults to the public satellite provider for connected networks", () => {
-    expect(MAP_PROVIDER).toBe("esri-satellite");
-    expect(MAP_STYLE_URL).toBe("https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}");
+  test("defaults to the offline map for closed network delivery", () => {
+    expect(MAP_PROVIDER).toBe("offline");
+    expect(MAP_STYLE_URL).toBe("");
   });
 
   test("defaults static assets to offline bundle mode for closed network delivery", () => {

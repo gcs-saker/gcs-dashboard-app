@@ -26,7 +26,7 @@ COMPOSE_PROJECT_NAME="${project_name}" \
 redis_container="${project_name}-redis-1"
 redis_summary="$({
   docker exec "${redis_container}" sh -lc '
-    REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli --no-auth-warning --raw EVAL "
+    REDISCLI_AUTH="$REDIS_PASSWORD" valkey-cli --no-auth-warning --raw EVAL "
       local cursor = \"0\"
       local total = 0
       local expiring = 0
