@@ -375,6 +375,7 @@ jobs:
           python scripts/ops/recovery_qualification.py --check
           python scripts/reports/performance_stability_qualification.py --check
           python scripts/reports/change_impact_qualification.py --check
+          python scripts/reports/hazard_closure_qualification.py --check
 
       - name: Validate threat model and attack-surface inventory
         run: python scripts/gates/attack_surface_gate.py --check

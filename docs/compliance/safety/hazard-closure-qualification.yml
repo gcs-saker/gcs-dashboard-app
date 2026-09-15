@@ -1,0 +1,36 @@
+schemaVersion: gcs-saker.hazard-closure-qualification.v1
+status: CONTROLLED_DRAFT_NOT_EXECUTED
+standard: MIL-STD-882E Change 1
+inputs:
+  hazardLog: docs/compliance/safety/hazard-log.yml
+  levelOfRigor: docs/compliance/safety/software-level-of-rigor.yml
+  residualRiskRegister: docs/compliance/safety/residual-risk-register.yml
+  traceability: docs/compliance/traceability/software-military-ready-traceability.yml
+  evidenceManifestSchema: docs/compliance/evidence/evidence-manifest-template.yml
+closureRequirements:
+  requiredHazardCount: 10
+  requireTopLevelRequirementTrace: true
+  requireClosedHazardStatus: true
+  requireAllSafetyRequirementsVerified: true
+  requirePassEvidenceManifest: true
+  requireExactSourceCommit: true
+  residualRiskRequiredFields:
+    - hazardId
+    - residualRisk
+    - disposition
+    - acceptanceAuthority
+    - acceptedAt
+    - reviewDueAt
+    - sourceCommit
+    - verifiedControlRequirementIds
+    - evidenceManifestIds
+thresholds:
+  status: PROPOSED_NOT_APPROVED
+  hazardClosureRatio: 1.0
+  expiredAcceptanceCount: 0
+  unacceptedResidualRiskCount: 0
+verdictRules:
+  PASS: reserved until thresholds and independent system-safety review are approved
+  FAIL: a hazard declared closed has incomplete controls invalid evidence or expired or rejected acceptance
+  BLOCKED: one or more hazards remain open or approval and independent evaluation are pending
+  NOT_RUN: closure report has not been generated for the candidate source commit

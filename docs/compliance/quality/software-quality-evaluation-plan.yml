@@ -93,7 +93,7 @@ procedures:
     measureId: QM-HAZARD-CLOSURE
     environment: ENV-CI
     method: reconcile applicable hazards with implemented controls verification evidence and residual-risk acceptance
-    inputs: [hazard log, control evidence, residual-risk register]
+    inputs: [hazard-closure-qualification.yml, hazard log, control evidence manifests, residual-risk register]
     outputs: [applicable hazards, verified closures, unaccepted residual risks, ratio]
 verdictRules:
   PASS: approved threshold met and evidence complete with required independent review
