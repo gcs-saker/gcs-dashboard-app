@@ -3,9 +3,7 @@ import json
 from pathlib import Path
 
 import pytest
-
 from scripts.ops.verify_mobile_release_evidence import MobileEvidenceError, verify
-
 
 DIGEST = "a" * 64
 

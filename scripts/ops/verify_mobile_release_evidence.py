@@ -10,9 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-IMAGE_REFERENCE = re.compile(
-    r"^ghcr\.io/gcs-saker/gcs-mobile-publisher@sha256:([0-9a-f]{64})$"
-)
+IMAGE_REFERENCE = re.compile(r"^ghcr\.io/gcs-saker/gcs-mobile-publisher@sha256:([0-9a-f]{64})$")
 BUNDLE_MEDIA_TYPE = "application/vnd.dev.sigstore.bundle.v0.3+json"
 STATEMENT_TYPE = "https://in-toto.io/Statement/v1"
 PREDICATE_TYPE = "https://sigstore.dev/cosign/sign/v1"
