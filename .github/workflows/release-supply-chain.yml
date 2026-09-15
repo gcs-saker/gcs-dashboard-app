@@ -254,9 +254,13 @@ jobs:
     permissions:
       actions: read
       contents: read
-      id-token: write
-      packages: read
     steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
       - name: Resolve immutable mobile release run
         env:
           GH_TOKEN: ${{ github.token }}
@@ -267,9 +271,13 @@ jobs:
             echo "mobile publisher signed release run ID is required" >&2
             exit 1
           }
-          conclusion="$(gh api "/repos/gcs-saker/gcs-mobile-publisher/actions/runs/${MOBILE_RELEASE_RUN_ID}" --jq .conclusion)"
-          test "${conclusion}" = success || {
-            echo "mobile publisher release run did not succeed" >&2
+          run_metadata="$(gh api "/repos/gcs-saker/gcs-mobile-publisher/actions/runs/${MOBILE_RELEASE_RUN_ID}")"
+          echo "${run_metadata}" | jq -e '
+            .conclusion == "success"
+            and .path == ".github/workflows/signed-release.yml"
+            and .head_sha != null
+          ' >/dev/null || {
+            echo "mobile publisher signed-release workflow did not succeed" >&2
             exit 1
           }
           artifact_id="$(gh api "/repos/gcs-saker/gcs-mobile-publisher/actions/runs/${MOBILE_RELEASE_RUN_ID}/artifacts" \
@@ -308,24 +316,12 @@ jobs:
           test "$(sha256sum THIRD_PARTY_NOTICES.md | cut -d' ' -f1)" = "$(jq -r .noticesSha256 mobile-release-entry.json)"
           jq -e '.releaseAllowed == true and (.blockedLicenses | length == 0)' license-report.json >/dev/null
 
-      - name: Install verified Cosign release
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-
-      - name: Authenticate to GHCR for mobile signature verification
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Verify mobile publisher signer identity
+      - name: Verify archived mobile signature evidence binding
         shell: bash
         run: |
-          image="$(jq -r .image "${RUNNER_TEMP}/mobile-evidence/mobile-release-entry.json")"
-          cosign verify \
-            --certificate-identity-regexp '^https://github.com/gcs-saker/gcs-mobile-publisher/.github/workflows/signed-release.yml@refs/(tags|heads)/' \
-            --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
-            "${image}"
+          python scripts/ops/verify_mobile_release_evidence.py \
+            --entry "${RUNNER_TEMP}/mobile-evidence/mobile-release-entry.json" \
+            --bundle "${RUNNER_TEMP}/mobile-evidence/mobile-publisher.cosign.bundle.json"
 
       - name: Upload verified mobile evidence for integration
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
