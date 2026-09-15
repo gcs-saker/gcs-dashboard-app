@@ -6,6 +6,7 @@ import kr.co.a4ai.gcssaker.authpolicy.api.BearerPrincipalResolver
 import kr.co.a4ai.gcssaker.authpolicy.api.MediaPolicyRpcService
 import kr.co.a4ai.gcssaker.authpolicy.api.UnauthorizedApiError
 import kr.co.a4ai.gcssaker.authpolicy.domain.*
+import kr.co.a4ai.gcssaker.authpolicy.domain.GeoPoint as DomainGeoPoint
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.devices.InMemoryRegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.contracts.v1.*
 import org.junit.jupiter.api.Assertions.*
@@ -19,8 +20,45 @@ class MediaPolicyRpcTest {
         OrganizationUnit(GroupId("child"), "Child", GroupType.COMPANY, GroupId("parent")),
         OrganizationUnit(GroupId("other"), "Other", GroupType.COMPANY),
     ))
-    private val service = MediaPolicyRpcService(principals, groups,
-        DevicePublishAuthorizationService(InMemoryRegisteredDeviceRepository(), PasswordHasher(iterations = 1000)))
+    private val geofences = InMemoryGeofenceRepository()
+    private val service = MediaPolicyRpcService(
+        principals,
+        groups,
+        DevicePublishAuthorizationService(InMemoryRegisteredDeviceRepository(), PasswordHasher(iterations = 1000)),
+        AllowedAreaSnapshotService(geofences),
+    )
+
+    @Test
+    fun `allowed area RPC returns deterministic current group snapshot`() {
+        geofences.save(Geofence("fence-b", "B", GroupId("child"), square(1.0)))
+        geofences.save(Geofence("fence-a", "A", GroupId("child"), square(0.0)))
+        val first = Capture<AllowedAreaSnapshotOutput>()
+        val second = Capture<AllowedAreaSnapshotOutput>()
+
+        service.currentAllowedArea(GroupScopeInput.newBuilder().setGroupId("child").build(), first)
+        service.currentAllowedArea(GroupScopeInput.newBuilder().setGroupId("child").build(), second)
+
+        assertNull(first.error)
+        assertEquals("child", first.value?.groupId)
+        assertEquals(listOf("fence-a", "fence-b"), first.value?.polygonsList?.map { it.geofenceId })
+        assertEquals(first.value?.version, second.value?.version)
+        assertTrue(first.value?.version?.startsWith("sha256:") == true)
+        assertEquals(71, first.value?.version?.length)
+
+        geofences.save(Geofence("fence-b", "B", GroupId("child"), square(2.0)))
+        val changed = Capture<AllowedAreaSnapshotOutput>()
+        service.currentAllowedArea(GroupScopeInput.newBuilder().setGroupId("child").build(), changed)
+        assertNotEquals(first.value?.version, changed.value?.version)
+    }
+
+    @Test
+    fun `allowed area RPC fails closed when group has no active geometry`() {
+        val response = Capture<AllowedAreaSnapshotOutput>()
+
+        service.currentAllowedArea(GroupScopeInput.newBuilder().setGroupId("other").build(), response)
+
+        assertEquals(Status.Code.PERMISSION_DENIED, Status.fromThrowable(requireNotNull(response.error)).code)
+    }
 
     @Test
     fun `stream RPC applies same group and ancestor policy without granting operator descendant access`() {
@@ -96,3 +134,8 @@ class MediaPolicyRpcTest {
         override fun onCompleted() = Unit
     }
 }
+
+private fun square(offset: Double) = listOf(
+    DomainGeoPoint(offset, offset), DomainGeoPoint(offset, offset + 0.5),
+    DomainGeoPoint(offset + 0.5, offset + 0.5), DomainGeoPoint(offset + 0.5, offset),
+)

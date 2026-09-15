@@ -33,8 +33,12 @@ class DevicePolicyRpcConfiguration {
     ) = DevicePolicyRpcService(credentials, TelemetryIngestionService(repository, effects))
 
     @Bean
-    fun mediaPolicyRpcService(principals: BearerPrincipalResolver, groups: GroupPolicyService, devices: DevicePublishAuthorizationService) =
-        MediaPolicyRpcService(principals, groups, devices)
+    fun mediaPolicyRpcService(
+        principals: BearerPrincipalResolver,
+        groups: GroupPolicyService,
+        devices: DevicePublishAuthorizationService,
+        geofences: GeofenceRepository,
+    ) = MediaPolicyRpcService(principals, groups, devices, AllowedAreaSnapshotService(geofences))
 
     @Bean(destroyMethod = "close")
     fun devicePolicyRpcServer(

@@ -20,9 +20,9 @@ type GeoPoint struct {
 }
 
 type AllowedAreaSnapshot struct {
-	GroupID string
-	Version string
-	Polygon []GeoPoint
+	GroupID  string
+	Version  string
+	Polygons [][]GeoPoint
 }
 
 type AllowedAreaProvider interface {
@@ -40,24 +40,45 @@ func (g RouteGeofence) AllowsRoute(
 	waypoints []Waypoint,
 	_ AltitudeDatum,
 ) (bool, error) {
-	if g.Provider == nil || groupID == "" || requestedVersion == "" {
-		return false, ErrGeofenceUnavailable
-	}
-	snapshot, err := g.Provider.CurrentAllowedArea(ctx, groupID)
-	if err != nil {
-		return false, ErrGeofenceUnavailable
-	}
-	if snapshot.GroupID != groupID || snapshot.Version == "" {
-		return false, ErrGeofenceInvalid
-	}
-	if snapshot.Version != requestedVersion {
-		return false, ErrGeofenceVersionStale
-	}
-	polygon, err := validatedPolygon(snapshot.Polygon)
+	polygons, err := g.currentPolygons(ctx, groupID, requestedVersion)
 	if err != nil {
 		return false, err
 	}
-	return routeInsidePolygon(waypoints, polygon), nil
+	return routeInsideAll(waypoints, polygons)
+}
+
+func (g RouteGeofence) currentPolygons(
+	ctx context.Context,
+	groupID string,
+	requestedVersion string,
+) ([][]GeoPoint, error) {
+	if g.Provider == nil || groupID == "" || requestedVersion == "" {
+		return nil, ErrGeofenceUnavailable
+	}
+	snapshot, err := g.Provider.CurrentAllowedArea(ctx, groupID)
+	if err != nil {
+		return nil, ErrGeofenceUnavailable
+	}
+	if snapshot.GroupID != groupID || snapshot.Version == "" {
+		return nil, ErrGeofenceInvalid
+	}
+	if snapshot.Version != requestedVersion {
+		return nil, ErrGeofenceVersionStale
+	}
+	if len(snapshot.Polygons) == 0 {
+		return nil, ErrGeofenceInvalid
+	}
+	return snapshot.Polygons, nil
+}
+
+func routeInsideAll(waypoints []Waypoint, candidates [][]GeoPoint) (bool, error) {
+	for _, candidate := range candidates {
+		polygon, err := validatedPolygon(candidate)
+		if err != nil || !routeInsidePolygon(waypoints, polygon) {
+			return false, err
+		}
+	}
+	return true, nil
 }
 
 func validatedPolygon(points []GeoPoint) ([]GeoPoint, error) {

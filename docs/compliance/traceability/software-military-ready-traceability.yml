@@ -62,11 +62,16 @@ traces:
       - docs/compliance/ai/ai-overlay-assurance-profile.yml
       - contracts/mission/v1/mission-dispatch.schema.json
     codeRefs:
+      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/operations/GeofenceModels.kt
+      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/grpc/MediaPolicyRpcService.kt
+      - services/media-control/internal/authpolicy/geofence_rpc.go
       - services/media-control/internal/mission/mission.go
       - services/media-control/internal/mission/route_geofence.go
       - services/media-control/internal/mission/redis_command_ledger.go
     testRefs:
       - backend/tests/test_system_safety_gate.py
+      - services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/MediaPolicyRpcTest.kt
+      - services/media-control/internal/authpolicy/geofence_rpc_test.go
       - services/media-control/internal/mission/mission_test.go
       - services/media-control/internal/mission/route_geofence_test.go
       - services/media-control/internal/mission/redis_command_ledger_test.go
