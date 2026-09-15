@@ -115,9 +115,7 @@ def test_report_and_notices_preserve_blocking_findings(tmp_path: Path) -> None:
 def test_internal_deployment_still_blocks_explicitly_denied_license(tmp_path: Path) -> None:
     sbom = tmp_path / "denied.spdx.json"
     sbom.write_text(
-        '{"packages":['
-        '{"name":"denied","versionInfo":"1","licenseDeclared":"AGPL-3.0-only","externalRefs":[]}'
-        "]}",
+        '{"packages":[{"name":"denied","versionInfo":"1","licenseDeclared":"AGPL-3.0-only","externalRefs":[]}]}',
         encoding="utf-8",
     )
 
