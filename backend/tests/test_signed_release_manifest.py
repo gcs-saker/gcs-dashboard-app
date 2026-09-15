@@ -29,12 +29,14 @@ def valid_manifest() -> dict:
                 "sbomSha256": digest,
                 "licenseReportSha256": digest,
                 "noticesSha256": digest,
+                "licenseScope": "distribution",
+                "licenseDeploymentAllowed": True,
                 "licenseReleaseAllowed": True,
             }
         )
     runtime_path = REPO_ROOT / "docs/compliance/supply-chain/runtime-delivery-inventory.json"
     return {
-        "schemaVersion": "gcs-saker.signed-release.v1",
+        "schemaVersion": "gcs-saker.signed-release.v2",
         "sourceCommit": "a" * 40,
         "workflowRun": "https://github.com/example/actions/runs/1",
         "createdAt": "2026-09-09T00:00:00Z",
@@ -75,6 +77,20 @@ def test_manifest_rejects_unapproved_vex() -> None:
     manifest["vex"] = [{"vulnerability": "CVE-example"}]
 
     with pytest.raises(module.ReleaseManifestError, match="approved VEX fields"):
+        module.validate_manifest(manifest, "a" * 40)
+
+
+def test_manifest_accepts_internal_scope_only_for_server_services() -> None:
+    module = load_module()
+    manifest = valid_manifest()
+    backend = next(entry for entry in manifest["images"] if entry["service"] == "backend")
+    backend.update({"licenseScope": "internal-service", "licenseReleaseAllowed": False})
+
+    module.validate_manifest(manifest, "a" * 40)
+
+    mobile = next(entry for entry in manifest["images"] if entry["service"] == "mobile-publisher")
+    mobile.update({"licenseScope": "internal-service", "licenseReleaseAllowed": False})
+    with pytest.raises(module.ReleaseManifestError, match="invalid internal-service"):
         module.validate_manifest(manifest, "a" * 40)
 
 

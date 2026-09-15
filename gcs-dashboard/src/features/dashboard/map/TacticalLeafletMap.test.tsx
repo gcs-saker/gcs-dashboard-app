@@ -239,23 +239,25 @@ describe("TacticalLeafletMap", () => {
   test("falls back to the closed-network offline renderer when public map loading fails", async () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
     await screen.findByTestId("public-tactical-map");
+    await waitFor(() => expect(leafletMock().tileLayers).toHaveLength(1));
 
     act(() => {
       leafletMock().tileLayers[0].emitError();
     });
 
-    expect(screen.getByTestId("offline-tactical-map")).toBeInTheDocument();
+    expect(await screen.findByTestId("offline-tactical-map")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("공개 지도 연결 실패로 오프라인 지도로 전환됨");
   });
 
   test("opens the same device popup from the closed-network offline map pins", async () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
     await screen.findByTestId("public-tactical-map");
+    await waitFor(() => expect(leafletMock().tileLayers).toHaveLength(1));
 
     act(() => {
       leafletMock().tileLayers[0].emitError();
     });
-    fireEvent.click(screen.getByRole("button", { name: /로컬 웹캠 위치/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /로컬 웹캠 위치/ }));
 
     const popup = screen.getByLabelText("로컬 웹캠 단말 정보");
     expect(popup).toBeInTheDocument();

@@ -171,6 +171,7 @@ def build_report(paths: list[Path], rules: LicenseRules, today: date) -> dict[st
         "generatedOn": today.isoformat(),
         "counts": dict(sorted(counts.items())),
         "releaseAllowed": not any(key in counts for key in ("DENIED", "UNKNOWN", "REVIEW_REQUIRED")),
+        "internalDeploymentAllowed": "DENIED" not in counts,
         "packages": [decision_document(decision) for decision in sorted(decisions, key=decision_sort_key)],
     }
 
@@ -217,6 +218,11 @@ def main() -> int:
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--notices", type=Path, required=True)
     parser.add_argument("--enforce", action="store_true")
+    parser.add_argument(
+        "--enforce-scope",
+        choices=("distribution", "internal-service"),
+        default="distribution",
+    )
     args = parser.parse_args()
     policy = load_yaml(args.policy)
     approvals = load_yaml(args.approvals).get("approvals", [])
@@ -224,7 +230,8 @@ def main() -> int:
     report = build_report(args.sbom, rules, date.today())
     args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     args.notices.write_text(notice_markdown(report), encoding="utf-8")
-    if args.enforce and not report["releaseAllowed"]:
+    allowed_field = "internalDeploymentAllowed" if args.enforce_scope == "internal-service" else "releaseAllowed"
+    if args.enforce and not report[allowed_field]:
         raise LicenseComplianceError(f"license release gate failed: {report['counts']}")
     print(json.dumps(report["counts"], sort_keys=True))
     return 0

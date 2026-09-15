@@ -107,8 +107,22 @@ def test_report_and_notices_preserve_blocking_findings(tmp_path: Path) -> None:
     notices = notice_markdown(report)
 
     assert report["releaseAllowed"] is False
+    assert report["internalDeploymentAllowed"] is True
     assert report["counts"] == {"ALLOWED": 1, "UNKNOWN": 1}
     assert "Disposition: `UNKNOWN`" in notices
+
+
+def test_internal_deployment_still_blocks_explicitly_denied_license(tmp_path: Path) -> None:
+    sbom = tmp_path / "denied.spdx.json"
+    sbom.write_text(
+        '{"packages":[{"name":"denied","versionInfo":"1","licenseDeclared":"AGPL-3.0-only","externalRefs":[]}]}',
+        encoding="utf-8",
+    )
+
+    report = build_report([sbom], RULES, TODAY)
+
+    assert report["releaseAllowed"] is False
+    assert report["internalDeploymentAllowed"] is False
 
 
 def test_invalid_spdx_document_is_rejected(tmp_path: Path) -> None:
