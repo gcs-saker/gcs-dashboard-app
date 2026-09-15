@@ -10,9 +10,10 @@ supports MIL-STD-882E Change 1 alignment; it is not an independent safety accept
 python scripts/reports/hazard_closure_qualification.py --check
 ```
 
-The controlled baseline currently contains ten open hazards. The residual-risk register contains no
-acceptance records, and five hazards do not yet appear in the top-level requirement trace catalogue.
-Therefore the truthful initial closure ratio is zero and the result is `BLOCKED`.
+The controlled baseline currently contains ten open hazards and the residual-risk register contains
+no acceptance records. All hazards now have a top-level requirement trace, while the five hazards
+added during the detailed control audit contain seven implemented, six partial, and two planned
+controls. Therefore the truthful closure ratio remains zero and the result is `BLOCKED`.
 
 ## Closure inputs
 
@@ -47,8 +48,8 @@ approved. Output creation is exclusive and never overwrites prior evidence.
 
 ## Review order
 
-1. Add top-level requirement traces for currently untraced hazards.
-2. Implement and verify every safety requirement at its owning boundary.
+1. Complete the partial and planned controls in `safety-control-catalogue.yml`.
+2. Implement and verify every remaining safety requirement at its owning boundary.
 3. Generate source-bound evidence manifests.
 4. Assess residual risk; the developer does not self-accept it.
 5. Obtain the named safety authority decision and review date.

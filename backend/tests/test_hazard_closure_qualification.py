@@ -67,7 +67,7 @@ def test_current_baseline_truthfully_reports_zero_closed_hazards() -> None:
     assert result["closedHazardCount"] == 0
     assert result["closureRatio"] == 0
     assert result["technicalResult"] == "BLOCKED"
-    assert len(result["untracedHazardIds"]) == 5
+    assert result["untracedHazardIds"] == []
 
 
 def test_complete_closed_hazard_is_technical_pass_but_not_approved() -> None:
