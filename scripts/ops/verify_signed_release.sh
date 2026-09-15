@@ -8,6 +8,8 @@ expected_commit="${SOURCE_COMMIT:?Set SOURCE_COMMIT to the immutable checkout re
 identity='^https://github.com/gcs-saker/gcs-dashboard-app/.github/workflows/release-supply-chain.yml@refs/(tags|heads)/'
 mobile_identity='^https://github.com/gcs-saker/gcs-mobile-publisher/.github/workflows/signed-release.yml@refs/(tags|heads)/'
 issuer='https://token.actions.githubusercontent.com'
+slsa_predicate='https://slsa.dev/provenance/v1'
+spdx_predicate='https://spdx.dev/Document/v2.3'
 
 cosign_bin="${COSIGN_BIN:-}"
 if [[ -z "${cosign_bin}" ]]; then
@@ -36,18 +38,18 @@ export MOBILE_PUBLISHER_IMAGE="$(jq -r '."mobile-publisher"' <<<"${inventory}")"
 
 for image in "${BACKEND_IMAGE}" "${AUTH_POLICY_IMAGE}" "${MEDIA_CONTROL_IMAGE}" "${DASHBOARD_IMAGE}"; do
   "${cosign_bin}" verify --certificate-identity-regexp "${identity}" --certificate-oidc-issuer "${issuer}" "${image}" >/dev/null
-  "${cosign_bin}" verify-attestation --type slsaprovenance \
+  "${cosign_bin}" verify-attestation --type "${slsa_predicate}" \
     --certificate-identity-regexp "${identity}" --certificate-oidc-issuer "${issuer}" "${image}" >/dev/null
-  "${cosign_bin}" verify-attestation --type spdxjson \
+  "${cosign_bin}" verify-attestation --type "${spdx_predicate}" \
     --certificate-identity-regexp "${identity}" --certificate-oidc-issuer "${issuer}" "${image}" >/dev/null
 done
 
 "${cosign_bin}" verify --certificate-identity-regexp "${mobile_identity}" \
   --certificate-oidc-issuer "${issuer}" "${MOBILE_PUBLISHER_IMAGE}" >/dev/null
-"${cosign_bin}" verify-attestation --type slsaprovenance \
+"${cosign_bin}" verify-attestation --type "${slsa_predicate}" \
   --certificate-identity-regexp "${mobile_identity}" --certificate-oidc-issuer "${issuer}" \
   "${MOBILE_PUBLISHER_IMAGE}" >/dev/null
-"${cosign_bin}" verify-attestation --type spdxjson \
+"${cosign_bin}" verify-attestation --type "${spdx_predicate}" \
   --certificate-identity-regexp "${mobile_identity}" --certificate-oidc-issuer "${issuer}" \
   "${MOBILE_PUBLISHER_IMAGE}" >/dev/null
 

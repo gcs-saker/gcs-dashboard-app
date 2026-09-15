@@ -122,8 +122,10 @@ def test_deploy_verifies_manifest_and_all_attestations() -> None:
     assert '"${cosign_bin}" verify-blob' in verifier
     assert '"${cosign_bin}" verify-attestation' in verifier
 
-    assert '"${cosign_bin}" verify-attestation --type slsaprovenance' in verifier
-    assert '"${cosign_bin}" verify-attestation --type spdxjson' in verifier
+    assert "slsa_predicate='https://slsa.dev/provenance/v1'" in verifier
+    assert "spdx_predicate='https://spdx.dev/Document/v2.3'" in verifier
+    assert '"${cosign_bin}" verify-attestation --type "${slsa_predicate}"' in verifier
+    assert '"${cosign_bin}" verify-attestation --type "${spdx_predicate}"' in verifier
     assert 'release_manifest.py" verify' in verifier
     assert "export MOBILE_PUBLISHER_IMAGE=" in verifier
     assert "gcs-mobile-publisher/.github/workflows/signed-release.yml" in verifier
