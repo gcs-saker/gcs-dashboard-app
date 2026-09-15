@@ -48,6 +48,8 @@ traces:
       - docs/compliance/safety/hazard-log.yml
       - docs/compliance/safety/software-level-of-rigor.yml
       - docs/compliance/safety/residual-risk-register.yml
+      - docs/compliance/safety/hazard-closure-qualification.yml
+      - docs/operations/GCS-Saker_Hazard_Closure_Qualification.md
       - docs/compliance/mission/mission-safety-contract.md
       - docs/compliance/ai/ai-overlay-assurance-profile.yml
       - contracts/mission/v1/mission-dispatch.schema.json
@@ -56,6 +58,8 @@ traces:
       - backend/tests/test_system_safety_gate.py
       - services/media-control/internal/mission/mission_test.go
       - backend/tests/test_ai_adapter_router_security.py
+      - scripts/reports/hazard_closure_qualification.py
+      - backend/tests/test_hazard_closure_qualification.py
     evidenceRefs: []
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/658
@@ -170,6 +174,8 @@ traces:
       - docs/operations/GCS-Saker_Server01_Performance_Qualification.md
       - docs/compliance/architecture/change-impact-ownership.yml
       - docs/operations/GCS-Saker_Change_Impact_Qualification.md
+      - docs/compliance/safety/hazard-closure-qualification.yml
+      - docs/operations/GCS-Saker_Hazard_Closure_Qualification.md
     codeRefs: []
     testRefs:
       - scripts/gates/iso_assurance_gate.py
@@ -182,6 +188,8 @@ traces:
       - backend/tests/test_performance_stability_qualification.py
       - scripts/reports/change_impact_qualification.py
       - backend/tests/test_change_impact_qualification.py
+      - scripts/reports/hazard_closure_qualification.py
+      - backend/tests/test_hazard_closure_qualification.py
     evidenceRefs: []
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/717
@@ -198,14 +206,18 @@ traces:
       - docs/operations/GCS-Saker_Server01_Performance_Qualification.md
       - docs/compliance/architecture/change-impact-ownership.yml
       - docs/operations/GCS-Saker_Change_Impact_Qualification.md
+      - docs/compliance/safety/hazard-closure-qualification.yml
+      - docs/operations/GCS-Saker_Hazard_Closure_Qualification.md
     codeRefs:
       - scripts/ops/recovery_qualification.py
       - scripts/reports/performance_stability_qualification.py
       - scripts/reports/change_impact_qualification.py
+      - scripts/reports/hazard_closure_qualification.py
     testRefs:
       - backend/tests/test_recovery_qualification.py
       - backend/tests/test_performance_stability_qualification.py
       - backend/tests/test_change_impact_qualification.py
+      - backend/tests/test_hazard_closure_qualification.py
       - scripts/gates/iso_assurance_gate.py
       - backend/tests/test_iso_assurance_gate.py
       - scripts/reports/software_quality_measurement.py

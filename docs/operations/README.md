@@ -17,6 +17,7 @@
 | `GCS-Saker_Server01_Recovery_Qualification.md` | Server-01 통제 장애 주입, 동일 컨테이너 복구, 데이터 무결성 증거 절차 |
 | `GCS-Saker_Server01_Performance_Qualification.md` | Server-01 지연·장시간 안정성 측정과 불변 판정 증거 절차 |
 | `GCS-Saker_Change_Impact_Qualification.md` | 변경 diff의 생산 소유 경계 분류와 교차 경계 검토 절차 |
+| `GCS-Saker_Hazard_Closure_Qualification.md` | MIL-STD-882E 위험·통제·증거·잔여위험 승인 폐루프 절차 |
 | `GCS-Saker_health_readiness_기준_v0.1.md` | Backend/MediaMTX/Docker/Nginx health와 readiness 판단 기준 |
 | `GCS-Saker_Docker_env_주입_가이드_v0.1.md` | Docker Compose env 주입 구조와 local/staging/production 분리 기준 |
 | `GCS-Saker_Nginx_HTTPS_WSS_reverse_proxy_v0.1.md` | Nginx HTTPS/WSS reverse proxy 경로 정책과 관리 포트 비노출 기준 |
