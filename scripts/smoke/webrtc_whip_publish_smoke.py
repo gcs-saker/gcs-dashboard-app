@@ -8,6 +8,7 @@ import array
 import asyncio
 import fractions
 import math
+import os
 import ssl
 import sys
 import time
@@ -257,6 +258,16 @@ def configure_relay_policy(peer_connection: object, relay_only: bool) -> None:
         enforce_aiortc_relay_policy(peer_connection)
 
 
+def resolve_publish_token(args: argparse.Namespace) -> str | None:
+    if args.publish_token_file:
+        with open(args.publish_token_file, encoding="utf-8") as token_file:
+            token = token_file.read().strip()
+        if not token:
+            raise RuntimeError("publish token file is empty")
+        return token
+    return args.publish_token or os.environ.get("GCS_PUBLISH_TOKEN")
+
+
 async def run_publish_smoke(args: argparse.Namespace) -> int:
     try:
         from aiortc import (
@@ -310,7 +321,7 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
             raise RuntimeError("Local WHIP offer SDP was not created")
         offer_ready_ms = (time.perf_counter() - started) * 1000
         offer_sdp = relay_only_sdp(local_description.sdp) if args.relay_only else local_description.sdp
-        answer_sdp = post_whip_offer(args.whip_url, offer_sdp, args.insecure, args.publish_token)
+        answer_sdp = post_whip_offer(args.whip_url, offer_sdp, args.insecure, resolve_publish_token(args))
         answer_ms = (time.perf_counter() - started) * 1000
         await peer_connection.setRemoteDescription(RTCSessionDescription(sdp=answer_sdp, type="answer"))
         if args.require_connected:
@@ -319,6 +330,7 @@ async def run_publish_smoke(args: argparse.Namespace) -> int:
         selected_pair = observe_aiortc_selected_pair(peer_connection)
         if args.require_selected_pair:
             require_ice_path(selected_pair, relay_required=args.require_relay_path)
+        print("WHIP publisher connected", flush=True)
         await asyncio.sleep(args.publish_seconds)
 
         print("WebRTC WHIP publish smoke run passed")
@@ -360,6 +372,11 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         default=None,
         help="Short-lived publish token sent as an Authorization bearer",
     )
+    parser.add_argument(
+        "--publish-token-file",
+        default=None,
+        help="Read the short-lived publish token from an owner-controlled file",
+    )
     parser.add_argument("--ice-server-url", default=DEFAULT_ICE_SERVER_URL)
     parser.add_argument("--ice-username", default=None)
     parser.add_argument("--ice-credential", default=None)
@@ -381,6 +398,8 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--require-relay-path", action="store_true")
     parser.add_argument("--relay-only", action="store_true")
     args = parser.parse_args(argv)
+    if args.publish_token and args.publish_token_file:
+        parser.error("--publish-token and --publish-token-file are mutually exclusive")
     if args.relay_only:
         args.require_relay_path = True
     if args.require_relay_path:

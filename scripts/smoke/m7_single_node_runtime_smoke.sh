@@ -67,8 +67,9 @@ compose() {
 
 load_env() {
   set -a
-  # shellcheck disable=SC1090
-  . "$ENV_FILE"
+  # Compose accepts CRLF env files; normalize only the shell input for Windows checkouts.
+  # shellcheck disable=SC1090,SC1091
+  . <(sed 's/\r$//' "$ENV_FILE")
   set +a
 }
 

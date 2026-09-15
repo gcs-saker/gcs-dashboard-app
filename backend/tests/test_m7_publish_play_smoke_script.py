@@ -14,3 +14,16 @@ def test_m7_publish_play_smoke_contract_check_passes():
     )
 
     assert "M7 publish/play smoke check passed" in result.stdout
+
+
+def test_m7_publish_play_uses_server_issued_media_routes():
+    script = (REPO_ROOT / "scripts" / "smoke" / "m7_publish_play_smoke.sh").read_text(encoding="utf-8")
+
+    assert "/media-control/api/v1/account/publish-sessions" in script
+    assert "/media-control/api/v1/streams/${stream_id}/playback" in script
+    assert "webrtc_whip_publish_smoke.py" in script
+    assert "--publish-token-file" in script
+    assert "--require-video-frame" in script
+    assert "--require-audio-frame" in script
+    assert "rtsp://mediamtx" not in script
+    assert "STREAM_PATH=" not in script
