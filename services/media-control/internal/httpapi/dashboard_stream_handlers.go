@@ -8,6 +8,8 @@ import (
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 )
 
+const serverOwnedTalkbackChannel = "operator"
+
 func (s Server) dashboardStreamItem(w http.ResponseWriter, r *http.Request) {
 	route, ok := dashboardStreamRouteFromPath(r.URL.Path)
 	if !ok {
@@ -89,11 +91,7 @@ func (s Server) authorizeTalkbackRoute(w http.ResponseWriter, r *http.Request, s
 		s.writeStreamAccessError(w, accessError)
 		return domain.ParsedStreamPath{}, "", false
 	}
-	operatorID := strings.TrimSpace(r.URL.Query().Get("operatorId"))
-	if operatorID == "" {
-		operatorID = "operator"
-	}
-	talkback, err := domain.ParseStreamPath("talkback/" + parsed.Path + "/" + operatorID)
+	talkback, err := domain.ParseStreamPath("talkback/" + parsed.Path + "/" + serverOwnedTalkbackChannel)
 	if err != nil {
 		writeJSON(w, http.StatusUnprocessableEntity, errorPayload("operator id is invalid"))
 		return domain.ParsedStreamPath{}, "", false

@@ -4,11 +4,14 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_DIR="${REPO_ROOT}/deploy/compose"
 COMPOSE_FILE="${COMPOSE_DIR}/compose.single-node.poc.yml"
+COMPOSE_OVERRIDE_FILE="${COMPOSE_DIR}/compose.local-dev.override.yml"
 ENV_FILE="${ENV_FILE:-${COMPOSE_DIR}/.env.single-node.example}"
 MODE="check"
 START_STACK="${START_STACK:-1}"
 STOP_STACK="${STOP_STACK:-0}"
 USE_SMOKE_PORTS="${USE_SMOKE_PORTS:-1}"
+USE_LOCAL_DEV_OVERRIDE="${USE_LOCAL_DEV_OVERRIDE:-1}"
+BUILD_STACK="${BUILD_STACK:-1}"
 
 usage() {
   cat <<'EOF'
@@ -24,6 +27,8 @@ Environment:
   START_STACK  In --run, start docker compose first. Default: 1
   STOP_STACK   In --run, stop docker compose at the end. Default: 0
   USE_SMOKE_PORTS  In --run, avoid common local ports. Default: 1
+  USE_LOCAL_DEV_OVERRIDE  Use the non-production mobile publisher stand-in. Default: 1
+  BUILD_STACK  Rebuild local service images before startup. Default: 1
 EOF
 }
 
@@ -58,17 +63,18 @@ require_command() {
 }
 
 compose() {
-  docker compose \
-    --project-directory "$COMPOSE_DIR" \
-    --env-file "$ENV_FILE" \
-    -f "$COMPOSE_FILE" \
-    "$@"
+  local compose_args=(--project-directory "$COMPOSE_DIR" --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
+  if [[ "$USE_LOCAL_DEV_OVERRIDE" == "1" ]]; then
+    compose_args+=(-f "$COMPOSE_OVERRIDE_FILE")
+  fi
+  docker compose "${compose_args[@]}" "$@"
 }
 
 load_env() {
   set -a
-  # shellcheck disable=SC1090
-  . "$ENV_FILE"
+  # Compose accepts CRLF env files; normalize only the shell input for Windows checkouts.
+  # shellcheck disable=SC1090,SC1091
+  . <(sed 's/\r$//' "$ENV_FILE")
   set +a
 }
 
@@ -93,6 +99,7 @@ apply_smoke_ports() {
   export MEDIAMTX_PUBLIC_HLS_BASE_URL="${GCS_SMOKE_MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/hls}"
   export MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL="${GCS_SMOKE_MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/webrtc}"
   export MEDIA_CONTROL_PUBLIC_HLS_BASE_URL="${GCS_SMOKE_MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/hls}"
+  export MEDIA_CONTROL_TURN_PRIMARY_URL="${GCS_SMOKE_MEDIA_CONTROL_TURN_PRIMARY_URL:-turn:127.0.0.1:${TURN_PRIMARY_HOST_PORT}?transport=udp}"
   export AUTH_POLICY_BASE_URL="${GCS_SMOKE_AUTH_POLICY_BASE_URL:-http://auth-policy:8080}"
   export MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID="${GCS_SMOKE_MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID:-co-a}"
   export MEDIA_CONTROL_STREAM_GROUP_MAP="${GCS_SMOKE_MEDIA_CONTROL_STREAM_GROUP_MAP:-raw/sample/front=co-a,raw/local/webcam=co-a}"
@@ -168,8 +175,23 @@ login_access_token() {
     | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])'
 }
 
+turn_credentials() {
+  local edge_base_url="$1"
+  local access_token="$2"
+  curl -fsS -H "Authorization: Bearer ${access_token}" \
+    "${edge_base_url}/media-control/api/v1/streams/ice-servers" \
+    | python3 -c '
+import json, sys
+payload = json.load(sys.stdin)
+servers = payload if isinstance(payload, list) else payload["iceServers"]
+server = next(item for item in servers if str(item.get("urls", "")).startswith("turn:"))
+print(server["urls"], server["username"], server["credential"], sep="\t")
+'
+}
+
 check_required_files() {
   test -f "$COMPOSE_FILE"
+  test -f "$COMPOSE_OVERRIDE_FILE"
   test -f "$ENV_FILE"
   test -f "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   test -f "${REPO_ROOT}/deploy/mediamtx/mediamtx.closed-network.yml"
@@ -231,7 +253,9 @@ run_live() {
   apply_smoke_ports
 
   if [[ "$START_STACK" == "1" ]]; then
-    compose up -d --build
+    local build_args=()
+    [[ "$BUILD_STACK" == "1" ]] && build_args+=(--build)
+    compose up -d "${build_args[@]}"
     compose restart edge >/dev/null
   fi
 
@@ -264,19 +288,15 @@ run_live() {
   runtime_probe_from_edge_with_auth "http://media-control:8081/api/v1/streams/ice-servers" "$access_token"
   runtime_probe_from_edge "http://mediamtx:9997/v3/config/global/get"
 
+  local turn_url
+  local turn_username
+  local turn_password
+  IFS=$'\t' read -r turn_url turn_username turn_password < <(turn_credentials "$edge_base_url" "$access_token")
   python3 "${REPO_ROOT}/scripts/smoke/turn_relay_smoke.py" \
     --run \
-    --turn-url "turn:127.0.0.1:${TURN_PRIMARY_HOST_PORT:-3478}?transport=udp" \
-    --username "${TURN_USERNAME:-gcs-turn}" \
-    --password "${TURN_PASSWORD:?TURN_PASSWORD is required}"
-
-  if [[ -n "$(compose ps -q turn-secondary 2>/dev/null)" ]]; then
-    python3 "${REPO_ROOT}/scripts/smoke/turn_relay_smoke.py" \
-      --run \
-      --turn-url "turn:127.0.0.1:${TURN_SECONDARY_HOST_PORT:-3479}?transport=udp" \
-      --username "${TURN_USERNAME:-gcs-turn}" \
-      --password "${TURN_PASSWORD:?TURN_PASSWORD is required}"
-  fi
+    --turn-url "$turn_url" \
+    --username "$turn_username" \
+    --password "$turn_password"
 
   curl -fsS "${edge_base_url}/webrtc/" >/dev/null 2>&1 || true
   curl -fsS "${edge_base_url}/hls/" >/dev/null 2>&1 || true

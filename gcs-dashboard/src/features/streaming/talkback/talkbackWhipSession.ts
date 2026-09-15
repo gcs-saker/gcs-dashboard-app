@@ -11,7 +11,6 @@ interface PublishTalkbackTargetOptions {
   audioTracks: MediaStreamTrack[];
   fetcher: typeof fetch;
   iceServers: RTCIceServer[];
-  operatorId?: string;
   peerConnectionFactory?: TalkbackPeerConnectionFactory;
   streamId: string;
 }
@@ -24,7 +23,6 @@ export async function publishTalkbackTarget({
   audioTracks,
   fetcher,
   iceServers,
-  operatorId,
   peerConnectionFactory,
   streamId,
 }: PublishTalkbackTargetOptions): Promise<TalkbackTargetPublishResult> {
@@ -44,7 +42,7 @@ export async function publishTalkbackTarget({
     if (!sdp) {
       throw new Error("talkback WebRTC offer SDP가 생성되지 않았습니다.");
     }
-    const publishSession = await fetchAuthorizedTalkbackSession(streamId, operatorId, fetcher);
+    const publishSession = await fetchAuthorizedTalkbackSession(streamId, fetcher);
     const response = await fetcher(publishSession.whipUrl, {
       method: "POST",
       headers: SDP_OFFER_HEADERS,

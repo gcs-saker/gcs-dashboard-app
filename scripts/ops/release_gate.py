@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import hashlib
 import json
 import os
@@ -37,6 +39,8 @@ PUBLIC_ENDPOINT_ENV_KEYS = {
 APPLICATION_IMAGE_REFERENCE = re.compile(
     r"^ghcr\.io/gcs-saker/gcs-saker-(backend|auth-policy|media-control|dashboard)@sha256:[0-9a-f]{64}$"
 )
+IMMUTABLE_IMAGE_REFERENCE = re.compile(r"^[^\s]+@sha256:[0-9a-f]{64}$")
+MINIMUM_MFA_SECRET_BYTES = 20
 
 
 def run(*args: str, secret_output: bool = False) -> str:
@@ -88,15 +92,88 @@ def require_private_file(path: pathlib.Path, *, allowed_read_uid: str | None = N
 
 
 def validate_public_endpoint_environment(path: pathlib.Path) -> None:
+    for key, value in read_environment(path).items():
+        if key not in PUBLIC_ENDPOINT_ENV_KEYS:
+            continue
+        if any(host in value for host in RETIRED_PUBLIC_HOSTS):
+            raise RuntimeError(f"{key} references a retired production hostname")
+
+
+def read_environment(path: pathlib.Path) -> dict[str, str]:
+    values = {}
     for line in path.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith("#") or "=" not in stripped:
             continue
         key, value = stripped.split("=", 1)
-        if key not in PUBLIC_ENDPOINT_ENV_KEYS:
-            continue
-        if any(host in value for host in RETIRED_PUBLIC_HOSTS):
-            raise RuntimeError(f"{key} references a retired production hostname")
+        values[key.strip()] = value.strip()
+    return values
+
+
+def validate_runtime_environment(path: pathlib.Path) -> None:
+    values = read_environment(path)
+    validate_admin_mfa_secret(values.get("AUTH_POLICY_ADMIN_MFA_SECRET", ""))
+    mobile_image = values.get("MOBILE_PUBLISHER_IMAGE", "")
+    if not IMMUTABLE_IMAGE_REFERENCE.fullmatch(mobile_image):
+        raise RuntimeError("MOBILE_PUBLISHER_IMAGE must use an immutable sha256 digest")
+    validate_turn_ranges(values)
+
+
+def validate_admin_mfa_secret(encoded: str) -> None:
+    try:
+        padding = "=" * ((8 - len(encoded) % 8) % 8)
+        decoded = base64.b32decode(encoded.upper() + padding, casefold=True)
+    except (binascii.Error, ValueError):
+        raise RuntimeError("AUTH_POLICY_ADMIN_MFA_SECRET must be valid Base32") from None
+    if len(decoded) < MINIMUM_MFA_SECRET_BYTES:
+        raise RuntimeError("AUTH_POLICY_ADMIN_MFA_SECRET must contain at least 160 bits")
+
+
+def validate_turn_ranges(values: dict[str, str]) -> None:
+    names = (
+        "TURN_RELAY_MIN_PORT",
+        "TURN_PRIMARY_RELAY_MAX_PORT",
+        "TURN_SECONDARY_RELAY_MIN_PORT",
+        "TURN_RELAY_MAX_PORT",
+        "TURN_PRIMARY_RELAY_HOST_MIN_PORT",
+        "TURN_PRIMARY_RELAY_HOST_MAX_PORT",
+        "TURN_SECONDARY_RELAY_HOST_MIN_PORT",
+        "TURN_SECONDARY_RELAY_HOST_MAX_PORT",
+    )
+    try:
+        ports = {name: int(values[name]) for name in names}
+    except (KeyError, ValueError):
+        raise RuntimeError("TURN relay ranges must be explicit integer values") from None
+    internal = range_sizes(
+        ports,
+        "TURN_RELAY_MIN_PORT",
+        "TURN_PRIMARY_RELAY_MAX_PORT",
+        "TURN_SECONDARY_RELAY_MIN_PORT",
+        "TURN_RELAY_MAX_PORT",
+    )
+    external = range_sizes(
+        ports,
+        "TURN_PRIMARY_RELAY_HOST_MIN_PORT",
+        "TURN_PRIMARY_RELAY_HOST_MAX_PORT",
+        "TURN_SECONDARY_RELAY_HOST_MIN_PORT",
+        "TURN_SECONDARY_RELAY_HOST_MAX_PORT",
+    )
+    if internal != external:
+        raise RuntimeError("TURN internal and published relay range sizes must match")
+
+
+def range_sizes(
+    values: dict[str, int],
+    first_min: str,
+    first_max: str,
+    second_min: str,
+    second_max: str,
+) -> tuple[int, int]:
+    first = values[first_max] - values[first_min] + 1
+    second = values[second_max] - values[second_min] + 1
+    if first <= 0 or second <= 0 or values[second_min] != values[first_max] + 1:
+        raise RuntimeError("TURN relay ranges must be positive and contiguous")
+    return first, second
 
 
 def migration_inventory() -> list[dict[str, str]]:
@@ -168,6 +245,7 @@ def main() -> int:
     require_private_file(env_file)
     require_private_file(mqtt_file, allowed_read_uid=os.environ.get("MOSQUITTO_RUNTIME_UID", "1883"))
     validate_public_endpoint_environment(env_file)
+    validate_runtime_environment(env_file)
     status = run("git", "status", "--porcelain")
     if status and not args.allow_dirty:
         raise RuntimeError("release checkout is dirty; commit the source before deployment")

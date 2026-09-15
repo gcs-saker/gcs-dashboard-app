@@ -1,3 +1,4 @@
+import argparse
 import importlib.util
 import subprocess
 import sys
@@ -121,3 +122,12 @@ def test_webrtc_whip_publish_smoke_sets_bounded_keyframe_interval() -> None:
     args = module.parse_args(["--run", "--keyframe-interval-frames", "30"])
 
     assert args.keyframe_interval_frames == 30
+
+
+def test_webrtc_whip_publish_smoke_reads_token_from_file(tmp_path: Path) -> None:
+    module = load_publish_module()
+    token_file = tmp_path / "publish-token"
+    token_file.write_text("short-lived-token\n", encoding="utf-8")
+    args = argparse.Namespace(publish_token_file=str(token_file), publish_token=None)
+
+    assert module.resolve_publish_token(args) == "short-lived-token"

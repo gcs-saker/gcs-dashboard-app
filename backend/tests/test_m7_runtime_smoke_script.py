@@ -23,6 +23,7 @@ def test_m7_runtime_smoke_ports_override_public_playback_urls():
     assert "MEDIAMTX_PUBLIC_HLS_BASE_URL" in script
     assert "MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL" in script
     assert "MEDIA_CONTROL_PUBLIC_HLS_BASE_URL" in script
+    assert "MEDIA_CONTROL_TURN_PRIMARY_URL" in script
     assert "AUTH_POLICY_BASE_URL" in script
     assert "MEDIA_CONTROL_STREAM_GROUP_MAP" in script
     assert "VITE_AUTH_API_BASE_URL" in script
@@ -65,6 +66,18 @@ def test_m7_runtime_smoke_requires_backend_stream_status_payload_and_read_model_
     assert "verify edge/backend/auth" not in script
     for legacy_path in ("/api/control/", "/api/v1/ai/mock/detections", "/metrics", "/ws/"):
         assert legacy_path not in script
+
+
+def test_m7_runtime_smoke_uses_local_override_and_ephemeral_turn_credentials():
+    script = (REPO_ROOT / "scripts" / "smoke" / "m7_single_node_runtime_smoke.sh").read_text(encoding="utf-8")
+
+    assert "compose.local-dev.override.yml" in script
+    assert "USE_LOCAL_DEV_OVERRIDE" in script
+    assert "BUILD_STACK" in script
+    assert "turn_credentials" in script
+    assert 'server["username"]' in script
+    assert 'server["credential"]' in script
+    assert "TURN_PASSWORD is required" not in script
 
 
 def test_mediamtx_additional_hosts_are_env_driven_for_public_nat_candidates():

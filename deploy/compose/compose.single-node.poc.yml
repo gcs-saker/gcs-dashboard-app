@@ -105,7 +105,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "mosquitto_sub -h 127.0.0.1 -p 8883 --cafile /run/secrets/gcs-pki/ca.crt --cert /run/secrets/gcs-pki/mqtt-health.crt --key /run/secrets/gcs-pki/mqtt-health.key -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null",
+          "mosquitto_sub -h mqtt -p 8883 --cafile /run/secrets/gcs-pki/ca.crt --cert /run/secrets/gcs-pki/mqtt-health.crt --key /run/secrets/gcs-pki/mqtt-health.key -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null",
         ]
     restart: unless-stopped
     networks:
@@ -378,7 +378,7 @@ services:
       - --static-auth-secret=${TURN_SHARED_SECRET:?Set TURN_SHARED_SECRET}
       - --listening-port=3478
       - --min-port=${TURN_RELAY_MIN_PORT:-49160}
-      - --max-port=${TURN_RELAY_MAX_PORT:-49200}
+      - --max-port=${TURN_PRIMARY_RELAY_MAX_PORT:-49180}
       - --external-ip=${TURN_EXTERNAL_IP:-127.0.0.1}
       - --no-cli
       - --no-multicast-peers
@@ -418,7 +418,7 @@ services:
       - --realm=${TURN_REALM:-gcs-saker.closed}
       - --static-auth-secret=${TURN_SHARED_SECRET:?Set TURN_SHARED_SECRET}
       - --listening-port=3478
-      - --min-port=49181
+      - --min-port=${TURN_SECONDARY_RELAY_MIN_PORT:-49181}
       - --max-port=${TURN_RELAY_MAX_PORT:-49200}
       - --external-ip=${TURN_EXTERNAL_IP:-127.0.0.1}
       - --no-cli

@@ -53,10 +53,10 @@ func TestDashboardPublishUrlRejectsStreamWithoutServerOwnedSession(t *testing.T)
 	}
 }
 
-func TestDashboardTalkbackPublishUsesAuthorizedShortLivedPath(t *testing.T) {
+func TestDashboardTalkbackPublishUsesServerOwnedShortLivedPath(t *testing.T) {
 	var observedTarget domain.StreamAccessTarget
 	server := newTestServerWithAuthorizer(fakeStreams{}, fakeIce{}, fakeAuthorizer{observedTarget: &observedTarget})
-	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.drone-01.front/talkback-publish?operatorId=operator01", nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/streams/raw.drone-01.front/talkback-publish?operatorId=attacker-selected", nil)
 	request.Header.Set("Authorization", "Bearer operator-token")
 	recorder := httptest.NewRecorder()
 
@@ -66,10 +66,10 @@ func TestDashboardTalkbackPublishUsesAuthorizedShortLivedPath(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
 	}
 	payload := decodeTestJSON[streamPublishResponse](t, recorder)
-	if !strings.HasPrefix(payload.WhipURL, "http://edge.local/webrtc/talkback/raw/drone-01/front/operator01/whip?") {
+	if !strings.HasPrefix(payload.WhipURL, "http://edge.local/webrtc/talkback/raw/drone-01/front/operator/whip?") {
 		t.Fatalf("unexpected talkback publish URL %v", payload.WhipURL)
 	}
-	assertMediaURLToken(t, payload.WhipURL, publisherTokenQueryKey, mediaMTXActionPublish, "talkback/raw/drone-01/front/operator01")
+	assertMediaURLToken(t, payload.WhipURL, publisherTokenQueryKey, mediaMTXActionPublish, "talkback/raw/drone-01/front/operator")
 	if observedTarget.Action != "send_talkback" {
 		t.Fatalf("expected send_talkback authorization action, got %q", observedTarget.Action)
 	}

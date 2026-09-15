@@ -13,10 +13,10 @@ export type { UseWhipAudioPublisherOptions } from "@streaming/talkback/talkbackP
 
 export function useWhipAudioPublisher(options: UseWhipAudioPublisherOptions = {}): TalkbackPublisherSnapshot {
   const runtime = useTalkbackRuntime();
-  const { mediaDevices = navigator.mediaDevices, peerConnectionFactory, fetcher = fetch, operatorId } = options;
+  const { mediaDevices = navigator.mediaDevices, peerConnectionFactory, fetcher = fetch } = options;
   const start = useCallback(async (streamIds: string[]): Promise<void> => {
-    await startTalkback(runtime, streamIds, { mediaDevices, peerConnectionFactory, fetcher, operatorId });
-  }, [fetcher, mediaDevices, operatorId, peerConnectionFactory, runtime]);
+    await startTalkback(runtime, streamIds, { mediaDevices, peerConnectionFactory, fetcher });
+  }, [fetcher, mediaDevices, peerConnectionFactory, runtime]);
   const stop = useCallback((): void => {
     const activeTargets = runtime.targets.filter((target) => target.status === "active").map((target) => target.streamId);
     runtime.stop();
@@ -76,7 +76,7 @@ async function startTalkback(
     runtime.setStatus("publishing");
     const iceServers = options.peerConnectionFactory ? WEBRTC_ICE_SERVERS : await loadWebRtcIceServers(options.fetcher);
     const results = await Promise.all(targets.map((streamId) => publishTalkbackTarget({
-      audioTracks, fetcher: options.fetcher, iceServers, operatorId: options.operatorId,
+      audioTracks, fetcher: options.fetcher, iceServers,
       peerConnectionFactory: options.peerConnectionFactory, streamId,
     })));
     runtime.peerConnectionsRef.current = results.flatMap((result) => result.peerConnection ? [result.peerConnection] : []);

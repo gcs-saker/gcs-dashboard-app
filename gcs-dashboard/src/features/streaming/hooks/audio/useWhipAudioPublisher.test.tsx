@@ -44,7 +44,7 @@ describe("useWhipAudioPublisher", () => {
       return peerConnection as unknown as RTCPeerConnection;
     });
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => init?.method === "GET"
-      ? Response.json({ whipUrl: String(input).replace("/media-control/api/v1/streams/", "/webrtc/").replace("/talkback-publish?operatorId=operator01", "/whip?publisherToken=short-lived"), iceServers: [] })
+      ? Response.json({ whipUrl: String(input).replace("/media-control/api/v1/streams/", "/webrtc/").replace("/talkback-publish", "/whip?publisherToken=short-lived"), iceServers: [] })
       : new Response("v=0\r\ntalkback-answer", { status: 201 })) as unknown as typeof fetch;
 
     const { result } = renderHook(() =>
@@ -52,7 +52,6 @@ describe("useWhipAudioPublisher", () => {
         mediaDevices,
         peerConnectionFactory,
         fetcher,
-        operatorId: "operator01",
       }),
     );
 
@@ -152,7 +151,6 @@ describe("useWhipAudioPublisher", () => {
         mediaDevices,
         peerConnectionFactory,
         fetcher,
-        operatorId: "operator01",
       }),
     );
 
