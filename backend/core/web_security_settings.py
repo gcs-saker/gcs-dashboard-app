@@ -16,7 +16,7 @@ DEFAULT_ALLOWED_ORIGINS = (
 DEFAULT_CONTENT_SECURITY_POLICY = (
     "default-src 'self'; "
     "script-src 'self'; "
-    "style-src 'self' 'unsafe-inline' https://unpkg.com; "
+    "style-src 'self' 'unsafe-inline'; "
     "img-src 'self' data: blob: https://tiles.openfreemap.org https://services.arcgisonline.com; "
     "connect-src 'self' https: wss:; "
     "media-src 'self' blob: https:; "

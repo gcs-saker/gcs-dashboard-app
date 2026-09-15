@@ -18,7 +18,7 @@ VEX = REPO_ROOT / "docs/compliance/supply-chain/vex-template.yml"
 
 
 def test_supply_chain_policy_covers_every_release_image() -> None:
-    assert validate_supply_chain(load_yaml(POLICY), load_yaml(VEX)) == 4
+    assert validate_supply_chain(load_yaml(POLICY), load_yaml(VEX)) == 5
 
 
 def test_supply_chain_policy_rejects_unsigned_requirement_relaxation() -> None:

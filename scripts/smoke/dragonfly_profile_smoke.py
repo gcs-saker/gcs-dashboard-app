@@ -262,7 +262,7 @@ def main() -> int:
                 "composeCommand": config.compose_command("redis", include_override=False),
                 "configCommand": config.config_command("redis", include_override=False),
                 "readinessCommand": config.readiness_command("redis", include_override=False),
-                "runtime": "redis:7.4-alpine",
+                "runtime": "valkey/valkey:8.1-alpine",
             },
             {
                 "name": "dragonfly",
@@ -319,7 +319,7 @@ def run_profiles(config: DragonflyProfileSmokeConfig) -> dict[str, Any]:
     password = read_env_value(config.env_file, "REDIS_PASSWORD")
     dragonfly_image = read_env_value(config.env_file, "DRAGONFLY_IMAGE", default=DEFAULT_DRAGONFLY_IMAGE)
     profiles = [
-        ("redis", False, "redis:7.4-alpine"),
+        ("valkey", False, "valkey/valkey:8.1-alpine"),
         ("dragonfly", True, dragonfly_image),
     ]
     results = []

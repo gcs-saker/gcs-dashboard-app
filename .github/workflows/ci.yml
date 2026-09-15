@@ -28,11 +28,11 @@ jobs:
     runs-on: ubuntu-latest
     services:
       redis:
-        image: redis:7.4.2-alpine
+        image: valkey/valkey:8.1-alpine
         ports:
           - 6379:6379
         options: >-
-          --health-cmd "redis-cli ping"
+          --health-cmd "valkey-cli ping"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10

@@ -5,11 +5,9 @@ from pydantic import Field, ValidationError, field_validator
 from core.env_parsing import empty_to_none
 from core.settings_base import BackendBaseSettings, SettingsConfigurationError, settings_error_message
 
-DEFAULT_MAP_PROVIDER = "esri-satellite"
-DEFAULT_MAP_STYLE_URL = (
-    "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-)
-DEFAULT_MAP_ATTRIBUTION = "Esri World Imagery"
+DEFAULT_MAP_PROVIDER = "offline"
+DEFAULT_MAP_STYLE_URL = ""
+DEFAULT_MAP_ATTRIBUTION = "Offline tactical map"
 
 
 class DashboardMapSettings(BackendBaseSettings):
@@ -30,7 +28,7 @@ class DashboardMapSettings(BackendBaseSettings):
     @classmethod
     def default_style_url(cls, value: object) -> object:
         if isinstance(value, str):
-            return empty_to_none(value) or DEFAULT_MAP_STYLE_URL
+            return value.strip()
         return value
 
     @field_validator("attribution", mode="before")

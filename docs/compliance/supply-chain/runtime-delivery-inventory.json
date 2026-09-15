@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "gcs-saker.runtime-delivery-inventory.v1",
+  "components": [
+    {
+      "service": "postgres-geo",
+      "image": "postgis/postgis@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5",
+      "projectLicenses": ["PostgreSQL", "GPL-2.0-or-later"],
+      "licenseSource": "https://github.com/postgis/docker-postgis"
+    },
+    {
+      "service": "redis",
+      "image": "valkey/valkey@sha256:d2e18f3410b6f616de1417f570fa55261af2898b9c5b2cfb6781ce2373ea43d1",
+      "projectLicenses": ["BSD-3-Clause"],
+      "licenseSource": "https://github.com/valkey-io/valkey/blob/unstable/COPYING"
+    },
+    {
+      "service": "mqtt",
+      "image": "eclipse-mosquitto@sha256:a908c65cc8e67ec9d292ef27c2c0360dbaaee7eb1b935cdd194e67697f15dea1",
+      "projectLicenses": ["EPL-2.0", "EDL-1.0"],
+      "licenseSource": "https://github.com/eclipse-mosquitto/mosquitto/blob/master/LICENSE.txt"
+    },
+    {
+      "service": "mediamtx",
+      "image": "bluenviron/mediamtx@sha256:32ecec42d5c716f0b85809b11b6c32f54126546ba89fc85ac57dbcf74738bb4e",
+      "projectLicenses": ["MIT"],
+      "licenseSource": "https://github.com/bluenviron/mediamtx/blob/main/LICENSE"
+    },
+    {
+      "service": "turn-primary",
+      "image": "coturn/coturn@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e",
+      "projectLicenses": ["BSD-3-Clause"],
+      "licenseSource": "https://github.com/coturn/coturn/blob/master/LICENSE"
+    },
+    {
+      "service": "edge",
+      "image": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6",
+      "projectLicenses": ["BSD-2-Clause"],
+      "licenseSource": "https://github.com/nginx/nginx/blob/master/LICENSE"
+    }
+  ]
+}

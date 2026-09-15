@@ -11,10 +11,13 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SERVICES = {"backend", "auth-policy", "media-control", "dashboard"}
-DIGEST_REFERENCE = re.compile(r"^ghcr\.io/gcs-saker/gcs-saker-[a-z-]+@sha256:[0-9a-f]{64}$")
+SERVICES = {"backend", "auth-policy", "media-control", "dashboard", "mobile-publisher"}
+IMAGE_NAMES = {service: f"gcs-saker-{service}" for service in SERVICES}
+IMAGE_NAMES["mobile-publisher"] = "gcs-mobile-publisher"
+DIGEST = re.compile(r"sha256:[0-9a-f]{64}$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
 ACTIVE_VEX = Path(__file__).resolve().parents[2] / "docs/compliance/supply-chain/active-vex.json"
+RUNTIME_INVENTORY = Path(__file__).resolve().parents[2] / "docs/compliance/supply-chain/runtime-delivery-inventory.json"
 
 
 class ReleaseManifestError(RuntimeError):
@@ -37,7 +40,7 @@ def create_entry(args: argparse.Namespace) -> dict[str, Any]:
     if license_report.get("releaseAllowed") is not True:
         raise ReleaseManifestError("license report does not permit release")
     reference = f"{args.image}@{args.digest}"
-    if not DIGEST_REFERENCE.fullmatch(reference):
+    if not valid_image_reference(args.service, reference):
         raise ReleaseManifestError("image must be an approved GHCR digest reference")
     return {
         "service": args.service,
@@ -60,6 +63,8 @@ def assemble_manifest(entries_root: Path, source_commit: str, workflow_run: str)
         "workflowRun": workflow_run,
         "createdAt": datetime.now(timezone.utc).isoformat(),
         "images": sorted(entries, key=lambda entry: str(entry["service"])),
+        "runtimeInventory": load_json(RUNTIME_INVENTORY),
+        "runtimeInventorySha256": sha256(RUNTIME_INVENTORY),
         "vex": load_json(ACTIVE_VEX).get("records", []),
     }
     validate_manifest(manifest, source_commit)
@@ -80,18 +85,43 @@ def validate_manifest(manifest: dict[str, Any], expected_commit: str) -> dict[st
         inventory[str(entry["service"])] = str(entry["image"])
     if set(inventory) != SERVICES:
         raise ReleaseManifestError("release manifest service inventory is invalid")
+    validate_runtime_inventory(manifest)
     validate_vex(manifest.get("vex", []))
     return inventory
 
 
+def validate_runtime_inventory(manifest: dict[str, Any]) -> None:
+    runtime_inventory = manifest.get("runtimeInventory")
+    if not isinstance(runtime_inventory, dict):
+        raise ReleaseManifestError("release manifest runtime inventory is missing")
+    components = runtime_inventory.get("components")
+    if not isinstance(components, list) or len(components) < 6:
+        raise ReleaseManifestError("release manifest runtime inventory is incomplete")
+    if manifest.get("runtimeInventorySha256") != sha256(RUNTIME_INVENTORY):
+        raise ReleaseManifestError("release manifest runtime inventory digest is invalid")
+    expected = load_json(RUNTIME_INVENTORY)
+    if runtime_inventory != expected:
+        raise ReleaseManifestError("release manifest runtime inventory does not match source")
+    for component in components:
+        image = str(component.get("image", ""))
+        if "@sha256:" not in image or not component.get("projectLicenses") or not component.get("licenseSource"):
+            raise ReleaseManifestError("release manifest runtime component evidence is incomplete")
+
+
 def validate_entry(entry: dict[str, Any]) -> None:
-    if entry.get("service") not in SERVICES or not DIGEST_REFERENCE.fullmatch(str(entry.get("image", ""))):
+    service = str(entry.get("service", ""))
+    if service not in SERVICES or not valid_image_reference(service, str(entry.get("image", ""))):
         raise ReleaseManifestError("release manifest contains an invalid image entry")
     for field in ("sbomSha256", "licenseReportSha256", "noticesSha256"):
         if not re.fullmatch(r"[0-9a-f]{64}", str(entry.get(field, ""))):
             raise ReleaseManifestError(f"release manifest contains an invalid {field}")
     if entry.get("licenseReleaseAllowed") is not True:
         raise ReleaseManifestError("release manifest contains a blocked license disposition")
+
+
+def valid_image_reference(service: str, reference: str) -> bool:
+    expected_prefix = f"ghcr.io/gcs-saker/{IMAGE_NAMES.get(service, '')}@"
+    return reference.startswith(expected_prefix) and DIGEST.fullmatch(reference.removeprefix(expected_prefix)) is not None
 
 
 def validate_vex(records: Any) -> None:

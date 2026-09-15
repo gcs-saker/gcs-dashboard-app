@@ -1,4 +1,6 @@
+import hashlib
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -18,23 +20,27 @@ def load_module():
 def valid_manifest() -> dict:
     digest = "1" * 64
     images = []
-    for service in ("backend", "auth-policy", "media-control", "dashboard"):
+    for service in ("backend", "auth-policy", "media-control", "dashboard", "mobile-publisher"):
+        image_name = "gcs-mobile-publisher" if service == "mobile-publisher" else f"gcs-saker-{service}"
         images.append(
             {
                 "service": service,
-                "image": f"ghcr.io/gcs-saker/gcs-saker-{service}@sha256:{digest}",
+                "image": f"ghcr.io/gcs-saker/{image_name}@sha256:{digest}",
                 "sbomSha256": digest,
                 "licenseReportSha256": digest,
                 "noticesSha256": digest,
                 "licenseReleaseAllowed": True,
             }
         )
+    runtime_path = REPO_ROOT / "docs/compliance/supply-chain/runtime-delivery-inventory.json"
     return {
         "schemaVersion": "gcs-saker.signed-release.v1",
         "sourceCommit": "a" * 40,
         "workflowRun": "https://github.com/example/actions/runs/1",
         "createdAt": "2026-09-09T00:00:00Z",
         "images": images,
+        "runtimeInventory": json.loads(runtime_path.read_text(encoding="utf-8")),
+        "runtimeInventorySha256": hashlib.sha256(runtime_path.read_bytes()).hexdigest(),
         "vex": [],
     }
 
@@ -44,7 +50,7 @@ def test_manifest_accepts_exact_signed_digest_inventory() -> None:
 
     inventory = module.validate_manifest(valid_manifest(), "a" * 40)
 
-    assert set(inventory) == {"backend", "auth-policy", "media-control", "dashboard"}
+    assert set(inventory) == {"backend", "auth-policy", "media-control", "dashboard", "mobile-publisher"}
 
 
 def test_manifest_rejects_mutable_image_reference() -> None:
@@ -103,4 +109,6 @@ def test_deploy_verifies_manifest_and_all_attestations() -> None:
     assert '"${cosign_bin}" verify-attestation --type slsaprovenance' in verifier
     assert '"${cosign_bin}" verify-attestation --type spdxjson' in verifier
     assert 'release_manifest.py" verify' in verifier
+    assert 'export MOBILE_PUBLISHER_IMAGE=' in verifier
+    assert "gcs-mobile-publisher/.github/workflows/signed-release.yml" in verifier
     assert "55122" not in verifier

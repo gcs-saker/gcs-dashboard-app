@@ -65,13 +65,13 @@ services:
     restart: always
 
   redis:
-    image: redis:7.4.2-alpine
+    image: valkey/valkey@sha256:d2e18f3410b6f616de1417f570fa55261af2898b9c5b2cfb6781ce2373ea43d1
     container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-redis
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}"]
+    command: ["valkey-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}"]
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping 2>/dev/null | grep -q PONG"]
+      test: ["CMD-SHELL", "valkey-cli -a \"$${REDIS_PASSWORD}\" ping 2>/dev/null | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -106,9 +106,9 @@ services:
       MEDIAMTX_PUBLIC_HLS_BASE_URL: ${MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://localhost:8888}
       MEDIAMTX_API_BASE_URL: ${MEDIAMTX_API_BASE_URL:-http://mediamtx:9997}
       WEBRTC_STUN_URL: ${WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}
-      DASHBOARD_MAP_PROVIDER: ${DASHBOARD_MAP_PROVIDER:-esri-satellite}
-      DASHBOARD_MAP_STYLE_URL: ${DASHBOARD_MAP_STYLE_URL:-https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}}
-      DASHBOARD_MAP_ATTRIBUTION: ${DASHBOARD_MAP_ATTRIBUTION:-Esri World Imagery}
+      DASHBOARD_MAP_PROVIDER: ${DASHBOARD_MAP_PROVIDER:-offline}
+      DASHBOARD_MAP_STYLE_URL: ${DASHBOARD_MAP_STYLE_URL:-}
+      DASHBOARD_MAP_ATTRIBUTION: ${DASHBOARD_MAP_ATTRIBUTION:-Offline tactical map}
       DASHBOARD_MAP_REQUIRES_API_KEY: ${DASHBOARD_MAP_REQUIRES_API_KEY:-false}
       WEBRTC_TURN_URL: ${WEBRTC_TURN_URL:-}
       WEBRTC_TURN_USERNAME: ${WEBRTC_TURN_USERNAME:-}
@@ -219,8 +219,8 @@ services:
         VITE_DEFAULT_STREAM_ID: ${VITE_DEFAULT_STREAM_ID:-CID001}
         VITE_LOCAL_WEBCAM_WHIP_URL: ${VITE_LOCAL_WEBCAM_WHIP_URL:-https://localhost/webrtc/raw/local/webcam/whip}
         VITE_WEBRTC_STUN_URL: ${VITE_WEBRTC_STUN_URL:-stun:stun.l.google.com:19302}
-        VITE_MAP_PROVIDER: ${VITE_MAP_PROVIDER:-esri-satellite}
-        VITE_MAP_STYLE_URL: ${VITE_MAP_STYLE_URL:-https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}}
+        VITE_MAP_PROVIDER: ${VITE_MAP_PROVIDER:-offline}
+        VITE_MAP_STYLE_URL: ${VITE_MAP_STYLE_URL:-}
     container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-dashboard
     env_file: *service_env_files
     ports:

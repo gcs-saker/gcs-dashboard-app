@@ -40,6 +40,7 @@ APPLICATION_IMAGE_REFERENCE = re.compile(
     r"^ghcr\.io/gcs-saker/gcs-saker-(backend|auth-policy|media-control|dashboard)@sha256:[0-9a-f]{64}$"
 )
 IMMUTABLE_IMAGE_REFERENCE = re.compile(r"^[^\s]+@sha256:[0-9a-f]{64}$")
+PLACEHOLDER_IMAGE_DIGEST = "0" * 64
 MINIMUM_MFA_SECRET_BYTES = 20
 
 
@@ -114,7 +115,7 @@ def validate_runtime_environment(path: pathlib.Path) -> None:
     values = read_environment(path)
     validate_admin_mfa_secret(values.get("AUTH_POLICY_ADMIN_MFA_SECRET", ""))
     mobile_image = values.get("MOBILE_PUBLISHER_IMAGE", "")
-    if not IMMUTABLE_IMAGE_REFERENCE.fullmatch(mobile_image):
+    if not IMMUTABLE_IMAGE_REFERENCE.fullmatch(mobile_image) or mobile_image.endswith(PLACEHOLDER_IMAGE_DIGEST):
         raise RuntimeError("MOBILE_PUBLISHER_IMAGE must use an immutable sha256 digest")
     validate_turn_ranges(values)
 
