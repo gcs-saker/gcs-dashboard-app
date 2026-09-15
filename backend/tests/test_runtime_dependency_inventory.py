@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 RUNTIME_REQUIREMENTS = Path(__file__).resolve().parents[1] / "requirements-runtime.txt"
 REMOVED_NON_RUNTIME_PACKAGES = {
     "cryptography",
