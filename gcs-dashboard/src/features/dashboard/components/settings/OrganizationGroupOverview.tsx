@@ -17,7 +17,6 @@ export function OrganizationGroupOverview({ group, groups, members, onAppoint, o
   const [issuedInvite, setIssuedInvite] = useState<SignupTokenIssue | null>(null);
   const groupAdmins = members.filter((member) => member.role === "group_admin" && member.active);
   const candidates = members.filter((member) => member.role !== "group_admin" && member.active);
-  const activationBlocked = group.status === "inactive" && groupAdmins.length !== 1;
   const run = async (action: () => Promise<unknown>): Promise<void> => {
     try { await action(); await onChanged(); }
     catch (reason) { onError(reason instanceof Error ? reason.message : "그룹을 변경하지 못했습니다."); }
@@ -38,19 +37,21 @@ export function OrganizationGroupOverview({ group, groups, members, onAppoint, o
           <option value="">없음</option>{groups.filter((item) => item.id !== group.id && item.status === "active").map((item) =>
             <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <button onClick={() => void run(() => updateManagedGroup(group.id, { name, parentId: parentId || null, changeParent: true }))} type="button">변경 저장</button>
-        <button className={group.status === "active" ? "is-danger" : "is-primary"} disabled={activationBlocked}
+        <button className={group.status === "active" ? "is-danger" : "is-primary"}
           onClick={() => void run(() => changeManagedGroupStatus(group.id, group.status !== "active"))}
-          title={activationBlocked ? "활성 group_admin 1명이 필요합니다." : undefined} type="button">
+          type="button">
           {group.status === "active" ? "비활성화" : "활성화"}</button>
       </div>
     </section>
     <section className="organization-bootstrap">
       <header><div><span>그룹 관리자</span><strong>{groupAdmins.length === 1 ? groupAdmins[0].username : "최초 관리자 필요"}</strong></div>
-        <em className={groupAdmins.length === 1 ? "is-ready" : "is-waiting"}>{groupAdmins.length === 1 ? "활성화 준비" : "관리자 없음"}</em></header>
+        <em className={groupAdmins.length === 1 ? "is-ready" : "is-waiting"}>{groupAdmins.length === 1 ? "관리자 지정됨" : "관리자 없음"}</em></header>
       {groupAdmins.length === 0 ? <p>이 그룹에 가입한 운영자를 선택해 관리자로 지정하거나, 전용 초대를 발급하세요.</p> : null}
       <div className="organization-bootstrap__actions">
-        <select aria-label="관리자 후보" onChange={(event) => setCandidate(event.target.value)} value={candidate}>
-          <option value="">관리자 후보 선택</option>{candidates.map((member) => <option key={member.username} value={member.username}>{member.username} · {member.role}</option>)}</select>
+        <input aria-label="관리자 후보" list={`group-admin-candidates-${group.id}`}
+          onChange={(event) => setCandidate(event.target.value)} placeholder="기존 viewer/operator 사용자명" value={candidate} />
+        <datalist id={`group-admin-candidates-${group.id}`}>{candidates.map((member) =>
+          <option key={member.username} value={member.username}>{member.username} · {member.role}</option>)}</datalist>
         <button disabled={!candidate} onClick={() => void onAppoint(candidate).then(() => setCandidate(""))} type="button">관리자로 지정</button>
         <button onClick={() => void invite()} type="button">관리자 초대</button>
         <button onClick={() => void onRefreshMembers()} type="button">가입 상태 확인</button>

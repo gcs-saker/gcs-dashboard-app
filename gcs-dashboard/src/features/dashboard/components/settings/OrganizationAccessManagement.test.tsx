@@ -39,8 +39,9 @@ describe("OrganizationAccessManagement", () => {
 
     await user.click(within(tree).getByRole("treeitem", { name: /B Company/ }));
     expect(await screen.findByText("최초 관리자 필요")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "활성화" })).toBeDisabled();
-    await user.selectOptions(screen.getByLabelText("관리자 후보"), "operator-b");
+    expect(screen.getByRole("button", { name: "활성화" })).toBeEnabled();
+    await user.clear(screen.getByLabelText("관리자 후보"));
+    await user.type(screen.getByLabelText("관리자 후보"), "operator-b");
     await user.click(screen.getByRole("button", { name: "관리자로 지정" }));
     expect(replaceGroupAdministrator).toHaveBeenCalledWith("co-b", "operator-b");
     await user.click(screen.getByRole("button", { name: "회원" }));

@@ -24,7 +24,10 @@ export function useDashboardPageViewProps({
   actions, auth, commands, notification, onDismissNotification, preferences, streams, ui, viewModel,
 }: DashboardPageViewPropsInput): DashboardPageViewProps {
   const { activeView: preferredView, cctvLayoutMode, cctvQualityMode, dashboardDensityMode, dashboardPriorityMode, layout, motionMode } = preferences.preferences;
-  const activeView = preferredView === "events" && auth.currentUser?.role !== "admin" ? "dashboard" : preferredView;
+  const isSystemAdmin = auth.currentUser?.role === "admin";
+  const activeView = isSystemAdmin && (preferredView === "dashboard" || preferredView === "cctv")
+    ? "settings"
+    : preferredView === "events" && !isSystemAdmin ? "dashboard" : preferredView;
   return {
     headerProps: {
       activeView, currentUser: auth.currentUser, isAssetDrawerOpen: ui.isAssetDrawerOpen,

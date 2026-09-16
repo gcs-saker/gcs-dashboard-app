@@ -22,6 +22,7 @@ import {
 import { useStreamDevicePolling } from "@dashboard/hooks/assets/useStreamDevicePolling";
 
 interface UseDashboardStreamsOptions {
+  readonly enabled?: boolean;
   readonly initialStreams?: DashboardStreamSlot[];
   readonly onAuthFailure?: () => void;
   readonly onStreamDeviceAliasChange?: (deviceId: string, alias: string) => void;
@@ -29,7 +30,7 @@ interface UseDashboardStreamsOptions {
 }
 
 export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
-  const { initialStreams, onAuthFailure, onStreamDeviceAliasChange, streamPreferences } = options;
+  const { enabled = true, initialStreams, onAuthFailure, onStreamDeviceAliasChange, streamPreferences } = options;
   const preferences = streamPreferences ?? EMPTY_STREAM_PREFERENCES;
   const [streams, setStreams] = useState(() => initialStreams ?? DEFAULT_DASHBOARD_STREAMS);
   const [streamDevices, setStreamDevices] = useState<StreamDeviceOption[]>(() =>
@@ -51,7 +52,7 @@ export function useDashboardStreams(options: UseDashboardStreamsOptions = {}) {
     [editingStreamId, streams],
   );
 
-  useStreamDevicePolling({ onAuthFailure, preferences, setStreamDevices, setStreams });
+  useStreamDevicePolling({ enabled, onAuthFailure, preferences, setStreamDevices, setStreams });
   useEffect(() => {
     setSelectedStreamId((current) => preferredSelectedStreamId(current, streamsRef.current, streamDevices));
   }, [streamDevices]);

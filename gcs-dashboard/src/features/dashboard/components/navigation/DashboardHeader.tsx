@@ -45,14 +45,15 @@ export function DashboardHeader({
   talkbackTargetStreamIds,
   talkback,
 }: DashboardHeaderProps) {
+  const hasMediaAccess = currentUser?.role !== "admin";
   return (
     <header className="ops-dashboard__tabs" aria-label="주요 탭">
       <DashboardTabs activeView={activeView} currentUser={currentUser} onChangeView={onChangeView} />
       <div className="ops-dashboard__actions">
-        {activeView === "dashboard" ? <DashboardLayoutModeSelect densityMode={dashboardDensityMode}
+        {hasMediaAccess && activeView === "dashboard" ? <DashboardLayoutModeSelect densityMode={dashboardDensityMode}
           onDensityChange={onSetDashboardDensityMode} onPriorityChange={onSetDashboardPriorityMode}
           priorityMode={dashboardPriorityMode} /> : null}
-        <button
+        {hasMediaAccess ? <button
           aria-controls="asset-tree-drawer"
           aria-expanded={activeView === "dashboard" && isAssetDrawerOpen}
           className="ops-command-button asset-menu-button"
@@ -62,9 +63,9 @@ export function DashboardHeader({
         >
           <span aria-hidden="true">☰</span>
           자산
-        </button>
-        <TalkbackControlPanel selectedStreamId={selectedStreamId} selectedStreamIds={talkbackTargetStreamIds} streams={streams} talkback={talkback} />
-        <div className="ops-dashboard__action-group">
+        </button> : null}
+        {hasMediaAccess ? <TalkbackControlPanel selectedStreamId={selectedStreamId} selectedStreamIds={talkbackTargetStreamIds} streams={streams} talkback={talkback} /> : null}
+        {hasMediaAccess ? <div className="ops-dashboard__action-group">
           <a
             className="ops-command-button is-primary"
             href="/stream"
@@ -73,7 +74,7 @@ export function DashboardHeader({
           >
             스트림 화면
           </a>
-        </div>
+        </div> : null}
         <details className="ops-user-menu">
           <summary>{currentUser ? currentUser.username : "미리보기"}</summary>
           <button onClick={onLogout} type="button">로그아웃</button>
@@ -86,7 +87,7 @@ export function DashboardHeader({
 function DashboardTabs({ activeView, currentUser, onChangeView }:
   Pick<DashboardHeaderProps, "activeView" | "currentUser" | "onChangeView">) {
   const visibleTabs = currentUser?.role === "admin"
-    ? DASHBOARD_TABS
+    ? DASHBOARD_TABS.filter((tab) => tab.id !== "dashboard" && tab.id !== "cctv")
     : DASHBOARD_TABS.filter((tab) => tab.id !== "events");
   return (
     <nav className="ops-dashboard__tab-list">

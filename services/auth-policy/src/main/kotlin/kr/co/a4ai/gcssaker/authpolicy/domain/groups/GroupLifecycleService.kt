@@ -35,7 +35,7 @@ class GroupLifecycleService(
             }
         }
         return groups.create(
-            OrganizationUnit(command.id, command.name, command.type, command.parentId, GroupStatus.INACTIVE),
+            OrganizationUnit(command.id, command.name, command.type, command.parentId, GroupStatus.ACTIVE),
         )
     }
 
@@ -58,9 +58,6 @@ class GroupLifecycleService(
     fun activate(principal: AuthenticatedPrincipal, groupId: GroupId): OrganizationUnit {
         requireSystemAdmin(principal)
         val current = requireGroup(groupId)
-        require(users.list().count { it.groupId == groupId && it.role == UserRole.GROUP_ADMIN && it.active } == 1) {
-            "exactly one active group administrator is required"
-        }
         current.parentId?.let { parent ->
             require(requireGroup(parent).status == GroupStatus.ACTIVE) { "active parent group is required" }
         }

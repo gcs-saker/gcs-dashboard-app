@@ -17,6 +17,22 @@ const baseStream = {
 afterEach(() => vi.useRealTimers());
 
 describe("useStreamDevicePolling", () => {
+  test("does not start registry polling when media access is disabled", async () => {
+    vi.useFakeTimers();
+    const fetchDevices = vi.fn().mockResolvedValue([]);
+    renderHook(() => useStreamDevicePolling({
+      enabled: false,
+      fetchDevices,
+      preferences: { deviceAliases: {} },
+      setStreamDevices: vi.fn(),
+      setStreams: vi.fn(),
+    }));
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+
+    expect(fetchDevices).not.toHaveBeenCalled();
+  });
+
   test("does not overlap registry requests when a response is slow", async () => {
     vi.useFakeTimers();
     let resolveRequest!: (devices: StreamDeviceOption[]) => void;

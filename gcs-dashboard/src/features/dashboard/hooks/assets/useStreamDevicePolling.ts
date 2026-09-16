@@ -5,6 +5,7 @@ import type { DashboardStreamSlot } from "@dashboard/streaming/streamTypes";
 import { startStreamDevicePolling } from "./streamDevicePollingRuntime";
 
 interface UseStreamDevicePollingInput {
+  enabled?: boolean;
   fetchDevices?: typeof fetchStreamDeviceOptions;
   onAuthFailure?: () => void;
   preferences: StreamPreferencesSnapshot;
@@ -13,6 +14,7 @@ interface UseStreamDevicePollingInput {
 }
 
 export function useStreamDevicePolling({
+  enabled = true,
   fetchDevices,
   onAuthFailure,
   preferences,
@@ -22,8 +24,8 @@ export function useStreamDevicePolling({
   const latestInput = useRef({ fetchDevices, onAuthFailure, preferences });
   latestInput.current = { fetchDevices, onAuthFailure, preferences };
   useEffect(
-    () => startStreamDevicePolling(latestInput, { setStreamDevices, setStreams }),
-    [setStreamDevices, setStreams],
+    () => enabled ? startStreamDevicePolling(latestInput, { setStreamDevices, setStreams }) : undefined,
+    [enabled, setStreamDevices, setStreams],
   );
 }
 

@@ -29,6 +29,7 @@ export function useDashboardPageController(options: DashboardPageControllerOptio
   const { motionMode } = preferencesApi.preferences;
 
   const streamState = useDashboardStreams({
+    enabled: currentUser?.role !== "admin",
     initialStreams: options.initialStreams,
     onAuthFailure: handleAuthFailure,
     onStreamDeviceAliasChange: preferencesApi.setStreamAlias,

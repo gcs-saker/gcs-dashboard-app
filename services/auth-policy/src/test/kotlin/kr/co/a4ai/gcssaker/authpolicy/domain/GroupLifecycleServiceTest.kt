@@ -22,16 +22,12 @@ class GroupLifecycleServiceTest {
     private val principal = users.findByUsername("system")!!.principal()
 
     @Test
-    fun `new group remains inactive until exactly one administrator is assigned`() {
+    fun `new group is active before an administrator is assigned`() {
         val created = service.create(
             principal,
             CreateGroupCommand(GroupId("plt-a"), "Platoon", GroupType.PLATOON, company.id),
         )
-        assertEquals(GroupStatus.INACTIVE, created.status)
-        assertFailsWith<IllegalArgumentException> { service.activate(principal, created.id) }
-
-        users.replaceGroupAdmin(created.id, "candidate")
-        assertEquals(GroupStatus.ACTIVE, service.activate(principal, created.id).status)
+        assertEquals(GroupStatus.ACTIVE, created.status)
     }
 
     @Test

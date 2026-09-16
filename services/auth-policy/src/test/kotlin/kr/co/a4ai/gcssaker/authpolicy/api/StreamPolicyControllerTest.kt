@@ -51,6 +51,13 @@ class StreamPolicyControllerTest {
                     role = UserRole.GROUP_ADMIN,
                     groupId = GroupId("bn-1"),
                 ),
+                AuthUser(
+                    username = "system-admin",
+                    email = "system-admin@example.test",
+                    passwordHash = passwordHasher.hash("pass"),
+                    role = UserRole.ADMIN,
+                    groupId = GroupId("bn-1"),
+                ),
             ),
         ),
         passwordHasher,
@@ -104,6 +111,27 @@ class StreamPolicyControllerTest {
 
         assertFalse(response.allowed)
         assertEquals("stream is outside principal group scope", response.reason)
+    }
+
+    @Test
+    fun `system administrator receives no stream or talkback access`() {
+        val token = accessToken("system-admin")
+        val request = StreamAccessRequest(
+            streamId = "raw.company-b.front",
+            path = "raw/company-b/front",
+            publisherGroupId = "co-b",
+        )
+
+        val view = controller.access(bearer(token), request)
+        val talkback = controller.access(bearer(token), request.copy(action = "send_talkback"))
+
+        assertFalse(view.allowed)
+        assertFalse(talkback.allowed)
+        assertEquals("system administrator has no media access", view.reason)
+        assertEquals(
+            listOf("manage_group_devices", "manage_group_members", "manage_policy"),
+            view.permissions,
+        )
     }
 
     @Test
