@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@auth/AuthProvider";
 import { useDashboardStreams } from "@dashboard/hooks/controller/useDashboardStreams";
 import { useDashboardUserPreferences } from "@dashboard/hooks/controller/useDashboardUserPreferences";
@@ -18,6 +18,7 @@ export function StreamPage() {
   }, [logout, navigate]);
   const preferences = useDashboardUserPreferences(currentUser?.username);
   const { streams, toggleStreamAiMode } = useDashboardStreams({
+    enabled: currentUser?.role !== "admin",
     initialStreams: EMPTY_STREAM_WALL,
     onAuthFailure: handleAuthFailure,
     streamPreferences: preferences.preferences.streamPreferences,
@@ -45,6 +46,8 @@ export function StreamPage() {
     logout();
     navigate("/login", { replace: true });
   }, [logout, navigate]);
+
+  if (currentUser?.role === "admin") return <Navigate replace to="/" />;
 
   return (
     <main className="stream-view" aria-label="스트림 전용 화면">

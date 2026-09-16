@@ -25,11 +25,11 @@ class GroupPolicyService private constructor(
         stream: StreamSessionDescriptor,
     ): StreamAccessDecision {
         activeScopeDenial(principal, stream.publisherGroupId)?.let { return it }
+        if (principal.role == UserRole.ADMIN) {
+            return StreamAccessDecision.deny("system administrator has no media access")
+        }
         if (stream.path.value == "control/stream-list" || stream.path.value == "control/ice-servers") {
             return StreamAccessDecision.allow("authenticated discovery; each stream is scoped separately")
-        }
-        if (principal.role == UserRole.ADMIN) {
-            return StreamAccessDecision.allow("admin can view every stream")
         }
         if (principal.groupId == stream.publisherGroupId) {
             return StreamAccessDecision.allow("same group stream")
@@ -55,12 +55,18 @@ class GroupPolicyService private constructor(
                 Permission.MANAGE_GROUP_MEMBERS,
                 Permission.MANAGE_GROUP_DEVICES,
             )
-            UserRole.ADMIN -> Permission.entries.toSet()
+            UserRole.ADMIN -> setOf(
+                Permission.MANAGE_GROUP_MEMBERS,
+                Permission.MANAGE_GROUP_DEVICES,
+                Permission.MANAGE_POLICY,
+            )
         }
 
     fun canSendTalkback(principal: AuthenticatedPrincipal, targetGroupId: GroupId): StreamAccessDecision {
         activeScopeDenial(principal, targetGroupId)?.let { return it }
-        if (principal.role == UserRole.ADMIN) return StreamAccessDecision.allow("admin can send talkback")
+        if (principal.role == UserRole.ADMIN) {
+            return StreamAccessDecision.deny("system administrator has no media access")
+        }
         if (principal.groupId == targetGroupId &&
             (principal.role == UserRole.OPERATOR || principal.role == UserRole.GROUP_ADMIN)
         ) {

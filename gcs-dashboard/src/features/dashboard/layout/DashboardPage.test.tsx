@@ -73,19 +73,25 @@ describe("DashboardPage", () => {
     expect(screen.queryByRole("heading", { name: "AI 결과" })).not.toBeInTheDocument();
   });
 
-  test("shows the event log navigation only to the system administrator", () => {
+  test("limits the system administrator to non-media operations views", async () => {
     clearAuthSession();
     storeAuthSession({
       accessToken: "admin-access-token",
       expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
       user: { username: "admin01", role: "admin", groupId: "co-a", securityVersion: 1,
-        capabilities: { canView: true, canControl: true, canManage: true, canSendTalkback: true,
-          canPublish: true, canManageMembers: true, canManageDevices: true } },
+        capabilities: { canView: true, canControl: false, canManage: true, canSendTalkback: false,
+          canPublish: false, canManageMembers: true, canManageDevices: true } },
     });
 
     renderDashboard();
 
     expect(screen.getByRole("button", { name: "이벤트로그" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "대시보드" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "CCTV" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "자산" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "스트림 화면" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "다중 stream 음성 송신" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "운영설정" })).toBeInTheDocument();
   });
 
   test("applies motion kill switch from operations settings", async () => {

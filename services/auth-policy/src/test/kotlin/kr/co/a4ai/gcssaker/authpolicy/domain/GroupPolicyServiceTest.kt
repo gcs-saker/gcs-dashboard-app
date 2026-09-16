@@ -98,11 +98,15 @@ class GroupPolicyServiceTest {
     }
 
     @Test
-    fun `admin can view every stream`() {
+    fun `system administrator cannot view streams`() {
         val principal = AuthenticatedPrincipal("admin", UserRole.ADMIN, companyA.id)
         val stream = StreamSessionDescriptor(StreamPath("raw/company-b/drone-1"), companyB.id, Instant.EPOCH)
 
-        assertTrue(service.canViewStream(principal, stream).allowed)
+        val decision = service.canViewStream(principal, stream)
+
+        assertFalse(decision.allowed)
+        assertEquals("system administrator has no media access", decision.reason)
+        assertFalse(service.canSendTalkback(principal, companyB.id).allowed)
     }
 
     @Test
@@ -143,6 +147,10 @@ class GroupPolicyServiceTest {
         assertFalse(Permission.MANAGE_POLICY in service.permissionsFor(UserRole.GROUP_ADMIN))
         assertTrue(Permission.SEND_TALKBACK in service.permissionsFor(UserRole.GROUP_ADMIN))
         assertTrue(Permission.MANAGE_POLICY in service.permissionsFor(UserRole.ADMIN))
+        assertFalse(Permission.VIEW_STREAM in service.permissionsFor(UserRole.ADMIN))
+        assertFalse(Permission.PUBLISH_STREAM in service.permissionsFor(UserRole.ADMIN))
+        assertFalse(Permission.CONTROL_ASSET in service.permissionsFor(UserRole.ADMIN))
+        assertFalse(Permission.SEND_TALKBACK in service.permissionsFor(UserRole.ADMIN))
     }
 
     @Test
