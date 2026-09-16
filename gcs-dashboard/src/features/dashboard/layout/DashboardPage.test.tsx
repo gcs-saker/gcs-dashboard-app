@@ -73,7 +73,7 @@ describe("DashboardPage", () => {
     expect(screen.queryByRole("heading", { name: "AI 결과" })).not.toBeInTheDocument();
   });
 
-  test("limits the system administrator to non-media operations views", async () => {
+  test("limits the system administrator to non-media operations views", () => {
     clearAuthSession();
     storeAuthSession({
       accessToken: "admin-access-token",
@@ -91,7 +91,7 @@ describe("DashboardPage", () => {
     expect(screen.queryByRole("button", { name: "자산" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "스트림 화면" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "다중 stream 음성 송신" })).not.toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "운영설정" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "운영설정" })).toHaveClass("is-active");
   });
 
   test("applies motion kill switch from operations settings", async () => {
