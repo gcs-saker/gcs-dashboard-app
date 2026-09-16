@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { GroupMember } from "@dashboard/groups/groupMembers";
 import { MemberActions } from "./MemberActions";
 
@@ -11,6 +11,7 @@ export function GroupMemberBrowser({ canAppoint, members, onAppoint, onUpdate }:
 }) {
   const [page, setPage] = useState(0);
   const [selectedUsername, setSelectedUsername] = useState("");
+  useEffect(() => { setPage(0); setSelectedUsername(""); }, [members]);
   const pageCount = Math.max(1, Math.ceil(members.length / PAGE_SIZE));
   const visible = members.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const selected = visible.find((member) => member.username === selectedUsername) ?? visible[0];
@@ -19,11 +20,11 @@ export function GroupMemberBrowser({ canAppoint, members, onAppoint, onUpdate }:
     <div className="settings-listbox" role="listbox" aria-label="그룹 회원 목록">
       {visible.map((member) => <button aria-selected={member.username === selected.username} key={member.username}
         onClick={() => setSelectedUsername(member.username)} role="option" type="button">
-        <strong>{member.username}</strong><span>{member.role} · {member.active ? "활성" : "비활성"}</span>
+        <strong>{member.username}</strong><span>{member.groupId} · {member.role} · {member.active ? "활성" : "비활성"}</span>
       </button>)}
     </div>
     <article className="group-member-editor">
-      <header><div><span>{selected.role}</span><strong>{selected.username}</strong><small>{selected.email}</small></div>
+      <header><div><span>{selected.groupId} · {selected.role}</span><strong>{selected.username}</strong><small>{selected.email}</small></div>
         <em className={selected.active ? "is-active" : "is-inactive"}>{selected.active ? "활성" : "비활성"}</em></header>
       <MemberActions canAppoint={canAppoint} member={selected} onAppoint={onAppoint} onUpdate={onUpdate} />
     </article>

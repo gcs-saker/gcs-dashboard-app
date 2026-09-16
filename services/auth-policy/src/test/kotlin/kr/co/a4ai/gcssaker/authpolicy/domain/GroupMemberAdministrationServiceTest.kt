@@ -87,6 +87,19 @@ class GroupMemberAdministrationServiceTest {
     }
 
     @Test
+    fun `system admin can move an operator from another group when appointing administrator`() {
+        val replacement = service.replaceGroupAdmin(
+            repository.findByUsername("system")!!.principal(),
+            groupB,
+            "operator-a",
+        )
+
+        assertEquals(groupB, replacement.groupId)
+        assertEquals(UserRole.GROUP_ADMIN, replacement.role)
+        assertEquals(1, repository.list().count { it.groupId == groupB && it.role == UserRole.GROUP_ADMIN && it.active })
+    }
+
+    @Test
     fun `group administrator cannot appoint another group administrator`() {
         assertFailsWith<IllegalArgumentException> {
             service.replaceGroupAdmin(

@@ -18,7 +18,7 @@ export function OrganizationCreateGroupForm({ groups, parentId, onCancel, onCrea
   };
   return <form aria-label="그룹 생성" className="organization-create" onSubmit={(event) => void submit(event)}>
     <header><div><span>새 조직</span><strong>그룹 생성</strong></div><button onClick={onCancel} type="button">닫기</button></header>
-    <p>그룹은 비활성 상태로 생성됩니다. 최초 관리자를 지정한 뒤 활성화할 수 있습니다.</p>
+    <p>그룹은 활성 상태로 생성됩니다. 생성 후 회원을 배정하고 그룹 관리자를 지정하세요.</p>
     <div className="organization-create__fields">
       <label><span>그룹 이름</span><input autoFocus onChange={(event) => setDraft({ ...draft, name: event.target.value })}
         placeholder="예: C Company" required value={draft.name} /></label>

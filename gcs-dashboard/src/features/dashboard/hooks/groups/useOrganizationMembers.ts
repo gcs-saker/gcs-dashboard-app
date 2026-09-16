@@ -17,7 +17,12 @@ export function useOrganizationMembers(groupId?: string) {
       if (requestId === latestRequest.current) setError(toErrorMessage(reason, "회원 목록을 불러오지 못했습니다."));
     }
   }, [groupId]);
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    setMembers([]);
+    setError("");
+    void refresh();
+    return () => { latestRequest.current += 1; };
+  }, [refresh]);
   const appoint = async (username: string): Promise<void> => {
     if (!groupId) return;
     try { await replaceGroupAdministrator(groupId, username); await refresh(); }
