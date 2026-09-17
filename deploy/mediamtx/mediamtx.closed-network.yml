@@ -4,6 +4,7 @@ api: true
 apiAddress: :9997
 metrics: true
 metricsAddress: :9998
+moq: false
 
 authMethod: http
 authHTTPAddress: http://media-control:8081/v1/mediamtx/auth

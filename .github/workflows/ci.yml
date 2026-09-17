@@ -137,6 +137,18 @@ jobs:
           severity-cutoff: high
           only-fixed: true
 
+      - name: Build hardened MediaMTX runtime image
+        working-directory: .
+        run: docker build -f deploy/mediamtx/Dockerfile.hardened -t gcs-saker-mediamtx:ci deploy/mediamtx
+
+      - name: Scan hardened MediaMTX runtime image
+        uses: anchore/scan-action@v6
+        with:
+          image: gcs-saker-mediamtx:ci
+          fail-build: true
+          severity-cutoff: high
+          only-fixed: true
+
       - name: Scan reachable vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
