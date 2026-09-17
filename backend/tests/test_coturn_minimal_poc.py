@@ -2,6 +2,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DOCKERFILE = ROOT / "deploy/coturn/Dockerfile.minimal-poc"
+SMOKE = ROOT / "scripts/smoke/coturn_minimal_poc_smoke.py"
 
 
 def test_minimal_coturn_is_isolated_and_disables_unused_integrations() -> None:
@@ -29,3 +30,12 @@ def test_minimal_coturn_reuses_the_production_dynamic_allowlist_entrypoint() -> 
 
     assert "COPY turnserver-entrypoint.sh /usr/local/bin/gcs-turnserver-entrypoint" in source
     assert 'ENTRYPOINT ["/bin/sh", "/usr/local/bin/gcs-turnserver-entrypoint"]' in source
+
+
+def test_minimal_coturn_promotion_contract_keeps_physical_talkback_blocked() -> None:
+    source = SMOKE.read_text(encoding="utf-8")
+
+    assert "relay-only WHIP publish" in source
+    assert "relay-only WHEP audio and video frames" in source
+    assert "physical mobile Talkback receive and intelligibility" in source
+    assert "compose image replacement" in source
