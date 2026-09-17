@@ -1,5 +1,7 @@
 schemaVersion: gcs-saker.license-resolutions.v1
 resolutions:
+  - {purl: "pkg:maven/aopalliance/aopalliance@1.0", licenseExpression: LicenseRef-Public-Domain, source: "https://maven.apache.org/ref/3-LATEST/apache-maven/dependencies.html", verifiedBy: maven-public-domain-review, verifiedOn: 2026-09-17}
+  - {purl: "pkg:maven/jrt-fs/jrt-fs@21.0.12", licenseExpression: "GPL-2.0-only WITH Classpath-exception-2.0", source: "https://github.com/corretto/corretto-21/blob/develop/ADDITIONAL_LICENSE_INFO", verifiedBy: corretto-distribution-review, verifiedOn: 2026-09-17}
   - {purl: "pkg:maven/org.hdrhistogram/HdrHistogram@2.2.2", licenseExpression: "CC0-1.0 OR BSD-2-Clause", source: "https://repo1.maven.org/maven2/org/hdrhistogram/HdrHistogram/2.2.2/HdrHistogram-2.2.2.pom", verifiedBy: maven-pom-evidence-v1, verifiedOn: 2026-09-17}
   - {purl: "pkg:maven/org.latencyutils/LatencyUtils@2.0.3", licenseExpression: CC0-1.0, source: "https://repo1.maven.org/maven2/org/latencyutils/LatencyUtils/2.0.3/LatencyUtils-2.0.3.pom", verifiedBy: maven-pom-evidence-v1, verifiedOn: 2026-09-17}
   - {purl: "pkg:maven/org.aspectj/aspectjweaver@1.9.25.1", licenseExpression: EPL-2.0, source: "https://repo1.maven.org/maven2/org/aspectj/aspectjweaver/1.9.25.1/aspectjweaver-1.9.25.1.pom", verifiedBy: maven-pom-evidence-v1, verifiedOn: 2026-09-17}

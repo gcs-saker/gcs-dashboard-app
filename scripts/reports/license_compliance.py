@@ -14,6 +14,7 @@ import yaml
 SPDX_TOKEN = re.compile(r"[A-Za-z0-9][A-Za-z0-9.+-]*")
 LOGICAL_TOKENS = {"AND", "OR", "WITH"}
 UNKNOWN_EXPRESSIONS = {"", "NOASSERTION", "NONE", "UNKNOWN"}
+AUDITED_LICENSE_REFS = {"LicenseRef-Public-Domain"}
 
 
 class LicenseComplianceError(AssertionError):
@@ -73,7 +74,9 @@ def load_resolutions(path: Path) -> dict[str, dict[str, str]]:
         verified_on = str(entry.get("verifiedOn", "")).strip()
         if not purl.startswith("pkg:") or purl in resolutions:
             raise LicenseComplianceError(f"invalid or duplicate resolution purl: {purl}")
-        if expression in UNKNOWN_EXPRESSIONS or expression.startswith("LicenseRef-"):
+        if expression in UNKNOWN_EXPRESSIONS or (
+            expression.startswith("LicenseRef-") and expression not in AUDITED_LICENSE_REFS
+        ):
             raise LicenseComplianceError(f"invalid resolved license for {purl}")
         if not source.startswith("https://"):
             raise LicenseComplianceError(f"resolution source must use HTTPS for {purl}")
@@ -115,7 +118,9 @@ def classify_package(package: dict[str, Any], rules: LicenseRules, today: date) 
     purl = package_purl(package)
     if any(purl.startswith(prefix) for prefix in rules.policy.get("firstPartyPurlPrefixes", [])):
         return "FIRST_PARTY", "", expression, source
-    if expression in UNKNOWN_EXPRESSIONS or expression.startswith("LicenseRef-"):
+    if expression in UNKNOWN_EXPRESSIONS or (
+        expression.startswith("LicenseRef-") and expression not in AUDITED_LICENSE_REFS
+    ):
         return "UNKNOWN", "license metadata must be resolved", expression, source
     tokens = license_tokens(expression)
     denied = tokens.intersection(rules.policy.get("deniedLicenses", []))

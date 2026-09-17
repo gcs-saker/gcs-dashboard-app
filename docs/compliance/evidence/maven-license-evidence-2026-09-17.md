@@ -28,3 +28,12 @@ the same auth-policy SBOM changed the complete report to `ALLOWED: 148`, `FIRST_
 `REVIEW_REQUIRED: 25`, and `UNKNOWN: 3`. The remaining unknowns are AOP Alliance Public Domain,
 Corretto `jrt-fs`, and the Alpine `libmd` OS package. Review-sensitive Maven licenses are now visible
 as `REVIEW_REQUIRED` instead of being hidden inside `UNKNOWN`.
+
+## Final Maven disposition
+
+AOP Alliance is recorded as an audited `LicenseRef-Public-Domain` using Apache Maven's published
+dependency inventory. Corretto `jrt-fs` is bound to Amazon Corretto 21's GPL-2.0 with Classpath
+Exception distribution evidence. Both remain `REVIEW_REQUIRED`; neither was globally allowed.
+Final Docker replay reports `ALLOWED: 148`, `FIRST_PARTY: 2`, `REVIEW_REQUIRED: 27`, and
+`UNKNOWN: 1`. No Maven UNKNOWN remains. The sole UNKNOWN is Alpine `libmd`, owned by OS-package
+remediation issue #712.

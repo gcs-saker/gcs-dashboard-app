@@ -107,6 +107,16 @@ def test_resolution_catalog_requires_exact_audited_https_evidence(tmp_path: Path
         load_resolutions(catalog)
 
 
+def test_exact_public_domain_reference_requires_review_instead_of_remaining_unknown() -> None:
+    purl = "pkg:maven/aopalliance/aopalliance@1.0"
+    rules = LicenseRules(POLICY, [], {purl: {"license": "LicenseRef-Public-Domain", "source": "https://x"}})
+
+    result = classify_package(package("aopalliance", "NOASSERTION", purl), rules, TODAY)
+
+    assert result[0] == "REVIEW_REQUIRED"
+    assert result[2] == "LicenseRef-Public-Domain"
+
+
 def test_report_and_notices_preserve_blocking_findings(tmp_path: Path) -> None:
     sbom = tmp_path / "image.spdx.json"
     sbom.write_text(
