@@ -113,6 +113,18 @@ jobs:
           severity-cutoff: high
           only-fixed: true
 
+      - name: Build hardened TURN runtime image
+        working-directory: .
+        run: docker build -f deploy/coturn/Dockerfile.hardened -t gcs-saker-coturn:ci deploy/coturn
+
+      - name: Scan hardened TURN runtime image
+        uses: anchore/scan-action@v6
+        with:
+          image: gcs-saker-coturn:ci
+          fail-build: true
+          severity-cutoff: high
+          only-fixed: true
+
       - name: Scan reachable vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
