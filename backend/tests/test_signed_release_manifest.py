@@ -145,10 +145,11 @@ def test_deploy_verifies_manifest_and_all_attestations() -> None:
     assert '"${cosign_bin}" verify-attestation --type "${slsa_predicate}"' in verifier
     assert '"${cosign_bin}" verify-attestation --type "${spdx_predicate}"' in verifier
     assert 'release_manifest.py" verify' in verifier
-    assert "export MQTT_IMAGE=" in verifier
-    assert "export MEDIAMTX_IMAGE=" in verifier
-    assert "export COTURN_IMAGE=" in verifier
-    assert "export MOBILE_PUBLISHER_IMAGE=" in verifier
+    assert 'MQTT_IMAGE="$(jq' in verifier
+    assert 'MEDIAMTX_IMAGE="$(jq' in verifier
+    assert 'COTURN_IMAGE="$(jq' in verifier
+    assert 'MOBILE_PUBLISHER_IMAGE="$(jq' in verifier
+    assert "export MQTT_IMAGE MEDIAMTX_IMAGE COTURN_IMAGE MOBILE_PUBLISHER_IMAGE" in verifier
     assert "gcs-mobile-publisher/.github/workflows/signed-release.yml" in verifier
     assert "55122" not in verifier
 
