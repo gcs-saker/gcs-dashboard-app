@@ -10,10 +10,11 @@ const streamApiBaseUrl = normalizeLocalDevBaseUrl(
 const hlsBaseUrl = normalizeLocalDevBaseUrl(import.meta.env.VITE_HLS_BASE_URL ?? "/hls", "/hls");
 const defaultStreamId = import.meta.env.VITE_DEFAULT_STREAM_ID ?? "CID001";
 const defaultStunUrl = import.meta.env.VITE_WEBRTC_STUN_URL ?? "stun:stun.l.google.com:19302";
-const defaultMapProvider = import.meta.env.VITE_MAP_PROVIDER ?? "offline";
+const defaultMapProvider = import.meta.env.VITE_MAP_PROVIDER ?? "esri-satellite";
 const staticAssetDeliveryMode = import.meta.env.VITE_STATIC_ASSET_DELIVERY_MODE ?? "offline-bundle";
 const defaultMapStyleUrl =
-  import.meta.env.VITE_MAP_STYLE_URL ?? "";
+  import.meta.env.VITE_MAP_STYLE_URL
+  ?? "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 const localWebcamWhipUrl = normalizeLocalDevBaseUrl(
   import.meta.env.VITE_LOCAL_WEBCAM_WHIP_URL ?? "/webrtc/raw/local/webcam/whip",
   "/webrtc/raw/local/webcam/whip",
@@ -41,7 +42,7 @@ export const MAP_STYLE_URL: string = defaultMapStyleUrl;
 export const FALLBACK_MAP_CONFIG: DashboardMapConfig = Object.freeze({
   provider: MAP_PROVIDER,
   styleUrl: MAP_STYLE_URL,
-  attribution: "Offline tactical map",
+  attribution: "Esri World Imagery",
   requiresApiKey: false,
 });
 export const LOCAL_WEBCAM_STREAM_ID = "raw.local.webcam";

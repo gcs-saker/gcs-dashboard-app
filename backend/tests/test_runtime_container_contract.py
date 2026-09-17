@@ -230,7 +230,8 @@ def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
     assert "ARG VITE_HLS_BASE_URL=/hls" in dockerfile
     assert "ARG VITE_LOCAL_WEBCAM_WHIP_URL=https://localhost/webrtc/raw/local/webcam/whip" in dockerfile
     assert "ARG VITE_WEBRTC_STUN_URL=stun:stun.l.google.com:19302" in dockerfile
-    assert "ARG VITE_MAP_PROVIDER=offline" in dockerfile
+    assert "ARG VITE_MAP_PROVIDER=esri-satellite" in dockerfile
+    assert "World_Imagery/MapServer/tile/{z}/{y}/{x}" in dockerfile
     assert "ARG VITE_MAP_STYLE_URL=" in dockerfile
     assert "COPY --from=builder /app/dist /usr/share/nginx/html" in dockerfile
     assert "COPY nginx.conf /etc/nginx/nginx.conf" in dockerfile

@@ -6,7 +6,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthApiError } from "./authApi";
 import { useAuth } from "./AuthProvider";
 import { loginFormSchema, toLoginRequest, type LoginFormValues } from "./loginFormContract";
-import { MfaLoginField } from "./MfaLoginField";
 import "./LoginPage.css";
 
 function safeRedirectPath(value: string | null): string {
@@ -130,8 +129,6 @@ function LoginFields({ errors, register }: Pick<LoginFormViewProps, "errors" | "
             {errors.password.message}
           </p>
         ) : null}
-
-        <MfaLoginField register={register} />
 
   </>;
 }
