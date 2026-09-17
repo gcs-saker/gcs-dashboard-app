@@ -28,6 +28,7 @@ def package(name: str, license_expression: str, purl: str) -> dict[str, Any]:
         "name": name,
         "versionInfo": "1.0.0",
         "licenseDeclared": license_expression,
+        "licenseConcluded": "NOASSERTION",
         "externalRefs": [{"referenceType": "purl", "referenceLocator": purl}],
     }
 
@@ -75,6 +76,19 @@ def test_exact_resolution_reclassifies_unknown_without_overriding_declared_licen
     assert resolved[0:3] == ("ALLOWED", "retain copyright and license notice", "MIT")
     assert resolved[3] == "https://example.invalid"
     assert declared[2:] == ("Apache-2.0", "SBOM licenseDeclared")
+
+
+def test_valid_spdx_conclusion_resolves_missing_declaration_before_catalog_fallback() -> None:
+    item = package("embedded", "NOASSERTION", "pkg:maven/example/embedded@1")
+    item["licenseConcluded"] = "Apache-2.0"
+    rules = LicenseRules(POLICY, [], {item["externalRefs"][0]["referenceLocator"]: {"license": "MIT", "source": "x"}})
+
+    assert classify_package(item, rules, TODAY)[0:4] == (
+        "ALLOWED",
+        "retain copyright and license notice",
+        "Apache-2.0",
+        "SBOM licenseConcluded",
+    )
 
 
 def test_resolution_catalog_requires_exact_audited_https_evidence(tmp_path: Path) -> None:

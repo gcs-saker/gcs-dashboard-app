@@ -89,9 +89,12 @@ def load_resolutions(path: Path) -> dict[str, dict[str, str]]:
 
 def effective_license(package: dict[str, Any], resolutions: dict[str, dict[str, str]]) -> tuple[str, str]:
     declared = str(package.get("licenseDeclared", "")).strip()
+    concluded = str(package.get("licenseConcluded", "")).strip()
     resolution = resolutions.get(package_purl(package))
     if declared not in UNKNOWN_EXPRESSIONS and not declared.startswith("LicenseRef-"):
         return declared, "SBOM licenseDeclared"
+    if concluded not in UNKNOWN_EXPRESSIONS and not concluded.startswith("LicenseRef-"):
+        return concluded, "SBOM licenseConcluded"
     if resolution:
         return resolution["license"], resolution["source"]
     return declared, "SBOM licenseDeclared"
