@@ -72,7 +72,7 @@ def test_single_node_compose_uses_hardened_mqtt_by_default() -> None:
     assert "mosquitto.hardened.conf" in compose
     assert "acl.hardened" in compose
     assert "INTERNAL_PKI_DIR" in compose
-    assert 'MQTT_TLS_ENABLED: "true"' in compose
+    assert "MQTT_TLS_ENABLED: ${MQTT_TLS_ENABLED:-true}" in compose
     assert "mqtt-health.crt" in compose
 
 

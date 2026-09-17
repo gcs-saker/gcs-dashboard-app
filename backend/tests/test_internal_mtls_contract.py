@@ -13,7 +13,7 @@ def test_production_internal_policy_rpc_requires_mtls_files() -> None:
 
     assert auth["environment"]["GCS_INTERNAL_GRPC_ENABLED"] == "true"
     assert auth["environment"]["GCS_INTERNAL_GRPC_CA_FILE"].endswith("/ca.crt")
-    assert media["environment"]["AUTH_POLICY_GRPC_TARGET"] == "auth-policy:9091"
+    assert media["environment"]["AUTH_POLICY_GRPC_TARGET"] == "${AUTH_POLICY_GRPC_TARGET-auth-policy:9091}"
     assert media["environment"]["AUTH_POLICY_GRPC_SERVER_NAME"] == "auth-policy"
     assert "ALLOW_PLAINTEXT" not in str(auth["environment"])
     assert "ALLOW_PLAINTEXT" not in str(media["environment"])
