@@ -27,6 +27,8 @@ def test_infrastructure_rollout_requires_verified_backup_and_idle_media() -> Non
     assert "infrastructure-backup.evidence" in source
     assert "ALLOW_MEDIA_SESSION_INTERRUPTION" in source
     assert "/v3/paths/list" in source
+    assert "validate_mediamtx_candidate_config" in source
+    assert "MediaMTX candidate rejected the release configuration" in source
 
 
 def test_each_replacement_has_a_service_specific_probe_and_rollback() -> None:

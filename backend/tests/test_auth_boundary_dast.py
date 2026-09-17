@@ -40,3 +40,11 @@ def test_remote_dast_requires_explicit_https_approval() -> None:
         module.validate_target("http://example.test", allow_remote=True)
     module.validate_target("https://example.test", allow_remote=True)
     module.validate_target("http://127.0.0.1:8080", allow_remote=False)
+
+
+def test_dast_payload_scenarios_reach_the_body_parser_without_a_cors_preflight() -> None:
+    module = load_module()
+    payload_scenarios = [item for item in module.scenarios() if item.body is not None]
+
+    assert payload_scenarios
+    assert all("Origin" not in item.headers for item in payload_scenarios)

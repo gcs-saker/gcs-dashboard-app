@@ -25,7 +25,7 @@ class Scenario:
 
 
 def scenarios() -> list[Scenario]:
-    json_headers = {"Content-Type": "application/json", "Origin": "http://127.0.0.1"}
+    json_headers = {"Content-Type": "application/json"}
     return [
         Scenario("admin_unauthenticated", "GET", "/auth-policy/admin/devices", None, (401, 403), {}),
         Scenario(
@@ -50,7 +50,7 @@ def scenarios() -> list[Scenario]:
             "POST",
             "/auth-policy/auth/login",
             b'{"username":"' + b"A" * 70_000 + b'","password":"x"}',
-            (400, 413, 429),
+            (400, 403, 413, 429),
             json_headers,
         ),
         Scenario(

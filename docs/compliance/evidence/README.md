@@ -8,6 +8,12 @@ Git에는 요구사항과 연결된 evidence manifest, 해시, 요약 및 비민
 PASS 판정은 manifest가 실제 요구사항, 시험과 immutable source commit에 연결된 경우만 허용한다.
 외부 artifact가 만료·손실되거나 해시가 일치하지 않으면 해당 증거는 유효하지 않다.
 
+## Current predeployment qualification
+
+배포를 수행하지 않은 최신 보안·복구·라이선스·음성 준비 상태는
+`predeployment-security-qualification-2026-09-17.md`에 기록한다. 물리 장비, 외부 감사 저장소,
+완전한 내부 mTLS 또는 배포 증거가 없는 항목은 계약 시험이 성공해도 `BLOCKED`로 유지한다.
+
 ## Software quality measurements
 
 통제된 카탈로그만 검증하고 시험 수행을 주장하지 않는 명령은 다음과 같다.

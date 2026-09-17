@@ -78,6 +78,23 @@ pull_and_verify_images() {
   done
 }
 
+validate_mediamtx_candidate_config() {
+  local name="gcs-mediamtx-preflight-${SOURCE_COMMIT:0:12}" status logs
+  docker rm -f "${name}" >/dev/null 2>&1 || true
+  docker run -d --name "${name}" --network none --read-only \
+    --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m \
+    -v "${ROOT}/deploy/mediamtx/mediamtx.closed-network.yml:/mediamtx.yml:ro" \
+    "${MEDIAMTX_IMAGE}" /mediamtx.yml >/dev/null
+  sleep 3
+  status="$(docker inspect --format '{{.State.Status}}' "${name}")"
+  logs="$(docker logs "${name}" 2>&1)"
+  docker rm -f "${name}" >/dev/null
+  [[ "${status}" == "running" && "${logs}" != *"ERR:"* ]] || {
+    echo "MediaMTX candidate rejected the release configuration" >&2
+    return 1
+  }
+}
+
 wait_container() {
   local service="$1" expected="$2" container status
   for _ in $(seq 1 60); do
@@ -157,6 +174,7 @@ capture_previous_state
 backup_mqtt_data
 require_idle_media_plane
 pull_and_verify_images
+validate_mediamtx_candidate_config
 trap on_exit EXIT
 
 replace_service mqtt healthy

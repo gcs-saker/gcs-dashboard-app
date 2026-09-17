@@ -25,7 +25,7 @@ traces:
     testRefs:
       - gcs-dashboard/src/features/streaming/talkback/talkbackWhipSession.test.ts
       - gcs-dashboard/src/features/streaming/talkback/talkbackAudioPolicy.test.ts
-    evidenceRefs: []
+    evidenceRefs: [docs/compliance/evidence/predeployment-security-qualification-2026-09-17.md]
     status: BLOCKED
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/659
   - requirementId: MR-SYM-001
@@ -99,7 +99,7 @@ traces:
       - scripts/gates/critical_code_contract.py
       - backend/tests/test_supply_chain_policy_gate.py
       - backend/tests/test_vulnerability_response_gate.py
-    evidenceRefs: []
+    evidenceRefs: [docs/compliance/evidence/predeployment-security-qualification-2026-09-17.md]
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/655
   - requirementId: MR-SEC-001
@@ -126,7 +126,7 @@ traces:
       - backend/tests/test_security_fuzz_profile.py
       - scripts/reports/software_quality_measurement.py
       - backend/tests/test_software_quality_measurement.py
-    evidenceRefs: []
+    evidenceRefs: [docs/compliance/evidence/predeployment-security-qualification-2026-09-17.md]
     status: NOT_RUN
     plannedWorkIssue: https://github.com/gcs-saker/gcs-dashboard-app/issues/656
   - requirementId: MR-RMF-001
