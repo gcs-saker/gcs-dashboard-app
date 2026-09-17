@@ -500,7 +500,9 @@ def client_command(
 
 
 def certificate_base(username: str) -> str:
-    return {BACKEND_USER: "backend", MEDIA_CONTROL_USER: "media-control", DEVICE_USER: f"device-{DEVICE_USER}"}[username]
+    return {BACKEND_USER: "backend", MEDIA_CONTROL_USER: "media-control", DEVICE_USER: f"device-{DEVICE_USER}"}[
+        username
+    ]
 
 
 def assert_bytes_equal(name: str, actual: bytes, expected: bytes) -> dict[str, Any]:
