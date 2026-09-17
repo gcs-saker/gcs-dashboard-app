@@ -37,6 +37,7 @@ type runtimeConfig struct {
 	streamPresenceKey   string
 	streamPresenceTTL   time.Duration
 	turnMaxHealthy      int
+	turnCredentialMode  string
 	turnSharedSecret    string
 	iceServerCacheTTL   time.Duration
 	iceServerCacheKey   string
@@ -70,7 +71,7 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		return runtimeConfig{}, err
 	}
 	publishToken := getenv(runtimeEnv.publishToken, "")
-	return runtimeConfig{
+	config := runtimeConfig{
 		traceExporter:       getenv(runtimeEnv.traceExporter, runtimeDefaults.traceExporter),
 		otelServiceName:     getenv(runtimeEnv.otelServiceName, runtimeDefaults.otelServiceName),
 		mediaMTXBaseURL:     getenv(runtimeEnv.mediaMTXBaseURL, runtimeDefaults.mediaMTXBaseURL),
@@ -79,31 +80,45 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		playback:            playback,
 		groupResolver:       groupResolver,
 		iceServers:          loadIceServers(),
-		authMode:            getenv(runtimeEnv.authMode, authpolicy.AuthModeRequired),
-		authPolicyBaseURL:   getenv(runtimeEnv.authPolicyBaseURL, runtimeDefaults.authPolicyBaseURL),
-		deviceRPCTarget:     getenv("AUTH_POLICY_GRPC_TARGET", ""),
-		deviceRPCToken:      getenv("AUTH_POLICY_RPC_TOKEN", ""),
-		deviceRPCCAFile:     getenv("AUTH_POLICY_GRPC_CA_FILE", ""),
-		deviceRPCCertFile:   getenv("AUTH_POLICY_GRPC_CERT_FILE", ""),
-		deviceRPCKeyFile:    getenv("AUTH_POLICY_GRPC_KEY_FILE", ""),
-		deviceRPCServerName: getenv("AUTH_POLICY_GRPC_SERVER_NAME", ""),
-		auditIngestToken:    getenv("AUTH_POLICY_AUDIT_INGEST_TOKEN", ""),
-		authzCacheTTL:       getenvDuration(runtimeEnv.authzCacheTTLSeconds, runtimeDefaults.authzCacheTTL),
-		streamCacheTTL:      getenvDuration(runtimeEnv.streamCacheTTLSeconds, runtimeDefaults.streamCacheTTL),
-		redisAddress:        getenv(runtimeEnv.redisAddress, runtimeDefaults.redisAddress),
-		redisPassword:       getenv(runtimeEnv.redisPassword, runtimeDefaults.redisPassword),
-		redisTimeout:        getenvDuration(runtimeEnv.redisTimeoutSeconds, runtimeDefaults.redisTimeout),
-		streamCacheKey:      getenv(runtimeEnv.streamCacheKey, runtimeDefaults.streamCacheKey),
-		streamPresenceKey:   getenv(runtimeEnv.streamPresencePrefix, runtimeDefaults.streamPresencePrefix),
-		streamPresenceTTL:   getenvDuration(runtimeEnv.streamPresenceTTL, runtimeDefaults.streamPresenceTTL),
-		turnMaxHealthy:      getenvInt(runtimeEnv.turnMaxHealthyServers, runtimeDefaults.turnMaxHealthyServers),
-		turnSharedSecret:    getenv(runtimeEnv.turnPassword, runtimeDefaults.turnPassword),
-		iceServerCacheTTL:   getenvDuration(runtimeEnv.iceServerCacheTTL, runtimeDefaults.iceServerCacheTTL),
-		iceServerCacheKey:   getenv(runtimeEnv.iceServerCacheKey, runtimeDefaults.iceServerCacheKey),
 		publishToken:        publishToken,
 		grpcToken:           getenv(runtimeEnv.grpcToken, publishToken),
 		grpcMaxPayloadBytes: getenvInt(runtimeEnv.grpcMaxPayloadBytes, runtimeDefaults.grpcMaxPayloadBytes),
-	}, nil
+	}
+	loadAuthorizationRuntime(&config)
+	loadStateRuntime(&config)
+	loadTurnRuntime(&config)
+	return config, nil
+}
+
+func loadAuthorizationRuntime(config *runtimeConfig) {
+	config.authMode = getenv(runtimeEnv.authMode, authpolicy.AuthModeRequired)
+	config.authPolicyBaseURL = getenv(runtimeEnv.authPolicyBaseURL, runtimeDefaults.authPolicyBaseURL)
+	config.deviceRPCTarget = getenv("AUTH_POLICY_GRPC_TARGET", "")
+	config.deviceRPCToken = getenv("AUTH_POLICY_RPC_TOKEN", "")
+	config.deviceRPCCAFile = getenv("AUTH_POLICY_GRPC_CA_FILE", "")
+	config.deviceRPCCertFile = getenv("AUTH_POLICY_GRPC_CERT_FILE", "")
+	config.deviceRPCKeyFile = getenv("AUTH_POLICY_GRPC_KEY_FILE", "")
+	config.deviceRPCServerName = getenv("AUTH_POLICY_GRPC_SERVER_NAME", "")
+	config.auditIngestToken = getenv("AUTH_POLICY_AUDIT_INGEST_TOKEN", "")
+	config.authzCacheTTL = getenvDuration(runtimeEnv.authzCacheTTLSeconds, runtimeDefaults.authzCacheTTL)
+}
+
+func loadStateRuntime(config *runtimeConfig) {
+	config.streamCacheTTL = getenvDuration(runtimeEnv.streamCacheTTLSeconds, runtimeDefaults.streamCacheTTL)
+	config.redisAddress = getenv(runtimeEnv.redisAddress, runtimeDefaults.redisAddress)
+	config.redisPassword = getenv(runtimeEnv.redisPassword, runtimeDefaults.redisPassword)
+	config.redisTimeout = getenvDuration(runtimeEnv.redisTimeoutSeconds, runtimeDefaults.redisTimeout)
+	config.streamCacheKey = getenv(runtimeEnv.streamCacheKey, runtimeDefaults.streamCacheKey)
+	config.streamPresenceKey = getenv(runtimeEnv.streamPresencePrefix, runtimeDefaults.streamPresencePrefix)
+	config.streamPresenceTTL = getenvDuration(runtimeEnv.streamPresenceTTL, runtimeDefaults.streamPresenceTTL)
+}
+
+func loadTurnRuntime(config *runtimeConfig) {
+	config.turnMaxHealthy = getenvInt(runtimeEnv.turnMaxHealthyServers, runtimeDefaults.turnMaxHealthyServers)
+	config.turnCredentialMode = loadTurnCredentialMode()
+	config.turnSharedSecret = getenv(runtimeEnv.turnSharedSecret, runtimeDefaults.turnSharedSecret)
+	config.iceServerCacheTTL = getenvDuration(runtimeEnv.iceServerCacheTTL, runtimeDefaults.iceServerCacheTTL)
+	config.iceServerCacheKey = getenv(runtimeEnv.iceServerCacheKey, runtimeDefaults.iceServerCacheKey)
 }
 
 func (c runtimeConfig) authPolicyTLS() authpolicy.RPCClientTLSConfig {
