@@ -1,5 +1,6 @@
 schemaVersion: gcs-saker.license-resolutions.v1
 resolutions:
+  - {purl: "pkg:apk/alpine/nginx@1.29.8-r1?arch=x86_64&distro=alpine-3.23.5", licenseExpression: BSD-2-Clause, source: "image:/usr/share/licenses/nginx/COPYRIGHT#sha256=4f72e2bccf0bcd839dd447ab6f359336f428caa1987a9afec2bc9ade5711658a", verifiedBy: immutable-image-copyright-review, verifiedOn: 2026-09-17}
   - {purl: "pkg:apk/alpine/libmd@1.2.0-r0?arch=x86_64&distro=alpine-3.24.1", licenseExpression: "BSD-2-Clause AND BSD-3-Clause AND ISC AND Beerware AND LicenseRef-Public-Domain", source: "https://packages.fedoraproject.org/pkgs/libmd/libmd/", verifiedBy: os-package-license-review, verifiedOn: 2026-09-17}
   - {purl: "pkg:maven/aopalliance/aopalliance@1.0", licenseExpression: LicenseRef-Public-Domain, source: "https://maven.apache.org/ref/3-LATEST/apache-maven/dependencies.html", verifiedBy: maven-public-domain-review, verifiedOn: 2026-09-17}
   - {purl: "pkg:maven/jrt-fs/jrt-fs@21.0.12", licenseExpression: "GPL-2.0-only WITH Classpath-exception-2.0", source: "https://github.com/corretto/corretto-21/blob/develop/ADDITIONAL_LICENSE_INFO", verifiedBy: corretto-distribution-review, verifiedOn: 2026-09-17}

@@ -78,8 +78,9 @@ def load_resolutions(path: Path) -> dict[str, dict[str, str]]:
             expression.startswith("LicenseRef-") and expression not in AUDITED_LICENSE_REFS
         ):
             raise LicenseComplianceError(f"invalid resolved license for {purl}")
-        if not source.startswith("https://"):
-            raise LicenseComplianceError(f"resolution source must use HTTPS for {purl}")
+        image_evidence = source.startswith("image:/") and re.search(r"#sha256=[0-9a-f]{64}$", source)
+        if not (source.startswith("https://") or image_evidence):
+            raise LicenseComplianceError(f"resolution source must use HTTPS or immutable image evidence for {purl}")
         if not verified_by or not verified_on:
             raise LicenseComplianceError(f"resolution audit fields are required for {purl}")
         try:
