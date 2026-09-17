@@ -12,6 +12,8 @@ RUN tar -xzf /tmp/mediamtx.tar.gz --strip-components=1 \
     && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/mediamtx .
 
 FROM scratch
+ARG SOURCE_COMMIT=unknown
+LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
 COPY --from=build /out/mediamtx /mediamtx
 USER 10001:10001
 ENTRYPOINT ["/mediamtx"]

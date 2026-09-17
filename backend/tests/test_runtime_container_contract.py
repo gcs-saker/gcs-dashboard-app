@@ -101,7 +101,9 @@ def test_single_node_stateful_images_and_resource_limits_are_fixed() -> None:
 
     assert services["turn-secondary"]["profiles"] == ["same-host-turn-redundancy"]
 
-    assert "${MEDIAMTX_IMAGE" not in services["mediamtx"]["image"]
+    assert services["mqtt"]["image"].startswith("${MQTT_IMAGE:-eclipse-mosquitto@sha256:")
+    assert services["mediamtx"]["image"].startswith("${MEDIAMTX_IMAGE:-bluenviron/mediamtx@sha256:")
+    assert services["turn-primary"]["image"].startswith("${COTURN_IMAGE:-coturn/coturn@sha256:")
 
 
 def test_https_edge_healthcheck_allows_temporary_self_signed_certificate() -> None:
@@ -188,7 +190,7 @@ def test_single_node_turn_services_use_coturn_supported_runtime_flags() -> None:
     for service_name in ("turn-primary", "turn-secondary"):
         service = compose["services"][service_name]
         command = service["command"]
-        assert service["image"].endswith("@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e")
+        assert service["image"].startswith("${COTURN_IMAGE:-coturn/coturn@sha256:")
         assert "--use-auth-secret" in command
         assert "--static-auth-secret=${TURN_SHARED_SECRET:?Set TURN_SHARED_SECRET}" in command
         assert not any(argument.startswith("--user=") for argument in command)

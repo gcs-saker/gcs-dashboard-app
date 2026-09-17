@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "gcs-saker.runtime-delivery-inventory.v1",
+  "schemaVersion": "gcs-saker.runtime-delivery-inventory.v2",
   "components": [
     {
       "service": "postgres-geo",
@@ -12,24 +12,6 @@
       "image": "valkey/valkey@sha256:d2e18f3410b6f616de1417f570fa55261af2898b9c5b2cfb6781ce2373ea43d1",
       "projectLicenses": ["BSD-3-Clause"],
       "licenseSource": "https://github.com/valkey-io/valkey/blob/unstable/COPYING"
-    },
-    {
-      "service": "mqtt",
-      "image": "eclipse-mosquitto@sha256:a908c65cc8e67ec9d292ef27c2c0360dbaaee7eb1b935cdd194e67697f15dea1",
-      "projectLicenses": ["EPL-2.0", "EDL-1.0"],
-      "licenseSource": "https://github.com/eclipse-mosquitto/mosquitto/blob/master/LICENSE.txt"
-    },
-    {
-      "service": "mediamtx",
-      "image": "bluenviron/mediamtx@sha256:19fddade8d6110a3d718ac0045681fbeba344ae563a066205fe5929a87f7582f",
-      "projectLicenses": ["MIT"],
-      "licenseSource": "https://github.com/bluenviron/mediamtx/blob/main/LICENSE"
-    },
-    {
-      "service": "turn-primary",
-      "image": "coturn/coturn@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e",
-      "projectLicenses": ["BSD-3-Clause"],
-      "licenseSource": "https://github.com/coturn/coturn/blob/master/LICENSE"
     },
     {
       "service": "edge",

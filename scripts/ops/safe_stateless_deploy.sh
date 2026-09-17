@@ -43,6 +43,7 @@ RELEASE_MANIFEST_BUNDLE="${RELEASE_MANIFEST_BUNDLE:-${RELEASE_DIR}/release-manif
 # shellcheck disable=SC1090
 source "${verified_images}"
 export BACKEND_IMAGE AUTH_POLICY_IMAGE MEDIA_CONTROL_IMAGE DASHBOARD_IMAGE
+export MQTT_IMAGE MEDIAMTX_IMAGE COTURN_IMAGE
 compose=(docker compose --project-name "${PROJECT_NAME}" --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
 previous_container_id="$("${compose[@]}" ps -q backend)"
 [[ -n "${previous_container_id}" ]] || { echo "running backend container is required" >&2; exit 2; }

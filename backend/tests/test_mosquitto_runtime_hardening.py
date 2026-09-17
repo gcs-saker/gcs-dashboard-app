@@ -8,4 +8,5 @@ def test_mosquitto_runtime_is_pinned_and_applies_security_updates() -> None:
     source = DOCKERFILE.read_text(encoding="utf-8")
 
     assert "FROM eclipse-mosquitto@sha256:" in source
+    assert "LABEL org.opencontainers.image.revision=$SOURCE_COMMIT" in source
     assert "RUN apk upgrade --no-cache" in source

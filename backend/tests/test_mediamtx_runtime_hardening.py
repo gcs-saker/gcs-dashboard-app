@@ -18,6 +18,7 @@ def test_mediamtx_runtime_patches_crypto_and_drops_privileges() -> None:
 
     assert "go get golang.org/x/crypto@v0.56.0" in source
     assert "FROM scratch" in source
+    assert "LABEL org.opencontainers.image.revision=$SOURCE_COMMIT" in source
     assert "USER 10001:10001" in source
 
 

@@ -39,6 +39,18 @@ artifacts:
     sbom: IMPLEMENTED
     signature: VERIFIED
     provenance: VERIFIED
+  - id: mqtt-image
+    sbom: IMPLEMENTED
+    signature: VERIFIED
+    provenance: VERIFIED
+  - id: mediamtx-image
+    sbom: IMPLEMENTED
+    signature: VERIFIED
+    provenance: VERIFIED
+  - id: turn-image
+    sbom: IMPLEMENTED
+    signature: VERIFIED
+    provenance: VERIFIED
   - id: mobile-publisher-image
     sbom: IMPLEMENTED_IN_SOURCE_REPOSITORY
     signature: VERIFIED_BEFORE_INTEGRATION

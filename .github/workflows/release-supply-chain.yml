@@ -72,6 +72,18 @@ jobs:
             context: gcs-dashboard
             file: gcs-dashboard/Dockerfile
             build_contexts: ""
+          - image: mqtt
+            context: deploy/mosquitto
+            file: deploy/mosquitto/Dockerfile.hardened
+            build_contexts: ""
+          - image: mediamtx
+            context: deploy/mediamtx
+            file: deploy/mediamtx/Dockerfile.hardened
+            build_contexts: ""
+          - image: turn
+            context: deploy/coturn
+            file: deploy/coturn/Dockerfile.hardened
+            build_contexts: ""
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
