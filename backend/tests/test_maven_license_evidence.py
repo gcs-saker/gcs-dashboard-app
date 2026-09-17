@@ -2,8 +2,11 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts/reports/maven_license_evidence.py"
+RESOLUTIONS = ROOT / "docs/compliance/supply-chain/license-resolutions.yml"
 
 
 def load_module():
@@ -41,3 +44,13 @@ def test_known_pom_license_names_normalize_without_weakening_review_licenses() -
     assert module.spdx_expression([{"name": "Apache 2.0", "url": "https://example.test"}]) == "Apache-2.0"
     assert module.spdx_expression([{"name": "EPL-2.0", "url": "https://example.test"}]) == "EPL-2.0"
     assert module.spdx_expression([{"name": "Public Domain", "url": "https://example.test"}]) is None
+
+
+def test_first_maven_resolution_batch_is_exact_and_version_pinned() -> None:
+    entries = yaml.safe_load(RESOLUTIONS.read_text(encoding="utf-8"))["resolutions"]
+    maven_entries = [entry for entry in entries if entry.get("verifiedBy") == "maven-pom-evidence-v1"]
+
+    assert len(maven_entries) == 29
+    assert len({entry["purl"] for entry in maven_entries}) == 29
+    assert all(entry["purl"].startswith("pkg:maven/") and "@" in entry["purl"] for entry in maven_entries)
+    assert all("repo1.maven.org/maven2/" in entry["source"] for entry in maven_entries)
