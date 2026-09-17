@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 from pathlib import Path
 from urllib.parse import unquote
@@ -54,8 +55,30 @@ def copyright_record(image: str, package: str) -> dict[str, object]:
         "path": path,
         "sha256": hashlib.sha256(result.stdout).hexdigest(),
         "sizeBytes": len(result.stdout),
+        "declaredLicenseLabels": declared_license_labels(result.stdout.decode("utf-8", errors="replace")),
         "status": "COLLECTED",
     }
+
+
+def declared_license_labels(copyright_text: str) -> list[str]:
+    labels = {
+        match.group(1).strip()
+        for line in copyright_text.splitlines()
+        if (match := re.match(r"^License:\s*(.+)$", line)) is not None
+    }
+    return sorted(label for label in labels if label)
+
+
+def copyright_groups(records: list[dict[str, object]]) -> list[dict[str, object]]:
+    grouped: dict[str, list[str]] = {}
+    for record in records:
+        digest = str(record.get("sha256", ""))
+        if digest:
+            grouped.setdefault(digest, []).append(str(record["package"]))
+    return [
+        {"sha256": digest, "packages": sorted(packages), "packageCount": len(packages)}
+        for digest, packages in sorted(grouped.items())
+    ]
 
 
 def main() -> int:
@@ -65,7 +88,16 @@ def main() -> int:
     args = parser.parse_args()
     image_id = run("docker", "image", "inspect", args.image, "--format", "{{.Id}}").decode().strip()
     records = [copyright_record(args.image, package) for package in unknown_packages(args.license_report)]
-    print(json.dumps({"schemaVersion": "gcs-saker.os-license-evidence.v1", "imageId": image_id, "records": records}))
+    print(
+        json.dumps(
+            {
+                "schemaVersion": "gcs-saker.os-license-evidence.v1",
+                "imageId": image_id,
+                "records": records,
+                "copyrightGroups": copyright_groups(records),
+            }
+        )
+    )
     return 1 if any(record["status"] != "COLLECTED" for record in records) else 0
 
 
