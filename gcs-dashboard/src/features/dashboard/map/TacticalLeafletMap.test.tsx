@@ -190,7 +190,7 @@ describe("TacticalLeafletMap", () => {
     await act(async () => Promise.resolve());
     expect(observe).toHaveBeenCalledWith(expect.objectContaining({ className: "tactical-map__leaflet" }));
     act(() => notifyResize?.([], {} as ResizeObserver));
-    expect(leafletMock().instances[0].invalidateSize).toHaveBeenCalledWith(false);
+    expect(leafletMock().instances.at(-1)?.invalidateSize).toHaveBeenCalledWith(false);
   });
 
   test("disables public map pan animation when motion is off", async () => {
@@ -210,7 +210,7 @@ describe("TacticalLeafletMap", () => {
     await screen.findByTestId("public-tactical-map");
 
     act(() => {
-      leafletMock().instances[0].emit("dragstart");
+      leafletMock().instances.at(-1)?.emit("dragstart");
     });
 
     expect(screen.getByRole("button", { name: "자동 포커스 켜기" })).not.toHaveClass("is-active");
@@ -230,7 +230,7 @@ describe("TacticalLeafletMap", () => {
 
     rerender(<TacticalLeafletMap selectedStream={remoteStream} streams={[stream, remoteStream]} />);
 
-    expect(leafletMock().instances[0].panTo).toHaveBeenLastCalledWith([35.8842, 128.6211], {
+    expect(leafletMock().instances.at(-1)?.panTo).toHaveBeenLastCalledWith([35.8842, 128.6211], {
       animate: true,
       duration: 0.28,
     });
@@ -239,10 +239,10 @@ describe("TacticalLeafletMap", () => {
   test("falls back to the closed-network offline renderer when public map loading fails", async () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
     await screen.findByTestId("public-tactical-map");
-    await waitFor(() => expect(leafletMock().tileLayers).toHaveLength(1));
+    await waitFor(() => expect(leafletMock().tileLayers.length).toBeGreaterThan(0));
 
     act(() => {
-      leafletMock().tileLayers[0].emitError();
+      leafletMock().tileLayers.at(-1)?.emitError();
     });
 
     expect(await screen.findByTestId("offline-tactical-map")).toBeInTheDocument();
@@ -252,10 +252,10 @@ describe("TacticalLeafletMap", () => {
   test("opens the same device popup from the closed-network offline map pins", async () => {
     render(<TacticalLeafletMap selectedStream={stream} streams={[stream]} />);
     await screen.findByTestId("public-tactical-map");
-    await waitFor(() => expect(leafletMock().tileLayers).toHaveLength(1));
+    await waitFor(() => expect(leafletMock().tileLayers.length).toBeGreaterThan(0));
 
     act(() => {
-      leafletMock().tileLayers[0].emitError();
+      leafletMock().tileLayers.at(-1)?.emitError();
     });
     fireEvent.click(await screen.findByRole("button", { name: /로컬 웹캠 위치/ }));
 

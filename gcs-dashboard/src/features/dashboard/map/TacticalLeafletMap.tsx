@@ -63,7 +63,7 @@ function useTacticalMapState(onSelectStream?: (streamId: string) => void) {
     let disposed = false;
     void fetchMapConfig().then((config) => {
       if (disposed) return;
-      setMapConfig(config);
+      setMapConfig((current) => sameMapConfig(current, config) ? current : config);
       setUseOfflineMap(chooseDashboardMapEngine(config) === "leaflet-offline");
       setMapFallbackNotice(config.provider === "offline" ? "폐쇄망 오프라인 지도 사용 중" : null);
     });
@@ -74,4 +74,11 @@ function useTacticalMapState(onSelectStream?: (streamId: string) => void) {
 
   return { activeStreamId, autoFocusEnabled, handleMapError, handlePopupClose, handleStreamMarkerSelect,
     layerMode, mapConfig, mapFallbackNotice, setAutoFocusEnabled, setLayerMode, useOfflineMap } as const;
+}
+
+function sameMapConfig(left: DashboardMapConfig, right: DashboardMapConfig): boolean {
+  return left.provider === right.provider
+    && left.styleUrl === right.styleUrl
+    && left.attribution === right.attribution
+    && left.requiresApiKey === right.requiresApiKey;
 }
