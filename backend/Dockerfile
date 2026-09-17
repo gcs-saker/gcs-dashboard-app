@@ -18,7 +18,8 @@ COPY --from=wheels /wheels /wheels
 COPY requirements-runtime.txt .
 RUN python -m pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir --no-index --find-links=/wheels -r requirements-runtime.txt \
-    && rm -rf /wheels
+    && python -m pip uninstall --yes pip setuptools wheel \
+    && rm -rf /wheels /root/.cache /usr/local/lib/python3.12/site-packages/pip/_vendor/msgpack
 COPY --chown=gcs:gcs . .
 USER 10001:10001
 EXPOSE 8001
