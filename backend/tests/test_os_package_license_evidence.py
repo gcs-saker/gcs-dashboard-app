@@ -43,3 +43,12 @@ def test_debian_license_labels_are_extracted_and_deduplicated() -> None:
     )
 
     assert labels == ["BSD-3-clause", "GPL-2+"]
+
+
+def test_known_debian_labels_normalize_and_unknown_labels_fail_closed() -> None:
+    module = load_module()
+
+    normalized, unresolved = module.normalize_debian_labels(["GPL-2+", "Expat", "custom-license"])
+
+    assert normalized == ["GPL-2.0-or-later", "MIT"]
+    assert unresolved == ["custom-license"]

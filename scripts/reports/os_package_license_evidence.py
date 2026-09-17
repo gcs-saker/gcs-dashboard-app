@@ -16,6 +16,16 @@ class OsLicenseEvidenceError(RuntimeError):
     pass
 
 
+SPDX_BY_DEBIAN_LABEL = {
+    "Apache-2.0": "Apache-2.0", "BSD-2-clause": "BSD-2-Clause", "BSD-3-clause": "BSD-3-Clause",
+    "Expat": "MIT", "GPL-2": "GPL-2.0-only", "GPL-2+": "GPL-2.0-or-later",
+    "GPL-3": "GPL-3.0-only", "GPL-3+": "GPL-3.0-or-later", "ISC": "ISC",
+    "LGPL-2": "LGPL-2.0-only", "LGPL-2+": "LGPL-2.0-or-later", "LGPL-2.1": "LGPL-2.1-only",
+    "LGPL-2.1+": "LGPL-2.1-or-later", "LGPL-3": "LGPL-3.0-only", "LGPL-3+": "LGPL-3.0-or-later",
+    "MIT": "MIT", "public-domain": "LicenseRef-Public-Domain",
+}
+
+
 def run(*args: str) -> bytes:
     result = subprocess.run(args, check=False, capture_output=True)
     if result.returncode:
@@ -50,12 +60,16 @@ def copyright_record(image: str, package: str) -> dict[str, object]:
     )
     if result.returncode:
         return {"package": package, "path": path, "status": "MISSING"}
+    labels = declared_license_labels(result.stdout.decode("utf-8", errors="replace"))
+    normalized, unresolved = normalize_debian_labels(labels)
     return {
         "package": package,
         "path": path,
         "sha256": hashlib.sha256(result.stdout).hexdigest(),
         "sizeBytes": len(result.stdout),
-        "declaredLicenseLabels": declared_license_labels(result.stdout.decode("utf-8", errors="replace")),
+        "declaredLicenseLabels": labels,
+        "normalizedSpdxLicenses": normalized,
+        "unresolvedLicenseLabels": unresolved,
         "status": "COLLECTED",
     }
 
@@ -67,6 +81,16 @@ def declared_license_labels(copyright_text: str) -> list[str]:
         if (match := re.match(r"^License:\s*(.+)$", line)) is not None
     }
     return sorted(label for label in labels if label)
+
+
+def normalize_debian_labels(labels: list[str]) -> tuple[list[str], list[str]]:
+    normalized, unresolved = [], []
+    for label in labels:
+        expression = SPDX_BY_DEBIAN_LABEL.get(label)
+        target, value = (normalized, expression) if expression else (unresolved, label)
+        if value not in target:
+            target.append(value)
+    return sorted(normalized), sorted(unresolved)
 
 
 def copyright_groups(records: list[dict[str, object]]) -> list[dict[str, object]]:
