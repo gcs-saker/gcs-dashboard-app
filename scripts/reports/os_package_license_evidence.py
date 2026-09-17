@@ -17,12 +17,23 @@ class OsLicenseEvidenceError(RuntimeError):
 
 
 SPDX_BY_DEBIAN_LABEL = {
-    "Apache-2.0": "Apache-2.0", "BSD-2-clause": "BSD-2-Clause", "BSD-3-clause": "BSD-3-Clause",
-    "Expat": "MIT", "GPL-2": "GPL-2.0-only", "GPL-2+": "GPL-2.0-or-later",
-    "GPL-3": "GPL-3.0-only", "GPL-3+": "GPL-3.0-or-later", "ISC": "ISC",
-    "LGPL-2": "LGPL-2.0-only", "LGPL-2+": "LGPL-2.0-or-later", "LGPL-2.1": "LGPL-2.1-only",
-    "LGPL-2.1+": "LGPL-2.1-or-later", "LGPL-3": "LGPL-3.0-only", "LGPL-3+": "LGPL-3.0-or-later",
-    "MIT": "MIT", "public-domain": "LicenseRef-Public-Domain",
+    "Apache-2.0": "Apache-2.0",
+    "BSD-2-clause": "BSD-2-Clause",
+    "BSD-3-clause": "BSD-3-Clause",
+    "Expat": "MIT",
+    "GPL-2": "GPL-2.0-only",
+    "GPL-2+": "GPL-2.0-or-later",
+    "GPL-3": "GPL-3.0-only",
+    "GPL-3+": "GPL-3.0-or-later",
+    "ISC": "ISC",
+    "LGPL-2": "LGPL-2.0-only",
+    "LGPL-2+": "LGPL-2.0-or-later",
+    "LGPL-2.1": "LGPL-2.1-only",
+    "LGPL-2.1+": "LGPL-2.1-or-later",
+    "LGPL-3": "LGPL-3.0-only",
+    "LGPL-3+": "LGPL-3.0-or-later",
+    "MIT": "MIT",
+    "public-domain": "LicenseRef-Public-Domain",
 }
 
 
