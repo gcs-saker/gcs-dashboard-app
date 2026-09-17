@@ -38,7 +38,9 @@ type runtimeEnvContract struct {
 	grpcToken             envName
 	grpcMaxPayloadBytes   envName
 	turnUsername          envName
-	turnPassword          envName
+	turnCredentialMode    envName
+	turnSharedSecret      envName
+	turnStaticPassword    envName
 	stunURL               envName
 	turnPrimaryURL        envName
 	turnSecondaryURL      envName
@@ -72,7 +74,9 @@ var runtimeEnv = runtimeEnvContract{
 	grpcToken:             "MEDIA_CONTROL_GRPC_TOKEN",
 	grpcMaxPayloadBytes:   "MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES",
 	turnUsername:          "TURN_USERNAME",
-	turnPassword:          "TURN_SHARED_SECRET",
+	turnCredentialMode:    "TURN_CREDENTIAL_MODE",
+	turnSharedSecret:      "TURN_SHARED_SECRET",
+	turnStaticPassword:    "TURN_PASSWORD",
 	stunURL:               "MEDIA_CONTROL_STUN_URL",
 	turnPrimaryURL:        "MEDIA_CONTROL_TURN_PRIMARY_URL",
 	turnSecondaryURL:      "MEDIA_CONTROL_TURN_SECONDARY_URL",
@@ -95,7 +99,9 @@ type runtimeDefaultsContract struct {
 	streamPresencePrefix  string
 	iceServerCacheKey     string
 	turnUsername          string
-	turnPassword          string
+	turnCredentialMode    string
+	turnSharedSecret      string
+	turnStaticPassword    string
 	stunURL               string
 	turnPrimaryURL        string
 	turnSecondaryURL      string
@@ -125,7 +131,9 @@ var runtimeDefaults = runtimeDefaultsContract{
 	streamPresencePrefix:  "gcs-saker:media-control:presence:",
 	iceServerCacheKey:     "gcs-saker:media-control:ice-servers",
 	turnUsername:          "gcs-turn",
-	turnPassword:          "replace-with-secret",
+	turnCredentialMode:    turnCredentialModeSharedSecret,
+	turnSharedSecret:      "replace-with-secret",
+	turnStaticPassword:    "replace-with-secret",
 	stunURL:               "stun:turn-primary:3478",
 	turnPrimaryURL:        "turn:turn-primary:3478",
 	turnSecondaryURL:      "",

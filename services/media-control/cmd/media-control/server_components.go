@@ -82,6 +82,9 @@ func newIceServerProvider(config runtimeConfig, metrics *httpapi.Metrics) httpap
 			metrics,
 		)
 	}
+	if config.turnCredentialMode == turnCredentialModeStatic {
+		return provider
+	}
 	return turn.NewEphemeralCredentialProvider(provider, config.turnSharedSecret, 5*time.Minute)
 }
 
