@@ -50,7 +50,7 @@ def test_first_maven_resolution_batch_is_exact_and_version_pinned() -> None:
     entries = yaml.safe_load(RESOLUTIONS.read_text(encoding="utf-8"))["resolutions"]
     maven_entries = [entry for entry in entries if entry.get("verifiedBy") == "maven-pom-evidence-v1"]
 
-    assert len(maven_entries) == 29
-    assert len({entry["purl"] for entry in maven_entries}) == 29
+    assert len(maven_entries) == 46
+    assert len({entry["purl"] for entry in maven_entries}) == 46
     assert all(entry["purl"].startswith("pkg:maven/") and "@" in entry["purl"] for entry in maven_entries)
     assert all("repo1.maven.org/maven2/" in entry["source"] for entry in maven_entries)

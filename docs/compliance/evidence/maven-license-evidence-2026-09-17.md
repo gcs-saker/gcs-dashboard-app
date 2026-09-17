@@ -20,3 +20,11 @@ The collector evaluated all 51 unresolved Maven coordinates:
 Review-sensitive expressions such as EPL-2.0, EDL-1.0, LGPL, CC0, MIT-0, and GPL with the
 Classpath exception are normalized but not added to the global allowlist. This evidence is an input to
 the exact-PURL resolution catalogue and is not itself a legal approval.
+
+## Exact-PURL catalogue replay
+
+Two reviewed batches added 46 exact Maven coordinates to the resolution catalogue. Docker replay of
+the same auth-policy SBOM changed the complete report to `ALLOWED: 148`, `FIRST_PARTY: 2`,
+`REVIEW_REQUIRED: 25`, and `UNKNOWN: 3`. The remaining unknowns are AOP Alliance Public Domain,
+Corretto `jrt-fs`, and the Alpine `libmd` OS package. Review-sensitive Maven licenses are now visible
+as `REVIEW_REQUIRED` instead of being hidden inside `UNKNOWN`.
