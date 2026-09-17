@@ -16,5 +16,6 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     libevent-openssl-2.1-7t64 libevent-pthreads-2.1-7t64 libssl3t64 \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /src/bin/turnserver /usr/bin/turnserver
+COPY turnserver-entrypoint.sh /usr/local/bin/gcs-turnserver-entrypoint
 USER nobody:nogroup
-ENTRYPOINT ["/usr/bin/turnserver"]
+ENTRYPOINT ["/bin/sh", "/usr/local/bin/gcs-turnserver-entrypoint"]

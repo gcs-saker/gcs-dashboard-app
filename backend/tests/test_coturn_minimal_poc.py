@@ -22,3 +22,10 @@ def test_minimal_coturn_is_not_wired_into_compose() -> None:
 
     assert "Dockerfile.minimal-poc" not in compose
     assert "gcs-saker-turn:minimal-poc" not in compose
+
+
+def test_minimal_coturn_reuses_the_production_dynamic_allowlist_entrypoint() -> None:
+    source = DOCKERFILE.read_text(encoding="utf-8")
+
+    assert "COPY turnserver-entrypoint.sh /usr/local/bin/gcs-turnserver-entrypoint" in source
+    assert 'ENTRYPOINT ["/bin/sh", "/usr/local/bin/gcs-turnserver-entrypoint"]' in source
