@@ -28,6 +28,7 @@ def package(name: str, license_expression: str, purl: str) -> dict[str, Any]:
         "name": name,
         "versionInfo": "1.0.0",
         "licenseDeclared": license_expression,
+        "licenseConcluded": "NOASSERTION",
         "externalRefs": [{"referenceType": "purl", "referenceLocator": purl}],
     }
 
@@ -77,6 +78,19 @@ def test_exact_resolution_reclassifies_unknown_without_overriding_declared_licen
     assert declared[2:] == ("Apache-2.0", "SBOM licenseDeclared")
 
 
+def test_valid_spdx_conclusion_resolves_missing_declaration_before_catalog_fallback() -> None:
+    item = package("embedded", "NOASSERTION", "pkg:maven/example/embedded@1")
+    item["licenseConcluded"] = "Apache-2.0"
+    rules = LicenseRules(POLICY, [], {item["externalRefs"][0]["referenceLocator"]: {"license": "MIT", "source": "x"}})
+
+    assert classify_package(item, rules, TODAY)[0:4] == (
+        "ALLOWED",
+        "retain copyright and license notice",
+        "Apache-2.0",
+        "SBOM licenseConcluded",
+    )
+
+
 def test_resolution_catalog_requires_exact_audited_https_evidence(tmp_path: Path) -> None:
     catalog = tmp_path / "resolutions.yml"
     catalog.write_text(
@@ -91,6 +105,27 @@ def test_resolution_catalog_requires_exact_audited_https_evidence(tmp_path: Path
 
     with pytest.raises(LicenseComplianceError, match="must use HTTPS"):
         load_resolutions(catalog)
+
+
+def test_exact_public_domain_reference_requires_review_instead_of_remaining_unknown() -> None:
+    purl = "pkg:maven/aopalliance/aopalliance@1.0"
+    rules = LicenseRules(POLICY, [], {purl: {"license": "LicenseRef-Public-Domain", "source": "https://x"}})
+
+    result = classify_package(package("aopalliance", "NOASSERTION", purl), rules, TODAY)
+
+    assert result[0] == "REVIEW_REQUIRED"
+    assert result[2] == "LicenseRef-Public-Domain"
+
+
+def test_libmd_composite_license_is_reviewed_instead_of_unknown() -> None:
+    purl = "pkg:apk/alpine/libmd@1.2.0-r0?arch=x86_64&distro=alpine-3.24.1"
+    expression = "BSD-2-Clause AND BSD-3-Clause AND ISC AND Beerware AND LicenseRef-Public-Domain"
+    rules = LicenseRules(POLICY, [], {purl: {"license": expression, "source": "https://packages.example"}})
+
+    result = classify_package(package("libmd", "NOASSERTION", purl), rules, TODAY)
+
+    assert result[0] == "REVIEW_REQUIRED"
+    assert result[2] == expression
 
 
 def test_report_and_notices_preserve_blocking_findings(tmp_path: Path) -> None:
