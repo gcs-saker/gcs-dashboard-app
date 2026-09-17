@@ -30,13 +30,27 @@ fi
 inventory="$(python3 "${ROOT}/scripts/ops/release_manifest.py" verify \
   --manifest "${manifest}" --source-commit "${expected_commit}")"
 
-export BACKEND_IMAGE="$(jq -r '.backend' <<<"${inventory}")"
-export AUTH_POLICY_IMAGE="$(jq -r '."auth-policy"' <<<"${inventory}")"
-export MEDIA_CONTROL_IMAGE="$(jq -r '."media-control"' <<<"${inventory}")"
-export DASHBOARD_IMAGE="$(jq -r '.dashboard' <<<"${inventory}")"
-export MOBILE_PUBLISHER_IMAGE="$(jq -r '."mobile-publisher"' <<<"${inventory}")"
+BACKEND_IMAGE="$(jq -r '.backend' <<<"${inventory}")"
+AUTH_POLICY_IMAGE="$(jq -r '."auth-policy"' <<<"${inventory}")"
+MEDIA_CONTROL_IMAGE="$(jq -r '."media-control"' <<<"${inventory}")"
+DASHBOARD_IMAGE="$(jq -r '.dashboard' <<<"${inventory}")"
+MQTT_IMAGE="$(jq -r '.mqtt' <<<"${inventory}")"
+MEDIAMTX_IMAGE="$(jq -r '.mediamtx' <<<"${inventory}")"
+COTURN_IMAGE="$(jq -r '.turn' <<<"${inventory}")"
+MOBILE_PUBLISHER_IMAGE="$(jq -r '."mobile-publisher"' <<<"${inventory}")"
+export BACKEND_IMAGE AUTH_POLICY_IMAGE MEDIA_CONTROL_IMAGE DASHBOARD_IMAGE
+export MQTT_IMAGE MEDIAMTX_IMAGE COTURN_IMAGE MOBILE_PUBLISHER_IMAGE
 
-for image in "${BACKEND_IMAGE}" "${AUTH_POLICY_IMAGE}" "${MEDIA_CONTROL_IMAGE}" "${DASHBOARD_IMAGE}"; do
+server_images=(
+  "${BACKEND_IMAGE}"
+  "${AUTH_POLICY_IMAGE}"
+  "${MEDIA_CONTROL_IMAGE}"
+  "${DASHBOARD_IMAGE}"
+  "${MQTT_IMAGE}"
+  "${MEDIAMTX_IMAGE}"
+  "${COTURN_IMAGE}"
+)
+for image in "${server_images[@]}"; do
   "${cosign_bin}" verify --certificate-identity-regexp "${identity}" --certificate-oidc-issuer "${issuer}" "${image}" >/dev/null
   "${cosign_bin}" verify-attestation --type "${slsa_predicate}" \
     --certificate-identity-regexp "${identity}" --certificate-oidc-issuer "${issuer}" "${image}" >/dev/null
@@ -57,4 +71,7 @@ printf 'BACKEND_IMAGE=%s\n' "${BACKEND_IMAGE}"
 printf 'AUTH_POLICY_IMAGE=%s\n' "${AUTH_POLICY_IMAGE}"
 printf 'MEDIA_CONTROL_IMAGE=%s\n' "${MEDIA_CONTROL_IMAGE}"
 printf 'DASHBOARD_IMAGE=%s\n' "${DASHBOARD_IMAGE}"
+printf 'MQTT_IMAGE=%s\n' "${MQTT_IMAGE}"
+printf 'MEDIAMTX_IMAGE=%s\n' "${MEDIAMTX_IMAGE}"
+printf 'COTURN_IMAGE=%s\n' "${COTURN_IMAGE}"
 printf 'MOBILE_PUBLISHER_IMAGE=%s\n' "${MOBILE_PUBLISHER_IMAGE}"

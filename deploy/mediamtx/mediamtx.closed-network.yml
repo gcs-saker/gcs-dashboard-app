@@ -4,6 +4,7 @@ api: true
 apiAddress: :9997
 metrics: true
 metricsAddress: :9998
+moq: false
 
 authMethod: http
 authHTTPAddress: http://media-control:8081/v1/mediamtx/auth
@@ -34,11 +35,11 @@ srtAddress: :8890
 hls: true
 hlsAddress: :8888
 hlsVariant: lowLatency
-hlsAllowOrigin: '*'
+hlsAllowOrigins: ['*']
 
 webrtc: true
 webrtcAddress: :8889
-webrtcAllowOrigin: '*'
+webrtcAllowOrigins: ['*']
 webrtcLocalUDPAddress: :8189
 webrtcLocalTCPAddress: :8189
 webrtcIPsFromInterfaces: true

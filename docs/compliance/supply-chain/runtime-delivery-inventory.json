@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "gcs-saker.runtime-delivery-inventory.v1",
+  "schemaVersion": "gcs-saker.runtime-delivery-inventory.v2",
   "components": [
     {
       "service": "postgres-geo",
@@ -14,26 +14,8 @@
       "licenseSource": "https://github.com/valkey-io/valkey/blob/unstable/COPYING"
     },
     {
-      "service": "mqtt",
-      "image": "eclipse-mosquitto@sha256:a908c65cc8e67ec9d292ef27c2c0360dbaaee7eb1b935cdd194e67697f15dea1",
-      "projectLicenses": ["EPL-2.0", "EDL-1.0"],
-      "licenseSource": "https://github.com/eclipse-mosquitto/mosquitto/blob/master/LICENSE.txt"
-    },
-    {
-      "service": "mediamtx",
-      "image": "bluenviron/mediamtx@sha256:32ecec42d5c716f0b85809b11b6c32f54126546ba89fc85ac57dbcf74738bb4e",
-      "projectLicenses": ["MIT"],
-      "licenseSource": "https://github.com/bluenviron/mediamtx/blob/main/LICENSE"
-    },
-    {
-      "service": "turn-primary",
-      "image": "coturn/coturn@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e",
-      "projectLicenses": ["BSD-3-Clause"],
-      "licenseSource": "https://github.com/coturn/coturn/blob/master/LICENSE"
-    },
-    {
       "service": "edge",
-      "image": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6",
+      "image": "nginxinc/nginx-unprivileged:stable-alpine@sha256:daa17b944bac2b578e962da4c61ad72a59233b3c63abea17113acaf4e6b9aea4",
       "projectLicenses": ["BSD-2-Clause"],
       "licenseSource": "https://github.com/nginx/nginx/blob/master/LICENSE"
     }

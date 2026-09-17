@@ -18,6 +18,9 @@ REQUIRED_ARTIFACTS = {
     "auth-policy-image",
     "media-control-image",
     "dashboard-image",
+    "mqtt-image",
+    "mediamtx-image",
+    "turn-image",
     "mobile-publisher-image",
 }
 HISTORICAL_SIGNED_RELEASE_ARTIFACTS = 4

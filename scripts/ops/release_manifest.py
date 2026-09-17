@@ -11,7 +11,16 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SERVICES = {"backend", "auth-policy", "media-control", "dashboard", "mobile-publisher"}
+SERVICES = {
+    "backend",
+    "auth-policy",
+    "media-control",
+    "dashboard",
+    "mqtt",
+    "mediamtx",
+    "turn",
+    "mobile-publisher",
+}
 IMAGE_NAMES = {service: f"gcs-saker-{service}" for service in SERVICES}
 IMAGE_NAMES["mobile-publisher"] = "gcs-mobile-publisher"
 DIGEST = re.compile(r"sha256:[0-9a-f]{64}$")
@@ -59,9 +68,9 @@ def assemble_manifest(entries_root: Path, source_commit: str, workflow_run: str)
     entries = [load_json(path) for path in sorted(entries_root.rglob("release-entry.json"))]
     services = {str(entry.get("service")) for entry in entries}
     if services != SERVICES or len(entries) != len(SERVICES):
-        raise ReleaseManifestError("release entries must cover each application service exactly once")
+        raise ReleaseManifestError("release entries must cover each managed image exactly once")
     manifest = {
-        "schemaVersion": "gcs-saker.signed-release.v2",
+        "schemaVersion": "gcs-saker.signed-release.v3",
         "sourceCommit": source_commit,
         "workflowRun": workflow_run,
         "createdAt": datetime.now(timezone.utc).isoformat(),
@@ -75,7 +84,7 @@ def assemble_manifest(entries_root: Path, source_commit: str, workflow_run: str)
 
 
 def validate_manifest(manifest: dict[str, Any], expected_commit: str) -> dict[str, str]:
-    if manifest.get("schemaVersion") != "gcs-saker.signed-release.v2":
+    if manifest.get("schemaVersion") != "gcs-saker.signed-release.v3":
         raise ReleaseManifestError("unsupported release manifest schema")
     if not COMMIT.fullmatch(expected_commit) or manifest.get("sourceCommit") != expected_commit:
         raise ReleaseManifestError("release manifest source commit mismatch")
@@ -98,7 +107,7 @@ def validate_runtime_inventory(manifest: dict[str, Any]) -> None:
     if not isinstance(runtime_inventory, dict):
         raise ReleaseManifestError("release manifest runtime inventory is missing")
     components = runtime_inventory.get("components")
-    if not isinstance(components, list) or len(components) < 6:
+    if not isinstance(components, list) or len(components) < 3:
         raise ReleaseManifestError("release manifest runtime inventory is incomplete")
     if manifest.get("runtimeInventorySha256") != sha256(RUNTIME_INVENTORY):
         raise ReleaseManifestError("release manifest runtime inventory digest is invalid")

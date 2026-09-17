@@ -1,0 +1,20 @@
+FROM golang:1.26.6-alpine@sha256:3889b425f035be855a72fb4755265311293b6d414521f0a519d819df32222d83 AS build
+
+WORKDIR /src
+ADD --checksum=sha256:be643437fed01827ee05c40591326549db82a19eae5c41e12c0252971ed85ac6 \
+    https://github.com/bluenviron/mediamtx/archive/2c6727904fbf233615de74a6c54a9b94dbf6025d.tar.gz \
+    /tmp/mediamtx.tar.gz
+RUN tar -xzf /tmp/mediamtx.tar.gz --strip-components=1 \
+    && printf 'v1.21.0' > internal/core/VERSION \
+    && (cd internal/servers/hls && go run ./hlsjsdownloader) \
+    && go get golang.org/x/crypto@v0.56.0 \
+    && go mod tidy \
+    && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/mediamtx .
+
+FROM scratch
+ARG SOURCE_COMMIT=unknown
+LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
+COPY --from=build /out/mediamtx /mediamtx
+USER 10001:10001
+ENTRYPOINT ["/mediamtx"]
+CMD ["/mediamtx.yml"]

@@ -80,7 +80,7 @@ services:
       - control-net
 
   mqtt:
-    image: eclipse-mosquitto@sha256:a908c65cc8e67ec9d292ef27c2c0360dbaaee7eb1b935cdd194e67697f15dea1
+    image: ${MQTT_IMAGE:-eclipse-mosquitto@sha256:a908c65cc8e67ec9d292ef27c2c0360dbaaee7eb1b935cdd194e67697f15dea1}
     pids_limit: 128
     mem_limit: ${MQTT_MEMORY_LIMIT:-256m}
     cpus: ${MQTT_CPU_LIMIT:-0.5}
@@ -341,7 +341,7 @@ services:
       - media-net
 
   mediamtx:
-    image: bluenviron/mediamtx@sha256:32ecec42d5c716f0b85809b11b6c32f54126546ba89fc85ac57dbcf74738bb4e
+    image: ${MEDIAMTX_IMAGE:-bluenviron/mediamtx@sha256:19fddade8d6110a3d718ac0045681fbeba344ae563a066205fe5929a87f7582f}
     pids_limit: 512
     mem_limit: ${MEDIAMTX_MEMORY_LIMIT:-1g}
     cpus: ${MEDIAMTX_CPU_LIMIT:-2.0}
@@ -367,7 +367,7 @@ services:
       - media-net
 
   turn-primary:
-    image: coturn/coturn@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e
+    image: ${COTURN_IMAGE:-coturn/coturn@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e}
     pids_limit: 256
     mem_limit: ${TURN_MEMORY_LIMIT:-256m}
     cpus: ${TURN_CPU_LIMIT:-0.5}
@@ -408,7 +408,7 @@ services:
 
   turn-secondary:
     profiles: [same-host-turn-redundancy]
-    image: coturn/coturn@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e
+    image: ${COTURN_IMAGE:-coturn/coturn@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e}
     pids_limit: 256
     mem_limit: ${TURN_MEMORY_LIMIT:-256m}
     cpus: ${TURN_CPU_LIMIT:-0.5}
@@ -491,7 +491,7 @@ services:
 
   edge:
     <<: *runtime_hardening
-    image: nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6
+    image: nginxinc/nginx-unprivileged:stable-alpine@sha256:daa17b944bac2b578e962da4c61ad72a59233b3c63abea17113acaf4e6b9aea4
     user: "101:101"
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
