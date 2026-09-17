@@ -1,0 +1,20 @@
+FROM debian:trixie-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132 AS build
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates g++ git libevent-dev libssl-dev make pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+RUN git init && git remote add origin https://github.com/coturn/coturn.git \
+    && git fetch --depth=1 origin 1986df21e4b4152b5e0216989f649e20ff76aced \
+    && git checkout --detach FETCH_HEAD
+RUN TURN_NO_PQ=1 TURN_NO_MYSQL=1 TURN_NO_MONGO=1 TURN_NO_HIREDIS=1 \
+    TURN_NO_SQLITE=1 TURN_NO_PROMETHEUS=1 TURN_NO_SYSTEMD=1 \
+    ./configure --prefix=/usr --disable-rpath && make -j2
+
+FROM debian:trixie-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
+    ca-certificates libevent-2.1-7t64 libevent-core-2.1-7t64 libevent-extra-2.1-7t64 \
+    libevent-openssl-2.1-7t64 libevent-pthreads-2.1-7t64 libssl3t64 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /src/bin/turnserver /usr/bin/turnserver
+USER nobody:nogroup
+ENTRYPOINT ["/usr/bin/turnserver"]
