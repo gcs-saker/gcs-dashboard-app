@@ -152,7 +152,7 @@ def test_compose_keeps_mediamtx_management_ports_private_and_mounts_config_as_fi
     compose = load_yaml(COMPOSE_FILE)
     mediamtx = compose["services"]["mediamtx"]
 
-    assert mediamtx["image"] == "${MEDIAMTX_IMAGE:-bluenviron/mediamtx:1.15.3}"
+    assert mediamtx["image"] == "${MEDIAMTX_IMAGE:-bluenviron/mediamtx:1.21.0}"
     assert not any("9997" in port or "9998" in port for port in mediamtx["ports"])
     assert {
         "type": "bind",

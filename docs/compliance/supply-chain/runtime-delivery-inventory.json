@@ -21,7 +21,7 @@
     },
     {
       "service": "mediamtx",
-      "image": "bluenviron/mediamtx@sha256:32ecec42d5c716f0b85809b11b6c32f54126546ba89fc85ac57dbcf74738bb4e",
+      "image": "bluenviron/mediamtx@sha256:19fddade8d6110a3d718ac0045681fbeba344ae563a066205fe5929a87f7582f",
       "projectLicenses": ["MIT"],
       "licenseSource": "https://github.com/bluenviron/mediamtx/blob/main/LICENSE"
     },
@@ -33,7 +33,7 @@
     },
     {
       "service": "edge",
-      "image": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6",
+      "image": "nginxinc/nginx-unprivileged:stable-alpine@sha256:daa17b944bac2b578e962da4c61ad72a59233b3c63abea17113acaf4e6b9aea4",
       "projectLicenses": ["BSD-2-Clause"],
       "licenseSource": "https://github.com/nginx/nginx/blob/master/LICENSE"
     }
