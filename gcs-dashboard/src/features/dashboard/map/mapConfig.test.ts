@@ -28,16 +28,16 @@ describe("mapConfig", () => {
     );
   });
 
-  test("falls back to the offline config when the API is unavailable", async () => {
+  test("falls back to the configured Esri map when the API is unavailable", async () => {
     const fetcher = vi.fn(async () => ({
       ok: false,
       status: 503,
     })) as unknown as typeof fetch;
 
     await expect(fetchMapConfig(fetcher)).resolves.toEqual({
-      provider: "offline",
-      styleUrl: "",
-      attribution: "Offline tactical map",
+      provider: "esri-satellite",
+      styleUrl: expect.stringContaining("World_Imagery"),
+      attribution: "Esri World Imagery",
       requiresApiKey: false,
     });
   });
