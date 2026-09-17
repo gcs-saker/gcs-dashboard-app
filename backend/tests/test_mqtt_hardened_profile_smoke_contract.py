@@ -97,3 +97,10 @@ def test_runtime_failure_captures_broker_logs_before_cleanup() -> None:
     assert '"logs", "--no-color", "--tail", "120", "mqtt"' in source
     assert "MQTT smoke failed before cleanup" in source
     assert source.index('"logs", "--no-color"') < source.index("config.down_command(generated_env)")
+
+
+def test_runtime_smoke_restarts_broker_and_requires_mtls_reconnect() -> None:
+    source = SMOKE_SCRIPT.read_text(encoding="utf-8")
+
+    assert '"restart", "mqtt"' in source
+    assert "broker.restart.mtls_reconnect" in source
