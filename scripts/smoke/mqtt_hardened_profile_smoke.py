@@ -255,6 +255,15 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
                 "passed": True,
                 "checks": checks,
             }
+        except Exception as error:
+            diagnostics = subprocess.run(
+                [*config.compose_command(generated_env), "logs", "--no-color", "--tail", "120", "mqtt"],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            detail = diagnostics.stdout.strip() or diagnostics.stderr.strip() or "no broker diagnostics available"
+            raise RuntimeError(f"MQTT smoke failed before cleanup\n{detail}") from error
         finally:
             run_checked(
                 config.down_command(generated_env),

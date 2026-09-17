@@ -89,3 +89,11 @@ def test_local_compose_uses_hardened_mqtt_and_keeps_no_auth_in_explicit_profile(
     assert "MQTT_USERNAME: ${MQTT_USERNAME:?Set MQTT_USERNAME in .env}" in compose
     assert "local-mqtt-no-auth" in local_no_auth
     assert "mosquitto-no-auth.conf" in local_no_auth
+
+
+def test_runtime_failure_captures_broker_logs_before_cleanup() -> None:
+    source = SMOKE_SCRIPT.read_text(encoding="utf-8")
+
+    assert '"logs", "--no-color", "--tail", "120", "mqtt"' in source
+    assert "MQTT smoke failed before cleanup" in source
+    assert source.index('"logs", "--no-color"') < source.index("config.down_command(generated_env)")
