@@ -117,6 +117,17 @@ def test_exact_public_domain_reference_requires_review_instead_of_remaining_unkn
     assert result[2] == "LicenseRef-Public-Domain"
 
 
+def test_libmd_composite_license_is_reviewed_instead_of_unknown() -> None:
+    purl = "pkg:apk/alpine/libmd@1.2.0-r0?arch=x86_64&distro=alpine-3.24.1"
+    expression = "BSD-2-Clause AND BSD-3-Clause AND ISC AND Beerware AND LicenseRef-Public-Domain"
+    rules = LicenseRules(POLICY, [], {purl: {"license": expression, "source": "https://packages.example"}})
+
+    result = classify_package(package("libmd", "NOASSERTION", purl), rules, TODAY)
+
+    assert result[0] == "REVIEW_REQUIRED"
+    assert result[2] == expression
+
+
 def test_report_and_notices_preserve_blocking_findings(tmp_path: Path) -> None:
     sbom = tmp_path / "image.spdx.json"
     sbom.write_text(
