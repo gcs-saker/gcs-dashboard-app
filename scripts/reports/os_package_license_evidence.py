@@ -74,12 +74,20 @@ def unknown_packages(report_path: Path) -> list[str]:
 
 
 def copyright_record(image: str, package: str) -> dict[str, object]:
-    path = f"/usr/share/doc/{package}/copyright"
-    result = subprocess.run(
-        ["docker", "run", "--rm", "--entrypoint", "cat", image, path],
-        check=False,
-        capture_output=True,
-    )
+    paths = [f"/usr/share/doc/{package}/copyright", f"/usr/share/licenses/{package}/COPYRIGHT"]
+    result = None
+    path = paths[0]
+    for candidate in paths:
+        attempted = subprocess.run(
+            ["docker", "run", "--rm", "--entrypoint", "cat", image, candidate],
+            check=False,
+            capture_output=True,
+        )
+        if attempted.returncode == 0:
+            path, result = candidate, attempted
+            break
+    if result is None:
+        result = attempted
     if result.returncode:
         return {"package": package, "path": path, "status": "MISSING"}
     labels = declared_license_labels(result.stdout.decode("utf-8", errors="replace"))

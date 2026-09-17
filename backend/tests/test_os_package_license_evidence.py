@@ -22,6 +22,13 @@ def test_os_package_name_decodes_exact_purl() -> None:
     assert module.package_name("pkg:golang/example@v1") is None
 
 
+def test_collector_supports_debian_and_alpine_license_locations() -> None:
+    source = SCRIPT.read_text(encoding="utf-8")
+
+    assert "/usr/share/doc/{package}/copyright" in source
+    assert "/usr/share/licenses/{package}/COPYRIGHT" in source
+
+
 def test_identical_copyright_files_are_grouped_for_single_review() -> None:
     module = load_module()
     records = [
