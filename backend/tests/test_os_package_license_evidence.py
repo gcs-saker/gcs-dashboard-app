@@ -52,3 +52,15 @@ def test_known_debian_labels_normalize_and_unknown_labels_fail_closed() -> None:
 
     assert normalized == ["GPL-2.0-or-later", "MIT"]
     assert unresolved == ["custom-license"]
+
+
+def test_compound_debian_labels_preserve_spdx_or_and_exception_semantics() -> None:
+    module = load_module()
+
+    normalized, unresolved = module.normalize_debian_labels(["LGPL-3+ or GPL-2+", "GPL-3+ with Autoconf exception"])
+
+    assert normalized == [
+        "GPL-3.0-or-later WITH Autoconf-exception-3.0",
+        "LGPL-3.0-or-later OR GPL-2.0-or-later",
+    ]
+    assert unresolved == []

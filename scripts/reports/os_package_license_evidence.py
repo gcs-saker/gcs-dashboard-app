@@ -34,6 +34,17 @@ SPDX_BY_DEBIAN_LABEL = {
     "LGPL-3+": "LGPL-3.0-or-later",
     "MIT": "MIT",
     "public-domain": "LicenseRef-Public-Domain",
+    "PD": "LicenseRef-Public-Domain",
+    "zlib": "Zlib",
+    "X11": "X11",
+    "Sleepycat": "Sleepycat",
+    "GPLv3+": "GPL-3.0-or-later",
+    "LGPLv2.1+": "LGPL-2.1-or-later",
+    "GFDL-NIV-1.3+": "GFDL-1.3-no-invariants-or-later",
+    "LGPL-3+ or GPL-2+": "LGPL-3.0-or-later OR GPL-2.0-or-later",
+    "LGPLv3+_or_GPLv2+": "LGPL-3.0-or-later OR GPL-2.0-or-later",
+    "GPL-3+ with Autoconf exception": "GPL-3.0-or-later WITH Autoconf-exception-3.0",
+    "GPL-3+-WITH-BISON-EXCEPTION": "GPL-3.0-or-later WITH Bison-exception-2.2",
 }
 
 
