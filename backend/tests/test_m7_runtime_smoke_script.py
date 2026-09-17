@@ -98,3 +98,9 @@ def test_mediamtx_additional_hosts_are_env_driven_for_public_nat_candidates():
     assert "MEDIAMTX_WEBRTC_IPS_FROM_INTERFACES=true" in single_node_env
     assert "MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS=127.0.0.1" in single_node_env
     assert deploy_config.count("clientOnly: true") == 2
+
+
+def test_docker_smoke_removes_the_host_loopback_ice_candidate() -> None:
+    smoke = (REPO_ROOT / "scripts/smoke/m7_single_node_runtime_smoke.sh").read_text(encoding="utf-8")
+
+    assert 'MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS="${GCS_SMOKE_MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS-}"' in smoke
