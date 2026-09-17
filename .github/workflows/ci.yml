@@ -125,6 +125,18 @@ jobs:
           severity-cutoff: high
           only-fixed: true
 
+      - name: Build hardened MQTT runtime image
+        working-directory: .
+        run: docker build -f deploy/mosquitto/Dockerfile.hardened -t gcs-saker-mosquitto:ci deploy/mosquitto
+
+      - name: Scan hardened MQTT runtime image
+        uses: anchore/scan-action@v6
+        with:
+          image: gcs-saker-mosquitto:ci
+          fail-build: true
+          severity-cutoff: high
+          only-fixed: true
+
       - name: Scan reachable vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
