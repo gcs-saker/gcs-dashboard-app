@@ -57,11 +57,15 @@ func (s Server) writeDashboardTalkbackStop(w http.ResponseWriter, r *http.Reques
 }
 
 func (s Server) writeDashboardTalkbackPlayback(w http.ResponseWriter, r *http.Request, streamID string) {
-	talkback, publisherGroupID, _, ok := s.authorizeTalkbackRoute(w, r, streamID, false)
+	talkback, publisherGroupID, decision, ok := s.authorizeTalkbackRoute(w, r, streamID, false)
 	if !ok {
 		return
 	}
-	playbackURLs := s.withPlaybackTokenForGroup(s.playback.Build(talkback), talkback, publisherGroupID)
+	playbackURLs, err := s.withBoundTalkbackPlaybackToken(r.Context(), talkback, publisherGroupID, decision)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPlaybackAuthFailed))
+		return
+	}
 	writeJSON(w, http.StatusOK, streamPlaybackResponse{
 		StreamID: talkback.StreamID, Status: domain.StreamStatusOnline, PlaybackURLs: playbackURLs,
 	})
@@ -86,7 +90,7 @@ func (s Server) authorizeTalkbackRoute(w http.ResponseWriter, r *http.Request, s
 	if sendsAudio {
 		decision, accessError = s.authorizeTalkbackAction(r.Context(), r.Header.Get(authorizationHeader), parsed, "send_talkback")
 	} else {
-		accessError = s.requireStreamAccess(r.Context(), r.Header.Get(authorizationHeader), parsed)
+		decision, accessError = s.authorizeStreamAccess(r.Context(), r.Header.Get(authorizationHeader), parsed)
 	}
 	if accessError != nil {
 		s.writeStreamAccessError(w, accessError)

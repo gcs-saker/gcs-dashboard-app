@@ -88,7 +88,8 @@ func (s Server) authorizeMediaMTXPlayback(w http.ResponseWriter, payload mediaMT
 			payload.Path,
 			time.Now(),
 		)
-		if err != nil || !s.legacyTokenHasActiveScope(token) {
+		validScope := err == nil && s.talkbackPlaybackTokenIsActive(token, time.Now())
+		if !validScope {
 			writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
 			return
 		}
@@ -116,4 +117,11 @@ func (s Server) authorizeMediaMTXPlayback(w http.ResponseWriter, payload mediaMT
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s Server) talkbackPlaybackTokenIsActive(token sessiontoken.Payload, now time.Time) bool {
+	if token.SessionID != "" {
+		return s.validateActivePublishSession(token, now)
+	}
+	return s.legacyTokenHasActiveScope(token)
 }

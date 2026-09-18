@@ -71,7 +71,7 @@ func TestWebRTCSessionControlListsPublishersAndKicksByID(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/v3/webrtcsessions/list":
-			_, _ = w.Write([]byte(`{"items":[{"id":"publisher-1","state":"publish","path":"raw/device/opaque"},{"id":"reader-1","state":"read","path":"raw/device/opaque"}]}`))
+			_, _ = w.Write([]byte(`{"items":[{"id":"publisher-1","state":"publish","path":"raw/device/opaque","query":"publisherToken=opaque"},{"id":"reader-1","state":"read","path":"raw/device/opaque","query":"playbackToken=opaque"}]}`))
 		case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/v3/webrtcsessions/kick/"):
 			kicked = strings.TrimPrefix(r.URL.Path, "/v3/webrtcsessions/kick/")
 			w.WriteHeader(http.StatusNoContent)
@@ -82,8 +82,8 @@ func TestWebRTCSessionControlListsPublishersAndKicksByID(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, server.Client())
-	sessions, err := client.ListWebRTCPublishSessions(context.Background())
-	if err != nil || len(sessions) != 1 || sessions[0].ID != "publisher-1" {
+	sessions, err := client.ListWebRTCSessions(context.Background())
+	if err != nil || len(sessions) != 2 || sessions[0].ID != "publisher-1" || sessions[1].State != "read" {
 		t.Fatalf("unexpected publisher sessions: %#v %v", sessions, err)
 	}
 	if err := client.KickWebRTCSession(context.Background(), sessions[0].ID); err != nil || kicked != "publisher-1" {

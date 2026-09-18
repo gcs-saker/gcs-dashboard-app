@@ -127,10 +127,43 @@ func (s Server) issueBoundTalkbackToken(
 	publisherGroupID string,
 	decision domain.StreamAccessDecision,
 ) (string, error) {
+	session, now, err := s.saveBoundTalkbackSession(ctx, parsed, publisherGroupID, decision)
+	if err != nil {
+		return "", err
+	}
+	return sessiontoken.IssueBound(s.publishToken, session, mediaMTXActionPublish, mustOpaqueToken("jti_"), now)
+}
+
+func (s Server) withBoundTalkbackPlaybackToken(
+	ctx context.Context,
+	parsed domain.ParsedStreamPath,
+	publisherGroupID string,
+	decision domain.StreamAccessDecision,
+) (domain.PlaybackURLs, error) {
+	if s.publishSessions == nil || decision.PrincipalID == "" || decision.SecurityVersion <= 0 {
+		return domain.PlaybackURLs{}, domain.ErrStreamAccessDenied
+	}
+	session, now, err := s.saveBoundTalkbackSession(ctx, parsed, publisherGroupID, decision)
+	if err != nil {
+		return domain.PlaybackURLs{}, err
+	}
+	token, err := sessiontoken.IssueBound(s.publishToken, session, mediaMTXActionPlayback, mustOpaqueToken("jti_"), now)
+	if err != nil {
+		return domain.PlaybackURLs{}, err
+	}
+	return appendPlaybackToken(s.playback.Build(parsed), token), nil
+}
+
+func (s Server) saveBoundTalkbackSession(
+	ctx context.Context,
+	parsed domain.ParsedStreamPath,
+	publisherGroupID string,
+	decision domain.StreamAccessDecision,
+) (domain.PublishSession, time.Time, error) {
 	now := s.now()
 	sessionID, err := secureOpaqueToken("ps_")
 	if err != nil {
-		return "", err
+		return domain.PublishSession{}, now, err
 	}
 	session := domain.PublishSession{
 		SessionID: sessionID, DeviceUUID: "account", SensorID: parsed.SensorID,
@@ -141,9 +174,16 @@ func (s Server) issueBoundTalkbackToken(
 		CreatedAt: now, UpdatedAt: now,
 	}
 	if err := s.publishSessions.Save(ctx, session); err != nil {
-		return "", err
+		return domain.PublishSession{}, now, err
 	}
-	return sessiontoken.IssueDevice(s.publishToken, session, mustOpaqueToken("jti_"), now)
+	return session, now, nil
+}
+
+func appendPlaybackToken(playbackURLs domain.PlaybackURLs, token string) domain.PlaybackURLs {
+	query := playbackTokenQueryKey + "=" + url.QueryEscape(token)
+	playbackURLs.WebRTC += "?" + query
+	playbackURLs.HLS += "?" + query
+	return playbackURLs
 }
 
 func (s Server) iceServerResponses() []iceServerResponse {

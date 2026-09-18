@@ -2,15 +2,17 @@ package mediamtx
 
 import (
 	"context"
-	"errors"
 	"log"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessiontoken"
 )
 
 type WebRTCSessionController interface {
-	ListWebRTCPublishSessions(context.Context) ([]WebRTCPublishSession, error)
+	ListWebRTCSessions(context.Context) ([]WebRTCSession, error)
 	KickWebRTCSession(context.Context, string) error
 }
 
@@ -21,16 +23,18 @@ type PublishSessionRevocationObserver struct {
 	interval  time.Duration
 	timeout   time.Duration
 	now       func() time.Time
+	secret    string
 }
 
 func NewPublishSessionRevocationObserver(
 	control WebRTCSessionController,
 	store domain.PublishSessionStore,
 	validator domain.SessionBindingValidator,
+	secret string,
 	interval time.Duration,
 ) PublishSessionRevocationObserver {
 	return PublishSessionRevocationObserver{
-		control: control, store: store, validator: validator, interval: interval,
+		control: control, store: store, validator: validator, secret: secret, interval: interval,
 		timeout: 2 * time.Second, now: time.Now,
 	}
 }
@@ -51,7 +55,7 @@ func (o PublishSessionRevocationObserver) Run(ctx context.Context) {
 func (o PublishSessionRevocationObserver) reconcile(ctx context.Context) {
 	queryContext, cancel := context.WithTimeout(ctx, o.timeout)
 	defer cancel()
-	sessions, err := o.control.ListWebRTCPublishSessions(queryContext)
+	sessions, err := o.control.ListWebRTCSessions(queryContext)
 	if err != nil {
 		log.Printf("publish_session_revocation result=list_failed error_type=%T", err)
 		return
@@ -61,19 +65,17 @@ func (o PublishSessionRevocationObserver) reconcile(ctx context.Context) {
 	}
 }
 
-func (o PublishSessionRevocationObserver) reconcileSession(ctx context.Context, active WebRTCPublishSession) {
+func (o PublishSessionRevocationObserver) reconcileSession(ctx context.Context, active WebRTCSession) {
 	parsed, err := domain.ParseStreamPath(active.Path)
 	if err != nil {
 		return
 	}
-	session, err := o.store.FindByStream(ctx, parsed.StreamID)
-	if errors.Is(err, domain.ErrPublishSessionNotFound) {
+	token, managed, tokenErr := o.boundSessionToken(active, parsed)
+	if !managed {
 		return
 	}
-	if err == nil && session.Path == active.Path && session.ActiveAt(o.now()) && o.validator != nil {
-		if o.validator.ValidateSessionBinding(ctx, session) == nil {
-			return
-		}
+	if tokenErr == nil && o.sessionBindingIsCurrent(ctx, active, token) {
+		return
 	}
 	kickContext, cancel := context.WithTimeout(ctx, o.timeout)
 	defer cancel()
@@ -82,4 +84,42 @@ func (o PublishSessionRevocationObserver) reconcileSession(ctx context.Context, 
 		return
 	}
 	log.Printf("publish_session_revocation result=revoked")
+}
+
+func (o PublishSessionRevocationObserver) sessionBindingIsCurrent(
+	ctx context.Context,
+	active WebRTCSession,
+	token sessiontoken.Payload,
+) bool {
+	session, err := o.store.Find(ctx, token.SessionID)
+	if err != nil || session.Path != active.Path || !session.ActiveAt(o.now()) {
+		return false
+	}
+	if !sessiontoken.MatchesSession(token, session) || o.validator == nil {
+		return false
+	}
+	return o.validator.ValidateSessionBinding(ctx, session) == nil
+}
+
+func (o PublishSessionRevocationObserver) boundSessionToken(
+	active WebRTCSession,
+	parsed domain.ParsedStreamPath,
+) (sessiontoken.Payload, bool, error) {
+	values, err := url.ParseQuery(strings.TrimPrefix(active.Query, "?"))
+	if err != nil {
+		return sessiontoken.Payload{}, true, err
+	}
+	action, key := "playback", "playbackToken"
+	if active.State == "publish" {
+		action, key = "publish", "publisherToken"
+	}
+	raw := values.Get(key)
+	if raw == "" {
+		return sessiontoken.Payload{}, false, nil
+	}
+	token, err := sessiontoken.ValidateForRoute(o.secret, raw, action, parsed.StreamID, active.Path, o.now())
+	if err != nil {
+		return sessiontoken.Payload{}, true, err
+	}
+	return token, token.SessionID != "", nil
 }
