@@ -230,7 +230,7 @@ func (s Server) validateActivePublishSession(payload sessiontoken.Payload, now t
 	if err != nil || current.SessionID != session.SessionID {
 		return false
 	}
-	if s.sessionValidator != nil && (session.CredentialVersion > 0 || session.BindingType == "account") {
+	if s.sessionValidator != nil && session.CredentialVersion > 0 {
 		if err := s.sessionValidator.ValidateSessionBinding(ctx, session); err != nil {
 			return false
 		}
