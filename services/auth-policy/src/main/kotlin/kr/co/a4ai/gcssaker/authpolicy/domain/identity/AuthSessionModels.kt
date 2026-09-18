@@ -21,7 +21,7 @@ class AuthSessionService(
 ) {
     fun login(username: String, password: String, mfaCode: String? = null): IssuedTokenSet? {
         val user = users.findByUsername(username) ?: return null
-        if (!user.active || !isGroupActive(user.groupId)) return null
+        if (!canAuthenticate(user)) return null
         if (!passwordHasher.verify(password, user.passwordHash)) {
             return null
         }
@@ -34,7 +34,7 @@ class AuthSessionService(
         val verified = tokenService.verifyRefreshTokenWithTtl(refreshToken)
         val principal = authoritativePrincipal(refreshToken, verified.principal) ?: return null
         val user = users.findByUsername(principal.username) ?: return null
-        if (!user.active || !isGroupActive(user.groupId) || user.securityVersion != principal.securityVersion) return null
+        if (!canAuthenticate(user) || user.securityVersion != principal.securityVersion) return null
         return issueTokens(user.principal(), verified.sessionExpiresAt)
     }
 
@@ -49,7 +49,7 @@ class AuthSessionService(
         val verified = tokenService.verifyAccessTokenWithTtl(accessToken)
         val currentUser = users.findByUsername(verified.principal.username)
             ?: throw IllegalArgumentException("user is not active")
-        require(currentUser.active && isGroupActive(currentUser.groupId) && currentUser.securityVersion == verified.principal.securityVersion) {
+        require(canAuthenticate(currentUser) && currentUser.securityVersion == verified.principal.securityVersion) {
             "access token security version is stale"
         }
         principalCache.putAccessPrincipal(
@@ -99,4 +99,7 @@ class AuthSessionService(
         hierarchyRepository?.let { repository ->
             runCatching { repository.current().contains(groupId) }.getOrDefault(false)
         } ?: true
+
+    private fun canAuthenticate(user: AuthUser): Boolean =
+        user.active && (user.role == UserRole.ADMIN || isGroupActive(user.groupId))
 }

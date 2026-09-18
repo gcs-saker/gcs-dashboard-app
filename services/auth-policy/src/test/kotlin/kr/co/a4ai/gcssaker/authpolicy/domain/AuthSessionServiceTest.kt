@@ -182,6 +182,25 @@ class AuthSessionServiceTest {
     }
 
     @Test
+    fun `system administrator can recover an inactive assigned group`() {
+        val group = OrganizationUnit(GroupId("co-a"), "A", GroupType.COMPANY, status = GroupStatus.INACTIVE)
+        val admin = AuthUser(
+            username = "recovery-admin", email = "recovery-admin@example.test",
+            passwordHash = passwordHasher.hash("recovery-password"), role = UserRole.ADMIN, groupId = group.id,
+        )
+        val repository = InMemoryAuthUserRepository(listOf(admin))
+        val scopedService = AuthSessionService(
+            repository, passwordHasher, tokenService, principalCache, refreshSessions,
+            InMemoryOrganizationHierarchyRepository(listOf(group)),
+        )
+
+        val tokens = scopedService.login(admin.username, "recovery-password")
+
+        assertNotNull(tokens)
+        assertEquals(UserRole.ADMIN, scopedService.verifyAccessToken(tokens.accessToken).role)
+    }
+
+    @Test
     fun `user repository save is synchronized for concurrent duplicate username writes`() {
         val repository: AuthUserRepository = InMemoryAuthUserRepository(emptyList())
         val executor = Executors.newFixedThreadPool(2)

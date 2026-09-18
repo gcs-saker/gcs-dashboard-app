@@ -45,8 +45,19 @@ class MediaPolicyRpcTest {
         assertEquals(Status.Code.PERMISSION_DENIED, Status.fromThrowable(requireNotNull(disabled.error)).code)
     }
 
-    private fun accountBinding(version: Long) = AccountBindingInput.newBuilder()
-        .setPrincipalId("publisher").setGroupId("child").setSecurityVersion(version).build()
+    @Test
+    fun `account binding RPC rejects group reassignment and security version changes`() {
+        val staleVersion = Capture<AccountBindingOutput>()
+        service.validateAccountBinding(accountBinding(2), staleVersion)
+        assertEquals(Status.Code.PERMISSION_DENIED, Status.fromThrowable(requireNotNull(staleVersion.error)).code)
+
+        val staleGroup = Capture<AccountBindingOutput>()
+        service.validateAccountBinding(accountBinding(3, "other"), staleGroup)
+        assertEquals(Status.Code.PERMISSION_DENIED, Status.fromThrowable(requireNotNull(staleGroup.error)).code)
+    }
+
+    private fun accountBinding(version: Long, groupId: String = "child") = AccountBindingInput.newBuilder()
+        .setPrincipalId("publisher").setGroupId(groupId).setSecurityVersion(version).build()
 
     @Test
     fun `allowed area RPC returns deterministic current group snapshot`() {
