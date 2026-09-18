@@ -22,7 +22,7 @@ DEFAULT_PROJECT_NAME = "gcs-saker-mqtt-profile-smoke"
 CLIENT_IMAGE = "eclipse-mosquitto:2"
 BACKEND_USER = "gcs_backend_pub"
 MEDIA_CONTROL_USER = "gcs_media_control"
-DEVICE_USER = "gcs_device_gateway"
+DEVICE_USER = "raw.mobile.front"
 BACKEND_PASSWORD = "smoke-backend-pass"
 MEDIA_CONTROL_PASSWORD = "smoke-media-control-pass"
 DEVICE_PASSWORD = "smoke-device-gateway-pass"
@@ -40,6 +40,7 @@ class MqttHardenedProfileConfig:
     override_file: Path | None
     env_file: Path
     project_name: str
+    pki_dir: Path | None = None
 
     def compose_command(self, env_file: Path | None = None) -> list[str]:
         command = [
@@ -90,6 +91,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--env-file", type=Path, default=ENV_FILE)
     parser.add_argument("--project-name", default=DEFAULT_PROJECT_NAME)
+    parser.add_argument("--pki-dir", type=Path)
     return parser
 
 
@@ -154,6 +156,7 @@ def main() -> int:
         override_file=args.override_file,
         env_file=args.env_file,
         project_name=args.project_name,
+        pki_dir=args.pki_dir,
     )
 
     if args.check or not args.run:
@@ -176,7 +179,9 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
         command_received = tmp_dir / "command.received.txt"
 
         write_password_file(password_file)
-        write_generated_env(config.env_file, generated_env, password_file)
+        if config.pki_dir is None or not config.pki_dir.is_dir():
+            raise RuntimeError("--pki-dir with ephemeral MQTT certificates is required")
+        write_generated_env(config.env_file, generated_env, password_file, config.pki_dir)
         write_telemetry_payload(telemetry_payload)
         command_payload.write_text("return-to-base", encoding="utf-8")
 
@@ -192,7 +197,7 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
                 "-h",
                 "mqtt",
                 "-p",
-                "1883",
+                "8883",
                 "-t",
                 "$SYS/broker/version",
                 "-C",
@@ -250,11 +255,24 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
                 )
             )
 
+            run_checked([*config.compose_command(generated_env), "restart", "mqtt"], name="compose.restart")
+            wait_for_mqtt(config)
+            checks.append({"name": "broker.restart.mtls_reconnect", "passed": True})
+
             return {
                 **smoke_contract(config),
                 "passed": True,
                 "checks": checks,
             }
+        except Exception as error:
+            diagnostics = subprocess.run(
+                [*config.compose_command(generated_env), "logs", "--no-color", "--tail", "120", "mqtt"],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            detail = diagnostics.stdout.strip() or diagnostics.stderr.strip() or "no broker diagnostics available"
+            raise RuntimeError(f"MQTT smoke failed before cleanup\n{detail}") from error
         finally:
             run_checked(
                 config.down_command(generated_env),
@@ -303,12 +321,12 @@ def write_password_file(password_file: Path) -> None:
         )
 
 
-def write_generated_env(source: Path, target: Path, password_file: Path) -> None:
+def write_generated_env(source: Path, target: Path, password_file: Path, pki_dir: Path) -> None:
     lines: list[str] = []
     for line in source.read_text(encoding="utf-8").splitlines():
         if line.startswith("COMPOSE_PROJECT_NAME="):
             continue
-        if line.startswith(("MQTT_PASSWORD=", "MQTT_PASSWORD_FILE=", "MQTT_HEALTH_PASSWORD=")):
+        if line.startswith(("MQTT_PASSWORD=", "MQTT_PASSWORD_FILE=", "MQTT_HEALTH_PASSWORD=", "INTERNAL_PKI_DIR=")):
             continue
         lines.append(line)
     lines.extend(
@@ -316,6 +334,7 @@ def write_generated_env(source: Path, target: Path, password_file: Path) -> None
             f"MQTT_PASSWORD={BACKEND_PASSWORD}",
             f"MQTT_PASSWORD_FILE={password_file}",
             f"MQTT_HEALTH_PASSWORD={BACKEND_PASSWORD}",
+            f"INTERNAL_PKI_DIR={pki_dir}",
         ]
     )
     target.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -359,7 +378,7 @@ def wait_for_mqtt(config: MqttHardenedProfileConfig) -> None:
             "-h",
             "mqtt",
             "-p",
-            "1883",
+            "8883",
             "-u",
             BACKEND_USER,
             "-P",
@@ -394,12 +413,14 @@ def subscribe_and_publish(
         config,
         "sh",
         "-lc",
-        'mosquitto_sub -h mqtt -p 1883 -u "$MQTT_USER" -P "$MQTT_PASSWORD" -t "$MQTT_TOPIC" -C 1 -W 8 -N > "$MQTT_OUTPUT"',
+        'mosquitto_sub -h mqtt -p 8883 --cafile /pki/ca.crt --cert "$MQTT_CERT" --key "$MQTT_KEY" -t "$MQTT_TOPIC" -C 1 -W 8 -N > "$MQTT_OUTPUT"',
         env={
             "MQTT_USER": subscriber_user,
             "MQTT_PASSWORD": subscriber_password,
             "MQTT_TOPIC": topic,
             "MQTT_OUTPUT": f"/work/{output_path.name}",
+            "MQTT_CERT": f"/pki/{certificate_base(subscriber_user)}.crt",
+            "MQTT_KEY": f"/pki/{certificate_base(subscriber_user)}.key",
         },
         work_dir=output_path.parent,
     )
@@ -410,7 +431,7 @@ def subscribe_and_publish(
         "-h",
         "mqtt",
         "-p",
-        "1883",
+        "8883",
         "-u",
         publisher_user,
         "-P",
@@ -457,13 +478,31 @@ def client_command(
     env: dict[str, str] | None = None,
 ) -> list[str]:
     command = ["docker", "run", "--rm", "--network", config.network_name()]
+    if config.pki_dir is None:
+        raise RuntimeError("MQTT client PKI directory is required")
+    command.extend(["-v", f"{config.pki_dir}:/pki:ro"])
     if work_dir is not None:
         command.extend(["-v", f"{work_dir}:/work"])
     for key, value in (env or {}).items():
         command.extend(["-e", f"{key}={value}"])
     command.append(CLIENT_IMAGE)
-    command.extend(args)
+    command.append(args[0])
+    if args[0] == "sh":
+        command.extend(args[1:])
+        return command
+    command.extend(["--cafile", "/pki/ca.crt"])
+    username = args[args.index("-u") + 1] if "-u" in args else ""
+    certificate = certificate_base(username) if username else ""
+    if certificate:
+        command.extend(["--cert", f"/pki/{certificate}.crt", "--key", f"/pki/{certificate}.key"])
+    command.extend(args[1:])
     return command
+
+
+def certificate_base(username: str) -> str:
+    return {BACKEND_USER: "backend", MEDIA_CONTROL_USER: "media-control", DEVICE_USER: f"device-{DEVICE_USER}"}[
+        username
+    ]
 
 
 def assert_bytes_equal(name: str, actual: bytes, expected: bytes) -> dict[str, Any]:
