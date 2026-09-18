@@ -63,6 +63,7 @@ const (
 	readyCheckStreamRegistry         = "stream_registry"
 	readyCheckIceServers             = "ice_servers"
 	readyCheckGrpcGateway            = "grpc_gateway"
+	readyCheckPublishSessions        = "publish_sessions"
 	errStreamRegistryQueryFailed     = "stream registry query failed"
 	errNoHealthyIceServers           = "no healthy ICE servers available"
 	errGrpcGatewayUnavailable        = "grpc gateway unavailable"
