@@ -7,6 +7,12 @@
   color: #dce8f4;
 }
 
+.local-webcam-publisher,
+.local-webcam-publisher * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
 .local-webcam-publisher__header {
   display: flex;
   flex-wrap: wrap;
@@ -27,6 +33,10 @@
   border: 1px solid rgba(126, 180, 222, 0.45);
   background: rgba(5, 9, 15, 0.78);
   font-size: 12px;
+}
+
+.local-webcam-publisher__whip {
+  overflow-wrap: anywhere;
 }
 
 .local-webcam-publisher__controls {

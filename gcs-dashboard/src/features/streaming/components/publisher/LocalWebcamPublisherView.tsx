@@ -43,11 +43,14 @@ export interface LocalWebcamPublisherViewProps {
   streamTargets: PublisherStreamTarget[];
   videoInputs: MediaDeviceInfo[];
   videoRef: RefObject<HTMLVideoElement | null>;
+  reconnectAttempt: number;
+  lastRecoveryMs: number | null;
 }
 
 export function LocalWebcamPublisherView(props: LocalWebcamPublisherViewProps) {
   return (
-    <main className="local-webcam-publisher" aria-label="Local webcam WebRTC test publisher">
+    <main className="local-webcam-publisher" aria-label="Local webcam WebRTC test publisher"
+      data-reconnect-attempt={props.reconnectAttempt} data-last-recovery-ms={props.lastRecoveryMs ?? ""}>
       <header className="local-webcam-publisher__header">
         <h1>로컬 웹캠 송출</h1>
         <span className="local-webcam-publisher__badge" role="status" aria-live="polite">{getStatusLabel(props.status)}</span>
@@ -83,6 +86,9 @@ export function LocalWebcamPublisherView(props: LocalWebcamPublisherViewProps) {
       />
       <video ref={props.videoRef} className="local-webcam-publisher__video" aria-label="Local camera preview" autoPlay muted playsInline />
       <p className="local-webcam-publisher__status-detail" aria-live="polite">{getStatusDetail(props.status)}</p>
+	  <p className="local-webcam-publisher__recovery-evidence">
+	    재연결 {props.reconnectAttempt}회 / 최근 복구 {props.lastRecoveryMs === null ? "대기" : `${props.lastRecoveryMs} ms`}
+	  </p>
       <p className={`local-webcam-publisher__gps local-webcam-publisher__gps--${props.gpsStatus}`} aria-live="polite">
         GPS: {getGpsStatusLabel(props.gpsStatus)} / {props.gpsDetail}
       </p>

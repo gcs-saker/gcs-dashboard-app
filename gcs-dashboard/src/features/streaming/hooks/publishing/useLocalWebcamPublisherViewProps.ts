@@ -64,5 +64,7 @@ export function useLocalWebcamPublisherViewProps(input: UseLocalWebcamPublisherV
     streamTargets,
     videoInputs,
     videoRef: runtime.videoRef,
+	  reconnectAttempt: runtime.reconnectAttemptRef.current,
+	  lastRecoveryMs: runtime.lastRecoveryMsRef.current,
   }), [audioInputs, deviceStatus, gpsDetail, gpsStatus, onPublish, onRefreshMediaDevices, onResetCapture, onStartPreview, onStop, runtime, selectedStreamTarget, selectedWhipUrl, steps, streamTargets, videoInputs]);
 }

@@ -14,12 +14,14 @@ interface PublisherWhipPublishInput {
   startGpsTelemetry: () => void;
   stopGpsTelemetry: () => void;
   streamId: string;
+  scheduleReconnect: (message: string) => void;
   updateStatus: (status: WebcamPublisherStatus) => void;
 }
 
 export function usePublisherWhipPublish(input: PublisherWhipPublishInput) {
   return useCallback(async (): Promise<void> => {
     const { runtime } = input;
+	const wasReconnecting = runtime.statusRef.current === "reconnecting";
     if (!runtime.streamRef.current) {
       updatePublishError(runtime, input.updateStatus, "camera", "송출 전 카메라 미리보기를 먼저 준비해야 합니다.");
       return;
@@ -38,6 +40,10 @@ export function usePublisherWhipPublish(input: PublisherWhipPublishInput) {
         streamId: input.streamId,
       });
       runtime.setErrorMessage(null);
+	  if (runtime.reconnectStartedAtRef.current !== null) {
+	    runtime.lastRecoveryMsRef.current = Math.round(performance.now() - runtime.reconnectStartedAtRef.current);
+	    runtime.reconnectStartedAtRef.current = null;
+	  }
       runtime.reconnectAttemptRef.current = 0;
       input.updateStatus("published");
       input.startGpsTelemetry();
@@ -46,6 +52,10 @@ export function usePublisherWhipPublish(input: PublisherWhipPublishInput) {
       input.stopGpsTelemetry();
       const step = error instanceof PublisherWhipSessionError ? error.step : "media";
       const message = error instanceof Error ? error.message : "로컬 웹캠 송출에 실패했습니다.";
+	  if (wasReconnecting && navigator.onLine && document.visibilityState === "visible") {
+	    input.scheduleReconnect(message);
+	    return;
+	  }
       updatePublishError(runtime, input.updateStatus, step, message);
     }
   }, [input]);

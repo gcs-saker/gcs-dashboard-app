@@ -147,4 +147,71 @@ describe("LocalWebcamPublisher telemetry and recovery", () => {
       expect.objectContaining({ method: "POST" }),
     );
   });
+
+  test("defers reconnect while offline and resumes once the mobile network returns", async () => {
+    const mediaStream = { getTracks: () => [{ stop: vi.fn() }] } as unknown as MediaStream;
+    const mediaDevices = { getUserMedia: vi.fn(async () => mediaStream) } as unknown as MediaDevices;
+    const firstPeerConnection = createPeerConnectionMock();
+    const secondPeerConnection = createPeerConnectionMock();
+    const peerConnectionFactory = vi.fn()
+      .mockReturnValueOnce(firstPeerConnection)
+      .mockReturnValueOnce(secondPeerConnection);
+
+    render(
+      <LocalWebcamPublisher
+        mediaDevices={mediaDevices}
+        peerConnectionFactory={peerConnectionFactory}
+        fetcher={createPublisherFetcher()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("미리보기 준비"));
+    fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"));
+
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    window.dispatchEvent(new Event("offline"));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("재연결 중"));
+    await new Promise((resolve) => window.setTimeout(resolve, 1_100));
+    expect(peerConnectionFactory).toHaveBeenCalledTimes(1);
+
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+    window.dispatchEvent(new Event("online"));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"), { timeout: 2_000 });
+    expect(peerConnectionFactory).toHaveBeenCalledTimes(2);
+	const publisher = screen.getByRole("main", { name: "Local webcam WebRTC test publisher" });
+	expect(publisher).toHaveAttribute("data-reconnect-attempt", "0");
+	expect(Number(publisher.getAttribute("data-last-recovery-ms"))).toBeGreaterThanOrEqual(1_000);
+  });
+
+  test("defers a dropped connection while backgrounded and resumes when visible", async () => {
+    const mediaStream = { getTracks: () => [{ stop: vi.fn() }] } as unknown as MediaStream;
+    const mediaDevices = { getUserMedia: vi.fn(async () => mediaStream) } as unknown as MediaDevices;
+    const firstPeerConnection = createPeerConnectionMock();
+    const peerConnectionFactory = vi.fn()
+      .mockReturnValueOnce(firstPeerConnection)
+      .mockReturnValueOnce(createPeerConnectionMock());
+    render(
+      <LocalWebcamPublisher
+        mediaDevices={mediaDevices}
+        peerConnectionFactory={peerConnectionFactory}
+        fetcher={createPublisherFetcher()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("미리보기 준비"));
+    fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"));
+
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    firstPeerConnection.disconnect();
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("재연결 중"));
+    await new Promise((resolve) => window.setTimeout(resolve, 1_100));
+    expect(peerConnectionFactory).toHaveBeenCalledTimes(1);
+
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    document.dispatchEvent(new Event("visibilitychange"));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"), { timeout: 2_000 });
+    expect(peerConnectionFactory).toHaveBeenCalledTimes(2);
+  });
 });

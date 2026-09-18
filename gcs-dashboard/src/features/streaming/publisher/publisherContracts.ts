@@ -27,6 +27,7 @@ export interface PublisherStreamTarget {
 export const ICE_GATHERING_TIMEOUT_MS = 5_000;
 export const MEDIA_CONNECTION_TIMEOUT_MS = 8_000;
 export const RECONNECT_DELAYS_MS = [1_000, 2_000, 5_000] as const;
+export const MAX_RECONNECT_ATTEMPTS = RECONNECT_DELAYS_MS.length;
 export const DEFAULT_CAMERA_DEVICE_ID = "__default_camera__";
 export const FRONT_CAMERA_DEVICE_ID = "__front_camera__";
 export const REAR_CAMERA_DEVICE_ID = "__rear_camera__";

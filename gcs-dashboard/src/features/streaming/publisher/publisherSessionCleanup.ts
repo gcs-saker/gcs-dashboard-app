@@ -5,6 +5,8 @@ interface CurrentRef<T> {
 export interface PublisherSessionRefs {
   peerConnectionRef: CurrentRef<RTCPeerConnection | null>;
   reconnectAttemptRef: CurrentRef<number>;
+  reconnectStartedAtRef?: CurrentRef<number | null>;
+  lastRecoveryMsRef?: CurrentRef<number | null>;
   reconnectTimeoutRef: CurrentRef<number | null>;
   streamRef: CurrentRef<MediaStream | null>;
   videoRef: CurrentRef<HTMLVideoElement | null>;
@@ -34,6 +36,8 @@ export function clearPublisherSession(
   }
   if (resolved.resetReconnectAttempt) {
     refs.reconnectAttemptRef.current = 0;
+	if (refs.reconnectStartedAtRef) refs.reconnectStartedAtRef.current = null;
+	if (refs.lastRecoveryMsRef) refs.lastRecoveryMsRef.current = null;
   }
   closePublisherPeerConnection(refs.peerConnectionRef);
   if (resolved.stopTracks) {
