@@ -35,6 +35,7 @@ type StreamAccessDecision struct {
 	ExpiresAt        *time.Time `json:"expiresAt,omitempty"`
 	PolicyVersion    string     `json:"policyVersion,omitempty"`
 	PrincipalVersion string     `json:"principalVersion,omitempty"`
+	SecurityVersion  int64      `json:"securityVersion,omitempty"`
 }
 
 func AllowStream(streamID string, reason string) StreamAccessDecision {

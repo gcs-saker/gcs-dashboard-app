@@ -48,6 +48,7 @@ message StreamAccessOutput {
   string principal_id = 3;
   string group_id = 4;
   int64 expires_unix_millis = 5;
+  int64 security_version = 6;
 }
 message DevicePublishInput { string device_uuid = 1; string credential = 2; string sensor_id = 3; }
 message AccountPublishInput { string authorization = 1; string sensor_id = 2; }

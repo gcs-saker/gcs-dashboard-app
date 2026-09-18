@@ -62,7 +62,11 @@ func (f fakeAuthorizer) AuthorizeStream(
 	if err, ok := f.errByStream[target.StreamID]; ok {
 		return domain.DenyStream(target.StreamID, err.Error()), err
 	}
-	return domain.AllowStream(target.StreamID, "test allow"), nil
+	decision := domain.AllowStream(target.StreamID, "test allow")
+	decision.PrincipalID = "test-operator"
+	decision.GroupID = "co-a"
+	decision.SecurityVersion = 1
+	return decision, nil
 }
 
 type fakeDevicePublisher struct {

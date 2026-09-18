@@ -23,7 +23,8 @@ class MediaPolicyRpcService(
         }
         StreamAccessOutput.newBuilder().setAllowed(decision.allowed).setStreamId(request.streamId)
             .setPrincipalId(principal.username).setGroupId(principal.groupId.value)
-            .setExpiresUnixMillis(Instant.now().plusSeconds(2).toEpochMilli()).build()
+            .setExpiresUnixMillis(Instant.now().plusSeconds(2).toEpochMilli())
+            .setSecurityVersion(principal.securityVersion).build()
     }
 
     override fun authorizeDevicePublish(request: DevicePublishInput, response: StreamObserver<PublishBindingOutput>) = reply(response) {

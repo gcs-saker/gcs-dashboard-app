@@ -57,7 +57,7 @@ func (s Server) writeDashboardTalkbackStop(w http.ResponseWriter, r *http.Reques
 }
 
 func (s Server) writeDashboardTalkbackPlayback(w http.ResponseWriter, r *http.Request, streamID string) {
-	talkback, publisherGroupID, ok := s.authorizeTalkbackRoute(w, r, streamID, false)
+	talkback, publisherGroupID, _, ok := s.authorizeTalkbackRoute(w, r, streamID, false)
 	if !ok {
 		return
 	}
@@ -68,40 +68,41 @@ func (s Server) writeDashboardTalkbackPlayback(w http.ResponseWriter, r *http.Re
 }
 
 func (s Server) writeDashboardTalkbackPublish(w http.ResponseWriter, r *http.Request, streamID string) {
-	talkback, publisherGroupID, ok := s.authorizeTalkbackRoute(w, r, streamID, true)
+	talkback, publisherGroupID, decision, ok := s.authorizeTalkbackRoute(w, r, streamID, true)
 	if !ok {
 		return
 	}
-	s.writeStreamPublishResponseForGroup(w, talkback, publisherGroupID)
+	s.writeBoundTalkbackPublishResponse(w, r, talkback, publisherGroupID, decision)
 }
 
-func (s Server) authorizeTalkbackRoute(w http.ResponseWriter, r *http.Request, streamID string, sendsAudio bool) (domain.ParsedStreamPath, string, bool) {
+func (s Server) authorizeTalkbackRoute(w http.ResponseWriter, r *http.Request, streamID string, sendsAudio bool) (domain.ParsedStreamPath, string, domain.StreamAccessDecision, bool) {
 	parsed, err := domain.ParseStreamID(streamID)
 	if err != nil || parsed.Prefix != "raw" {
 		writeJSON(w, http.StatusUnprocessableEntity, errorPayload("talkback target must be a raw stream"))
-		return domain.ParsedStreamPath{}, "", false
+		return domain.ParsedStreamPath{}, "", domain.StreamAccessDecision{}, false
 	}
 	var accessError error
+	var decision domain.StreamAccessDecision
 	if sendsAudio {
-		accessError = s.requireTalkbackSendAccess(r.Context(), r.Header.Get(authorizationHeader), parsed)
+		decision, accessError = s.authorizeTalkbackAction(r.Context(), r.Header.Get(authorizationHeader), parsed, "send_talkback")
 	} else {
 		accessError = s.requireStreamAccess(r.Context(), r.Header.Get(authorizationHeader), parsed)
 	}
 	if accessError != nil {
 		s.writeStreamAccessError(w, accessError)
-		return domain.ParsedStreamPath{}, "", false
+		return domain.ParsedStreamPath{}, "", domain.StreamAccessDecision{}, false
 	}
 	talkback, err := domain.ParseStreamPath("talkback/" + parsed.Path + "/" + serverOwnedTalkbackChannel)
 	if err != nil {
 		writeJSON(w, http.StatusUnprocessableEntity, errorPayload("operator id is invalid"))
-		return domain.ParsedStreamPath{}, "", false
+		return domain.ParsedStreamPath{}, "", domain.StreamAccessDecision{}, false
 	}
 	target, err := s.resolveStreamTarget(r.Context(), parsed)
 	if err != nil {
 		s.writeStreamAccessError(w, err)
-		return domain.ParsedStreamPath{}, "", false
+		return domain.ParsedStreamPath{}, "", domain.StreamAccessDecision{}, false
 	}
-	return talkback, target.PublisherGroupID, true
+	return talkback, target.PublisherGroupID, decision, true
 }
 
 func (s Server) writeDashboardStreamPublish(w http.ResponseWriter, r *http.Request, streamID string) {
