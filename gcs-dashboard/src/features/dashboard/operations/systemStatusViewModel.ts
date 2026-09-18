@@ -72,9 +72,19 @@ function buildImpactItems(status: DashboardServerStatusSnapshot): SystemImpactIt
   return [
     ["API", status.apiServer, status.apiServer === DASHBOARD_SERVER_HEALTH.online ? "조회/제어 정상" : "대시보드 데이터 지연 가능"],
     ["Auth", status.authServer, status.authServer === DASHBOARD_SERVER_HEALTH.online ? "세션 확인 정상" : "로그인/토큰 갱신 영향"],
-    ["Signaling", status.signalingServer, status.signalingServer === DASHBOARD_SERVER_HEALTH.online ? "WHIP/WHEP 정상" : "신규 스트림 연결 영향"],
+    ["Signaling", status.signalingServer, signalingImpact(status)],
     ["Streams", status.streams, status.streams === DASHBOARD_SERVER_HEALTH.online ? "Registry 정상" : "스트림 목록/상태 반영 지연"],
   ];
+}
+
+function signalingImpact(status: DashboardServerStatusSnapshot): string {
+  if (status.signalingServer === DASHBOARD_SERVER_HEALTH.online) return "WHIP/WHEP 정상";
+  switch (status.signalingReason) {
+    case "store_unavailable": return "세션 저장소 조회 실패";
+    case "scan_truncated": return "세션 조사 한도 초과";
+    case "session_age_exceeded": return "세션 정리 지연";
+    default: return "신규 스트림 연결 영향";
+  }
 }
 
 function formatCheckedAt(checkedAt: number | null): string {

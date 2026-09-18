@@ -23,6 +23,10 @@ type GatewayReadiness interface {
 	Ready() (bool, string)
 }
 
+type PublishSessionReadiness interface {
+	Ready() (bool, string)
+}
+
 type StreamAuthorizer interface {
 	AuthorizeStream(
 		ctx context.Context,
@@ -69,9 +73,15 @@ type publishEndpoints struct {
 }
 
 type operationalEndpoints struct {
-	metrics *Metrics
-	gateway GatewayReadiness
-	now     func() time.Time
+	metrics                 *Metrics
+	gateway                 GatewayReadiness
+	publishSessionReadiness PublishSessionReadiness
+	now                     func() time.Time
+}
+
+func (s Server) WithPublishSessionReadiness(readiness PublishSessionReadiness) Server {
+	s.publishSessionReadiness = readiness
+	return s
 }
 
 func NewServer(

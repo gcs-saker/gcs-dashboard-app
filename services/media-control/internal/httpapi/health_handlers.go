@@ -25,6 +25,9 @@ func (s Server) readyz(w http.ResponseWriter, r *http.Request) {
 	if check, ok := s.grpcGatewayReadiness(); ok {
 		checks = append(checks, check)
 	}
+	if check, ok := s.publishSessionsReadiness(); ok {
+		checks = append(checks, check)
+	}
 
 	status, httpStatus := readinessStatus(checks)
 	writeJSON(w, httpStatus, readinessResponse{
@@ -32,6 +35,17 @@ func (s Server) readyz(w http.ResponseWriter, r *http.Request) {
 		Status:  status,
 		Checks:  checks,
 	})
+}
+
+func (s Server) publishSessionsReadiness() (readinessCheck, bool) {
+	if s.publishSessionReadiness == nil {
+		return readinessCheck{}, false
+	}
+	ready, reason := s.publishSessionReadiness.Ready()
+	if !ready {
+		return readinessCheck{Name: readyCheckPublishSessions, Status: healthStatusError, Required: true, Reason: reason}, true
+	}
+	return readinessCheck{Name: readyCheckPublishSessions, Status: healthStatusOK, Required: true}, true
 }
 
 func (s Server) runtimeMetrics(w http.ResponseWriter, _ *http.Request) {
