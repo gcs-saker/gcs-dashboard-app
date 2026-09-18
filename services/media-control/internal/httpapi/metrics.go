@@ -25,6 +25,43 @@ type Metrics struct {
 	talkbackSnapshots      *prometheus.CounterVec
 	talkbackSnapshotTime   *prometheus.HistogramVec
 	talkbackTransitions    *prometheus.CounterVec
+	revocationScans        *prometheus.CounterVec
+	revocationScanDuration *prometheus.HistogramVec
+	revocationActive       prometheus.Gauge
+	revocationOutcomes     *prometheus.CounterVec
+	revocationLatency      *prometheus.HistogramVec
+}
+
+func (m *Metrics) ObserveSessionRevocationScan(err error, elapsed time.Duration, active int) {
+	result := metricResultSuccess
+	if err != nil {
+		result = metricResultError
+		m.ObserveError(metricSourceRevocation, metricErrorSnapshotFailed)
+	}
+	m.revocationScans.WithLabelValues(result).Inc()
+	m.revocationScanDuration.WithLabelValues(result).Observe(elapsed.Seconds())
+	m.revocationActive.Set(float64(active))
+}
+
+func (m *Metrics) ObserveSessionRevocation(kind string, result string, elapsed time.Duration) {
+	m.revocationOutcomes.WithLabelValues(revocationKind(kind), revocationResult(result)).Inc()
+	m.revocationLatency.WithLabelValues(revocationResult(result)).Observe(elapsed.Seconds())
+}
+
+func revocationKind(kind string) string {
+	if kind == "publish" || kind == "read" {
+		return kind
+	}
+	return "unknown"
+}
+
+func revocationResult(result string) string {
+	switch result {
+	case "ignored", "retained", "revoked", "kick_failed", "audit_failed":
+		return result
+	default:
+		return metricResultError
+	}
 }
 
 func NewMetrics() *Metrics {

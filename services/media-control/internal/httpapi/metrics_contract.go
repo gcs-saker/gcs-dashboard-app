@@ -12,6 +12,7 @@ const (
 	metricSourceStream        = "stream_registry"
 	metricSourceIceServers    = "ice_servers"
 	metricSourceTalkback      = "talkback_lifecycle"
+	metricSourceRevocation    = "session_revocation"
 	metricErrorSnapshotFailed = "snapshot_failed"
 	metricErrorAuditFailed    = "audit_sink_failed"
 )

@@ -54,3 +54,27 @@ func TestLifecycleAuditSinkRejectsWeakTokenAndNonSuccess(t *testing.T) {
 		t.Fatal("non-success audit ingest response was ignored")
 	}
 }
+
+func TestLifecycleAuditSinkRecordsSessionRevocation(t *testing.T) {
+	var operation string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatal(err)
+		}
+		operation, _ = payload["operation"].(string)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+	sink, err := NewLifecycleAuditSink(server.URL, "audit-token-with-at-least-32-characters", server.Client())
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = sink.RecordSessionRevocation(context.Background(), mediamtx.SessionRevocationEvent{
+		Reference: "0123456789abcdef0123456789abcdef", GroupID: "co-a",
+		Operation: "media.session.revoked", OccurredAt: time.Unix(10, 0).UTC(),
+	})
+	if err != nil || operation != "media.session.revoked" {
+		t.Fatalf("session revocation audit failed: operation=%q err=%v", operation, err)
+	}
+}
