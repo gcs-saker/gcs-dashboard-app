@@ -29,3 +29,19 @@ func TestClassifyPublishSessionReadiness(t *testing.T) {
 		})
 	}
 }
+
+func TestPublishSessionReadinessReportsOnlyTransitions(t *testing.T) {
+	state := &publishSessionReadiness{ready: true}
+	changed, _ := state.update(false, "store_unavailable")
+	if !changed {
+		t.Fatal("degradation transition was not reported")
+	}
+	changed, _ = state.update(false, "store_unavailable")
+	if changed {
+		t.Fatal("unchanged degradation must not repeat alerts")
+	}
+	changed, previous := state.update(true, "")
+	if !changed || previous != "store_unavailable" {
+		t.Fatal("recovery transition lost its prior reason")
+	}
+}

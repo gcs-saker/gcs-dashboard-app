@@ -3,6 +3,8 @@ package authpolicy
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,6 +20,20 @@ type LifecycleAuditSink struct {
 	baseURL    string
 	token      string
 	httpClient *http.Client
+}
+
+func (s LifecycleAuditSink) RecordPublishSessionHealth(
+	ctx context.Context,
+	degraded bool,
+	reason string,
+	occurredAt time.Time,
+) error {
+	operation := "publish.sessions.recovered"
+	if degraded {
+		operation = "publish.sessions.degraded"
+	}
+	digest := sha256.Sum256([]byte("publish-session-readiness:" + reason))
+	return s.recordMediaLifecycle(ctx, "system", hex.EncodeToString(digest[:16]), operation, occurredAt)
 }
 
 func NewLifecycleAuditSink(baseURL string, token string, httpClient *http.Client) (LifecycleAuditSink, error) {

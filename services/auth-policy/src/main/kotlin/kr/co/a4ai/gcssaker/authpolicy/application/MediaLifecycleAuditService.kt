@@ -67,6 +67,9 @@ class MediaLifecycleAuditService(
         const val MAX_CLOCK_SKEW_SECONDS = 300L
         val GROUP_PATTERN = Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
         val REFERENCE_PATTERN = Regex("^[a-f0-9]{32}$")
-        val OPERATIONS = setOf("talkback.session.started", "talkback.session.disconnected", "media.session.revoked")
+        val OPERATIONS = setOf(
+            "talkback.session.started", "talkback.session.disconnected", "media.session.revoked",
+            "publish.sessions.degraded", "publish.sessions.recovered",
+        )
     }
 }

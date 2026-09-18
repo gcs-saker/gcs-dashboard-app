@@ -78,3 +78,19 @@ func TestLifecycleAuditSinkRecordsSessionRevocation(t *testing.T) {
 		t.Fatalf("session revocation audit failed: operation=%q err=%v", operation, err)
 	}
 }
+
+func TestLifecycleAuditSinkRecordsPublishSessionHealthWithoutReasonLeak(t *testing.T) {
+	var payload map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&payload)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+	sink, _ := NewLifecycleAuditSink(server.URL, "audit-token-with-at-least-32-characters", server.Client())
+	if err := sink.RecordPublishSessionHealth(context.Background(), true, "store_unavailable", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if payload["operation"] != "publish.sessions.degraded" || len(payload["sessionReference"].(string)) != 32 {
+		t.Fatalf("unexpected bounded health audit %#v", payload)
+	}
+}

@@ -67,7 +67,9 @@ func run() error {
 	}
 	publishReadiness := &publishSessionReadiness{ready: true}
 	handler = handler.WithPublishSessionReadiness(publishReadiness)
-	startPublishSessionStatistics(runtimeContext, resources, publishReadiness)
+	if err := startPublishSessionStatistics(runtimeContext, config, resources, publishReadiness); err != nil {
+		return err
+	}
 	stopMQTT, err := startMQTTAdapter(runtimeContext, config)
 	if err != nil {
 		return err
