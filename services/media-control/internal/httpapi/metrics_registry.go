@@ -25,6 +25,9 @@ func newMetricsRegistry() (*prometheus.Registry, *Metrics) {
 		revocationActive:       newRevocationActiveMetric(),
 		revocationOutcomes:     newRevocationOutcomesMetric(),
 		revocationLatency:      newRevocationLatencyMetric(),
+		publishSessionCount:    newPublishSessionCountMetric(),
+		publishSessionOldest:   newPublishSessionOldestMetric(),
+		publishSessionScans:    newPublishSessionScansMetric(),
 	}
 	registry.MustRegister(
 		metrics.httpRequests,
@@ -46,6 +49,9 @@ func newMetricsRegistry() (*prometheus.Registry, *Metrics) {
 		metrics.revocationActive,
 		metrics.revocationOutcomes,
 		metrics.revocationLatency,
+		metrics.publishSessionCount,
+		metrics.publishSessionOldest,
+		metrics.publishSessionScans,
 	)
 	return registry, metrics
 }
