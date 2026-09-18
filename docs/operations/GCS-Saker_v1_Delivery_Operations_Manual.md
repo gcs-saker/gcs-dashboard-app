@@ -1,5 +1,16 @@
 # GCS-Saker v1 delivery operations manual
 
+## Publish-session readiness Runbook
+
+| ID | Trigger | First action | Prohibited action |
+| --- | --- | --- | --- |
+| `RUN-PUB-01` | `store_unavailable` | Check Redis health and the media-control connection, then observe automatic recovery. | Do not manually delete session keys. |
+| `RUN-PUB-02` | `scan_truncated` | Review session growth and expiry trends, then schedule a controlled inspection window. | Do not run unbounded key scans or bulk deletion during operation. |
+| `RUN-PUB-03` | `session_age_exceeded` | Inspect the oldest session and its Redis TTL to determine why expiry did not complete. | Do not terminate sessions without confirming the associated media connection state. |
+
+All three conditions degrade `/media-control/readyz`. Keep `/healthz` available for diagnostics, preserve audit evidence,
+and confirm readiness automatically returns to normal before declaring recovery.
+
 ## Managed target
 
 Only Server-01 through SSH port 55121 is managed. Server-02 is never probed or used as fallback.
