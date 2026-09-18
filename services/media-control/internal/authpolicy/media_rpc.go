@@ -31,7 +31,8 @@ func (c *DeviceRPCClient) AuthorizeStream(ctx context.Context, authorization str
 	}
 	expires := time.UnixMilli(result.ExpiresUnixMillis)
 	decision := domain.StreamAccessDecision{StreamID: result.StreamId, Allowed: result.Allowed,
-		PrincipalID: result.PrincipalId, GroupID: result.GroupId, ExpiresAt: &expires, Reason: "policy_evaluated"}
+		PrincipalID: result.PrincipalId, GroupID: result.GroupId, ExpiresAt: &expires, Reason: "policy_evaluated",
+		SecurityVersion: result.SecurityVersion}
 	if !result.Allowed {
 		return decision, domain.ErrStreamAccessDenied
 	}

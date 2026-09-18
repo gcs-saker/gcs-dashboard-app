@@ -312,6 +312,7 @@ type StreamAccessOutput struct {
 	PrincipalId       string                 `protobuf:"bytes,3,opt,name=principal_id,json=principalId,proto3" json:"principal_id,omitempty"`
 	GroupId           string                 `protobuf:"bytes,4,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
 	ExpiresUnixMillis int64                  `protobuf:"varint,5,opt,name=expires_unix_millis,json=expiresUnixMillis,proto3" json:"expires_unix_millis,omitempty"`
+	SecurityVersion   int64                  `protobuf:"varint,6,opt,name=security_version,json=securityVersion,proto3" json:"security_version,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -377,6 +378,13 @@ func (x *StreamAccessOutput) GetGroupId() string {
 func (x *StreamAccessOutput) GetExpiresUnixMillis() int64 {
 	if x != nil {
 		return x.ExpiresUnixMillis
+	}
+	return 0
+}
+
+func (x *StreamAccessOutput) GetSecurityVersion() int64 {
+	if x != nil {
+		return x.SecurityVersion
 	}
 	return 0
 }
@@ -960,13 +968,14 @@ const file_gcs_saker_v1_device_policy_service_proto_rawDesc = "" +
 	"\tstream_id\x18\x02 \x01(\tR\bstreamId\x12\x12\n" +
 	"\x04path\x18\x03 \x01(\tR\x04path\x12,\n" +
 	"\x12publisher_group_id\x18\x04 \x01(\tR\x10publisherGroupId\x12\x16\n" +
-	"\x06action\x18\x05 \x01(\tR\x06action\"\xb9\x01\n" +
+	"\x06action\x18\x05 \x01(\tR\x06action\"\xe4\x01\n" +
 	"\x12StreamAccessOutput\x12\x18\n" +
 	"\aallowed\x18\x01 \x01(\bR\aallowed\x12\x1b\n" +
 	"\tstream_id\x18\x02 \x01(\tR\bstreamId\x12!\n" +
 	"\fprincipal_id\x18\x03 \x01(\tR\vprincipalId\x12\x19\n" +
 	"\bgroup_id\x18\x04 \x01(\tR\agroupId\x12.\n" +
-	"\x13expires_unix_millis\x18\x05 \x01(\x03R\x11expiresUnixMillis\"r\n" +
+	"\x13expires_unix_millis\x18\x05 \x01(\x03R\x11expiresUnixMillis\x12)\n" +
+	"\x10security_version\x18\x06 \x01(\x03R\x0fsecurityVersion\"r\n" +
 	"\x12DevicePublishInput\x12\x1f\n" +
 	"\vdevice_uuid\x18\x01 \x01(\tR\n" +
 	"deviceUuid\x12\x1e\n" +

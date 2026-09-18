@@ -91,11 +91,20 @@ func (s Server) requireTalkbackAction(
 	parsed domain.ParsedStreamPath,
 	action string,
 ) error {
+	_, err := s.authorizeTalkbackAction(ctx, authorization, parsed, action)
+	return err
+}
+
+func (s Server) authorizeTalkbackAction(
+	ctx context.Context,
+	authorization string,
+	parsed domain.ParsedStreamPath,
+	action string,
+) (domain.StreamAccessDecision, error) {
 	target, err := s.resolveStreamTarget(ctx, parsed)
 	if err != nil {
-		return err
+		return domain.StreamAccessDecision{}, err
 	}
 	target.Action = action
-	_, err = s.authorizer.AuthorizeStream(ctx, authorization, target)
-	return err
+	return s.authorizer.AuthorizeStream(ctx, authorization, target)
 }

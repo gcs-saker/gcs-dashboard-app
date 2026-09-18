@@ -110,7 +110,7 @@ class MediaPolicyRpcTest {
     @Test
     fun `talkback RPC keeps group admin inside exact group scope`() {
         Mockito.`when`(principals.requirePrincipal("Bearer fixture")).thenReturn(
-            AuthenticatedPrincipal("fixture", UserRole.GROUP_ADMIN, GroupId("parent")),
+            AuthenticatedPrincipal("fixture", UserRole.GROUP_ADMIN, GroupId("parent"), securityVersion = 7),
         )
         val ownGroup = Capture<StreamAccessOutput>()
         val descendant = Capture<StreamAccessOutput>()
@@ -119,6 +119,7 @@ class MediaPolicyRpcTest {
         service.authorizeStream(talkbackRequest("child"), descendant)
 
         assertTrue(ownGroup.value?.allowed == true)
+        assertEquals(7, ownGroup.value?.securityVersion)
         assertFalse(descendant.value?.allowed == true)
     }
 

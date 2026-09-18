@@ -98,6 +98,54 @@ func (s Server) writeStreamPublishResponseForGroup(
 	})
 }
 
+func (s Server) writeBoundTalkbackPublishResponse(
+	w http.ResponseWriter,
+	r *http.Request,
+	parsed domain.ParsedStreamPath,
+	publisherGroupID string,
+	decision domain.StreamAccessDecision,
+) {
+	if s.publishSessions == nil || decision.PrincipalID == "" || decision.SecurityVersion <= 0 {
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
+	token, err := s.issueBoundTalkbackToken(r.Context(), parsed, publisherGroupID, decision)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
+	playbackURLs := s.playback.Build(parsed)
+	whipURL := strings.TrimSuffix(playbackURLs.WebRTC, "/whep") + "/whip?" + publisherTokenQueryKey + "=" + url.QueryEscape(token)
+	writeJSON(w, http.StatusOK, streamPublishResponse{
+		StreamID: parsed.StreamID, WhipURL: whipURL, IceServers: s.iceServerResponses(),
+	})
+}
+
+func (s Server) issueBoundTalkbackToken(
+	ctx context.Context,
+	parsed domain.ParsedStreamPath,
+	publisherGroupID string,
+	decision domain.StreamAccessDecision,
+) (string, error) {
+	now := s.now()
+	sessionID, err := secureOpaqueToken("ps_")
+	if err != nil {
+		return "", err
+	}
+	session := domain.PublishSession{
+		SessionID: sessionID, DeviceUUID: "account", SensorID: parsed.SensorID,
+		StreamID: parsed.StreamID, Path: parsed.Path, GroupID: publisherGroupID,
+		CredentialVersion: decision.SecurityVersion, DevicePolicyVersion: 1,
+		PrincipalID: decision.PrincipalID, BindingType: "account", Status: domain.PublishSessionActive,
+		PublishTokenExpiresAt: now.Add(sessiontoken.TTL), RenewalTokenExpiresAt: now.Add(sessiontoken.TTL),
+		CreatedAt: now, UpdatedAt: now,
+	}
+	if err := s.publishSessions.Save(ctx, session); err != nil {
+		return "", err
+	}
+	return sessiontoken.IssueDevice(s.publishToken, session, mustOpaqueToken("jti_"), now)
+}
+
 func (s Server) iceServerResponses() []iceServerResponse {
 	servers := s.healthyIceServers()
 	payload := make([]iceServerResponse, 0, len(servers))

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -70,6 +71,13 @@ func TestDashboardTalkbackPublishUsesServerOwnedShortLivedPath(t *testing.T) {
 		t.Fatalf("unexpected talkback publish URL %v", payload.WhipURL)
 	}
 	assertMediaURLToken(t, payload.WhipURL, publisherTokenQueryKey, mediaMTXActionPublish, "talkback/raw/drone-01/front/operator")
+	session, err := server.publishSessions.FindByStream(context.Background(), "talkback.raw.drone-01.front.operator")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if session.PrincipalID != "test-operator" || session.CredentialVersion != 1 || session.BindingType != "account" {
+		t.Fatalf("talkback publisher was not bound to the authorized account: %#v", session)
+	}
 	if observedTarget.Action != "send_talkback" {
 		t.Fatalf("expected send_talkback authorization action, got %q", observedTarget.Action)
 	}
