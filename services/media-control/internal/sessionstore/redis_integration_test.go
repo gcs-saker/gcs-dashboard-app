@@ -24,6 +24,8 @@ func TestRedisStoreLifecycleAndCancellation(t *testing.T) {
 	if err := store.Save(ctx, session); err != nil {
 		t.Fatal(err)
 	}
+	assertSessionTTL(t, store, ctx, keyPrefix+session.SessionID, time.Hour+sessionExpiryGrace)
+	assertSessionTTL(t, store, ctx, streamIndexKey(session.StreamID), time.Hour+sessionExpiryGrace)
 	loaded, err := store.Find(ctx, session.SessionID)
 	if err != nil || loaded.DeviceUUID != session.DeviceUUID {
 		t.Fatalf("find: %#v %v", loaded, err)
@@ -44,5 +46,17 @@ func TestRedisStoreLifecycleAndCancellation(t *testing.T) {
 	cancel()
 	if _, err := store.Find(cancelled, session.SessionID); !errors.Is(err, domain.ErrPublishSessionStoreUnavailable) {
 		t.Fatalf("cancelled find must expose dependency failure, got %v", err)
+	}
+}
+
+func assertSessionTTL(t *testing.T, store *RedisStore, ctx context.Context, key string, expected time.Duration) {
+	t.Helper()
+	ttl, err := store.client.TTL(ctx, key).Result()
+	if err != nil {
+		t.Fatal(err)
+	}
+	const tolerance = 5 * time.Second
+	if ttl < expected-tolerance || ttl > expected+tolerance {
+		t.Fatalf("unexpected bounded session TTL for key class: got %s want %s +/- %s", ttl, expected, tolerance)
 	}
 }
