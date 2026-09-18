@@ -27,6 +27,7 @@ class InternalMediaAuditControllerTest {
         ).single()
         assertEquals("media-control", event.actorId)
         assertEquals("observed", event.result)
+        assertEquals("security", event.category)
         assertEquals("0123456789abcdef0123456789abcdef", event.message.substringAfter("sessionRef=").substringBefore("]"))
         assertEquals(null, event.streamId)
     }

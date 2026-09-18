@@ -42,7 +42,7 @@ class MediaLifecycleAuditService(
         id = "audit-media-${receivedAt.toEpochMilli()}-$sequence",
         occurredAt = occurredAt,
         severity = "info",
-        category = "audit",
+        category = "security",
         eventType = operation,
         sourceService = "media-control",
         source = "media lifecycle",
