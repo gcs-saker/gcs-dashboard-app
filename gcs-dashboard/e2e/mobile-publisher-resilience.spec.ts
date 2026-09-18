@@ -42,4 +42,9 @@ test("mobile publisher keeps a recoverable UI after permission and network trans
   await expect(page.getByRole("button", { name: "카메라 준비" })).toBeEnabled();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
+
+  await page.reload();
+  await expect(page.getByRole("status")).toContainText("대기");
+  await expect(page.getByRole("button", { name: "카메라 준비" })).toBeEnabled();
+  await expect(page.getByText("마이크 권한이 거부되었습니다.")).toHaveCount(0);
 });
