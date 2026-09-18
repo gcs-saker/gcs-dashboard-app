@@ -49,7 +49,7 @@ export function useLocalWebcamPublisherController({
   }, [runtime]);
   const { clearReconnectTimer, handleConnectionChange, resetCapture, scheduleReconnect, stopAll, suspendReconnect } =
     usePublisherConnectionRecovery(runtime, publishRef, stopGpsTelemetry, updateStatus);
-  usePublisherBrowserRecovery({ runtime, scheduleReconnect, suspendReconnect });
+  usePublisherBrowserRecovery({ runtime, scheduleReconnect, stopAll, suspendReconnect });
   usePublisherTrackLifecycle(runtime, stopGpsTelemetry, updateStatus);
   const startPreview = usePublisherPreview(runtime, mediaDevices, refreshMediaDevices, updateStatus);
   const publish = usePublisherWhipPublish({

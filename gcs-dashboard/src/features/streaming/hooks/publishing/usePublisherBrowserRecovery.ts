@@ -6,12 +6,14 @@ interface PublisherBrowserRecoveryInput {
   runtime: LocalWebcamPublisherRuntime;
   scheduleReconnect: (message: string) => void;
   suspendReconnect: (message: string) => void;
+  stopAll: () => void;
 }
 
 export function usePublisherBrowserRecovery({
   runtime,
   scheduleReconnect,
   suspendReconnect,
+  stopAll,
 }: PublisherBrowserRecoveryInput): void {
   useEffect(() => {
     const suspend = (): void => {
@@ -28,10 +30,12 @@ export function usePublisherBrowserRecovery({
     window.addEventListener("offline", suspend);
     window.addEventListener("online", resume);
     document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pagehide", stopAll);
     return () => {
       window.removeEventListener("offline", suspend);
       window.removeEventListener("online", resume);
       document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("pagehide", stopAll);
     };
-  }, [runtime.statusRef, scheduleReconnect, suspendReconnect]);
+  }, [runtime.statusRef, scheduleReconnect, stopAll, suspendReconnect]);
 }

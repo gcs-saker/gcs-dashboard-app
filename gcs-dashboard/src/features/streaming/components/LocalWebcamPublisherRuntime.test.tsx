@@ -247,4 +247,29 @@ describe("LocalWebcamPublisher telemetry and recovery", () => {
     expect(screen.getByText(/미디어 트랙이 종료/)).toBeInTheDocument();
     expect(track.stop).toHaveBeenCalled();
   });
+
+  test("cleans publisher media and timers on browser pagehide", async () => {
+    const track = { stop: vi.fn() } as unknown as MediaStreamTrack;
+    const mediaDevices = {
+      getUserMedia: vi.fn(async () => ({ getTracks: () => [track] } as unknown as MediaStream)),
+    } as unknown as MediaDevices;
+    const peerConnection = createPeerConnectionMock();
+    render(
+      <LocalWebcamPublisher
+        mediaDevices={mediaDevices}
+        peerConnectionFactory={() => peerConnection}
+        fetcher={createPublisherFetcher()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "카메라 준비" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("미리보기 준비"));
+    fireEvent.click(screen.getByRole("button", { name: "시그널링 시작" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"));
+
+    window.dispatchEvent(new Event("pagehide"));
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("대기"));
+    expect(track.stop).toHaveBeenCalledTimes(1);
+    expect(peerConnection.close).toHaveBeenCalledTimes(1);
+  });
 });
