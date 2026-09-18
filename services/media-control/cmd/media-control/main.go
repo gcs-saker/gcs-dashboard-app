@@ -62,6 +62,9 @@ func run() error {
 	if err := startTalkbackLifecycleObserver(runtimeContext, config, resources.metrics); err != nil {
 		return err
 	}
+	if err := startPublishSessionRevocationObserver(runtimeContext, config, resources); err != nil {
+		return err
+	}
 	stopMQTT, err := startMQTTAdapter(runtimeContext, config)
 	if err != nil {
 		return err
