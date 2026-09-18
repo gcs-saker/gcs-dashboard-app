@@ -13,8 +13,9 @@ class AccountPublishAuthorizationService(private val groupPolicy: GroupPolicySer
         val publisher = "account-$accountId"
         return DevicePublishAuthorization(
             deviceUuid = publisher, streamId = "raw.$publisher.$sensorId", path = "raw/$publisher/$sensorId",
-            sensorId = sensorId, publisherGroupId = principal.groupId, credentialVersion = 0, devicePolicyVersion = 1,
-            reason = "account group authorized",
+            sensorId = sensorId, publisherGroupId = principal.groupId, credentialVersion = principal.securityVersion,
+            devicePolicyVersion = 1, reason = "account group authorized", principalId = principal.username,
+            bindingType = "account",
         )
     }
 }

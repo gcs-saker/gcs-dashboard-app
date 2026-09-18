@@ -11,6 +11,7 @@ class MediaPolicyRpcService(
     private val groups: GroupPolicyService,
     private val devices: DevicePublishAuthorizationService,
     private val allowedAreas: AllowedAreaSnapshotService,
+    private val users: AuthUserRepository,
 ) : MediaPolicyServiceGrpc.MediaPolicyServiceImplBase() {
     override fun authorizeStream(request: StreamAccessInput, response: StreamObserver<StreamAccessOutput>) = reply(response) {
         val principal = principals.requirePrincipal(request.authorization)
@@ -33,6 +34,13 @@ class MediaPolicyRpcService(
         publishBinding(AccountPublishAuthorizationService(groups).authorize(principals.requirePrincipal(request.authorization), request.sensorId))
     }
 
+    override fun validateAccountBinding(request: AccountBindingInput, response: StreamObserver<AccountBindingOutput>) = reply(response) {
+        val user = users.findByUsername(request.principalId) ?: throw UnauthorizedApiError("authentication_required")
+        check(user.active && groups.isActiveGroup(user.groupId)) { "account_inactive" }
+        check(user.groupId.value == request.groupId && user.securityVersion == request.securityVersion) { "account_binding_stale" }
+        AccountBindingOutput.newBuilder().setValid(true).build()
+    }
+
     override fun currentAllowedArea(request: GroupScopeInput, response: StreamObserver<AllowedAreaSnapshotOutput>) = reply(response) {
         val snapshot = allowedAreas.current(GroupId(request.groupId))
         AllowedAreaSnapshotOutput.newBuilder().setGroupId(snapshot.groupId.value).setVersion(snapshot.version)
@@ -47,7 +55,8 @@ class MediaPolicyRpcService(
     private fun publishBinding(binding: DevicePublishAuthorization): PublishBindingOutput = PublishBindingOutput.newBuilder()
         .setDeviceUuid(binding.deviceUuid).setGroupId(binding.publisherGroupId.value).setSensorId(binding.sensorId)
         .setStreamId(binding.streamId).setPath(binding.path).setCredentialVersion(binding.credentialVersion)
-        .setPolicyVersion(binding.devicePolicyVersion).build()
+        .setPolicyVersion(binding.devicePolicyVersion).setPrincipalId(binding.principalId)
+        .setBindingType(binding.bindingType).build()
 
     private fun <T> reply(observer: StreamObserver<T>, action: () -> T) {
         try {

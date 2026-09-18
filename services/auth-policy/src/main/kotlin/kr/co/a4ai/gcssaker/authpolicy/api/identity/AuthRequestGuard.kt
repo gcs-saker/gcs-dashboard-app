@@ -25,6 +25,11 @@ internal class AuthRequestGuard(
             sessions.verifyAccessToken(token)
         } catch (_: JWTVerificationException) {
             throw UnauthorizedApiError(AuthApiErrors.INVALID_TOKEN)
+        } catch (error: IllegalArgumentException) {
+            if (error.message == "access token security version is stale") {
+                throw UnauthorizedApiError(AuthApiErrors.INVALID_TOKEN)
+            }
+            throw error
         }
     }
 }

@@ -21,12 +21,32 @@ class MediaPolicyRpcTest {
         OrganizationUnit(GroupId("other"), "Other", GroupType.COMPANY),
     ))
     private val geofences = InMemoryGeofenceRepository()
+    private val users = InMemoryAuthUserRepository(listOf(
+        AuthUser(username = "publisher", email = "publisher@test", passwordHash = "hash", role = UserRole.OPERATOR,
+            groupId = GroupId("child"), securityVersion = 3),
+    ))
     private val service = MediaPolicyRpcService(
         principals,
         groups,
         DevicePublishAuthorizationService(InMemoryRegisteredDeviceRepository(), PasswordHasher(iterations = 1000)),
         AllowedAreaSnapshotService(geofences),
+        users,
     )
+
+    @Test
+    fun `account binding RPC rejects disabled or stale publisher sessions`() {
+        val current = Capture<AccountBindingOutput>()
+        service.validateAccountBinding(accountBinding(3), current)
+        assertTrue(current.value?.valid == true)
+
+        users.update(requireNotNull(users.findByUsername("publisher")).copy(active = false, securityVersion = 4))
+        val disabled = Capture<AccountBindingOutput>()
+        service.validateAccountBinding(accountBinding(3), disabled)
+        assertEquals(Status.Code.PERMISSION_DENIED, Status.fromThrowable(requireNotNull(disabled.error)).code)
+    }
+
+    private fun accountBinding(version: Long) = AccountBindingInput.newBuilder()
+        .setPrincipalId("publisher").setGroupId("child").setSecurityVersion(version).build()
 
     @Test
     fun `allowed area RPC returns deterministic current group snapshot`() {

@@ -68,5 +68,5 @@ func mapPublishBinding(binding *pb.PublishBindingOutput, err error) (domain.Devi
 	}
 	return domain.DevicePublishAuthorization{DeviceUUID: binding.DeviceUuid, PublisherGroupID: binding.GroupId,
 		SensorID: binding.SensorId, StreamID: binding.StreamId, Path: binding.Path, CredentialVersion: binding.CredentialVersion,
-		DevicePolicyVersion: binding.PolicyVersion}, nil
+		DevicePolicyVersion: binding.PolicyVersion, PrincipalID: binding.PrincipalId, BindingType: binding.BindingType}, nil
 }

@@ -19,6 +19,7 @@ service MediaPolicyService {
   rpc AuthorizeStream(StreamAccessInput) returns (StreamAccessOutput);
   rpc AuthorizeDevicePublish(DevicePublishInput) returns (PublishBindingOutput);
   rpc AuthorizeAccountPublish(AccountPublishInput) returns (PublishBindingOutput);
+  rpc ValidateAccountBinding(AccountBindingInput) returns (AccountBindingOutput);
   rpc CurrentAllowedArea(GroupScopeInput) returns (AllowedAreaSnapshotOutput);
 }
 
@@ -58,7 +59,16 @@ message PublishBindingOutput {
   string path = 5;
   int64 credential_version = 6;
   int64 policy_version = 7;
+  string principal_id = 8;
+  string binding_type = 9;
 }
+
+message AccountBindingInput {
+  string principal_id = 1;
+  string group_id = 2;
+  int64 security_version = 3;
+}
+message AccountBindingOutput { bool valid = 1; }
 
 message DeviceCredentialRequest {
   string device_uuid = 1;

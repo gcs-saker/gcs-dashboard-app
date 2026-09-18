@@ -30,6 +30,8 @@ type PublishSession struct {
 	GroupID                  string
 	CredentialVersion        int64
 	DevicePolicyVersion      int64
+	PrincipalID              string
+	BindingType              string
 	Status                   PublishSessionStatus
 	RenewalTokenHash         []byte
 	PreviousRenewalTokenHash []byte
