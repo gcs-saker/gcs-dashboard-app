@@ -15,6 +15,8 @@ data class DevicePublishAuthorization(
     val credentialVersion: Long,
     val devicePolicyVersion: Long,
     val reason: String,
+    val principalId: String = "",
+    val bindingType: String = "device",
 )
 
 class DevicePublishAuthorizationRejectedException(message: String) : RuntimeException(message)

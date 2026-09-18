@@ -204,6 +204,7 @@ const (
 	MediaPolicyService_AuthorizeStream_FullMethodName         = "/gcs.saker.v1.MediaPolicyService/AuthorizeStream"
 	MediaPolicyService_AuthorizeDevicePublish_FullMethodName  = "/gcs.saker.v1.MediaPolicyService/AuthorizeDevicePublish"
 	MediaPolicyService_AuthorizeAccountPublish_FullMethodName = "/gcs.saker.v1.MediaPolicyService/AuthorizeAccountPublish"
+	MediaPolicyService_ValidateAccountBinding_FullMethodName  = "/gcs.saker.v1.MediaPolicyService/ValidateAccountBinding"
 	MediaPolicyService_CurrentAllowedArea_FullMethodName      = "/gcs.saker.v1.MediaPolicyService/CurrentAllowedArea"
 )
 
@@ -214,6 +215,7 @@ type MediaPolicyServiceClient interface {
 	AuthorizeStream(ctx context.Context, in *StreamAccessInput, opts ...grpc.CallOption) (*StreamAccessOutput, error)
 	AuthorizeDevicePublish(ctx context.Context, in *DevicePublishInput, opts ...grpc.CallOption) (*PublishBindingOutput, error)
 	AuthorizeAccountPublish(ctx context.Context, in *AccountPublishInput, opts ...grpc.CallOption) (*PublishBindingOutput, error)
+	ValidateAccountBinding(ctx context.Context, in *AccountBindingInput, opts ...grpc.CallOption) (*AccountBindingOutput, error)
 	CurrentAllowedArea(ctx context.Context, in *GroupScopeInput, opts ...grpc.CallOption) (*AllowedAreaSnapshotOutput, error)
 }
 
@@ -255,6 +257,16 @@ func (c *mediaPolicyServiceClient) AuthorizeAccountPublish(ctx context.Context, 
 	return out, nil
 }
 
+func (c *mediaPolicyServiceClient) ValidateAccountBinding(ctx context.Context, in *AccountBindingInput, opts ...grpc.CallOption) (*AccountBindingOutput, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AccountBindingOutput)
+	err := c.cc.Invoke(ctx, MediaPolicyService_ValidateAccountBinding_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *mediaPolicyServiceClient) CurrentAllowedArea(ctx context.Context, in *GroupScopeInput, opts ...grpc.CallOption) (*AllowedAreaSnapshotOutput, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AllowedAreaSnapshotOutput)
@@ -272,6 +284,7 @@ type MediaPolicyServiceServer interface {
 	AuthorizeStream(context.Context, *StreamAccessInput) (*StreamAccessOutput, error)
 	AuthorizeDevicePublish(context.Context, *DevicePublishInput) (*PublishBindingOutput, error)
 	AuthorizeAccountPublish(context.Context, *AccountPublishInput) (*PublishBindingOutput, error)
+	ValidateAccountBinding(context.Context, *AccountBindingInput) (*AccountBindingOutput, error)
 	CurrentAllowedArea(context.Context, *GroupScopeInput) (*AllowedAreaSnapshotOutput, error)
 	mustEmbedUnimplementedMediaPolicyServiceServer()
 }
@@ -291,6 +304,9 @@ func (UnimplementedMediaPolicyServiceServer) AuthorizeDevicePublish(context.Cont
 }
 func (UnimplementedMediaPolicyServiceServer) AuthorizeAccountPublish(context.Context, *AccountPublishInput) (*PublishBindingOutput, error) {
 	return nil, status.Error(codes.Unimplemented, "method AuthorizeAccountPublish not implemented")
+}
+func (UnimplementedMediaPolicyServiceServer) ValidateAccountBinding(context.Context, *AccountBindingInput) (*AccountBindingOutput, error) {
+	return nil, status.Error(codes.Unimplemented, "method ValidateAccountBinding not implemented")
 }
 func (UnimplementedMediaPolicyServiceServer) CurrentAllowedArea(context.Context, *GroupScopeInput) (*AllowedAreaSnapshotOutput, error) {
 	return nil, status.Error(codes.Unimplemented, "method CurrentAllowedArea not implemented")
@@ -370,6 +386,24 @@ func _MediaPolicyService_AuthorizeAccountPublish_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MediaPolicyService_ValidateAccountBinding_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AccountBindingInput)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MediaPolicyServiceServer).ValidateAccountBinding(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MediaPolicyService_ValidateAccountBinding_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MediaPolicyServiceServer).ValidateAccountBinding(ctx, req.(*AccountBindingInput))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _MediaPolicyService_CurrentAllowedArea_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GroupScopeInput)
 	if err := dec(in); err != nil {
@@ -406,6 +440,10 @@ var MediaPolicyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AuthorizeAccountPublish",
 			Handler:    _MediaPolicyService_AuthorizeAccountPublish_Handler,
+		},
+		{
+			MethodName: "ValidateAccountBinding",
+			Handler:    _MediaPolicyService_ValidateAccountBinding_Handler,
 		},
 		{
 			MethodName: "CurrentAllowedArea",

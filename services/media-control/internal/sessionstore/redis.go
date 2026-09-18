@@ -139,6 +139,7 @@ func encode(v domain.PublishSession) map[string]any {
 		"session_id": v.SessionID, "device_uuid": v.DeviceUUID, "sensor_id": v.SensorID,
 		"stream_id": v.StreamID, "path": v.Path, "group_id": v.GroupID,
 		"credential_version": v.CredentialVersion, "device_policy_version": v.DevicePolicyVersion,
+		"principal_id": v.PrincipalID, "binding_type": v.BindingType,
 		"status": string(v.Status), "renewal_hash": b64(v.RenewalTokenHash),
 		"previous_renewal_hash": b64(v.PreviousRenewalTokenHash), "renewal_version": v.RenewalTokenVersion,
 		"publish_expires_ms": millis(v.PublishTokenExpiresAt), "renewal_expires_ms": millis(v.RenewalTokenExpiresAt),
@@ -178,6 +179,7 @@ func decode(m map[string]string) (domain.PublishSession, error) {
 	return domain.PublishSession{
 		SessionID: m["session_id"], DeviceUUID: m["device_uuid"], SensorID: m["sensor_id"], StreamID: m["stream_id"], Path: m["path"], GroupID: m["group_id"],
 		CredentialVersion: credentialVersion, DevicePolicyVersion: policyVersion, Status: status,
+		PrincipalID: m["principal_id"], BindingType: m["binding_type"],
 		RenewalTokenHash: current, PreviousRenewalTokenHash: previous, RenewalTokenVersion: version,
 		PublishTokenExpiresAt: times.publishExpiresAt, RenewalTokenExpiresAt: times.renewalExpiresAt,
 		CreatedAt: times.createdAt, UpdatedAt: times.updatedAt,

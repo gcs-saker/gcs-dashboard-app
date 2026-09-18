@@ -122,6 +122,7 @@ func (s Server) createPublishSession(ctx context.Context, authorization domain.D
 		SessionID: sessionID, DeviceUUID: authorization.DeviceUUID, SensorID: authorization.SensorID,
 		StreamID: publicStreamID, Path: publicPath, GroupID: authorization.PublisherGroupID,
 		CredentialVersion: authorization.CredentialVersion, DevicePolicyVersion: authorization.DevicePolicyVersion,
+		PrincipalID: authorization.PrincipalID, BindingType: authorization.BindingType,
 		Status: domain.PublishSessionActive, RenewalTokenHash: s.hashRenewalToken(renewalToken), RenewalTokenVersion: 1,
 		PublishTokenExpiresAt: now.Add(publishAccessTTL), RenewalTokenExpiresAt: now.Add(publishRenewalTTL),
 		CreatedAt: now, UpdatedAt: now,
@@ -229,7 +230,7 @@ func (s Server) validateActivePublishSession(payload sessiontoken.Payload, now t
 	if err != nil || current.SessionID != session.SessionID {
 		return false
 	}
-	if s.sessionValidator != nil && session.CredentialVersion > 0 {
+	if s.sessionValidator != nil && (session.CredentialVersion > 0 || session.BindingType == "account") {
 		if err := s.sessionValidator.ValidateSessionBinding(ctx, session); err != nil {
 			return false
 		}

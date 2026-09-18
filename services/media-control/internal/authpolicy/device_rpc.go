@@ -71,6 +71,12 @@ func (c *DeviceRPCClient) ValidateSessionBinding(ctx context.Context, session do
 	}
 	ctx, cancel := c.requestContext(ctx)
 	defer cancel()
+	if session.BindingType == "account" {
+		_, err := pb.NewMediaPolicyServiceClient(c.connection).ValidateAccountBinding(ctx, &pb.AccountBindingInput{
+			PrincipalId: session.PrincipalID, GroupId: session.GroupID, SecurityVersion: session.CredentialVersion,
+		})
+		return err
+	}
 	_, err := c.client.ValidateBinding(ctx, sessionBinding(session))
 	return err
 }

@@ -31,4 +31,6 @@ type DevicePublishAuthorization struct {
 	DevicePolicyVersion int64  `json:"devicePolicyVersion"`
 	Reason              string `json:"reason"`
 	PolicyVersion       string `json:"policyVersion"`
+	PrincipalID         string `json:"principalId,omitempty"`
+	BindingType         string `json:"bindingType,omitempty"`
 }

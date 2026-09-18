@@ -18,3 +18,5 @@ def test_auth_smoke_override_is_loopback_only() -> None:
 
     assert "${AUTH_POLICY_SMOKE_BIND_ADDR:-127.0.0.1}" in source
     assert "${AUTH_POLICY_SMOKE_PORT:-28080}:8080" in source
+    assert "${MEDIA_CONTROL_SMOKE_BIND_ADDR:-127.0.0.1}" in source
+    assert "${MEDIA_CONTROL_SMOKE_PORT:-28081}:8081" in source
