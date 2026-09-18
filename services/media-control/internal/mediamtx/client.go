@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -17,6 +18,61 @@ const traceOperationListStreams = "media-control.mediamtx.list-streams"
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
+}
+
+type WebRTCPublishSession struct {
+	ID   string `json:"id"`
+	Path string `json:"path"`
+}
+
+type webRTCSessionListResponse struct {
+	Items []struct {
+		ID    string `json:"id"`
+		State string `json:"state"`
+		Path  string `json:"path"`
+	} `json:"items"`
+}
+
+func (c Client) ListWebRTCPublishSessions(ctx context.Context) ([]WebRTCPublishSession, error) {
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/v3/webrtcsessions/list", nil)
+	if err != nil {
+		return nil, err
+	}
+	response, err := c.httpClient.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("mediamtx WebRTC session list returned status %d", response.StatusCode)
+	}
+	var payload webRTCSessionListResponse
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		return nil, err
+	}
+	result := make([]WebRTCPublishSession, 0, len(payload.Items))
+	for _, item := range payload.Items {
+		if item.State == "publish" && item.ID != "" && item.Path != "" {
+			result = append(result, WebRTCPublishSession{ID: item.ID, Path: item.Path})
+		}
+	}
+	return result, nil
+}
+
+func (c Client) KickWebRTCSession(ctx context.Context, sessionID string) error {
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/v3/webrtcsessions/kick/"+url.PathEscape(sessionID), nil)
+	if err != nil {
+		return err
+	}
+	response, err := c.httpClient.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return fmt.Errorf("mediamtx WebRTC session kick returned status %d", response.StatusCode)
+	}
+	return nil
 }
 
 func NewClient(baseURL string, httpClient *http.Client) Client {
