@@ -36,6 +36,21 @@ func (v revocationValidator) ValidateSessionBinding(_ context.Context, session d
 	return nil
 }
 
+type revocationEvidence struct {
+	scans    int
+	outcomes []string
+	events   []SessionRevocationEvent
+}
+
+func (e *revocationEvidence) ObserveSessionRevocationScan(error, time.Duration, int) { e.scans++ }
+func (e *revocationEvidence) ObserveSessionRevocation(kind string, result string, _ time.Duration) {
+	e.outcomes = append(e.outcomes, kind+":"+result)
+}
+func (e *revocationEvidence) RecordSessionRevocation(_ context.Context, event SessionRevocationEvent) error {
+	e.events = append(e.events, event)
+	return nil
+}
+
 func TestPublishSessionRevocationKicksOnlyStaleOwnedPublisher(t *testing.T) {
 	now := time.Now()
 	store := domain.NewInMemoryPublishSessionStore()
@@ -98,15 +113,22 @@ func TestPublishSessionRevocationKicksStaleTalkbackReader(t *testing.T) {
 		t.Fatal(err)
 	}
 	control := &revocationControl{sessions: []WebRTCSession{boundWebRTCSession(t, "reader", "read", session, now)}}
+	evidence := &revocationEvidence{}
 	observer := NewPublishSessionRevocationObserver(
 		control, store, revocationValidator{stalePrincipal: "stale-reader"}, revocationTestSecret, time.Second,
-	)
+	).WithMetrics(evidence).WithAuditSink(evidence)
 	observer.now = func() time.Time { return now }
 
 	observer.reconcile(context.Background())
 
 	if len(control.kicked) != 1 || control.kicked[0] != "reader" {
 		t.Fatalf("stale talkback reader was not kicked: %#v", control.kicked)
+	}
+	if evidence.scans != 1 || len(evidence.outcomes) != 1 || evidence.outcomes[0] != "read:revoked" {
+		t.Fatalf("revocation metrics evidence missing: %#v", evidence)
+	}
+	if len(evidence.events) != 1 || evidence.events[0].Operation != "media.session.revoked" || len(evidence.events[0].Reference) != 32 {
+		t.Fatalf("bounded revocation audit evidence missing: %#v", evidence.events)
 	}
 }
 

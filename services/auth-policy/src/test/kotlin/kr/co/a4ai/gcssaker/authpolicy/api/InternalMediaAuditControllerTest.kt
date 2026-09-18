@@ -32,6 +32,18 @@ class InternalMediaAuditControllerTest {
     }
 
     @Test
+    fun `session revocation event is accepted as bounded audit evidence`() {
+        controller.lifecycle(token, request(operation = "media.session.revoked"))
+
+        val event = repository.eventsFor(
+            AuthenticatedPrincipal("admin", UserRole.ADMIN, GroupId("co-a")),
+            OperationalEventQuery(query = "media.session.revoked"),
+        ).single()
+        assertEquals("media.session.revoked", event.operation)
+        assertEquals(null, event.streamId)
+    }
+
+    @Test
     fun `missing or incorrect service token is rejected before persistence`() {
         assertThrows(UnauthorizedApiError::class.java) { controller.lifecycle(null, request()) }
         assertThrows(UnauthorizedApiError::class.java) { controller.lifecycle("wrong", request()) }

@@ -20,6 +20,11 @@ func newMetricsRegistry() (*prometheus.Registry, *Metrics) {
 		talkbackSnapshots:      newTalkbackSnapshotsMetric(),
 		talkbackSnapshotTime:   newTalkbackSnapshotDurationMetric(),
 		talkbackTransitions:    newTalkbackTransitionsMetric(),
+		revocationScans:        newRevocationScansMetric(),
+		revocationScanDuration: newRevocationScanDurationMetric(),
+		revocationActive:       newRevocationActiveMetric(),
+		revocationOutcomes:     newRevocationOutcomesMetric(),
+		revocationLatency:      newRevocationLatencyMetric(),
 	}
 	registry.MustRegister(
 		metrics.httpRequests,
@@ -36,6 +41,11 @@ func newMetricsRegistry() (*prometheus.Registry, *Metrics) {
 		metrics.talkbackSnapshots,
 		metrics.talkbackSnapshotTime,
 		metrics.talkbackTransitions,
+		metrics.revocationScans,
+		metrics.revocationScanDuration,
+		metrics.revocationActive,
+		metrics.revocationOutcomes,
+		metrics.revocationLatency,
 	)
 	return registry, metrics
 }

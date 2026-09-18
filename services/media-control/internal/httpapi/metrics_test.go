@@ -20,6 +20,8 @@ func TestMetricsEndpointExposesPrometheusText(t *testing.T) {
 	metrics.ObserveTalkbackSnapshot(nil, 4*time.Millisecond)
 	metrics.ObserveTalkbackTransition("talkback.session.started", nil)
 	metrics.ObserveTalkbackTransition("private-session-reference", assertiveError{})
+	metrics.ObserveSessionRevocationScan(nil, 5*time.Millisecond, 2)
+	metrics.ObserveSessionRevocation("read", "revoked", 6*time.Millisecond)
 	recorder := httptest.NewRecorder()
 
 	metrics.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/metrics", nil))
@@ -34,6 +36,9 @@ func TestMetricsEndpointExposesPrometheusText(t *testing.T) {
 		"gcs_media_control_talkback_transitions_total{operation=\"started\",result=\"success\"} 1",
 		"gcs_media_control_talkback_transitions_total{operation=\"unknown\",result=\"error\"} 1",
 		"gcs_media_control_errors_total{reason=\"audit_sink_failed\",source=\"talkback_lifecycle\"} 1",
+		"gcs_media_control_session_revocation_scans_total{result=\"success\"} 1",
+		"gcs_media_control_session_revocation_active_sessions 2",
+		"gcs_media_control_session_revocation_outcomes_total{kind=\"read\",result=\"revoked\"} 1",
 	} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected metric line %q in:\n%s", expected, body)

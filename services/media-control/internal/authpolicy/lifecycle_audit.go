@@ -34,12 +34,26 @@ func NewLifecycleAuditSink(baseURL string, token string, httpClient *http.Client
 }
 
 func (s LifecycleAuditSink) RecordTalkbackLifecycle(ctx context.Context, event mediamtx.TalkbackLifecycleEvent) error {
+	return s.recordMediaLifecycle(ctx, event.GroupID, event.Reference, event.Operation, event.OccurredAt)
+}
+
+func (s LifecycleAuditSink) RecordSessionRevocation(ctx context.Context, event mediamtx.SessionRevocationEvent) error {
+	return s.recordMediaLifecycle(ctx, event.GroupID, event.Reference, event.Operation, event.OccurredAt)
+}
+
+func (s LifecycleAuditSink) recordMediaLifecycle(
+	ctx context.Context,
+	groupID string,
+	reference string,
+	operation string,
+	occurredAt time.Time,
+) error {
 	body, err := json.Marshal(struct {
 		GroupID          string    `json:"groupId"`
 		SessionReference string    `json:"sessionReference"`
 		Operation        string    `json:"operation"`
 		OccurredAt       time.Time `json:"occurredAt"`
-	}{event.GroupID, event.Reference, event.Operation, event.OccurredAt})
+	}{groupID, reference, operation, occurredAt})
 	if err != nil {
 		return err
 	}

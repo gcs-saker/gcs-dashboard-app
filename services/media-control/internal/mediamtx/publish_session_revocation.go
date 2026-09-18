@@ -16,6 +16,22 @@ type WebRTCSessionController interface {
 	KickWebRTCSession(context.Context, string) error
 }
 
+type SessionRevocationMetrics interface {
+	ObserveSessionRevocationScan(error, time.Duration, int)
+	ObserveSessionRevocation(string, string, time.Duration)
+}
+
+type SessionRevocationEvent struct {
+	Reference  string
+	GroupID    string
+	Operation  string
+	OccurredAt time.Time
+}
+
+type SessionRevocationAuditSink interface {
+	RecordSessionRevocation(context.Context, SessionRevocationEvent) error
+}
+
 type PublishSessionRevocationObserver struct {
 	control   WebRTCSessionController
 	store     domain.PublishSessionStore
@@ -24,6 +40,18 @@ type PublishSessionRevocationObserver struct {
 	timeout   time.Duration
 	now       func() time.Time
 	secret    string
+	metrics   SessionRevocationMetrics
+	audit     SessionRevocationAuditSink
+}
+
+func (o PublishSessionRevocationObserver) WithMetrics(metrics SessionRevocationMetrics) PublishSessionRevocationObserver {
+	o.metrics = metrics
+	return o
+}
+
+func (o PublishSessionRevocationObserver) WithAuditSink(audit SessionRevocationAuditSink) PublishSessionRevocationObserver {
+	o.audit = audit
+	return o
 }
 
 func NewPublishSessionRevocationObserver(
@@ -53,9 +81,13 @@ func (o PublishSessionRevocationObserver) Run(ctx context.Context) {
 }
 
 func (o PublishSessionRevocationObserver) reconcile(ctx context.Context) {
+	started := time.Now()
 	queryContext, cancel := context.WithTimeout(ctx, o.timeout)
 	defer cancel()
 	sessions, err := o.control.ListWebRTCSessions(queryContext)
+	if o.metrics != nil {
+		o.metrics.ObserveSessionRevocationScan(err, time.Since(started), len(sessions))
+	}
 	if err != nil {
 		log.Printf("publish_session_revocation result=list_failed error_type=%T", err)
 		return
@@ -66,6 +98,13 @@ func (o PublishSessionRevocationObserver) reconcile(ctx context.Context) {
 }
 
 func (o PublishSessionRevocationObserver) reconcileSession(ctx context.Context, active WebRTCSession) {
+	started := time.Now()
+	result := "ignored"
+	defer func() {
+		if o.metrics != nil {
+			o.metrics.ObserveSessionRevocation(active.State, result, time.Since(started))
+		}
+	}()
 	parsed, err := domain.ParseStreamPath(active.Path)
 	if err != nil {
 		return
@@ -75,15 +114,40 @@ func (o PublishSessionRevocationObserver) reconcileSession(ctx context.Context, 
 		return
 	}
 	if tokenErr == nil && o.sessionBindingIsCurrent(ctx, active, token) {
+		result = "retained"
 		return
 	}
 	kickContext, cancel := context.WithTimeout(ctx, o.timeout)
 	defer cancel()
 	if kickErr := o.control.KickWebRTCSession(kickContext, active.ID); kickErr != nil {
+		result = "kick_failed"
 		log.Printf("publish_session_revocation result=kick_failed error_type=%T", kickErr)
 		return
 	}
+	result = "revoked"
+	if o.recordRevocation(ctx, active, token) != nil {
+		result = "audit_failed"
+	}
 	log.Printf("publish_session_revocation result=revoked")
+}
+
+func (o PublishSessionRevocationObserver) recordRevocation(
+	ctx context.Context,
+	active WebRTCSession,
+	token sessiontoken.Payload,
+) error {
+	if o.audit == nil {
+		return nil
+	}
+	event := SessionRevocationEvent{
+		Reference: hashReference(active.Path + ":" + active.ID), GroupID: token.GroupID,
+		Operation: "media.session.revoked", OccurredAt: o.now().UTC(),
+	}
+	if err := o.audit.RecordSessionRevocation(ctx, event); err != nil {
+		log.Printf("publish_session_revocation result=audit_failed error_type=%T", err)
+		return err
+	}
+	return nil
 }
 
 func (o PublishSessionRevocationObserver) sessionBindingIsCurrent(
