@@ -35,10 +35,23 @@ export function usePublisherConnectionRecovery(
       void publishRef.current();
     }, RECONNECT_DELAYS_MS[attempt]);
   }, [publishRef, runtime, stopGpsTelemetry, updateStatus]);
+  const suspendReconnect = useCallback((message: string): void => {
+    if (!runtime.streamRef.current) return;
+    clearReconnectTimer();
+    stopGpsTelemetry();
+    closePublisherPeerConnection(runtime.peerConnectionRef);
+    runtime.setFailedStep("media");
+    runtime.setErrorMessage(message);
+    updateStatus("reconnecting");
+  }, [clearReconnectTimer, runtime, stopGpsTelemetry, updateStatus]);
   const handleConnectionChange = useCallback((peerConnection: RTCPeerConnection): void => {
     if (!isPublishedConnectionDisconnected(peerConnection) || runtime.statusRef.current !== "published") return;
+    if (!navigator.onLine || document.visibilityState === "hidden") {
+      suspendReconnect("네트워크 또는 화면 복귀 후 송출 재연결을 시도합니다.");
+      return;
+    }
     scheduleReconnect(`송출 미디어 연결이 끊겼습니다 (${peerConnection.connectionState}/${peerConnection.iceConnectionState}). 재연결을 시도합니다.`);
-  }, [runtime.statusRef, scheduleReconnect]);
+  }, [runtime.statusRef, scheduleReconnect, suspendReconnect]);
   const resetCapture = useCallback((): void => {
     if (runtime.statusRef.current !== "idle") {
       stopGpsTelemetry();
@@ -48,5 +61,5 @@ export function usePublisherConnectionRecovery(
     runtime.setFailedStep(null);
     runtime.setErrorMessage(null);
   }, [runtime, stopGpsTelemetry, updateStatus]);
-  return { clearReconnectTimer, handleConnectionChange, resetCapture, stopAll } as const;
+  return { clearReconnectTimer, handleConnectionChange, resetCapture, scheduleReconnect, stopAll, suspendReconnect } as const;
 }
