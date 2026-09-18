@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { LocalWebcamPublisherViewProps } from "@streaming/components/publisher/LocalWebcamPublisherView";
 import type { PublisherStreamTarget } from "@streaming/publisher/publisherContracts";
 import type { useLocalWebcamPublisherRuntime } from "@streaming/hooks/publishing/useLocalWebcamPublisherRuntime";
+import { qualifyPublisherRecovery } from "@streaming/publisher/publisherRecoveryEvidence";
 
 interface UseLocalWebcamPublisherViewPropsInput {
   audioInputs: MediaDeviceInfo[];
@@ -66,5 +67,6 @@ export function useLocalWebcamPublisherViewProps(input: UseLocalWebcamPublisherV
     videoRef: runtime.videoRef,
 	  reconnectAttempt: runtime.reconnectAttemptRef.current,
 	  lastRecoveryMs: runtime.lastRecoveryMsRef.current,
+	  recoveryQualification: qualifyPublisherRecovery(runtime.recoverySamplesRef.current),
   }), [audioInputs, deviceStatus, gpsDetail, gpsStatus, onPublish, onRefreshMediaDevices, onResetCapture, onStartPreview, onStop, runtime, selectedStreamTarget, selectedWhipUrl, steps, streamTargets, videoInputs]);
 }

@@ -7,6 +7,7 @@ export interface PublisherSessionRefs {
   reconnectAttemptRef: CurrentRef<number>;
   reconnectStartedAtRef?: CurrentRef<number | null>;
   lastRecoveryMsRef?: CurrentRef<number | null>;
+  recoverySamplesRef?: CurrentRef<unknown[]>;
   reconnectTimeoutRef: CurrentRef<number | null>;
   streamRef: CurrentRef<MediaStream | null>;
   videoRef: CurrentRef<HTMLVideoElement | null>;
@@ -38,6 +39,7 @@ export function clearPublisherSession(
     refs.reconnectAttemptRef.current = 0;
 	if (refs.reconnectStartedAtRef) refs.reconnectStartedAtRef.current = null;
 	if (refs.lastRecoveryMsRef) refs.lastRecoveryMsRef.current = null;
+	if (refs.recoverySamplesRef) refs.recoverySamplesRef.current = [];
   }
   closePublisherPeerConnection(refs.peerConnectionRef);
   if (resolved.stopTracks) {
