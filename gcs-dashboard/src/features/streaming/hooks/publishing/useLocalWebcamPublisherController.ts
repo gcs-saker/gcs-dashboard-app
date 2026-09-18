@@ -52,7 +52,7 @@ export function useLocalWebcamPublisherController({
   const startPreview = usePublisherPreview(runtime, mediaDevices, refreshMediaDevices, updateStatus);
   const publish = usePublisherWhipPublish({
     clearReconnectTimer, fetcher, handleConnectionChange, peerConnectionFactory, runtime,
-    startGpsTelemetry, stopGpsTelemetry, streamId: selectedStreamTarget.id, updateStatus,
+	  scheduleReconnect, startGpsTelemetry, stopGpsTelemetry, streamId: selectedStreamTarget.id, updateStatus,
   });
   publishRef.current = publish;
   useRemoteCameraControl({

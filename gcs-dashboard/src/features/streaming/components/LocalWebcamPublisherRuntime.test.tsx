@@ -179,6 +179,9 @@ describe("LocalWebcamPublisher telemetry and recovery", () => {
     window.dispatchEvent(new Event("online"));
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("송출 중"), { timeout: 2_000 });
     expect(peerConnectionFactory).toHaveBeenCalledTimes(2);
+	const publisher = screen.getByRole("main", { name: "Local webcam WebRTC test publisher" });
+	expect(publisher).toHaveAttribute("data-reconnect-attempt", "0");
+	expect(Number(publisher.getAttribute("data-last-recovery-ms"))).toBeGreaterThanOrEqual(1_000);
   });
 
   test("defers a dropped connection while backgrounded and resumes when visible", async () => {

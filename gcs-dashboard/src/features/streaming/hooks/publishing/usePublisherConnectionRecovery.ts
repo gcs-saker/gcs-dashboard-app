@@ -1,7 +1,8 @@
 import { useCallback, type MutableRefObject } from "react";
 
 import type { LocalWebcamPublisherRuntime } from "./useLocalWebcamPublisherRuntime";
-import { RECONNECT_DELAYS_MS, type WebcamPublisherStatus } from "@streaming/publisher/publisherContracts";
+import type { WebcamPublisherStatus } from "@streaming/publisher/publisherContracts";
+import { reconnectDelayForAttempt } from "@streaming/publisher/publisherReconnectPolicy";
 import { isPublishedConnectionDisconnected } from "@streaming/publisher/publisherConnectionState";
 import { clearPublisherReconnectTimer, clearPublisherSession, closePublisherPeerConnection } from "@streaming/publisher/publisherSessionCleanup";
 
@@ -21,25 +22,13 @@ export function usePublisherConnectionRecovery(
     updateStatus("idle");
     runtime.setFailedStep(null);
   }, [runtime, stopGpsTelemetry, updateStatus]);
-  const scheduleReconnect = useCallback((message: string): void => {
-    if (!runtime.streamRef.current || runtime.reconnectTimeoutRef.current !== null) return;
-    stopGpsTelemetry();
-    closePublisherPeerConnection(runtime.peerConnectionRef);
-    const attempt = Math.min(runtime.reconnectAttemptRef.current, RECONNECT_DELAYS_MS.length - 1);
-    runtime.reconnectAttemptRef.current += 1;
-    runtime.setFailedStep("media");
-    runtime.setErrorMessage(message);
-    updateStatus("reconnecting");
-    runtime.reconnectTimeoutRef.current = window.setTimeout(() => {
-      runtime.reconnectTimeoutRef.current = null;
-      void publishRef.current();
-    }, RECONNECT_DELAYS_MS[attempt]);
-  }, [publishRef, runtime, stopGpsTelemetry, updateStatus]);
+  const scheduleReconnect = useReconnectScheduler(runtime, publishRef, stopGpsTelemetry, updateStatus);
   const suspendReconnect = useCallback((message: string): void => {
     if (!runtime.streamRef.current) return;
     clearReconnectTimer();
     stopGpsTelemetry();
     closePublisherPeerConnection(runtime.peerConnectionRef);
+    runtime.reconnectStartedAtRef.current ??= performance.now();
     runtime.setFailedStep("media");
     runtime.setErrorMessage(message);
     updateStatus("reconnecting");
@@ -62,4 +51,33 @@ export function usePublisherConnectionRecovery(
     runtime.setErrorMessage(null);
   }, [runtime, stopGpsTelemetry, updateStatus]);
   return { clearReconnectTimer, handleConnectionChange, resetCapture, scheduleReconnect, stopAll, suspendReconnect } as const;
+}
+
+function useReconnectScheduler(
+  runtime: LocalWebcamPublisherRuntime,
+  publishRef: MutableRefObject<() => Promise<void>>,
+  stopGpsTelemetry: () => void,
+  updateStatus: (status: WebcamPublisherStatus) => void,
+) {
+  return useCallback((message: string): void => {
+    if (!runtime.streamRef.current || runtime.reconnectTimeoutRef.current !== null) return;
+    const delay = reconnectDelayForAttempt(runtime.reconnectAttemptRef.current);
+    if (delay === null) {
+      runtime.setFailedStep("media");
+      runtime.setErrorMessage("자동 재연결 횟수를 초과했습니다. 카메라 준비 후 수동으로 다시 시도하세요.");
+      updateStatus("error");
+      return;
+    }
+    stopGpsTelemetry();
+    closePublisherPeerConnection(runtime.peerConnectionRef);
+    runtime.reconnectAttemptRef.current += 1;
+    runtime.reconnectStartedAtRef.current ??= performance.now();
+    runtime.setFailedStep("media");
+    runtime.setErrorMessage(message);
+    updateStatus("reconnecting");
+    runtime.reconnectTimeoutRef.current = window.setTimeout(() => {
+      runtime.reconnectTimeoutRef.current = null;
+      void publishRef.current();
+    }, delay);
+  }, [publishRef, runtime, stopGpsTelemetry, updateStatus]);
 }
