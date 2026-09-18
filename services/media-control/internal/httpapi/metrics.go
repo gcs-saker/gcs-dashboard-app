@@ -30,6 +30,28 @@ type Metrics struct {
 	revocationActive       prometheus.Gauge
 	revocationOutcomes     *prometheus.CounterVec
 	revocationLatency      *prometheus.HistogramVec
+	publishSessionCount    *prometheus.GaugeVec
+	publishSessionOldest   prometheus.Gauge
+	publishSessionScans    *prometheus.CounterVec
+}
+
+func (m *Metrics) ObservePublishSessionStatistics(active, ended, expired int, oldest time.Duration, truncated bool, err error) {
+	result := metricResultSuccess
+	if err != nil {
+		result = metricResultError
+		m.ObserveError("publish_session_store", "statistics_failed")
+	}
+	if truncated {
+		result = "truncated"
+	}
+	m.publishSessionScans.WithLabelValues(result).Inc()
+	if err != nil {
+		return
+	}
+	m.publishSessionCount.WithLabelValues("active").Set(float64(active))
+	m.publishSessionCount.WithLabelValues("ended").Set(float64(ended))
+	m.publishSessionCount.WithLabelValues("expired").Set(float64(expired))
+	m.publishSessionOldest.Set(oldest.Seconds())
 }
 
 func (m *Metrics) ObserveSessionRevocationScan(err error, elapsed time.Duration, active int) {
