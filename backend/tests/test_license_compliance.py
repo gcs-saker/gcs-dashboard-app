@@ -107,6 +107,21 @@ def test_resolution_catalog_requires_exact_audited_https_evidence(tmp_path: Path
         load_resolutions(catalog)
 
 
+def test_resolution_catalog_accepts_hashed_immutable_image_evidence(tmp_path: Path) -> None:
+    catalog = tmp_path / "resolutions.yml"
+    catalog.write_text(
+        "resolutions:\n"
+        "  - purl: pkg:apk/alpine/nginx@1\n"
+        "    licenseExpression: BSD-2-Clause\n"
+        f"    source: image:/copyright#sha256={'a' * 64}\n"
+        "    verifiedBy: image-review\n"
+        "    verifiedOn: 2026-09-17\n",
+        encoding="utf-8",
+    )
+
+    assert load_resolutions(catalog)["pkg:apk/alpine/nginx@1"]["license"] == "BSD-2-Clause"
+
+
 def test_exact_public_domain_reference_requires_review_instead_of_remaining_unknown() -> None:
     purl = "pkg:maven/aopalliance/aopalliance@1.0"
     rules = LicenseRules(POLICY, [], {purl: {"license": "LicenseRef-Public-Domain", "source": "https://x"}})

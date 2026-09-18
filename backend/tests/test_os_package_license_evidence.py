@@ -22,6 +22,20 @@ def test_os_package_name_decodes_exact_purl() -> None:
     assert module.package_name("pkg:golang/example@v1") is None
 
 
+def test_collector_supports_debian_and_alpine_license_locations() -> None:
+    source = SCRIPT.read_text(encoding="utf-8")
+
+    assert "/usr/share/doc/{package}/copyright" in source
+    assert "/usr/share/licenses/{package}/COPYRIGHT" in source
+
+
+def test_tzdata_versions_can_share_one_hashed_distribution_evidence() -> None:
+    resolutions = (ROOT / "docs/compliance/supply-chain/license-resolutions.yml").read_text(encoding="utf-8")
+
+    assert resolutions.count("/tzdata@2026") == 2
+    assert resolutions.count("cb61132bc0fc7b26ef5a82ee18b2fb644a1362f4f286ed980ff22e408471f59a") == 2
+
+
 def test_identical_copyright_files_are_grouped_for_single_review() -> None:
     module = load_module()
     records = [
