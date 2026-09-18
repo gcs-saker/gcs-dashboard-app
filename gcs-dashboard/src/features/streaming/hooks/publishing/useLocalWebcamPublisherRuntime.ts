@@ -7,6 +7,7 @@ import {
   type WebcamPublisherStatus,
 } from "@streaming/publisher/publisherContracts";
 import type { PublisherSessionRefs } from "@streaming/publisher/publisherSessionCleanup";
+import type { PublisherRecoverySample } from "@streaming/publisher/publisherRecoveryEvidence";
 
 export function useLocalWebcamPublisherRuntime(streamId: string) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -16,6 +17,7 @@ export function useLocalWebcamPublisherRuntime(streamId: string) {
   const reconnectAttemptRef = useRef(0);
   const reconnectStartedAtRef = useRef<number | null>(null);
   const lastRecoveryMsRef = useRef<number | null>(null);
+  const recoverySamplesRef = useRef<PublisherRecoverySample[]>([]);
   const statusRef = useRef<WebcamPublisherStatus>("idle");
   const [status, setStatus] = useState<WebcamPublisherStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -29,6 +31,7 @@ export function useLocalWebcamPublisherRuntime(streamId: string) {
     reconnectAttemptRef,
     reconnectStartedAtRef,
     lastRecoveryMsRef,
+    recoverySamplesRef,
     reconnectTimeoutRef,
     streamRef,
     videoRef,
@@ -42,6 +45,7 @@ export function useLocalWebcamPublisherRuntime(streamId: string) {
     reconnectAttemptRef,
     reconnectStartedAtRef,
     lastRecoveryMsRef,
+	  recoverySamplesRef,
     reconnectTimeoutRef,
     selectedAudioDeviceId,
     selectedStreamId,

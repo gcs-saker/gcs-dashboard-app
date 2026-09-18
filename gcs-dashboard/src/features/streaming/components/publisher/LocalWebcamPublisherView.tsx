@@ -11,6 +11,7 @@ import type {
 import { getGpsStatusLabel, getStatusDetail, getStatusLabel } from "@streaming/publisher/publisherStatusPresentation";
 import { LocalWebcamPublisherControls } from "./LocalWebcamPublisherControls";
 import { TalkbackAudioReceiver } from "@streaming/components/TalkbackAudioReceiver";
+import type { PublisherRecoveryQualification } from "@streaming/publisher/publisherRecoveryEvidence";
 
 interface PublisherStepView {
   id: PublisherStepId;
@@ -45,6 +46,7 @@ export interface LocalWebcamPublisherViewProps {
   videoRef: RefObject<HTMLVideoElement | null>;
   reconnectAttempt: number;
   lastRecoveryMs: number | null;
+  recoveryQualification: PublisherRecoveryQualification;
 }
 
 export function LocalWebcamPublisherView(props: LocalWebcamPublisherViewProps) {
@@ -88,6 +90,10 @@ export function LocalWebcamPublisherView(props: LocalWebcamPublisherViewProps) {
       <p className="local-webcam-publisher__status-detail" aria-live="polite">{getStatusDetail(props.status)}</p>
 	  <p className="local-webcam-publisher__recovery-evidence">
 	    재연결 {props.reconnectAttempt}회 / 최근 복구 {props.lastRecoveryMs === null ? "대기" : `${props.lastRecoveryMs} ms`}
+	  </p>
+	  <p className="local-webcam-publisher__recovery-evidence" data-recovery-qualified={props.recoveryQualification.qualified}>
+	    복구 증거 {props.recoveryQualification.recoveredCount}/{props.recoveryQualification.sampleCount} /
+	     최대 {props.recoveryQualification.maxRecoveryMs === null ? "대기" : `${props.recoveryQualification.maxRecoveryMs} ms`}
 	  </p>
       <p className={`local-webcam-publisher__gps local-webcam-publisher__gps--${props.gpsStatus}`} aria-live="polite">
         GPS: {getGpsStatusLabel(props.gpsStatus)} / {props.gpsDetail}

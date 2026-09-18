@@ -42,6 +42,10 @@ export function usePublisherWhipPublish(input: PublisherWhipPublishInput) {
       runtime.setErrorMessage(null);
 	  if (runtime.reconnectStartedAtRef.current !== null) {
 	    runtime.lastRecoveryMsRef.current = Math.round(performance.now() - runtime.reconnectStartedAtRef.current);
+	    runtime.recoverySamplesRef.current = [
+	      ...runtime.recoverySamplesRef.current.slice(-49),
+	      { recovered: true, recoveryMs: runtime.lastRecoveryMsRef.current },
+	    ];
 	    runtime.reconnectStartedAtRef.current = null;
 	  }
       runtime.reconnectAttemptRef.current = 0;

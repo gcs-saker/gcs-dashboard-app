@@ -63,6 +63,7 @@ function useReconnectScheduler(
     if (!runtime.streamRef.current || runtime.reconnectTimeoutRef.current !== null) return;
     const delay = reconnectDelayForAttempt(runtime.reconnectAttemptRef.current);
     if (delay === null) {
+      runtime.recoverySamplesRef.current = [...runtime.recoverySamplesRef.current.slice(-49), { recovered: false, recoveryMs: null }];
       runtime.setFailedStep("media");
       runtime.setErrorMessage("자동 재연결 횟수를 초과했습니다. 카메라 준비 후 수동으로 다시 시도하세요.");
       updateStatus("error");
