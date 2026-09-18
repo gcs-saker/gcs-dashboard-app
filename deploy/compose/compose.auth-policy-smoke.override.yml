@@ -1,0 +1,4 @@
+services:
+  auth-policy:
+    ports:
+      - "${AUTH_POLICY_SMOKE_BIND_ADDR:-127.0.0.1}:${AUTH_POLICY_SMOKE_PORT:-28080}:8080"
