@@ -69,12 +69,20 @@ func (s Server) requireStreamAccess(
 	authorization string,
 	parsed domain.ParsedStreamPath,
 ) error {
+	_, err := s.authorizeStreamAccess(ctx, authorization, parsed)
+	return err
+}
+
+func (s Server) authorizeStreamAccess(
+	ctx context.Context,
+	authorization string,
+	parsed domain.ParsedStreamPath,
+) (domain.StreamAccessDecision, error) {
 	target, err := s.resolveStreamTarget(ctx, parsed)
 	if err != nil {
-		return err
+		return domain.StreamAccessDecision{}, err
 	}
-	_, err = s.authorizer.AuthorizeStream(ctx, authorization, target)
-	return err
+	return s.authorizer.AuthorizeStream(ctx, authorization, target)
 }
 
 func (s Server) requireTalkbackSendAccess(

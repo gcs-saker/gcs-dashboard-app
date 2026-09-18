@@ -42,11 +42,15 @@ func MatchesSession(payload Payload, session domain.PublishSession) bool {
 }
 
 func IssueDevice(secret string, session domain.PublishSession, tokenID string, now time.Time) (string, error) {
-	if strings.TrimSpace(secret) == "" || !session.ActiveAt(now) || tokenID == "" {
+	return IssueBound(secret, session, "publish", tokenID, now)
+}
+
+func IssueBound(secret string, session domain.PublishSession, action string, tokenID string, now time.Time) (string, error) {
+	if strings.TrimSpace(secret) == "" || strings.TrimSpace(action) == "" || !session.ActiveAt(now) || tokenID == "" {
 		return "", ErrInvalid
 	}
 	payload := Payload{
-		StreamID: session.StreamID, Action: "publish", Path: session.Path, GroupID: session.GroupID,
+		StreamID: session.StreamID, Action: action, Path: session.Path, GroupID: session.GroupID,
 		SessionID: session.SessionID, DeviceUUID: session.DeviceUUID, SensorID: session.SensorID,
 		CredentialVersion: session.CredentialVersion, DevicePolicyVersion: session.DevicePolicyVersion,
 		TokenID: tokenID, ExpiresAt: session.PublishTokenExpiresAt.Unix(),

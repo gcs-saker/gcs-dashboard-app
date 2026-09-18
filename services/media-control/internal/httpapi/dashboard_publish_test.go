@@ -156,6 +156,10 @@ func TestDashboardTalkbackPlaybackUsesAuthorizedShortLivedPath(t *testing.T) {
 	if authRecorder.Code != http.StatusNoContent {
 		t.Fatalf("expected MediaMTX talkback playback authorization, got %d: %s", authRecorder.Code, authRecorder.Body.String())
 	}
+	session, err := server.publishSessions.FindByStream(context.Background(), "talkback.raw.drone-01.front.operator")
+	if err != nil || session.PrincipalID != "test-operator" || session.CredentialVersion != 1 {
+		t.Fatalf("talkback reader was not bound to the authorized account: %#v %v", session, err)
+	}
 }
 
 func TestDashboardPublishUrlUsesDevicePolicyWithoutGroupID(t *testing.T) {

@@ -20,9 +20,11 @@ type Client struct {
 	httpClient *http.Client
 }
 
-type WebRTCPublishSession struct {
-	ID   string `json:"id"`
-	Path string `json:"path"`
+type WebRTCSession struct {
+	ID    string `json:"id"`
+	State string `json:"state"`
+	Path  string `json:"path"`
+	Query string `json:"query"`
 }
 
 type webRTCSessionListResponse struct {
@@ -30,10 +32,11 @@ type webRTCSessionListResponse struct {
 		ID    string `json:"id"`
 		State string `json:"state"`
 		Path  string `json:"path"`
+		Query string `json:"query"`
 	} `json:"items"`
 }
 
-func (c Client) ListWebRTCPublishSessions(ctx context.Context) ([]WebRTCPublishSession, error) {
+func (c Client) ListWebRTCSessions(ctx context.Context) ([]WebRTCSession, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/v3/webrtcsessions/list", nil)
 	if err != nil {
 		return nil, err
@@ -50,10 +53,10 @@ func (c Client) ListWebRTCPublishSessions(ctx context.Context) ([]WebRTCPublishS
 	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
 		return nil, err
 	}
-	result := make([]WebRTCPublishSession, 0, len(payload.Items))
+	result := make([]WebRTCSession, 0, len(payload.Items))
 	for _, item := range payload.Items {
-		if item.State == "publish" && item.ID != "" && item.Path != "" {
-			result = append(result, WebRTCPublishSession{ID: item.ID, Path: item.Path})
+		if (item.State == "publish" || item.State == "read") && item.ID != "" && item.Path != "" {
+			result = append(result, WebRTCSession{ID: item.ID, State: item.State, Path: item.Path, Query: item.Query})
 		}
 	}
 	return result, nil
