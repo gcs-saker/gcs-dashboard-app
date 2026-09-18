@@ -14,6 +14,7 @@ import { usePublisherPreview } from "@streaming/hooks/publishing/usePublisherPre
 import { usePublisherWhipPublish } from "@streaming/hooks/publishing/usePublisherWhipPublish";
 import { useRemoteCameraControl } from "@streaming/hooks/publishing/useRemoteCameraControl";
 import { usePublisherBrowserRecovery } from "@streaming/hooks/publishing/usePublisherBrowserRecovery";
+import { usePublisherTrackLifecycle } from "@streaming/hooks/publishing/usePublisherTrackLifecycle";
 
 export interface LocalWebcamPublisherProps {
   streamId?: string;
@@ -48,7 +49,8 @@ export function useLocalWebcamPublisherController({
   }, [runtime]);
   const { clearReconnectTimer, handleConnectionChange, resetCapture, scheduleReconnect, stopAll, suspendReconnect } =
     usePublisherConnectionRecovery(runtime, publishRef, stopGpsTelemetry, updateStatus);
-  usePublisherBrowserRecovery({ runtime, scheduleReconnect, suspendReconnect });
+  usePublisherBrowserRecovery({ runtime, scheduleReconnect, stopAll, suspendReconnect });
+  usePublisherTrackLifecycle(runtime, stopGpsTelemetry, updateStatus);
   const startPreview = usePublisherPreview(runtime, mediaDevices, refreshMediaDevices, updateStatus);
   const publish = usePublisherWhipPublish({
     clearReconnectTimer, fetcher, handleConnectionChange, peerConnectionFactory, runtime,
