@@ -8,10 +8,21 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessiontoken"
 )
+
+type renewalBindingValidator struct {
+	err   error
+	calls int
+}
+
+func (v *renewalBindingValidator) ValidateSessionBinding(context.Context, domain.PublishSession) error {
+	v.calls++
+	return v.err
+}
 
 func TestDevicePublishSessionUsesServerOwnedIdentityAndRotatesRenewalToken(t *testing.T) {
 	observed := domain.DevicePublishCommand{}
@@ -20,7 +31,8 @@ func TestDevicePublishSessionUsesServerOwnedIdentityAndRotatesRenewalToken(t *te
 		Path: "raw/device-001/front", PublisherGroupID: "co-a", CredentialVersion: 2, DevicePolicyVersion: 4,
 	}}
 	store := domain.NewInMemoryPublishSessionStore()
-	server := newTestServerWithDevicePublisher(fakeStreams{}, fakeIce{}, publisher).WithPublishSessionStore(store)
+	server := newTestServerWithDevicePublisher(fakeStreams{}, fakeIce{}, publisher).WithPublishSessionStore(store).
+		WithSessionBindingValidator(&renewalBindingValidator{})
 
 	request := httptest.NewRequest(http.MethodPost, routeDevicePublishSessions, strings.NewReader(`{"sensorId":"front"}`))
 	request.Header.Set(deviceUUIDHeader, "device-001")
@@ -100,6 +112,56 @@ func TestDevicePublishSessionRejectsClientOwnedDestinationFields(t *testing.T) {
 
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestPublishSessionRenewalRejectsStaleAccountBinding(t *testing.T) {
+	validator := &renewalBindingValidator{err: errors.New("account binding stale")}
+	store := domain.NewInMemoryPublishSessionStore()
+	server := newTestServerWithDevicePublisher(fakeStreams{}, fakeIce{}, fakeDevicePublisher{}).
+		WithPublishSessionStore(store).WithSessionBindingValidator(validator)
+	now := time.Now()
+	raw := "gcs_renew_valid"
+	session := domain.PublishSession{
+		SessionID: "ps_account", DeviceUUID: "account-opaque", StreamID: "raw.device.opaque", Path: "raw/device/opaque",
+		GroupID: "co-a", PrincipalID: "publisher", BindingType: "account", CredentialVersion: 3,
+		Status: domain.PublishSessionActive, RenewalTokenHash: server.hashRenewalToken(raw), RenewalTokenExpiresAt: now.Add(time.Hour),
+	}
+	if err := store.Save(context.Background(), session); err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodPost, routeDevicePublishSessionPrefix+session.SessionID+"/renew", nil)
+	request.Header.Set(authorizationHeader, "Bearer "+raw)
+	recorder := httptest.NewRecorder()
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized || validator.calls != 1 {
+		t.Fatalf("expected stale binding denial and one validation, got status=%d calls=%d", recorder.Code, validator.calls)
+	}
+	stored, err := store.Find(context.Background(), session.SessionID)
+	if err != nil || stored.RenewalTokenVersion != 0 {
+		t.Fatal("stale account binding must not rotate renewal state")
+	}
+}
+
+func TestPublishSessionRenewalDoesNotValidateRandomMismatch(t *testing.T) {
+	validator := &renewalBindingValidator{err: errors.New("must not be called")}
+	store := domain.NewInMemoryPublishSessionStore()
+	server := newTestServerWithDevicePublisher(fakeStreams{}, fakeIce{}, fakeDevicePublisher{}).
+		WithPublishSessionStore(store).WithSessionBindingValidator(validator)
+	session := domain.PublishSession{SessionID: "ps_account", CredentialVersion: 3, Status: domain.PublishSessionActive,
+		RenewalTokenHash: server.hashRenewalToken("valid"), RenewalTokenExpiresAt: time.Now().Add(time.Hour)}
+	if err := store.Save(context.Background(), session); err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPost, routeDevicePublishSessionPrefix+session.SessionID+"/renew", nil)
+	request.Header.Set(authorizationHeader, "Bearer random-attacker-token")
+	recorder := httptest.NewRecorder()
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized || validator.calls != 0 {
+		t.Fatalf("random mismatch must be denied without policy lookup, got status=%d calls=%d", recorder.Code, validator.calls)
 	}
 }
 

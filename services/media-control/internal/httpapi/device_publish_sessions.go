@@ -156,6 +156,18 @@ func (s Server) renewDevicePublishSession(w http.ResponseWriter, r *http.Request
 		writeJSON(w, http.StatusUnauthorized, errorPayload(errPublishSessionRenewalDenied))
 		return
 	}
+	current, findErr := s.publishSessions.Find(r.Context(), sessionID)
+	if errors.Is(findErr, domain.ErrPublishSessionStoreUnavailable) {
+		w.Header().Set("Retry-After", "1")
+		writeJSON(w, http.StatusServiceUnavailable, errorPayload(errPublisherAuthNotConfigured))
+		return
+	}
+	rawHash := s.hashRenewalToken(raw)
+	if findErr == nil && hmac.Equal(current.RenewalTokenHash, rawHash) && !s.renewalBindingIsCurrent(r.Context(), current) {
+		s.auditDeviceSession(r, "publish_session_renewal_rejected", "", "denied")
+		writeJSON(w, http.StatusUnauthorized, errorPayload(errPublishSessionRenewalDenied))
+		return
+	}
 	now := s.now()
 	nextRenewal, err := secureOpaqueToken("gcs_renew_")
 	if err != nil {
@@ -164,7 +176,7 @@ func (s Server) renewDevicePublishSession(w http.ResponseWriter, r *http.Request
 	}
 	session, result, storeErr := s.publishSessions.RotateRenewal(
 		r.Context(),
-		sessionID, s.hashRenewalToken(raw), s.hashRenewalToken(nextRenewal),
+		sessionID, rawHash, s.hashRenewalToken(nextRenewal),
 		now.Add(publishAccessTTL), now.Add(publishRenewalTTL), now,
 	)
 	if storeErr != nil {
@@ -190,6 +202,18 @@ func (s Server) renewDevicePublishSession(w http.ResponseWriter, r *http.Request
 		PublishTokenExpiresAt: session.PublishTokenExpiresAt.UTC().Format(time.RFC3339),
 		RenewalTokenExpiresAt: session.RenewalTokenExpiresAt.UTC().Format(time.RFC3339),
 	})
+}
+
+func (s Server) renewalBindingIsCurrent(ctx context.Context, session domain.PublishSession) bool {
+	if session.CredentialVersion <= 0 {
+		return true
+	}
+	if s.sessionValidator == nil {
+		return false
+	}
+	validationContext, cancel := context.WithTimeout(ctx, sessionLookupTimeout)
+	defer cancel()
+	return s.sessionValidator.ValidateSessionBinding(validationContext, session) == nil
 }
 
 func (s Server) endDevicePublishSession(w http.ResponseWriter, r *http.Request, sessionID string) {
