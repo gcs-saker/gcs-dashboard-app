@@ -10,6 +10,7 @@ export interface DashboardServerStatusSnapshot {
   streams: DashboardServerHealth;
   latencyMs: number | null;
   checkedAt: number | null;
+  signalingReason?: string | null;
 }
 
 export const DEFAULT_SERVER_STATUS: DashboardServerStatusSnapshot = {
@@ -20,6 +21,7 @@ export const DEFAULT_SERVER_STATUS: DashboardServerStatusSnapshot = {
   streams: DASHBOARD_SERVER_HEALTH.degraded,
   latencyMs: null,
   checkedAt: null,
+  signalingReason: null,
 };
 
 async function probe(fetcher: typeof fetch, path: string, headers?: Record<string, string>): Promise<Response> {
@@ -42,6 +44,7 @@ export async function fetchDashboardServerStatus(
   const ready = probeHealth(readyResult);
   const signaling = combineProbeHealth(signalingResult, signalingReadyResult);
   const streams = probeHealth(streamResult);
+  const signalingReason = await readinessReason(signalingReadyResult);
 
   return {
     apiServer: streams === DASHBOARD_SERVER_HEALTH.online ? healthFromLatency(latencyMs) : streams,
@@ -51,7 +54,23 @@ export async function fetchDashboardServerStatus(
     streams,
     latencyMs,
     checkedAt: Date.now(),
+    signalingReason,
   };
+}
+
+async function readinessReason(result: PromiseSettledResult<Response>): Promise<string | null> {
+  if (result.status === "rejected") return "readiness_unavailable";
+  try {
+    const payload = await result.value.json() as { checks?: Array<{ name?: string; reason?: string }> };
+    const reason = payload.checks?.find((check) => check.name === "publish_sessions")?.reason;
+    return knownReadinessReason(reason) ? reason : null;
+  } catch {
+    return null;
+  }
+}
+
+function knownReadinessReason(reason: string | undefined): reason is string {
+  return reason === "store_unavailable" || reason === "scan_truncated" || reason === "session_age_exceeded";
 }
 
 function probeHealth(result: PromiseSettledResult<Response>): DashboardServerHealth {

@@ -33,13 +33,16 @@ describe("serverStatus", () => {
       .mockResolvedValueOnce(new Response("ok", { status: 200 }))
       .mockResolvedValueOnce(new Response("ready", { status: 200 }))
       .mockResolvedValueOnce(new Response("media", { status: 200 }))
-      .mockResolvedValueOnce(Response.json({ status: "degraded" }, { status: 503 }))
+      .mockResolvedValueOnce(Response.json({
+        status: "degraded", checks: [{ name: "publish_sessions", status: "error", reason: "store_unavailable" }],
+      }, { status: 503 }))
       .mockResolvedValueOnce(Response.json({ stream: "ready", service: "media-control", deprecated: true }));
 
     const status = await fetchDashboardServerStatus(fetcher as unknown as typeof fetch);
 
     expect(status.apiServer).toBe("online");
     expect(status.signalingServer).toBe("degraded");
+    expect(status.signalingReason).toBe("store_unavailable");
     expect(status.streams).toBe("online");
   });
 

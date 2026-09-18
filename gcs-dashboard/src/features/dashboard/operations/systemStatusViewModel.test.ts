@@ -36,4 +36,14 @@ describe("systemStatusViewModel", () => {
     expect(model.impactItems.find(([name]) => name === "Auth")?.[2]).toContain("로그인");
     expect(model.impactItems.find(([name]) => name === "Streams")?.[2]).toContain("스트림 목록");
   });
+
+  it("shows the bounded publish-session readiness reason", () => {
+    const model = buildSystemStatusViewModel({
+      ...degradedStatus,
+      signalingServer: DASHBOARD_SERVER_HEALTH.degraded,
+      signalingReason: "session_age_exceeded",
+    }, []);
+
+    expect(model.impactItems.find(([name]) => name === "Signaling")?.[2]).toBe("세션 정리 지연");
+  });
 });
