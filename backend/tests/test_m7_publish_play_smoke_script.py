@@ -26,6 +26,8 @@ def test_m7_publish_play_uses_server_issued_media_routes():
     assert "--require-video-frame" in script
     assert "--require-audio-frame" in script
     assert "PLAYBACK_RETRY_COUNT" in script
+    assert 'RUN_HLS_SMOKE="${RUN_HLS_SMOKE:-0}"' in script
+    assert '[[ "$RUN_HLS_SMOKE" == "1" ]] && verify_hls' in script
     assert '[[ "$status" == "404" || "$status" == "409" ]]' in script
     assert "Waiting for stream registry" in script
     assert 'docker run -d --name "$PUBLISHER_NAME"' in script

@@ -10,6 +10,7 @@ PLAYBACK_RETRY_DELAY_SECONDS="${PLAYBACK_RETRY_DELAY_SECONDS:-1}"
 START_STACK="${START_STACK:-1}"
 STOP_STACK="${STOP_STACK:-0}"
 RUN_WEBRTC_ICE_SMOKE="${RUN_WEBRTC_ICE_SMOKE:-1}"
+RUN_HLS_SMOKE="${RUN_HLS_SMOKE:-0}"
 PYTHON_IMAGE="${PYTHON_IMAGE:-python:3.12-slim}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-gcs-saker-arch-poc}"
 EDGE_BASE_URL="${EDGE_BASE_URL:-http://127.0.0.1:18080}"
@@ -32,6 +33,7 @@ Environment:
   START_STACK              Start the single-node stack first. Default: 1
   STOP_STACK               Stop compose after the smoke. Default: 0
   RUN_WEBRTC_ICE_SMOKE     Verify WHEP audio and video frames. Default: 1
+  RUN_HLS_SMOKE            Verify HLS only with an H264-compatible publisher. Default: 0
   PYTHON_IMAGE             Default: python:3.12-slim
   EDGE_BASE_URL            Default: http://127.0.0.1:18080
 EOF
@@ -236,7 +238,7 @@ run_live() {
   start_publisher
   wait_for_publisher
   issue_playback_urls
-  verify_hls
+  [[ "$RUN_HLS_SMOKE" == "1" ]] && verify_hls
   [[ "$RUN_WEBRTC_ICE_SMOKE" == "1" ]] && verify_whep
   echo "M7 authenticated publish/play smoke run passed"
   echo "Publish-to-playback visibility latency ms: $(($(now_ms) - PUBLISHER_STARTED_MS))"
