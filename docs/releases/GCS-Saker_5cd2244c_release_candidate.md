@@ -3,9 +3,11 @@
 ## Immutable source
 
 - Candidate source: `5cd2244c6fdb21938d032f4a9a0b656eac157224`
-- Server-01 deployed source at assessment: `9636df6b629cf15f5b60a8de016e181096aa90c3`
+- Server-01 source before rollout: `9636df6b629cf15f5b60a8de016e181096aa90c3`
+- Server-01 deployed source after rollout: `5cd2244c6fdb21938d032f4a9a0b656eac157224`
 - Candidate CI: GitHub Actions runs `35563231872` and `35554060377`, both successful
-- Deployment target: Server-01 production only; this document does not authorize deployment
+- Signed release workflow: GitHub Actions run `35568805767`, successful
+- Deployment target: Server-01 production only
 
 ## Operator-visible changes
 
@@ -33,6 +35,40 @@ stateless application replacement is a short reconnect rather than a user data m
 The schema migration is forward-only. Application rollback must not drop the V30 table. A verified PostgreSQL backup is
 required before production migration.
 
+## Server-01 production qualification
+
+- PostgreSQL pre-V30 backup and `pg_restore --list` verification: `PASS`
+- MQTT data backup and archive verification: `PASS`
+- Signed MQTT, MediaMTX, and TURN sequential rollout: `PASS`
+- Signed backend, auth-policy, media-control, and dashboard rollout: `PASS`
+- Flyway V30 applied: `PASS`
+- Public health and readiness: `200 / 200`
+- Unauthenticated protected stream API: `401`
+- Runtime source revision for all seven replaced containers: candidate commit
+- Container restart count after rollout: `0`
+- Server-01 operational smoke: `PASS`
+- Audit anchor continuity after deployment-key alignment: written successfully, failures `0`
+
+The externally supplied mobile-publisher container was deliberately preserved during this rollout. The environment's
+future image reference is pinned to the verified digest, while replacement of that external component remains a separate
+controlled operation.
+
+## Post-deployment media evidence
+
+- Physical mobile WHIP publish: `PASS`, H264 and Opus, ten continuous samples, RTP loss `0`
+- Synthetic account-authorized WHIP publish: `PASS`, VP8 and Opus
+- Synthetic authorized WHEP playback: `PASS`, audio and video frames received
+- WHEP answer latency: `47.5 ms`
+- ICE connected latency: `71.9 ms`
+- First audio frame: `173.2 ms`
+- First video frame: `639.2 ms`, `640x360`
+- Playback latency budget: `PASS`
+- Test publisher/container cleanup: `PASS`
+- Existing physical mobile publisher preserved after synthetic test: `PASS`
+
+The legacy smoke path that requests publish authorization for a caller-selected stream ID is denied with `403`, as
+required by the opaque server-owned routing policy. Follow-up automation must use the account publish-session API.
+
 ## Deployment order and gates
 
 1. Record active mobile/WebRTC sessions and current container/image revisions.
@@ -50,4 +86,5 @@ mismatch. Roll back the affected application image only; keep the forward-compat
 - Physical mobile Wi-Fi/LTE transitions: `BLOCKED` until coordinated device operation
 - Physical screen-lock/background soak: `BLOCKED` until coordinated device operation
 - MIL-STD-1472H Talkback intelligibility: `BLOCKED` pending real microphone/speaker and controlled acoustic conditions
-- Production deployment and rollback rehearsal: `NOT_RUN`; explicit deployment authorization is required
+- Controlled production rollout: `PASS`
+- Production rollback rehearsal after this rollout: `NOT_RUN`; no failure required rollback
