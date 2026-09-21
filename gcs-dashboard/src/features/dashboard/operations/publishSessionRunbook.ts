@@ -23,3 +23,20 @@ export function publishSessionRunbook(reason?: string | null): PublishSessionRun
 function guidance(id: string, action: string, caution: string): PublishSessionRunbookGuidance {
   return { action, caution, documentPath: DOCUMENT_PATH, id };
 }
+
+export type AlertAcknowledgementState = "acknowledged" | "in_progress" | "resolved";
+
+export async function acknowledgePublishSessionAlert(
+  runbookId: string,
+  state: AlertAcknowledgementState,
+  fetcher: typeof fetch = fetch,
+): Promise<void> {
+  const response = await authenticatedFetch(apiV1Url("/operations/alerts/acknowledgements"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ runbookId, state }),
+  }, fetcher);
+  if (!response.ok) throw new Error(`Alert acknowledgement failed with ${response.status}`);
+}
+import { apiV1Url } from "@/config";
+import { authenticatedFetch } from "@auth/authApi";

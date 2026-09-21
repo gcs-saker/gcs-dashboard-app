@@ -1,6 +1,11 @@
+import { useState } from "react";
 import { serverHealthText, type DashboardServerStatusSnapshot } from "@dashboard/operations/serverStatus";
 import { DASHBOARD_SERVER_HEALTH } from "@/features/stateContracts";
-import { publishSessionRunbook } from "@dashboard/operations/publishSessionRunbook";
+import {
+  acknowledgePublishSessionAlert,
+  publishSessionRunbook,
+  type AlertAcknowledgementState,
+} from "@dashboard/operations/publishSessionRunbook";
 
 interface SystemRunbookPanelProps {
   checkedText: string;
@@ -9,6 +14,16 @@ interface SystemRunbookPanelProps {
 
 export function SystemRunbookPanel({ checkedText, status }: SystemRunbookPanelProps) {
   const sessionRunbook = publishSessionRunbook(status.signalingReason);
+  const [acknowledgement, setAcknowledgement] = useState<AlertAcknowledgementState | "error" | null>(null);
+  const submit = async (state: AlertAcknowledgementState): Promise<void> => {
+    if (!sessionRunbook) return;
+    try {
+      await acknowledgePublishSessionAlert(sessionRunbook.id, state);
+      setAcknowledgement(state);
+    } catch {
+      setAcknowledgement("error");
+    }
+  };
   return (
     <section className="ops-panel system-status-page__panel system-status-page__runbook">
       <div className="ops-panel__header">
@@ -26,6 +41,12 @@ export function SystemRunbookPanel({ checkedText, status }: SystemRunbookPanelPr
           <div><dt>권장 조치</dt><dd>{sessionRunbook.action}</dd></div>
           <div><dt>금지 사항</dt><dd>{sessionRunbook.caution}</dd></div>
           <div><dt>문서 경로</dt><dd><code>{sessionRunbook.documentPath}</code></dd></div>
+          <div><dt>조치 상태</dt><dd className="system-status-page__acknowledgement">
+            <button type="button" onClick={() => void submit("acknowledged")}>확인</button>
+            <button type="button" onClick={() => void submit("in_progress")}>조치 중</button>
+            <button type="button" onClick={() => void submit("resolved")}>종료</button>
+            <span role="status">{acknowledgement === "error" ? "기록 실패" : acknowledgement ?? "미확인"}</span>
+          </dd></div>
         </> : null}
       </dl>
     </section>
