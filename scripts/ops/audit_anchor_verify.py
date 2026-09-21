@@ -57,9 +57,7 @@ def canonical_payload(anchor: dict[str, Any]) -> bytes:
     try:
         return "|".join(str(anchor[field]) for field in PAYLOAD_FIELDS).encode()
     except KeyError as error:
-        raise AuditAnchorError(
-            f"audit anchor field is missing: {error.args[0]}"
-        ) from None
+        raise AuditAnchorError(f"audit anchor field is missing: {error.args[0]}") from None
 
 
 def verify_anchor_record(anchor: dict[str, Any], key: bytes) -> str:
@@ -90,16 +88,10 @@ def verify_anchor_directory(
 ) -> int:
     if not directory.is_dir():
         raise AuditAnchorError("audit anchor directory is missing")
-    malformed = [
-        path.name
-        for path in directory.glob("anchor-*.json")
-        if not ANCHOR_PATTERN.fullmatch(path.name)
-    ]
+    malformed = [path.name for path in directory.glob("anchor-*.json") if not ANCHOR_PATTERN.fullmatch(path.name)]
     if malformed:
         raise AuditAnchorError("malformed audit anchor filename is present")
-    paths = sorted(
-        path for path in directory.iterdir() if ANCHOR_PATTERN.fullmatch(path.name)
-    )
+    paths = sorted(path for path in directory.iterdir() if ANCHOR_PATTERN.fullmatch(path.name))
     if not paths:
         raise AuditAnchorError("no audit anchors are available")
     state = VerificationState()
@@ -132,10 +124,7 @@ def verify_next_anchor(
     anchored_at = parse_timestamp(anchor.get("anchoredAt"))
     if previous.anchored_at is not None and anchored_at < previous.anchored_at:
         raise AuditAnchorError("audit anchor timestamp regressed")
-    if (
-        options.expected_commit is not None
-        and anchor.get("sourceCommit") != options.expected_commit
-    ):
+    if options.expected_commit is not None and anchor.get("sourceCommit") != options.expected_commit:
         raise AuditAnchorError("audit anchor source commit does not match")
     return VerificationState(
         expected_sequence,
@@ -147,10 +136,7 @@ def verify_next_anchor(
 
 def verify_checkpoint(path: Path, sequence: int, anchor_hash: str) -> None:
     checkpoint = read_anchor(path)
-    if (
-        checkpoint.get("sequence") != sequence
-        or checkpoint.get("anchorHash") != anchor_hash
-    ):
+    if checkpoint.get("sequence") != sequence or checkpoint.get("anchorHash") != anchor_hash:
         raise AuditAnchorError("audit anchor checkpoint does not match latest anchor")
 
 
@@ -158,9 +144,7 @@ def parse_timestamp(value: object) -> datetime:
     if not isinstance(value, str):
         raise AuditAnchorError("audit anchor timestamp is invalid")
     try:
-        normalized = re.sub(
-            r"(\.[0-9]{6})[0-9]+(?=Z|[+-][0-9]{2}:[0-9]{2}$)", r"\1", value
-        )
+        normalized = re.sub(r"(\.[0-9]{6})[0-9]+(?=Z|[+-][0-9]{2}:[0-9]{2}$)", r"\1", value)
         return datetime.fromisoformat(normalized.replace("Z", "+00:00"))
     except ValueError as error:
         raise AuditAnchorError("audit anchor timestamp is invalid") from error
