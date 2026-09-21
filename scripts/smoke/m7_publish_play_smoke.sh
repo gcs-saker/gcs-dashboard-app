@@ -5,9 +5,12 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MODE="check"
 SENSOR_ID="${SENSOR_ID:-front}"
 PUBLISH_DURATION_SECONDS="${PUBLISH_DURATION_SECONDS:-90}"
+PLAYBACK_RETRY_COUNT="${PLAYBACK_RETRY_COUNT:-10}"
+PLAYBACK_RETRY_DELAY_SECONDS="${PLAYBACK_RETRY_DELAY_SECONDS:-1}"
 START_STACK="${START_STACK:-1}"
 STOP_STACK="${STOP_STACK:-0}"
 RUN_WEBRTC_ICE_SMOKE="${RUN_WEBRTC_ICE_SMOKE:-1}"
+RUN_HLS_SMOKE="${RUN_HLS_SMOKE:-0}"
 PYTHON_IMAGE="${PYTHON_IMAGE:-python:3.12-slim}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-gcs-saker-arch-poc}"
 EDGE_BASE_URL="${EDGE_BASE_URL:-http://127.0.0.1:18080}"
@@ -30,6 +33,7 @@ Environment:
   START_STACK              Start the single-node stack first. Default: 1
   STOP_STACK               Stop compose after the smoke. Default: 0
   RUN_WEBRTC_ICE_SMOKE     Verify WHEP audio and video frames. Default: 1
+  RUN_HLS_SMOKE            Verify HLS only with an H264-compatible publisher. Default: 0
   PYTHON_IMAGE             Default: python:3.12-slim
   EDGE_BASE_URL            Default: http://127.0.0.1:18080
 EOF
@@ -61,6 +65,11 @@ now_ms() {
 }
 
 cleanup() {
+  local status=$?
+  if [[ "$status" -ne 0 ]] && docker inspect "$PUBLISHER_NAME" >/dev/null 2>&1; then
+    echo "Authenticated WHIP publisher failed; retained tail follows" >&2
+    docker logs --tail 80 "$PUBLISHER_NAME" 2>&1 >&2 || true
+  fi
   docker rm -f "$PUBLISHER_NAME" >/dev/null 2>&1 || true
   if [[ -n "$SESSION_DIR" && -d "$SESSION_DIR" ]]; then
     rm -f -- "$SESSION_DIR/access-token" "$SESSION_DIR/publish-token" "$SESSION_DIR/session.json" "$SESSION_DIR/playback.json"
@@ -69,6 +78,7 @@ cleanup() {
   if [[ "$STOP_STACK" == "1" ]]; then
     STOP_STACK=1 "${REPO_ROOT}/scripts/smoke/m7_single_node_runtime_smoke.sh" --run >/dev/null 2>&1 || true
   fi
+  return "$status"
 }
 
 wait_for_http() {
@@ -131,7 +141,7 @@ start_publisher() {
   local publish_url internal_publish_url
   publish_url="$(json_field "${SESSION_DIR}/session.json" publishUrl)"
   internal_publish_url="$(rewrite_origin_for_container "$publish_url")"
-  docker run -d --rm --name "$PUBLISHER_NAME" --network "$MEDIA_NETWORK" \
+  docker run -d --name "$PUBLISHER_NAME" --network "$MEDIA_NETWORK" \
     -v "${REPO_ROOT}:/workspace:ro" -v "${SESSION_DIR}:/run/gcs-smoke:ro" -w /workspace \
     "$PYTHON_IMAGE" \
     bash -lc 'pip install aiortc >/tmp/aiortc-install.log && python scripts/smoke/webrtc_whip_publish_smoke.py --run --require-connected --whip-url "$1" --publish-token-file /run/gcs-smoke/publish-token --ice-server-url stun:turn-primary:3478 --publish-seconds "$2"' \
@@ -154,13 +164,24 @@ wait_for_publisher() {
 }
 
 issue_playback_urls() {
-  local access_token stream_id
+  local access_token stream_id attempt status
   access_token="$(<"${SESSION_DIR}/access-token")"
   stream_id="$(json_field "${SESSION_DIR}/session.json" streamId)"
-  curl -fsS -H "Authorization: Bearer ${access_token}" \
-    "${EDGE_BASE_URL}/media-control/api/v1/streams/${stream_id}/playback" \
-    >"${SESSION_DIR}/playback.json"
-  chmod 600 "${SESSION_DIR}/playback.json"
+  for ((attempt = 1; attempt <= PLAYBACK_RETRY_COUNT; attempt += 1)); do
+    status="$(curl -sS -o "${SESSION_DIR}/playback.json" -w '%{http_code}' \
+      -H "Authorization: Bearer ${access_token}" \
+      "${EDGE_BASE_URL}/media-control/api/v1/streams/${stream_id}/playback")"
+    chmod 600 "${SESSION_DIR}/playback.json"
+    [[ "$status" == "200" ]] && return 0
+    [[ "$status" == "404" || "$status" == "409" ]] || {
+      echo "Playback authorization failed with HTTP ${status}" >&2
+      return 1
+    }
+    echo "Waiting for stream registry (${attempt}/${PLAYBACK_RETRY_COUNT})" >&2
+    sleep "$PLAYBACK_RETRY_DELAY_SECONDS"
+  done
+  echo "Timed out waiting for stream registry" >&2
+  return 1
 }
 
 first_hls_variant_url() {
@@ -217,7 +238,7 @@ run_live() {
   start_publisher
   wait_for_publisher
   issue_playback_urls
-  verify_hls
+  [[ "$RUN_HLS_SMOKE" == "1" ]] && verify_hls
   [[ "$RUN_WEBRTC_ICE_SMOKE" == "1" ]] && verify_whep
   echo "M7 authenticated publish/play smoke run passed"
   echo "Publish-to-playback visibility latency ms: $(($(now_ms) - PUBLISHER_STARTED_MS))"
