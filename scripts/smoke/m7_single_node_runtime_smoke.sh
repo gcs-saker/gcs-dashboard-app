@@ -5,6 +5,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_DIR="${REPO_ROOT}/deploy/compose"
 COMPOSE_FILE="${COMPOSE_DIR}/compose.single-node.poc.yml"
 COMPOSE_OVERRIDE_FILE="${COMPOSE_DIR}/compose.local-dev.override.yml"
+EPHEMERAL_PKI_OVERRIDE_FILE="${COMPOSE_DIR}/compose.ephemeral-pki.override.yml"
 ENV_FILE="${ENV_FILE:-${COMPOSE_DIR}/.env.single-node.example}"
 MODE="check"
 START_STACK="${START_STACK:-1}"
@@ -12,6 +13,10 @@ STOP_STACK="${STOP_STACK:-0}"
 USE_SMOKE_PORTS="${USE_SMOKE_PORTS:-1}"
 USE_LOCAL_DEV_OVERRIDE="${USE_LOCAL_DEV_OVERRIDE:-1}"
 BUILD_STACK="${BUILD_STACK:-1}"
+EPHEMERAL_INTERNAL_PKI="${EPHEMERAL_INTERNAL_PKI:-${STOP_STACK}}"
+EPHEMERAL_PKI_DIR=""
+EPHEMERAL_PKI_VOLUME=""
+STACK_STARTED=0
 
 usage() {
   cat <<'EOF'
@@ -29,6 +34,7 @@ Environment:
   USE_SMOKE_PORTS  In --run, avoid common local ports. Default: 1
   USE_LOCAL_DEV_OVERRIDE  Use the non-production mobile publisher stand-in. Default: 1
   BUILD_STACK  Rebuild local service images before startup. Default: 1
+  EPHEMERAL_INTERNAL_PKI  Generate isolated local PKI. Defaults to STOP_STACK.
 EOF
 }
 
@@ -67,6 +73,9 @@ compose() {
   if [[ "$USE_LOCAL_DEV_OVERRIDE" == "1" ]]; then
     compose_args+=(-f "$COMPOSE_OVERRIDE_FILE")
   fi
+  if [[ -n "$EPHEMERAL_PKI_VOLUME" ]]; then
+    compose_args+=(-f "$EPHEMERAL_PKI_OVERRIDE_FILE")
+  fi
   docker compose "${compose_args[@]}" "$@"
 }
 
@@ -77,6 +86,9 @@ load_env() {
   . <(sed 's/\r$//' "$ENV_FILE")
   set +a
 }
+
+# shellcheck source=scripts/smoke/m7_ephemeral_pki_smoke_lib.sh
+source "${REPO_ROOT}/scripts/smoke/m7_ephemeral_pki_smoke_lib.sh"
 
 apply_smoke_ports() {
   if [[ "$USE_SMOKE_PORTS" != "1" ]]; then
@@ -195,6 +207,7 @@ print(server["urls"], server["username"], server["credential"], sep="\t")
 check_required_files() {
   test -f "$COMPOSE_FILE"
   test -f "$COMPOSE_OVERRIDE_FILE"
+  test -f "$EPHEMERAL_PKI_OVERRIDE_FILE"
   test -f "$ENV_FILE"
   test -f "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   test -f "${REPO_ROOT}/deploy/mediamtx/mediamtx.closed-network.yml"
@@ -254,10 +267,13 @@ run_live() {
   check_required_files
   load_env
   apply_smoke_ports
+  trap cleanup_runtime_smoke EXIT
+  prepare_ephemeral_internal_pki
 
   if [[ "$START_STACK" == "1" ]]; then
     local build_args=()
     [[ "$BUILD_STACK" == "1" ]] && build_args+=(--build)
+    STACK_STARTED=1
     compose up -d "${build_args[@]}"
     compose restart edge >/dev/null
   fi
@@ -308,9 +324,6 @@ run_live() {
   echo "Edge URL: ${edge_base_url}"
   echo "Verified active cutover: auth-policy health/ready/telemetry ingest-read/asset reads, unauthenticated telemetry rejection, media-control stream status/ICE servers, MediaMTX API, primary TURN allocation"
 
-  if [[ "$STOP_STACK" == "1" ]]; then
-    compose down
-  fi
 }
 
 case "$MODE" in

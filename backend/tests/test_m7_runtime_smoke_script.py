@@ -80,6 +80,27 @@ def test_m7_runtime_smoke_uses_local_override_and_ephemeral_turn_credentials():
     assert "TURN_PASSWORD is required" not in script
 
 
+def test_m7_runtime_smoke_generates_and_removes_ephemeral_local_pki():
+    script = (REPO_ROOT / "scripts/smoke/m7_single_node_runtime_smoke.sh").read_text(encoding="utf-8")
+    pki_library = (REPO_ROOT / "scripts/smoke/m7_ephemeral_pki_smoke_lib.sh").read_text(encoding="utf-8")
+    contract = script + pki_library
+
+    assert 'EPHEMERAL_INTERNAL_PKI="${EPHEMERAL_INTERNAL_PKI:-${STOP_STACK}}"' in script
+    assert "prepare_internal_pki.sh" in contract
+    assert "compose.ephemeral-pki.override.yml" in script
+    assert "gcs-saker.ephemeral-pki=true" in contract
+    assert "chown 10002:10002 /target/auth-policy.key" in contract
+    assert "chown 10001:10001 /target/media-control.key /target/backend.key" in contract
+    assert "chown 1883:1883 /target/mqtt.key /target/mqtt-health.key" in contract
+    assert "/source/ca.key" not in contract
+    assert 'export INTERNAL_PKI_DIR="$(cygpath -m "$EPHEMERAL_PKI_DIR")"' in contract
+    assert "export AUTH_POLICY_AUDIT_ANCHOR_ENABLED=false" in contract
+    assert "EPHEMERAL_INTERNAL_PKI requires STOP_STACK=1" in contract
+    assert "trap cleanup_runtime_smoke EXIT" in script
+    assert "retained service log tails follow" in contract
+    assert 'rm -rf -- "$resolved"' in contract
+
+
 def test_mediamtx_additional_hosts_are_env_driven_for_public_nat_candidates():
     deploy_config = (REPO_ROOT / "deploy" / "mediamtx" / "mediamtx.closed-network.yml").read_text(encoding="utf-8")
     dashboard_config = (REPO_ROOT / "gcs-dashboard" / "mediamtx.yml").read_text(encoding="utf-8")
