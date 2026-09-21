@@ -20,6 +20,15 @@ export function publishSessionRunbook(reason?: string | null): PublishSessionRun
   }
 }
 
+export function publishSessionRunbookById(id: string): PublishSessionRunbookGuidance | null {
+  const reasonById: Record<string, string> = {
+    "RUN-PUB-01": "store_unavailable",
+    "RUN-PUB-02": "scan_truncated",
+    "RUN-PUB-03": "session_age_exceeded",
+  };
+  return publishSessionRunbook(reasonById[id]);
+}
+
 function guidance(id: string, action: string, caution: string): PublishSessionRunbookGuidance {
   return { action, caution, documentPath: DOCUMENT_PATH, id };
 }
@@ -37,6 +46,20 @@ export async function acknowledgePublishSessionAlert(
     body: JSON.stringify({ runbookId, state }),
   }, fetcher);
   if (!response.ok) throw new Error(`Alert acknowledgement failed with ${response.status}`);
+}
+
+interface AlertAcknowledgementResponse {
+  runbookId: string;
+  state: AlertAcknowledgementState;
+}
+
+export async function fetchPublishSessionAcknowledgements(fetcher: typeof fetch = fetch): Promise<Map<string, AlertAcknowledgementState>> {
+  const response = await authenticatedFetch(apiV1Url("/operations/alerts/acknowledgements"), {
+    headers: { Accept: "application/json" },
+  }, fetcher);
+  if (!response.ok) throw new Error(`Alert acknowledgement query failed with ${response.status}`);
+  const payload = await response.json() as AlertAcknowledgementResponse[];
+  return new Map(payload.map((item) => [item.runbookId, item.state]));
 }
 import { apiV1Url } from "@/config";
 import { authenticatedFetch } from "@auth/authApi";
