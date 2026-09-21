@@ -41,6 +41,21 @@ docker compose config
 5. backend `/healthz`, `/readyz`를 확인한다.
 6. dashboard 접속과 `/api/v1/streams` playback URL을 확인한다.
 
+## 일회성 내부 PKI smoke
+
+로컬 통합 시험은 저장소의 placeholder 인증서를 TLS 성공 근거로 사용하지 않는다. 다음 명령은 저장소 외부에
+일회성 CA와 leaf 인증서를 만들고, 런타임에는 CA 개인키를 제외한 인증서만 별도 Docker volume으로 전달한다.
+
+```bash
+START_STACK=1 STOP_STACK=1 BUILD_STACK=0 EPHEMERAL_INTERNAL_PKI=1 \
+  bash scripts/smoke/m7_single_node_runtime_smoke.sh --run
+```
+
+- auth-policy 키는 UID `10002`, media-control/backend 키는 UID `10001`, MQTT 키는 UID `1883`만 읽는다.
+- one-shot CA는 영속 감사 앵커 키와 연속성이 없으므로 이 smoke에서만 앵커 스케줄러를 비활성화한다.
+- 성공과 실패 모두 서비스 로그 tail을 보존한 뒤 컨테이너, 임시 PKI volume, 호스트 임시 키를 정리한다.
+- 영속 PKI 회전과 감사 앵커 무결성은 별도 운영 qualification에서 계속 fail-closed로 검증한다.
+
 ## #112 반영 사항
 
 - `mediamtx.yml` file bind mount를 테스트로 확인한다.

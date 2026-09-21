@@ -1,0 +1,30 @@
+services:
+  mqtt:
+    volumes:
+      - type: volume
+        source: ephemeral-pki
+        target: /run/secrets/gcs-pki
+        read_only: true
+  backend:
+    volumes:
+      - type: volume
+        source: ephemeral-pki
+        target: /run/secrets/gcs-pki
+        read_only: true
+  auth-policy:
+    volumes:
+      - type: volume
+        source: ephemeral-pki
+        target: /run/secrets/gcs-pki
+        read_only: true
+  media-control:
+    volumes:
+      - type: volume
+        source: ephemeral-pki
+        target: /run/secrets/gcs-pki
+        read_only: true
+
+volumes:
+  ephemeral-pki:
+    external: true
+    name: ${EPHEMERAL_PKI_VOLUME:?Set EPHEMERAL_PKI_VOLUME}
