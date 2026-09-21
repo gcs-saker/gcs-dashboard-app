@@ -14,3 +14,5 @@ ignore:
     package: *python312_binary
   - vulnerability: CVE-2026-7210
     package: *python312_binary
+  - vulnerability: CVE-2026-82049
+    package: *python312_binary
