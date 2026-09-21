@@ -5,6 +5,8 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MODE="check"
 SENSOR_ID="${SENSOR_ID:-front}"
 PUBLISH_DURATION_SECONDS="${PUBLISH_DURATION_SECONDS:-90}"
+PLAYBACK_RETRY_COUNT="${PLAYBACK_RETRY_COUNT:-10}"
+PLAYBACK_RETRY_DELAY_SECONDS="${PLAYBACK_RETRY_DELAY_SECONDS:-1}"
 START_STACK="${START_STACK:-1}"
 STOP_STACK="${STOP_STACK:-0}"
 RUN_WEBRTC_ICE_SMOKE="${RUN_WEBRTC_ICE_SMOKE:-1}"
@@ -131,7 +133,7 @@ start_publisher() {
   local publish_url internal_publish_url
   publish_url="$(json_field "${SESSION_DIR}/session.json" publishUrl)"
   internal_publish_url="$(rewrite_origin_for_container "$publish_url")"
-  docker run -d --rm --name "$PUBLISHER_NAME" --network "$MEDIA_NETWORK" \
+  docker run -d --name "$PUBLISHER_NAME" --network "$MEDIA_NETWORK" \
     -v "${REPO_ROOT}:/workspace:ro" -v "${SESSION_DIR}:/run/gcs-smoke:ro" -w /workspace \
     "$PYTHON_IMAGE" \
     bash -lc 'pip install aiortc >/tmp/aiortc-install.log && python scripts/smoke/webrtc_whip_publish_smoke.py --run --require-connected --whip-url "$1" --publish-token-file /run/gcs-smoke/publish-token --ice-server-url stun:turn-primary:3478 --publish-seconds "$2"' \
@@ -154,13 +156,24 @@ wait_for_publisher() {
 }
 
 issue_playback_urls() {
-  local access_token stream_id
+  local access_token stream_id attempt status
   access_token="$(<"${SESSION_DIR}/access-token")"
   stream_id="$(json_field "${SESSION_DIR}/session.json" streamId)"
-  curl -fsS -H "Authorization: Bearer ${access_token}" \
-    "${EDGE_BASE_URL}/media-control/api/v1/streams/${stream_id}/playback" \
-    >"${SESSION_DIR}/playback.json"
-  chmod 600 "${SESSION_DIR}/playback.json"
+  for ((attempt = 1; attempt <= PLAYBACK_RETRY_COUNT; attempt += 1)); do
+    status="$(curl -sS -o "${SESSION_DIR}/playback.json" -w '%{http_code}' \
+      -H "Authorization: Bearer ${access_token}" \
+      "${EDGE_BASE_URL}/media-control/api/v1/streams/${stream_id}/playback")"
+    chmod 600 "${SESSION_DIR}/playback.json"
+    [[ "$status" == "200" ]] && return 0
+    [[ "$status" == "404" || "$status" == "409" ]] || {
+      echo "Playback authorization failed with HTTP ${status}" >&2
+      return 1
+    }
+    echo "Waiting for stream registry (${attempt}/${PLAYBACK_RETRY_COUNT})" >&2
+    sleep "$PLAYBACK_RETRY_DELAY_SECONDS"
+  done
+  echo "Timed out waiting for stream registry" >&2
+  return 1
 }
 
 first_hls_variant_url() {

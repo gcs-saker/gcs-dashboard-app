@@ -25,5 +25,10 @@ def test_m7_publish_play_uses_server_issued_media_routes():
     assert "--publish-token-file" in script
     assert "--require-video-frame" in script
     assert "--require-audio-frame" in script
+    assert "PLAYBACK_RETRY_COUNT" in script
+    assert '[[ "$status" == "404" || "$status" == "409" ]]' in script
+    assert "Waiting for stream registry" in script
+    assert 'docker run -d --name "$PUBLISHER_NAME"' in script
+    assert 'docker run -d --rm --name "$PUBLISHER_NAME"' not in script
     assert "rtsp://mediamtx" not in script
     assert "STREAM_PATH=" not in script

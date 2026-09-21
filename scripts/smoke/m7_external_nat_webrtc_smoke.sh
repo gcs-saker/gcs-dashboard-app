@@ -4,8 +4,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MODE="check"
 EDGE_BASE_URL="${EDGE_BASE_URL:-https://gcs-saker.com}"
-STREAM_PATH="${STREAM_PATH:-raw/nat/smoke}"
-STREAM_ID="${STREAM_ID:-${STREAM_PATH//\//.}}"
+SENSOR_ID="${SENSOR_ID:-external-nat-smoke}"
 STUN_URL="${STUN_URL:-stun:turn.gcs-saker.com:3478}"
 TURN_PRIMARY_URL="${TURN_PRIMARY_URL:-turn:turn.gcs-saker.com:3478?transport=udp}"
 TURN_SECONDARY_URL="${TURN_SECONDARY_URL:-}"
@@ -24,6 +23,7 @@ WHEP_RETRY_DELAY_SECONDS="${WHEP_RETRY_DELAY_SECONDS:-2}"
 REPORT_FILE="${REPORT_FILE:-}"
 PUBLISHER_PID=""
 PUBLISHER_STARTED_MS=""
+SESSION_DIR=""
 auth_args=()
 insecure_arg=()
 ice_path_args=(--require-selected-pair)
@@ -39,7 +39,7 @@ Modes:
 
 Environment:
   EDGE_BASE_URL         Default: https://gcs-saker.com
-  STREAM_PATH           Default: raw/nat/smoke
+  SENSOR_ID             Account publish-session sensor label. Default: external-nat-smoke
   STUN_URL              Default: stun:turn.gcs-saker.com:3478
   TURN_PRIMARY_URL      Default: turn:turn.gcs-saker.com:3478?transport=udp
   TURN_SECONDARY_URL    Default: empty (single-host deployment)
@@ -116,62 +116,8 @@ curl_status() {
   fi
 }
 
-resolve_publish_whip_url() {
-  local publish_auth_url="${EDGE_BASE_URL}/media-control/api/v1/streams/${STREAM_ID}/publish"
-  if [[ -z "$AUTH_BEARER_TOKEN" ]]; then
-    echo "AUTH_BEARER_TOKEN is required to request an authorized WHIP publish URL" >&2
-    exit 1
-  fi
-  # shellcheck disable=SC2046
-  curl $(tls_args) -fsS \
-    -H "Authorization: Bearer ${AUTH_BEARER_TOKEN}" \
-    -H "Accept: application/json" \
-    "$publish_auth_url" \
-    | python3 -c 'import json,sys; payload=json.load(sys.stdin); print(payload["whipUrl"])'
-}
-
-resolve_playback_whep_url() {
-  local playback_auth_url="${EDGE_BASE_URL}/media-control/api/v1/streams/${STREAM_ID}/playback"
-  if [[ -z "$AUTH_BEARER_TOKEN" ]]; then
-    echo "AUTH_BEARER_TOKEN is required to request an authorized WHEP playback URL" >&2
-    exit 1
-  fi
-  # shellcheck disable=SC2046
-  curl $(tls_args) -fsS \
-    -H "Authorization: Bearer ${AUTH_BEARER_TOKEN}" \
-    -H "Accept: application/json" \
-    "$playback_auth_url" \
-    | python3 -c 'import json,sys; payload=json.load(sys.stdin); print(payload["playbackUrls"]["webrtc"])'
-}
-
-resolve_playback_whep_url_with_retry() {
-  local attempt=1
-  local output
-  local status
-  local line
-  while [[ "$attempt" -le "$WHEP_RETRY_COUNT" ]]; do
-    set +e
-    output="$(resolve_playback_whep_url 2>&1)"
-    status=$?
-    set -e
-    if [[ "$status" -eq 0 && -n "$output" ]]; then
-      if [[ -n "$PUBLISHER_STARTED_MS" ]]; then
-        append_report "Stream visibility latency ms: $(($(now_ms) - PUBLISHER_STARTED_MS))" >&2
-      fi
-      printf '%s\n' "$output"
-      return 0
-    fi
-    line="authorized WHEP playback URL attempt ${attempt}: waiting for stream registry"
-    echo "$line" >&2
-    if [[ -n "$REPORT_FILE" ]]; then
-      printf '%s\n' "$line" >>"$REPORT_FILE"
-    fi
-    sleep "$WHEP_RETRY_DELAY_SECONDS"
-    attempt=$((attempt + 1))
-  done
-  printf '%s\n' "$output" >&2
-  return "$status"
-}
+# shellcheck source=scripts/smoke/m7_account_session_smoke_lib.sh
+source "${REPO_ROOT}/scripts/smoke/m7_account_session_smoke_lib.sh"
 
 run_turn_allocation() {
   local label="$1"
@@ -259,16 +205,22 @@ run_live() {
   local media_ready_status
   local ice_status
   local ice_server_for_media="$STUN_URL"
-  local whip_url="${EDGE_BASE_URL}/webrtc/${STREAM_PATH}/whip"
-  local whep_url="${EDGE_BASE_URL}/webrtc/${STREAM_PATH}/whep"
+  local whip_url=""
+  local whep_url=""
 
   cleanup_publisher() {
     if [[ -n "$PUBLISHER_PID" ]]; then
       kill "$PUBLISHER_PID" >/dev/null 2>&1 || true
       wait "$PUBLISHER_PID" >/dev/null 2>&1 || true
     fi
+    if [[ -n "$SESSION_DIR" && -d "$SESSION_DIR" ]]; then
+      rm -f -- "$SESSION_DIR/publish-token" "$SESSION_DIR/publish-session.json"
+      rmdir -- "$SESSION_DIR" 2>/dev/null || true
+    fi
   }
   trap cleanup_publisher EXIT
+  SESSION_DIR="$(mktemp -d)"
+  chmod 700 "$SESSION_DIR"
 
   if [[ "$INSECURE_TLS" == "1" ]]; then
     insecure_arg=(--insecure)
@@ -287,7 +239,7 @@ run_live() {
 
   append_report "M7 external NAT WebRTC smoke run"
   append_report "Edge base URL: ${EDGE_BASE_URL}"
-  append_report "Stream path: ${STREAM_PATH}"
+  append_report "Stream route ownership: server-issued opaque account session"
   append_report "Relay-only requested: ${RELAY_ONLY}"
   append_report "healthz HTTP status: ${health_status}"
   append_report "readyz HTTP status: ${ready_status}"
@@ -317,13 +269,14 @@ run_live() {
 
   if [[ "$RUN_WHIP_PUBLISH" == "1" ]]; then
     publish_auth_started_ms="$(now_ms)"
-    whip_url="$(resolve_publish_whip_url)"
+    whip_url="$(issue_account_publish_session)"
     append_report "Publish authorization latency ms: $(($(now_ms) - publish_auth_started_ms))"
     append_report "authorized WHIP publish URL resolved through media-control"
     PUBLISHER_STARTED_MS="$(now_ms)"
     python3 "${REPO_ROOT}/scripts/smoke/webrtc_whip_publish_smoke.py" \
       --run \
       --whip-url "$whip_url" \
+      --publish-token-file "$SESSION_DIR/publish-token" \
       --ice-server-url "$ice_server_for_media" \
       ${auth_args+"${auth_args[@]}"} \
       "${insecure_arg[@]}" \
@@ -336,10 +289,12 @@ run_live() {
   fi
 
   if [[ "$RUN_WHEP_PLAYBACK" == "1" ]]; then
-    if [[ -n "$AUTH_BEARER_TOKEN" ]]; then
-      whep_url="$(resolve_playback_whep_url_with_retry)"
-      append_report "authorized WHEP playback URL resolved through media-control"
-    fi
+    [[ "$RUN_WHIP_PUBLISH" == "1" ]] || {
+      echo "WHEP playback requires an issued account publish session" >&2
+      exit 1
+    }
+    whep_url="$(resolve_playback_whep_url_with_retry)"
+    append_report "authorized WHEP playback URL resolved through media-control"
     run_whep_playback_with_retry "$whep_url" "$ice_server_for_media"
   fi
 

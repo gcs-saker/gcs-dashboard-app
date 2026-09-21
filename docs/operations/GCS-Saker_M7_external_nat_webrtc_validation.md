@@ -27,9 +27,13 @@
 WEBRTC_TURN_USERNAME=... \
 WEBRTC_TURN_PASSWORD=... \
 EDGE_BASE_URL=https://gcs-saker.com \
-STREAM_PATH=raw/nat/smoke \
+SENSOR_ID=external-nat-smoke \
 scripts/smoke/m7_external_nat_webrtc_smoke.sh --run
 ```
+
+The smoke never constructs a private media path or requests authorization for a caller-selected stream ID. It creates an
+account publish session, keeps the publish token in an owner-only temporary file, and uses only the opaque publish and
+playback routes returned by media-control. Playback discovery retries are bounded and redact the unavailable route.
 
 기본값은 `INSECURE_TLS=0`이며 공인 CA 신뢰 체인을 검증한다. 격리된 로컬 개발 환경에서만 명시적으로 `INSECURE_TLS=1`을 사용할 수 있고, staging/production 승인 근거로는 인정하지 않는다.
 

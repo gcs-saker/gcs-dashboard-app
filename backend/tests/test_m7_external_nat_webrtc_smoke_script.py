@@ -6,6 +6,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "smoke" / "m7_external_nat_webrtc_smoke.sh"
+SESSION_LIBRARY = REPO_ROOT / "scripts" / "smoke" / "m7_account_session_smoke_lib.sh"
 PUBLISHER_SCRIPT = REPO_ROOT / "scripts" / "smoke" / "webrtc_whip_publish_smoke.py"
 DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_M7_external_nat_webrtc_validation.md"
 
@@ -35,13 +36,19 @@ def test_m7_external_nat_webrtc_smoke_contract_check_passes() -> None:
 
 def test_m7_external_nat_webrtc_smoke_reports_required_metrics() -> None:
     script = SCRIPT.read_text(encoding="utf-8")
+    contract = script + SESSION_LIBRARY.read_text(encoding="utf-8")
     doc = DOC.read_text(encoding="utf-8")
 
     assert "TURN primary" in script
     assert "TURN secondary" in script
     assert "AUTH_BEARER_TOKEN" in script
-    assert "resolve_publish_whip_url" in script
-    assert "resolve_playback_whep_url" in script
+    assert "issue_account_publish_session" in contract
+    assert "/media-control/api/v1/account/publish-sessions" in contract
+    assert "--publish-token-file" in script
+    assert "/streams/${STREAM_ID}/publish" not in script
+    assert "STREAM_PATH=" not in script
+    assert 'json.dumps({"sensorId": os.environ["SENSOR_ID"]})' in contract
+    assert "resolve_playback_whep_url" in contract
     assert "authorized WHEP playback URL resolved through media-control" in script
     assert "authorized WHIP publish URL resolved through media-control" in script
     assert "Security gate: WHIP publish URL was issued by media-control authorization" in script
@@ -53,11 +60,11 @@ def test_m7_external_nat_webrtc_smoke_reports_required_metrics() -> None:
     assert "--measure-audio-video-sync" in script
     assert "candidate summary" in script
     assert "WHEP_RETRY_COUNT" in script
-    assert 'printf \'%s\\n\' "$output" >>"$REPORT_FILE"' in script
+    assert 'printf \'%s\\n\' "$line" >>"$REPORT_FILE"' in contract
     assert "waiting for WHIP path visibility" in script
     assert "External NAT smoke wall latency ms" in script
     assert "Publish authorization latency ms" in script
-    assert "Stream visibility latency ms" in script
+    assert "Stream visibility latency ms" in contract
     assert "--latency-profile playback" in script
     assert "--enforce-latency-budget" in script
     assert "--measure-keyframe-interval" in script
