@@ -30,5 +30,7 @@ def test_m7_publish_play_uses_server_issued_media_routes():
     assert "Waiting for stream registry" in script
     assert 'docker run -d --name "$PUBLISHER_NAME"' in script
     assert 'docker run -d --rm --name "$PUBLISHER_NAME"' not in script
+    assert 'docker logs --tail 80 "$PUBLISHER_NAME"' in script
+    assert "Authenticated WHIP publisher failed; retained tail follows" in script
     assert "rtsp://mediamtx" not in script
     assert "STREAM_PATH=" not in script

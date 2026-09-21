@@ -63,6 +63,11 @@ now_ms() {
 }
 
 cleanup() {
+  local status=$?
+  if [[ "$status" -ne 0 ]] && docker inspect "$PUBLISHER_NAME" >/dev/null 2>&1; then
+    echo "Authenticated WHIP publisher failed; retained tail follows" >&2
+    docker logs --tail 80 "$PUBLISHER_NAME" 2>&1 >&2 || true
+  fi
   docker rm -f "$PUBLISHER_NAME" >/dev/null 2>&1 || true
   if [[ -n "$SESSION_DIR" && -d "$SESSION_DIR" ]]; then
     rm -f -- "$SESSION_DIR/access-token" "$SESSION_DIR/publish-token" "$SESSION_DIR/session.json" "$SESSION_DIR/playback.json"
@@ -71,6 +76,7 @@ cleanup() {
   if [[ "$STOP_STACK" == "1" ]]; then
     STOP_STACK=1 "${REPO_ROOT}/scripts/smoke/m7_single_node_runtime_smoke.sh" --run >/dev/null 2>&1 || true
   fi
+  return "$status"
 }
 
 wait_for_http() {
