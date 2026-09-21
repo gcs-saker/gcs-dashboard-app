@@ -20,6 +20,15 @@ export function publishSessionRunbook(reason?: string | null): PublishSessionRun
   }
 }
 
+export function publishSessionRunbookById(id: string): PublishSessionRunbookGuidance | null {
+  const reasonById: Record<string, string> = {
+    "RUN-PUB-01": "store_unavailable",
+    "RUN-PUB-02": "scan_truncated",
+    "RUN-PUB-03": "session_age_exceeded",
+  };
+  return publishSessionRunbook(reasonById[id]);
+}
+
 function guidance(id: string, action: string, caution: string): PublishSessionRunbookGuidance {
   return { action, caution, documentPath: DOCUMENT_PATH, id };
 }

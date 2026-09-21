@@ -4,6 +4,7 @@ import {
   acknowledgePublishSessionAlert,
   fetchPublishSessionAcknowledgements,
   publishSessionRunbook,
+  publishSessionRunbookById,
 } from "./publishSessionRunbook";
 import { authenticatedFetch } from "@auth/authApi";
 
@@ -17,6 +18,8 @@ describe("publishSessionRunbook", () => {
     expect(publishSessionRunbook("session_age_exceeded")?.id).toBe("RUN-PUB-03");
     expect(publishSessionRunbook("private redis error")).toBeNull();
     expect(publishSessionRunbook(null)).toBeNull();
+    expect(publishSessionRunbookById("RUN-PUB-03")?.id).toBe("RUN-PUB-03");
+    expect(publishSessionRunbookById("RUN-UNKNOWN")).toBeNull();
   });
 
   test("posts only the bounded runbook transition payload", async () => {
