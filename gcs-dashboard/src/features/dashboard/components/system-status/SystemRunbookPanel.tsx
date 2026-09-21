@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { serverHealthText, type DashboardServerStatusSnapshot } from "@dashboard/operations/serverStatus";
 import { DASHBOARD_SERVER_HEALTH } from "@/features/stateContracts";
 import {
   acknowledgePublishSessionAlert,
+  fetchPublishSessionAcknowledgements,
   publishSessionRunbook,
   type AlertAcknowledgementState,
 } from "@dashboard/operations/publishSessionRunbook";
@@ -14,7 +15,19 @@ interface SystemRunbookPanelProps {
 
 export function SystemRunbookPanel({ checkedText, status }: SystemRunbookPanelProps) {
   const sessionRunbook = publishSessionRunbook(status.signalingReason);
+  const runbookId = sessionRunbook?.id ?? null;
   const [acknowledgement, setAcknowledgement] = useState<AlertAcknowledgementState | "error" | null>(null);
+  useEffect(() => {
+    let active = true;
+    if (!runbookId) {
+      setAcknowledgement(null);
+      return () => { active = false; };
+    }
+    void fetchPublishSessionAcknowledgements()
+      .then((values) => { if (active) setAcknowledgement(values.get(runbookId) ?? null); })
+      .catch(() => { if (active) setAcknowledgement("error"); });
+    return () => { active = false; };
+  }, [runbookId]);
   const submit = async (state: AlertAcknowledgementState): Promise<void> => {
     if (!sessionRunbook) return;
     try {

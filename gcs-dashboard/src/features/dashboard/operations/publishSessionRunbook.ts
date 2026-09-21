@@ -38,5 +38,19 @@ export async function acknowledgePublishSessionAlert(
   }, fetcher);
   if (!response.ok) throw new Error(`Alert acknowledgement failed with ${response.status}`);
 }
+
+interface AlertAcknowledgementResponse {
+  runbookId: string;
+  state: AlertAcknowledgementState;
+}
+
+export async function fetchPublishSessionAcknowledgements(fetcher: typeof fetch = fetch): Promise<Map<string, AlertAcknowledgementState>> {
+  const response = await authenticatedFetch(apiV1Url("/operations/alerts/acknowledgements"), {
+    headers: { Accept: "application/json" },
+  }, fetcher);
+  if (!response.ok) throw new Error(`Alert acknowledgement query failed with ${response.status}`);
+  const payload = await response.json() as AlertAcknowledgementResponse[];
+  return new Map(payload.map((item) => [item.runbookId, item.state]));
+}
 import { apiV1Url } from "@/config";
 import { authenticatedFetch } from "@auth/authApi";

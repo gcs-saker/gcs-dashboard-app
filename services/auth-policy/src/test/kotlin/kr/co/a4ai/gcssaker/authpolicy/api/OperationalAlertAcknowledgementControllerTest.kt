@@ -4,6 +4,8 @@ import kr.co.a4ai.gcssaker.authpolicy.application.SecurityAuditPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalAlertAcknowledgement
+import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalAlertAcknowledgementRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -13,7 +15,8 @@ import org.springframework.mock.web.MockHttpServletRequest
 class OperationalAlertAcknowledgementControllerTest {
     private val principals = Mockito.mock(BearerPrincipalResolver::class.java)
     private val audit = RecordingSecurityAuditPublisher()
-    private val controller = OperationalAlertAcknowledgementController(principals, audit)
+    private val repository = InMemoryAcknowledgementRepository()
+    private val controller = OperationalAlertAcknowledgementController(principals, audit, repository)
 
     @Test
     fun `system administrator records a bounded alert transition`() {
@@ -26,9 +29,11 @@ class OperationalAlertAcknowledgementControllerTest {
             MockHttpServletRequest().apply { remoteAddr = "127.0.0.1" },
         )
 
-        assertEquals(OperationalAlertAcknowledgementResponse("RUN-PUB-01", "in_progress"), response)
+        assertEquals("RUN-PUB-01", response.runbookId)
+        assertEquals("in_progress", response.state)
         assertEquals("operational.alert.in_progress", audit.action)
         assertEquals("RUN-PUB-01", audit.target)
+        assertEquals(response, controller.list("Bearer admin").single())
     }
 
     @Test
@@ -47,6 +52,14 @@ class OperationalAlertAcknowledgementControllerTest {
             controller.acknowledge("Bearer admin", OperationalAlertAcknowledgementRequest("RUN-PRIVATE", "resolved"), request)
         }
     }
+}
+
+private class InMemoryAcknowledgementRepository : OperationalAlertAcknowledgementRepository {
+    private val values = linkedMapOf<String, OperationalAlertAcknowledgement>()
+    override fun save(value: OperationalAlertAcknowledgement): OperationalAlertAcknowledgement = value.also {
+        values[value.runbookId] = value
+    }
+    override fun list(): List<OperationalAlertAcknowledgement> = values.values.toList()
 }
 
 private class RecordingSecurityAuditPublisher : SecurityAuditPublisher {
