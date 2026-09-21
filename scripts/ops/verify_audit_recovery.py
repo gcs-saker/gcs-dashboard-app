@@ -4,22 +4,11 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
-import hmac
 import json
-import os
-import stat
 from pathlib import Path
 
+from audit_anchor_verify import require_private_key, verify_anchor_record
 from audit_chain_verify import read_json_lines, verify_records
-
-
-def require_private_key(path: Path) -> bytes:
-    if not path.is_file() or path.stat().st_size < 32:
-        raise ValueError("audit anchor key is missing or weak")
-    if os.name != "nt" and path.stat().st_mode & (stat.S_IRWXG | stat.S_IRWXO):
-        raise ValueError("audit anchor key permissions are unsafe")
-    return path.read_bytes().strip()
 
 
 def verify_recovery(original: Path, restored: Path, anchor_path: Path, key_path: Path) -> int:
@@ -34,16 +23,7 @@ def verify_recovery(original: Path, restored: Path, anchor_path: Path, key_path:
     chain_head = restored_records[-1]["recordHash"] if restored_records else "0" * 64
     if anchor.get("recordCount") != record_count or anchor.get("chainHead") != chain_head:
         raise ValueError("external anchor does not bind the restored chain head")
-    payload = "|".join(
-        str(anchor[field])
-        for field in ("sequence", "previousAnchorHash", "chainHead", "recordCount", "anchoredAt", "sourceCommit")
-    ).encode()
-    anchor_hash = hashlib.sha256(payload).hexdigest()
-    if not hmac.compare_digest(anchor_hash, str(anchor.get("anchorHash", ""))):
-        raise ValueError("external anchor hash is invalid")
-    signature = hmac.new(require_private_key(key_path), anchor_hash.encode("ascii"), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(signature, str(anchor.get("signature", ""))):
-        raise ValueError("external anchor signature is invalid")
+    verify_anchor_record(anchor, require_private_key(key_path))
     return record_count
 
 
