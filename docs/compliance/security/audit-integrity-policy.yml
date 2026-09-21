@@ -20,6 +20,15 @@ integrity:
   anchorStorage: dedicated append-only mounted volume
   externalImmutableStorage: REQUIRED_NOT_IMPLEMENTED
   externalAnchorOffload: IMPLEMENTED_NOT_DEPLOYED
+  anchorDirectoryVerification: IMPLEMENTED
+  anchorVerificationChecks:
+    - filename-and-content-sequence-continuity
+    - previous-anchor-hash-linkage
+    - canonical-payload-hash
+    - HMAC-SHA-256-signature
+    - monotonic-record-count-and-UTC-time
+    - optional-source-commit-binding
+    - independent-latest-anchor-checkpoint
   recoveryVerification: CHAIN_EQUALITY_AND_SIGNED_ANCHOR
 retention:
   securityEventsDays: 365
