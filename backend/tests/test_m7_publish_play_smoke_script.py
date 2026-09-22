@@ -30,6 +30,10 @@ def test_m7_publish_play_uses_server_issued_media_routes():
     assert '[[ "$RUN_HLS_SMOKE" == "1" ]] && verify_hls' in script
     assert '[[ "$status" == "404" || "$status" == "409" ]]' in script
     assert "Waiting for stream registry" in script
+    assert "verify_sibling_playback_denied" in script
+    assert '[[ "$status" == "403" ]]' in script
+    assert "AUTH_POLICY_SMOKE_USERNAME" in script
+    assert "sibling-access-token" in script
     assert 'docker run -d --name "$PUBLISHER_NAME"' in script
     assert 'docker run -d --rm --name "$PUBLISHER_NAME"' not in script
     assert 'docker logs --tail 80 "$PUBLISHER_NAME"' in script

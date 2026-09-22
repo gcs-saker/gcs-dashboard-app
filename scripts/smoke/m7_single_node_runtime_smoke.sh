@@ -14,6 +14,7 @@ USE_SMOKE_PORTS="${USE_SMOKE_PORTS:-1}"
 USE_LOCAL_DEV_OVERRIDE="${USE_LOCAL_DEV_OVERRIDE:-1}"
 BUILD_STACK="${BUILD_STACK:-1}"
 RUN_AUTH_DAST="${RUN_AUTH_DAST:-1}"
+RUN_PUBLISH_PLAY_SMOKE="${RUN_PUBLISH_PLAY_SMOKE:-0}"
 AUTH_DAST_EVIDENCE_FILE="${AUTH_DAST_EVIDENCE_FILE:-}"
 EPHEMERAL_INTERNAL_PKI="${EPHEMERAL_INTERNAL_PKI:-${STOP_STACK}}"
 EPHEMERAL_PKI_DIR=""
@@ -38,6 +39,7 @@ Environment:
   BUILD_STACK  Rebuild local service images before startup. Default: 1
   EPHEMERAL_INTERNAL_PKI  Generate isolated local PKI. Defaults to STOP_STACK.
   RUN_AUTH_DAST  Run bounded authentication/authorization DAST. Default: 1.
+  RUN_PUBLISH_PLAY_SMOKE  Run VP8/Opus publish/play and sibling denial. Default: 0.
   AUTH_DAST_EVIDENCE_FILE  Optional new absolute owner-only JSON result path.
 EOF
 }
@@ -362,6 +364,11 @@ run_live() {
     --turn-url "$turn_url" \
     --username "$turn_username" \
     --password "$turn_password"
+
+  if [[ "$RUN_PUBLISH_PLAY_SMOKE" == "1" ]]; then
+    START_STACK=0 STOP_STACK=0 EDGE_BASE_URL="$edge_base_url" \
+      "${REPO_ROOT}/scripts/smoke/m7_publish_play_smoke.sh" --run
+  fi
 
   curl -fsS "${edge_base_url}/webrtc/" >/dev/null 2>&1 || true
   curl -fsS "${edge_base_url}/hls/" >/dev/null 2>&1 || true

@@ -134,3 +134,11 @@ def test_docker_smoke_removes_the_host_loopback_ice_candidate() -> None:
     smoke = (REPO_ROOT / "scripts/smoke/m7_single_node_runtime_smoke.sh").read_text(encoding="utf-8")
 
     assert 'MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS="${GCS_SMOKE_MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS-}"' in smoke
+
+
+def test_runtime_smoke_can_run_publish_play_inside_ephemeral_pki_lifecycle() -> None:
+    script = (REPO_ROOT / "scripts/smoke/m7_single_node_runtime_smoke.sh").read_text(encoding="utf-8")
+
+    assert 'RUN_PUBLISH_PLAY_SMOKE="${RUN_PUBLISH_PLAY_SMOKE:-0}"' in script
+    assert '"${REPO_ROOT}/scripts/smoke/m7_publish_play_smoke.sh" --run' in script
+    assert 'START_STACK=0 STOP_STACK=0 EDGE_BASE_URL="$edge_base_url"' in script
