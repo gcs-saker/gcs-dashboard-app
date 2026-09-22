@@ -51,7 +51,7 @@ controls:
     implementation: Formatting, type checking, unit/integration tests, authorization denials, builds, browser smoke, and image scans block release.
     assessment: Sample a release and reproduce every required check from the immutable source revision.
     evidence: [.github/workflows/ci.yml]
-    status: IMPLEMENTED_NOT_ASSESSED
+    status: ASSESSED_INTERNAL_PASS
   - id: SA-15
     family: System and Services Acquisition
     implementation: Secure Development Plan defines design, code, review, test, incident, and evidence obligations.
@@ -62,8 +62,8 @@ controls:
     family: Supply Chain Risk Management
     implementation: Lockfiles, exact versions, base-image digests, SBOM generation, dependency audits, and image scans are required.
     assessment: Verify artifact signatures, VEX, provenance, license policy, and supplier review gaps.
-    evidence: [.github/workflows/ci.yml]
-    status: OPEN
+    evidence: [.github/workflows/ci.yml, docs/compliance/evidence/signed-release-2026-09-08.md, docs/compliance/evidence/license-remediation-2026-09-14.md]
+    status: ASSESSED_INTERNAL_PASS
   - id: AC-12
     family: Access Control
     implementation: Explicit logout and bounded access/refresh tokens exist; STIG idle-session limits are not implemented.
@@ -82,6 +82,18 @@ controls:
     assessment: Fill an isolated audit volume past 75 percent and verify immediate SA/ISSO notification without losing records.
     evidence: [docs/compliance/security/poam.yml]
     status: OPEN
+  - id: AU-4
+    family: Audit and Accountability
+    implementation: Audit storage capacity is sampled and exposed through bounded operational metrics and alerts.
+    assessment: Fill an isolated audit volume through warning and critical thresholds and verify alert delivery and record continuity.
+    evidence: [services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/AuditStorageMonitor.kt, services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/AuditStorageMonitorTest.kt]
+    status: IMPLEMENTED_NOT_ASSESSED
+  - id: AU-9
+    family: Audit and Accountability
+    implementation: Audit batches are hash-chained, anchored, verified, and exercised through off-load and restore automation.
+    assessment: Verify a complete anchor chain, reject mutation and gaps, and repeat off-load and restore against an independent WORM target.
+    evidence: [docs/compliance/security/audit-integrity-policy.yml, scripts/ops/audit_offload_restore_drill.py]
+    status: IMPLEMENTED_NOT_DEPLOYED
   - id: SC-13
     family: System and Communications Protection
     implementation: Public TLS and internal mTLS profiles define protocol floors, identities, rotation, and plaintext denial.
@@ -93,4 +105,16 @@ controls:
     implementation: The ASD STIG assessment overlay binds conservative verdicts to NIST controls and repository evidence.
     assessment: Obtain the official V6R4 XCCDF/data stream, verify its hash, restore CCI mappings, and review every Open verdict.
     evidence: [docs/compliance/security/asd-stig-v6r4-assessment.yml]
+    status: OPEN
+  - id: CA-7
+    family: Assessment, Authorization, and Monitoring
+    implementation: Required CI, runtime health, security campaign, vulnerability, and evidence gates provide continuous internal monitoring.
+    assessment: Sample a release interval and verify every required monitor produced a bounded result tied to one source revision.
+    evidence: [.github/workflows/ci.yml, docs/compliance/security/cybersecurity-test-plan.md]
+    status: IMPLEMENTED_NOT_ASSESSED
+  - id: CA-8
+    family: Assessment, Authorization, and Monitoring
+    implementation: Bounded DAST and protocol fuzz campaigns run against disposable targets with sanitized evidence.
+    assessment: Review internal campaign coverage and commission an independent penetration test and remediation retest.
+    evidence: [scripts/smoke/auth_boundary_dast.py, docs/compliance/security/security-testing-profile.yml]
     status: OPEN

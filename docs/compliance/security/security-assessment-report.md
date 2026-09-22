@@ -16,9 +16,10 @@ inventing CCI values.
 - Internal gRPC mTLS, MQTT client identity, System Administrator MFA, and short-lived TURN credentials
   are implemented but not deployed or enrolled on Server-01.
 - PostgreSQL and Redis encryption still require a controlled target profile.
-- Artifact and SBOM signatures, SLSA provenance, VEX, and license policy are incomplete.
-- Audit tamper evidence and long-term retention are incomplete.
-- DAST, fuzzing, and independent penetration evidence are incomplete.
+- Artifact and SBOM signatures, SLSA provenance, and license policy have internal release evidence;
+  future exceptions still require time-bounded VEX records.
+- Audit hash-chain and recovery evidence exist; independent WORM retention remains incomplete.
+- Internal DAST and fuzzing evidence exist; independent penetration evidence remains incomplete.
 - AI analysis remains intentionally unavailable until stream/session/group binding is server-owned.
 
 These findings are not accepted risk. They are tracked in `poam.yml` and the linked M12 issues.
