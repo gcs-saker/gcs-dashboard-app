@@ -11,7 +11,12 @@ def test_security_testing_profile_tracks_implemented_and_unrun_work_separately()
 
     assert profile["fuzzing"]["pullRequestSeeds"]["status"] == "IMPLEMENTED"
     assert profile["fuzzing"]["scheduledCampaign"]["status"] == "IMPLEMENTED"
-    assert profile["dynamic"]["dast"]["status"] == "IMPLEMENTED_NOT_RUN"
+    assert profile["dynamic"]["dast"]["status"] == "IMPLEMENTED_DISPOSABLE_PASS"
+    assert profile["dynamic"]["dast"]["lastDisposableResult"] == {
+        "scenarios": 11,
+        "passed": 11,
+        "leakageDetected": 0,
+    }
     assert profile["dynamic"]["penetrationTest"]["status"] == "NOT_RUN"
     assert "authorization bypass" in profile["failureConditions"]
 

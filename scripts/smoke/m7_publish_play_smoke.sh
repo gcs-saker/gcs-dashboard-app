@@ -19,6 +19,8 @@ ENV_FILE="${ENV_FILE:-${REPO_ROOT}/deploy/compose/.env.single-node.example}"
 PUBLISHER_NAME="gcs-saker-m7-publisher-$$"
 SESSION_DIR=""
 PUBLISHER_STARTED_MS=""
+OWNER_TOKEN_FILE=""
+SIBLING_TOKEN_FILE=""
 
 usage() {
   cat <<'EOF'
@@ -72,7 +74,7 @@ cleanup() {
   fi
   docker rm -f "$PUBLISHER_NAME" >/dev/null 2>&1 || true
   if [[ -n "$SESSION_DIR" && -d "$SESSION_DIR" ]]; then
-    rm -f -- "$SESSION_DIR/access-token" "$SESSION_DIR/publish-token" "$SESSION_DIR/session.json" "$SESSION_DIR/playback.json"
+    rm -f -- "$SESSION_DIR/access-token" "$SESSION_DIR/sibling-access-token" "$SESSION_DIR/publish-token" "$SESSION_DIR/session.json" "$SESSION_DIR/playback.json" "$SESSION_DIR/sibling-playback.json"
     rmdir -- "$SESSION_DIR" 2>/dev/null || true
   fi
   if [[ "$STOP_STACK" == "1" ]]; then
@@ -114,21 +116,29 @@ print(value)
 PY
 }
 
-login() {
-  local username="${AUTH_POLICY_OPERATOR_USERNAME:-operator01}"
-  local password="${AUTH_POLICY_OPERATOR_PASSWORD:-correct-password}"
+login_to_file() {
+  local username="$1" password="$2" token_file="$3"
   curl -fsS -H "Content-Type: application/json" -H "Origin: ${EDGE_BASE_URL}" \
     -H "X-GCS-CSRF: same-origin" \
     -d "{\"username\":\"${username}\",\"password\":\"${password}\"}" \
     "${EDGE_BASE_URL}/auth-policy/auth/login" \
     | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])' \
-    >"${SESSION_DIR}/access-token"
-  chmod 600 "${SESSION_DIR}/access-token"
+    >"${token_file}"
+  chmod 600 "${token_file}"
+}
+
+login() {
+  OWNER_TOKEN_FILE="${SESSION_DIR}/access-token"
+  SIBLING_TOKEN_FILE="${SESSION_DIR}/sibling-access-token"
+  login_to_file "${AUTH_POLICY_OPERATOR_USERNAME:-operator01}" \
+    "${AUTH_POLICY_OPERATOR_PASSWORD:-correct-password}" "$OWNER_TOKEN_FILE"
+  login_to_file "${AUTH_POLICY_SMOKE_USERNAME:-m7-smoke-viewer}" \
+    "${AUTH_POLICY_SMOKE_PASSWORD}" "$SIBLING_TOKEN_FILE"
 }
 
 issue_publish_session() {
   local access_token
-  access_token="$(<"${SESSION_DIR}/access-token")"
+  access_token="$(<"$OWNER_TOKEN_FILE")"
   curl -fsS -H "Authorization: Bearer ${access_token}" -H "Content-Type: application/json" \
     -d "{\"sensorId\":\"${SENSOR_ID}\"}" \
     "${EDGE_BASE_URL}/media-control/api/v1/account/publish-sessions" \
@@ -165,7 +175,7 @@ wait_for_publisher() {
 
 issue_playback_urls() {
   local access_token stream_id attempt status
-  access_token="$(<"${SESSION_DIR}/access-token")"
+  access_token="$(<"$OWNER_TOKEN_FILE")"
   stream_id="$(json_field "${SESSION_DIR}/session.json" streamId)"
   for ((attempt = 1; attempt <= PLAYBACK_RETRY_COUNT; attempt += 1)); do
     status="$(curl -sS -o "${SESSION_DIR}/playback.json" -w '%{http_code}' \
@@ -182,6 +192,21 @@ issue_playback_urls() {
   done
   echo "Timed out waiting for stream registry" >&2
   return 1
+}
+
+verify_sibling_playback_denied() {
+  local access_token stream_id status
+  access_token="$(<"$SIBLING_TOKEN_FILE")"
+  stream_id="$(json_field "${SESSION_DIR}/session.json" streamId)"
+  status="$(curl -sS -o "${SESSION_DIR}/sibling-playback.json" -w '%{http_code}' \
+    -H "Authorization: Bearer ${access_token}" \
+    "${EDGE_BASE_URL}/media-control/api/v1/streams/${stream_id}/playback")"
+  chmod 600 "${SESSION_DIR}/sibling-playback.json"
+  [[ "$status" == "403" ]] || {
+    echo "Sibling-group playback expected HTTP 403, received ${status}" >&2
+    return 1
+  }
+  echo "Sibling-group playback denial passed"
 }
 
 first_hls_variant_url() {
@@ -238,6 +263,7 @@ run_live() {
   start_publisher
   wait_for_publisher
   issue_playback_urls
+  verify_sibling_playback_denied
   [[ "$RUN_HLS_SMOKE" == "1" ]] && verify_hls
   [[ "$RUN_WEBRTC_ICE_SMOKE" == "1" ]] && verify_whep
   echo "M7 authenticated publish/play smoke run passed"

@@ -67,6 +67,10 @@ def test_m7_runtime_smoke_requires_backend_stream_status_payload_and_read_model_
     assert "auth_boundary_dast.py" in script
     assert "AUTH_DAST_EVIDENCE_FILE" in script
     assert "wait_for_container_health mqtt" in script
+    assert "AUTH_POLICY_SMOKE_GROUP_ID" in script
+    assert "verify_authenticated_sibling_denial" in script
+    assert "/api/v1/groups/co-a/members" in script
+    assert "sibling-group viewer received co-a telemetry" in script
     assert "verify edge/backend/auth" not in script
     for legacy_path in ("/api/control/", "/api/v1/ai/mock/detections", "/metrics", "/ws/"):
         assert legacy_path not in script
@@ -130,3 +134,11 @@ def test_docker_smoke_removes_the_host_loopback_ice_candidate() -> None:
     smoke = (REPO_ROOT / "scripts/smoke/m7_single_node_runtime_smoke.sh").read_text(encoding="utf-8")
 
     assert 'MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS="${GCS_SMOKE_MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS-}"' in smoke
+
+
+def test_runtime_smoke_can_run_publish_play_inside_ephemeral_pki_lifecycle() -> None:
+    script = (REPO_ROOT / "scripts/smoke/m7_single_node_runtime_smoke.sh").read_text(encoding="utf-8")
+
+    assert 'RUN_PUBLISH_PLAY_SMOKE="${RUN_PUBLISH_PLAY_SMOKE:-0}"' in script
+    assert '"${REPO_ROOT}/scripts/smoke/m7_publish_play_smoke.sh" --run' in script
+    assert 'START_STACK=0 STOP_STACK=0 EDGE_BASE_URL="$edge_base_url"' in script

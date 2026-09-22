@@ -14,6 +14,7 @@ USE_SMOKE_PORTS="${USE_SMOKE_PORTS:-1}"
 USE_LOCAL_DEV_OVERRIDE="${USE_LOCAL_DEV_OVERRIDE:-1}"
 BUILD_STACK="${BUILD_STACK:-1}"
 RUN_AUTH_DAST="${RUN_AUTH_DAST:-1}"
+RUN_PUBLISH_PLAY_SMOKE="${RUN_PUBLISH_PLAY_SMOKE:-0}"
 AUTH_DAST_EVIDENCE_FILE="${AUTH_DAST_EVIDENCE_FILE:-}"
 EPHEMERAL_INTERNAL_PKI="${EPHEMERAL_INTERNAL_PKI:-${STOP_STACK}}"
 EPHEMERAL_PKI_DIR=""
@@ -38,6 +39,7 @@ Environment:
   BUILD_STACK  Rebuild local service images before startup. Default: 1
   EPHEMERAL_INTERNAL_PKI  Generate isolated local PKI. Defaults to STOP_STACK.
   RUN_AUTH_DAST  Run bounded authentication/authorization DAST. Default: 1.
+  RUN_PUBLISH_PLAY_SMOKE  Run VP8/Opus publish/play and sibling denial. Default: 0.
   AUTH_DAST_EVIDENCE_FILE  Optional new absolute owner-only JSON result path.
 EOF
 }
@@ -120,6 +122,7 @@ apply_smoke_ports() {
   export MEDIA_CONTROL_PUBLIC_HLS_BASE_URL="${GCS_SMOKE_MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/hls}"
   export MEDIA_CONTROL_TURN_PRIMARY_URL="${GCS_SMOKE_MEDIA_CONTROL_TURN_PRIMARY_URL:-turn:127.0.0.1:${TURN_PRIMARY_HOST_PORT}?transport=udp}"
   export AUTH_POLICY_BASE_URL="${GCS_SMOKE_AUTH_POLICY_BASE_URL:-http://auth-policy:8080}"
+  export AUTH_POLICY_SMOKE_GROUP_ID="${GCS_SMOKE_SIBLING_GROUP_ID:-co-b}"
   export MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID="${GCS_SMOKE_MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID:-co-a}"
   export MEDIA_CONTROL_STREAM_GROUP_MAP="${GCS_SMOKE_MEDIA_CONTROL_STREAM_GROUP_MAP:-raw/sample/front=co-a,raw/local/webcam=co-a}"
   export VITE_AUTH_API_BASE_URL="${GCS_SMOKE_VITE_AUTH_API_BASE_URL:-/auth-policy/auth}"
@@ -197,6 +200,12 @@ login_access_token() {
   local username="${AUTH_POLICY_OPERATOR_USERNAME:-operator01}"
   local password="${AUTH_POLICY_OPERATOR_PASSWORD:-correct-password}"
 
+  login_token_for "$edge_base_url" "$username" "$password"
+}
+
+login_token_for() {
+  local edge_base_url="$1" username="$2" password="$3"
+
   curl -fsS \
     -H "Content-Type: application/json" \
     -H "Origin: ${edge_base_url}" \
@@ -204,6 +213,21 @@ login_access_token() {
     -d "{\"username\":\"${username}\",\"password\":\"${password}\"}" \
     "${edge_base_url}/auth-policy/auth/login" \
     | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])'
+}
+
+verify_authenticated_sibling_denial() {
+  local edge_base_url="$1" sibling_token sibling_payload
+  sibling_token="$(login_token_for "$edge_base_url" \
+    "${AUTH_POLICY_SMOKE_USERNAME:-m7-smoke-viewer}" "${AUTH_POLICY_SMOKE_PASSWORD}")"
+  expect_http_status "403" "${edge_base_url}/auth-policy/api/v1/groups/co-a/members" \
+    -H "Authorization: Bearer ${sibling_token}"
+  sibling_payload="$(curl -fsS -H "Authorization: Bearer ${sibling_token}" \
+    "${edge_base_url}/api/telemetry/all")"
+  [[ "$sibling_payload" != *"raw.sample.front"* ]] || {
+    echo "sibling-group viewer received co-a telemetry" >&2
+    return 1
+  }
+  echo "Authenticated sibling-group IDOR denial passed"
 }
 
 turn_credentials() {
@@ -314,6 +338,7 @@ run_live() {
 
   local access_token
   access_token="$(login_access_token "$edge_base_url")"
+  verify_authenticated_sibling_denial "$edge_base_url"
   curl -fsS \
     -H "Authorization: Bearer ${access_token}" \
     -H "Content-Type: application/json" \
@@ -339,6 +364,11 @@ run_live() {
     --turn-url "$turn_url" \
     --username "$turn_username" \
     --password "$turn_password"
+
+  if [[ "$RUN_PUBLISH_PLAY_SMOKE" == "1" ]]; then
+    START_STACK=0 STOP_STACK=0 EDGE_BASE_URL="$edge_base_url" \
+      "${REPO_ROOT}/scripts/smoke/m7_publish_play_smoke.sh" --run
+  fi
 
   curl -fsS "${edge_base_url}/webrtc/" >/dev/null 2>&1 || true
   curl -fsS "${edge_base_url}/hls/" >/dev/null 2>&1 || true
