@@ -58,3 +58,24 @@ python3 scripts/ops/audit_offload_restore_drill.py \
 The result contains only status, counts, sequence, UTC completion time, and SHA-256 evidence digests. Paths, event
 contents, credentials, and private routes are not recorded. An isolated Docker rehearsal may use separate tmpfs mounts
 to exercise the workflow, but it is not evidence that an operational external WORM service has been deployed.
+
+## S3 Object Lock external adapter
+
+For an approved S3 or compatible external service, create a versioned bucket with Object Lock enabled before use. The
+adapter only accepts `COMPLIANCE` mode, requires at least 30 days retention, uploads with SHA-256, and verifies the exact
+returned object version with `HeadObject`. It never requests governance bypass.
+
+```bash
+python3 scripts/ops/s3_object_lock_offload.py \
+  --anchor /private/anchors/anchor-00000000000000000029.json \
+  --bucket approved-audit-lock-bucket \
+  --prefix gcs-saker/audit-anchors \
+  --retention-days 365 \
+  --expected-bucket-owner '<account-id>' \
+  --evidence-output /private/evidence/s3-object-lock-result.json
+```
+
+Credentials use the standard AWS CLI credential chain and must never be passed as command arguments or written to the
+evidence file. Official prerequisites and API behavior are documented in the
+[S3 Object Lock guide](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock-configure.html) and
+[PutObject API](https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html).
