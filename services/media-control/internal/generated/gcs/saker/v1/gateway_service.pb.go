@@ -173,6 +173,7 @@ type GatewayStreamRequest struct {
 	//	*GatewayStreamRequest_Telemetry
 	//	*GatewayStreamRequest_StreamEvent
 	//	*GatewayStreamRequest_CommandAck
+	//	*GatewayStreamRequest_ControlCommandAck
 	Payload       isGatewayStreamRequest_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -270,6 +271,15 @@ func (x *GatewayStreamRequest) GetCommandAck() *CommandAck {
 	return nil
 }
 
+func (x *GatewayStreamRequest) GetControlCommandAck() *ControlCommandAck {
+	if x != nil {
+		if x, ok := x.Payload.(*GatewayStreamRequest_ControlCommandAck); ok {
+			return x.ControlCommandAck
+		}
+	}
+	return nil
+}
+
 type isGatewayStreamRequest_Payload interface {
 	isGatewayStreamRequest_Payload()
 }
@@ -286,11 +296,17 @@ type GatewayStreamRequest_CommandAck struct {
 	CommandAck *CommandAck `protobuf:"bytes,12,opt,name=command_ack,json=commandAck,proto3,oneof"`
 }
 
+type GatewayStreamRequest_ControlCommandAck struct {
+	ControlCommandAck *ControlCommandAck `protobuf:"bytes,31,opt,name=control_command_ack,json=controlCommandAck,proto3,oneof"`
+}
+
 func (*GatewayStreamRequest_Telemetry) isGatewayStreamRequest_Payload() {}
 
 func (*GatewayStreamRequest_StreamEvent) isGatewayStreamRequest_Payload() {}
 
 func (*GatewayStreamRequest_CommandAck) isGatewayStreamRequest_Payload() {}
+
+func (*GatewayStreamRequest_ControlCommandAck) isGatewayStreamRequest_Payload() {}
 
 type GatewayStreamResponse struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
@@ -302,6 +318,7 @@ type GatewayStreamResponse struct {
 	//
 	//	*GatewayStreamResponse_Command
 	//	*GatewayStreamResponse_TelemetryBatch
+	//	*GatewayStreamResponse_ControlCommand
 	Payload       isGatewayStreamResponse_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -390,6 +407,15 @@ func (x *GatewayStreamResponse) GetTelemetryBatch() *TelemetryBatch {
 	return nil
 }
 
+func (x *GatewayStreamResponse) GetControlCommand() *ControlCommandEnvelope {
+	if x != nil {
+		if x, ok := x.Payload.(*GatewayStreamResponse_ControlCommand); ok {
+			return x.ControlCommand
+		}
+	}
+	return nil
+}
+
 type isGatewayStreamResponse_Payload interface {
 	isGatewayStreamResponse_Payload()
 }
@@ -402,15 +428,21 @@ type GatewayStreamResponse_TelemetryBatch struct {
 	TelemetryBatch *TelemetryBatch `protobuf:"bytes,11,opt,name=telemetry_batch,json=telemetryBatch,proto3,oneof"`
 }
 
+type GatewayStreamResponse_ControlCommand struct {
+	ControlCommand *ControlCommandEnvelope `protobuf:"bytes,31,opt,name=control_command,json=controlCommand,proto3,oneof"`
+}
+
 func (*GatewayStreamResponse_Command) isGatewayStreamResponse_Payload() {}
 
 func (*GatewayStreamResponse_TelemetryBatch) isGatewayStreamResponse_Payload() {}
+
+func (*GatewayStreamResponse_ControlCommand) isGatewayStreamResponse_Payload() {}
 
 var File_gcs_saker_v1_gateway_service_proto protoreflect.FileDescriptor
 
 const file_gcs_saker_v1_gateway_service_proto_rawDesc = "" +
 	"\n" +
-	"\"gcs/saker/v1/gateway_service.proto\x12\fgcs.saker.v1\x1a\x19gcs/saker/v1/common.proto\x1a!gcs/saker/v1/stream_control.proto\x1a\x1cgcs/saker/v1/telemetry.proto\"\xf1\x01\n" +
+	"\"gcs/saker/v1/gateway_service.proto\x12\fgcs.saker.v1\x1a\x19gcs/saker/v1/common.proto\x1a\"gcs/saker/v1/control_command.proto\x1a!gcs/saker/v1/stream_control.proto\x1a\x1cgcs/saker/v1/telemetry.proto\"\xf1\x01\n" +
 	"\n" +
 	"CommandAck\x12\x1d\n" +
 	"\n" +
@@ -420,7 +452,7 @@ const file_gcs_saker_v1_gateway_service_proto_rawDesc = "" +
 	"\x06status\x18\x04 \x01(\x0e2\x1e.gcs.saker.v1.GatewayAckStatusR\x06status\x12\x1f\n" +
 	"\vreason_code\x18\x05 \x01(\tR\n" +
 	"reasonCode\x12-\n" +
-	"\x04time\x18\x06 \x01(\v2\x19.gcs.saker.v1.TimestampedR\x04timeJ\x04\b\a\x10\x15\"\xd8\x02\n" +
+	"\x04time\x18\x06 \x01(\v2\x19.gcs.saker.v1.TimestampedR\x04timeJ\x04\b\a\x10\x15\"\xb1\x03\n" +
 	"\x14GatewayStreamRequest\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x15\n" +
@@ -431,8 +463,9 @@ const file_gcs_saker_v1_gateway_service_proto_rawDesc = "" +
 	" \x01(\v2\x1f.gcs.saker.v1.TelemetryEnvelopeH\x00R\ttelemetry\x12E\n" +
 	"\fstream_event\x18\v \x01(\v2 .gcs.saker.v1.StreamSessionEventH\x00R\vstreamEvent\x12;\n" +
 	"\vcommand_ack\x18\f \x01(\v2\x18.gcs.saker.v1.CommandAckH\x00R\n" +
-	"commandAckB\t\n" +
-	"\apayloadJ\x04\b\r\x10\x1f\"\xc3\x02\n" +
+	"commandAck\x12Q\n" +
+	"\x13control_command_ack\x18\x1f \x01(\v2\x1f.gcs.saker.v1.ControlCommandAckH\x00R\x11controlCommandAckB\t\n" +
+	"\apayloadJ\x04\b\r\x10\x1fJ\x04\b \x103\"\x9a\x03\n" +
 	"\x15GatewayStreamResponse\x12\x1f\n" +
 	"\vresponse_id\x18\x01 \x01(\tR\n" +
 	"responseId\x12\x1d\n" +
@@ -443,8 +476,9 @@ const file_gcs_saker_v1_gateway_service_proto_rawDesc = "" +
 	"reasonCode\x127\n" +
 	"\acommand\x18\n" +
 	" \x01(\v2\x1b.gcs.saker.v1.StreamCommandH\x00R\acommand\x12G\n" +
-	"\x0ftelemetry_batch\x18\v \x01(\v2\x1c.gcs.saker.v1.TelemetryBatchH\x00R\x0etelemetryBatchB\t\n" +
-	"\apayloadJ\x04\b\f\x10\x1f*\xbf\x01\n" +
+	"\x0ftelemetry_batch\x18\v \x01(\v2\x1c.gcs.saker.v1.TelemetryBatchH\x00R\x0etelemetryBatch\x12O\n" +
+	"\x0fcontrol_command\x18\x1f \x01(\v2$.gcs.saker.v1.ControlCommandEnvelopeH\x00R\x0econtrolCommandB\t\n" +
+	"\apayloadJ\x04\b\f\x10\x1fJ\x04\b \x103*\xbf\x01\n" +
 	"\x10GatewayAckStatus\x12\"\n" +
 	"\x1eGATEWAY_ACK_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bGATEWAY_ACK_STATUS_ACCEPTED\x10\x01\x12\x1f\n" +
@@ -470,32 +504,36 @@ func file_gcs_saker_v1_gateway_service_proto_rawDescGZIP() []byte {
 var file_gcs_saker_v1_gateway_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_gcs_saker_v1_gateway_service_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_gcs_saker_v1_gateway_service_proto_goTypes = []any{
-	(GatewayAckStatus)(0),         // 0: gcs.saker.v1.GatewayAckStatus
-	(*CommandAck)(nil),            // 1: gcs.saker.v1.CommandAck
-	(*GatewayStreamRequest)(nil),  // 2: gcs.saker.v1.GatewayStreamRequest
-	(*GatewayStreamResponse)(nil), // 3: gcs.saker.v1.GatewayStreamResponse
-	(*Timestamped)(nil),           // 4: gcs.saker.v1.Timestamped
-	(*TelemetryEnvelope)(nil),     // 5: gcs.saker.v1.TelemetryEnvelope
-	(*StreamSessionEvent)(nil),    // 6: gcs.saker.v1.StreamSessionEvent
-	(*StreamCommand)(nil),         // 7: gcs.saker.v1.StreamCommand
-	(*TelemetryBatch)(nil),        // 8: gcs.saker.v1.TelemetryBatch
+	(GatewayAckStatus)(0),          // 0: gcs.saker.v1.GatewayAckStatus
+	(*CommandAck)(nil),             // 1: gcs.saker.v1.CommandAck
+	(*GatewayStreamRequest)(nil),   // 2: gcs.saker.v1.GatewayStreamRequest
+	(*GatewayStreamResponse)(nil),  // 3: gcs.saker.v1.GatewayStreamResponse
+	(*Timestamped)(nil),            // 4: gcs.saker.v1.Timestamped
+	(*TelemetryEnvelope)(nil),      // 5: gcs.saker.v1.TelemetryEnvelope
+	(*StreamSessionEvent)(nil),     // 6: gcs.saker.v1.StreamSessionEvent
+	(*ControlCommandAck)(nil),      // 7: gcs.saker.v1.ControlCommandAck
+	(*StreamCommand)(nil),          // 8: gcs.saker.v1.StreamCommand
+	(*TelemetryBatch)(nil),         // 9: gcs.saker.v1.TelemetryBatch
+	(*ControlCommandEnvelope)(nil), // 10: gcs.saker.v1.ControlCommandEnvelope
 }
 var file_gcs_saker_v1_gateway_service_proto_depIdxs = []int32{
-	0, // 0: gcs.saker.v1.CommandAck.status:type_name -> gcs.saker.v1.GatewayAckStatus
-	4, // 1: gcs.saker.v1.CommandAck.time:type_name -> gcs.saker.v1.Timestamped
-	5, // 2: gcs.saker.v1.GatewayStreamRequest.telemetry:type_name -> gcs.saker.v1.TelemetryEnvelope
-	6, // 3: gcs.saker.v1.GatewayStreamRequest.stream_event:type_name -> gcs.saker.v1.StreamSessionEvent
-	1, // 4: gcs.saker.v1.GatewayStreamRequest.command_ack:type_name -> gcs.saker.v1.CommandAck
-	0, // 5: gcs.saker.v1.GatewayStreamResponse.status:type_name -> gcs.saker.v1.GatewayAckStatus
-	7, // 6: gcs.saker.v1.GatewayStreamResponse.command:type_name -> gcs.saker.v1.StreamCommand
-	8, // 7: gcs.saker.v1.GatewayStreamResponse.telemetry_batch:type_name -> gcs.saker.v1.TelemetryBatch
-	2, // 8: gcs.saker.v1.SakerGatewayService.Exchange:input_type -> gcs.saker.v1.GatewayStreamRequest
-	3, // 9: gcs.saker.v1.SakerGatewayService.Exchange:output_type -> gcs.saker.v1.GatewayStreamResponse
-	9, // [9:10] is the sub-list for method output_type
-	8, // [8:9] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	0,  // 0: gcs.saker.v1.CommandAck.status:type_name -> gcs.saker.v1.GatewayAckStatus
+	4,  // 1: gcs.saker.v1.CommandAck.time:type_name -> gcs.saker.v1.Timestamped
+	5,  // 2: gcs.saker.v1.GatewayStreamRequest.telemetry:type_name -> gcs.saker.v1.TelemetryEnvelope
+	6,  // 3: gcs.saker.v1.GatewayStreamRequest.stream_event:type_name -> gcs.saker.v1.StreamSessionEvent
+	1,  // 4: gcs.saker.v1.GatewayStreamRequest.command_ack:type_name -> gcs.saker.v1.CommandAck
+	7,  // 5: gcs.saker.v1.GatewayStreamRequest.control_command_ack:type_name -> gcs.saker.v1.ControlCommandAck
+	0,  // 6: gcs.saker.v1.GatewayStreamResponse.status:type_name -> gcs.saker.v1.GatewayAckStatus
+	8,  // 7: gcs.saker.v1.GatewayStreamResponse.command:type_name -> gcs.saker.v1.StreamCommand
+	9,  // 8: gcs.saker.v1.GatewayStreamResponse.telemetry_batch:type_name -> gcs.saker.v1.TelemetryBatch
+	10, // 9: gcs.saker.v1.GatewayStreamResponse.control_command:type_name -> gcs.saker.v1.ControlCommandEnvelope
+	2,  // 10: gcs.saker.v1.SakerGatewayService.Exchange:input_type -> gcs.saker.v1.GatewayStreamRequest
+	3,  // 11: gcs.saker.v1.SakerGatewayService.Exchange:output_type -> gcs.saker.v1.GatewayStreamResponse
+	11, // [11:12] is the sub-list for method output_type
+	10, // [10:11] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_gcs_saker_v1_gateway_service_proto_init() }
@@ -504,16 +542,19 @@ func file_gcs_saker_v1_gateway_service_proto_init() {
 		return
 	}
 	file_gcs_saker_v1_common_proto_init()
+	file_gcs_saker_v1_control_command_proto_init()
 	file_gcs_saker_v1_stream_control_proto_init()
 	file_gcs_saker_v1_telemetry_proto_init()
 	file_gcs_saker_v1_gateway_service_proto_msgTypes[1].OneofWrappers = []any{
 		(*GatewayStreamRequest_Telemetry)(nil),
 		(*GatewayStreamRequest_StreamEvent)(nil),
 		(*GatewayStreamRequest_CommandAck)(nil),
+		(*GatewayStreamRequest_ControlCommandAck)(nil),
 	}
 	file_gcs_saker_v1_gateway_service_proto_msgTypes[2].OneofWrappers = []any{
 		(*GatewayStreamResponse_Command)(nil),
 		(*GatewayStreamResponse_TelemetryBatch)(nil),
+		(*GatewayStreamResponse_ControlCommand)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

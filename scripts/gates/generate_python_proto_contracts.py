@@ -10,6 +10,7 @@ PROTO_ROOT = REPO_ROOT / "contracts" / "proto"
 OUTPUT_ROOT = REPO_ROOT / "backend"
 PROTO_FILES = (
     "gcs/saker/v1/common.proto",
+    "gcs/saker/v1/control_command.proto",
     "gcs/saker/v1/stream_control.proto",
     "gcs/saker/v1/telemetry.proto",
     "gcs/saker/v1/gateway_service.proto",

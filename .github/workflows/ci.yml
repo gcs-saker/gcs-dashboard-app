@@ -61,7 +61,7 @@ jobs:
             --plugin=protoc-gen-go-grpc="$RUNNER_TEMP/proto-bin/protoc-gen-go-grpc" \
             --go_out="$RUNNER_TEMP/go-contracts" --go_opt=paths=source_relative \
             --go-grpc_out="$RUNNER_TEMP/go-contracts" --go-grpc_opt=paths=source_relative \
-            contracts/proto/gcs/saker/v1/{common,stream_control,telemetry,gateway_service,device_policy_service,mqtt_gateway}.proto
+            contracts/proto/gcs/saker/v1/{common,control_command,stream_control,telemetry,gateway_service,device_policy_service,mqtt_gateway}.proto
           diff -ru services/media-control/internal/generated "$RUNNER_TEMP/go-contracts"
 
       - name: Reject stale or unused Go module requirements
@@ -251,7 +251,7 @@ jobs:
         run: |
           temp_dir="$(mktemp -d)"
           python -m grpc_tools.protoc -Icontracts/proto --python_out="$temp_dir" \
-            contracts/proto/gcs/saker/v1/{common,stream_control,telemetry,gateway_service}.proto
+            contracts/proto/gcs/saker/v1/{common,control_command,stream_control,telemetry,gateway_service}.proto
           diff -ru backend/gcs "$temp_dir/gcs"
 
       - name: Audit backend dependencies

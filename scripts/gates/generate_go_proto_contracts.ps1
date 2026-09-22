@@ -13,6 +13,7 @@ python -m grpc_tools.protoc `
   "--go_out=$outputRoot" --go_opt=paths=source_relative `
   "--go-grpc_out=$outputRoot" --go-grpc_opt=paths=source_relative `
   (Join-Path $protoRoot "gcs/saker/v1/common.proto") `
+  (Join-Path $protoRoot "gcs/saker/v1/control_command.proto") `
   (Join-Path $protoRoot "gcs/saker/v1/stream_control.proto") `
   (Join-Path $protoRoot "gcs/saker/v1/telemetry.proto") `
   (Join-Path $protoRoot "gcs/saker/v1/gateway_service.proto") `

@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package gcs.saker.v1;
+
+option go_package = "github.com/gcs-saker/gcs-dashboard-app/contracts/gen/go/gcs/saker/v1;sakerv1";
+option java_multiple_files = true;
+option java_package = "kr.co.a4ai.gcssaker.contracts.v1";
+
+enum ControlCommandType {
+  CONTROL_COMMAND_TYPE_UNSPECIFIED = 0;
+  CONTROL_COMMAND_TYPE_STOP = 1;
+  CONTROL_COMMAND_TYPE_MOTION = 2;
+  CONTROL_COMMAND_TYPE_CAMERA_PAN_TILT = 3;
+  CONTROL_COMMAND_TYPE_RETURN_HOME = 4;
+  CONTROL_COMMAND_TYPE_EMERGENCY_STOP = 5;
+}
+
+enum ControlAckStatus {
+  CONTROL_ACK_STATUS_UNSPECIFIED = 0;
+  CONTROL_ACK_STATUS_ACCEPTED = 1;
+  CONTROL_ACK_STATUS_APPLIED = 2;
+  CONTROL_ACK_STATUS_REJECTED = 3;
+  CONTROL_ACK_STATUS_EXPIRED = 4;
+  CONTROL_ACK_STATUS_DUPLICATE = 5;
+}
+
+enum ControlErrorCode {
+  CONTROL_ERROR_CODE_UNSPECIFIED = 0;
+  CONTROL_ERROR_CODE_NONE = 1;
+  CONTROL_ERROR_CODE_UNAUTHORIZED = 2;
+  CONTROL_ERROR_CODE_LEASE_MISMATCH = 3;
+  CONTROL_ERROR_CODE_SEQUENCE_REJECTED = 4;
+  CONTROL_ERROR_CODE_EXPIRED = 5;
+  CONTROL_ERROR_CODE_UNSUPPORTED = 6;
+  CONTROL_ERROR_CODE_PARAMETER_RANGE = 7;
+  CONTROL_ERROR_CODE_DEVICE_UNAVAILABLE = 8;
+  CONTROL_ERROR_CODE_INTERNAL = 9;
+}
+
+message ControlLease {
+  string control_session_id = 1;
+  string device_id = 2;
+  int64 issued_unix_millis = 3;
+  int64 expires_unix_millis = 4;
+  int32 heartbeat_interval_millis = 5;
+  int32 max_command_lifetime_millis = 6;
+
+  reserved 7 to 20;
+}
+
+message MotionAxes {
+  double forward = 1;
+  double right = 2;
+  double up = 3;
+  double yaw = 4;
+
+  reserved 5 to 20;
+}
+
+message CameraPanTilt {
+  double pan = 1;
+  double tilt = 2;
+
+  reserved 3 to 20;
+}
+
+message ControlCommandEnvelope {
+  string command_id = 1;
+  string control_session_id = 2;
+  string device_id = 3;
+  uint64 sequence = 4;
+  ControlCommandType command_type = 5;
+  int64 issued_unix_millis = 6;
+  int64 expires_unix_millis = 7;
+  string idempotency_id = 8;
+
+  oneof parameters {
+    MotionAxes motion = 20;
+    CameraPanTilt camera = 21;
+  }
+
+  reserved 9 to 19;
+  reserved 22 to 40;
+}
+
+message ControlCommandAck {
+  string command_id = 1;
+  string control_session_id = 2;
+  string device_id = 3;
+  uint64 sequence = 4;
+  ControlAckStatus status = 5;
+  ControlErrorCode error_code = 6;
+  int64 applied_unix_millis = 7;
+  int64 device_unix_millis = 8;
+
+  reserved 9 to 30;
+}

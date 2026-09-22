@@ -52,6 +52,7 @@ def test_evolvable_event_messages_keep_reserved_field_ranges() -> None:
     event_proto_files = [
         "ai_overlay.proto",
         "gateway_service.proto",
+        "control_command.proto",
         "ops_event.proto",
         "stream_control.proto",
         "telemetry.proto",
@@ -73,6 +74,42 @@ def test_grpc_gateway_contract_is_internal_bidi_streaming_only() -> None:
     assert "Browser" not in content
     assert "Dashboard" not in content
     assert "DashboardRequest" not in content
+
+
+def test_control_command_contract_is_server_routed_and_fail_closed() -> None:
+    content = (PROTO_ROOT / "gcs" / "saker" / "v1" / "control_command.proto").read_text(encoding="utf-8")
+
+    for field in (
+        "control_session_id",
+        "device_id",
+        "sequence",
+        "issued_unix_millis",
+        "expires_unix_millis",
+        "idempotency_id",
+        "heartbeat_interval_millis",
+        "max_command_lifetime_millis",
+    ):
+        assert field in content
+    for command in ("STOP", "MOTION", "CAMERA_PAN_TILT", "RETURN_HOME", "EMERGENCY_STOP"):
+        assert f"CONTROL_COMMAND_TYPE_{command}" in content
+    for denial in ("UNAUTHORIZED", "LEASE_MISMATCH", "SEQUENCE_REJECTED", "EXPIRED", "UNSUPPORTED"):
+        assert f"CONTROL_ERROR_CODE_{denial}" in content
+    assert "reserved 9 to 19;" in content
+    assert "mqtt" not in content.lower()
+    assert "topic" not in content.lower()
+    assert "receiver" not in content.lower()
+    assert "group_id" not in content
+
+
+def test_gateway_preserves_legacy_command_fields_and_uses_new_field_range() -> None:
+    content = (PROTO_ROOT / "gcs" / "saker" / "v1" / "gateway_service.proto").read_text(encoding="utf-8")
+
+    assert "CommandAck command_ack = 12;" in content
+    assert "StreamCommand command = 10;" in content
+    assert "ControlCommandAck control_command_ack = 31;" in content
+    assert "ControlCommandEnvelope control_command = 31;" in content
+    assert "reserved 13 to 30;" in content
+    assert "reserved 32 to 50;" in content
 
 
 def test_python_telemetry_decoder_accepts_descriptor_encoded_payload() -> None:
