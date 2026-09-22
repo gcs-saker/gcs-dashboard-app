@@ -15,8 +15,10 @@ if (( usage >= 75 )); then
   echo "audit_volume_warning threshold=75 result=warning" >&2
   exit 1
 fi
-latest="$(find "${source_dir}" -maxdepth 1 -type f -name 'anchor-*.json' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
-[[ -n "${latest}" && -s "${latest}" ]] || { echo "no audit anchor is available" >&2; exit 1; }
+latest="$(find "${source_dir}" -maxdepth 1 -type f -name 'anchor-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].json' -printf '%f\n' | sort | tail -n1)"
+[[ -n "${latest}" ]] || { echo "no audit anchor is available" >&2; exit 1; }
+latest="${source_dir}/${latest}"
+[[ -s "${latest}" ]] || { echo "no audit anchor is available" >&2; exit 1; }
 target="${external_dir}/$(basename "${latest}")"
 [[ ! -e "${target}" ]] || { echo "external anchor already exists; overwrite denied" >&2; exit 1; }
 install -m 400 "${latest}" "${target}"
