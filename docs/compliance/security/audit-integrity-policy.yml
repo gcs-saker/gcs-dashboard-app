@@ -21,6 +21,8 @@ integrity:
   externalImmutableStorage: REQUIRED_NOT_IMPLEMENTED
   externalAnchorOffload: IMPLEMENTED_NOT_DEPLOYED
   offloadRestoreDrill: AUTOMATED_ISOLATED_PASS
+  s3ObjectLockAdapter: IMPLEMENTED_NOT_DEPLOYED
+  requiredExternalRetentionMode: COMPLIANCE
   anchorDirectoryVerification: IMPLEMENTED
   anchorVerificationChecks:
     - filename-and-content-sequence-continuity
