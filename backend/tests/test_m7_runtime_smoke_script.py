@@ -67,6 +67,10 @@ def test_m7_runtime_smoke_requires_backend_stream_status_payload_and_read_model_
     assert "auth_boundary_dast.py" in script
     assert "AUTH_DAST_EVIDENCE_FILE" in script
     assert "wait_for_container_health mqtt" in script
+    assert "AUTH_POLICY_SMOKE_GROUP_ID" in script
+    assert "verify_authenticated_sibling_denial" in script
+    assert "/api/v1/groups/co-a/members" in script
+    assert "sibling-group viewer received co-a telemetry" in script
     assert "verify edge/backend/auth" not in script
     for legacy_path in ("/api/control/", "/api/v1/ai/mock/detections", "/metrics", "/ws/"):
         assert legacy_path not in script

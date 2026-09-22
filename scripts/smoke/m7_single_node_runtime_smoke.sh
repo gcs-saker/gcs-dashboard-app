@@ -120,6 +120,7 @@ apply_smoke_ports() {
   export MEDIA_CONTROL_PUBLIC_HLS_BASE_URL="${GCS_SMOKE_MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://127.0.0.1:${PUBLIC_HTTP_PORT}/hls}"
   export MEDIA_CONTROL_TURN_PRIMARY_URL="${GCS_SMOKE_MEDIA_CONTROL_TURN_PRIMARY_URL:-turn:127.0.0.1:${TURN_PRIMARY_HOST_PORT}?transport=udp}"
   export AUTH_POLICY_BASE_URL="${GCS_SMOKE_AUTH_POLICY_BASE_URL:-http://auth-policy:8080}"
+  export AUTH_POLICY_SMOKE_GROUP_ID="${GCS_SMOKE_SIBLING_GROUP_ID:-co-b}"
   export MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID="${GCS_SMOKE_MEDIA_CONTROL_DEFAULT_PUBLISHER_GROUP_ID:-co-a}"
   export MEDIA_CONTROL_STREAM_GROUP_MAP="${GCS_SMOKE_MEDIA_CONTROL_STREAM_GROUP_MAP:-raw/sample/front=co-a,raw/local/webcam=co-a}"
   export VITE_AUTH_API_BASE_URL="${GCS_SMOKE_VITE_AUTH_API_BASE_URL:-/auth-policy/auth}"
@@ -197,6 +198,12 @@ login_access_token() {
   local username="${AUTH_POLICY_OPERATOR_USERNAME:-operator01}"
   local password="${AUTH_POLICY_OPERATOR_PASSWORD:-correct-password}"
 
+  login_token_for "$edge_base_url" "$username" "$password"
+}
+
+login_token_for() {
+  local edge_base_url="$1" username="$2" password="$3"
+
   curl -fsS \
     -H "Content-Type: application/json" \
     -H "Origin: ${edge_base_url}" \
@@ -204,6 +211,21 @@ login_access_token() {
     -d "{\"username\":\"${username}\",\"password\":\"${password}\"}" \
     "${edge_base_url}/auth-policy/auth/login" \
     | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])'
+}
+
+verify_authenticated_sibling_denial() {
+  local edge_base_url="$1" sibling_token sibling_payload
+  sibling_token="$(login_token_for "$edge_base_url" \
+    "${AUTH_POLICY_SMOKE_USERNAME:-m7-smoke-viewer}" "${AUTH_POLICY_SMOKE_PASSWORD}")"
+  expect_http_status "403" "${edge_base_url}/auth-policy/api/v1/groups/co-a/members" \
+    -H "Authorization: Bearer ${sibling_token}"
+  sibling_payload="$(curl -fsS -H "Authorization: Bearer ${sibling_token}" \
+    "${edge_base_url}/api/telemetry/all")"
+  [[ "$sibling_payload" != *"raw.sample.front"* ]] || {
+    echo "sibling-group viewer received co-a telemetry" >&2
+    return 1
+  }
+  echo "Authenticated sibling-group IDOR denial passed"
 }
 
 turn_credentials() {
@@ -314,6 +336,7 @@ run_live() {
 
   local access_token
   access_token="$(login_access_token "$edge_base_url")"
+  verify_authenticated_sibling_denial "$edge_base_url"
   curl -fsS \
     -H "Authorization: Bearer ${access_token}" \
     -H "Content-Type: application/json" \
