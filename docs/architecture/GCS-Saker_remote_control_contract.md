@@ -54,3 +54,13 @@ QoS 1, and fail closed on duplicate, reordered, oversized, expired, timeout, or 
 ACK payloads are bounded protobuf messages received only from the server-session ACK topic. The topic
 session must equal the ACK control session and the ACK must identify a command and non-zero sequence.
 Malformed, oversized, or cross-session acknowledgements are rejected before state mutation.
+
+## PR-5 virtual device adapter
+
+The virtual adapter maps only approved command enums to fixed actuator methods. Motion and camera
+axes reject NaN, infinity, and values outside `[-1, 1]`; unsupported commands and session mismatch
+return stable NACK codes. No command contains a function name or executable content.
+
+The adapter binds one opaque lease, accepts heartbeat only for that lease, and invokes STOP once when
+heartbeat age exceeds three seconds, the lease expires, or the connection closes. Emergency stop maps
+directly to its dedicated actuator function. This is a simulator boundary and does not enable hardware.
