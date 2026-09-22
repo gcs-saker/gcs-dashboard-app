@@ -13,3 +13,5 @@ def test_audit_offload_requires_independent_storage_and_capacity_headroom() -> N
     assert 'install -m 400 "${latest}"' in source
     assert "sha256sum" in source
     assert "digest mismatch" in source
+    assert "%T@" not in source
+    assert "sort | tail -n1" in source

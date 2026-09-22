@@ -38,3 +38,23 @@ last independently offloaded copy, and run `verify_audit_recovery.py` against th
 
 This software verifier provides tamper evidence and recovery comparison. It does not turn ordinary local storage into
 external immutable or certified WORM storage. That infrastructure requirement remains open in the audit integrity policy.
+
+## Offload and restore rehearsal
+
+Use new empty directories on independently mounted storage. The runner refuses same-device offload and evidence
+overwrite, selects the highest anchor sequence rather than file modification time, installs the offloaded anchor as
+read-only, restores the audit export with an exclusive create, and verifies chain equality plus the signed anchor.
+
+```bash
+python3 scripts/ops/audit_offload_restore_drill.py \
+  --original-export /private/source/audit.jsonl \
+  --anchor-directory /private/source/anchors \
+  --hmac-key-file /private/keys/audit-anchor.key \
+  --external-directory /independent/worm-staging/anchors \
+  --restore-directory /isolated/restore \
+  --evidence-output /isolated/evidence/audit-drill-result.json
+```
+
+The result contains only status, counts, sequence, UTC completion time, and SHA-256 evidence digests. Paths, event
+contents, credentials, and private routes are not recorded. An isolated Docker rehearsal may use separate tmpfs mounts
+to exercise the workflow, but it is not evidence that an operational external WORM service has been deployed.
