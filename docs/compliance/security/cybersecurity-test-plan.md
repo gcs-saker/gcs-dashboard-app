@@ -53,3 +53,6 @@ gRPC metadata fuzz, MQTT boundary/fuzz, or scoped-token fuzz evidence disappears
 status, response byte count, leak verdict, and PASS/FAIL only; response bodies, credentials, UUIDs, and private routes are
 not retained.
 
+The one-shot local runtime smoke generates ephemeral mTLS identities, waits for MQTT TLS/CRL health, and executes the
+bounded DAST after public readiness. Any unexpected status or response-leak marker fails the complete runtime smoke.
+

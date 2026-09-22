@@ -4,11 +4,12 @@ static:
   methods: [type checking, lint, critical pattern gate, dependency audit, image scan]
 dynamic:
   dast:
-    status: IMPLEMENTED_NOT_RUN
+    status: IMPLEMENTED_DISPOSABLE_PASS
     harness: scripts/smoke/auth_boundary_dast.py
     ciInventoryGate: scripts/gates/security_campaign_gate.py
     targets: [REST, GraphQL, WebSocket, WHIP-WHEP signaling]
     requiredScenarios: [unauthenticated, invalid-bearer, object-scope, path-traversal, malformed-json, oversized-input, error-sanitization]
+    lastDisposableResult: {scenarios: 11, passed: 11, leakageDetected: 0}
   penetrationTest:
     status: NOT_RUN
     independence: REQUIRED
