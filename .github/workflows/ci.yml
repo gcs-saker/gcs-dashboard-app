@@ -64,6 +64,9 @@ jobs:
             contracts/proto/gcs/saker/v1/{common,stream_control,telemetry,gateway_service,device_policy_service,mqtt_gateway}.proto
           diff -ru services/media-control/internal/generated "$RUNNER_TEMP/go-contracts"
 
+      - name: Reject stale or unused Go module requirements
+        run: go mod tidy -diff
+
       - name: Run race tests
         run: go test -race -cover ./...
         env:

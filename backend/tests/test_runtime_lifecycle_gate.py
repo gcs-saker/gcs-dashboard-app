@@ -16,11 +16,12 @@ def test_current_runtime_policy_passes() -> None:
     validate(load_policy())
 
 
-def test_eol_node_runtime_is_rejected() -> None:
+@pytest.mark.parametrize("runtime", ["node", "python", "java", "go"])
+def test_eol_runtime_is_rejected(runtime: str) -> None:
     policy = deepcopy(load_policy())
-    policy["minimumSupported"]["node"] = 99
+    policy["minimumSupported"][runtime] = "99"
 
-    with pytest.raises(RuntimeLifecycleError, match="Node runtime"):
+    with pytest.raises(RuntimeLifecycleError, match=f"{runtime} runtime"):
         validate(policy)
 
 
