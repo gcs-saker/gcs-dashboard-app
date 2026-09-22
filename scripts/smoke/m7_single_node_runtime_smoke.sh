@@ -13,6 +13,8 @@ STOP_STACK="${STOP_STACK:-0}"
 USE_SMOKE_PORTS="${USE_SMOKE_PORTS:-1}"
 USE_LOCAL_DEV_OVERRIDE="${USE_LOCAL_DEV_OVERRIDE:-1}"
 BUILD_STACK="${BUILD_STACK:-1}"
+RUN_AUTH_DAST="${RUN_AUTH_DAST:-1}"
+AUTH_DAST_EVIDENCE_FILE="${AUTH_DAST_EVIDENCE_FILE:-}"
 EPHEMERAL_INTERNAL_PKI="${EPHEMERAL_INTERNAL_PKI:-${STOP_STACK}}"
 EPHEMERAL_PKI_DIR=""
 EPHEMERAL_PKI_VOLUME=""
@@ -35,6 +37,8 @@ Environment:
   USE_LOCAL_DEV_OVERRIDE  Use the non-production mobile publisher stand-in. Default: 1
   BUILD_STACK  Rebuild local service images before startup. Default: 1
   EPHEMERAL_INTERNAL_PKI  Generate isolated local PKI. Defaults to STOP_STACK.
+  RUN_AUTH_DAST  Run bounded authentication/authorization DAST. Default: 1.
+  AUTH_DAST_EVIDENCE_FILE  Optional new absolute owner-only JSON result path.
 EOF
 }
 
@@ -141,6 +145,18 @@ wait_for_http() {
   done
 
   echo "Timed out waiting for ${url}" >&2
+  return 1
+}
+
+wait_for_container_health() {
+  local service="$1" attempt status container_id
+  for attempt in $(seq 1 45); do
+    container_id="$(compose ps -q "$service")"
+    status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$container_id")"
+    [[ "$status" == "healthy" ]] && return 0
+    sleep 2
+  done
+  echo "Timed out waiting for ${service} container health" >&2
   return 1
 }
 
@@ -282,7 +298,14 @@ run_live() {
   local edge_base_url="http://127.0.0.1:${public_http_port}"
   wait_for_http "${edge_base_url}/healthz"
   wait_for_http "${edge_base_url}/readyz"
+  wait_for_container_health mqtt
   wait_for_stream_status "${edge_base_url}/stream/status"
+
+  if [[ "$RUN_AUTH_DAST" == "1" ]]; then
+    local dast_args=(--run --base-url "$edge_base_url")
+    [[ -z "$AUTH_DAST_EVIDENCE_FILE" ]] || dast_args+=(--output "$AUTH_DAST_EVIDENCE_FILE")
+    python3 "${REPO_ROOT}/scripts/smoke/auth_boundary_dast.py" "${dast_args[@]}"
+  fi
 
   expect_http_status "401" \
     "${edge_base_url}/api/telemetry/" \
