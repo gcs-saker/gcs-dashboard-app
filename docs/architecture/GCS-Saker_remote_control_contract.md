@@ -32,3 +32,14 @@ expiry. Return-home requires explicit high-risk confirmation. Emergency stop rem
 otherwise authorized lease holder without an extra confirmation step so safety action is not delayed.
 The domain policy performs no Redis, database, broker, clock, UUID, or network I/O; persistence and
 atomic lease acquisition belong to the following routing/session PR.
+
+## PR-3 routing and lease persistence
+
+Media-control resolves a command route only from a server-known active publish session whose device
+identity matches the requested opaque device. Ended, expired, missing, corrupt, or mismatched sessions
+fail closed. Group and MQTT command topic remain private fields of an internal route object and cannot
+be serialized accidentally as an HTTP response.
+
+Control lease acquisition uses Redis `SET NX` with a maximum 30-second TTL. Redis keys use a versioned
+namespace and a SHA-256 digest of the device identity, never the raw device identifier. Invalid opaque
+identifiers, invalid TTLs, and store failures return typed sanitized errors.
