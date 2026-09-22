@@ -23,6 +23,11 @@ def test_dast_scenarios_cover_owned_attack_boundaries() -> None:
 
     assert names == {
         "admin_unauthenticated",
+        "streams_unauthenticated",
+        "publish_session_unauthenticated",
+        "playback_idor_unauthenticated",
+        "telemetry_unauthenticated",
+        "invalid_bearer_admin",
         "graphql_unauthenticated",
         "websocket_unauthenticated",
         "login_malformed_json",
@@ -48,3 +53,46 @@ def test_dast_payload_scenarios_reach_the_body_parser_without_a_cors_preflight()
 
     assert payload_scenarios
     assert all("Origin" not in item.headers for item in payload_scenarios)
+
+
+def test_dast_results_never_return_response_content(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = load_module()
+
+    class FakeResponse:
+        status = 401
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return None
+
+        def read(self, _limit):
+            return b'{"code":"authentication_required"}'
+
+    monkeypatch.setattr(module, "urlopen", lambda *_args, **_kwargs: FakeResponse())
+    result = module.execute("http://127.0.0.1:8080", module.scenarios()[0])
+
+    assert result["result"] == "PASS"
+    assert result["leakageDetected"] is False
+    assert "body" not in result
+
+
+def test_dast_fails_on_internal_secret_or_stack_marker(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = load_module()
+
+    class LeakingResponse:
+        status = 401
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return None
+
+        def read(self, _limit):
+            return b"Traceback: jdbc:postgresql://internal"
+
+    monkeypatch.setattr(module, "urlopen", lambda *_args, **_kwargs: LeakingResponse())
+
+    assert module.execute("http://127.0.0.1:8080", module.scenarios()[0])["result"] == "FAIL"

@@ -12,6 +12,16 @@ from urllib.parse import urljoin, urlsplit
 from urllib.request import Request, urlopen
 
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+FORBIDDEN_RESPONSE_MARKERS = (
+    "traceback",
+    "stack trace",
+    "postgresql://",
+    "jdbc:postgresql",
+    "redis://",
+    "bearer ",
+    "publishertoken",
+    "/run/secrets",
+)
 
 
 @dataclass(frozen=True)
@@ -28,6 +38,39 @@ def scenarios() -> list[Scenario]:
     json_headers = {"Content-Type": "application/json"}
     return [
         Scenario("admin_unauthenticated", "GET", "/auth-policy/admin/devices", None, (401, 403), {}),
+        Scenario("streams_unauthenticated", "GET", "/media-control/api/v1/streams", None, (401, 403), {}),
+        Scenario(
+            "publish_session_unauthenticated",
+            "POST",
+            "/media-control/api/v1/account/publish-sessions",
+            b'{"sensorId":"security-campaign"}',
+            (401, 403),
+            json_headers,
+        ),
+        Scenario(
+            "playback_idor_unauthenticated",
+            "GET",
+            "/media-control/api/v1/streams/opaque-cross-group/playback",
+            None,
+            (401, 403, 404),
+            {},
+        ),
+        Scenario(
+            "telemetry_unauthenticated",
+            "POST",
+            "/api/telemetry/",
+            b'{"uuid":"cross-group-device"}',
+            (401, 403),
+            json_headers,
+        ),
+        Scenario(
+            "invalid_bearer_admin",
+            "GET",
+            "/auth-policy/admin/devices",
+            None,
+            (401, 403),
+            {"Authorization": "Bearer invalid-security-campaign-token"},
+        ),
         Scenario(
             "graphql_unauthenticated",
             "POST",
@@ -82,16 +125,26 @@ def execute(base_url: str, scenario: Scenario) -> dict[str, object]:
         method=scenario.method,
     )
     status = 0
+    response_body = b""
     try:
         with urlopen(request, timeout=5, context=ssl.create_default_context()) as response:
             status = response.status
-            response.read(4096)
+            response_body = response.read(4096)
     except HTTPError as error:
         status = error.code
-        error.read(4096)
+        response_body = error.read(4096)
     except URLError as error:
         raise RuntimeError(f"DAST target unavailable: {error.reason}") from error
-    return {"name": scenario.name, "status": status, "result": "PASS" if status in scenario.expected else "FAIL"}
+    decoded = response_body.decode("utf-8", errors="replace").lower()
+    leakage = any(marker in decoded for marker in FORBIDDEN_RESPONSE_MARKERS)
+    passed = status in scenario.expected and not leakage
+    return {
+        "name": scenario.name,
+        "status": status,
+        "bodyBytes": len(response_body),
+        "leakageDetected": leakage,
+        "result": "PASS" if passed else "FAIL",
+    }
 
 
 def main() -> int:
