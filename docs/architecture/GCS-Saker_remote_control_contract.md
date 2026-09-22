@@ -43,3 +43,14 @@ be serialized accidentally as an HTTP response.
 Control lease acquisition uses Redis `SET NX` with a maximum 30-second TTL. Redis keys use a versioned
 namespace and a SHA-256 digest of the device identity, never the raw device identifier. Invalid opaque
 identifiers, invalid TTLs, and store failures return typed sanitized errors.
+
+## PR-4 MQTT command and acknowledgement boundary
+
+The command transport accepts only a server-resolved internal route and a protobuf command whose
+device, command ID, control session, sequence, idempotency ID, issue time, and expiry are valid.
+Commands live for at most five seconds, reserve idempotency before sequence acceptance, publish at
+QoS 1, and fail closed on duplicate, reordered, oversized, expired, timeout, or broker failure.
+
+ACK payloads are bounded protobuf messages received only from the server-session ACK topic. The topic
+session must equal the ACK control session and the ACK must identify a command and non-zero sequence.
+Malformed, oversized, or cross-session acknowledgements are rejected before state mutation.
