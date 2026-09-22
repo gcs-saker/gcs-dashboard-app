@@ -3,6 +3,7 @@ syntax = "proto3";
 package gcs.saker.v1;
 
 import "gcs/saker/v1/common.proto";
+import "gcs/saker/v1/control_command.proto";
 import "gcs/saker/v1/stream_control.proto";
 import "gcs/saker/v1/telemetry.proto";
 
@@ -41,9 +42,11 @@ message GatewayStreamRequest {
     TelemetryEnvelope telemetry = 10;
     StreamSessionEvent stream_event = 11;
     CommandAck command_ack = 12;
+    ControlCommandAck control_command_ack = 31;
   }
 
   reserved 13 to 30;
+  reserved 32 to 50;
 }
 
 message GatewayStreamResponse {
@@ -55,9 +58,11 @@ message GatewayStreamResponse {
   oneof payload {
     StreamCommand command = 10;
     TelemetryBatch telemetry_batch = 11;
+    ControlCommandEnvelope control_command = 31;
   }
 
   reserved 12 to 30;
+  reserved 32 to 50;
 }
 
 service SakerGatewayService {

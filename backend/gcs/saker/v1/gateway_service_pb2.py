@@ -23,11 +23,12 @@ _sym_db = _symbol_database.Default()
 
 
 from gcs.saker.v1 import common_pb2 as gcs_dot_saker_dot_v1_dot_common__pb2
+from gcs.saker.v1 import control_command_pb2 as gcs_dot_saker_dot_v1_dot_control__command__pb2
 from gcs.saker.v1 import stream_control_pb2 as gcs_dot_saker_dot_v1_dot_stream__control__pb2
 from gcs.saker.v1 import telemetry_pb2 as gcs_dot_saker_dot_v1_dot_telemetry__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\"gcs/saker/v1/gateway_service.proto\x12\x0cgcs.saker.v1\x1a\x19gcs/saker/v1/common.proto\x1a!gcs/saker/v1/stream_control.proto\x1a\x1cgcs/saker/v1/telemetry.proto\"\xb9\x01\n\nCommandAck\x12\x12\n\ncommand_id\x18\x01 \x01(\t\x12\x11\n\tstream_id\x18\x02 \x01(\t\x12\x10\n\x08\x61sset_id\x18\x03 \x01(\t\x12.\n\x06status\x18\x04 \x01(\x0e\x32\x1e.gcs.saker.v1.GatewayAckStatus\x12\x13\n\x0breason_code\x18\x05 \x01(\t\x12\'\n\x04time\x18\x06 \x01(\x0b\x32\x19.gcs.saker.v1.TimestampedJ\x04\x08\x07\x10\x15\"\x90\x02\n\x14GatewayStreamRequest\x12\x12\n\nrequest_id\x18\x01 \x01(\t\x12\x0e\n\x06org_id\x18\x02 \x01(\t\x12\x10\n\x08group_id\x18\x03 \x01(\t\x12\x10\n\x08\x61sset_id\x18\x04 \x01(\t\x12\x34\n\ttelemetry\x18\n \x01(\x0b\x32\x1f.gcs.saker.v1.TelemetryEnvelopeH\x00\x12\x38\n\x0cstream_event\x18\x0b \x01(\x0b\x32 .gcs.saker.v1.StreamSessionEventH\x00\x12/\n\x0b\x63ommand_ack\x18\x0c \x01(\x0b\x32\x18.gcs.saker.v1.CommandAckH\x00\x42\t\n\x07payloadJ\x04\x08\r\x10\x1f\"\xff\x01\n\x15GatewayStreamResponse\x12\x13\n\x0bresponse_id\x18\x01 \x01(\t\x12\x12\n\nrequest_id\x18\x02 \x01(\t\x12.\n\x06status\x18\x03 \x01(\x0e\x32\x1e.gcs.saker.v1.GatewayAckStatus\x12\x13\n\x0breason_code\x18\x04 \x01(\t\x12.\n\x07\x63ommand\x18\n \x01(\x0b\x32\x1b.gcs.saker.v1.StreamCommandH\x00\x12\x37\n\x0ftelemetry_batch\x18\x0b \x01(\x0b\x32\x1c.gcs.saker.v1.TelemetryBatchH\x00\x42\t\n\x07payloadJ\x04\x08\x0c\x10\x1f*\xbf\x01\n\x10GatewayAckStatus\x12\"\n\x1eGATEWAY_ACK_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n\x1bGATEWAY_ACK_STATUS_ACCEPTED\x10\x01\x12\x1f\n\x1bGATEWAY_ACK_STATUS_REJECTED\x10\x02\x12#\n\x1fGATEWAY_ACK_STATUS_BACKPRESSURE\x10\x03\x12 \n\x1cGATEWAY_ACK_STATUS_RECONNECT\x10\x04\x32n\n\x13SakerGatewayService\x12W\n\x08\x45xchange\x12\".gcs.saker.v1.GatewayStreamRequest\x1a#.gcs.saker.v1.GatewayStreamResponse(\x01\x30\x01\x42r\n kr.co.a4ai.gcssaker.contracts.v1P\x01ZLgithub.com/gcs-saker/gcs-dashboard-app/contracts/gen/go/gcs/saker/v1;sakerv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\"gcs/saker/v1/gateway_service.proto\x12\x0cgcs.saker.v1\x1a\x19gcs/saker/v1/common.proto\x1a\"gcs/saker/v1/control_command.proto\x1a!gcs/saker/v1/stream_control.proto\x1a\x1cgcs/saker/v1/telemetry.proto\"\xb9\x01\n\nCommandAck\x12\x12\n\ncommand_id\x18\x01 \x01(\t\x12\x11\n\tstream_id\x18\x02 \x01(\t\x12\x10\n\x08\x61sset_id\x18\x03 \x01(\t\x12.\n\x06status\x18\x04 \x01(\x0e\x32\x1e.gcs.saker.v1.GatewayAckStatus\x12\x13\n\x0breason_code\x18\x05 \x01(\t\x12\'\n\x04time\x18\x06 \x01(\x0b\x32\x19.gcs.saker.v1.TimestampedJ\x04\x08\x07\x10\x15\"\xd6\x02\n\x14GatewayStreamRequest\x12\x12\n\nrequest_id\x18\x01 \x01(\t\x12\x0e\n\x06org_id\x18\x02 \x01(\t\x12\x10\n\x08group_id\x18\x03 \x01(\t\x12\x10\n\x08\x61sset_id\x18\x04 \x01(\t\x12\x34\n\ttelemetry\x18\n \x01(\x0b\x32\x1f.gcs.saker.v1.TelemetryEnvelopeH\x00\x12\x38\n\x0cstream_event\x18\x0b \x01(\x0b\x32 .gcs.saker.v1.StreamSessionEventH\x00\x12/\n\x0b\x63ommand_ack\x18\x0c \x01(\x0b\x32\x18.gcs.saker.v1.CommandAckH\x00\x12>\n\x13\x63ontrol_command_ack\x18\x1f \x01(\x0b\x32\x1f.gcs.saker.v1.ControlCommandAckH\x00\x42\t\n\x07payloadJ\x04\x08\r\x10\x1fJ\x04\x08 \x10\x33\"\xc6\x02\n\x15GatewayStreamResponse\x12\x13\n\x0bresponse_id\x18\x01 \x01(\t\x12\x12\n\nrequest_id\x18\x02 \x01(\t\x12.\n\x06status\x18\x03 \x01(\x0e\x32\x1e.gcs.saker.v1.GatewayAckStatus\x12\x13\n\x0breason_code\x18\x04 \x01(\t\x12.\n\x07\x63ommand\x18\n \x01(\x0b\x32\x1b.gcs.saker.v1.StreamCommandH\x00\x12\x37\n\x0ftelemetry_batch\x18\x0b \x01(\x0b\x32\x1c.gcs.saker.v1.TelemetryBatchH\x00\x12?\n\x0f\x63ontrol_command\x18\x1f \x01(\x0b\x32$.gcs.saker.v1.ControlCommandEnvelopeH\x00\x42\t\n\x07payloadJ\x04\x08\x0c\x10\x1fJ\x04\x08 \x10\x33*\xbf\x01\n\x10GatewayAckStatus\x12\"\n\x1eGATEWAY_ACK_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n\x1bGATEWAY_ACK_STATUS_ACCEPTED\x10\x01\x12\x1f\n\x1bGATEWAY_ACK_STATUS_REJECTED\x10\x02\x12#\n\x1fGATEWAY_ACK_STATUS_BACKPRESSURE\x10\x03\x12 \n\x1cGATEWAY_ACK_STATUS_RECONNECT\x10\x04\x32n\n\x13SakerGatewayService\x12W\n\x08\x45xchange\x12\".gcs.saker.v1.GatewayStreamRequest\x1a#.gcs.saker.v1.GatewayStreamResponse(\x01\x30\x01\x42r\n kr.co.a4ai.gcssaker.contracts.v1P\x01ZLgithub.com/gcs-saker/gcs-dashboard-app/contracts/gen/go/gcs/saker/v1;sakerv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,14 +36,14 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'gcs.saker.v1.gateway_servic
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'\n kr.co.a4ai.gcssaker.contracts.v1P\001ZLgithub.com/gcs-saker/gcs-dashboard-app/contracts/gen/go/gcs/saker/v1;sakerv1'
-  _globals['_GATEWAYACKSTATUS']._serialized_start=866
-  _globals['_GATEWAYACKSTATUS']._serialized_end=1057
-  _globals['_COMMANDACK']._serialized_start=145
-  _globals['_COMMANDACK']._serialized_end=330
-  _globals['_GATEWAYSTREAMREQUEST']._serialized_start=333
-  _globals['_GATEWAYSTREAMREQUEST']._serialized_end=605
-  _globals['_GATEWAYSTREAMRESPONSE']._serialized_start=608
-  _globals['_GATEWAYSTREAMRESPONSE']._serialized_end=863
-  _globals['_SAKERGATEWAYSERVICE']._serialized_start=1059
-  _globals['_SAKERGATEWAYSERVICE']._serialized_end=1169
+  _globals['_GATEWAYACKSTATUS']._serialized_start=1043
+  _globals['_GATEWAYACKSTATUS']._serialized_end=1234
+  _globals['_COMMANDACK']._serialized_start=181
+  _globals['_COMMANDACK']._serialized_end=366
+  _globals['_GATEWAYSTREAMREQUEST']._serialized_start=369
+  _globals['_GATEWAYSTREAMREQUEST']._serialized_end=711
+  _globals['_GATEWAYSTREAMRESPONSE']._serialized_start=714
+  _globals['_GATEWAYSTREAMRESPONSE']._serialized_end=1040
+  _globals['_SAKERGATEWAYSERVICE']._serialized_start=1236
+  _globals['_SAKERGATEWAYSERVICE']._serialized_end=1346
 # @@protoc_insertion_point(module_scope)
