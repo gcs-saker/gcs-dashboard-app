@@ -415,7 +415,9 @@ jobs:
           python scripts/gates/safety_control_traceability_gate.py --check
 
       - name: Validate threat model and attack-surface inventory
-        run: python scripts/gates/attack_surface_gate.py --check
+        run: |
+          python scripts/gates/attack_surface_gate.py --check
+          python scripts/gates/security_campaign_gate.py --check
 
       - name: Validate MIL-STD-882E system-safety records
         run: python scripts/gates/system_safety_gate.py --check

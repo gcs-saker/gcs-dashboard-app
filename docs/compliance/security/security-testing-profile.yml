@@ -6,8 +6,9 @@ dynamic:
   dast:
     status: IMPLEMENTED_NOT_RUN
     harness: scripts/smoke/auth_boundary_dast.py
+    ciInventoryGate: scripts/gates/security_campaign_gate.py
     targets: [REST, GraphQL, WebSocket, WHIP-WHEP signaling]
-    requiredScenarios: [unauthenticated, unauthorized, object-scope, injection, oversized-input, rate-limit, error-sanitization]
+    requiredScenarios: [unauthenticated, invalid-bearer, object-scope, path-traversal, malformed-json, oversized-input, error-sanitization]
   penetrationTest:
     status: NOT_RUN
     independence: REQUIRED
@@ -21,6 +22,7 @@ fuzzing:
     targets: [FuzzParseStreamID, FuzzValidateForRoute, FuzzMissionWaypointBoundary, FuzzGatewayMetadata, FuzzSessionFromTopic]
 failureConditions: [panic, crash, race, resource leak, secret disclosure, authorization bypass, unbounded retry, inconsistent accepted round-trip]
 evidencePolicy: Findings and corpora exclude credentials, private routes, controlled data, and raw private media.
+ciEvidenceSchema: gcs-saker.security-campaign.v1
 retestPolicy: Critical and High findings are retested after remediation and before release; all other findings are retested within 30 days.
 penetrationScope: [public authentication and authorization, REST, GraphQL, WebSocket, WHIP-WHEP signaling, gRPC metadata, MQTT topic and payload boundaries]
 resultBinding: [docs/compliance/security/poam.yml, docs/compliance/evidence/qualification-package-plan.md]

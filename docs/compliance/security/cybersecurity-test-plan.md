@@ -48,3 +48,8 @@ hash mismatch cannot be reported as PASS.
   missing safety/security negative test, provenance mismatch, or failed rollback readiness blocks release.
 - Open findings are tracked in the POA&M with owner, mitigation, due date, and residual risk.
 
+The repository contract `scripts/gates/security_campaign_gate.py --check` fails when required REST DAST, gRPC boundary,
+gRPC metadata fuzz, MQTT boundary/fuzz, or scoped-token fuzz evidence disappears. Dynamic DAST output contains scenario,
+status, response byte count, leak verdict, and PASS/FAIL only; response bodies, credentials, UUIDs, and private routes are
+not retained.
+
