@@ -8,6 +8,8 @@ import {
 } from "./authStorage";
 import type { AuthenticatedUser, LoginRequest } from "./types";
 import { safeParseAuthenticatedUser } from "./authResponseValidation";
+import { IdleSessionWarning } from "./IdleSessionWarning";
+import { useIdleSessionTimeout } from "./useIdleSessionTimeout";
 
 interface AuthContextValue {
   accessToken: string | null;
@@ -41,6 +43,7 @@ export function AuthProvider({ children, onSessionCleared }: AuthProviderProps) 
     onSessionCleared?.();
     void logoutRequest().catch(() => undefined);
   }, [onSessionCleared]);
+  const idleSession = useIdleSessionTimeout(Boolean(accessToken), currentUser?.role ?? null, logout);
 
   const login = useCallback(async (credentials: LoginRequest): Promise<void> => {
     const token = await loginRequest(credentials);
@@ -54,7 +57,12 @@ export function AuthProvider({ children, onSessionCleared }: AuthProviderProps) 
   const value = useMemo<AuthContextValue>(() => ({ accessToken, currentUser,
     isAuthenticated: Boolean(accessToken), isAuthReady, login, logout,
   }), [accessToken, currentUser, isAuthReady, login, logout]);
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>
+    {idleSession.warningSeconds !== null ? (
+      <IdleSessionWarning seconds={idleSession.warningSeconds} onExtend={idleSession.extendSession} />
+    ) : null}
+    {children}
+  </AuthContext.Provider>;
 }
 
 function useSessionRefresh(

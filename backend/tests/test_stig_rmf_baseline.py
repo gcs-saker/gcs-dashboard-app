@@ -36,9 +36,9 @@ def test_stig_assessment_overlay_preserves_open_and_unassessed_work() -> None:
     counts = runpy.run_path(str(ASSESSMENT_GATE))["validate"]()
 
     assert counts == {
-        "NOT_A_FINDING": 9,
+        "NOT_A_FINDING": 11,
         "NOT_APPLICABLE": 1,
-        "OPEN": 276,
+        "OPEN": 274,
     }
 
 

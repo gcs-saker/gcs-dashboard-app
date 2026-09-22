@@ -1,0 +1,26 @@
+.idle-session-warning {
+  position: fixed;
+  z-index: 10000;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #d9a928;
+  border-radius: 8px;
+  background: #101c24;
+  color: #f5f8fa;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+}
+
+.idle-session-warning button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #38bdf8;
+  border-radius: 6px;
+  background: #0b2b3b;
+  color: #e8f7ff;
+  font: inherit;
+  cursor: pointer;
+}
