@@ -64,3 +64,12 @@ return stable NACK codes. No command contains a function name or executable cont
 The adapter binds one opaque lease, accepts heartbeat only for that lease, and invokes STOP once when
 heartbeat age exceeds three seconds, the lease expires, or the connection closes. Emergency stop maps
 directly to its dedicated actuator function. This is a simulator boundary and does not enable hardware.
+
+## PR-6 dashboard dead-man input
+
+The dashboard control pad emits typed motion intent only and receives no receiver address, topic, or
+private route. WASD keydown updates normalized axes; final keyup emits STOP. Window blur, tab hiding,
+pointer cancellation, pointer departure, explicit stop, and component unmount also emit STOP.
+Keyboard events originating from input, textarea, select, or editable content are ignored so control
+cannot capture text-entry keystrokes. The pad remains disabled until a future API supplies an active
+opaque control session.
