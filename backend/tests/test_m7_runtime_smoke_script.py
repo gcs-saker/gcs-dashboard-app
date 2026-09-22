@@ -63,6 +63,10 @@ def test_m7_runtime_smoke_requires_backend_stream_status_payload_and_read_model_
     assert "unauthenticated telemetry rejection" in script
     assert "media-control stream status" in script
     assert "Verified active cutover" in script
+    assert "RUN_AUTH_DAST" in script
+    assert "auth_boundary_dast.py" in script
+    assert "AUTH_DAST_EVIDENCE_FILE" in script
+    assert "wait_for_container_health mqtt" in script
     assert "verify edge/backend/auth" not in script
     for legacy_path in ("/api/control/", "/api/v1/ai/mock/detections", "/metrics", "/ws/"):
         assert legacy_path not in script
@@ -92,6 +96,7 @@ def test_m7_runtime_smoke_generates_and_removes_ephemeral_local_pki():
     assert "chown 10002:10002 /target/auth-policy.key" in contract
     assert "chown 10001:10001 /target/media-control.key /target/backend.key" in contract
     assert "chown 1883:1883 /target/mqtt.key /target/mqtt-health.key" in contract
+    assert "/source/ca.crl" in contract
     assert "/source/ca.key" not in contract
     assert 'export INTERNAL_PKI_DIR="$(cygpath -m "$EPHEMERAL_PKI_DIR")"' in contract
     assert "export AUTH_POLICY_AUDIT_ANCHOR_ENABLED=false" in contract

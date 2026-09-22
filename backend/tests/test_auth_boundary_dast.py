@@ -96,3 +96,14 @@ def test_dast_fails_on_internal_secret_or_stack_marker(monkeypatch: pytest.Monke
     monkeypatch.setattr(module, "urlopen", lambda *_args, **_kwargs: LeakingResponse())
 
     assert module.execute("http://127.0.0.1:8080", module.scenarios()[0])["result"] == "FAIL"
+
+
+def test_dast_evidence_is_exclusive_and_contains_no_response_body(tmp_path: Path) -> None:
+    module = load_module()
+    output = (tmp_path / "dast.json").resolve()
+    module.emit_report({"results": [{"bodyBytes": 10, "result": "PASS"}]}, output)
+
+    assert "bodyBytes" in output.read_text(encoding="utf-8")
+    assert "response_body" not in output.read_text(encoding="utf-8")
+    with pytest.raises(ValueError, match="new and absolute"):
+        module.emit_report({}, output)

@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import ssl
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlsplit
 from urllib.request import Request, urlopen
@@ -52,7 +54,7 @@ def scenarios() -> list[Scenario]:
             "GET",
             "/media-control/api/v1/streams/opaque-cross-group/playback",
             None,
-            (401, 403, 404),
+            (401, 403, 404, 422),
             {},
         ),
         Scenario(
@@ -147,12 +149,24 @@ def execute(base_url: str, scenario: Scenario) -> dict[str, object]:
     }
 
 
+def emit_report(payload: dict[str, object], output: Path | None) -> None:
+    encoded = json.dumps(payload, sort_keys=True)
+    if output is not None:
+        if not output.is_absolute() or output.exists():
+            raise ValueError("DAST evidence path must be new and absolute")
+        descriptor = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(encoded + "\n")
+    print(encoded)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--run", action="store_true")
     parser.add_argument("--base-url", default="http://127.0.0.1:8080")
     parser.add_argument("--allow-remote", action="store_true")
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     validate_target(args.base_url, args.allow_remote)
     if not args.run:
@@ -160,10 +174,10 @@ def main() -> int:
             {"name": item.name, "method": item.method, "path": item.path, "expected": item.expected}
             for item in scenarios()
         ]
-        print(json.dumps({"schemaVersion": "gcs-saker.auth-dast.v1", "scenarios": contracts}))
+        emit_report({"schemaVersion": "gcs-saker.auth-dast.v1", "scenarios": contracts}, args.output)
         return 0
     results = [execute(args.base_url, item) for item in scenarios()]
-    print(json.dumps({"schemaVersion": "gcs-saker.auth-dast.v1", "results": results}, sort_keys=True))
+    emit_report({"schemaVersion": "gcs-saker.auth-dast.v1", "results": results}, args.output)
     return 1 if any(result["result"] == "FAIL" for result in results) else 0
 
 

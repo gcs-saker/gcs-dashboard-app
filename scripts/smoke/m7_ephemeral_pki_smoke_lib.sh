@@ -19,7 +19,7 @@ prepare_ephemeral_internal_pki() {
     -v "${EPHEMERAL_PKI_DIR}:/source:ro" \
     -v "${EPHEMERAL_PKI_VOLUME}:/target" \
     alpine:3.23 sh -eu -c '
-      cp /source/ca.crt /source/auth-policy.crt /source/auth-policy.key \
+      cp /source/ca.crt /source/ca.crl /source/auth-policy.crt /source/auth-policy.key \
         /source/media-control.crt /source/media-control.key \
         /source/mqtt.crt /source/mqtt.key /source/mqtt-health.crt /source/mqtt-health.key \
         /source/backend.crt /source/backend.key /target/
@@ -27,7 +27,7 @@ prepare_ephemeral_internal_pki() {
       chown 10001:10001 /target/media-control.key /target/backend.key
       chown 1883:1883 /target/mqtt.key /target/mqtt-health.key
       chmod 600 /target/*.key
-      chmod 644 /target/*.crt
+      chmod 644 /target/*.crt /target/*.crl
     '
   if command -v cygpath >/dev/null 2>&1; then
     export INTERNAL_PKI_DIR="$(cygpath -m "$EPHEMERAL_PKI_DIR")"
