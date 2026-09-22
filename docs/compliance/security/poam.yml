@@ -40,9 +40,11 @@ items:
     controls: [AC-12]
     issue: https://github.com/gcs-saker/gcs-dashboard-app/issues/656
     severity: MEDIUM
-    mitigation: Access and refresh token limits, explicit logout, and administrator MFA reduce exposure pending idle enforcement.
+    mitigation: Role-based idle enforcement recognizes foreground operational media, then clears client state and invokes server logout when inactive.
     dueBy: 2026-10-15
-    status: OPEN
+    status: CLOSED
+    closedAt: 2026-09-22
+    evidence: [gcs-dashboard/src/features/auth/useIdleSessionTimeout.ts, gcs-dashboard/src/features/auth/useIdleSessionTimeout.test.tsx]
   - id: POAM-SEC-006
     weakness: Audit off-load and the 75 percent storage warning lack production evidence.
     controls: [AU-4, AU-5, AU-9]

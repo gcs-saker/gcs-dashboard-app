@@ -66,10 +66,10 @@ controls:
     status: ASSESSED_INTERNAL_PASS
   - id: AC-12
     family: Access Control
-    implementation: Explicit logout and bounded access/refresh tokens exist; STIG idle-session limits are not implemented.
+    implementation: Explicit logout, bounded tokens, 10-minute administrator idle termination, and 15-minute user idle termination with foreground operational-media awareness are implemented.
     assessment: Verify logout and token expiry, then test 10-minute admin and 15-minute user idle termination.
-    evidence: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/AuthSessionServiceTest.kt]
-    status: OPEN
+    evidence: [services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/AuthSessionServiceTest.kt, gcs-dashboard/src/features/auth/useIdleSessionTimeout.test.tsx]
+    status: ASSESSED_INTERNAL_PASS
   - id: AU-3
     family: Audit and Accountability
     implementation: Security events carry UTC time, stable action/category, result, and authenticated or redacted process identity.

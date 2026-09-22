@@ -5,8 +5,8 @@
 This is an initial internal assessment, not an authorization decision or certification. Automated
 tests demonstrate existing authentication, scoped authorization, secret redaction, dependency and
 image scanning, immutable release, backup, rollback, and health/denial controls. The imported ASD
-STIG V6R4 source remains immutable. The assessment overlay currently records 9 Not a Finding,
-276 Open, and 1 Not Applicable rule. Rules without approved evidence fail closed as Open rather than
+STIG V6R4 source remains immutable. The assessment overlay currently records 11 Not a Finding,
+274 Open, and 1 Not Applicable rule. Rules without approved evidence fail closed as Open rather than
 remaining implicitly unassessed. CCI identifiers remain blocked because the retained
 official-source extraction omitted them; NIST control mappings and evidence are recorded without
 inventing CCI values.
