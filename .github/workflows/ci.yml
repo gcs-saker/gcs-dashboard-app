@@ -429,6 +429,7 @@ jobs:
       - name: Validate supply-chain assurance policy
         run: |
           python -m unittest discover -s scripts/reports -p 'test_*.py'
+          python scripts/gates/gradle_dependency_gate.py
           python scripts/gates/python_dependency_gate.py
           python scripts/gates/supply_chain_policy_gate.py --check
           python scripts/gates/runtime_lifecycle_gate.py
