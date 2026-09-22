@@ -1,0 +1,34 @@
+schemaVersion: gcs-saker.auth-policy-dependencies.v1
+dependencies:
+  - {configuration: implementation, coordinate: "io.grpc:grpc-netty-shaded:1.76.0", reason: "TLS gRPC server transport"}
+  - {configuration: implementation, coordinate: "io.grpc:grpc-protobuf:1.76.0", reason: "protobuf gRPC marshalling"}
+  - {configuration: implementation, coordinate: "io.grpc:grpc-stub:1.76.0", reason: "generated gRPC service stubs"}
+  - {configuration: compileOnly, coordinate: "javax.annotation:javax.annotation-api:1.3.2", reason: "generated gRPC annotations"}
+  - {configuration: implementation, coordinate: "org.springframework.boot:spring-boot-starter-web", reason: "REST API and servlet runtime"}
+  - {configuration: implementation, coordinate: "org.springframework.boot:spring-boot-starter-websocket", reason: "scoped telemetry WebSocket"}
+  - {configuration: implementation, coordinate: "org.springframework.boot:spring-boot-starter-actuator", reason: "health readiness and metrics"}
+  - {configuration: implementation, coordinate: "org.springframework.boot:spring-boot-starter-graphql", reason: "operational GraphQL reads"}
+  - {configuration: implementation, coordinate: "org.springframework.boot:spring-boot-starter-jdbc", reason: "explicit JDBC repositories"}
+  - {configuration: implementation, coordinate: "org.springframework.boot:spring-boot-starter-data-jpa", reason: "JPA persistence mode"}
+  - {configuration: implementation, coordinate: "org.springframework.boot:spring-boot-starter-data-redis", reason: "token and principal stores"}
+  - {configuration: implementation, coordinate: "org.springframework.boot:spring-boot-starter-security", reason: "authentication and authorization filters"}
+  - {configuration: implementation, coordinate: "org.springframework.boot:spring-boot-starter-validation", reason: "request boundary validation"}
+  - {configuration: implementation, coordinate: "org.webjars:swagger-ui:5.17.14", reason: "offline operational API documentation"}
+  - {configuration: implementation, coordinate: "com.auth0:java-jwt:4.5.0", reason: "JWT signing and verification"}
+  - {configuration: implementation, coordinate: "com.fasterxml.jackson.module:jackson-module-kotlin", reason: "Kotlin JSON binding"}
+  - {configuration: implementation, coordinate: "org.flywaydb:flyway-core", reason: "database schema migration"}
+  - {configuration: implementation, coordinate: "io.github.resilience4j:resilience4j-circuitbreaker:2.3.0", reason: "bounded session-store degradation"}
+  - {configuration: implementation, coordinate: "io.micrometer:micrometer-tracing-bridge-otel", reason: "trace correlation bridge"}
+  - {configuration: implementation, coordinate: "org.jetbrains.kotlin:kotlin-reflect", reason: "Spring Kotlin runtime reflection"}
+  - {configuration: compileOnly, coordinate: "org.springframework.modulith:spring-modulith-api", reason: "module boundary annotations"}
+  - {configuration: testImplementation, coordinate: "org.springframework.boot:spring-boot-starter-test", reason: "Spring integration tests"}
+  - {configuration: testImplementation, coordinate: "org.springframework.security:spring-security-test", reason: "authorization tests"}
+  - {configuration: testImplementation, coordinate: "org.springframework.graphql:spring-graphql-test", reason: "GraphQL contract tests"}
+  - {configuration: testImplementation, coordinate: "org.jetbrains.kotlin:kotlin-test-junit5", reason: "Kotlin JUnit assertions"}
+  - {configuration: testImplementation, coordinate: "org.testcontainers:junit-jupiter:1.21.3", reason: "container lifecycle tests"}
+  - {configuration: testImplementation, coordinate: "org.testcontainers:postgresql:1.21.3", reason: "PostgreSQL integration tests"}
+  - {configuration: testImplementation, coordinate: "org.springframework.modulith:spring-modulith-starter-test", reason: "module boundary verification"}
+  - {configuration: testImplementation, coordinate: "com.h2database:h2", reason: "isolated JDBC repository tests"}
+  - {configuration: runtimeOnly, coordinate: "io.micrometer:micrometer-registry-prometheus", reason: "Prometheus metrics export"}
+  - {configuration: runtimeOnly, coordinate: "org.flywaydb:flyway-database-postgresql", reason: "PostgreSQL Flyway dialect"}
+  - {configuration: runtimeOnly, coordinate: "org.postgresql:postgresql:42.7.12", reason: "production PostgreSQL driver"}
