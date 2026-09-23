@@ -23,3 +23,10 @@ def test_control_route_and_lease_have_single_owned_packages() -> None:
     assert (media / "controllease/redis_store.go").is_file()
     assert not (media / "controlsession/route.go").exists()
     assert not (media / "controlsession/redis_lease.go").exists()
+
+
+def test_control_mqtt_transport_has_a_single_owner() -> None:
+    media = ROOT / "services/media-control/internal"
+
+    assert (media / "controltransport/mqtt_command.go").is_file()
+    assert not (media / "controlsession/command_transport.go").exists()

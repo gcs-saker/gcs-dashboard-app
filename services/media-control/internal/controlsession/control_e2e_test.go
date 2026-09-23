@@ -7,7 +7,7 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controlroute"
-	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controlsession"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controltransport"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/deviceadapter"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 	pb "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
@@ -30,11 +30,11 @@ func TestControlCommandE2ESuccessAndAck(t *testing.T) {
 		t.Fatal("lease rejected")
 	}
 	loopback := &loopbackPublisher{adapter: adapter, now: now}
-	transport := controlsession.NewCommandTransport(loopback, allowLedger{}, allowSequence{})
+	transport := controltransport.NewCommandTransport(loopback, allowLedger{}, allowSequence{})
 	if err := transport.Publish(context.Background(), route, stopCommand(now), now); err != nil {
 		t.Fatal(err)
 	}
-	ack, err := controlsession.DecodeAck("gcs/device/control-01/ack", loopback.ack)
+	ack, err := controltransport.DecodeAck("gcs/device/control-01/ack", loopback.ack)
 	if err != nil || ack.Status != pb.ControlAckStatus_CONTROL_ACK_STATUS_APPLIED || actuator.stops != 1 {
 		t.Fatalf("unexpected result ack=%v stops=%d err=%v", ack, actuator.stops, err)
 	}
