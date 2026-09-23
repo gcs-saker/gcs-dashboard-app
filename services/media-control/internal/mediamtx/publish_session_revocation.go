@@ -181,7 +181,9 @@ func (o PublishSessionRevocationObserver) boundSessionToken(
 	if raw == "" {
 		return sessiontoken.Payload{}, false, nil
 	}
-	token, err := sessiontoken.ValidateForRoute(o.secret, raw, action, parsed.StreamID, active.Path, o.now())
+	token, err := sessiontoken.ValidateForRoute(o.secret, raw, sessiontoken.RouteValidation{
+		Action: action, StreamID: parsed.StreamID, StreamPath: active.Path,
+	})
 	if err != nil {
 		return sessiontoken.Payload{}, true, err
 	}

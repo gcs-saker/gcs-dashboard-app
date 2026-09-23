@@ -11,6 +11,8 @@ func FuzzValidateForRoute(f *testing.F) {
 	}
 	now := time.Date(2026, 9, 7, 0, 0, 0, 0, time.UTC)
 	f.Fuzz(func(t *testing.T, token, action, streamID, path string) {
-		_, _ = ValidateForRoute("fuzz-secret-at-least-32-characters", token, action, streamID, path, now)
+		_, _ = ValidateForRoute("fuzz-secret-at-least-32-characters", token, RouteValidation{
+			Action: action, StreamID: streamID, StreamPath: path, Now: now, EnforceExpiry: true,
+		})
 	})
 }
