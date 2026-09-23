@@ -1,4 +1,4 @@
-package controlsession
+package controltransport
 
 import (
 	"context"

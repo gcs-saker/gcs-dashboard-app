@@ -6,7 +6,7 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controlsession"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controltransport"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/deviceadapter"
 	pb "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
 	"google.golang.org/protobuf/proto"
@@ -41,7 +41,7 @@ func TestControlCommandE2EThroughRealBroker(t *testing.T) {
 	mustToken(t, server.Publish("gcs/device/session-01/command", 1, false, wire))
 	select {
 	case received := <-ackWire:
-		ack, err := controlsession.DecodeAck("gcs/device/control-01/ack", received)
+		ack, err := controltransport.DecodeAck("gcs/device/control-01/ack", received)
 		if err != nil || ack.Status != pb.ControlAckStatus_CONTROL_ACK_STATUS_APPLIED || actuator.stops != 1 {
 			t.Fatalf("unexpected broker result ack=%v stops=%d err=%v", ack, actuator.stops, err)
 		}
