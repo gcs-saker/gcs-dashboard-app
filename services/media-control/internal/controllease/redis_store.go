@@ -1,10 +1,11 @@
-package controlsession
+package controllease
 
 import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"regexp"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -16,6 +17,8 @@ var (
 	ErrLeaseUnavailable = errors.New("control_lease_unavailable")
 	ErrLeaseInvalid     = errors.New("control_lease_invalid")
 )
+
+var opaqueSegment = regexp.MustCompile(`^[A-Za-z0-9_-]{8,128}$`)
 
 type setNXClient interface {
 	SetNX(context.Context, string, any, time.Duration) *redis.BoolCmd

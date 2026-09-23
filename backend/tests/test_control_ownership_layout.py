@@ -14,3 +14,12 @@ def test_kotlin_domain_package_matches_physical_owner() -> None:
     assert source.is_file()
     assert source.read_text(encoding="utf-8").startswith("package kr.co.a4ai.gcssaker.authpolicy.domain\n")
     assert not (source.parent / "control/ControlLeasePolicy.kt").exists()
+
+
+def test_control_route_and_lease_have_single_owned_packages() -> None:
+    media = ROOT / "services/media-control/internal"
+
+    assert (media / "controlroute/resolver.go").is_file()
+    assert (media / "controllease/redis_store.go").is_file()
+    assert not (media / "controlsession/route.go").exists()
+    assert not (media / "controlsession/redis_lease.go").exists()
