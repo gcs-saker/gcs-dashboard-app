@@ -16,7 +16,10 @@ def test_control_command_e2e_covers_required_boundaries() -> None:
 
     assert "ControlLeasePolicyTest" in source
     assert "TestControlCommandE2E" in source
-    assert "go test -race ./internal/controlsession ./internal/deviceadapter" in source
+    assert (
+        "go test -race ./internal/controltransport ./internal/controlstate ./internal/controlobs ./internal/deviceadapter"
+        in source
+    )
     assert (
         "policy denials, routing, lease, duplicate, sequence, expiry, ACK, fail-safe, emergency-stop, leakage" in source
     )

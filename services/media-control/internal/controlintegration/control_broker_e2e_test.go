@@ -1,4 +1,4 @@
-package controlsession_test
+package controlintegration_test
 
 import (
 	"os"

@@ -26,8 +26,8 @@ run_live() {
   '
   docker run --rm -v "${REPO_ROOT}/services/media-control:/workspace:ro" \
     -w /workspace golang:1.26.6-bookworm sh -eu -c '
-      go test -race ./internal/controlsession ./internal/deviceadapter
-      go test ./... -run "TestControlCommandE2E"
+      go test -race ./internal/controltransport ./internal/controlstate ./internal/controlobs ./internal/deviceadapter
+      go test ./internal/controlintegration -run "TestControlCommandE2E"
   '
   echo "control command Docker E2E passed"
   echo "verified: policy denials, routing, lease, duplicate, sequence, expiry, ACK, fail-safe, emergency-stop, leakage"

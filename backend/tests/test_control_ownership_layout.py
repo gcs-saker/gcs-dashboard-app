@@ -30,3 +30,12 @@ def test_control_mqtt_transport_has_a_single_owner() -> None:
 
     assert (media / "controltransport/mqtt_command.go").is_file()
     assert not (media / "controlsession/command_transport.go").exists()
+
+
+def test_control_state_observability_and_integration_have_distinct_owners() -> None:
+    media = ROOT / "services/media-control/internal"
+
+    assert (media / "controlstate/ack_tracker.go").is_file()
+    assert (media / "controlobs/metrics.go").is_file()
+    assert (media / "controlintegration/control_e2e_test.go").is_file()
+    assert not (media / "controlsession").exists()
