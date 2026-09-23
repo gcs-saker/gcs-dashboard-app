@@ -81,3 +81,11 @@ Media-control exposes POST-only control-session and command endpoints. The servi
 unknown or oversized JSON fields, and returns only opaque session/command state. Public response DTOs
 contain no group, receiver, MQTT topic, device route, token, or private path. Runtime policy, Redis,
 MQTT, and dashboard wiring remain required before the pad can be enabled.
+
+## PR-10B auth-policy boundary
+
+Auth-policy exposes an authenticated internal control decision endpoint. It resolves the principal
+from the bearer token, loads the authoritative registered device and group status, rejects unknown
+actions or commands, and delegates acquisition/command decisions to `ControlLeasePolicy`. The caller
+cannot override principal role, group, or security version. The response contains only allowed,
+stable reason, and the server-confirmed group; media-control runtime injection remains outstanding.
