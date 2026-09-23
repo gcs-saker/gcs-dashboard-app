@@ -1,0 +1,29 @@
+schemaVersion: gcs-saker.remote-control-hardware-qualification.v1
+currentPhase: SOFTWARE_ONLY
+hardwareActivationAllowed: false
+overallVerdict: BLOCKED
+blocker: No representative flight controller, motor/servo rig, radio link, emergency-stop circuit, or controlled test range is available.
+capabilityAdapter:
+  requiredInputs: [device model, firmware version, supported command enums, axis units, safe ranges, heartbeat limit, lease limit]
+  requiredFunctions: [STOP, MOTION, CAMERA_PAN_TILT, RETURN_HOME, EMERGENCY_STOP]
+  forbiddenFunctions: [arbitrary function name, script execution, browser-selected receiver, browser-selected MQTT topic]
+  failSafeState: STOP
+qualification:
+  - {id: RC-HW-001, name: axis direction and unit calibration, verdict: BLOCKED}
+  - {id: RC-HW-002, name: velocity yaw altitude range enforcement, verdict: BLOCKED}
+  - {id: RC-HW-003, name: key-up blur disconnect heartbeat STOP latency, verdict: BLOCKED}
+  - {id: RC-HW-004, name: emergency-stop priority and independent circuit, verdict: BLOCKED}
+  - {id: RC-HW-005, name: loss jitter reconnect and radio outage behavior, verdict: BLOCKED}
+  - {id: RC-HW-006, name: repeated command and lease handover endurance, verdict: BLOCKED}
+  - {id: RC-HW-007, name: operator workload and control ambiguity, verdict: BLOCKED}
+requiredEvidence:
+  - immutable source commit and firmware revision
+  - calibrated test equipment and environment
+  - command and telemetry time correlation
+  - video of physical response and emergency stop
+  - measured stop latency and pass criteria
+  - anomaly log corrective action and retest
+standardsAlignment:
+  MIL-STD-882E: hazard identification risk control verification and residual-risk acceptance
+  MIL-STD-1472H: control-display compatibility operator workload and error prevention
+releaseRule: Hardware activation remains false until every qualification verdict is PASS and residual risk is accepted by a named authority.
