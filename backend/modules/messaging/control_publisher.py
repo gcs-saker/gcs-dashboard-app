@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import lru_cache
 
-from api.contracts import ControlProtocol
 from model.control_model import ControlCommand
+from model.control_protocol import ControlProtocol
 from modules.messaging.sender import MessageContentType, MessageEnvelope, MessageSender, get_message_sender
 from modules.protocol_v2.stream_control import StreamCommandPayload
 from mqtt.topics import command_topic

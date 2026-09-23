@@ -6,7 +6,6 @@ from typing import Protocol
 from prometheus_client import Gauge
 from pydantic import Field, ValidationError
 
-from api.telemetry import upsert_telemetry
 from core.db import SessionLocal
 from core.settings_base import BackendBaseSettings, SettingsConfigurationError, settings_error_message
 from model.telemetry_model import TelemetryCreate
@@ -22,6 +21,7 @@ from modules.telemetry_buffer.bulk_sql import (
     build_postgres_history_bulk_insert,
     build_postgres_latest_bulk_upsert,
 )
+from modules.telemetry_ingest import upsert_telemetry
 
 
 class TelemetryBufferEnv:

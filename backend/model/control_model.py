@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from api.contracts import ControlProtocol
+from model.control_protocol import ControlProtocol
 
 
 class ControlCommand(BaseModel):
