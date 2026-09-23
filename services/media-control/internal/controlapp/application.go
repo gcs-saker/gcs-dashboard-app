@@ -1,9 +1,10 @@
-package httpapi
+package controlapp
 
 import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"sync"
 	"time"
 
@@ -15,6 +16,25 @@ const (
 	controlLeaseDuration = 30 * time.Second
 	maxControlSessions   = 1024
 )
+
+var (
+	ErrDenied      = errors.New("control_denied")
+	ErrConflict    = errors.New("control_conflict")
+	ErrUnavailable = errors.New("control_unavailable")
+)
+
+type SessionRequest struct{ DeviceID, PublishSession string }
+type SessionResponse struct {
+	ControlSessionID, ExpiresAt string
+	HeartbeatMillis             int
+}
+type CommandRequest struct {
+	Command        string
+	Sequence       uint64
+	IdempotencyID  string
+	Forward, Right float64
+}
+type CommandResponse struct{ CommandID, Status string }
 
 type ControlPolicyTarget struct {
 	Action, DeviceID, Command, ControlSessionID string
@@ -61,37 +81,37 @@ func NewControlApplication(policy ControlPolicyClient, leases ControlLeaseStore,
 		now: time.Now, newID: randomOpaqueID, sessions: make(map[string]controlSessionState)}
 }
 
-func (a *ControlApplication) CreateSession(ctx context.Context, authorization string, request ControlSessionRequest) (ControlSessionResponse, error) {
+func (a *ControlApplication) CreateSession(ctx context.Context, authorization string, request SessionRequest) (SessionResponse, error) {
 	now := a.now()
 	sessionID, idErr := a.newID("cs_")
 	if idErr != nil {
-		return ControlSessionResponse{}, ErrControlUnavailable
+		return SessionResponse{}, ErrUnavailable
 	}
 	route, err := a.routes.Resolve(ctx, controlsession.RouteRequest{DeviceID: request.DeviceID, PublishSession: request.PublishSession, Now: now})
 	if err != nil {
-		return ControlSessionResponse{}, ErrControlDenied
+		return SessionResponse{}, ErrDenied
 	}
 	allowed, err := a.policy.AuthorizeControl(ctx, authorization, ControlPolicyTarget{Action: "acquire", DeviceID: request.DeviceID, Command: "STOP"})
 	if err != nil || !allowed {
-		return ControlSessionResponse{}, ErrControlDenied
+		return SessionResponse{}, ErrDenied
 	}
 	expiresAt := now.Add(controlLeaseDuration)
 	acquired, err := a.leases.Acquire(ctx, request.DeviceID, sessionID, expiresAt, now)
 	if err != nil {
-		return ControlSessionResponse{}, ErrControlUnavailable
+		return SessionResponse{}, ErrUnavailable
 	}
 	if !acquired {
-		return ControlSessionResponse{}, ErrControlConflict
+		return SessionResponse{}, ErrConflict
 	}
 	a.mu.Lock()
 	a.pruneExpiredLocked(now)
 	if len(a.sessions) >= maxControlSessions {
 		a.mu.Unlock()
-		return ControlSessionResponse{}, ErrControlUnavailable
+		return SessionResponse{}, ErrUnavailable
 	}
 	a.sessions[sessionID] = controlSessionState{request.DeviceID, request.PublishSession, route, expiresAt, 1}
 	a.mu.Unlock()
-	return ControlSessionResponse{sessionID, expiresAt.UTC().Format(time.RFC3339Nano), 1000}, nil
+	return SessionResponse{sessionID, expiresAt.UTC().Format(time.RFC3339Nano), 1000}, nil
 }
 
 func (a *ControlApplication) pruneExpiredLocked(now time.Time) {
@@ -102,7 +122,7 @@ func (a *ControlApplication) pruneExpiredLocked(now time.Time) {
 	}
 }
 
-func (a *ControlApplication) SubmitCommand(ctx context.Context, authorization, sessionID string, request ControlCommandRequest) (ControlCommandResponse, error) {
+func (a *ControlApplication) SubmitCommand(ctx context.Context, authorization, sessionID string, request CommandRequest) (CommandResponse, error) {
 	a.mu.Lock()
 	state, ok := a.sessions[sessionID]
 	sequenceAccepted := ok && request.Sequence == state.nextSequence
@@ -112,37 +132,37 @@ func (a *ControlApplication) SubmitCommand(ctx context.Context, authorization, s
 	}
 	a.mu.Unlock()
 	if !sequenceAccepted || !state.expiresAt.After(a.now()) {
-		return ControlCommandResponse{}, ErrControlDenied
+		return CommandResponse{}, ErrDenied
 	}
 	allowed, err := a.policy.AuthorizeControl(ctx, authorization, ControlPolicyTarget{Action: "command", DeviceID: state.deviceID,
 		Command: request.Command, ControlSessionID: sessionID, LeaseExpiresAt: state.expiresAt})
 	if err != nil || !allowed {
-		return ControlCommandResponse{}, ErrControlDenied
+		return CommandResponse{}, ErrDenied
 	}
 	commandID, idErr := a.newID("cmd_")
 	if idErr != nil {
-		return ControlCommandResponse{}, ErrControlUnavailable
+		return CommandResponse{}, ErrUnavailable
 	}
 	command, err := buildControlCommand(controlCommandInput{commandID, sessionID, state.deviceID, request, a.now()})
 	if err != nil {
-		return ControlCommandResponse{}, ErrControlDenied
+		return CommandResponse{}, ErrDenied
 	}
 	if err := a.commands.Publish(ctx, state.route, command, a.now()); err != nil {
-		return ControlCommandResponse{}, ErrControlUnavailable
+		return CommandResponse{}, ErrUnavailable
 	}
-	return ControlCommandResponse{command.CommandId, "accepted"}, nil
+	return CommandResponse{command.CommandId, "accepted"}, nil
 }
 
 type controlCommandInput struct {
 	commandID, sessionID, deviceID string
-	request                        ControlCommandRequest
+	request                        CommandRequest
 	now                            time.Time
 }
 
 func buildControlCommand(input controlCommandInput) (*pb.ControlCommandEnvelope, error) {
 	typeValue := pb.ControlCommandType(pb.ControlCommandType_value["CONTROL_COMMAND_TYPE_"+input.request.Command])
 	if typeValue == pb.ControlCommandType_CONTROL_COMMAND_TYPE_UNSPECIFIED {
-		return nil, ErrControlDenied
+		return nil, ErrDenied
 	}
 	command := &pb.ControlCommandEnvelope{CommandId: input.commandID, ControlSessionId: input.sessionID, DeviceId: input.deviceID,
 		Sequence: input.request.Sequence, CommandType: typeValue, IssuedUnixMillis: input.now.UnixMilli(), ExpiresUnixMillis: input.now.Add(2 * time.Second).UnixMilli(),
