@@ -1,11 +1,5 @@
-package kr.co.a4ai.gcssaker.authpolicy.domain.control
+package kr.co.a4ai.gcssaker.authpolicy.domain
 
-import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
-import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
-import kr.co.a4ai.gcssaker.authpolicy.domain.GroupStatus
-import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDevice
-import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceStatus
-import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import java.time.Instant
