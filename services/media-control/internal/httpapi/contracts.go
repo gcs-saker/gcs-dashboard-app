@@ -17,6 +17,8 @@ const (
 	routeDevicePublishSessionPrefix  = "/api/v1/device/publish-sessions/"
 	routeAccountPublishSessions      = "/api/v1/account/publish-sessions"
 	routeAccountPublishSessionPrefix = "/api/v1/account/publish-sessions/"
+	routeControlSessions             = "/api/v1/control/sessions"
+	routeControlSessionPrefix        = "/api/v1/control/sessions/"
 	routeSuffixPlayback              = "playback"
 	routeSuffixPublish               = "publish"
 	routeSuffixStatus                = "status"
