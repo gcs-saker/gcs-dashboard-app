@@ -16,6 +16,7 @@
     "paths": {
       "@/*": ["src/*"],
       "@auth/*": ["src/features/auth/*"],
+      "@control/*": ["src/features/control/*"],
       "@dashboard/*": ["src/features/dashboard/*"],
       "@features/*": ["src/features/*"],
       "@mocks/*": ["src/mocks/*"],
