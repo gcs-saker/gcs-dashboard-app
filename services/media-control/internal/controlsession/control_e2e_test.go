@@ -6,6 +6,7 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controlroute"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controlsession"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/deviceadapter"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
@@ -17,7 +18,7 @@ func TestControlCommandE2ESuccessAndAck(t *testing.T) {
 	now := time.Now()
 	store := domain.NewInMemoryPublishSessionStore()
 	_ = store.Save(context.Background(), activeSession(now))
-	route, err := controlsession.NewRouteResolver(store).Resolve(context.Background(), controlsession.RouteRequest{
+	route, err := controlroute.NewRouteResolver(store).Resolve(context.Background(), controlroute.RouteRequest{
 		DeviceID: "device-01", PublishSession: "session-01", Now: now,
 	})
 	if err != nil {

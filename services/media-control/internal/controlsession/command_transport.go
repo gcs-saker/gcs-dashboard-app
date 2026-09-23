@@ -3,10 +3,12 @@ package controlsession
 import (
 	"context"
 	"errors"
+	"regexp"
 	"strings"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controlroute"
 	pb "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
 	"google.golang.org/protobuf/proto"
 )
@@ -26,6 +28,8 @@ var (
 	ErrCommandUnavailable = errors.New("control_command_unavailable")
 	ErrAckInvalid         = errors.New("control_ack_invalid")
 )
+
+var ackSessionSegment = regexp.MustCompile(`^[A-Za-z0-9_-]{8,128}$`)
 
 type IdempotencyLedger interface {
 	Reserve(context.Context, string, time.Time) (bool, error)
@@ -49,7 +53,7 @@ func NewCommandTransport(client commandMQTTClient, idempotency IdempotencyLedger
 	return CommandTransport{client: client, idempotency: idempotency, sequences: sequences}
 }
 
-func (t CommandTransport) Publish(ctx context.Context, route InternalRoute, command *pb.ControlCommandEnvelope, now time.Time) error {
+func (t CommandTransport) Publish(ctx context.Context, route controlroute.InternalRoute, command *pb.ControlCommandEnvelope, now time.Time) error {
 	if err := validateCommand(route, command, now); err != nil {
 		return err
 	}
@@ -109,7 +113,7 @@ func DecodeAck(topic string, payload []byte) (*pb.ControlCommandAck, error) {
 	return ack, nil
 }
 
-func validateCommand(route InternalRoute, command *pb.ControlCommandEnvelope, now time.Time) error {
+func validateCommand(route controlroute.InternalRoute, command *pb.ControlCommandEnvelope, now time.Time) error {
 	if command == nil || command.CommandId == "" || command.IdempotencyId == "" || command.Sequence == 0 {
 		return ErrCommandInvalid
 	}
@@ -126,7 +130,7 @@ func validateCommand(route InternalRoute, command *pb.ControlCommandEnvelope, no
 func ackSession(topic string) (string, bool) {
 	parts := strings.Split(topic, "/")
 	returnValue := len(parts) == 4 && parts[0] == "gcs" && parts[1] == "device" && parts[3] == ackTopicSuffix
-	if !returnValue || !opaqueSegment.MatchString(parts[2]) {
+	if !returnValue || !ackSessionSegment.MatchString(parts[2]) {
 		return "", false
 	}
 	return parts[2], true

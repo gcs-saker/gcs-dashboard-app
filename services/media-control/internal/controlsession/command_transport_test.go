@@ -7,6 +7,8 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controlroute"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 	pb "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
 	"google.golang.org/protobuf/proto"
 )
@@ -48,8 +50,15 @@ func TestDecodeAckBindsTopicSessionAndRejectsMalformedPayload(t *testing.T) {
 	}
 }
 
-func internalRoute() InternalRoute {
-	return InternalRoute{deviceID: "device-01", commandTopic: "gcs/device/session-01/command"}
+func internalRoute() controlroute.InternalRoute {
+	now := time.Now()
+	store := domain.NewInMemoryPublishSessionStore()
+	_ = store.Save(context.Background(), domain.PublishSession{SessionID: "session-01", DeviceUUID: "device-01", GroupID: "co-a",
+		Status: domain.PublishSessionActive, RenewalTokenExpiresAt: now.Add(time.Minute)})
+	route, _ := controlroute.NewRouteResolver(store).Resolve(context.Background(), controlroute.RouteRequest{
+		DeviceID: "device-01", PublishSession: "session-01", Now: now,
+	})
+	return route
 }
 
 func command(now time.Time) *pb.ControlCommandEnvelope {

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controlsession"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controlroute"
 	pb "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
 )
 
@@ -83,13 +83,13 @@ func (l leaseStub) Acquire(context.Context, string, string, time.Time, time.Time
 
 type routeResolverStub struct{}
 
-func (routeResolverStub) Resolve(context.Context, controlsession.RouteRequest) (controlsession.InternalRoute, error) {
-	return controlsession.InternalRoute{}, nil
+func (routeResolverStub) Resolve(context.Context, controlroute.RouteRequest) (controlroute.InternalRoute, error) {
+	return controlroute.InternalRoute{}, nil
 }
 
 type commandPublisherStub struct{ command *pb.ControlCommandEnvelope }
 
-func (p *commandPublisherStub) Publish(_ context.Context, _ controlsession.InternalRoute, command *pb.ControlCommandEnvelope, _ time.Time) error {
+func (p *commandPublisherStub) Publish(_ context.Context, _ controlroute.InternalRoute, command *pb.ControlCommandEnvelope, _ time.Time) error {
 	p.command = command
 	return nil
 }

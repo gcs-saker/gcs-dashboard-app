@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controlsession"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controlroute"
 	pb "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
 )
 
@@ -51,16 +51,16 @@ type ControlLeaseStore interface {
 }
 
 type ControlRouteResolver interface {
-	Resolve(context.Context, controlsession.RouteRequest) (controlsession.InternalRoute, error)
+	Resolve(context.Context, controlroute.RouteRequest) (controlroute.InternalRoute, error)
 }
 
 type ControlCommandPublisher interface {
-	Publish(context.Context, controlsession.InternalRoute, *pb.ControlCommandEnvelope, time.Time) error
+	Publish(context.Context, controlroute.InternalRoute, *pb.ControlCommandEnvelope, time.Time) error
 }
 
 type controlSessionState struct {
 	deviceID, publishSession string
-	route                    controlsession.InternalRoute
+	route                    controlroute.InternalRoute
 	expiresAt                time.Time
 	nextSequence             uint64
 }
@@ -87,7 +87,7 @@ func (a *ControlApplication) CreateSession(ctx context.Context, authorization st
 	if idErr != nil {
 		return SessionResponse{}, ErrUnavailable
 	}
-	route, err := a.routes.Resolve(ctx, controlsession.RouteRequest{DeviceID: request.DeviceID, PublishSession: request.PublishSession, Now: now})
+	route, err := a.routes.Resolve(ctx, controlroute.RouteRequest{DeviceID: request.DeviceID, PublishSession: request.PublishSession, Now: now})
 	if err != nil {
 		return SessionResponse{}, ErrDenied
 	}
