@@ -53,6 +53,12 @@ type Server struct {
 	streamEndpoints
 	publishEndpoints
 	operationalEndpoints
+	control ControlService
+}
+
+type ControlService interface {
+	CreateSession(context.Context, string, ControlSessionRequest) (ControlSessionResponse, error)
+	SubmitCommand(context.Context, string, string, ControlCommandRequest) (ControlCommandResponse, error)
 }
 
 type streamEndpoints struct {
@@ -78,6 +84,8 @@ type operationalEndpoints struct {
 	publishSessionReadiness PublishSessionReadiness
 	now                     func() time.Time
 }
+
+func (s Server) WithControlService(service ControlService) Server { s.control = service; return s }
 
 func (s Server) WithPublishSessionReadiness(readiness PublishSessionReadiness) Server {
 	s.publishSessionReadiness = readiness
@@ -147,6 +155,8 @@ func (s Server) Routes() http.Handler {
 	s.registerOperationalRoutes(mux)
 	s.registerStreamRoutes(mux)
 	s.registerPublishRoutes(mux)
+	s.handle(mux, routeControlSessions, s.controlSessions)
+	s.handle(mux, routeControlSessionPrefix, s.controlSessions)
 	return mux
 }
 

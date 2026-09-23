@@ -73,3 +73,11 @@ pointer cancellation, pointer departure, explicit stop, and component unmount al
 Keyboard events originating from input, textarea, select, or editable content are ignored so control
 cannot capture text-entry keystrokes. The pad remains disabled until a future API supplies an active
 opaque control session.
+
+## PR-10A public HTTP boundary
+
+Media-control exposes POST-only control-session and command endpoints. The service fails closed with
+503 until an application control service is injected, requires an Authorization header, rejects
+unknown or oversized JSON fields, and returns only opaque session/command state. Public response DTOs
+contain no group, receiver, MQTT topic, device route, token, or private path. Runtime policy, Redis,
+MQTT, and dashboard wiring remain required before the pad can be enabled.
