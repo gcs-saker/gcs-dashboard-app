@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
-import { useDeadManControl, type ControlIntent } from "./useDeadManControl";
+import type { ControlIntent } from "@control/contracts/controlIntent";
+import { useDeadManControl } from "@control/hooks/useDeadManControl";
 
 describe("useDeadManControl", () => {
   test("maps WASD and sends stop on final key release", () => {

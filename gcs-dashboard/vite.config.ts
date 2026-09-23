@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => {
       alias: {
         "@": sourcePath("./src"),
         "@auth": sourcePath("./src/features/auth"),
+        "@control": sourcePath("./src/features/control"),
         "@dashboard": sourcePath("./src/features/dashboard"),
         "@features": sourcePath("./src/features"),
         "@mocks": sourcePath("./src/mocks"),
