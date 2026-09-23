@@ -82,6 +82,14 @@ unknown or oversized JSON fields, and returns only opaque session/command state.
 contain no group, receiver, MQTT topic, device route, token, or private path. Runtime policy, Redis,
 MQTT, and dashboard wiring remain required before the pad can be enabled.
 
+## Ownership layout
+
+HTTP handlers own only public DTO decoding and status mapping. `internal/controlapp` owns orchestration
+across policy, route, lease, sequence, and command ports. Kotlin control policy is physically located
+in the root domain package that owns its package declaration. Transport, persistence, device adapter,
+and dashboard input remain separate owners. Repository tests prevent application logic from moving
+back into the HTTP transport folder or reintroducing package-path mismatch.
+
 ## PR-10B auth-policy boundary
 
 Auth-policy exposes an authenticated internal control decision endpoint. It resolves the principal

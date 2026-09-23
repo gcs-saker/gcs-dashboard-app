@@ -1,4 +1,4 @@
-package httpapi
+package controlapp
 
 import (
 	"context"
@@ -12,28 +12,28 @@ import (
 func TestControlApplicationCreatesLeaseAndPublishesOrderedCommand(t *testing.T) {
 	commands := &commandPublisherStub{}
 	app := testControlApplication(policyStub(true), leaseStub(true), commands)
-	session, err := app.CreateSession(context.Background(), "Bearer token", ControlSessionRequest{"device-01", "session-01"})
+	session, err := app.CreateSession(context.Background(), "Bearer token", SessionRequest{"device-01", "session-01"})
 	if err != nil || session.ControlSessionID != "cs_test" {
 		t.Fatalf("unexpected session: %+v err=%v", session, err)
 	}
 	response, err := app.SubmitCommand(context.Background(), "Bearer token", session.ControlSessionID,
-		ControlCommandRequest{Command: "STOP", Sequence: 1, IdempotencyID: "idem-1"})
+		CommandRequest{Command: "STOP", Sequence: 1, IdempotencyID: "idem-1"})
 	if err != nil || response.Status != "accepted" || commands.command.Sequence != 1 {
 		t.Fatalf("unexpected command: %+v err=%v", response, err)
 	}
 	if _, err := app.SubmitCommand(context.Background(), "Bearer token", session.ControlSessionID,
-		ControlCommandRequest{Command: "STOP", Sequence: 1, IdempotencyID: "idem-2"}); err != ErrControlDenied {
+		CommandRequest{Command: "STOP", Sequence: 1, IdempotencyID: "idem-2"}); err != ErrDenied {
 		t.Fatalf("duplicate sequence must fail: %v", err)
 	}
 }
 
 func TestControlApplicationFailsClosedForPolicyAndLeaseConflict(t *testing.T) {
 	if _, err := testControlApplication(policyStub(false), leaseStub(true), &commandPublisherStub{}).
-		CreateSession(context.Background(), "Bearer token", ControlSessionRequest{"device-01", "session-01"}); err != ErrControlDenied {
+		CreateSession(context.Background(), "Bearer token", SessionRequest{"device-01", "session-01"}); err != ErrDenied {
 		t.Fatalf("expected denial: %v", err)
 	}
 	if _, err := testControlApplication(policyStub(true), leaseStub(false), &commandPublisherStub{}).
-		CreateSession(context.Background(), "Bearer token", ControlSessionRequest{"device-01", "session-01"}); err != ErrControlConflict {
+		CreateSession(context.Background(), "Bearer token", SessionRequest{"device-01", "session-01"}); err != ErrConflict {
 		t.Fatalf("expected conflict: %v", err)
 	}
 }
@@ -42,7 +42,7 @@ func TestControlApplicationPrunesExpiredSessionState(t *testing.T) {
 	app := testControlApplication(policyStub(true), leaseStub(true), &commandPublisherStub{})
 	ids := []string{"cs_one", "cs_two"}
 	app.newID = func(string) (string, error) { id := ids[0]; ids = ids[1:]; return id, nil }
-	first, err := app.CreateSession(context.Background(), "Bearer token", ControlSessionRequest{"device-01", "session-01"})
+	first, err := app.CreateSession(context.Background(), "Bearer token", SessionRequest{"device-01", "session-01"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestControlApplicationPrunesExpiredSessionState(t *testing.T) {
 	state.expiresAt = app.now().Add(-time.Second)
 	app.sessions[first.ControlSessionID] = state
 	app.mu.Unlock()
-	if _, err := app.CreateSession(context.Background(), "Bearer token", ControlSessionRequest{"device-01", "session-01"}); err != nil {
+	if _, err := app.CreateSession(context.Background(), "Bearer token", SessionRequest{"device-01", "session-01"}); err != nil {
 		t.Fatal(err)
 	}
 	app.mu.Lock()
