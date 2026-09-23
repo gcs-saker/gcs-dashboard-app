@@ -66,8 +66,19 @@ func TestPublishSessionRevocationKicksOnlyStaleOwnedPublisher(t *testing.T) {
 	}
 	active, _ := store.Find(context.Background(), "active")
 	stale, _ := store.Find(context.Background(), "stale")
+	renewed := domain.PublishSession{
+		SessionID: "renewed", StreamID: "raw.device.renewed", Path: "raw/device/renewed",
+		GroupID: "co-a", PrincipalID: "active-user", Status: domain.PublishSessionActive,
+		PublishTokenExpiresAt: now.Add(-time.Minute), RenewalTokenExpiresAt: now.Add(time.Hour),
+	}
+	renewedActive := boundWebRTCSession(t, "renewed", "publish", renewed, now.Add(-2*time.Minute))
+	renewed.PublishTokenExpiresAt = now.Add(30 * time.Minute)
+	if err := store.Save(context.Background(), renewed); err != nil {
+		t.Fatal(err)
+	}
 	control := &revocationControl{sessions: []WebRTCSession{
 		boundWebRTCSession(t, "keep", "publish", active, now), boundWebRTCSession(t, "kick", "publish", stale, now),
+		renewedActive,
 		{ID: "legacy", State: "publish", Path: "raw/local/webcam"},
 	}}
 	observer := NewPublishSessionRevocationObserver(control, store, revocationValidator{stalePrincipal: "stale-user"}, revocationTestSecret, time.Second)
@@ -142,7 +153,9 @@ func boundWebRTCSession(t *testing.T, id string, state string, session domain.Pu
 	if err != nil {
 		t.Fatal(err)
 	}
-	payload, err := sessiontoken.ValidateForRoute(revocationTestSecret, token, action, session.StreamID, session.Path, now)
+	payload, err := sessiontoken.ValidateForRoute(revocationTestSecret, token, sessiontoken.RouteValidation{
+		Action: action, StreamID: session.StreamID, StreamPath: session.Path, Now: now, EnforceExpiry: true,
+	})
 	if err != nil || !sessiontoken.MatchesSession(payload, session) {
 		t.Fatalf("issued fixture token does not match session: payload=%#v err=%v", payload, err)
 	}

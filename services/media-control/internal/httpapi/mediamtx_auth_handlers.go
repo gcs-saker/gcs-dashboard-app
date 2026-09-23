@@ -51,10 +51,10 @@ func (s Server) authorizeMediaMTXPublish(w http.ResponseWriter, payload mediaMTX
 	tokenPayload, err := sessiontoken.ValidateForRoute(
 		s.publishToken,
 		values.Get(publisherTokenQueryKey),
-		mediaMTXActionPublish,
-		parsed.StreamID,
-		payload.Path,
-		time.Now(),
+		sessiontoken.RouteValidation{
+			Action: mediaMTXActionPublish, StreamID: parsed.StreamID, StreamPath: payload.Path,
+			Now: time.Now(), EnforceExpiry: true,
+		},
 	)
 	if err != nil || !s.validateActivePublishSession(tokenPayload, time.Now()) {
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
@@ -83,10 +83,10 @@ func (s Server) authorizeMediaMTXPlayback(w http.ResponseWriter, payload mediaMT
 		token, err := sessiontoken.ValidateForRoute(
 			s.publishToken,
 			values.Get(playbackTokenQueryKey),
-			mediaMTXActionPlayback,
-			parsed.StreamID,
-			payload.Path,
-			time.Now(),
+			sessiontoken.RouteValidation{
+				Action: mediaMTXActionPlayback, StreamID: parsed.StreamID, StreamPath: payload.Path,
+				Now: time.Now(), EnforceExpiry: true,
+			},
 		)
 		validScope := err == nil && s.talkbackPlaybackTokenIsActive(token, time.Now())
 		if !validScope {

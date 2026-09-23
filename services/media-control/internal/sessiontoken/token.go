@@ -35,6 +35,12 @@ type Payload struct {
 	ExpiresAt           int64  `json:"exp"`
 }
 
+type RouteValidation struct {
+	Action, StreamID, StreamPath string
+	Now                          time.Time
+	EnforceExpiry                bool
+}
+
 func MatchesSession(payload Payload, session domain.PublishSession) bool {
 	return session.DeviceUUID == payload.DeviceUUID && session.SensorID == payload.SensorID &&
 		session.StreamID == payload.StreamID && session.Path == payload.Path && session.GroupID == payload.GroupID &&
@@ -103,23 +109,16 @@ func Validate(
 	return nil
 }
 
-func ValidateForRoute(
-	secret string,
-	token string,
-	action string,
-	streamID string,
-	streamPath string,
-	now time.Time,
-) (Payload, error) {
+func ValidateForRoute(secret string, token string, validation RouteValidation) (Payload, error) {
 	payload, err := decodeVerified(secret, token)
 	if err != nil {
 		return Payload{}, err
 	}
-	if payload.StreamID != streamID ||
-		payload.Action != action ||
-		payload.Path != streamPath ||
+	if payload.StreamID != validation.StreamID ||
+		payload.Action != validation.Action ||
+		payload.Path != validation.StreamPath ||
 		payload.GroupID == "" ||
-		payload.ExpiresAt <= now.Unix() {
+		(validation.EnforceExpiry && payload.ExpiresAt <= validation.Now.Unix()) {
 		return Payload{}, ErrInvalid
 	}
 	return payload, nil
