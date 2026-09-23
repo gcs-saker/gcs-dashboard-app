@@ -14,7 +14,7 @@ cleanup() {
 
 run_check() {
   bash -n "$0"
-  grep -q "TEST_CONTROL_MQTT_URL" "$REPO_ROOT/services/media-control/internal/controlsession/control_broker_e2e_test.go"
+  grep -q "TEST_CONTROL_MQTT_URL" "$REPO_ROOT/services/media-control/internal/controlintegration/control_broker_e2e_test.go"
   echo "control broker E2E contract check passed"
 }
 
@@ -28,7 +28,7 @@ run_live() {
     eclipse-mosquitto:2.0.22 >/dev/null
   docker run --rm --network "$NETWORK" -e TEST_CONTROL_MQTT_URL=tcp://mqtt:1883 \
     -v "$REPO_ROOT/services/media-control:/workspace:ro" -w /workspace golang:1.26.6-bookworm \
-    sh -eu -c 'go test -race ./internal/controlsession -run TestControlCommandE2EThroughRealBroker -count=1'
+    sh -eu -c 'go test -race ./internal/controlintegration -run TestControlCommandE2EThroughRealBroker -count=1'
   echo "test-only Mosquitto control round trip passed"
 }
 
