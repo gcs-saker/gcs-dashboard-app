@@ -34,6 +34,15 @@ Evidence:
 PASS/FAIL/BLOCKED/NOT_RUN - command, test count, log, or artifact
 ```
 
+### Changed behavior to test mapping
+
+| Changed function, contract, or lifecycle | Direct test file and case | Success/failure/cleanup paths |
+| --- | --- | --- |
+| | | |
+
+- [ ] Every changed decision, state transition, I/O boundary, and cleanup path is mapped above or explicitly marked as a behavior-neutral move.
+- [ ] Renamed packages, classes, routes, and scripts are exercised by their canonical executable entrypoint rather than checked only as text.
+
 ## Design Intent
 - Related design intent IDs:
 - [ ] `Architecture intent gate` passed

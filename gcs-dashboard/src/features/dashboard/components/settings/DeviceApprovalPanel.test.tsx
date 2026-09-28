@@ -18,7 +18,7 @@ describe("DeviceApprovalPanel", () => {
       if (init?.method === "POST") {
         return jsonResponse(device("active"));
       }
-      return jsonResponse([device("pending"), device("active")]);
+      return jsonResponse([device("pending"), device("active", "device-002")]);
     });
     vi.stubGlobal("fetch", fetcher);
 
@@ -83,9 +83,9 @@ function renderPanel(role: UserRole) {
   );
 }
 
-function device(status: string) {
+function device(status: string, deviceUuid = "device-001") {
   return {
-    deviceUuid: "device-001",
+    deviceUuid,
     deviceType: "drone",
     displayName: "Daegu Drone 01",
     groupId: "co-a",

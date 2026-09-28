@@ -72,6 +72,10 @@ jobs:
         env:
           TEST_REDIS_ADDR: 127.0.0.1:6379
 
+      - name: Enforce critical Go package coverage floors
+        working-directory: .
+        run: scripts/gates/go_critical_coverage.sh
+
       - name: Run scheduled security fuzz campaigns
         if: github.event_name == 'schedule'
         run: |

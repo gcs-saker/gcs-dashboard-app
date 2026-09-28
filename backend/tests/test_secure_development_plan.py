@@ -30,6 +30,16 @@ def test_security_sensitive_pull_requests_require_complete_impact_context() -> N
     assert all(prompt in template for prompt in required_prompts)
 
 
+def test_changed_behavior_requires_direct_test_mapping() -> None:
+    template = PR_TEMPLATE.read_text(encoding="utf-8")
+
+    assert "Changed behavior to test mapping" in template
+    assert "Direct test file and case" in template
+    assert "Success/failure/cleanup paths" in template
+    assert "behavior-neutral move" in template
+    assert "canonical executable entrypoint" in template
+
+
 def test_security_owned_boundaries_have_codeowners() -> None:
     owners = CODEOWNERS.read_text(encoding="utf-8")
 

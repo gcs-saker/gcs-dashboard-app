@@ -9,7 +9,7 @@ MODE="check"
 
 run_check() {
   bash -n "$0"
-  grep -q "ControlLeasePolicyTest" "$0"
+  grep -q "kr.co.a4ai.gcssaker.authpolicy.domain.ControlLeasePolicyTest" "$0"
   grep -q "TestControlCommandE2E" "$0"
   echo "control command E2E contract check passed"
 }
@@ -22,7 +22,7 @@ run_live() {
     cp -a /source/contracts /tmp/contracts
     cd /tmp/auth-policy
     CONTRACTS_PROTO_DIR=/tmp/contracts/proto gradle --no-daemon test \
-      --tests kr.co.a4ai.gcssaker.authpolicy.domain.control.ControlLeasePolicyTest
+      --tests kr.co.a4ai.gcssaker.authpolicy.domain.ControlLeasePolicyTest
   '
   docker run --rm -v "${REPO_ROOT}/services/media-control:/workspace:ro" \
     -w /workspace golang:1.26.6-bookworm sh -eu -c '
