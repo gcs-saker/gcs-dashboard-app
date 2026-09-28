@@ -64,6 +64,71 @@ func TestDispatchRequiresGeofenceVersionAndBoundedLifetime(t *testing.T) {
 	}
 }
 
+func TestMissionLifetimeAcceptsExactMaximumAndRejectsOneNanosecondBeyond(t *testing.T) {
+	service, request := fixture()
+	request.IssuedAt = service.Now()
+	request.ExpiresAt = request.IssuedAt.Add(MaxCommandLifetime)
+	if _, err := service.Dispatch(context.Background(), "operator-a", request); err != nil {
+		t.Fatalf("exact maximum lifetime rejected: %v", err)
+	}
+	request.ExpiresAt = request.IssuedAt.Add(MaxCommandLifetime + time.Nanosecond)
+	if _, err := service.Dispatch(context.Background(), "operator-a", request); err != ErrCommandExpired {
+		t.Fatalf("lifetime beyond maximum error=%v", err)
+	}
+}
+
+func TestWaypointCountAndCoordinateBoundaries(t *testing.T) {
+	now := time.Now()
+	request := fixtureRequest(now)
+	for _, waypoint := range []Waypoint{
+		{Sequence: 1, Latitude: -90, Longitude: -180},
+		{Sequence: 1, Latitude: 90, Longitude: 180, HoldSeconds: 3600},
+	} {
+		request.Waypoints = []Waypoint{waypoint}
+		if err := validateRequest(request, now); err != nil {
+			t.Fatalf("coordinate boundary rejected: %#v err=%v", waypoint, err)
+		}
+	}
+	for _, waypoint := range []Waypoint{
+		{Sequence: 1, Latitude: -90.000001},
+		{Sequence: 1, Latitude: 90.000001},
+		{Sequence: 1, Longitude: -180.000001},
+		{Sequence: 1, Longitude: 180.000001},
+		{Sequence: 1, HoldSeconds: -1},
+		{Sequence: 1, HoldSeconds: 3601},
+	} {
+		request.Waypoints = []Waypoint{waypoint}
+		if err := validateRequest(request, now); err != ErrInvalidMission {
+			t.Fatalf("coordinate outside boundary error=%v waypoint=%#v", err, waypoint)
+		}
+	}
+	request.Waypoints = make([]Waypoint, 200)
+	for index := range request.Waypoints {
+		request.Waypoints[index] = Waypoint{Sequence: index + 1}
+	}
+	if err := validateRequest(request, now); err != nil {
+		t.Fatalf("200 waypoints rejected: %v", err)
+	}
+	request.Waypoints = append(request.Waypoints, Waypoint{Sequence: 201})
+	if err := validateRequest(request, now); err != ErrInvalidMission {
+		t.Fatalf("201 waypoints error=%v", err)
+	}
+	request.Waypoints = nil
+	if err := validateRequest(request, now); err != ErrInvalidMission {
+		t.Fatalf("empty waypoints error=%v", err)
+	}
+}
+
+func fixtureRequest(now time.Time) DispatchRequest {
+	return DispatchRequest{
+		MissionID: "mission-boundary", MissionRevision: 1, CommandID: "command-boundary",
+		AssetUUID: "asset-a", AssetSessionID: "session-a", IssuedAt: now,
+		ExpiresAt: now.Add(time.Minute), AltitudeDatum: AltitudeAGL,
+		GeofenceVersion: "geofence-v1", OperatorConfirmed: true,
+		Waypoints: []Waypoint{{Sequence: 1}},
+	}
+}
+
 func fixture() (Service, DispatchRequest) {
 	now := time.Date(2026, 9, 7, 0, 0, 0, 0, time.UTC)
 	request := DispatchRequest{
