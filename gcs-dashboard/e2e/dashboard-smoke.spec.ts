@@ -44,17 +44,22 @@ test.beforeEach(async ({ page }) => {
   await mockOperationalPolling(page);
 });
 
-test("login mock flow reaches dashboard without real credentials", async ({ page }, testInfo) => {
+test("login mock flow submits with Enter and reaches dashboard once", async ({ page }, testInfo) => {
   await mockLoginFlow(page);
+  let loginRequests = 0;
+  page.on("request", (request) => {
+    if (request.url().includes("/auth-policy/auth/login")) loginRequests += 1;
+  });
 
   // Keep this browser contract deterministic: authentication is under test,
   // while live operational API polling is covered by the deployment smokes.
   await page.goto("/login?redirect=%2F%3FuiPreview%3D1");
   await page.getByLabel("아이디").fill("operator01");
   await page.getByLabel("비밀번호").fill("preview-password");
-  await page.getByRole("button", { name: "접속" }).click();
+  await page.getByLabel("비밀번호").press("Enter");
 
   await expect(page.getByRole("main", { name: "Field Ops Dashboard" })).toBeVisible();
+  expect(loginRequests).toBe(1);
   await attachScreenshot(page, testInfo, "login-dashboard");
 });
 
@@ -98,6 +103,35 @@ test("dashboard preview supports stream, map, and operations navigation", async 
   await expectRenderDiagnostics(page, ["PublicVectorMap", "TacticalLeafletMap"]);
 });
 
+test("critical operator workflow stays free of application errors", async ({ page }) => {
+  const browserErrors: string[] = [];
+  page.on("pageerror", (error) => browserErrors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error" && !message.text().startsWith("Failed to load resource:")) {
+      browserErrors.push(message.text());
+    }
+  });
+  await page.goto("/?uiPreview=1");
+
+  await page.getByRole("button", { name: "스트리밍 3 선택" }).click();
+  await expect(page.getByRole("button", { name: "스트리밍 3 선택" })).toHaveAttribute("aria-pressed", "true");
+
+  await page.getByRole("button", { name: "CCTV" }).click();
+  await page.getByRole("button", { name: "4x4" }).click();
+  await expect(page.getByText(/16채널 감시 레이아웃/)).toBeVisible();
+
+  await page.getByRole("button", { name: "대시보드" }).click();
+  await page.getByRole("button", { name: "자산" }).click();
+  await expect(page.getByRole("complementary", { name: "자산트리" })).toBeVisible();
+  await page.getByTitle("자산트리 닫기").click();
+
+  await page.getByRole("button", { name: "운영설정" }).click();
+  await page.getByRole("button", { name: "화면 효과" }).click();
+  await page.getByRole("radio", { name: /효과 끄기/ }).click();
+  await expect(page.getByRole("main", { name: "Field Ops Dashboard" })).toHaveAttribute("data-motion", "off");
+  expect(browserErrors).toEqual([]);
+});
+
 async function mockLoginFlow(page: Page): Promise<void> {
   await page.route("**/auth-policy/auth/refresh", (route) =>
     route.fulfill({ json: { detail: "preview refresh disabled" }, status: 401 }),
@@ -111,13 +145,22 @@ async function mockLoginFlow(page: Page): Promise<void> {
 }
 
 async function mockOperationalPolling(page: Page): Promise<void> {
+  await page.route("**/auth-policy/auth/refresh", (route) =>
+    route.fulfill({ json: { detail: "preview refresh disabled" }, status: 401 }),
+  );
   await page.route("**/media-control/api/v1/streams**", (route) =>
     route.fulfill({ json: PREVIEW_STREAMS, status: 200 }),
+  );
+  await page.route("**/api/v1/map/config**", (route) =>
+    route.fulfill({
+      json: { provider: "none", styleUrl: "", attribution: "", requiresApiKey: false },
+      status: 200,
+    }),
   );
   await page.route("**/api/telemetry/all**", (route) =>
     route.fulfill({ json: PREVIEW_TELEMETRY, status: 200 }),
   );
-  await page.route("**/api/v1/groups**", (route) =>
+  await page.route(/\/auth-policy\/api\/v1\/groups(?:[/?].*)?$/, (route) =>
     route.fulfill({ json: [], status: 200 }),
   );
 }
