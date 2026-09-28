@@ -120,11 +120,12 @@ describe("TacticalLeafletMap", () => {
     expect(screen.getByRole("button", { name: "자동 포커스 켜짐" })).toHaveClass("is-active");
   });
 
-  test("opens a compact device popup when a public stream pin is clicked", () => {
+  test("opens a compact device popup when a public stream pin is clicked", async () => {
     const onSelectStream = vi.fn();
     render(<TacticalLeafletMap onSelectStream={onSelectStream} selectedStream={stream} streams={[stream]} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /로컬 웹캠 위치/ }));
+    await screen.findByTestId("public-tactical-map");
+    fireEvent.click(await screen.findByRole("button", { name: /로컬 웹캠 위치/ }));
 
     expect(onSelectStream).toHaveBeenCalledWith("raw.local.webcam");
     expect(screen.getByLabelText("로컬 웹캠 단말 정보")).toBeInTheDocument();

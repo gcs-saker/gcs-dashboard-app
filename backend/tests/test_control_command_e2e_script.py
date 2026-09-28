@@ -14,7 +14,8 @@ def test_control_command_e2e_contract_check_passes() -> None:
 def test_control_command_e2e_covers_required_boundaries() -> None:
     source = SCRIPT.read_text(encoding="utf-8")
 
-    assert "ControlLeasePolicyTest" in source
+    assert "--tests kr.co.a4ai.gcssaker.authpolicy.domain.ControlLeasePolicyTest" in source
+    assert "domain.control.ControlLeasePolicyTest" not in source
     assert "TestControlCommandE2E" in source
     assert (
         "go test -race ./internal/controltransport ./internal/controlstate ./internal/controlobs ./internal/deviceadapter"
