@@ -63,6 +63,21 @@ test("operator dashboard degrades to usable offline cards when operational APIs 
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
+test("responsive breakpoint boundary values never create horizontal overflow", async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 390, height: 900 });
+  await mockAuthenticatedApp(page, OPERATOR);
+  await login(page, "operator");
+  const widths = [320, 359, 360, 759, 760, 761, 1319, 1320, 1321, 1499, 1500, 1501, 1920];
+
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(page.getByRole("main", { name: "Field Ops Dashboard" })).toBeVisible();
+    expect(await horizontalOverflow(page), `viewport ${width}px`).toBeLessThanOrEqual(1);
+    await expectInsideViewport(page, page.getByRole("region", { name: "선택 스트림" }));
+  }
+});
+
 async function login(page: Page, username: string): Promise<void> {
   await page.goto("/login?redirect=%2F");
   await page.getByLabel("아이디").fill(username);

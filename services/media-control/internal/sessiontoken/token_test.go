@@ -20,6 +20,11 @@ func TestLegacyTokenValidatesExactScopeAndExpiry(t *testing.T) {
 	if err := Validate(testSecret, token, "playback", "raw.sample.front", "raw/sample/front", "co-a", now); err != nil {
 		t.Fatal(err)
 	}
+	if err := Validate(
+		testSecret, token, "playback", "raw.sample.front", "raw/sample/front", "co-a", now.Add(TTL-time.Second),
+	); err != nil {
+		t.Fatalf("token was rejected immediately before expiry: %v", err)
+	}
 	for _, input := range []struct{ action, streamID, path, group string }{
 		{"publish", "raw.sample.front", "raw/sample/front", "co-a"},
 		{"playback", "raw.other.front", "raw/sample/front", "co-a"},
@@ -50,6 +55,9 @@ func TestBoundTokenMatchesAuthoritativeSession(t *testing.T) {
 	}
 	if _, err := ValidatePublishSession(testSecret, token, session.SessionID, now); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := ValidatePublishSession(testSecret, token, session.SessionID, session.PublishTokenExpiresAt); err == nil {
+		t.Fatal("publish session token accepted at exact expiry")
 	}
 	session.CredentialVersion++
 	if MatchesSession(payload, session) {
