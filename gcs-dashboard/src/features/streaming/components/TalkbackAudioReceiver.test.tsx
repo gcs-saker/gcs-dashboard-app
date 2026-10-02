@@ -13,6 +13,7 @@ vi.mock("@streaming/hooks/playback/useWhepPlayback", () => ({
 describe("TalkbackAudioReceiver", () => {
   test("starts receiving operator talkback audio through the selected stream WHEP path", async () => {
     const user = userEvent.setup();
+    const onReceipt = vi.fn();
     useWhepPlayback.mockReturnValue({
       videoRef: { current: null },
       status: "connecting",
@@ -24,7 +25,7 @@ describe("TalkbackAudioReceiver", () => {
       playbackUrls: { webrtc: "/webrtc/authorized-talkback/whep?playbackToken=short-lived", hls: null },
     })));
 
-    render(<TalkbackAudioReceiver streamId="raw.sample.front" />);
+    render(<TalkbackAudioReceiver onReceipt={onReceipt} streamId="raw.sample.front" />);
 
     expect(useWhepPlayback).toHaveBeenLastCalledWith({ whepUrl: null, isOnline: false });
 
@@ -37,6 +38,11 @@ describe("TalkbackAudioReceiver", () => {
     expect(screen.getByLabelText("관제 음성 WebRTC 수신")).toBeInTheDocument();
     expect(screen.queryByText(/playbackToken/)).not.toBeInTheDocument();
     expect(screen.getByText("오디오 수신")).toHaveAttribute("title", "오디오 수신 중");
+    await waitFor(() => expect(onReceipt).toHaveBeenLastCalledWith(expect.objectContaining({
+      schemaVersion: "gcs-saker.talkback-receipt.v1",
+      streamId: "raw.sample.front",
+      state: "audio_playing",
+    })));
   });
 
   test("explains a talkback WHEP 404 as a missing operator audio sender", async () => {
