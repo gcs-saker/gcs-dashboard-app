@@ -251,6 +251,8 @@ class AuthControllerTest {
 
         assertEquals(HttpStatus.NO_CONTENT, response.statusCode)
         assertTrue(requireNotNull(response.headers.getFirst(HttpHeaders.SET_COOKIE)).contains("Max-Age=0"))
+        assertEquals("no-store", response.headers.cacheControl)
+        assertEquals("no-cache", response.headers.getFirst("Pragma"))
     }
 
     @Test
