@@ -1,0 +1,43 @@
+schemaVersion: gcs-saker.state-authority.v1
+stores:
+  - id: identity-policy
+    owner: auth-policy
+    authority: PostgreSQL
+    data: [users, groups, memberships, devices, policy versions]
+    ttlSeconds: null
+    invalidationEvents: [user mutation, group mutation, membership mutation, device mutation]
+    degradedBehavior: fail-closed authorization; never infer membership from cache
+  - id: refresh-sessions
+    owner: auth-policy
+    authority: Redis
+    data: [single-use refresh sessions, principal cache]
+    ttlSeconds: 7200
+    invalidationEvents: [refresh rotation, logout, role change, group change, account disable]
+    degradedBehavior: reject refresh and authoritative-principal continuation
+  - id: publish-sessions
+    owner: media-control
+    authority: Redis
+    data: [opaque publish session, stream binding, renewal version]
+    ttlSeconds: 300
+    invalidationEvents: [renewal rotation, explicit end, binding revocation, expiry]
+    degradedBehavior: reject publish renewal, playback binding, and Talkback issuance
+  - id: live-stream-presence
+    owner: media-control
+    authority: MediaMTX
+    data: [active paths, publishers, readers]
+    ttlSeconds: 6
+    invalidationEvents: [MediaMTX refresh, publish start, publish stop]
+    degradedBehavior: retain last known UI state as degraded; never grant access from presence cache
+  - id: browser-server-state
+    owner: gcs-dashboard
+    authority: upstream API response
+    data: [stream registry, telemetry, operational events, time status]
+    ttlSeconds: 30
+    invalidationEvents: [logout, session change, mutation success, authorization failure]
+    degradedBehavior: show stale/degraded presentation without fabricating online state or authorization
+rules:
+  credentialMaterialInKeys: false
+  browserMayAuthorize: false
+  cacheMayGrantAccess: false
+  utcRequired: true
+  boundedTtlRequiredForReplicas: true
