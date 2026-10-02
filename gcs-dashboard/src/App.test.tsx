@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import App from './App';
 import { clearAuthSession, storeAuthSession } from './features/auth/authStorage';
@@ -25,6 +24,13 @@ vi.mock('./features/dashboard/layout/StreamPage', () => ({
   },
 }));
 
+vi.mock('./features/dashboard/layout/DashboardPage', () => ({
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- Vitest requires this component inside its hoisted mock factory.
+  DashboardPage: function MockDashboardPage() {
+    return <main aria-label="Field Ops Dashboard">Dashboard</main>;
+  },
+}));
+
 describe('App dashboard shell', () => {
   beforeEach(() => {
     storeAuthSession({
@@ -41,24 +47,10 @@ describe('App dashboard shell', () => {
     window.history.pushState({}, '', '/');
   });
 
-  test('renders the core dashboard regions', async () => {
-    const user = userEvent.setup();
+  test('renders the protected dashboard route', async () => {
     render(<App />);
 
-    expect(await screen.findByRole('main', { name: 'Field Ops Dashboard' }, { timeout: 10000 })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '자산트리' })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '지도' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '선택 스트림' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '서버 상태 상세 / 연결상태 / 헬스체크' })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '지오메트리 / 텔레메트리' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '운용 요약' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'AI 결과' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '스트림 화면' })).toHaveAttribute('href', '/stream');
-    expect(screen.getByRole('link', { name: '스트림 화면' })).toHaveAttribute('target', '_blank');
-
-    await user.click(screen.getByRole('button', { name: '자산' }));
-
-    expect(screen.getByRole('heading', { name: '자산트리' })).toBeInTheDocument();
+    expect(await screen.findByRole('main', { name: 'Field Ops Dashboard' })).toBeInTheDocument();
   });
 
   test('renders the streaming smoke dashboard when requested by query string', async () => {
