@@ -426,6 +426,7 @@ jobs:
         run: |
           python scripts/gates/attack_surface_gate.py --check
           python scripts/gates/security_campaign_gate.py --check
+          python scripts/gates/security_hardening_gate.py --check
 
       - name: Validate MIL-STD-882E system-safety records
         run: python scripts/gates/system_safety_gate.py --check

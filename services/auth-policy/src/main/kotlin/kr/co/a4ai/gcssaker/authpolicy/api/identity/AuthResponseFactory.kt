@@ -39,6 +39,8 @@ internal class AuthResponseFactory(private val settings: AuthRuntimeSettings) {
     fun logoutResponse(): ResponseEntity<Void> =
         ResponseEntity.noContent()
             .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
+            .cacheControl(CacheControl.noStore())
+            .header(AuthResponseHeaders.PRAGMA_HEADER_NAME, AuthResponseHeaders.PRAGMA_NO_CACHE)
             .build()
 
     fun userResponse(user: AuthUser): UserResponse =

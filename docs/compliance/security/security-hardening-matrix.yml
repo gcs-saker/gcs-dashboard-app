@@ -1,0 +1,89 @@
+schemaVersion: gcs-saker.security-hardening.v1
+status: IMPLEMENTED_NOT_RUNTIME_ASSESSED
+controls:
+  - id: SH-AUTH-001
+    area: authentication-session
+    objective: Browser refresh credentials are protected, rotated, revoked, origin checked, and never cached.
+    evidence:
+      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/identity/AuthResponseFactory.kt
+      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/identity/AuthHttpGuards.kt
+      - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/identity/AuthSessionModels.kt
+      - services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthControllerTest.kt
+      - scripts/smoke/auth_session_rotation_smoke.py
+    anchors: [httpOnly(true), consumeRefreshSession, assertTrustedOrigin, CacheControl.noStore]
+    validations:
+      - {type: success, source: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthControllerTest.kt, selector: refresh rotates token from httpOnly cookie}
+      - {type: replay-denial, source: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/AuthSessionServiceTest.kt, selector: refresh rejects reused refresh token when session store is authoritative}
+      - {type: cache-boundary, source: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AuthControllerTest.kt, selector: logout clears refresh cookie}
+  - id: SH-SCOPE-001
+    area: group-media-isolation
+    objective: Stream, Talkback, telemetry, and device access fail closed across groups and identities.
+    evidence:
+      - docs/compliance/security/authorization-denial-matrix.yml
+      - services/media-control/internal/httpapi/dashboard_streams_test.go
+      - services/media-control/internal/grpcgateway/telemetry_test.go
+    anchors: [AD-GROUP-002, TestDashboardPlaybackDeniesForbiddenStream, TestTelemetryHandlerRejectsAuthenticatedGroupMismatchWithoutStore]
+    validations:
+      - {type: cross-group-denial, source: services/media-control/internal/httpapi/dashboard_streams_test.go, selector: TestDashboardPlaybackDeniesForbiddenStream}
+      - {type: identity-mismatch, source: services/media-control/internal/grpcgateway/telemetry_test.go, selector: TestTelemetryHandlerRejectsAuthenticatedGroupMismatchWithoutStore}
+      - {type: talkback-denial, source: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/StreamPolicyControllerTest.kt, selector: group admin cannot send talkback to descendant group}
+  - id: SH-CONTROL-001
+    area: remote-command-protection
+    objective: Commands are session bound, expiry bounded, replay resistant, and rejected on route mismatch.
+    evidence:
+      - services/media-control/internal/mission/redis_command_ledger.go
+      - services/media-control/internal/mission/redis_command_ledger_test.go
+      - services/media-control/internal/controlroute/resolver_test.go
+    anchors: [SetNX, MaxCommandLifetime, commandLedgerKeyPrefix, TestRouteResolverRejectsMismatchAndStaleSession]
+    validations:
+      - {type: replay-denial, source: services/media-control/internal/controltransport/mqtt_command_test.go, selector: TestCommandTransportRejectsDuplicateSequenceAndExpiry}
+      - {type: session-mismatch, source: services/media-control/internal/controlroute/resolver_test.go, selector: TestRouteResolverRejectsMismatchAndStaleSession}
+      - {type: expiry-boundary, source: services/media-control/internal/mission/redis_command_ledger_test.go, selector: TestRedisCommandLedgerRejectsMissingIDAndExcessiveTTL}
+  - id: SH-INPUT-001
+    area: input-secret-protection
+    objective: Boundary input is validated and sensitive values are excluded from logs and repository source.
+    evidence:
+      - scripts/gates/critical_code_contract.py
+      - scripts/smoke/auth_boundary_dast.py
+      - docs/compliance/security/security-testing-profile.yml
+    anchors: [SENSITIVE_LOG_INTERPOLATION, oversized-input, error-sanitization]
+    validations:
+      - {type: malformed-input, source: services/media-control/internal/mqttgateway/message_test.go, selector: TestMalformedAndOversizedMessagesNeverReachGateway}
+      - {type: oversized-input, source: services/media-control/internal/grpcgateway/server_test.go, selector: TestExchangeReturnsBackpressureForOversizedPayload}
+      - {type: disclosure-denial, source: scripts/smoke/auth_boundary_dast.py, selector: leakageDetected}
+  - id: SH-NETWORK-001
+    area: network-exposure
+    objective: Only the TLS edge and required media relay ports are public; data and management planes remain private.
+    evidence:
+      - deploy/compose/compose.single-node.poc.yml
+      - deploy/nginx/gcs-saker.reverse-proxy.example.conf
+      - scripts/gates/closed_network_static_check.py
+    anchors: [PUBLIC_HTTP_BIND_ADDR, LOCAL_BIND_ADDR, /media-control/metrics, Closed-network static check passed]
+    validations:
+      - {type: private-service-denial, source: scripts/gates/security_hardening_gate.py, selector: must not publish a host port}
+      - {type: management-port-denial, source: scripts/gates/security_hardening_gate.py, selector: must stay private}
+      - {type: closed-network-profile, source: scripts/gates/closed_network_static_check.py, selector: Closed-network static check passed}
+  - id: SH-AUDIT-001
+    area: audit-traceability
+    objective: Privileged and media lifecycle events are attributable, chained, UTC based, and recoverably verifiable.
+    evidence:
+      - docs/compliance/security/audit-integrity-policy.yml
+      - scripts/ops/audit_chain_verify.py
+      - scripts/ops/verify_audit_recovery.py
+    anchors: [eventHash, previousHash, occurredAt, recovery]
+    validations:
+      - {type: tamper-denial, source: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/infrastructure/anchor/FileAuditAnchorWriterTest.kt, selector: writer rejects a tampered existing anchor before extending chain}
+      - {type: authentication-denial, source: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/InternalMediaAuditControllerTest.kt, selector: missing or incorrect service token is rejected before persistence}
+      - {type: recovery-integrity, source: scripts/ops/verify_audit_recovery.py, selector: audit recovery verified}
+  - id: SH-SUPPLY-001
+    area: supply-chain-release
+    objective: Immutable source, dependency policy, SBOM, image scanning, signing, provenance, and vulnerability response gate releases.
+    evidence:
+      - .github/workflows/ci.yml
+      - .github/workflows/release-supply-chain.yml
+      - docs/compliance/supply-chain/supply-chain-policy.yml
+    anchors: [Generate backend SBOM, Scan media-control runtime image, Attest SPDX SBOM, DIGEST_PINNED_AND_MANIFEST_BOUND]
+    validations:
+      - {type: dependency-audit, source: .github/workflows/ci.yml, selector: Audit backend dependencies}
+      - {type: runtime-image-scan, source: .github/workflows/ci.yml, selector: Scan auth-policy runtime image}
+      - {type: signed-provenance, source: .github/workflows/release-supply-chain.yml, selector: Attest SPDX SBOM}
