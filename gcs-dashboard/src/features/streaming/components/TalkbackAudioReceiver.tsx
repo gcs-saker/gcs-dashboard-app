@@ -1,13 +1,23 @@
+import { useEffect, useRef } from "react";
 import { useTalkbackAudioReceiver } from "@streaming/hooks/audio/useTalkbackAudioReceiver";
+import { createTalkbackReceipt, receiptStateForPlayback, type TalkbackReceipt } from "@streaming/talkback/talkbackReceipt";
 
 interface TalkbackAudioReceiverProps {
   autoStart?: boolean;
+  onReceipt?: (receipt: TalkbackReceipt) => void;
   streamId: string;
 }
 
-export function TalkbackAudioReceiver({ autoStart = false, streamId }: TalkbackAudioReceiverProps) {
+export function TalkbackAudioReceiver({ autoStart = false, onReceipt, streamId }: TalkbackAudioReceiverProps) {
   const { enabled, playback, sessionError, setEnabled } = useTalkbackAudioReceiver(autoStart, streamId);
   const errorMessage = sessionError ?? talkbackErrorMessage(playback.errorMessage);
+  const lastReceiptState = useRef<string | null>(null);
+  const receiptState = receiptStateForPlayback(enabled, playback.audioPlaybackState, errorMessage);
+  useEffect(() => {
+    if (!onReceipt || lastReceiptState.current === receiptState) return;
+    lastReceiptState.current = receiptState;
+    onReceipt(createTalkbackReceipt(streamId, receiptState, errorMessage ? "receiver_error" : undefined));
+  }, [errorMessage, onReceipt, receiptState, streamId]);
 
   return (
     <section className="talkback-audio-receiver" aria-label="관제 음성 수신">
