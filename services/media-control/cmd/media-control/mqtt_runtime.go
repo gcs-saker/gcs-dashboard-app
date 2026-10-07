@@ -7,12 +7,13 @@ import (
 	"net"
 	"time"
 
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/httpapi"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/mqttgateway"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func startMQTTAdapter(parent context.Context, config runtimeConfig) (func(), error) {
+func startMQTTAdapter(parent context.Context, config runtimeConfig, metrics *httpapi.Metrics) (func(), error) {
 	broker := getenv("MQTT_GATEWAY_URL", "")
 	if broker == "" {
 		return func() {}, nil
@@ -23,7 +24,7 @@ func startMQTTAdapter(parent context.Context, config runtimeConfig) (func(), err
 	settings := mqttgateway.Config{URL: broker, Username: getenv("MQTT_GATEWAY_USERNAME", ""),
 		Password: getenv("MQTT_GATEWAY_PASSWORD", ""), AllowPlaintext: getenv("MQTT_GATEWAY_ALLOW_PLAINTEXT", "false") == "true",
 		TLS: mqttgateway.TLSFiles{CAFile: getenv("MQTT_GATEWAY_CA_FILE", ""), CertFile: getenv("MQTT_GATEWAY_CERT_FILE", ""),
-			KeyFile: getenv("MQTT_GATEWAY_KEY_FILE", ""), ServerName: getenv("MQTT_GATEWAY_SERVER_NAME", "")}}
+			KeyFile: getenv("MQTT_GATEWAY_KEY_FILE", ""), ServerName: getenv("MQTT_GATEWAY_SERVER_NAME", "")}, Metrics: metrics}
 	if err := settings.Validate(); err != nil {
 		return nil, err
 	}

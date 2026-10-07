@@ -28,6 +28,8 @@ func newMetricsRegistry() (*prometheus.Registry, *Metrics) {
 		publishSessionCount:    newPublishSessionCountMetric(),
 		publishSessionOldest:   newPublishSessionOldestMetric(),
 		publishSessionScans:    newPublishSessionScansMetric(),
+		mqttIngress:            newMQTTIngressMetric(),
+		mqttQueueDepth:         newMQTTQueueDepthMetric(),
 	}
 	registry.MustRegister(
 		metrics.httpRequests,
@@ -52,6 +54,8 @@ func newMetricsRegistry() (*prometheus.Registry, *Metrics) {
 		metrics.publishSessionCount,
 		metrics.publishSessionOldest,
 		metrics.publishSessionScans,
+		metrics.mqttIngress,
+		metrics.mqttQueueDepth,
 	)
 	return registry, metrics
 }
