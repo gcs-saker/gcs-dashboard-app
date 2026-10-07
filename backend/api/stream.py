@@ -75,7 +75,7 @@ class StreamStatusOperation(StreamLookupOperation[StreamStatusResponse]):
 
 
 @v1_router.get(StreamRoutes.STREAMS, response_model=list[StreamDescriptorResponse])
-async def list_streams(service: StreamServiceDependency) -> list[StreamDescriptorResponse]:
+def list_streams(service: StreamServiceDependency) -> list[StreamDescriptorResponse]:
     return [StreamDescriptorResponse.from_domain(descriptor) for descriptor in service.list_registered_streams()]
 
 
@@ -85,7 +85,7 @@ async def list_stream_ice_servers() -> list[IceServerResponse]:
 
 
 @v1_router.get(StreamRoutes.PLAYBACK, response_model=StreamPlaybackResponse)
-async def get_stream_playback(
+def get_stream_playback(
     stream_id: str,
     service: StreamServiceDependency,
 ) -> StreamPlaybackResponse:
@@ -93,7 +93,7 @@ async def get_stream_playback(
 
 
 @v1_router.get(StreamRoutes.STREAM_STATUS, response_model=StreamStatusResponse)
-async def get_stream_status(
+def get_stream_status(
     stream_id: str,
     service: StreamServiceDependency,
 ) -> StreamStatusResponse:
@@ -101,7 +101,7 @@ async def get_stream_status(
 
 
 @v1_router.get(StreamRoutes.STREAM_DETAIL, response_model=StreamDescriptorResponse)
-async def get_stream(
+def get_stream(
     stream_id: str,
     service: StreamServiceDependency,
 ) -> StreamDescriptorResponse:

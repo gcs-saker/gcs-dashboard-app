@@ -249,7 +249,7 @@ def test_streaming_module_router_boundary_is_mounted_under_stream_api():
 
 
 def test_streaming_module_status_router_returns_testable_payload():
-    response = run_async(get_streaming_module_status())
+    response = get_streaming_module_status()
 
     assert response.model_dump(by_alias=True) == {
         "registryReady": True,
@@ -288,7 +288,7 @@ def test_streaming_module_playback_router_returns_422_for_invalid_stream_id(monk
 
 
 def test_streaming_module_registry_router_returns_seed_streams():
-    response = run_async(list_stream_registry())
+    response = list_stream_registry()
 
     assert [stream.stream_id for stream in response] == [
         "raw.sample.front",
@@ -302,7 +302,7 @@ def test_streaming_module_registry_router_returns_sample_front_seed(monkeypatch)
     service = StreamingService(playback_url_builder=PlaybackUrlBuilder())
     monkeypatch.setattr(streaming_router_module, "default_streaming_service", service)
 
-    response = run_async(get_stream_registry_item("raw.sample.front"))
+    response = get_stream_registry_item("raw.sample.front")
 
     assert response.model_dump(by_alias=True) == {
         "streamId": "raw.sample.front",
@@ -321,7 +321,7 @@ def test_streaming_module_registry_router_returns_sample_front_seed(monkeypatch)
 @pytest.mark.parametrize("stream_id", ["raw.robot-001.front", "ai.drone-01.front.detector-v1"])
 def test_streaming_module_registry_router_returns_404_for_missing_stream(stream_id):
     with pytest.raises(HTTPException) as exc_info:
-        run_async(get_stream_registry_item(stream_id))
+        get_stream_registry_item(stream_id)
 
     assert exc_info.value.status_code == 404
     assert exc_info.value.detail == "stream is not registered"
@@ -331,7 +331,7 @@ def test_streaming_module_registry_router_returns_local_webcam_seed(monkeypatch)
     service = StreamingService(playback_url_builder=PlaybackUrlBuilder())
     monkeypatch.setattr(streaming_router_module, "default_streaming_service", service)
 
-    response = run_async(get_stream_registry_item("raw.local.webcam"))
+    response = get_stream_registry_item("raw.local.webcam")
 
     assert response.model_dump(by_alias=True) == {
         "streamId": "raw.local.webcam",
