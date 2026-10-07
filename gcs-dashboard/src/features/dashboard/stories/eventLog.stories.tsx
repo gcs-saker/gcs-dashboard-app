@@ -1,5 +1,5 @@
 import "@dashboard/layout/DashboardPage.scss";
-import type { StoryDefault } from "../../../stories/storyContract";
+import type { StoryDefault } from "@/stories/storyContract";
 import { EventLogMetricCard } from "@dashboard/components/event-log/EventLogMetricCard";
 import { DashboardStoryShell } from "./DashboardStoryShell";
 import "./dashboardStories.css";

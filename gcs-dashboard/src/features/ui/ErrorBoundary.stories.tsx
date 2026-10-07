@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { StoryDefault } from "../../stories/storyContract";
+import type { StoryDefault } from "@/stories/storyContract";
 import { DashboardErrorBoundary } from "./ErrorBoundary";
 
 export default {
