@@ -33,6 +33,8 @@ type Metrics struct {
 	publishSessionCount    *prometheus.GaugeVec
 	publishSessionOldest   prometheus.Gauge
 	publishSessionScans    *prometheus.CounterVec
+	mqttIngress            *prometheus.CounterVec
+	mqttQueueDepth         prometheus.Gauge
 }
 
 func (m *Metrics) ObservePublishSessionStatistics(active, ended, expired int, oldest time.Duration, truncated bool, err error) {
@@ -136,6 +138,27 @@ func (m *Metrics) ObserveError(source string, reason string) {
 func (m *Metrics) ObserveGateway(status string, reason string, elapsed time.Duration) {
 	m.gatewayMessages.WithLabelValues(status, reason).Inc()
 	m.gatewayDuration.WithLabelValues(status).Observe(elapsed.Seconds())
+}
+
+func (m *Metrics) ObserveMQTTIngress(result string) {
+	m.mqttIngress.WithLabelValues(mqttIngressResult(result)).Inc()
+}
+
+func (m *Metrics) SetMQTTQueueDepth(depth int) {
+	m.mqttQueueDepth.Set(float64(depth))
+}
+
+func (m *Metrics) AdjustMQTTQueueDepth(delta int) {
+	m.mqttQueueDepth.Add(float64(delta))
+}
+
+func mqttIngressResult(result string) string {
+	switch result {
+	case "queued", "processed", "rejected", "failed", "backpressure":
+		return result
+	default:
+		return metricResultError
+	}
 }
 
 func (m *Metrics) ObserveTalkbackSnapshot(err error, elapsed time.Duration) {

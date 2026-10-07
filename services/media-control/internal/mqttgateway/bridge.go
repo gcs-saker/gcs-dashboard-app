@@ -14,7 +14,13 @@ import (
 )
 
 const operationTimeout = 5 * time.Second
-const queueCapacity = 64
+const ingressQueueCapacity = 64
+
+type IngressMetrics interface {
+	ObserveMQTTIngress(result string)
+	AdjustMQTTQueueDepth(delta int)
+	SetMQTTQueueDepth(depth int)
+}
 
 type Config struct {
 	URL            string
@@ -23,6 +29,7 @@ type Config struct {
 	AllowPlaintext bool
 	TLS            TLSFiles
 	Ready          func()
+	Metrics        IngressMetrics
 }
 
 func (c Config) Validate() error {
@@ -53,7 +60,7 @@ func Run(ctx context.Context, config Config, exchange Exchange) error {
 	if err := config.Validate(); err != nil {
 		return err
 	}
-	queue := make(chan mqtt.Message, queueCapacity)
+	queue := make(chan mqtt.Message, ingressQueueCapacity)
 	lost := make(chan struct{}, 1)
 	tlsConfig, err := config.TLS.Config()
 	if err != nil {
@@ -78,13 +85,7 @@ func Run(ctx context.Context, config Config, exchange Exchange) error {
 		return fmt.Errorf("mqtt_connect_failed")
 	}
 	callback := func(_ mqtt.Client, message mqtt.Message) {
-		select {
-		case queue <- message:
-		case <-ctx.Done():
-		default:
-			slog.Warn("mqtt_ingress", "result", "backpressure", "error_code", "queue_full")
-			message.Ack()
-		}
+		enqueueMessage(ctx, queue, message, config.Metrics)
 	}
 	if err := await(client.Subscribe(Subscription, 1, callback)); err != nil {
 		return fmt.Errorf("mqtt_subscribe_failed")
@@ -92,29 +93,29 @@ func Run(ctx context.Context, config Config, exchange Exchange) error {
 	if config.Ready != nil {
 		config.Ready()
 	}
-	return (consumer{client: client, queue: queue, lost: lost, exchange: exchange}).run(ctx)
+	return (consumer{client: client, queue: queue, lost: lost, exchange: exchange, metrics: config.Metrics}).run(ctx)
 }
 
-type consumer struct {
-	client   mqtt.Client
-	queue    <-chan mqtt.Message
-	lost     <-chan struct{}
-	exchange Exchange
-}
-
-func (c consumer) run(ctx context.Context) error {
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-c.lost:
-			return errors.New("mqtt_connection_lost")
-		case message := <-c.queue:
-			if err := deliver(ctx, c.client, message, c.exchange); err != nil {
-				slog.Warn("mqtt_ingress", "result", "failed", "error_code", "result_delivery_failed")
-				return err
-			}
+func enqueueMessage(ctx context.Context, queue chan<- mqtt.Message, message mqtt.Message, metrics IngressMetrics) bool {
+	select {
+	case queue <- message:
+		observeIngress(metrics, "queued")
+		if metrics != nil {
+			metrics.AdjustMQTTQueueDepth(1)
 		}
+		return true
+	case <-ctx.Done():
+		return false
+	default:
+		observeIngress(metrics, "backpressure")
+		slog.Warn("mqtt_ingress", "result", "backpressure", "error_code", "queue_full")
+		return false
+	}
+}
+
+func observeIngress(metrics IngressMetrics, result string) {
+	if metrics != nil {
+		metrics.ObserveMQTTIngress(result)
 	}
 }
 

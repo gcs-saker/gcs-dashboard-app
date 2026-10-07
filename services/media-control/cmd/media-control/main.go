@@ -70,7 +70,7 @@ func run() error {
 	if err := startPublishSessionStatistics(runtimeContext, config, resources, publishReadiness); err != nil {
 		return err
 	}
-	stopMQTT, err := startMQTTAdapter(runtimeContext, config)
+	stopMQTT, err := startMQTTAdapter(runtimeContext, config, resources.metrics)
 	if err != nil {
 		return err
 	}

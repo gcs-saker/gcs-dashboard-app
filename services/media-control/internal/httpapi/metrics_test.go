@@ -17,6 +17,8 @@ func TestMetricsEndpointExposesPrometheusText(t *testing.T) {
 	metrics.ObserveIceCache(metricResultMiss)
 	metrics.ObserveError(metricSourceHTTP, "access_denied")
 	metrics.ObserveGateway("GATEWAY_ACK_STATUS_ACCEPTED", "accepted", 3*time.Millisecond)
+	metrics.ObserveMQTTIngress("backpressure")
+	metrics.SetMQTTQueueDepth(3)
 	metrics.ObserveTalkbackSnapshot(nil, 4*time.Millisecond)
 	metrics.ObserveTalkbackTransition("talkback.session.started", nil)
 	metrics.ObserveTalkbackTransition("private-session-reference", assertiveError{})
@@ -26,13 +28,14 @@ func TestMetricsEndpointExposesPrometheusText(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
 	metrics.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/metrics", nil))
-
 	body := recorder.Body.String()
 	for _, expected := range []string{
 		"gcs_media_control_stream_cache_events_total{result=\"hit\"} 1",
 		"gcs_media_control_ice_cache_events_total{result=\"miss\"} 1",
 		"gcs_media_control_errors_total{reason=\"access_denied\",source=\"http\"} 1",
 		"gcs_media_control_gateway_messages_total{reason=\"accepted\",status=\"GATEWAY_ACK_STATUS_ACCEPTED\"} 1",
+		"gcs_media_control_mqtt_ingress_total{result=\"backpressure\"} 1",
+		"gcs_media_control_mqtt_queue_depth 3",
 		"gcs_media_control_talkback_snapshot_total{result=\"success\"} 1",
 		"gcs_media_control_talkback_transitions_total{operation=\"started\",result=\"success\"} 1",
 		"gcs_media_control_talkback_transitions_total{operation=\"unknown\",result=\"error\"} 1",
