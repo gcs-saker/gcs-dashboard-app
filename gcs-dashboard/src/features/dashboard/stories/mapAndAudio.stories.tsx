@@ -1,6 +1,5 @@
-import type { StoryDefault } from "@ladle/react";
-
 import "@dashboard/layout/DashboardPage.scss";
+import type { StoryDefault } from "@/stories/storyContract";
 import { AudioWaveformPanel } from "@dashboard/components/AudioWaveformPanel";
 import { StreamMapPopup } from "@dashboard/map/StreamMapPopup";
 import { STORY_AUDIO_ANALYSIS, STORY_STREAM_SLOTS } from "./dashboardStoryFixtures";

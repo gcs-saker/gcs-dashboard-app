@@ -6,7 +6,7 @@ import { AudioWaveform, MapMarkerPopup } from "./mapAndAudio.stories";
 import { PlayerPlaceholders, StreamCards } from "./streamStates.stories";
 import { ServiceCards } from "./systemStatus.stories";
 
-describe("dashboard Ladle stories", () => {
+describe("dashboard component stories", () => {
   it("render stream state scenarios", () => {
     render(<StreamCards />);
     expect(screen.getByText("스트림 카드 상태")).toBeInTheDocument();

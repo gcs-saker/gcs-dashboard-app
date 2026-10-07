@@ -67,6 +67,24 @@ class AuthPolicyContainerIntegrationTest {
     }
 
     @Test
+    fun `postgres telemetry write keeps first durable sample when event id is replayed`() {
+        val dataSource = postgresDataSource()
+        AuthPolicyDatabaseInitializer(dataSource).initializeSchema()
+        val repository = kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalReadRepository(
+            dataSource, emptyList(), emptyMap(),
+        )
+        val principal = AuthenticatedPrincipal("fixture", UserRole.ADMIN, GroupId(ContainerIntegrationContract.GROUP_ID))
+        val first = telemetrySample("replay-event", 35.87)
+        val replay = telemetrySample("replay-event", 36.12)
+
+        repository.upsertTelemetry(first)
+        repository.upsertTelemetry(replay)
+
+        assertEquals(35.87, repository.telemetryFor(principal).single { it.uuid == first.uuid }.latitude)
+        assertEquals(1, repository.telemetryHistoryFor(principal, first.uuid, 10).size)
+    }
+
+    @Test
     fun `redis container stores principal cache and consumes refresh session once`() {
         val connectionFactory = LettuceConnectionFactory(redis.host, redis.getMappedPort(ContainerIntegrationContract.REDIS_PORT))
         connectionFactory.start()
@@ -125,6 +143,15 @@ class AuthPolicyContainerIntegrationTest {
             latencyMs = 12,
             throughputMbps = 1.5,
             groupId = GroupId(ContainerIntegrationContract.GROUP_ID),
+        )
+
+    private fun telemetrySample(eventId: String, latitude: Double) =
+        kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel(
+            uuid = "replay-fixture", latitude = latitude, longitude = 128.6, altitude = 1.0,
+            magneticX = 0.0, magneticY = 0.0, magneticZ = 0.0, soc = "50", phoneBatterySOC = 50.0,
+            velocity = 0.0, totalDistance = 0.0, epochTime = "00:00:00", portDistance = 0.0,
+            groupId = GroupId(ContainerIntegrationContract.GROUP_ID), observedAt = Instant.now(), eventId = eventId,
+            sessionId = "ps_fixture", streamId = "raw.device.fixture",
         )
 
     companion object {

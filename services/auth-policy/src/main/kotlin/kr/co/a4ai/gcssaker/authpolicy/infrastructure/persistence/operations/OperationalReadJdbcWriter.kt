@@ -20,11 +20,10 @@ internal class OperationalReadJdbcWriter(
     fun replaceTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel {
         transactions.executeWithoutResult {
             if (isPostgres) {
-                val insertedHistoryRows =
-                    jdbc.update(OperationalReadSql.insertTelemetryHistoryPostgres, *historyArguments(telemetry))
-                if (telemetry.eventId == null || insertedHistoryRows == 1) {
-                    jdbc.update(OperationalReadSql.upsertTelemetryPostgres, *latestArguments(telemetry))
-                }
+                jdbc.update(
+                    OperationalReadSql.upsertTelemetryAndHistoryPostgres,
+                    *postgresTelemetryArguments(telemetry),
+                )
             } else {
                 jdbc.update(OperationalReadSql.deleteTelemetryByUuid, telemetry.uuid)
                 insertTelemetry(telemetry)
@@ -89,6 +88,12 @@ internal class OperationalReadJdbcWriter(
         telemetry.sessionId,
         telemetry.streamId,
     )
+
+    private fun postgresTelemetryArguments(telemetry: TelemetryReadModel): Array<Any?> = buildList {
+        addAll(historyArguments(telemetry))
+        addAll(latestArguments(telemetry))
+        add(telemetry.eventId)
+    }.toTypedArray()
 
     private fun historyArguments(telemetry: TelemetryReadModel): Array<Any?> = arrayOf(
         telemetry.eventId,

@@ -1,10 +1,10 @@
-FROM python:3.12.14-slim-bookworm@sha256:392307d22300de8b5986851a12d9176dfc0fc073e65bf6523ebd7dcbeb23564e AS wheels
+FROM python:3.12.15-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258 AS wheels
 WORKDIR /build
 COPY requirements-runtime.txt .
 RUN python -m pip install --no-cache-dir --upgrade pip wheel \
     && pip wheel --no-cache-dir --wheel-dir /wheels -r requirements-runtime.txt
 
-FROM python:3.12.14-slim-bookworm@sha256:392307d22300de8b5986851a12d9176dfc0fc073e65bf6523ebd7dcbeb23564e
+FROM python:3.12.15-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258
 ARG SOURCE_COMMIT=unknown
 LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
 ENV TZ=UTC PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
