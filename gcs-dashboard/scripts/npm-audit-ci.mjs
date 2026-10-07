@@ -4,6 +4,10 @@ const allowedAdvisories = new Set([
   // This advisory only affects applications using React Router's unstable RSC
   // APIs. The GCS dashboard is a client-side SPA and does not use those APIs.
   "https://github.com/advisories/GHSA-qwww-vcr4-c8h2",
+  // `braces` is reachable only through Sass' optional development file watcher.
+  // Production images install dependencies for the build stage only and never
+  // accept glob patterns from users. Remove this when a patched release exists.
+  "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
 ]);
 
 const npmCli = process.env.npm_execpath;
@@ -53,7 +57,7 @@ const blocked = Object.keys(vulnerabilities).filter((name) => !isAllowed(name));
 const allowed = Object.keys(vulnerabilities).filter((name) => isAllowed(name));
 
 if (allowed.length > 0) {
-  console.warn(`사용하지 않는 RSC 전용 권고를 예외 처리했습니다: ${allowed.join(", ")}`);
+  console.warn(`검토된 비런타임 또는 비사용 경로 권고를 예외 처리했습니다: ${allowed.join(", ")}`);
 }
 
 if (blocked.length > 0) {

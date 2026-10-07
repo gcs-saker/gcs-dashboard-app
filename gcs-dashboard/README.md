@@ -42,14 +42,7 @@ Screenshots and failure context are written under `test-results/` and `playwrigh
 
 ## Component Scenarios
 
-Dashboard component scenarios use Ladle:
-
-```bash
-npm run stories
-npm run stories:build
-```
-
-Ladle was selected over Storybook for the current M10 scope because the dashboard already uses Vite, and the immediate goal is lightweight state documentation rather than a full design-system addon stack. Stories focus on fixed UI states for streams, system status, event logs, map popups, and audio waveform panels. The story fixtures reuse MSW mock data where possible so API contract mocks and component scenarios do not drift apart.
+Dashboard component scenarios are maintained as framework-neutral story modules and rendered by Vitest. Stories focus on fixed UI states for streams, system status, event logs, map popups, and audio waveform panels. The fixtures reuse MSW mock data where possible so API contract mocks and component scenarios do not drift apart. This keeps the scenarios executable without shipping a separate interactive story-server dependency.
 
 ## Render Diagnostics
 

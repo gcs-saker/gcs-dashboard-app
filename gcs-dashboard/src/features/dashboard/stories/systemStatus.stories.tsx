@@ -1,8 +1,7 @@
-import type { StoryDefault } from "@ladle/react";
-
 import "@dashboard/layout/DashboardPage.scss";
 import { SystemServiceCards } from "@dashboard/components/system-status/SystemServiceCards";
 import { SystemStatePreview } from "@dashboard/components/system-status/SystemStatePreview";
+import type { StoryDefault } from "../../../stories/storyContract";
 import { STORY_SERVICE_CARDS } from "./dashboardStoryFixtures";
 import { DashboardStoryShell } from "./DashboardStoryShell";
 import "./dashboardStories.css";

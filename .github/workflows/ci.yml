@@ -290,8 +290,6 @@ jobs:
 
       - name: Scan backend runtime image
         uses: anchore/scan-action@v6
-        env:
-          GRYPE_CONFIG: ${{ github.workspace }}/.github/grype/backend-python312.yaml
         with:
           image: gcs-saker-backend:ci
           fail-build: true

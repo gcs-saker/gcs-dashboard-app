@@ -17,7 +17,6 @@
     "zustand": "5.0.14"
   },
   "devDependencies": {
-    "@ladle/react": "5.1.1",
     "@playwright/test": "1.57.0",
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "6.9.1",
@@ -42,6 +41,8 @@
     "nanoid": "3.3.18",
     "picomatch@2": "2.3.2",
     "query-string": "9.5.1",
+    "smol-toml": "1.9.0",
+    "source-map-js": "1.2.2",
     "undici": "7.29.1"
   },
   "scripts": {
@@ -56,9 +57,7 @@
     "audit": "node scripts/npm-audit-ci.mjs",
     "test:e2e": "playwright test",
     "test:smoke:failure": "vitest run src/features/streaming/failureSmokeScenarios.test.ts src/features/streaming/components/RealtimePlayer.test.tsx src/features/streaming/components/HLSFallbackPlayer.test.tsx",
-    "test:coverage": "vitest run --coverage",
-    "stories": "ladle serve --host 127.0.0.1",
-    "stories:build": "ladle build"
+    "test:coverage": "vitest run --coverage"
   },
   "vitest": {
     "collectCoverageFrom": [
