@@ -65,12 +65,25 @@ internal object OperationalReadSql {
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
-    const val upsertTelemetryPostgres = """
+    const val upsertTelemetryAndHistoryPostgres = """
+        WITH inserted_history AS (
+            INSERT INTO telemetry_history (
+                event_id, uuid, recorded_at, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
+                soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id,
+                battery_percent, heading_deg, roll_deg, pitch_deg, yaw_deg, link_quality_percent, observed_at,
+                session_id, stream_id
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (event_id) DO NOTHING
+            RETURNING event_id
+        )
         INSERT INTO telemetry_latest (
             event_id, uuid, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
             soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id,
             battery_percent, heading_deg, roll_deg, pitch_deg, yaw_deg, link_quality_percent, observed_at, session_id, stream_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        )
+        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        WHERE CAST(? AS VARCHAR) IS NULL OR EXISTS (SELECT 1 FROM inserted_history)
         ON CONFLICT (uuid) DO UPDATE SET
             event_id = EXCLUDED.event_id,
             latitude = EXCLUDED.latitude,
@@ -106,14 +119,6 @@ internal object OperationalReadSql {
             battery_percent, heading_deg, roll_deg, pitch_deg, yaw_deg, link_quality_percent, observed_at, session_id, stream_id
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """
-    const val insertTelemetryHistoryPostgres = """
-        INSERT INTO telemetry_history (
-            event_id, uuid, recorded_at, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
-            soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id,
-            battery_percent, heading_deg, roll_deg, pitch_deg, yaw_deg, link_quality_percent, observed_at, session_id, stream_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT (event_id) DO NOTHING
     """
     const val insertAsset = """
         INSERT INTO gateway_assets (
