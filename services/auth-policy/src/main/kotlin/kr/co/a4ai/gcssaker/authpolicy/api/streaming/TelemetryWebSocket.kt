@@ -1,11 +1,13 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.micrometer.core.instrument.MeterRegistry
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryPublisher
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
+import kr.co.a4ai.gcssaker.authpolicy.observability.TelemetryWebSocketMetrics
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Bean
 import org.springframework.security.core.Authentication
@@ -17,6 +19,9 @@ import org.springframework.web.socket.config.annotation.WebSocketConfigurer
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 import org.springframework.web.socket.handler.TextWebSocketHandler
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 object TelemetryWebSocketContract {
     const val PATH = "/ws/v1/telemetry"
@@ -25,13 +30,11 @@ object TelemetryWebSocketContract {
 class TelemetryWebSocketHub(
     private val objectMapper: ObjectMapper,
     private val hierarchyRepository: OrganizationHierarchyRepository? = null,
-) : TextWebSocketHandler(), TelemetryPublisher {
-    private data class Subscriber(
-        val session: WebSocketSession,
-        val principal: AuthenticatedPrincipal,
-    )
-
-    private val subscribers = ConcurrentHashMap<String, Subscriber>()
+    private val metrics: TelemetryWebSocketMetrics = TelemetryWebSocketMetrics(),
+    private val executor: ExecutorService = Executors.newVirtualThreadPerTaskExecutor(),
+    private val queueCapacity: Int = DEFAULT_QUEUE_CAPACITY,
+) : TextWebSocketHandler(), TelemetryPublisher, AutoCloseable {
+    private val subscribers = ConcurrentHashMap<String, TelemetrySubscriber>()
 
     override fun afterConnectionEstablished(session: WebSocketSession) {
         val principal = (session.principal as? Authentication)?.principal as? AuthenticatedPrincipal
@@ -39,16 +42,23 @@ class TelemetryWebSocketHub(
             session.close(CloseStatus.NOT_ACCEPTABLE.withReason("authenticated principal required"))
             return
         }
-        subscribers[session.id] = Subscriber(session, principal)
+        val subscriber = TelemetrySubscriber(session, principal, queueCapacity, metrics) {
+            removeSubscriber(session.id, CloseStatus.SERVER_ERROR, true)
+        }
+        subscribers.put(session.id, subscriber)?.let { previous ->
+            previous.close(CloseStatus.NORMAL, true)
+            metrics.disconnected()
+        }
+        metrics.connected()
+        subscriber.start(executor)
     }
 
     override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
-        subscribers.remove(session.id)
+        removeSubscriber(session.id, status, false)
     }
 
     override fun handleTransportError(session: WebSocketSession, exception: Throwable) {
-        subscribers.remove(session.id)
-        if (session.isOpen) session.close(CloseStatus.SERVER_ERROR)
+        removeSubscriber(session.id, CloseStatus.SERVER_ERROR, true)
     }
 
     override fun publish(telemetry: TelemetryReadModel) {
@@ -57,18 +67,37 @@ class TelemetryWebSocketHub(
             val canViewDescendant = subscriber.principal.role == UserRole.GROUP_ADMIN &&
                 hierarchyRepository?.current()?.isAncestor(subscriber.principal.groupId, telemetry.groupId) == true
             if (subscriber.principal.role == UserRole.ADMIN || subscriber.principal.groupId == telemetry.groupId || canViewDescendant) {
-                runCatching {
-                    synchronized(subscriber.session) {
-                        if (subscriber.session.isOpen) subscriber.session.sendMessage(payload)
-                    }
-                }.onFailure {
-                    subscribers.remove(subscriber.session.id)
+                if (!subscriber.offer(payload)) {
+                    removeSubscriber(subscriber.session.id, BACKPRESSURE_CLOSE_STATUS, true)
                 }
             }
         }
     }
 
     fun connectionCount(): Int = subscribers.size
+
+    override fun close() {
+        subscribers.keys.toList().forEach { removeSubscriber(it, CloseStatus.GOING_AWAY, true) }
+        executor.shutdownNow()
+        try {
+            executor.awaitTermination(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+    }
+
+    private fun removeSubscriber(id: String, status: CloseStatus, closeSession: Boolean) {
+        subscribers.remove(id)?.let { subscriber ->
+            subscriber.close(status, closeSession)
+            metrics.disconnected()
+        }
+    }
+
+    private companion object {
+        const val DEFAULT_QUEUE_CAPACITY = 64
+        const val SHUTDOWN_TIMEOUT_SECONDS = 1L
+        val BACKPRESSURE_CLOSE_STATUS = CloseStatus(1013, "telemetry backpressure")
+    }
 }
 
 @Configuration
@@ -77,7 +106,9 @@ class TelemetryWebSocketBeanConfig {
     fun telemetryWebSocketHub(
         objectMapper: ObjectMapper,
         hierarchyRepository: OrganizationHierarchyRepository,
-    ): TelemetryWebSocketHub = TelemetryWebSocketHub(objectMapper, hierarchyRepository)
+        meterRegistry: MeterRegistry,
+    ): TelemetryWebSocketHub =
+        TelemetryWebSocketHub(objectMapper, hierarchyRepository, TelemetryWebSocketMetrics(meterRegistry))
 }
 
 @Configuration
