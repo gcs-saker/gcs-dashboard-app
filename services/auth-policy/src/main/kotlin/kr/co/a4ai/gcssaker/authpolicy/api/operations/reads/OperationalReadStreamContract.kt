@@ -15,7 +15,7 @@ data class OperationalReadStreamPolicy(
 object OperationalReadStreamContract {
     const val DEFAULT_POLL_COUNT = 30
     const val MAX_POLL_COUNT = 120
-    const val DEFAULT_POLL_INTERVAL_MILLIS = 1_000L
+    const val DEFAULT_POLL_INTERVAL_MILLIS = 15_000L
     const val EVENT_STREAM_SESSIONS = "stream-sessions"
     const val EVENT_HEARTBEAT = "heartbeat"
     const val FIELD_EVENT = "event"
