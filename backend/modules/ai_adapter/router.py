@@ -8,6 +8,7 @@ from core.db import get_db
 from core.security import AuthenticatedUser, get_current_user
 from modules.ai_adapter.service import AIAdapterService, AIProcessorNotFoundError, AIProcessorUnavailableError
 from modules.ai_adapter.settings import AIAdapterSettings
+from modules.ai_contract.constants import AI_CONTRACT_SCHEMA_VERSION
 from modules.ai_contract.schemas import AIEndpointResponse
 
 router = APIRouter(prefix="/ai", tags=["AI Adapter"])
@@ -24,6 +25,23 @@ class AIAnalysisRequest(BaseModel):
         if not AIAdapterService.is_canonical_stream_id(value):
             raise ValueError("streamId must be a canonical stream path")
         return value
+
+
+class AIAdapterStatusResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    configured: bool
+    processor_ids: list[str] = Field(alias="processorIds")
+    contract_version: str = Field(alias="contractVersion")
+
+
+@router.get("/status", response_model=AIAdapterStatusResponse)
+def ai_adapter_status() -> AIAdapterStatusResponse:
+    processor_ids = sorted(AIAdapterSettings.from_env().processor_endpoints())
+    return AIAdapterStatusResponse(
+        configured=bool(processor_ids),
+        processor_ids=processor_ids,
+        contract_version=AI_CONTRACT_SCHEMA_VERSION,
+    )
 
 
 @router.post("/analyze", response_model=AIEndpointResponse)

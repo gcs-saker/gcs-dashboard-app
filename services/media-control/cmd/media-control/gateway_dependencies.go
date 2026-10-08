@@ -22,8 +22,9 @@ const (
 )
 
 type gatewayAuthAdapter struct {
-	client authpolicy.Client
-	rpc    *authpolicy.DeviceRPCClient
+	client            authpolicy.Client
+	rpc               *authpolicy.DeviceRPCClient
+	allowHTTPFallback bool
 }
 
 func (a gatewayAuthAdapter) AuthenticateGateway(ctx context.Context, credentials grpcgateway.GatewayCredentials) (grpcgateway.GatewayIdentity, error) {
@@ -40,6 +41,9 @@ func (a gatewayAuthAdapter) AuthenticateGateway(ctx context.Context, credentials
 func (a gatewayAuthAdapter) authenticateDevice(ctx context.Context, credentials grpcgateway.GatewayCredentials) (authpolicy.DeviceAuthentication, error) {
 	if a.rpc != nil {
 		return a.rpc.AuthenticateDevice(ctx, credentials.DeviceUUID, credentials.Credential)
+	}
+	if !a.allowHTTPFallback {
+		return authpolicy.DeviceAuthentication{}, fmt.Errorf("private device policy RPC unavailable")
 	}
 	return a.client.AuthenticateDevice(ctx, credentials.DeviceUUID, credentials.Credential)
 }
@@ -88,7 +92,10 @@ func newGatewayRuntime(config runtimeConfig, metrics *httpapi.Metrics, sessions 
 			return gatewayRuntime{}, err
 		}
 	}
-	authenticator := gatewayAuthAdapter{client: client, rpc: rpc}
+	if rpc == nil && !config.authPolicyHTTPFallback {
+		return gatewayRuntime{}, fmt.Errorf("AUTH_POLICY_GRPC_TARGET is required")
+	}
+	authenticator := gatewayAuthAdapter{client: client, rpc: rpc, allowHTTPFallback: config.authPolicyHTTPFallback}
 	idempotency := redis.NewClient(&redis.Options{
 		Addr: config.redisAddress, Password: config.redisPassword, DialTimeout: config.redisTimeout,
 		ReadTimeout: config.redisTimeout, WriteTimeout: config.redisTimeout,

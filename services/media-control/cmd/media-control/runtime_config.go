@@ -11,39 +11,40 @@ import (
 )
 
 type runtimeConfig struct {
-	traceExporter       string
-	otelServiceName     string
-	mediaMTXBaseURL     string
-	listenAddress       string
-	grpcListenAddress   string
-	playback            domain.PlaybackURLBuilder
-	groupResolver       domain.StreamGroupResolver
-	iceServers          []domain.IceServer
-	authMode            string
-	authPolicyBaseURL   string
-	deviceRPCTarget     string
-	deviceRPCToken      string
-	deviceRPCCAFile     string
-	deviceRPCCertFile   string
-	deviceRPCKeyFile    string
-	deviceRPCServerName string
-	auditIngestToken    string
-	authzCacheTTL       time.Duration
-	streamCacheTTL      time.Duration
-	redisAddress        string
-	redisPassword       string
-	redisTimeout        time.Duration
-	streamCacheKey      string
-	streamPresenceKey   string
-	streamPresenceTTL   time.Duration
-	turnMaxHealthy      int
-	turnCredentialMode  string
-	turnSharedSecret    string
-	iceServerCacheTTL   time.Duration
-	iceServerCacheKey   string
-	publishToken        string
-	grpcToken           string
-	grpcMaxPayloadBytes int
+	traceExporter          string
+	otelServiceName        string
+	mediaMTXBaseURL        string
+	listenAddress          string
+	grpcListenAddress      string
+	playback               domain.PlaybackURLBuilder
+	groupResolver          domain.StreamGroupResolver
+	iceServers             []domain.IceServer
+	authMode               string
+	authPolicyBaseURL      string
+	authPolicyHTTPFallback bool
+	deviceRPCTarget        string
+	deviceRPCToken         string
+	deviceRPCCAFile        string
+	deviceRPCCertFile      string
+	deviceRPCKeyFile       string
+	deviceRPCServerName    string
+	auditIngestToken       string
+	authzCacheTTL          time.Duration
+	streamCacheTTL         time.Duration
+	redisAddress           string
+	redisPassword          string
+	redisTimeout           time.Duration
+	streamCacheKey         string
+	streamPresenceKey      string
+	streamPresenceTTL      time.Duration
+	turnMaxHealthy         int
+	turnCredentialMode     string
+	turnSharedSecret       string
+	iceServerCacheTTL      time.Duration
+	iceServerCacheKey      string
+	publishToken           string
+	grpcToken              string
+	grpcMaxPayloadBytes    int
 }
 
 func loadRuntimeConfig() (runtimeConfig, error) {
@@ -93,6 +94,7 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 func loadAuthorizationRuntime(config *runtimeConfig) {
 	config.authMode = getenv(runtimeEnv.authMode, authpolicy.AuthModeRequired)
 	config.authPolicyBaseURL = getenv(runtimeEnv.authPolicyBaseURL, runtimeDefaults.authPolicyBaseURL)
+	config.authPolicyHTTPFallback = getenv("AUTH_POLICY_ALLOW_HTTP_FALLBACK", "false") == "true"
 	config.deviceRPCTarget = getenv("AUTH_POLICY_GRPC_TARGET", "")
 	config.deviceRPCToken = getenv("AUTH_POLICY_RPC_TOKEN", "")
 	config.deviceRPCCAFile = getenv("AUTH_POLICY_GRPC_CA_FILE", "")
