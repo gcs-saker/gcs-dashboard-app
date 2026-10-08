@@ -267,8 +267,8 @@ services:
       SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT:-6379}
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
       SPRING_DATA_REDIS_SSL_ENABLED: "true"
-      SPRING_DATA_REDIS_SSL_BUNDLE: gcs-redis
-      SPRING_SSL_BUNDLE_PEM_GCS_REDIS_TRUSTSTORE_CERTIFICATE: /run/secrets/gcs-pki/ca.crt
+      SPRING_DATA_REDIS_SSL_BUNDLE: gcsredis
+      SPRING_SSL_BUNDLE_PEM_GCSREDIS_TRUSTSTORE_CERTIFICATE: /run/secrets/gcs-pki/ca.crt
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz >/dev/null"]
