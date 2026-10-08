@@ -2,7 +2,9 @@ package kr.co.a4ai.gcssaker.authpolicy.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import kr.co.a4ai.gcssaker.authpolicy.application.NoopOperationalAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.application.NoopOperationalEventSignal
 import kr.co.a4ai.gcssaker.authpolicy.application.OperationalAuditPublisher
+import kr.co.a4ai.gcssaker.authpolicy.application.OperationalEventSignal
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventCursor
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.observability.OperationalEventPipelineMetrics
@@ -24,9 +26,10 @@ class OperationalEventController(
     private val objectMapper: ObjectMapper,
     private val streamPolicy: OperationalEventStreamPolicy = OperationalEventStreamPolicy(),
     private val pipelineMetrics: OperationalEventPipelineMetrics = OperationalEventPipelineMetrics(),
+    private val eventSignal: OperationalEventSignal = NoopOperationalEventSignal,
 ) {
     private val requests = OperationalEventRequestReader(principalResolver)
-    private val streamWriter = OperationalEventStreamWriter(repository, objectMapper, streamPolicy, pipelineMetrics)
+    private val streamWriter = OperationalEventStreamWriter(repository, objectMapper, streamPolicy, pipelineMetrics, eventSignal)
 
     @GetMapping(OperationalEventApiRoutes.EVENTS)
     @RequiresBearerAuth
