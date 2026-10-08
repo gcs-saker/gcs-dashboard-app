@@ -164,13 +164,13 @@ MQTT는 telemetry, command, status, command ack 같은 control/data plane을 흡
 
 | 용도 | Topic |
 | --- | --- |
-| telemetry publish | `gcs/{orgId}/{groupId}/{assetId}/telemetry` |
-| command publish | `gcs/{orgId}/{groupId}/{assetId}/command` |
-| status publish | `gcs/{orgId}/{groupId}/{assetId}/status` |
-| command ack publish | `gcs/{orgId}/{groupId}/{assetId}/command_ack` |
-| telemetry subscribe | `gcs/+/+/+/telemetry` |
+| telemetry publish | `gcs/device/{deviceUuid}/{publishSession}/telemetry` |
+| result subscribe | `gcs/device/{deviceUuid}/{publishSession}/result` |
+| command subscribe | `gcs/device/{deviceUuid}/{publishSession}/command` |
+| command ack publish | `gcs/device/{deviceUuid}/{publishSession}/command_ack` |
+| telemetry subscribe | `gcs/device/+/+/telemetry` (Media Control only) |
 
-MQTT payload는 Protobuf를 우선한다. broker credential은 장비 gateway 또는 서버 내부 설정으로만 보관하고 dashboard bundle에 넣지 않는다.
+MQTT payload는 Protobuf를 사용한다. 장비가 보낸 group/receiver는 권한 근거로 사용하지 않는다. 인증서와 opaque session의 실제 group은 Media Control이 조회하며 dashboard bundle에는 MQTT credential을 넣지 않는다.
 
 ## 10. Legacy / Fallback API
 

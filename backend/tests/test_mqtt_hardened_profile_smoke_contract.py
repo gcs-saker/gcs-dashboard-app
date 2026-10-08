@@ -65,7 +65,7 @@ def test_mqtt_acl_and_guide_keep_dashboard_outside_broker_and_health_readable() 
     assert "topic write gcs/device/+/+/result" in acl
     assert "pattern write gcs/device/%u/+/telemetry" in acl
     assert "pattern read gcs/device/%u/+/command" in acl
-    assert "pattern write gcs/+/+/%u/telemetry" in acl
+    assert "pattern write gcs/+/+/%u/telemetry" not in acl
     assert "pattern read gcs/+/+/%u/command" in acl
     assert "The dashboard must never receive MQTT credentials" in readme
     assert "Media frames must not be carried by MQTT" in readme

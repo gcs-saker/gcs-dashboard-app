@@ -97,7 +97,7 @@ sequenceDiagram
     participant G as PostgreSQL/PostGIS
     participant W as Dashboard
 
-    D->>B: publish gcs/{org}/{group}/{asset}/telemetry
+    D->>B: publish gcs/device/{deviceUuid}/{publishSession}/telemetry
     B->>C: deliver QoS policy event
     C->>P: decode TelemetryEnvelope
     P-->>C: validated DTO/domain input

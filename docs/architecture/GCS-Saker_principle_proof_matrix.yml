@@ -331,7 +331,7 @@ principles:
           text: "mosquitto"
       evidencePaths:
         - deploy/compose/compose.single-node.poc.yml
-        - backend/tests/test_mqtt_consumer_bridge.py
+        - services/media-control/internal/mqttgateway/bridge_integration_test.go
 
   - id: STACK-GRAPHQL-001
     group: stack-migration

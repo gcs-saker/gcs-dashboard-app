@@ -1,5 +1,4 @@
 from collections.abc import Awaitable, Callable
-from contextlib import asynccontextmanager
 from time import perf_counter
 
 from fastapi import Depends, FastAPI, Request, Response
@@ -29,18 +28,6 @@ from core.tracing import TracingSettings, configure_global_tracing, trace_fastap
 from modules.ai_adapter.router import router as ai_adapter_router
 from modules.ai_contract.router import router as mock_ai_router
 from modules.telemetry_ingest import TelemetryReadModelStore
-from mqtt.subscriber import start_optional_telemetry_subscriber
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    start_optional_telemetry_subscriber(app)
-    try:
-        yield
-    finally:
-        runtime = getattr(app.state, "mqtt_v2_telemetry_subscriber", None)
-        if runtime is not None:
-            runtime.close()
 
 
 async def add_security_headers(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
@@ -149,7 +136,6 @@ def create_app() -> FastAPI:
         title="GCS Backend API",
         description="드론/로봇 제어 및 영상 처리 백엔드",
         version="1.0.0",
-        lifespan=lifespan,
     )
     web_security_settings = WebSecuritySettings.from_env()
     tracing_settings = TracingSettings.from_env()

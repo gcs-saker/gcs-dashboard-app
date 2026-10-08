@@ -141,9 +141,9 @@ media frame은 WebRTC/HLS media plane으로만 보낸다. JSON, MQTT, gRPC, Grap
 | Protocol | Address / Topic | Auth | Required Data | Response / Ack | Notes |
 | --- | --- | --- | --- | --- | --- |
 | gRPC bidi | `/gcs.saker.v1.SakerGatewayService/Exchange` | `x-gcs-gateway-token`, `authorization: bearer <token>` | `requestId`, `orgId`, `groupId`, `assetId`, payload kind | `accepted`, `rejected`, `backpressure`, `reconnect` | browser 직접 연결 금지 |
-| MQTT publish | `gcs/{orgId}/{groupId}/{assetId}/telemetry` | broker credential / device policy | telemetry Protobuf payload | broker ack | telemetry ingest 후보 |
-| MQTT publish | `gcs/{orgId}/{groupId}/{assetId}/command_ack` | broker credential / device policy | command id, status, observed time | broker ack | command ack 후보 |
-| MQTT subscribe | `gcs/{orgId}/{groupId}/{assetId}/command` | broker credential / device policy | none | command Protobuf payload | device command 후보 |
+| MQTT publish | `gcs/device/{deviceUuid}/{publishSession}/telemetry` | mTLS device certificate + opaque publish token | telemetry Protobuf payload; no authoritative group | result topic | Media Control resolves group |
+| MQTT publish | `gcs/device/{deviceUuid}/{publishSession}/command_ack` | mTLS device certificate + session binding | command id, status, observed time | broker ack | canonical command ACK |
+| MQTT subscribe | `gcs/device/{deviceUuid}/{publishSession}/command` | mTLS device certificate + session binding | none | command Protobuf payload | server-selected receiver |
 
 ## External Integration Quick Flow
 

@@ -86,8 +86,8 @@ def test_endpoint_catalogue_documents_protocol_boundaries() -> None:
         "Media frame은 WebRTC/HLS media plane으로만 보낸다",
         "gcs.saker.v1.SakerGatewayService",
         "/gcs.saker.v1.SakerGatewayService/Exchange",
-        "gcs/{orgId}/{groupId}/{assetId}/telemetry",
-        "gcs/+/+/+/telemetry",
+        "gcs/device/{deviceUuid}/{publishSession}/telemetry",
+        "gcs/device/+/+/telemetry",
         "legacy/fallback",
         "미인가 로봇/드론",
     ]
