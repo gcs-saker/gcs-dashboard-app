@@ -5,7 +5,7 @@ from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-from api import auth, control, health, map_config, stream, telemetry, unmaned_assets
+from api import auth, health, map_config, stream, telemetry, unmaned_assets
 from api.contracts import (
     LegacyRouteContract,
     MetricsProtocol,
@@ -115,12 +115,6 @@ def register_routes(app: FastAPI) -> None:
         ai_adapter_router, prefix=RouterPrefixes.API_V1, dependencies=[Depends(require_role(ROLE_ADMIN))]
     )
     app.include_router(telemetry.router, prefix=RouterPrefixes.TELEMETRY, tags=["Telemetry"])
-    app.include_router(
-        control.router,
-        prefix=RouterPrefixes.CONTROL,
-        tags=["Control"],
-        dependencies=[Depends(require_role(ROLE_OPERATOR))],
-    )
     app.include_router(
         unmaned_assets.router,
         prefix=RouterPrefixes.ASSET,

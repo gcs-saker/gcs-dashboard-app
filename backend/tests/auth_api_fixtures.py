@@ -10,25 +10,11 @@ from api.auth import get_password_hash
 from api.contracts import AuthProtocol
 from core.db import Base, get_db
 from main import app
-from modules.messaging.sender import MessageEnvelope, MessageSenderUnavailableError
 from sql.company_sql import Company
 from sql.user_sql import User
 
 TEST_AUTH_SECRET = "test-auth-secret-for-gcs-saker-at-least-32-characters"
 TEST_CSRF_HEADERS = {AuthProtocol.CSRF_HEADER_NAME: AuthProtocol.CSRF_HEADER_VALUE}
-
-
-class RecordingMessageSender:
-    def __init__(self, published: list[tuple[str, str | bytes]]) -> None:
-        self._published = published
-
-    def send(self, envelope: MessageEnvelope) -> None:
-        self._published.append((envelope.destination, envelope.payload))
-
-
-class FailingMessageSender:
-    def send(self, envelope: MessageEnvelope) -> None:
-        raise MessageSenderUnavailableError("gRPC gateway target is not configured")
 
 
 @pytest.fixture

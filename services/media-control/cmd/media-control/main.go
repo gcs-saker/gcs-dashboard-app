@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/authpolicy"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controlroute"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/grpcgateway"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/httpapi"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/observability"
@@ -82,10 +83,12 @@ type runtimeResources struct {
 	authorizer      *authpolicy.CachedAuthorizer
 	publishSessions *sessionstore.RedisStore
 	gateway         gatewayRuntime
+	control         controlRuntime
 	metrics         *httpapi.Metrics
 }
 
 func (r runtimeResources) Close() {
+	r.control.Close()
 	if r.authorizer != nil {
 		if err := r.authorizer.Close(); err != nil {
 			log.Printf("resource_close_failed component=policy_rpc error_type=%T", err)
@@ -122,8 +125,19 @@ func buildRuntime(config runtimeConfig) (httpapi.Server, runtimeResources, error
 	if gateway.rpc != nil {
 		handler = handler.WithSessionBindingValidator(gateway.rpc)
 	}
+	control, controlRuntime, err := newControlRuntime(
+		config,
+		controlroute.NewRouteResolver(publishSessions),
+		gateway.idempotency,
+	)
+	if err != nil {
+		return httpapi.Server{}, runtimeResources{}, errors.Join(err, gateway.Close(), publishSessions.Close(), authorizer.Close())
+	}
+	if control != nil {
+		handler = handler.WithControlService(control)
+	}
 	return handler, runtimeResources{
-		publishSessions: publishSessions, gateway: gateway, authorizer: &authorizer, metrics: metrics,
+		publishSessions: publishSessions, gateway: gateway, control: controlRuntime, authorizer: &authorizer, metrics: metrics,
 	}, nil
 }
 

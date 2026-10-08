@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Final
 
-from model.control_protocol import ControlProtocol as ControlProtocol
-
 
 class AuthRoutes:
     SIGNUP: Final = "/signup"
@@ -40,7 +38,6 @@ class RouterPrefixes:
     STREAM_LEGACY: Final = "/stream"
     API_V1: Final = "/api/v1"
     TELEMETRY: Final = "/telemetry"
-    CONTROL: Final = "/control"
     ASSET: Final = "/asset"
 
 
@@ -105,7 +102,6 @@ class MapRoutes:
 class LegacyRouteContract:
     MARKED_PREFIXES: Final = (
         RouterPrefixes.AUTH,
-        RouterPrefixes.CONTROL,
         RouterPrefixes.STREAM_LEGACY,
         f"{RouterPrefixes.API_V1}/ai",
     )
@@ -115,7 +111,6 @@ class LegacyRouteContract:
     )
     REPLACEMENTS: Final = {
         RouterPrefixes.AUTH: "/auth-policy/auth",
-        RouterPrefixes.CONTROL: "disabled-until-control-policy-is-final",
         RouterPrefixes.STREAM_LEGACY: "/media-control/api/v1/streams",
         f"{RouterPrefixes.API_V1}/ai": "edge-ai-sidecar",
         f"{RouterPrefixes.API_V1}{MapRoutes.CONFIG}": "/auth-policy/map/config",
@@ -130,10 +125,6 @@ class StreamErrorDetails:
 class StreamStatusProtocol:
     FIELD_STREAM: Final = "stream"
     READY: Final = "ready"
-
-
-class ControlRoutes:
-    SEND: Final = "/"
 
 
 class MetricsProtocol:

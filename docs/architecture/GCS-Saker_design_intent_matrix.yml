@@ -122,15 +122,15 @@ intents:
       requiredTexts:
         - path: contracts/proto/gcs/saker/v1/gateway_service.proto
           text: "rpc Exchange(stream GatewayStreamRequest) returns (stream GatewayStreamResponse);"
-        - path: backend/modules/messaging/sender.py
-          text: "MessageSender"
+        - path: services/media-control/internal/controlapp/application.go
+          text: "ControlCommandPublisher"
         - path: scripts/smoke/grpc_runtime_smoke.py
           text: "runtime-integrated"
         - path: backend/modules/protocol_v2/gateway_service.py
           text: "GatewayStreamRequest"
       evidencePaths:
         - backend/tests/test_protobuf_contracts.py
-        - backend/tests/test_message_sender_abstraction.py
+        - services/media-control/internal/controlintegration/control_e2e_test.go
         - backend/tests/test_protocol_v2_gateway_service.py
 
   - id: ARCH-MEDIA-001

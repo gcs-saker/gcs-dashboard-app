@@ -172,15 +172,14 @@ stacks:
       protocol: "gRPC bidirectional streaming over protobuf payload"
     evidence:
       - contracts/proto/gcs/saker/v1/gateway_service.proto
-      - backend/modules/messaging/sender.py
       - backend/modules/protocol_v2/gateway_service.py
-      - backend/tests/test_message_sender_abstraction.py
       - backend/tests/test_protocol_v2_gateway_service.py
       - services/media-control/internal/grpcgateway
+      - services/media-control/internal/controlapp
+      - services/media-control/internal/controltransport
       - scripts/smoke/grpc_runtime_smoke.py
     activeRuntime:
-      - "client implementation behind MessageSender abstraction"
-      - "CONTROL_GRPC_TARGET and CONTROL_GRPC_METHOD runtime configuration"
+      - "Media Control owns policy-checked control sessions and MQTT command publication"
       - "media-control internal SakerGatewayService.Exchange endpoint"
       - "explicit GatewayStreamRequest/GatewayStreamResponse mappers in Python and Go"
       - "compose internal Exchange smoke with multi-message bidi stream"

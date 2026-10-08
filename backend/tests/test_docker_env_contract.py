@@ -85,14 +85,9 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     )
     assert services["backend"]["environment"]["AUTH_REFRESH_COOKIE_SECURE"] == "${AUTH_REFRESH_COOKIE_SECURE:-false}"
     assert services["backend"]["environment"]["AUTH_REFRESH_COOKIE_SAMESITE"] == "${AUTH_REFRESH_COOKIE_SAMESITE:-lax}"
-    assert services["backend"]["environment"]["MQTT_HOST"] == "${MQTT_HOST:-mqtt}"
-    assert services["backend"]["environment"]["MQTT_USERNAME"] == "${MQTT_USERNAME:-}"
-    assert services["backend"]["environment"]["MQTT_PASSWORD"] == "${MQTT_PASSWORD:-}"
-    assert services["backend"]["environment"]["MQTT_TLS_ENABLED"] == "true"
     assert services["backend"]["environment"]["TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS"] == (
         "${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}"
     )
-    assert services["backend"]["environment"]["CONTROL_MESSAGE_SENDER"] == "${CONTROL_MESSAGE_SENDER:-mqtt}"
     assert services["backend"]["environment"]["MEDIAMTX_PUBLIC_WEBRTC_BASE_URL"].startswith(
         "${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:"
     )
@@ -129,7 +124,6 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
 def test_local_compose_uses_hardened_mqtt_by_default() -> None:
     compose = load_yaml(COMPOSE_FILE)
     mqtt = compose["services"]["mqtt"]
-    backend = compose["services"]["backend"]
     healthcheck_command = " ".join(mqtt["healthcheck"]["test"])
 
     assert mqtt["command"] == ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
@@ -155,7 +149,7 @@ def test_local_compose_uses_hardened_mqtt_by_default() -> None:
     assert "$$SYS/broker/version" in healthcheck_command
     assert "mqtt-health.crt" in healthcheck_command
     assert "mqtt-health.key" in healthcheck_command
-    assert backend["depends_on"]["mqtt"]["condition"] == "service_healthy"
+    assert compose["services"]["media-control"]["depends_on"]["mqtt"]["condition"] == "service_healthy"
 
 
 def test_no_auth_mqtt_is_only_available_as_explicit_local_smoke_profile() -> None:
@@ -166,7 +160,6 @@ def test_no_auth_mqtt_is_only_available_as_explicit_local_smoke_profile() -> Non
     assert "mosquitto-no-auth.conf" not in compose
     assert override["services"]["mqtt"]["profiles"] == ["local-mqtt-no-auth"]
     assert override["services"]["mqtt"]["command"] == ["mosquitto", "-c", "/mosquitto-no-auth.conf"]
-    assert override["services"]["backend"]["environment"]["MQTT_TLS_ENABLED"] == "false"
     assert override["services"]["media-control"]["environment"]["MQTT_GATEWAY_ALLOW_PLAINTEXT"] == "true"
     assert "local-mqtt-no-auth" in override_text
 

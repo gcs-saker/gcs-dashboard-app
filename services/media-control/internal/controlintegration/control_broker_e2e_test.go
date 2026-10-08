@@ -1,13 +1,16 @@
 package controlintegration_test
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controlroute"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controltransport"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/deviceadapter"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
 	pb "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
 	"google.golang.org/protobuf/proto"
 )
@@ -18,6 +21,15 @@ func TestControlCommandE2EThroughRealBroker(t *testing.T) {
 		t.Skip("TEST_CONTROL_MQTT_URL is not set")
 	}
 	now := time.Now()
+	sessions := domain.NewInMemoryPublishSessionStore()
+	_ = sessions.Save(context.Background(), domain.PublishSession{SessionID: "ps_session-01", DeviceUUID: "device-01", GroupID: "co-a",
+		Status: domain.PublishSessionActive, RenewalTokenExpiresAt: now.Add(time.Minute)})
+	route, err := controlroute.NewRouteResolver(sessions).Resolve(context.Background(), controlroute.RouteRequest{
+		DeviceID: "device-01", PublishSession: "ps_session-01", Now: now,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	actuator := &e2eActuator{}
 	adapter := deviceadapter.New(actuator)
 	adapter.BeginLease("control-01", now.Add(30*time.Second), now)
@@ -41,7 +53,7 @@ func TestControlCommandE2EThroughRealBroker(t *testing.T) {
 	mustToken(t, server.Publish("gcs/device/device-01/ps_session-01/command", 1, false, wire))
 	select {
 	case received := <-ackWire:
-		ack, err := controltransport.DecodeAck("gcs/device/device-01/ps_session-01/command_ack", received)
+		ack, err := controltransport.DecodeBoundAck(route, "control-01", "gcs/device/device-01/ps_session-01/command_ack", received)
 		if err != nil || ack.Status != pb.ControlAckStatus_CONTROL_ACK_STATUS_APPLIED || actuator.stops != 1 {
 			t.Fatalf("unexpected broker result ack=%v stops=%d err=%v", ack, actuator.stops, err)
 		}
