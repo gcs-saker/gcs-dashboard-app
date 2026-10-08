@@ -332,7 +332,7 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
         "${MEDIA_CONTROL_TURN_PRIMARY_URL:-turn:localhost:3478?transport=udp}"
     )
     assert services["media-control"]["environment"]["MEDIA_CONTROL_TURN_SECONDARY_URL"] == (
-        "${MEDIA_CONTROL_TURN_SECONDARY_URL:-}"
+        "${MEDIA_CONTROL_TURN_SECONDARY_URL:-turns:turn-primary:5349?transport=tcp}"
     )
     assert services["turn-secondary"]["profiles"] == ["same-host-turn-redundancy"]
     assert "turn-secondary" not in services["media-control"]["depends_on"]
