@@ -19,7 +19,7 @@ func TestControlCommandE2ESuccessAndAck(t *testing.T) {
 	store := domain.NewInMemoryPublishSessionStore()
 	_ = store.Save(context.Background(), activeSession(now))
 	route, err := controlroute.NewRouteResolver(store).Resolve(context.Background(), controlroute.RouteRequest{
-		DeviceID: "device-01", PublishSession: "session-01", Now: now,
+		DeviceID: "device-01", PublishSession: "ps_session-01", Now: now,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +34,7 @@ func TestControlCommandE2ESuccessAndAck(t *testing.T) {
 	if err := transport.Publish(context.Background(), route, stopCommand(now), now); err != nil {
 		t.Fatal(err)
 	}
-	ack, err := controltransport.DecodeAck("gcs/device/control-01/ack", loopback.ack)
+	ack, err := controltransport.DecodeAck("gcs/device/device-01/ps_session-01/command_ack", loopback.ack)
 	if err != nil || ack.Status != pb.ControlAckStatus_CONTROL_ACK_STATUS_APPLIED || actuator.stops != 1 {
 		t.Fatalf("unexpected result ack=%v stops=%d err=%v", ack, actuator.stops, err)
 	}
@@ -61,7 +61,7 @@ func TestControlCommandE2EFailSafeAndEmergencyStop(t *testing.T) {
 }
 
 func activeSession(now time.Time) domain.PublishSession {
-	return domain.PublishSession{SessionID: "session-01", DeviceUUID: "device-01", GroupID: "co-a",
+	return domain.PublishSession{SessionID: "ps_session-01", DeviceUUID: "device-01", GroupID: "co-a",
 		Status: domain.PublishSessionActive, RenewalTokenExpiresAt: now.Add(time.Minute)}
 }
 

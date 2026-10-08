@@ -18,7 +18,7 @@ func TestCommandTransportPublishesValidatedCommandWithQoSOne(t *testing.T) {
 	client := &publishStub{}
 	transport := NewCommandTransport(client, ledgerStub{true, nil}, sequenceStub{true, nil})
 	err := transport.Publish(context.Background(), internalRoute(), command(now), now)
-	if err != nil || client.topic != "gcs/device/session-01/command" || client.qos != 1 {
+	if err != nil || client.topic != "gcs/device/device-01/ps_session-01/command" || client.qos != 1 {
 		t.Fatalf("unexpected publish topic=%s qos=%d err=%v", client.topic, client.qos, err)
 	}
 }
@@ -39,13 +39,13 @@ func TestCommandTransportRejectsDuplicateSequenceAndExpiry(t *testing.T) {
 }
 
 func TestDecodeAckBindsTopicSessionAndRejectsMalformedPayload(t *testing.T) {
-	ack := &pb.ControlCommandAck{CommandId: "command-01", ControlSessionId: "session-01", DeviceId: "device-01", Sequence: 1, Status: pb.ControlAckStatus_CONTROL_ACK_STATUS_APPLIED}
+	ack := &pb.ControlCommandAck{CommandId: "command-01", ControlSessionId: "control-01", DeviceId: "device-01", Sequence: 1, Status: pb.ControlAckStatus_CONTROL_ACK_STATUS_APPLIED}
 	wire, _ := proto.Marshal(ack)
-	decoded, err := DecodeAck("gcs/device/session-01/ack", wire)
+	decoded, err := DecodeAck("gcs/device/device-01/ps_session-01/command_ack", wire)
 	if err != nil || decoded.CommandId != "command-01" {
 		t.Fatalf("unexpected ack: %+v err=%v", decoded, err)
 	}
-	if _, err := DecodeAck("gcs/device/session-02/ack", wire); !errors.Is(err, ErrAckInvalid) {
+	if _, err := DecodeAck("gcs/device/device-02/ps_session-01/command_ack", wire); !errors.Is(err, ErrAckInvalid) {
 		t.Fatalf("expected session mismatch rejection, got %v", err)
 	}
 }
@@ -53,10 +53,10 @@ func TestDecodeAckBindsTopicSessionAndRejectsMalformedPayload(t *testing.T) {
 func internalRoute() controlroute.InternalRoute {
 	now := time.Now()
 	store := domain.NewInMemoryPublishSessionStore()
-	_ = store.Save(context.Background(), domain.PublishSession{SessionID: "session-01", DeviceUUID: "device-01", GroupID: "co-a",
+	_ = store.Save(context.Background(), domain.PublishSession{SessionID: "ps_session-01", DeviceUUID: "device-01", GroupID: "co-a",
 		Status: domain.PublishSessionActive, RenewalTokenExpiresAt: now.Add(time.Minute)})
 	route, _ := controlroute.NewRouteResolver(store).Resolve(context.Background(), controlroute.RouteRequest{
-		DeviceID: "device-01", PublishSession: "session-01", Now: now,
+		DeviceID: "device-01", PublishSession: "ps_session-01", Now: now,
 	})
 	return route
 }

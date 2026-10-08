@@ -140,7 +140,7 @@ type testMessage struct {
 }
 
 func newTestMessage(sessionID string, payload string) *testMessage {
-	return &testMessage{topic: "gcs/device/" + sessionID + "/telemetry", payload: []byte(payload)}
+	return &testMessage{topic: "gcs/device/device-01/" + sessionID + "/telemetry", payload: []byte(payload)}
 }
 
 func (m *testMessage) Duplicate() bool   { return false }

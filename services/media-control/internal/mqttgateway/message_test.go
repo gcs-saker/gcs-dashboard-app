@@ -23,19 +23,22 @@ func TestMessageDoesNotRequireReceiverOrGroup(t *testing.T) {
 		}
 		return &pb.GatewayStreamResponse{RequestId: message.RequestId}, nil
 	}
-	if _, err := Handle(context.Background(), exchange, "gcs/device/ps_test/telemetry", wire); err != nil {
+	if _, err := Handle(context.Background(), exchange, "gcs/device/device-1/ps_test/telemetry", wire); err != nil {
 		t.Fatal(err)
 	}
 	if calls != 1 {
 		t.Fatal("message not forwarded")
 	}
-	for _, topic := range []string{"gcs/org/group/device/telemetry", "gcs/device/+/telemetry", "gcs/device/ps_test/command"} {
+	for _, topic := range []string{"gcs/org/group/device/telemetry", "gcs/device/+/+/telemetry", "gcs/device/device-1/ps_test/command"} {
 		if _, err := Handle(context.Background(), exchange, topic, wire); err == nil {
 			t.Fatalf("accepted topic %s", topic)
 		}
 	}
 	if calls != 1 {
 		t.Fatal("invalid topic reached gateway")
+	}
+	if _, err := Handle(context.Background(), exchange, "gcs/device/device-2/ps_test/telemetry", wire); err == nil {
+		t.Fatal("topic device identity mismatch was accepted")
 	}
 }
 
@@ -45,7 +48,7 @@ func TestMalformedAndOversizedMessagesNeverReachGateway(t *testing.T) {
 		return nil, nil
 	}
 	for _, payload := range [][]byte{nil, {0xff}, make([]byte, MaxPayloadBytes+1)} {
-		if _, err := Handle(context.Background(), exchange, "gcs/device/ps_test/telemetry", payload); err == nil {
+		if _, err := Handle(context.Background(), exchange, "gcs/device/device-1/ps_test/telemetry", payload); err == nil {
 			t.Fatal("accepted invalid payload")
 		}
 	}

@@ -98,7 +98,7 @@ func TestRealMQTTToSessionAuthenticatedGRPC(t *testing.T) {
 	defer client.Disconnect(100)
 	waitToken(t, client.Connect())
 	responses := make(chan *pb.GatewayStreamResponse, 8)
-	waitToken(t, client.Subscribe("gcs/device/ps_mqtttest/result", 1, func(_ mqtt.Client, m mqtt.Message) {
+	waitToken(t, client.Subscribe("gcs/device/drone-1/ps_mqtttest/result", 1, func(_ mqtt.Client, m mqtt.Message) {
 		response := &pb.GatewayStreamResponse{}
 		if err := proto.Unmarshal(m.Payload(), response); err == nil {
 			responses <- response
@@ -113,7 +113,7 @@ func TestRealMQTTToSessionAuthenticatedGRPC(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		waitToken(t, client.Publish("gcs/device/ps_mqtttest/telemetry", 1, false, wire))
+		waitToken(t, client.Publish("gcs/device/drone-1/ps_mqtttest/telemetry", 1, false, wire))
 		select {
 		case response := <-responses:
 			if response.Status != expected {

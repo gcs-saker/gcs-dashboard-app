@@ -3,32 +3,25 @@ package mqttgateway
 import (
 	"context"
 	"errors"
-	"regexp"
-	"strings"
-
 	pb "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/mqtttopic"
 	"google.golang.org/protobuf/proto"
 )
 
 const (
-	Subscription    = "gcs/device/+/telemetry"
+	Subscription    = mqtttopic.TelemetrySubscription
 	MaxPayloadBytes = 64 * 1024
 )
-
-var sessionSegment = regexp.MustCompile(`^ps_[A-Za-z0-9_-]{1,96}$`)
 
 type Exchange func(context.Context, string, string, *pb.GatewayStreamRequest) (*pb.GatewayStreamResponse, error)
 
 func SessionFromTopic(topic string) (string, error) {
-	parts := strings.Split(topic, "/")
-	if len(parts) != 4 || parts[0] != "gcs" || parts[1] != "device" || parts[3] != "telemetry" || !sessionSegment.MatchString(parts[2]) {
-		return "", errors.New("mqtt_topic_invalid")
-	}
-	return parts[2], nil
+	binding, err := telemetryTopic(topic)
+	return binding.PublishSession, err
 }
 
 func Handle(ctx context.Context, exchange Exchange, topic string, payload []byte) (*pb.GatewayStreamResponse, error) {
-	sessionID, err := SessionFromTopic(topic)
+	binding, err := telemetryTopic(topic)
 	if err != nil {
 		return nil, err
 	}
@@ -42,5 +35,16 @@ func Handle(ctx context.Context, exchange Exchange, topic string, payload []byte
 	if message.PublishToken == "" || message.Request == nil || message.Request.GetTelemetry() == nil {
 		return nil, errors.New("mqtt_telemetry_required")
 	}
-	return exchange(ctx, sessionID, message.PublishToken, message.Request)
+	if message.Request.AssetId != binding.DeviceUUID || message.Request.GetTelemetry().AssetId != binding.DeviceUUID {
+		return nil, errors.New("mqtt_device_identity_mismatch")
+	}
+	return exchange(ctx, binding.PublishSession, message.PublishToken, message.Request)
+}
+
+func telemetryTopic(raw string) (mqtttopic.Topic, error) {
+	binding, err := mqtttopic.Parse(raw)
+	if err != nil || binding.Channel != mqtttopic.Telemetry {
+		return mqtttopic.Topic{}, mqtttopic.ErrTopicInvalid
+	}
+	return binding, nil
 }

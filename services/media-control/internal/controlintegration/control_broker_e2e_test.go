@@ -26,22 +26,22 @@ func TestControlCommandE2EThroughRealBroker(t *testing.T) {
 	defer device.Disconnect(100)
 	defer server.Disconnect(100)
 	ackWire := make(chan []byte, 1)
-	mustToken(t, server.Subscribe("gcs/device/control-01/ack", 1, func(_ mqtt.Client, message mqtt.Message) {
+	mustToken(t, server.Subscribe("gcs/device/device-01/ps_session-01/command_ack", 1, func(_ mqtt.Client, message mqtt.Message) {
 		ackWire <- append([]byte(nil), message.Payload()...)
 	}))
-	mustToken(t, device.Subscribe("gcs/device/session-01/command", 1, func(client mqtt.Client, message mqtt.Message) {
+	mustToken(t, device.Subscribe("gcs/device/device-01/ps_session-01/command", 1, func(client mqtt.Client, message mqtt.Message) {
 		command := &pb.ControlCommandEnvelope{}
 		if proto.Unmarshal(message.Payload(), command) != nil {
 			return
 		}
 		wire, _ := proto.Marshal(adapter.Execute(command, now))
-		client.Publish("gcs/device/control-01/ack", 1, false, wire)
+		client.Publish("gcs/device/device-01/ps_session-01/command_ack", 1, false, wire)
 	}))
 	wire, _ := proto.Marshal(stopCommand(now))
-	mustToken(t, server.Publish("gcs/device/session-01/command", 1, false, wire))
+	mustToken(t, server.Publish("gcs/device/device-01/ps_session-01/command", 1, false, wire))
 	select {
 	case received := <-ackWire:
-		ack, err := controltransport.DecodeAck("gcs/device/control-01/ack", received)
+		ack, err := controltransport.DecodeAck("gcs/device/device-01/ps_session-01/command_ack", received)
 		if err != nil || ack.Status != pb.ControlAckStatus_CONTROL_ACK_STATUS_APPLIED || actuator.stops != 1 {
 			t.Fatalf("unexpected broker result ack=%v stops=%d err=%v", ack, actuator.stops, err)
 		}
