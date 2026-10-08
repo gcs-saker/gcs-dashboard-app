@@ -48,16 +48,19 @@ class MediaMTXPath:
 
 
 class MediaMTXClient:
-    def __init__(self, base_url: str, timeout_seconds: float = 1.5) -> None:
+    def __init__(self, base_url: str, timeout_seconds: float = 1.5, username: str = "", password: str = "") -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
+        self.username = username
+        self.password = password
 
     @classmethod
     def from_env(cls) -> "MediaMTXClient | None":
-        api_base_url = MediaServerSettings.from_env().api_base_url
+        settings = MediaServerSettings.from_env()
+        api_base_url = settings.api_base_url
         if api_base_url is None:
             return None
-        return cls(api_base_url)
+        return cls(api_base_url, username=settings.api_username or "", password=settings.api_password or "")
 
     def list_paths(self) -> list[MediaMTXPath]:
         payload = self._get_json(
@@ -78,7 +81,8 @@ class MediaMTXClient:
 
     def _get_json(self, path: str, query: dict[str, str] | None = None) -> dict[str, object]:
         try:
-            with httpx.Client(base_url=self.base_url, timeout=self.timeout_seconds) as client:
+            auth = (self.username, self.password) if self.username and self.password else None
+            with httpx.Client(base_url=self.base_url, timeout=self.timeout_seconds, auth=auth) as client:
                 response = client.get(
                     path,
                     params=query,

@@ -10,6 +10,25 @@ import (
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/sessiontoken"
 )
 
+func TestMediaMTXAPIAuthRequiresExactInternalIdentity(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{}).WithMediaMTXAPIIdentity("media-control", "secret")
+	for _, test := range []struct {
+		body string
+		want int
+	}{
+		{`{"action":"api","user":"media-control","password":"secret"}`, http.StatusNoContent},
+		{`{"action":"api","user":"media-control","password":"wrong"}`, http.StatusForbidden},
+		{`{"action":"api"}`, http.StatusForbidden},
+	} {
+		request := httptest.NewRequest(http.MethodPost, routeMediaMTXAuth, strings.NewReader(test.body))
+		recorder := httptest.NewRecorder()
+		server.Routes().ServeHTTP(recorder, request)
+		if recorder.Code != test.want {
+			t.Fatalf("body=%s status=%d want=%d", test.body, recorder.Code, test.want)
+		}
+	}
+}
+
 func TestMediaMTXPublishAuthRejectsMissingPublisherToken(t *testing.T) {
 	server := newTestServer(fakeStreams{}, fakeIce{})
 	request := httptest.NewRequest(

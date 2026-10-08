@@ -10,6 +10,8 @@ class MediaServerSettings(BackendBaseSettings):
     public_webrtc_base_url: str | None = Field(None, validation_alias="MEDIAMTX_PUBLIC_WEBRTC_BASE_URL")
     public_hls_base_url: str | None = Field(None, validation_alias="MEDIAMTX_PUBLIC_HLS_BASE_URL")
     api_base_url: str | None = Field(None, validation_alias="MEDIAMTX_API_BASE_URL")
+    api_username: str | None = Field(None, validation_alias="MEDIAMTX_API_USER")
+    api_password: str | None = Field(None, validation_alias="MEDIAMTX_API_PASSWORD")
 
     @field_validator("*", mode="before")
     @classmethod

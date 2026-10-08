@@ -26,6 +26,7 @@ const (
 
 	mediaMTXActionPlayback = "playback"
 	mediaMTXActionPublish  = "publish"
+	mediaMTXActionAPI      = "api"
 	mediaMTXActionRead     = "read"
 	playbackTokenQueryKey  = "playbackToken"
 	publisherTokenQueryKey = "publisherToken"

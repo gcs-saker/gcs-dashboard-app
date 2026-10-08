@@ -76,6 +76,8 @@ type publishEndpoints struct {
 	publishToken     string
 	publishSessions  domain.PublishSessionStore
 	sessionValidator domain.SessionBindingValidator
+	mediaMTXAPIUser  string
+	mediaMTXAPIPass  string
 }
 
 type operationalEndpoints struct {
@@ -86,6 +88,11 @@ type operationalEndpoints struct {
 }
 
 func (s Server) WithControlService(service ControlService) Server { s.control = service; return s }
+
+func (s Server) WithMediaMTXAPIIdentity(username, password string) Server {
+	s.mediaMTXAPIUser, s.mediaMTXAPIPass = username, password
+	return s
+}
 
 func (s Server) WithPublishSessionReadiness(readiness PublishSessionReadiness) Server {
 	s.publishSessionReadiness = readiness

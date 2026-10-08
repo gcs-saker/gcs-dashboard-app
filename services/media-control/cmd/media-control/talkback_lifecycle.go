@@ -18,7 +18,7 @@ func startTalkbackLifecycleObserver(ctx context.Context, config runtimeConfig, m
 		return err
 	}
 	observer := mediamtx.NewTalkbackLifecycleObserver(
-		mediamtx.NewClient(config.mediaMTXBaseURL, nil), config.groupResolver,
+		newMediaMTXClient(config, nil), config.groupResolver,
 		sink, talkbackLifecyclePollInterval,
 	).WithMetrics(metrics)
 	go observer.Run(ctx)
