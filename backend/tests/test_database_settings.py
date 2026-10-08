@@ -34,3 +34,16 @@ def test_database_settings_rejects_mysql_unless_legacy_flag_is_explicit(monkeypa
     settings = DatabaseSettings.from_env()
 
     assert settings.dialect == "mysql+pymysql"
+
+
+def test_postgres_tls_requirement_rejects_plaintext_and_accepts_verify_full(monkeypatch) -> None:
+    monkeypatch.setenv("DATABASE_TLS_REQUIRED", "true")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://gcs:test@postgres-geo:5432/gcs")
+    with pytest.raises(SettingsConfigurationError, match="verify-full"):
+        DatabaseSettings.from_env()
+
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "postgresql://gcs:test@postgres-geo:5432/gcs?sslmode=verify-full&sslrootcert=/pki/ca.crt",
+    )
+    assert DatabaseSettings.from_env().tls_required is True

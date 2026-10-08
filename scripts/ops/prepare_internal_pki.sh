@@ -67,6 +67,8 @@ issue_identity() {
 issue_identity auth-policy auth-policy serverAuth auth-policy
 issue_identity media-control media-control serverClientAuth gcs_media_control
 issue_identity mqtt mqtt serverAuth mqtt
+issue_identity postgres postgres-geo serverAuth postgres-geo
+issue_identity redis redis serverAuth redis
 issue_identity mqtt-health mqtt-health clientAuth mqtt-health
 issue_identity backend backend clientAuth gcs_backend_pub
 if [[ "${INCLUDE_MQTT_SMOKE_IDENTITY:-0}" == "1" ]]; then

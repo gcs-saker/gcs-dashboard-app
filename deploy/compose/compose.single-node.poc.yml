@@ -35,11 +35,26 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-gcs_geo}
       POSTGRES_USER: ${POSTGRES_USER:-gcs_geo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    entrypoint: ["/bin/bash", "-ec"]
+    command:
+      - |
+        install -d -o postgres -g postgres -m 700 /var/lib/postgresql/tls
+        install -o postgres -g postgres -m 600 /run/secrets/gcs-pki/postgres.key /var/lib/postgresql/tls/server.key
+        install -o postgres -g postgres -m 644 /run/secrets/gcs-pki/postgres.crt /var/lib/postgresql/tls/server.crt
+        exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/tls/server.crt -c ssl_key_file=/var/lib/postgresql/tls/server.key -c hba_file=/etc/postgresql/pg_hba.tls.conf
     volumes:
       - postgres-geo-data:/var/lib/postgresql/data
       - type: bind
         source: ../postgres/init
         target: /docker-entrypoint-initdb.d
+        read_only: true
+      - type: bind
+        source: ../postgres/pg_hba.tls.conf
+        target: /etc/postgresql/pg_hba.tls.conf
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
+        target: /run/secrets/gcs-pki
         read_only: true
     healthcheck:
       <<: *health_defaults
@@ -70,11 +85,27 @@ services:
       - ${REDIS_AOF_REWRITE_MIN_SIZE:-64mb}
       - --requirepass
       - ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+      - --port
+      - "0"
+      - --tls-port
+      - "6379"
+      - --tls-cert-file
+      - /run/secrets/gcs-pki/redis.crt
+      - --tls-key-file
+      - /run/secrets/gcs-pki/redis.key
+      - --tls-ca-cert-file
+      - /run/secrets/gcs-pki/ca.crt
+      - --tls-auth-clients
+      - "no"
     volumes:
       - redis-data:/data
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
+        target: /run/secrets/gcs-pki
+        read_only: true
     healthcheck:
       <<: *health_defaults
-      test: ["CMD-SHELL", "valkey-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      test: ["CMD-SHELL", "valkey-cli --tls --cacert /run/secrets/gcs-pki/ca.crt -h redis -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
     restart: unless-stopped
     networks:
       - control-net
@@ -125,6 +156,7 @@ services:
     env_file: *service_env_files
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+      DATABASE_TLS_REQUIRED: "true"
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?Set AUTH_JWT_SECRET}
       AUTH_ACCESS_TOKEN_EXPIRE_MINUTES: ${AUTH_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       AUTH_REFRESH_TOKEN_EXPIRE_MINUTES: ${AUTH_REFRESH_TOKEN_EXPIRE_MINUTES:-120}
@@ -224,7 +256,7 @@ services:
       GCS_INTERNAL_GRPC_CERT_FILE: /run/secrets/gcs-pki/auth-policy.crt
       GCS_INTERNAL_GRPC_KEY_FILE: /run/secrets/gcs-pki/auth-policy.key
       SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
-      SPRING_DATASOURCE_URL: ${AUTH_POLICY_DATASOURCE_URL:-jdbc:postgresql://postgres-geo:5432/${POSTGRES_DB:-gcs_geo}}
+      SPRING_DATASOURCE_URL: ${AUTH_POLICY_DATASOURCE_URL:-jdbc:postgresql://postgres-geo:5432/${POSTGRES_DB:-gcs_geo}?sslmode=verify-full&sslrootcert=/run/secrets/gcs-pki/ca.crt}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-gcs_geo}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
       TIME_SYNC_MODE: ${TIME_SYNC_MODE:-public}
@@ -234,6 +266,9 @@ services:
       SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST:-redis}
       SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT:-6379}
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+      SPRING_DATA_REDIS_SSL_ENABLED: "true"
+      SPRING_DATA_REDIS_SSL_BUNDLE: gcs-redis
+      SPRING_SSL_BUNDLE_PEM_GCS_REDIS_TRUSTSTORE_CERTIFICATE: /run/secrets/gcs-pki/ca.crt
     healthcheck:
       <<: *health_defaults
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz >/dev/null"]
@@ -310,6 +345,9 @@ services:
       MEDIA_CONTROL_OTEL_SERVICE_NAME: ${MEDIA_CONTROL_OTEL_SERVICE_NAME:-gcs-saker-media-control}
       MEDIA_CONTROL_REDIS_ADDR: ${MEDIA_CONTROL_REDIS_ADDR:-redis:6379}
       MEDIA_CONTROL_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+      MEDIA_CONTROL_REDIS_CA_FILE: /run/secrets/gcs-pki/ca.crt
+      MEDIA_CONTROL_REDIS_SERVER_NAME: redis
+      MEDIA_CONTROL_REDIS_ALLOW_PLAINTEXT: "false"
       MQTT_GATEWAY_URL: ${MQTT_GATEWAY_URL:-ssl://mqtt:8883}
       MQTT_GATEWAY_CA_FILE: /run/secrets/gcs-pki/ca.crt
       MQTT_GATEWAY_CERT_FILE: /run/secrets/gcs-pki/media-control.crt

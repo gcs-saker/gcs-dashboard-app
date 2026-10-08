@@ -96,16 +96,17 @@ func newGatewayRuntime(config runtimeConfig, metrics *httpapi.Metrics, sessions 
 		return gatewayRuntime{}, fmt.Errorf("AUTH_POLICY_GRPC_TARGET is required")
 	}
 	authenticator := gatewayAuthAdapter{client: client, rpc: rpc, allowHTTPFallback: config.authPolicyHTTPFallback}
-	idempotency := redis.NewClient(&redis.Options{
-		Addr: config.redisAddress, Password: config.redisPassword, DialTimeout: config.redisTimeout,
-		ReadTimeout: config.redisTimeout, WriteTimeout: config.redisTimeout,
-	})
+	redisConfig, err := redisOptions(config)
+	if err != nil {
+		return gatewayRuntime{}, errors.Join(err, closeDeviceRPC(rpc))
+	}
+	idempotency := redis.NewClient(redisConfig)
 	server := grpcgateway.NewDeviceServer(authenticator, config.grpcMaxPayloadBytes, grpcgateway.NewTelemetryHandler(
 		gatewayContextTelemetryStore{client: client, idempotency: idempotency, rpc: rpc},
 	)).WithMetrics(metrics).WithSessionAuthenticator(grpcgateway.PublishSessionAuthenticator{
 		Store: sessions, Validator: rpc, Secret: config.publishToken, Now: time.Now,
 	})
-	server, err := configureGatewayTransport(server)
+	server, err = configureGatewayTransport(server)
 	if err != nil {
 		return gatewayRuntime{}, errors.Join(err, idempotency.Close(), closeDeviceRPC(rpc))
 	}

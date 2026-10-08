@@ -42,7 +42,11 @@ func newPublishSessionStore(config runtimeConfig) (*sessionstore.RedisStore, err
 	if config.redisAddress == "" {
 		return nil, fmt.Errorf("REDIS_ADDRESS is required for durable publish sessions")
 	}
-	store := sessionstore.NewRedisStore(config.redisAddress, config.redisPassword, config.redisTimeout)
+	options, err := redisOptions(config)
+	if err != nil {
+		return nil, err
+	}
+	store := sessionstore.NewRedisStoreWithOptions(options)
 	ctx, cancel := context.WithTimeout(context.Background(), config.redisTimeout)
 	defer cancel()
 	if err := store.Ping(ctx); err != nil {
@@ -92,9 +96,14 @@ func newIceServerProvider(config runtimeConfig, metrics *httpapi.Metrics) httpap
 }
 
 func newRedisStringCache(config runtimeConfig) streamcache.StringCache {
-	return streamcache.NewRedisStringCache(
+	options, err := redisOptions(config)
+	if err != nil {
+		return streamcache.NewRedisStringCache("", "", config.redisTimeout)
+	}
+	return streamcache.NewRedisStringCacheTLS(
 		config.redisAddress,
 		config.redisPassword,
 		config.redisTimeout,
+		options.TLSConfig,
 	)
 }
