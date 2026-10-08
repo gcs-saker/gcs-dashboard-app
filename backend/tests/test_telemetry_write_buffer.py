@@ -41,6 +41,8 @@ class FakeRedisListClient:
     def __init__(self) -> None:
         self.values: dict[str, str] = {}
         self.lists: dict[str, list[str]] = {}
+        self.lpop_calls: list[tuple[str, int]] = []
+        self.lpush_calls: list[tuple[str, tuple[str, ...]]] = []
 
     def set(self, name: str, value: str) -> None:
         self.values[name] = value
@@ -51,14 +53,18 @@ class FakeRedisListClient:
     def rpush(self, name: str, value: str) -> None:
         self.lists.setdefault(name, []).append(value)
 
-    def lpop(self, name: str) -> str | None:
+    def lpop(self, name: str, count: int) -> list[str]:
+        self.lpop_calls.append((name, count))
         values = self.lists.setdefault(name, [])
-        if not values:
-            return None
-        return values.pop(0)
+        popped = values[:count]
+        del values[:count]
+        return popped
 
-    def lpush(self, name: str, value: str) -> None:
-        self.lists.setdefault(name, []).insert(0, value)
+    def lpush(self, name: str, *values: str) -> None:
+        self.lpush_calls.append((name, values))
+        target = self.lists.setdefault(name, [])
+        for value in values:
+            target.insert(0, value)
 
     def llen(self, name: str) -> int:
         return len(self.lists.get(name, []))
@@ -184,6 +190,7 @@ def test_redis_buffer_keeps_latest_and_history_contract_without_key_scan() -> No
     assert [record.telemetry.latitude for record in drained] == [35.87, 35.88]
     assert stats.latest_count == 0
     assert stats.pending_history_count == 0
+    assert client.lpop_calls == [("test:telemetry:history", 10)]
 
 
 def test_redis_buffer_config_reads_key_prefix_from_env(monkeypatch) -> None:
@@ -213,6 +220,79 @@ def test_redis_buffer_restores_drained_records_in_original_order() -> None:
         "raw.mobile.front",
         "raw.mobile.rear",
     ]
+    assert len(client.lpush_calls) == 1
+    assert len(client.lpush_calls[0][1]) == 2
+
+
+def test_redis_restore_precedes_records_appended_during_failed_flush() -> None:
+    client = FakeRedisListClient()
+    buffer = RedisTelemetryWriteBuffer(client=client)
+    first = TelemetryBufferRecord.create(telemetry("raw.mobile.front", 35.87))
+    second = TelemetryBufferRecord.create(telemetry("raw.mobile.rear", 35.88))
+    later = TelemetryBufferRecord.create(telemetry("raw.mobile.side", 35.89))
+    buffer.append_history(first)
+    buffer.append_history(second)
+
+    drained = buffer.drain_history(2)
+    buffer.append_history(later)
+    buffer.restore_history_front(drained)
+
+    restored = buffer.drain_history(10)
+    assert [record.telemetry.uuid for record in restored] == [
+        "raw.mobile.front",
+        "raw.mobile.rear",
+        "raw.mobile.side",
+    ]
+
+
+@pytest.mark.parametrize(
+    "max_items, expected", [(0, []), (-1, []), (1, ["raw.mobile.front"]), (10, ["raw.mobile.front", "raw.mobile.rear"])]
+)
+def test_redis_bulk_pop_honors_batch_boundaries(max_items: int, expected: list[str]) -> None:
+    client = FakeRedisListClient()
+    buffer = RedisTelemetryWriteBuffer(client=client)
+    for uuid in ["raw.mobile.front", "raw.mobile.rear"]:
+        buffer.append_history(TelemetryBufferRecord.create(telemetry(uuid, 35.87)))
+
+    drained = buffer.drain_history(max_items)
+
+    assert [record.telemetry.uuid for record in drained] == expected
+    assert len(client.lpop_calls) == (0 if max_items <= 0 else 1)
+
+
+def test_redis_bulk_pop_returns_empty_batch_without_extra_round_trips() -> None:
+    client = FakeRedisListClient()
+    buffer = RedisTelemetryWriteBuffer(client=client)
+
+    assert buffer.drain_history(100) == []
+    assert client.lpop_calls == [("gcs-saker:telemetry-buffer:history", 100)]
+
+
+def test_redis_restore_skips_command_for_empty_batch() -> None:
+    client = FakeRedisListClient()
+    buffer = RedisTelemetryWriteBuffer(client=client)
+
+    buffer.restore_history_front([])
+
+    assert client.lpush_calls == []
+
+
+class FailingBulkRedisClient(FakeRedisListClient):
+    def lpop(self, name: str, count: int) -> list[str]:
+        raise ConnectionError("redis bulk pop failed")
+
+    def lpush(self, name: str, *values: str) -> None:
+        raise ConnectionError("redis bulk restore failed")
+
+
+def test_redis_bulk_failures_are_not_converted_to_success() -> None:
+    buffer = RedisTelemetryWriteBuffer(client=FailingBulkRedisClient())
+    record = TelemetryBufferRecord.create(telemetry("raw.mobile.front", 35.87))
+
+    with pytest.raises(ConnectionError, match="bulk pop failed"):
+        buffer.drain_history(10)
+    with pytest.raises(ConnectionError, match="bulk restore failed"):
+        buffer.restore_history_front([record])
 
 
 def test_telemetry_bulk_batch_rejects_records_without_stream_uuid() -> None:

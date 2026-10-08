@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Protocol
@@ -14,6 +14,7 @@ from model.telemetry_model import TelemetryCreate
 from modules.telemetry_buffer.buffer import TelemetryBufferRecord, TelemetryBufferStats
 
 TELEMETRY_REDIS_KEY_PREFIX_ENV = "TELEMETRY_REDIS_KEY_PREFIX"
+RedisValue = str | bytes
 
 
 class TelemetryRedisKeys:
@@ -26,13 +27,13 @@ class TelemetryRedisKeys:
 class RedisListClient(Protocol):
     def set(self, name: str, value: str) -> Any: ...
 
-    def get(self, name: str) -> str | bytes | None: ...
+    def get(self, name: str) -> RedisValue | None: ...
 
     def rpush(self, name: str, value: str) -> Any: ...
 
-    def lpop(self, name: str) -> str | bytes | None: ...
+    def lpop(self, name: str, count: int) -> Sequence[RedisValue] | None: ...
 
-    def lpush(self, name: str, value: str) -> Any: ...
+    def lpush(self, name: str, *values: str) -> Any: ...
 
     def llen(self, name: str) -> int: ...
 
@@ -90,19 +91,13 @@ class RedisTelemetryWriteBuffer:
     def drain_history(self, max_items: int) -> list[TelemetryBufferRecord]:
         if max_items <= 0:
             return []
-        records: list[TelemetryBufferRecord] = []
-        history_key = self._config.history_queue_key()
-        while len(records) < max_items:
-            record = deserialize_record(self._client.lpop(history_key))
-            if record is None:
-                break
-            records.append(record)
-        return records
+        values = self._client.lpop(self._config.history_queue_key(), max_items)
+        return [deserialize_required_record(value) for value in popped_values(values)]
 
     def restore_history_front(self, records: Iterable[TelemetryBufferRecord]) -> None:
-        history_key = self._config.history_queue_key()
-        for record in reversed(list(records)):
-            self._client.lpush(history_key, serialize_record(record))
+        serialized = [serialize_record(record) for record in reversed(list(records))]
+        if serialized:
+            self._client.lpush(self._config.history_queue_key(), *serialized)
 
     def stats(self) -> TelemetryBufferStats:
         return TelemetryBufferStats(
@@ -132,3 +127,16 @@ def deserialize_record(value: str | bytes | None) -> TelemetryBufferRecord | Non
         received_at=datetime.fromisoformat(str(payload["received_at"])),
         telemetry=TelemetryCreate.model_validate(payload["telemetry"]),
     )
+
+
+def popped_values(values: Sequence[RedisValue] | None) -> list[RedisValue]:
+    if values is None:
+        return []
+    return list(values)
+
+
+def deserialize_required_record(value: RedisValue) -> TelemetryBufferRecord:
+    record = deserialize_record(value)
+    if record is None:
+        raise ValueError("popped telemetry record cannot be empty")
+    return record
