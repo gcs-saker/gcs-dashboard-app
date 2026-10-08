@@ -14,39 +14,23 @@ def load_report(path: Path) -> dict[str, Any]:
     if payload.get("schemaVersion") != "gcs-saker.telemetry-load.v1":
         raise ValueError("unsupported telemetry load evidence schema")
     results = payload.get("results")
-    if (
-        not isinstance(results, list)
-        or [item.get("devices") for item in results] != EXPECTED_DEVICES
-    ):
-        raise ValueError(
-            "telemetry load evidence must contain ordered 10/50/100 device results"
-        )
+    if not isinstance(results, list) or [item.get("devices") for item in results] != EXPECTED_DEVICES:
+        raise ValueError("telemetry load evidence must contain ordered 10/50/100 device results")
     return payload
 
 
 def validate_report(payload: dict[str, Any]) -> None:
     thresholds = payload["thresholds"]
     for result in payload["results"]:
-        if any(
-            result[field] != 0
-            for field in ("failed", "backpressure", "lost", "orderErrors")
-        ):
-            raise ValueError(
-                f"telemetry load integrity failed for {result['devices']} devices"
-            )
+        if any(result[field] != 0 for field in ("failed", "backpressure", "lost", "orderErrors")):
+            raise ValueError(f"telemetry load integrity failed for {result['devices']} devices")
         if result["p95Millis"] > thresholds["maxP95Millis"]:
-            raise ValueError(
-                f"telemetry p95 threshold failed for {result['devices']} devices"
-            )
+            raise ValueError(f"telemetry p95 threshold failed for {result['devices']} devices")
         if result["p99Millis"] > thresholds["maxP99Millis"]:
-            raise ValueError(
-                f"telemetry p99 threshold failed for {result['devices']} devices"
-            )
+            raise ValueError(f"telemetry p99 threshold failed for {result['devices']} devices")
         minimum = result["devices"] * 10 * thresholds["minimumThroughputRatio"]
         if result["throughputPerSecond"] < minimum:
-            raise ValueError(
-                f"telemetry throughput threshold failed for {result['devices']} devices"
-            )
+            raise ValueError(f"telemetry throughput threshold failed for {result['devices']} devices")
 
 
 def render_markdown(payload: dict[str, Any]) -> str:
@@ -55,10 +39,7 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for result in payload["results"]:
-        integrity = "/".join(
-            str(result[field])
-            for field in ("failed", "backpressure", "lost", "orderErrors")
-        )
+        integrity = "/".join(str(result[field]) for field in ("failed", "backpressure", "lost", "orderErrors"))
         rows.append(
             f"| {result['devices']} | {result['sent']}/{result['processed']} | "
             f"{result['p50Millis']:.3f} | {result['p95Millis']:.3f} | {result['p99Millis']:.3f} | "
