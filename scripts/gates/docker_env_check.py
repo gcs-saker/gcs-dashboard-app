@@ -20,7 +20,6 @@ DASHBOARD_ENV_EXAMPLES = (
 BACKEND_ENV_EXAMPLE = BACKEND_DIR / ".env.example"
 ENV_DOC = REPO_ROOT / "docs" / "operations" / "GCS-Saker_Docker_env_주입_가이드_v0.1.md"
 DB_MODULE = BACKEND_DIR / "core" / "db.py"
-MQTT_MODULE = BACKEND_DIR / "mqtt" / "client.py"
 GITIGNORE = REPO_ROOT / ".gitignore"
 
 REQUIRED_DASHBOARD_KEYS = {
@@ -40,8 +39,8 @@ REQUIRED_DASHBOARD_KEYS = {
     "DASHBOARD_HTTP_PORT",
     "PUBLIC_HTTPS_PORT",
     "NGINX_CERTS_DIR",
-    "MQTT_HOST",
-    "MQTT_PORT",
+    "MQTT_HOST_PORT",
+    "MQTT_GATEWAY_URL",
     "VITE_API_BASE_URL",
     "VITE_AUTH_API_BASE_URL",
     "VITE_STREAM_API_BASE_URL",
@@ -171,8 +170,6 @@ def require_env_examples() -> None:
         "AUTH_REFRESH_COOKIE_SECURE",
         "AUTH_REFRESH_COOKIE_SAMESITE",
         "BACKEND_CORS_ALLOW_ORIGINS",
-        "MQTT_HOST",
-        "MQTT_PORT",
         "MEDIAMTX_PUBLIC_WEBRTC_BASE_URL",
         "MEDIAMTX_PUBLIC_HLS_BASE_URL",
     ):
@@ -184,7 +181,7 @@ def require_env_examples() -> None:
 
 
 def require_no_hardcoded_runtime_secrets() -> None:
-    for path in (DB_MODULE, MQTT_MODULE, COMPOSE_FILE):
+    for path in (DB_MODULE, COMPOSE_FILE):
         content = path.read_text(encoding="utf-8")
         for pattern in SECRET_PATTERNS:
             require(

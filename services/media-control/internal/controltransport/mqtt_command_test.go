@@ -50,6 +50,23 @@ func TestDecodeAckBindsTopicSessionAndRejectsMalformedPayload(t *testing.T) {
 	}
 }
 
+func TestDecodeBoundAckRejectsDifferentPublishSession(t *testing.T) {
+	ack := &pb.ControlCommandAck{CommandId: "command-01", ControlSessionId: "control-01", DeviceId: "device-01", Sequence: 1}
+	wire, err := proto.Marshal(ack)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeBoundAck(internalRoute(), "control-01", "gcs/device/device-01/ps_other-session/command_ack", wire); !errors.Is(err, ErrAckInvalid) {
+		t.Fatalf("cross-session ACK error=%v", err)
+	}
+	if _, err := DecodeBoundAck(internalRoute(), "control-other", "gcs/device/device-01/ps_session-01/command_ack", wire); !errors.Is(err, ErrAckInvalid) {
+		t.Fatalf("cross-control-session ACK error=%v", err)
+	}
+	if _, err := DecodeBoundAck(internalRoute(), "control-01", "gcs/device/device-01/ps_session-01/command_ack", wire); err != nil {
+		t.Fatalf("bound ACK rejected: %v", err)
+	}
+}
+
 func internalRoute() controlroute.InternalRoute {
 	now := time.Now()
 	store := domain.NewInMemoryPublishSessionStore()

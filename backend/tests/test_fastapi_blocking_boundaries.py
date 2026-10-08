@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 import api.telemetry as telemetry_api
-from api.control import control_robot
 from api.health import readyz
 from api.stream import get_stream, get_stream_playback, get_stream_status, list_streams
 from api.unmaned_assets import get_asset
@@ -19,7 +18,6 @@ from modules.telemetry_ingest import TelemetryIngestCommand
 BLOCKING_ENDPOINTS = (
     telemetry_api.receive_telemetry,
     get_asset,
-    control_robot,
     readyz,
     list_streams,
     get_stream_playback,

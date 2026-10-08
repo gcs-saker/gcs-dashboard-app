@@ -20,6 +20,8 @@ func TestAPIDeviceStreamingContractDocumentsMediaControlRoutes(t *testing.T) {
 		"/media-control" + routeDashboardStreams + "/{streamId}/" + routeSuffixPlayback,
 		"/media-control" + routeDashboardStreams + "/{streamId}/" + routeSuffixPublish,
 		"/media-control" + routeDashboardIceServers,
+		"/media-control" + routeControlSessions,
+		"/media-control" + routeControlSessionPrefix + "{controlSessionId}/commands",
 		"/webrtc/{streamPath}/whip",
 		"/webrtc/{streamPath}/whep",
 		"/hls/{streamPath}/index.m3u8",

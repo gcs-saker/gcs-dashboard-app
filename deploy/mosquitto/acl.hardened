@@ -9,8 +9,6 @@
 
 user gcs_backend_pub
 topic read $SYS/#
-# Transitional control publisher removed by #848.
-topic write gcs/+/+/+/command
 topic write gcs/ops/+/event
 
 user gcs_media_control
@@ -29,7 +27,3 @@ pattern write gcs/device/%u/+/telemetry
 pattern read gcs/device/%u/+/result
 pattern read gcs/device/%u/+/command
 pattern write gcs/device/%u/+/command_ack
-
-# Transitional control namespace. Removed by #848.
-pattern read gcs/+/+/%u/command
-pattern write gcs/+/+/%u/command_ack

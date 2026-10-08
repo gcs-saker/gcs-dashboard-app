@@ -1,4 +1,8 @@
-# GCS-Saker M8 MessageSender Abstraction
+# GCS-Saker M8 MessageSender Abstraction (retired)
+
+> #848에서 이 Python transport 구조를 제거했다. 활성 제어 경로는 Media Control REST → Auth Policy
+> → control lease/sequence/idempotency 검증 → server-owned canonical MQTT topic이다. 아래 내용은 이전
+> 설계 기록이며 운영 구성을 설명하지 않는다.
 
 ## 목적
 
@@ -26,12 +30,12 @@ flowchart LR
 
 ## 적용 원칙
 
-- controller는 `mqtt.client`를 import하지 않는다.
+- Python controller와 runtime에는 MQTT client가 없다.
 - controller는 `ControlMessagePublisher`만 의존한다.
 - payload 생성은 command type과 payload format에 따라 publisher가 담당한다.
 - transport 전송은 `MessageSender.send()`만 호출한다.
-- default sender는 `CONTROL_MESSAGE_SENDER=mqtt`다.
-- `CONTROL_MESSAGE_SENDER=grpc`는 후속 runtime 구현 전까지 명확한 unavailable 상태로 격리한다.
+- 활성 sender는 Media Control의 `ControlCommandPublisher`다.
+- transport 선택권은 public request나 Python 환경변수로 노출하지 않는다.
 
 ## 왜 이렇게 하나
 

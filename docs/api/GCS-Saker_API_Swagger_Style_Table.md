@@ -132,7 +132,16 @@ media frame은 WebRTC/HLS media plane으로만 보낸다. JSON, MQTT, gRPC, Grap
 | GET | `/stream/status` | none | none | none | none | `stream`, `service`, `status`, `deprecated`, `replacement` | legacy smoke only. replacement는 `/media-control/api/v1/streams` |
 | GET | `/api/v1/map/config` | bearer | `Authorization` | none | none | `provider`, `styleUrl`, `attribution`, `requiresApiKey` | auth-policy read model로 이전 예정 |
 | `/auth/*` | legacy | varies | varies | varies | varies | varies | 신규 기본 경로는 `/auth-policy/auth/*` |
-| `/control/*` | disabled/fallback | policy 필요 | varies | varies | varies | varies | MQTT/gRPC gateway policy 이후 재개 |
+| `/control/*` | retired | none | none | none | none | `404` | use `/media-control/api/v1/control/sessions` |
+
+## Operator Control
+
+| Method | Path | Auth | Headers | Params | Body | Response | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| POST | `/media-control/api/v1/control/sessions` | operator bearer | `Authorization`, `Content-Type`, `X-GCS-CSRF` | none | `deviceId`, `publishSessionId` | `controlSessionId`, `expiresAt`, `heartbeatIntervalMillis` | policy and exclusive lease required |
+| POST | `/media-control/api/v1/control/sessions/{controlSessionId}/commands` | operator bearer | `Authorization`, `Content-Type`, `X-GCS-CSRF` | control session | `command`, `sequence`, `idempotencyId`, optional motion axes | `commandId`, `status` | exact sequence and bounded expiry |
+
+Device/group routing is not accepted from the command request. Media Control resolves the canonical MQTT topic from the authoritative publish session.
 
 ## Device / Gateway Non-HTTP Boundary
 

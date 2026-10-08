@@ -83,8 +83,8 @@
 | --- | --- | --- | --- | --- |
 | Device gateway telemetry | Media Control MQTT gateway | canonical MQTT Protobuf consumer | P0 완료 | malformed payload, unauthorized metadata, duplicate idempotency test |
 | Stream session event | Go/Python stream registry event | gRPC `GatewayStreamRequest.stream_event` | P0 | stream online/offline/reconnect event가 media-control registry에 반영 |
-| Command ack | Python `StreamCommandPayload`, MQTT/control sender | gRPC `GatewayStreamRequest.command_ack` 또는 MQTT Protobuf | P0 | command id 기준 ack round-trip과 timeout test |
-| Control command dispatch | Python `/control`, MQTT sender | Spring/Go policy 후 gRPC/MQTT Protobuf dispatch | P1 | auth-policy decision 후 group scoped command 전송 |
+| Command ack | Media Control canonical MQTT | session-bound MQTT Protobuf ACK | P0 완료 | command id와 publish session 결합 검증 |
+| Control command dispatch | Media Control REST/control application | policy 후 canonical MQTT Protobuf dispatch | P0 완료 | lease, sequence, expiry, replay, cross-group 검증 |
 | Gateway backpressure/reconnect | 문서/테스트 일부 | gRPC response stream status | P1 | queue full, retry-after, reconnect resume smoke |
 | Native/mobile operator client | 미구현 | gRPC or HTTPS/JSON hybrid | P2 | browser와 별도 client credential flow |
 | AI overlay metadata internal path | mock REST | Protobuf metadata event 후보 | P2 | frame 없이 metadata만 dashboard overlay로 반영 |
@@ -110,7 +110,7 @@
 검증:
 
 - `services/media-control/README.md`의 gRPC device gateway 설명 확인
-- `backend/modules/messaging/sender.py`의 gRPC/MQTT sender abstraction 확인
+- `services/media-control/internal/controlapp`과 `controltransport`의 정책·세션·MQTT 경계 확인
 - `services/media-control/internal/mqttgateway`만 canonical telemetry를 소비하는지 확인
 - `gcs-dashboard`가 gRPC endpoint를 직접 호출하지 않는지 확인
 

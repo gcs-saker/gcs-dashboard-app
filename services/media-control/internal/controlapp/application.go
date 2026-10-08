@@ -37,9 +37,9 @@ type CommandRequest struct {
 type CommandResponse struct{ CommandID, Status string }
 
 type ControlPolicyTarget struct {
-	Action, DeviceID, Command, ControlSessionID string
-	HighRiskConfirmed                           bool
-	LeaseExpiresAt                              time.Time
+	Action, DeviceID, GroupID, Command, ControlSessionID string
+	HighRiskConfirmed                                    bool
+	LeaseExpiresAt                                       time.Time
 }
 
 type ControlPolicyClient interface {
@@ -91,7 +91,9 @@ func (a *ControlApplication) CreateSession(ctx context.Context, authorization st
 	if err != nil {
 		return SessionResponse{}, ErrDenied
 	}
-	allowed, err := a.policy.AuthorizeControl(ctx, authorization, ControlPolicyTarget{Action: "acquire", DeviceID: request.DeviceID, Command: "STOP"})
+	allowed, err := a.policy.AuthorizeControl(ctx, authorization, ControlPolicyTarget{
+		Action: "acquire", DeviceID: request.DeviceID, GroupID: route.GroupID(), Command: "STOP",
+	})
 	if err != nil || !allowed {
 		return SessionResponse{}, ErrDenied
 	}
@@ -135,7 +137,7 @@ func (a *ControlApplication) SubmitCommand(ctx context.Context, authorization, s
 		return CommandResponse{}, ErrDenied
 	}
 	allowed, err := a.policy.AuthorizeControl(ctx, authorization, ControlPolicyTarget{Action: "command", DeviceID: state.deviceID,
-		Command: request.Command, ControlSessionID: sessionID, LeaseExpiresAt: state.expiresAt})
+		GroupID: state.route.GroupID(), Command: request.Command, ControlSessionID: sessionID, LeaseExpiresAt: state.expiresAt})
 	if err != nil || !allowed {
 		return CommandResponse{}, ErrDenied
 	}

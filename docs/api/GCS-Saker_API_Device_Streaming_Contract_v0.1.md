@@ -411,6 +411,10 @@ REST 방식은 빠른 연동 검증에는 좋지만, 장비 수가 많아지면 
 
 ### MQTT / Protobuf 운영 방식
 
+Operator control uses `POST /media-control/api/v1/control/sessions` followed by
+`POST /media-control/api/v1/control/sessions/{controlSessionId}/commands`. The browser never submits a
+group, receiver, MQTT topic, or media route.
+
 Topic template:
 
 ```text

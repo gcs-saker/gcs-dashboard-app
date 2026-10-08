@@ -66,7 +66,7 @@ def test_mqtt_acl_and_guide_keep_dashboard_outside_broker_and_health_readable() 
     assert "pattern write gcs/device/%u/+/telemetry" in acl
     assert "pattern read gcs/device/%u/+/command" in acl
     assert "pattern write gcs/+/+/%u/telemetry" not in acl
-    assert "pattern read gcs/+/+/%u/command" in acl
+    assert "pattern read gcs/+/+/%u/command" not in acl
     assert "The dashboard must never receive MQTT credentials" in readme
     assert "Media frames must not be carried by MQTT" in readme
     assert "python3 scripts/smoke/mqtt_hardened_profile_smoke.py --run" in readme
@@ -79,7 +79,7 @@ def test_single_node_compose_uses_hardened_mqtt_by_default() -> None:
     assert "mosquitto.hardened.conf" in compose
     assert "acl.hardened" in compose
     assert "INTERNAL_PKI_DIR" in compose
-    assert "MQTT_TLS_ENABLED: ${MQTT_TLS_ENABLED:-true}" in compose
+    assert "MQTT_TLS_ENABLED" not in compose
     assert "MQTT_GATEWAY_URL: ${MQTT_GATEWAY_URL:-ssl://mqtt:8883}" in compose
     assert "MQTT_GATEWAY_ALLOW_PLAINTEXT" not in compose
     assert "MQTT_GATEWAY_CERT_FILE: /run/secrets/gcs-pki/media-control.crt" in compose
@@ -97,8 +97,8 @@ def test_local_compose_uses_hardened_mqtt_and_keeps_no_auth_in_explicit_profile(
     assert "mosquitto.hardened.conf" in compose
     assert "acl.hardened" in compose
     assert "MQTT_PASSWORD_FILE" not in compose
-    assert "MQTT_USERNAME: ${MQTT_USERNAME:-}" in compose
-    assert 'MQTT_TLS_ENABLED: "true"' in compose
+    assert "MQTT_USERNAME" not in compose
+    assert "MQTT_GATEWAY_URL: ssl://mqtt:8883" in compose
     assert "mqtt-health.crt" in compose
     assert "local-mqtt-no-auth" in local_no_auth
     assert "mosquitto-no-auth.conf" in local_no_auth

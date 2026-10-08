@@ -1,6 +1,5 @@
 from api.contracts import (
     AuthRoutes,
-    ControlRoutes,
     HealthRoutes,
     MapRoutes,
     RouterPrefixes,
@@ -15,7 +14,6 @@ def test_python_api_route_contracts_are_domain_scoped() -> None:
     assert StreamRoutes.ICE_SERVERS == "/streams/ice-servers"
     assert MapRoutes.CONFIG == "/map/config"
     assert TelemetryRoutes.ALL == "/all"
-    assert ControlRoutes.SEND == "/"
 
 
 def test_python_router_prefix_contracts_match_edge_proxy_paths() -> None:

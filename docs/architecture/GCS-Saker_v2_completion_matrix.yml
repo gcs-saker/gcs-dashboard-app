@@ -20,7 +20,7 @@ requiredGates:
     evidence:
       - contracts/proto/gcs/saker/v1/gateway_service.proto
       - scripts/smoke/grpc_runtime_smoke.py
-      - backend/tests/test_message_sender_abstraction.py
+      - services/media-control/internal/controlintegration/control_e2e_test.go
       - backend/tests/test_protocol_v2_gateway_service.py
       - backend/modules/protocol_v2/gateway_service.py
       - services/media-control/internal/grpcgateway

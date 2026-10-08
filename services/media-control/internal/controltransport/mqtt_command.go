@@ -110,6 +110,18 @@ func DecodeAck(topic string, payload []byte) (*pb.ControlCommandAck, error) {
 	return ack, nil
 }
 
+func DecodeBoundAck(route controlroute.InternalRoute, controlSessionID, topic string, payload []byte) (*pb.ControlCommandAck, error) {
+	binding, err := mqtttopic.Parse(topic)
+	if err != nil || binding.DeviceUUID != route.DeviceID() || binding.PublishSession != route.PublishSession() {
+		return nil, ErrAckInvalid
+	}
+	ack, err := DecodeAck(topic, payload)
+	if err != nil || ack.DeviceId != route.DeviceID() || ack.ControlSessionId != controlSessionID {
+		return nil, ErrAckInvalid
+	}
+	return ack, nil
+}
+
 func validateCommand(route controlroute.InternalRoute, command *pb.ControlCommandEnvelope, now time.Time) error {
 	if command == nil || command.CommandId == "" || command.IdempotencyId == "" || command.Sequence == 0 {
 		return ErrCommandInvalid

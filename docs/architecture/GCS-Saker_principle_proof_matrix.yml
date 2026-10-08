@@ -169,22 +169,22 @@ principles:
   - id: CODE-INTERFACE-001
     group: code-design
     principle: "통신 구현체는 interface 뒤에 두어 MQTT/gRPC/HTTP 교체가 가능해야 한다."
-    expectedProof: "Python MessageSender Protocol과 Go provider/cache interface가 구현체 교체 지점을 만든다."
+    expectedProof: "Media Control의 ControlCommandPublisher와 Go provider/cache interface가 구현체 교체 지점을 만든다."
     proofState: automated
     severity: p1
     issue: 412
     assertions:
       requiredTexts:
-        - path: backend/modules/messaging/sender.py
-          text: "class MessageSender(Protocol)"
-        - path: backend/modules/messaging/sender.py
-          text: "GrpcMessageSender"
+        - path: services/media-control/internal/controlapp/application.go
+          text: "type ControlCommandPublisher interface"
+        - path: services/media-control/internal/controltransport/mqtt_command.go
+          text: "type CommandTransport struct"
         - path: services/media-control/internal/turn/cached_registry.go
           text: "type IceServerProvider interface"
         - path: services/media-control/internal/streamcache/cached_lister.go
           text: "interface"
       evidencePaths:
-        - backend/tests/test_message_sender_abstraction.py
+        - services/media-control/internal/controlintegration/control_e2e_test.go
         - services/media-control/internal/turn/cached_registry_test.go
 
   - id: CODE-CONCURRENCY-001
