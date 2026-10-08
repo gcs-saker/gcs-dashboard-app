@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "gcs-saker.telemetry-load.v1",
+  "generatedAt": "2026-10-08T02:27:34.947743275Z",
+  "sourceRevision": "93db68cabc8edb1b6df0113a450fd222486de41d",
+  "runtime": "go1.26.6",
+  "platform": "linux/amd64",
+  "scope": "in-process MQTT ingress partition pipeline; excludes broker, network, gRPC and database latency",
+  "thresholds": {
+    "maxP95Millis": 200,
+    "maxP99Millis": 400,
+    "minimumThroughputRatio": 0.5
+  },
+  "results": [
+    {
+      "devices": 10,
+      "sent": 100,
+      "processed": 100,
+      "failed": 0,
+      "backpressure": 0,
+      "lost": 0,
+      "orderErrors": 0,
+      "maxQueueDepth": 1,
+      "p50Millis": 0.046,
+      "p95Millis": 0.118,
+      "p99Millis": 0.146,
+      "throughputPerSecond": 97.69028619247577
+    },
+    {
+      "devices": 50,
+      "sent": 500,
+      "processed": 500,
+      "failed": 0,
+      "backpressure": 0,
+      "lost": 0,
+      "orderErrors": 0,
+      "maxQueueDepth": 1,
+      "p50Millis": 0.04,
+      "p95Millis": 0.078,
+      "p99Millis": 0.123,
+      "throughputPerSecond": 454.16470927732496
+    },
+    {
+      "devices": 100,
+      "sent": 1000,
+      "processed": 1000,
+      "failed": 0,
+      "backpressure": 0,
+      "lost": 0,
+      "orderErrors": 0,
+      "maxQueueDepth": 1,
+      "p50Millis": 0.039,
+      "p95Millis": 0.07,
+      "p99Millis": 0.099,
+      "throughputPerSecond": 892.4844493197181
+    }
+  ]
+}

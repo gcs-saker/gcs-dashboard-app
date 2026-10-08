@@ -55,6 +55,11 @@ python scripts/reports/performance_stability_qualification.py --check
 정규화한 뒤 새 절대경로에만 판정 결과를 생성한다. 세부 절차는
 `docs/operations/GCS-Saker_Server01_Performance_Qualification.md`를 따른다.
 
+10·50·100개 가상 publish session을 사용하는 인프로세스 MQTT ingress 예비 부하시험은
+`telemetry-load-qualification-2026-10-08.json`과 같은 이름의 Markdown 요약에 기록한다. 이 결과는
+partition queue의 순서·손실·backpressure 및 처리 지연을 검증하지만 브로커, 네트워크, gRPC, DB와
+물리 장비를 포함하지 않으므로 Server-01 종단 성능 판정은 `NOT_RUN`으로 유지한다.
+
 ## Architecture change-impact qualification
 
 두 불변 커밋 사이의 변경 파일을 생산 소유 경계별로 분류하고 교차 경계 변경을 검토 대상으로

@@ -25,6 +25,10 @@ preconditions:
 collectors:
   controlPlane: scripts/benchmarks/m7_performance_benchmark_matrix.py
   streamingSoak: scripts/smoke/m7_streaming_stability_soak.sh
+  telemetryVirtualLoad: services/media-control/internal/mqttgateway/load_qualification_test.go
+preliminaryEvidence:
+  telemetryVirtualLoad: docs/compliance/evidence/telemetry-load-qualification-2026-10-08.json
+  scope: in-process engineering evidence only; not Server-01 or physical-device qualification
 requiredMetricCategories: [control-plane, telemetry-acceptance]
 requiredOperationalSignals:
   - request errors
