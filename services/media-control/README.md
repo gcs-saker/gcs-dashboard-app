@@ -123,7 +123,11 @@ authorization: bearer <token>
 
 ## Auth-policy 연동
 
-`AUTH_POLICY_BASE_URL`이 설정되면 media-control은 stream list/detail/playback/status 요청마다 `Authorization` header를 Spring/Kotlin auth-policy의 `POST /policy/streams/access`로 전달한다.
+명시적 local-test HTTP fallback에서는 media-control이 stream 요청의 `Authorization` header를 Spring/Kotlin auth-policy의 `POST /policy/streams/access`로 전달한다.
+
+운영 single-node/폐쇄망에서는 stream·publish·device binding과 telemetry 정책 경로가
+`AUTH_POLICY_GRPC_TARGET`의 mTLS gRPC로 고정된다. gRPC target 또는 PKI 누락 시 시작을 거부하며,
+REST fallback은 local-test의 `AUTH_POLICY_ALLOW_HTTP_FALLBACK=true`에서만 허용한다.
 
 - 인증 실패: `401`
 - 권한 없는 단건 stream: `403`

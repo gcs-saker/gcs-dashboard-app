@@ -24,6 +24,9 @@ func newAuthorizer(config runtimeConfig) (authpolicy.CachedAuthorizer, error) {
 		}
 		return authpolicy.NewCachedAuthorizer(client, config.authzCacheTTL), nil
 	}
+	if !config.authPolicyHTTPFallback {
+		return authpolicy.CachedAuthorizer{}, fmt.Errorf("AUTH_POLICY_GRPC_TARGET is required")
+	}
 	baseAuthorizer, err := authpolicy.NewAuthorizer(
 		config.authMode,
 		config.authPolicyBaseURL,
