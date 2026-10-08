@@ -11,7 +11,6 @@ object AuthSecurityRouteContract {
     const val ALL_PATHS = "/**"
     const val ERROR_PATH = "/error"
     const val ERROR_DETAIL_FIELD = "detail"
-    const val AUTH_PREFIX = "/auth/**"
     private const val ACTUATOR_HEALTH = "/actuator/health"
     private const val ACTUATOR_INFO = "/actuator/info"
     private const val ACTUATOR_PROMETHEUS = "/actuator/prometheus"
@@ -63,7 +62,6 @@ object AuthSecurityRouteContract {
         RouteMatcher(HttpMethod.GET, "/webjars/swagger-ui/**"),
         RouteMatcher(HttpMethod.OPTIONS, ALL_PATHS),
         RouteMatcher(null, ERROR_PATH),
-        RouteMatcher(null, AUTH_PREFIX),
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.SIGNUP),
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.LOGIN),
         RouteMatcher(HttpMethod.POST, AuthApiRoutes.ROOT + AuthApiRoutes.REFRESH),
