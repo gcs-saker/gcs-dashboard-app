@@ -30,15 +30,7 @@ func startMQTTAdapter(parent context.Context, config runtimeConfig, metrics *htt
 	if err := settings.Validate(); err != nil {
 		return nil, err
 	}
-	_, port, err := net.SplitHostPort(config.grpcListenAddress)
-	if err != nil {
-		return nil, fmt.Errorf("gateway listen address invalid")
-	}
-	transport, err := loopbackGatewayCredentials()
-	if err != nil {
-		return nil, err
-	}
-	connection, err := grpc.NewClient(net.JoinHostPort("127.0.0.1", port), grpc.WithTransportCredentials(transport))
+	connection, err := newLoopbackGatewayConnection(config.grpcListenAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -61,6 +53,18 @@ func startMQTTAdapter(parent context.Context, config runtimeConfig, metrics *htt
 			slog.Error("mqtt_shutdown", "error_code", "grpc_close_failed")
 		}
 	}, nil
+}
+
+func newLoopbackGatewayConnection(listenAddress string) (*grpc.ClientConn, error) {
+	_, port, err := net.SplitHostPort(listenAddress)
+	if err != nil {
+		return nil, fmt.Errorf("gateway listen address invalid")
+	}
+	transport, err := loopbackGatewayCredentials()
+	if err != nil {
+		return nil, err
+	}
+	return grpc.NewClient(net.JoinHostPort("127.0.0.1", port), grpc.WithTransportCredentials(transport))
 }
 
 func loopbackGatewayCredentials() (credentials.TransportCredentials, error) {
