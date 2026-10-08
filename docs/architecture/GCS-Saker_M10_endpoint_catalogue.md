@@ -155,6 +155,7 @@ Media frame은 WebRTC/HLS media plane으로만 보낸다. JSON, MQTT, gRPC, Grap
 | Payload kind | `telemetry`, `stream_event`, `command_ack`, `command`, `telemetry_batch` |
 | 필수 식별자 | `requestId`, `orgId`, `groupId`, `assetId` |
 | 최대 payload | `MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES`, 기본 `65536` |
+| transport | TLS 1.3 mTLS, internal CA, `media-control` server-name 검증 |
 
 gRPC 응답은 `accepted`, `rejected`, `backpressure`, `reconnect` 중 하나의 ack 상태를 반환한다. `backpressure`는 장비 gateway가 전송량을 줄이거나 batch 전략을 바꾸는 신호다.
 

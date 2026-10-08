@@ -93,15 +93,41 @@ func newGatewayRuntime(config runtimeConfig, metrics *httpapi.Metrics, sessions 
 		Addr: config.redisAddress, Password: config.redisPassword, DialTimeout: config.redisTimeout,
 		ReadTimeout: config.redisTimeout, WriteTimeout: config.redisTimeout,
 	})
+	server := grpcgateway.NewDeviceServer(authenticator, config.grpcMaxPayloadBytes, grpcgateway.NewTelemetryHandler(
+		gatewayContextTelemetryStore{client: client, idempotency: idempotency, rpc: rpc},
+	)).WithMetrics(metrics).WithSessionAuthenticator(grpcgateway.PublishSessionAuthenticator{
+		Store: sessions, Validator: rpc, Secret: config.publishToken, Now: time.Now,
+	})
+	server, err := configureGatewayTransport(server)
+	if err != nil {
+		return gatewayRuntime{}, errors.Join(err, idempotency.Close(), closeDeviceRPC(rpc))
+	}
 	return gatewayRuntime{
-		server: grpcgateway.NewDeviceServer(authenticator, config.grpcMaxPayloadBytes, grpcgateway.NewTelemetryHandler(
-			gatewayContextTelemetryStore{client: client, idempotency: idempotency, rpc: rpc},
-		)).WithMetrics(metrics).WithSessionAuthenticator(grpcgateway.PublishSessionAuthenticator{
-			Store: sessions, Validator: rpc, Secret: config.publishToken, Now: time.Now,
-		}),
+		server:      server,
 		idempotency: idempotency,
 		rpc:         rpc,
 	}, nil
+}
+
+func configureGatewayTransport(server grpcgateway.Server) (grpcgateway.Server, error) {
+	if getenv("MEDIA_CONTROL_GRPC_ALLOW_PLAINTEXT", "false") == "true" {
+		return server, nil
+	}
+	credentials, err := (grpcgateway.TLSFiles{
+		CAFile: getenv("MEDIA_CONTROL_GRPC_CA_FILE", ""), CertFile: getenv("MEDIA_CONTROL_GRPC_CERT_FILE", ""),
+		KeyFile: getenv("MEDIA_CONTROL_GRPC_KEY_FILE", ""), ServerName: "media-control",
+	}).ServerCredentials()
+	if err != nil {
+		return grpcgateway.Server{}, err
+	}
+	return server.WithTransportCredentials(credentials), nil
+}
+
+func closeDeviceRPC(rpc *authpolicy.DeviceRPCClient) error {
+	if rpc == nil {
+		return nil
+	}
+	return rpc.Close()
 }
 
 type gatewayContextTelemetryStore struct {

@@ -92,6 +92,10 @@ response에는 운영 디버깅을 위해 `X-GCS-Trace-Id`가 포함될 수 있�
 
 media-control은 HTTP control API와 별도로 내부/device gateway용 gRPC bidirectional streaming listener를 실행한다.
 
+운영 listener는 내부 CA 기반 TLS 1.3 mTLS를 강제한다. `MEDIA_CONTROL_GRPC_CA_FILE`,
+`MEDIA_CONTROL_GRPC_CERT_FILE`, `MEDIA_CONTROL_GRPC_KEY_FILE`이 없거나 잘못되면 시작을 거부한다.
+plaintext는 명시적 local-test profile의 `MEDIA_CONTROL_GRPC_ALLOW_PLAINTEXT=true`에서만 허용한다.
+
 ```env
 MEDIA_CONTROL_GRPC_LISTEN_ADDR=:9090
 MEDIA_CONTROL_GRPC_TOKEN=replace-with-secret

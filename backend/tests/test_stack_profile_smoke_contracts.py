@@ -39,7 +39,7 @@ def load_script_module(script: Path, module_name: str):
 def test_grpc_runtime_smoke_reports_integrated_runtime_state_and_follow_up_gates() -> None:
     payload = run_check(GRPC_SMOKE)
 
-    assert payload["schemaVersion"] == "grpc-runtime-smoke-v1"
+    assert payload["schemaVersion"] == "grpc-runtime-smoke-v2"
     assert payload["status"] == "runtime-integrated"
     assert payload["descriptorCommand"][:3] == [
         "protoc",
@@ -47,7 +47,8 @@ def test_grpc_runtime_smoke_reports_integrated_runtime_state_and_follow_up_gates
         f"--descriptor_set_out={REPO_ROOT / 'tmp' / 'gcs-saker-grpc-gateway.pb'}",
     ]
     assert payload["descriptorFallbackCommand"][:3] == [sys.executable, "-m", "grpc_tools.protoc"]
-    assert "client implementation behind MessageSender abstraction" in payload["implementedRuntime"]
+    assert "reusable Backend MediaControlGrpcClient" in "\n".join(payload["implementedRuntime"])
+    assert "TLS 1.3 mutual authentication" in "\n".join(payload["implementedRuntime"])
     assert "SakerGatewayService.Exchange server implementation in media-control" in payload["implementedRuntime"]
     assert (
         "MEDIA_CONTROL_GRPC_LISTEN_ADDR compose wiring for local and single-node runtime"
@@ -118,7 +119,7 @@ def test_grpc_runtime_smoke_main_defaults_to_check(monkeypatch, capsys) -> None:
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
-    assert payload["schemaVersion"] == "grpc-runtime-smoke-v1"
+    assert payload["schemaVersion"] == "grpc-runtime-smoke-v2"
     assert payload["descriptorFallbackCommand"][:3] == [sys.executable, "-m", "grpc_tools.protoc"]
 
 

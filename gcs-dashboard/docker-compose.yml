@@ -92,6 +92,13 @@ services:
       AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-gcs-saker}
       BACKEND_CORS_ALLOW_ORIGINS: ${BACKEND_CORS_ALLOW_ORIGINS:-http://localhost:5173,http://localhost:5174}
       BACKEND_CONTENT_SECURITY_POLICY: ${BACKEND_CONTENT_SECURITY_POLICY:-}
+      MEDIA_CONTROL_GRPC_TARGET: ${MEDIA_CONTROL_GRPC_TARGET:-media-control:9090}
+      MEDIA_CONTROL_GRPC_CA_FILE: /run/secrets/gcs-pki/ca.crt
+      MEDIA_CONTROL_GRPC_CERT_FILE: /run/secrets/gcs-pki/backend.crt
+      MEDIA_CONTROL_GRPC_KEY_FILE: /run/secrets/gcs-pki/backend.key
+      MEDIA_CONTROL_GRPC_SERVER_NAME: media-control
+      MEDIA_CONTROL_GRPC_ALLOW_PLAINTEXT: "false"
+      MEDIA_CONTROL_GRPC_TIMEOUT_SECONDS: ${MEDIA_CONTROL_GRPC_TIMEOUT_SECONDS:-2}
       TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS: ${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}
       MEDIAMTX_PUBLIC_WEBRTC_BASE_URL: ${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8889}
       MEDIAMTX_PUBLIC_HLS_BASE_URL: ${MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://localhost:8888}
@@ -109,7 +116,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      media-control:
+        condition: service_started
     restart: always
+    volumes:
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR in .env}
+        target: /run/secrets/gcs-pki
+        read_only: true
 
   mediamtx:
     image: ${MEDIAMTX_IMAGE:-bluenviron/mediamtx:1.21.0}
@@ -162,6 +176,10 @@ services:
       MEDIA_CONTROL_GRPC_LISTEN_ADDR: :9090
       MEDIA_CONTROL_GRPC_TOKEN: ${MEDIA_CONTROL_GRPC_TOKEN:-${MEDIA_CONTROL_PUBLISH_TOKEN:?Set MEDIA_CONTROL_PUBLISH_TOKEN in .env}}
       MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES: ${MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES:-65536}
+      MEDIA_CONTROL_GRPC_CA_FILE: /run/secrets/gcs-pki/ca.crt
+      MEDIA_CONTROL_GRPC_CERT_FILE: /run/secrets/gcs-pki/media-control.crt
+      MEDIA_CONTROL_GRPC_KEY_FILE: /run/secrets/gcs-pki/media-control.key
+      MEDIA_CONTROL_GRPC_ALLOW_PLAINTEXT: "false"
       AUTH_POLICY_BASE_URL: ${AUTH_POLICY_BASE_URL:?Set AUTH_POLICY_BASE_URL in .env}
       AUTH_POLICY_AUDIT_INGEST_TOKEN: ${AUTH_POLICY_AUDIT_INGEST_TOKEN:?Set AUTH_POLICY_AUDIT_INGEST_TOKEN in .env}
       MEDIA_CONTROL_REDIS_ADDR: ${MEDIA_CONTROL_REDIS_ADDR:-redis:6379}

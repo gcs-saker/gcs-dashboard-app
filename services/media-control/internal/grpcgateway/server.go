@@ -11,6 +11,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/observability"
@@ -29,6 +30,7 @@ type Server struct {
 	authenticator        GatewayAuthenticator
 	sessionAuthenticator SessionAuthenticator
 	metrics              GatewayMetrics
+	transportCredentials credentials.TransportCredentials
 }
 
 type GatewayMetrics interface {
@@ -48,6 +50,11 @@ func (s Server) WithMetrics(metrics GatewayMetrics) Server {
 
 func (s Server) WithSessionAuthenticator(authenticator SessionAuthenticator) Server {
 	s.sessionAuthenticator = authenticator
+	return s
+}
+
+func (s Server) WithTransportCredentials(transport credentials.TransportCredentials) Server {
+	s.transportCredentials = transport
 	return s
 }
 
@@ -81,7 +88,11 @@ func (s Server) serve(ctx context.Context, listenAddress string, onReady func())
 	if err != nil {
 		return err
 	}
-	server := grpc.NewServer()
+	serverOptions := make([]grpc.ServerOption, 0, 1)
+	if s.transportCredentials != nil {
+		serverOptions = append(serverOptions, grpc.Creds(s.transportCredentials))
+	}
+	server := grpc.NewServer(serverOptions...)
 	s.Register(server)
 	go stopServerWhenCancelled(ctx, server)
 	if onReady != nil {
