@@ -24,6 +24,13 @@ func (s Server) mediaMTXAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch payload.Action {
+	case mediaMTXActionAPI:
+		if s.mediaMTXAPIUser == "" || s.mediaMTXAPIPass == "" ||
+			payload.User != s.mediaMTXAPIUser || payload.Password != s.mediaMTXAPIPass {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	case mediaMTXActionPublish:
 		s.authorizeMediaMTXPublish(w, payload)
 	case mediaMTXActionRead, mediaMTXActionPlayback:

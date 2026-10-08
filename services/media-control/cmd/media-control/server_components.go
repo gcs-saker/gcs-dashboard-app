@@ -56,10 +56,7 @@ func newPublishSessionStore(config runtimeConfig) (*sessionstore.RedisStore, err
 }
 
 func newStreamLister(config runtimeConfig, metrics *httpapi.Metrics) httpapi.StreamLister {
-	var streamLister httpapi.StreamLister = mediamtx.NewClient(
-		config.mediaMTXBaseURL,
-		&http.Client{Timeout: 3 * time.Second},
-	)
+	var streamLister httpapi.StreamLister = newMediaMTXClient(config, &http.Client{Timeout: 3 * time.Second})
 	if config.redisAddress == "" || config.streamCacheTTL <= 0 {
 		return streamLister
 	}
@@ -71,6 +68,12 @@ func newStreamLister(config runtimeConfig, metrics *httpapi.Metrics) httpapi.Str
 		config.streamCacheTTL,
 		config.streamPresenceTTL,
 		metrics,
+	)
+}
+
+func newMediaMTXClient(config runtimeConfig, client *http.Client) mediamtx.Client {
+	return mediamtx.NewAuthenticatedClient(
+		config.mediaMTXBaseURL, config.mediaMTXAPIUser, config.mediaMTXAPIPassword, client,
 	)
 }
 

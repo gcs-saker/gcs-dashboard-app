@@ -14,6 +14,8 @@ type runtimeConfig struct {
 	traceExporter          string
 	otelServiceName        string
 	mediaMTXBaseURL        string
+	mediaMTXAPIUser        string
+	mediaMTXAPIPassword    string
 	listenAddress          string
 	grpcListenAddress      string
 	playback               domain.PlaybackURLBuilder
@@ -81,6 +83,8 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		traceExporter:       getenv(runtimeEnv.traceExporter, runtimeDefaults.traceExporter),
 		otelServiceName:     getenv(runtimeEnv.otelServiceName, runtimeDefaults.otelServiceName),
 		mediaMTXBaseURL:     getenv(runtimeEnv.mediaMTXBaseURL, runtimeDefaults.mediaMTXBaseURL),
+		mediaMTXAPIUser:     getenv("MEDIAMTX_API_USER", ""),
+		mediaMTXAPIPassword: getenv("MEDIAMTX_API_PASSWORD", ""),
 		listenAddress:       getenv(runtimeEnv.listenAddress, runtimeDefaults.listenAddress),
 		grpcListenAddress:   getenv(runtimeEnv.grpcListenAddress, runtimeDefaults.grpcListenAddress),
 		playback:            playback,

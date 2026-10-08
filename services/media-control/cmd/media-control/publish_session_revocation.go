@@ -17,7 +17,7 @@ func startPublishSessionRevocationObserver(ctx context.Context, config runtimeCo
 		return fmt.Errorf("publish session revocation requires policy RPC")
 	}
 	observer := mediamtx.NewPublishSessionRevocationObserver(
-		mediamtx.NewClient(config.mediaMTXBaseURL, nil), resources.publishSessions,
+		newMediaMTXClient(config, nil), resources.publishSessions,
 		resources.gateway.rpc, config.publishToken, publishSessionRevocationInterval,
 	).WithMetrics(resources.metrics)
 	audit, err := authpolicy.NewLifecycleAuditSink(config.authPolicyBaseURL, config.auditIngestToken, nil)

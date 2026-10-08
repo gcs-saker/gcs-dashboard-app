@@ -18,6 +18,8 @@ const traceOperationListStreams = "media-control.mediamtx.list-streams"
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
+	username   string
+	password   string
 }
 
 type WebRTCSession struct {
@@ -41,6 +43,7 @@ func (c Client) ListWebRTCSessions(ctx context.Context) ([]WebRTCSession, error)
 	if err != nil {
 		return nil, err
 	}
+	c.authorize(request)
 	response, err := c.httpClient.Do(request)
 	if err != nil {
 		return nil, err
@@ -67,6 +70,7 @@ func (c Client) KickWebRTCSession(ctx context.Context, sessionID string) error {
 	if err != nil {
 		return err
 	}
+	c.authorize(request)
 	response, err := c.httpClient.Do(request)
 	if err != nil {
 		return err
@@ -79,12 +83,24 @@ func (c Client) KickWebRTCSession(ctx context.Context, sessionID string) error {
 }
 
 func NewClient(baseURL string, httpClient *http.Client) Client {
+	return NewAuthenticatedClient(baseURL, "", "", httpClient)
+}
+
+func NewAuthenticatedClient(baseURL, username, password string, httpClient *http.Client) Client {
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: 3 * time.Second}
 	}
 	return Client{
 		baseURL:    strings.TrimRight(baseURL, "/"),
 		httpClient: observability.InstrumentHTTPClient(httpClient, traceOperationListStreams),
+		username:   username,
+		password:   password,
+	}
+}
+
+func (c Client) authorize(request *http.Request) {
+	if c.username != "" && c.password != "" {
+		request.SetBasicAuth(c.username, c.password)
 	}
 }
 
@@ -131,6 +147,7 @@ func (c Client) listPathItems(ctx context.Context) ([]pathItem, error) {
 	if err != nil {
 		return nil, err
 	}
+	c.authorize(request)
 	response, err := c.httpClient.Do(request)
 	if err != nil {
 		return nil, err

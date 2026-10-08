@@ -117,7 +117,8 @@ func buildRuntime(config runtimeConfig) (httpapi.Server, runtimeResources, error
 		&authorizer, config.groupResolver, config.publishToken, metrics,
 	).WithDevicePublishAuthorizer(&authorizer).
 		WithAccountPublishAuthorizer(&authorizer).
-		WithPublishSessionStore(publishSessions)
+		WithPublishSessionStore(publishSessions).
+		WithMediaMTXAPIIdentity(config.mediaMTXAPIUser, config.mediaMTXAPIPassword)
 	gateway, err := newGatewayRuntime(config, metrics, publishSessions)
 	if err != nil {
 		return httpapi.Server{}, runtimeResources{}, errors.Join(err, publishSessions.Close(), authorizer.Close())
