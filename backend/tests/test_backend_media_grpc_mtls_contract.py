@@ -13,7 +13,7 @@ def test_operational_compose_requires_backend_media_control_mtls() -> None:
         assert "MEDIA_CONTROL_GRPC_CA_FILE: /run/secrets/gcs-pki/ca.crt" in compose
         assert "MEDIA_CONTROL_GRPC_CERT_FILE: /run/secrets/gcs-pki/backend.crt" in compose
         assert "MEDIA_CONTROL_GRPC_KEY_FILE: /run/secrets/gcs-pki/backend.key" in compose
-        assert 'MEDIA_CONTROL_GRPC_ALLOW_PLAINTEXT: "false"' in compose
+        assert "MEDIA_CONTROL_GRPC_ALLOW_PLAINTEXT" not in compose
         assert "MEDIA_CONTROL_GRPC_CERT_FILE: /run/secrets/gcs-pki/media-control.crt" in compose
 
 

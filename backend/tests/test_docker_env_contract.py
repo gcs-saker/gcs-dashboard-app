@@ -82,7 +82,6 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["backend"]["environment"]["MEDIA_CONTROL_GRPC_TARGET"] == (
         "${MEDIA_CONTROL_GRPC_TARGET:-media-control:9090}"
     )
-    assert services["backend"]["environment"]["MEDIA_CONTROL_GRPC_ALLOW_PLAINTEXT"] == "false"
     assert services["backend"]["environment"]["AUTH_JWT_SECRET"].startswith("${AUTH_JWT_SECRET:")
     assert services["backend"]["environment"]["AUTH_REFRESH_TOKEN_EXPIRE_MINUTES"] == (
         "${AUTH_REFRESH_TOKEN_EXPIRE_MINUTES:-120}"
@@ -109,7 +108,6 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES"] == (
         "${MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES:-65536}"
     )
-    assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_ALLOW_PLAINTEXT"] == "false"
     assert services["nginx"]["build"]["args"]["VITE_API_BASE_URL"] == "${VITE_API_BASE_URL:-/api}"
     assert services["nginx"]["build"]["args"]["VITE_IDENTITY_API_BASE_URL"] == (
         "${VITE_AUTH_API_BASE_URL:-/auth-policy/auth}"
