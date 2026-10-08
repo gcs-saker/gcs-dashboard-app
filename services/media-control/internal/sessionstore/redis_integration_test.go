@@ -3,11 +3,13 @@ package sessionstore
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/redis/go-redis/v9"
 )
 
 func TestRedisStoreLifecycleAndCancellation(t *testing.T) {
@@ -46,6 +48,30 @@ func TestRedisStoreLifecycleAndCancellation(t *testing.T) {
 	cancel()
 	if _, err := store.Find(cancelled, session.SessionID); !errors.Is(err, domain.ErrPublishSessionStoreUnavailable) {
 		t.Fatalf("cancelled find must expose dependency failure, got %v", err)
+	}
+}
+
+func TestStatisticsRemainBoundedAboveOneThousandSessions(t *testing.T) {
+	address := os.Getenv("TEST_REDIS_ADDR")
+	if address == "" {
+		t.Skip("TEST_REDIS_ADDR is not configured")
+	}
+	store := NewRedisStoreWithOptions(&redis.Options{Addr: address, Password: os.Getenv("TEST_REDIS_PASSWORD"), DB: 15})
+	t.Cleanup(func() { _ = store.client.FlushDB(context.Background()).Err(); _ = store.Close() })
+	ctx := context.Background()
+	now := time.Now().UTC()
+	for index := 0; index < 1005; index++ {
+		session := domain.PublishSession{SessionID: fmt.Sprintf("load-%04d", index), DeviceUUID: "device-load",
+			StreamID: fmt.Sprintf("raw.device.load-%04d", index), Path: fmt.Sprintf("raw/device/load-%04d", index),
+			GroupID: "co-a", Status: domain.PublishSessionActive, RenewalTokenHash: []byte("hash"),
+			PublishTokenExpiresAt: now.Add(time.Minute), RenewalTokenExpiresAt: now.Add(time.Hour), CreatedAt: now, UpdatedAt: now}
+		if err := store.Save(ctx, session); err != nil {
+			t.Fatal(err)
+		}
+	}
+	stats, err := store.SnapshotStatistics(ctx, now, 1000)
+	if err != nil || stats.Active != 1005 || stats.Scanned != 1005 || stats.Truncated {
+		t.Fatalf("unexpected >1000 session statistics %#v err=%v", stats, err)
 	}
 }
 

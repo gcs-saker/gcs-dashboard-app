@@ -55,7 +55,7 @@ class TelemetryAlertRuleEngine(
             if (timedOut && activate(deviceKey, "telemetry.timeout")) {
                 appendAlert(state.groupId, "telemetry.timeout", now)
             }
-            if (timedOut) devices.remove(deviceKey, state)
+            if (timedOut && devices.remove(deviceKey, state)) clearDeviceRules(deviceKey)
         }
     }
 
@@ -99,9 +99,14 @@ class TelemetryAlertRuleEngine(
         if (active) activeRules[key] = true else activeRules.remove(key)
     }
 
+    private fun clearDeviceRules(deviceKey: String) {
+        ALERT_RULES.forEach { activeRules.remove("$deviceKey:$it") }
+    }
+
     private fun TelemetryReadModel.key(): String = "${groupId.value}:$uuid"
 
     companion object {
+        private val ALERT_RULES = setOf("battery.low", "tilt.abnormal", "link.quality.low", "telemetry.timeout")
         val NOOP = TelemetryAlertRuleEngine(null)
     }
 }

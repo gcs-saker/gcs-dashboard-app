@@ -9,6 +9,8 @@ import org.springframework.web.filter.OncePerRequestFilter
 import java.time.Clock
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicBoolean
 
 object RateLimitContract {
     const val RETRY_AFTER_HEADER = "Retry-After"
@@ -69,22 +71,26 @@ class FixedWindowRateLimiter(
     private val maxTrackedKeys: Int = DEFAULT_MAX_TRACKED_KEYS,
 ) {
     private val windows = ConcurrentHashMap<String, WindowCounter>()
+    private val expirations = ConcurrentLinkedQueue<WindowExpiry>()
 
     fun tryAcquire(key: String): RateLimitDecision {
         if (maxRequests <= 0) return RateLimitDecision.denied(window.seconds)
         val nowMillis = clock.millis()
-        windows.entries.removeIf { it.value.resetAtMillis <= nowMillis }
+        cleanupExpired(nowMillis)
         if (!windows.containsKey(key) && windows.size >= maxTrackedKeys) {
             return RateLimitDecision.denied(window.seconds.coerceAtLeast(1))
         }
         val windowMillis = window.toMillis().coerceAtLeast(1)
+        val created = AtomicBoolean(false)
         val next = windows.compute(key) { _, current ->
             if (current == null || nowMillis >= current.resetAtMillis) {
+                created.set(true)
                 WindowCounter(count = 1, resetAtMillis = nowMillis + windowMillis)
             } else {
                 current.copy(count = current.count + 1)
             }
         } ?: WindowCounter(count = 1, resetAtMillis = nowMillis + windowMillis)
+        if (created.get()) expirations.add(WindowExpiry(key, next.resetAtMillis))
 
         if (next.count <= maxRequests) {
             return RateLimitDecision.allowed()
@@ -92,13 +98,27 @@ class FixedWindowRateLimiter(
         return RateLimitDecision.denied(((next.resetAtMillis - nowMillis) / 1000).coerceAtLeast(1))
     }
 
+    private fun cleanupExpired(nowMillis: Long) {
+        repeat(MAX_EXPIRY_CLEANUP_PER_REQUEST) {
+            val expiry = expirations.peek() ?: return
+            if (expiry.resetAtMillis > nowMillis) return
+            expirations.poll()
+            windows.computeIfPresent(expiry.key) { _, current ->
+                current.takeIf { it.resetAtMillis != expiry.resetAtMillis }
+            }
+        }
+    }
+
     private data class WindowCounter(
         val count: Int,
         val resetAtMillis: Long,
     )
 
+    private data class WindowExpiry(val key: String, val resetAtMillis: Long)
+
     private companion object {
         const val DEFAULT_MAX_TRACKED_KEYS = 10_000
+        const val MAX_EXPIRY_CLEANUP_PER_REQUEST = 64
     }
 }
 

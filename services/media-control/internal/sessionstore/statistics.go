@@ -13,76 +13,56 @@ import (
 const defaultStatisticsLimit = 1000
 
 type Statistics struct {
-	Active    int
-	Ended     int
-	Expired   int
-	OldestAge time.Duration
-	Scanned   int
-	Truncated bool
+	Active, Ended, Expired, Scanned int
+	OldestAge                       time.Duration
+	Truncated                       bool
 }
+
+var statisticsScript = redis.NewScript(`
+local expired = redis.call('ZRANGEBYSCORE', KEYS[3], '-inf', ARGV[1], 'LIMIT', 0, ARGV[2])
+for _, id in ipairs(expired) do
+  local status = redis.call('HGET', KEYS[1], id)
+  if status then redis.call('HINCRBY', KEYS[2], status, -1) end
+  redis.call('HDEL', KEYS[1], id)
+  redis.call('ZREM', KEYS[3], id)
+  redis.call('ZREM', KEYS[4], id)
+end
+local oldest = redis.call('ZRANGE', KEYS[4], 0, 0, 'WITHSCORES')
+local oldestScore = oldest[2] or '0'
+local remainingExpired = redis.call('ZCOUNT', KEYS[3], '-inf', ARGV[1])
+return {
+  tostring(redis.call('HGET', KEYS[2], 'active') or '0'),
+  tostring(redis.call('HGET', KEYS[2], 'ended') or '0'),
+  tostring(#expired), oldestScore,
+  tostring(redis.call('ZCARD', KEYS[3])),
+  tostring(remainingExpired > 0 and 1 or 0)
+}
+`)
 
 func (s *RedisStore) SnapshotStatistics(ctx context.Context, now time.Time, limit int) (Statistics, error) {
 	if limit <= 0 || limit > defaultStatisticsLimit {
 		limit = defaultStatisticsLimit
 	}
-	keys, truncated, err := s.scanSessionKeys(ctx, limit)
-	if err != nil {
-		return Statistics{}, fmt.Errorf("%w: scan statistics: %v", domain.ErrPublishSessionStoreUnavailable, err)
+	values, err := statisticsScript.Run(ctx, s.client,
+		[]string{statisticsStatusKey, statisticsCountKey, statisticsExpiryKey, statisticsCreatedKey},
+		now.UnixMilli(), limit,
+	).StringSlice()
+	if err != nil || len(values) != 6 {
+		return Statistics{}, fmt.Errorf("%w: aggregate statistics", domain.ErrPublishSessionStoreUnavailable)
 	}
-	commands, err := s.loadSessionStatistics(ctx, keys)
-	if err != nil {
-		return Statistics{}, fmt.Errorf("%w: load statistics: %v", domain.ErrPublishSessionStoreUnavailable, err)
-	}
-	stats := Statistics{Scanned: len(keys), Truncated: truncated}
-	for _, command := range commands {
-		classifyStatistics(&stats, command.Val(), now)
-	}
-	return stats, nil
+	return decodeStatistics(values, now), nil
 }
 
-func (s *RedisStore) scanSessionKeys(ctx context.Context, limit int) ([]string, bool, error) {
-	keys := make([]string, 0, limit)
-	var cursor uint64
-	for {
-		batch, next, err := s.client.Scan(ctx, cursor, keyPrefix+"*", 100).Result()
-		if err != nil {
-			return nil, false, err
-		}
-		remaining := limit - len(keys)
-		if len(batch) > remaining {
-			return append(keys, batch[:remaining]...), true, nil
-		}
-		keys = append(keys, batch...)
-		cursor = next
-		if cursor == 0 || len(keys) == limit {
-			return keys, cursor != 0, nil
-		}
+func decodeStatistics(values []string, now time.Time) Statistics {
+	active, _ := strconv.Atoi(values[0])
+	ended, _ := strconv.Atoi(values[1])
+	expired, _ := strconv.Atoi(values[2])
+	oldestMillis, _ := strconv.ParseInt(values[3], 10, 64)
+	total, _ := strconv.Atoi(values[4])
+	truncated := values[5] == "1"
+	oldestAge := time.Duration(0)
+	if oldestMillis > 0 {
+		oldestAge = now.Sub(time.UnixMilli(oldestMillis))
 	}
-}
-
-func (s *RedisStore) loadSessionStatistics(ctx context.Context, keys []string) ([]*redis.MapStringStringCmd, error) {
-	commands := make([]*redis.MapStringStringCmd, 0, len(keys))
-	_, err := s.client.Pipelined(ctx, func(pipe redis.Pipeliner) error {
-		for _, key := range keys {
-			commands = append(commands, pipe.HGetAll(ctx, key))
-		}
-		return nil
-	})
-	return commands, err
-}
-
-func classifyStatistics(stats *Statistics, values map[string]string, now time.Time) {
-	expiry, _ := strconv.ParseInt(values["renewal_expires_ms"], 10, 64)
-	created, _ := strconv.ParseInt(values["created_ms"], 10, 64)
-	if expiry <= now.UnixMilli() {
-		stats.Expired++
-	} else if values["status"] == "active" {
-		stats.Active++
-	} else {
-		stats.Ended++
-	}
-	age := now.Sub(time.UnixMilli(created))
-	if created > 0 && age > stats.OldestAge {
-		stats.OldestAge = age
-	}
+	return Statistics{Active: active, Ended: ended, Expired: expired, Scanned: total, OldestAge: oldestAge, Truncated: truncated}
 }
