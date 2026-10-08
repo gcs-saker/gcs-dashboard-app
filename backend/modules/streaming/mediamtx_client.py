@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import threading
+import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 
@@ -48,11 +50,25 @@ class MediaMTXPath:
 
 
 class MediaMTXClient:
-    def __init__(self, base_url: str, timeout_seconds: float = 1.5, username: str = "", password: str = "") -> None:
+    def __init__(
+        self,
+        base_url: str,
+        timeout_seconds: float = 1.5,
+        username: str = "",
+        password: str = "",
+        snapshot_ttl_seconds: float = 1.0,
+        stale_ttl_seconds: float = 5.0,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
         self.username = username
         self.password = password
+        auth = (username, password) if username and password else None
+        self._client = httpx.Client(base_url=self.base_url, timeout=timeout_seconds, auth=auth)
+        self._snapshot_ttl_seconds = snapshot_ttl_seconds
+        self._stale_ttl_seconds = stale_ttl_seconds
+        self._snapshot: tuple[float, list[MediaMTXPath]] | None = None
+        self._refresh_lock = threading.Lock()
 
     @classmethod
     def from_env(cls) -> "MediaMTXClient | None":
@@ -63,6 +79,24 @@ class MediaMTXClient:
         return cls(api_base_url, username=settings.api_username or "", password=settings.api_password or "")
 
     def list_paths(self) -> list[MediaMTXPath]:
+        cached = self._cached_paths(self._snapshot_ttl_seconds)
+        if cached is not None:
+            return cached
+        with self._refresh_lock:
+            cached = self._cached_paths(self._snapshot_ttl_seconds)
+            if cached is not None:
+                return cached
+            try:
+                paths = self._load_paths()
+            except MediaMTXClientError:
+                stale = self._cached_paths(self._stale_ttl_seconds)
+                if stale is not None:
+                    return stale
+                raise
+            self._snapshot = (time.monotonic(), paths)
+            return list(paths)
+
+    def _load_paths(self) -> list[MediaMTXPath]:
         payload = self._get_json(
             MediaMTXApiRoutes.PATHS_LIST,
             {MediaMTXApiQuery.ITEMS_PER_PAGE: MediaMTXApiQuery.DEFAULT_ITEMS_PER_PAGE},
@@ -79,16 +113,25 @@ class MediaMTXClient:
                     paths.append(path)
         return paths
 
+    def _cached_paths(self, ttl_seconds: float) -> list[MediaMTXPath] | None:
+        if self._snapshot is None or time.monotonic() - self._snapshot[0] > ttl_seconds:
+            return None
+        return list(self._snapshot[1])
+
+    def invalidate(self) -> None:
+        self._snapshot = None
+
+    def close(self) -> None:
+        self._client.close()
+
     def _get_json(self, path: str, query: dict[str, str] | None = None) -> dict[str, object]:
         try:
-            auth = (self.username, self.password) if self.username and self.password else None
-            with httpx.Client(base_url=self.base_url, timeout=self.timeout_seconds, auth=auth) as client:
-                response = client.get(
-                    path,
-                    params=query,
-                    headers={MediaMTXHttpHeaders.ACCEPT: MediaMTXHttpHeaders.APPLICATION_JSON},
-                )
-                response.raise_for_status()
+            response = self._client.get(
+                path,
+                params=query,
+                headers={MediaMTXHttpHeaders.ACCEPT: MediaMTXHttpHeaders.APPLICATION_JSON},
+            )
+            response.raise_for_status()
         except (httpx.HTTPStatusError, httpx.RequestError, httpx.TimeoutException) as exc:
             raise MediaMTXClientError(f"MediaMTX API request failed: {exc}") from exc
 
