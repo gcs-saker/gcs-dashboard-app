@@ -29,7 +29,7 @@ PageOffset = Annotated[int, Query(ge=0, le=100_000)]
 
 # 센서 데이터 수집 (장비 → 서버)
 @router.post(TelemetryRoutes.INGEST, response_model=TelemetryResponse)
-async def receive_telemetry(
+def receive_telemetry(
     data: TelemetryCreate,
     read_models: TelemetryReadModelDependency,
     db: Session = Depends(get_db),

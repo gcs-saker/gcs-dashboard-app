@@ -42,7 +42,7 @@ async def healthz() -> HealthReportResponse:
 
 
 @router.get(HealthRoutes.READYZ, response_model=HealthReportResponse)
-async def readyz(
+def readyz(
     response: Response,
     service: StreamServiceDependency,
     database_probe: DatabaseProbeDependency,

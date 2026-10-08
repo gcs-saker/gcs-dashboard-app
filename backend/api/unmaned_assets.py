@@ -14,7 +14,7 @@ PageOffset = Annotated[int, Query(ge=0, le=100_000)]
 
 
 @router.get(AssetRoutes.BY_GATEWAY_UUID)
-async def get_asset(
+def get_asset(
     uuid: str,
     db: Session = Depends(get_db),
     limit: PageLimit = 200,

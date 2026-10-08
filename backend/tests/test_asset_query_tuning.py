@@ -1,4 +1,3 @@
-import asyncio
 from collections.abc import Generator
 
 import pytest
@@ -62,7 +61,7 @@ def test_asset_lookup_uses_gateway_lookup_then_join_query(asset_db_session: Sess
 
     event.listen(bind, "before_cursor_execute", record_selects)
     try:
-        assets = asyncio.run(get_asset("raw.local.webcam", asset_db_session))
+        assets = get_asset("raw.local.webcam", asset_db_session)
     finally:
         event.remove(bind, "before_cursor_execute", record_selects)
 

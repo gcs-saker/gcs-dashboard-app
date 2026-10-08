@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 @router.post(ControlRoutes.SEND)
-async def control_robot(
+def control_robot(
     command: ControlCommand,
     publisher: Annotated[ControlMessagePublisher, Depends(get_control_message_publisher)],
 ):
