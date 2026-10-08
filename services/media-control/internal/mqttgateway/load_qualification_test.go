@@ -108,7 +108,8 @@ type loadMessage struct {
 
 func newLoadMessage(device, sequence int) *loadMessage {
 	sessionID := fmt.Sprintf("ps_load_%03d", device)
-	return &loadMessage{topic: "gcs/device/" + sessionID + "/telemetry", sequence: sequence, createdAt: time.Now()}
+	deviceUUID := fmt.Sprintf("device-%03d", device)
+	return &loadMessage{topic: "gcs/device/" + deviceUUID + "/" + sessionID + "/telemetry", sequence: sequence, createdAt: time.Now()}
 }
 
 func (m *loadMessage) Duplicate() bool   { return false }

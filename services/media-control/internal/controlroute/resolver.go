@@ -3,11 +3,11 @@ package controlroute
 import (
 	"context"
 	"errors"
-	"fmt"
 	"regexp"
 	"time"
 
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/domain"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/mqtttopic"
 )
 
 var (
@@ -58,8 +58,12 @@ func (r RouteResolver) Resolve(ctx context.Context, request RouteRequest) (Inter
 	if session.GroupID == "" {
 		return InternalRoute{}, ErrRouteUnavailable
 	}
+	commandTopic, err := mqtttopic.New(session.DeviceUUID, session.SessionID, mqtttopic.Command)
+	if err != nil {
+		return InternalRoute{}, ErrRouteUnavailable
+	}
 	return InternalRoute{
 		deviceID: request.DeviceID, groupID: session.GroupID, publishSession: session.SessionID,
-		commandTopic: fmt.Sprintf("gcs/device/%s/command", session.SessionID),
+		commandTopic: commandTopic.String(),
 	}, nil
 }

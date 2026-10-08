@@ -10,6 +10,7 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	pb "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/mqtttopic"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -120,7 +121,7 @@ func observeIngress(metrics IngressMetrics, result string) {
 }
 
 func deliver(ctx context.Context, client mqtt.Client, message mqtt.Message, exchange Exchange) error {
-	sessionID, err := SessionFromTopic(message.Topic())
+	binding, err := telemetryTopic(message.Topic())
 	if err != nil {
 		message.Ack()
 		return nil
@@ -136,7 +137,11 @@ func deliver(ctx context.Context, client mqtt.Client, message mqtt.Message, exch
 	if err != nil {
 		return errors.New("mqtt_result_encode_failed")
 	}
-	if err := await(client.Publish("gcs/device/"+sessionID+"/result", 1, false, wire)); err != nil {
+	resultTopic, err := mqtttopic.New(binding.DeviceUUID, binding.PublishSession, mqtttopic.Result)
+	if err != nil {
+		return errors.New("mqtt_result_topic_invalid")
+	}
+	if err := await(client.Publish(resultTopic.String(), 1, false, wire)); err != nil {
 		return errors.New("mqtt_result_publish_failed")
 	}
 	message.Ack()

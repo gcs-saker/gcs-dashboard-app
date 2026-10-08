@@ -24,7 +24,7 @@ REQUIRED_EVIDENCE = {
     ),
     "mqtt-boundary": (
         ROOT / "services/media-control/internal/mqttgateway/message_test.go",
-        ("MalformedAndOversized", "gcs/device/+/telemetry", "invalid payload reached gateway"),
+        ("MalformedAndOversized", "gcs/device/+/+/telemetry", "invalid payload reached gateway"),
     ),
     "mqtt-fuzz": (
         ROOT / "services/media-control/internal/mqttgateway/message_fuzz_test.go",

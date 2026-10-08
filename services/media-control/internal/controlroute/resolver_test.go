@@ -14,8 +14,8 @@ func TestRouteResolverUsesServerOwnedActiveSession(t *testing.T) {
 	now := time.Now()
 	store := domain.NewInMemoryPublishSessionStore()
 	_ = store.Save(context.Background(), session(now))
-	route, err := NewRouteResolver(store).Resolve(context.Background(), RouteRequest{"device-01", "session-01", now})
-	if err != nil || route.GroupID() != "co-a" || route.CommandTopic() != "gcs/device/session-01/command" {
+	route, err := NewRouteResolver(store).Resolve(context.Background(), RouteRequest{"device-01", "ps_session-01", now})
+	if err != nil || route.GroupID() != "co-a" || route.CommandTopic() != "gcs/device/device-01/ps_session-01/command" {
 		t.Fatalf("unexpected route: %+v err=%v", route, err)
 	}
 }
@@ -32,15 +32,15 @@ func TestRouteResolverRejectsMismatchAndStaleSession(t *testing.T) {
 	store := domain.NewInMemoryPublishSessionStore()
 	_ = store.Save(context.Background(), session(now))
 	resolver := NewRouteResolver(store)
-	if _, err := resolver.Resolve(context.Background(), RouteRequest{"device-02", "session-01", now}); !errors.Is(err, ErrDeviceMismatch) {
+	if _, err := resolver.Resolve(context.Background(), RouteRequest{"device-02", "ps_session-01", now}); !errors.Is(err, ErrDeviceMismatch) {
 		t.Fatalf("expected mismatch, got %v", err)
 	}
-	if _, err := resolver.Resolve(context.Background(), RouteRequest{"device-01", "session-01", now.Add(time.Minute)}); !errors.Is(err, ErrSessionStale) {
+	if _, err := resolver.Resolve(context.Background(), RouteRequest{"device-01", "ps_session-01", now.Add(time.Minute)}); !errors.Is(err, ErrSessionStale) {
 		t.Fatalf("expected stale session, got %v", err)
 	}
 }
 
 func session(now time.Time) domain.PublishSession {
-	return domain.PublishSession{SessionID: "session-01", DeviceUUID: "device-01", GroupID: "co-a",
+	return domain.PublishSession{SessionID: "ps_session-01", DeviceUUID: "device-01", GroupID: "co-a",
 		Status: domain.PublishSessionActive, RenewalTokenExpiresAt: now.Add(30 * time.Second)}
 }

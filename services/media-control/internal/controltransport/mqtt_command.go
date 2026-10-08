@@ -3,13 +3,12 @@ package controltransport
 import (
 	"context"
 	"errors"
-	"regexp"
-	"strings"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/controlroute"
 	pb "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/mqtttopic"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -17,7 +16,6 @@ const (
 	commandQoS      = 1
 	commandTimeout  = 5 * time.Second
 	maxCommandBytes = 16 * 1024
-	ackTopicSuffix  = "ack"
 )
 
 var (
@@ -28,8 +26,6 @@ var (
 	ErrCommandUnavailable = errors.New("control_command_unavailable")
 	ErrAckInvalid         = errors.New("control_ack_invalid")
 )
-
-var ackSessionSegment = regexp.MustCompile(`^[A-Za-z0-9_-]{8,128}$`)
 
 type IdempotencyLedger interface {
 	Reserve(context.Context, string, time.Time) (bool, error)
@@ -102,12 +98,13 @@ func (t CommandTransport) publishWire(topic string, command *pb.ControlCommandEn
 }
 
 func DecodeAck(topic string, payload []byte) (*pb.ControlCommandAck, error) {
-	sessionID, ok := ackSession(topic)
-	if !ok || len(payload) == 0 || len(payload) > maxCommandBytes {
+	binding, err := mqtttopic.Parse(topic)
+	if err != nil || binding.Channel != mqtttopic.CommandAck || len(payload) == 0 || len(payload) > maxCommandBytes {
 		return nil, ErrAckInvalid
 	}
 	ack := &pb.ControlCommandAck{}
-	if proto.Unmarshal(payload, ack) != nil || ack.ControlSessionId != sessionID || ack.CommandId == "" || ack.Sequence == 0 {
+	if proto.Unmarshal(payload, ack) != nil || ack.DeviceId != binding.DeviceUUID ||
+		ack.ControlSessionId == "" || ack.CommandId == "" || ack.Sequence == 0 {
 		return nil, ErrAckInvalid
 	}
 	return ack, nil
@@ -125,13 +122,4 @@ func validateCommand(route controlroute.InternalRoute, command *pb.ControlComman
 		return ErrCommandExpired
 	}
 	return nil
-}
-
-func ackSession(topic string) (string, bool) {
-	parts := strings.Split(topic, "/")
-	returnValue := len(parts) == 4 && parts[0] == "gcs" && parts[1] == "device" && parts[3] == ackTopicSuffix
-	if !returnValue || !ackSessionSegment.MatchString(parts[2]) {
-		return "", false
-	}
-	return parts[2], true
 }

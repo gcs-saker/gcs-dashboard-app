@@ -21,7 +21,8 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Topic: gcs/device/<sessionId>/telemetry. Never includes a receiver or group.
+// Topic: gcs/device/<deviceUuid>/<publishSession>/<channel>.
+// The certificate identity must match deviceUuid. Group and receiver are always server-resolved.
 // Token is an opaque, short-lived publish token; never a device credential.
 type MqttGatewayMessage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`

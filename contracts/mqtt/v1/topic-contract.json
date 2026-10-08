@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "gcs-saker.mqtt-topic.v1",
+  "namespace": "gcs/device/{deviceUuid}/{publishSession}/{channel}",
+  "identity": {
+    "deviceUuid": "authenticated-device-certificate-cn",
+    "publishSession": "server-issued-opaque-session",
+    "group": "server-side-session-lookup-only",
+    "receiver": "server-side-routing-only"
+  },
+  "channels": {
+    "telemetry": { "publisher": "device", "subscriber": "media-control" },
+    "result": { "publisher": "media-control", "subscriber": "device" },
+    "command": { "publisher": "media-control", "subscriber": "device" },
+    "command_ack": { "publisher": "device", "subscriber": "media-control" }
+  },
+  "constraints": {
+    "deviceUuidPattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+    "publishSessionPattern": "^ps_[A-Za-z0-9_-]{1,96}$",
+    "wildcardsAllowedForDevice": false,
+    "qos": 1,
+    "retained": false
+  }
+}

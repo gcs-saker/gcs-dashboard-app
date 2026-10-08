@@ -11,6 +11,7 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	pb "github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/generated/gcs/saker/v1"
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/mqtttopic"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -110,8 +111,12 @@ func connect(config simulatorConfig) (mqtt.Client, <-chan *pb.GatewayStreamRespo
 		return nil, nil, fmt.Errorf("mqtt_connect_failed")
 	}
 	responses := make(chan *pb.GatewayStreamResponse, 4)
-	topic := "gcs/device/" + config.State.SessionID + "/result"
-	if err := wait(client.Subscribe(topic, 1, func(_ mqtt.Client, message mqtt.Message) {
+	topic, err := mqtttopic.New(config.State.DeviceUUID, config.State.SessionID, mqtttopic.Result)
+	if err != nil {
+		client.Disconnect(100)
+		return nil, nil, fmt.Errorf("mqtt_result_topic_invalid")
+	}
+	if err := wait(client.Subscribe(topic.String(), 1, func(_ mqtt.Client, message mqtt.Message) {
 		response := &pb.GatewayStreamResponse{}
 		if proto.Unmarshal(message.Payload(), response) == nil {
 			responses <- response
@@ -166,7 +171,11 @@ func publishAndVerify(client mqtt.Client, responses <-chan *pb.GatewayStreamResp
 	if err != nil {
 		return fmt.Errorf("payload_encode_failed")
 	}
-	if err := wait(client.Publish("gcs/device/"+state.SessionID+"/telemetry", 1, false, wire)); err != nil {
+	topic, err := mqtttopic.New(state.DeviceUUID, state.SessionID, mqtttopic.Telemetry)
+	if err != nil {
+		return fmt.Errorf("mqtt_telemetry_topic_invalid")
+	}
+	if err := wait(client.Publish(topic.String(), 1, false, wire)); err != nil {
 		return fmt.Errorf("mqtt_publish_failed")
 	}
 	select {
