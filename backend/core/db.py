@@ -11,6 +11,7 @@ from core.settings_base import BackendBaseSettings, SettingsConfigurationError, 
 Base = declarative_base()
 
 DATABASE_URL_ENV = "DATABASE_URL"
+DATABASE_TLS_REQUIRED_ENV = "DATABASE_TLS_REQUIRED"
 DEFAULT_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 LEGACY_MYSQL_ALLOWED_ENV = "GCS_ALLOW_LEGACY_MYSQL"
 LEGACY_MYSQL_DIALECTS = frozenset({"mysql", "mysql+pymysql", "mariadb", "mariadb+pymysql"})
@@ -20,6 +21,7 @@ POSTGRES_DIALECTS = frozenset({"postgresql", "postgresql+psycopg2"})
 class DatabaseSettings(BackendBaseSettings):
     url: str = Field(DEFAULT_DATABASE_URL, validation_alias=DATABASE_URL_ENV)
     legacy_mysql_allowed: bool = Field(False, validation_alias=LEGACY_MYSQL_ALLOWED_ENV)
+    tls_required: bool = Field(False, validation_alias=DATABASE_TLS_REQUIRED_ENV)
 
     @classmethod
     def from_env(cls) -> "DatabaseSettings":
@@ -43,6 +45,10 @@ class DatabaseSettings(BackendBaseSettings):
                 f"{self.dialect} is a legacy fallback dialect. "
                 f"Use PostgreSQL/PostGIS or set {LEGACY_MYSQL_ALLOWED_ENV}=true for an explicit migration-only run."
             )
+        if self.is_postgres and self.tls_required:
+            query = dict(item.split("=", 1) for item in urlparse(self.url).query.split("&") if "=" in item)
+            if query.get("sslmode") != "verify-full" or not query.get("sslrootcert"):
+                raise ValueError("PostgreSQL requires sslmode=verify-full and sslrootcert")
         return self
 
 
@@ -58,7 +64,14 @@ def get_database_url() -> str:
     return DatabaseSettings.from_env().url
 
 
-engine = create_engine(get_database_url(), pool_pre_ping=True)
+def create_database_engine(settings: DatabaseSettings):
+    options: dict[str, object] = {"pool_pre_ping": True}
+    if settings.is_postgres:
+        options.update(pool_timeout=5, pool_recycle=300)
+    return create_engine(settings.url, **options)
+
+
+engine = create_database_engine(DatabaseSettings.from_env())
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

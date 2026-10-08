@@ -23,10 +23,14 @@ type RedisStore struct {
 }
 
 func NewRedisStore(address, password string, timeout time.Duration) *RedisStore {
-	return &RedisStore{client: redis.NewClient(&redis.Options{
+	return NewRedisStoreWithOptions(&redis.Options{
 		Addr: address, Password: password, DialTimeout: timeout,
 		ReadTimeout: timeout, WriteTimeout: timeout,
-	})}
+	})
+}
+
+func NewRedisStoreWithOptions(options *redis.Options) *RedisStore {
+	return &RedisStore{client: redis.NewClient(options)}
 }
 
 func (s *RedisStore) Ping(ctx context.Context) error { return s.client.Ping(ctx).Err() }

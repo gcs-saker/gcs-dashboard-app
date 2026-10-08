@@ -3,6 +3,7 @@ package streamcache
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -12,9 +13,16 @@ import (
 )
 
 type RedisStringCache struct {
-	addr     string
-	password string
-	timeout  time.Duration
+	addr      string
+	password  string
+	timeout   time.Duration
+	tlsConfig *tls.Config
+}
+
+func NewRedisStringCacheTLS(addr, password string, timeout time.Duration, tlsConfig *tls.Config) RedisStringCache {
+	cache := NewRedisStringCache(addr, password, timeout)
+	cache.tlsConfig = tlsConfig
+	return cache
 }
 
 func NewRedisStringCache(addr string, password string, timeout time.Duration) RedisStringCache {
@@ -52,8 +60,7 @@ func (c RedisStringCache) command(ctx context.Context, args ...string) (any, err
 	if c.addr == "" {
 		return nil, errors.New("redis address is empty")
 	}
-	dialer := net.Dialer{Timeout: c.timeout}
-	conn, err := dialer.DialContext(ctx, "tcp", c.addr)
+	conn, err := c.dial(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -79,4 +86,12 @@ func (c RedisStringCache) command(ctx context.Context, args ...string) (any, err
 		return nil, err
 	}
 	return readRESP(reader)
+}
+
+func (c RedisStringCache) dial(ctx context.Context) (net.Conn, error) {
+	dialer := net.Dialer{Timeout: c.timeout}
+	if c.tlsConfig == nil {
+		return dialer.DialContext(ctx, "tcp", c.addr)
+	}
+	return (&tls.Dialer{NetDialer: &dialer, Config: c.tlsConfig}).DialContext(ctx, "tcp", c.addr)
 }

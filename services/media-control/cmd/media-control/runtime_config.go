@@ -34,6 +34,11 @@ type runtimeConfig struct {
 	redisAddress           string
 	redisPassword          string
 	redisTimeout           time.Duration
+	redisCAFile            string
+	redisCertFile          string
+	redisKeyFile           string
+	redisServerName        string
+	redisAllowPlaintext    bool
 	streamCacheKey         string
 	streamPresenceKey      string
 	streamPresenceTTL      time.Duration
@@ -110,6 +115,11 @@ func loadStateRuntime(config *runtimeConfig) {
 	config.redisAddress = getenv(runtimeEnv.redisAddress, runtimeDefaults.redisAddress)
 	config.redisPassword = getenv(runtimeEnv.redisPassword, runtimeDefaults.redisPassword)
 	config.redisTimeout = getenvDuration(runtimeEnv.redisTimeoutSeconds, runtimeDefaults.redisTimeout)
+	config.redisCAFile = getenv("MEDIA_CONTROL_REDIS_CA_FILE", "")
+	config.redisCertFile = getenv("MEDIA_CONTROL_REDIS_CERT_FILE", "")
+	config.redisKeyFile = getenv("MEDIA_CONTROL_REDIS_KEY_FILE", "")
+	config.redisServerName = getenv("MEDIA_CONTROL_REDIS_SERVER_NAME", "")
+	config.redisAllowPlaintext = getenv("MEDIA_CONTROL_REDIS_ALLOW_PLAINTEXT", "false") == "true"
 	config.streamCacheKey = getenv(runtimeEnv.streamCacheKey, runtimeDefaults.streamCacheKey)
 	config.streamPresenceKey = getenv(runtimeEnv.streamPresencePrefix, runtimeDefaults.streamPresencePrefix)
 	config.streamPresenceTTL = getenvDuration(runtimeEnv.streamPresenceTTL, runtimeDefaults.streamPresenceTTL)
