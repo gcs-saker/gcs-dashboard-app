@@ -78,7 +78,7 @@ def test_single_node_compose_uses_hardened_mqtt_by_default() -> None:
     assert "INTERNAL_PKI_DIR" in compose
     assert "MQTT_TLS_ENABLED: ${MQTT_TLS_ENABLED:-true}" in compose
     assert "MQTT_GATEWAY_URL: ${MQTT_GATEWAY_URL:-ssl://mqtt:8883}" in compose
-    assert 'MQTT_GATEWAY_ALLOW_PLAINTEXT: "false"' in compose
+    assert "MQTT_GATEWAY_ALLOW_PLAINTEXT" not in compose
     assert "MQTT_GATEWAY_CERT_FILE: /run/secrets/gcs-pki/media-control.crt" in compose
     assert "MQTT_GATEWAY_SERVER_NAME: mqtt" in compose
     assert "mqtt-health.crt" in compose
