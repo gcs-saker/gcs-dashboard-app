@@ -9,9 +9,10 @@
 | Browser/mobile camera publisher | `GET /media-control/api/v1/streams/{streamId}/publish` 후 반환된 `whipUrl` | operator/publisher bearer token, short-lived `publisherToken` | WebRTC WHIP 송출 |
 | Dashboard receiver | `GET /media-control/api/v1/streams/{streamId}/playback` 후 반환된 `playbackUrls.webrtc` | operator bearer token, short-lived `playbackToken` | WebRTC WHEP 수신 |
 | Robot/drone gateway | `GET /media-control/api/v1/streams/{streamId}/publish` 후 반환된 `whipUrl` | device UUID, device credential, short-lived `publisherToken` | 송출 group 결정, telemetry, stream event, command ack |
-| MQTT device | `gcs/{orgId}/{groupId}/{assetId}/telemetry` | broker credential, device policy | 대량 telemetry ingest |
+| MQTT device | `gcs/device/{deviceUuid}/{publishSession}/telemetry` | mTLS device certificate, opaque publish token | server-scoped telemetry ingest |
 
 브라우저는 gRPC/MQTT에 직접 연결하지 않는다. 브라우저는 HTTPS JSON, SSE, WHIP, WHEP, HLS만 사용한다.
+MQTT 장비는 group이나 receiver를 topic에 넣지 않는다. Media Control이 publish session으로 group과 route를 조회한다.
 
 ## 2. Browser / Mobile Publisher 절차
 

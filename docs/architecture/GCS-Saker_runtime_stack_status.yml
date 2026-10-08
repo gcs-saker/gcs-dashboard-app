@@ -136,7 +136,7 @@ stacks:
     evidence:
       - scripts/smoke/mqtt_hardened_profile_smoke.py
       - backend/tests/test_mqtt_hardened_profile_smoke_contract.py
-      - backend/tests/test_mqtt_consumer_bridge.py
+      - services/media-control/internal/mqttgateway/bridge_integration_test.go
       - deploy/mosquitto/mosquitto.hardened.conf
       - deploy/mosquitto/acl.hardened
       - services/auth-policy/src/main/kotlin/kr/co/a4ai/gcssaker/authpolicy/application/MqttTelemetryConsumerBridge.kt

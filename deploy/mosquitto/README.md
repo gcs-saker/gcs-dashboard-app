@@ -18,6 +18,8 @@ The dashboard must never receive MQTT credentials. It continues to use REST/JSON
 
 Media frames must not be carried by MQTT. WebRTC/HLS media continues to use MediaMTX. MQTT is only for telemetry, health, command, command ACK, and operational events.
 
+The retired `gcs/{orgId}/{groupId}/{assetId}/telemetry` namespace has no broker ACL or Python subscriber. Devices must not select a group in a topic or MQTT envelope. Media Control resolves the authoritative group from the opaque publish session.
+
 ## Runtime smoke
 
 Run the isolated profile smoke from the repository root:

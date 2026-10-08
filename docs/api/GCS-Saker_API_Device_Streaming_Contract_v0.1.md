@@ -409,23 +409,25 @@ Content-Type: application/json
 
 REST 방식은 빠른 연동 검증에는 좋지만, 장비 수가 많아지면 MQTT/Protobuf 또는 gRPC gateway로 옮기는 것이 맞다.
 
-### MQTT / Protobuf 후보 방식
+### MQTT / Protobuf 운영 방식
 
 Topic template:
 
 ```text
-gcs/{orgId}/{groupId}/{assetId}/telemetry
+gcs/device/{deviceUuid}/{publishSession}/telemetry
 ```
 
 Payload:
 
-- Protobuf-compatible binary envelope
-- `eventId`, `orgId`, `groupId`, `assetId`, `observedUnixMillis`, `receivedUnixMillis`, `latitude`, `longitude`, `altitudeM`, `headingDeg`, `speedMps`, `batteryPercent`, `health`, `activeStreamIds`
+- `MqttGatewayMessage` Protobuf envelope
+- 장비 입력: `publishToken`, `requestId`, `assetId`, telemetry와 관측 시각
+- `groupId`와 실제 media route는 장비가 선택하지 않으며 Media Control이 session으로 결정한다.
 
 운영 원칙:
 
 - MQTT broker port는 기본적으로 내부망/폐쇄망 장비 대역에만 허용한다.
-- 공개 인터넷에서는 443/Nginx API를 우선 사용하고, MQTT 직접 공개는 hardened profile 확정 후에만 허용한다.
+- MQTT는 TLS 1.3/8883 mTLS와 인증서 CN 기반 ACL을 사용한다.
+- 폐기 인증서, 타 장비 UUID topic, legacy group-bearing telemetry topic은 거부한다.
 
 ### gRPC bidirectional streaming 내부/device gateway 방식
 

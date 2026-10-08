@@ -53,3 +53,19 @@ func TestMalformedAndOversizedMessagesNeverReachGateway(t *testing.T) {
 		}
 	}
 }
+
+func TestDeviceCannotSelectGroupInMQTTEnvelope(t *testing.T) {
+	exchange := func(context.Context, string, string, *pb.GatewayStreamRequest) (*pb.GatewayStreamResponse, error) {
+		t.Fatal("device-selected group reached gateway")
+		return nil, nil
+	}
+	request := &pb.GatewayStreamRequest{AssetId: "device-1", GroupId: "co-a",
+		Payload: &pb.GatewayStreamRequest_Telemetry{Telemetry: &pb.TelemetryEnvelope{AssetId: "device-1"}}}
+	wire, err := proto.Marshal(&pb.MqttGatewayMessage{PublishToken: "opaque-token", Request: request})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Handle(context.Background(), exchange, "gcs/device/device-1/ps_test/telemetry", wire); err == nil {
+		t.Fatal("device-selected group was accepted")
+	}
+}

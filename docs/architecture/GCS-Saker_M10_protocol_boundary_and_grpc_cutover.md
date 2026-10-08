@@ -48,13 +48,13 @@
 | Dashboard media receive | React player | WHEP WebRTC, HLS fallback | `/webrtc/{stream}/whep`, `/hls/{stream}` | 유지 | 초저지연은 WHEP 우선, HLS는 fallback |
 | Browser publisher | Web/mobile browser | WHIP WebRTC, HTTPS/JSON token request | `/media-control/api/v1/streams/{id}/publish`, `/webrtc/{stream}/whip` | 일부 구현 | publish token 선발급 후 WHIP |
 | Device gateway | 로봇/드론 gateway | gRPC bidi + Protobuf | `/gcs.saker.v1.SakerGatewayService/Exchange` | PR #501에서 readiness 승격 | telemetry, stream event, command ack 이동 |
-| Device telemetry bulk | 로봇/드론 gateway | MQTT + Protobuf | `gcs/{org}/{group}/{asset}/telemetry` | 검증 profile 존재 | 대량 telemetry 흡수 전용 |
+| Device telemetry bulk | 로봇/드론 gateway | MQTT + Protobuf | `gcs/device/{deviceUuid}/{publishSession}/telemetry` | mTLS/ACL/E2E 검증 | Media Control이 group 결정 |
 | Auth/session/group policy | Spring/Kotlin auth-policy | HTTPS/JSON, internal DTO | `/auth/*`, `/policy/streams/access` | 활성 core | PDP 역할 고정 |
 | Media control | Go media-control | HTTPS/JSON, gRPC internal | `/api/v1/streams*`, `/v1/mediamtx/auth`, gRPC Exchange | 활성 core | PEP, stream registry, ICE, token 발급 |
 | Media plane | MediaMTX | WHIP/WHEP/HLS/RTSP | `/webrtc/*`, `/hls/*`, RTSP internal | 활성 core | frame 중계 전담 |
 | ICE plane | coturn pair | STUN/TURN UDP/TCP | `3478`, relay range | 활성 core | STUN 우선, TURN fallback |
 | Operational read model | Spring/Kotlin | HTTPS/JSON, SSE | `/ops/server-health/snapshots`, `/ops/stream-sessions`, `/ops/stream-sessions/stream` | 활성화 중 | dashboard read model 유지 |
-| Legacy fallback | Python/FastAPI | HTTPS/JSON, MQTT/Protobuf adapter | `/stream/*`, `/telemetry/*`, `/control/*`, `/api/v1/*` | fallback/compat | active core에서 점진 하향 |
+| Legacy fallback | Python/FastAPI | HTTPS/JSON | `/stream/*`, `/telemetry/*`, `/control/*`, `/api/v1/*` | fallback/compat | MQTT telemetry subscriber 제거 완료 |
 | Cache/session | Redis or DragonFly profile | Redis protocol | refresh session, stream cache, ICE cache | Redis 기본, DragonFly 후보 | TTL cache와 session 분리 |
 | Durable relational DB | PostgreSQL/PostGIS target | SQL/Spatial SQL | telemetry history, asset, group, geo | 후보/profile | MySQL legacy 제거 방향 |
 | AI overlay sidecar | FastAPI or future Spring AI | HTTPS/JSON, metadata only | `/api/v1/ai/*` 후보 | 후보 | frame이 아니라 overlay metadata만 전달 |
@@ -81,7 +81,7 @@
 
 | 전환 대상 | 현재 경로/구현 | 목표 경로 | 우선순위 | 완료 기준 |
 | --- | --- | --- | --- | --- |
-| Device gateway telemetry | Python `TelemetryEnvelopePayload`, MQTT bridge 일부 | gRPC Exchange 또는 MQTT Protobuf consumer | P0 | malformed payload, unauthorized metadata, duplicate idempotency test |
+| Device gateway telemetry | Media Control MQTT gateway | canonical MQTT Protobuf consumer | P0 완료 | malformed payload, unauthorized metadata, duplicate idempotency test |
 | Stream session event | Go/Python stream registry event | gRPC `GatewayStreamRequest.stream_event` | P0 | stream online/offline/reconnect event가 media-control registry에 반영 |
 | Command ack | Python `StreamCommandPayload`, MQTT/control sender | gRPC `GatewayStreamRequest.command_ack` 또는 MQTT Protobuf | P0 | command id 기준 ack round-trip과 timeout test |
 | Control command dispatch | Python `/control`, MQTT sender | Spring/Go policy 후 gRPC/MQTT Protobuf dispatch | P1 | auth-policy decision 후 group scoped command 전송 |
@@ -111,7 +111,7 @@
 
 - `services/media-control/README.md`의 gRPC device gateway 설명 확인
 - `backend/modules/messaging/sender.py`의 gRPC/MQTT sender abstraction 확인
-- `backend/mqtt/consumer_bridge.py`의 Protobuf telemetry bridge 확인
+- `services/media-control/internal/mqttgateway`만 canonical telemetry를 소비하는지 확인
 - `gcs-dashboard`가 gRPC endpoint를 직접 호출하지 않는지 확인
 
 ### P0. gRPC Exchange contract completion

@@ -35,6 +35,9 @@ func Handle(ctx context.Context, exchange Exchange, topic string, payload []byte
 	if message.PublishToken == "" || message.Request == nil || message.Request.GetTelemetry() == nil {
 		return nil, errors.New("mqtt_telemetry_required")
 	}
+	if message.Request.GroupId != "" {
+		return nil, errors.New("mqtt_group_input_forbidden")
+	}
 	if message.Request.AssetId != binding.DeviceUUID || message.Request.GetTelemetry().AssetId != binding.DeviceUUID {
 		return nil, errors.New("mqtt_device_identity_mismatch")
 	}

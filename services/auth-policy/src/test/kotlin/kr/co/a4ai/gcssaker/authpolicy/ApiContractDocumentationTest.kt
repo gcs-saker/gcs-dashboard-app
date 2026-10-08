@@ -74,7 +74,7 @@ class ApiContractDocumentationTest {
             "/webrtc/{streamPath}/whip",
             "/webrtc/{streamPath}/whep",
             "/hls/{streamPath}/index.m3u8",
-            "gcs/{orgId}/{groupId}/{assetId}/telemetry",
+            "gcs/device/{deviceUuid}/{publishSession}/telemetry",
             "/gcs.saker.v1.SakerGatewayService/Exchange",
             "x-gcs-gateway-token",
             "CONTROL_GRPC_TARGET",
