@@ -18,6 +18,8 @@ def test_internal_pki_generation_is_private_and_bounded() -> None:
     assert "default_days=90" in source
     assert "chmod 600" in source
     assert "serverAuth" in source and "clientAuth" in source
+    assert "serverAuth,clientAuth" in source
+    assert "issue_identity media-control media-control serverClientAuth" in source
     assert "openssl ca -gencrl" in source
     assert "mqtt-device-other" in source
     assert "mqtt-device-revoked" in source

@@ -46,11 +46,16 @@ extendedKeyUsage=serverAuth
 basicConstraints=critical,CA:FALSE
 keyUsage=critical,digitalSignature
 extendedKeyUsage=clientAuth
+[server_client_cert]
+basicConstraints=critical,CA:FALSE
+keyUsage=critical,digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth,clientAuth
 EOF
 
 issue_identity() {
   local name="$1" dns_name="$2" usage="$3" common_name="$4" extension=client_cert
   [[ "${usage}" == "serverAuth" ]] && extension=server_cert
+  [[ "${usage}" == "serverClientAuth" ]] && extension=server_client_cert
   openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out "${output_real}/${name}.key"
   openssl req -new -sha384 -key "${output_real}/${name}.key" \
     -subj "/CN=${common_name}" -addext "subjectAltName=DNS:${dns_name}" -out "${output_real}/${name}.csr"
@@ -60,7 +65,7 @@ issue_identity() {
 }
 
 issue_identity auth-policy auth-policy serverAuth auth-policy
-issue_identity media-control media-control clientAuth gcs_media_control
+issue_identity media-control media-control serverClientAuth gcs_media_control
 issue_identity mqtt mqtt serverAuth mqtt
 issue_identity mqtt-health mqtt-health clientAuth mqtt-health
 issue_identity backend backend clientAuth gcs_backend_pub

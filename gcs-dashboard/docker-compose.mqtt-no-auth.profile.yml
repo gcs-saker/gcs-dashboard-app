@@ -8,6 +8,7 @@ services:
       test: ["CMD-SHELL", "mosquitto_sub -h 127.0.0.1 -p 1883 -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null"]
   media-control:
     environment:
+      MEDIA_CONTROL_GRPC_ALLOW_PLAINTEXT: "true"
       MQTT_GATEWAY_URL: tcp://mqtt:1883
       MQTT_GATEWAY_ALLOW_PLAINTEXT: "true"
       MQTT_GATEWAY_USERNAME: local-smoke-only
@@ -16,3 +17,6 @@ services:
       MQTT_GATEWAY_CERT_FILE: ""
       MQTT_GATEWAY_KEY_FILE: ""
       MQTT_GATEWAY_SERVER_NAME: ""
+  backend:
+    environment:
+      MEDIA_CONTROL_GRPC_ALLOW_PLAINTEXT: "true"

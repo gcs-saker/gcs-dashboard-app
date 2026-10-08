@@ -135,6 +135,12 @@ services:
       AI_PROCESSOR_ENDPOINTS_JSON: ${AI_PROCESSOR_ENDPOINTS_JSON:-{}}
       AI_STREAM_BASE_URL: ${AI_STREAM_BASE_URL:-http://mediamtx:8889}
       AI_ADAPTER_TIMEOUT_SECONDS: ${AI_ADAPTER_TIMEOUT_SECONDS:-2.0}
+      MEDIA_CONTROL_GRPC_TARGET: ${MEDIA_CONTROL_GRPC_TARGET:-media-control:9090}
+      MEDIA_CONTROL_GRPC_CA_FILE: /run/secrets/gcs-pki/ca.crt
+      MEDIA_CONTROL_GRPC_CERT_FILE: /run/secrets/gcs-pki/backend.crt
+      MEDIA_CONTROL_GRPC_KEY_FILE: /run/secrets/gcs-pki/backend.key
+      MEDIA_CONTROL_GRPC_SERVER_NAME: media-control
+      MEDIA_CONTROL_GRPC_TIMEOUT_SECONDS: ${MEDIA_CONTROL_GRPC_TIMEOUT_SECONDS:-2}
       TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS: ${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}
       TELEMETRY_BUFFER_MAX_PENDING_HISTORY: ${TELEMETRY_BUFFER_MAX_PENDING_HISTORY:-10000}
       MEDIAMTX_PUBLIC_WEBRTC_BASE_URL: ${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8080/webrtc}
@@ -149,7 +155,7 @@ services:
     depends_on:
       postgres-geo:
         condition: service_healthy
-      mqtt:
+      media-control:
         condition: service_started
       mediamtx:
         condition: service_started
@@ -295,6 +301,9 @@ services:
       MEDIA_CONTROL_GRPC_LISTEN_ADDR: :9090
       MEDIA_CONTROL_GRPC_TOKEN: ${MEDIA_CONTROL_GRPC_TOKEN:-${MEDIA_CONTROL_PUBLISH_TOKEN:?Set MEDIA_CONTROL_PUBLISH_TOKEN}}
       MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES: ${MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES:-65536}
+      MEDIA_CONTROL_GRPC_CA_FILE: /run/secrets/gcs-pki/ca.crt
+      MEDIA_CONTROL_GRPC_CERT_FILE: /run/secrets/gcs-pki/media-control.crt
+      MEDIA_CONTROL_GRPC_KEY_FILE: /run/secrets/gcs-pki/media-control.key
       GOGC: ${MEDIA_CONTROL_GOGC:-100}
       GOMEMLIMIT: ${MEDIA_CONTROL_GOMEMLIMIT:-512MiB}
       MEDIA_CONTROL_TRACE_EXPORTER: ${MEDIA_CONTROL_TRACE_EXPORTER:-none}

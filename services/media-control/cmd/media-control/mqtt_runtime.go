@@ -7,9 +7,11 @@ import (
 	"net"
 	"time"
 
+	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/grpcgateway"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/httpapi"
 	"github.com/gcs-saker/gcs-dashboard-app/services/media-control/internal/mqttgateway"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
@@ -28,11 +30,7 @@ func startMQTTAdapter(parent context.Context, config runtimeConfig, metrics *htt
 	if err := settings.Validate(); err != nil {
 		return nil, err
 	}
-	_, port, err := net.SplitHostPort(config.grpcListenAddress)
-	if err != nil {
-		return nil, fmt.Errorf("gateway listen address invalid")
-	}
-	connection, err := grpc.NewClient(net.JoinHostPort("127.0.0.1", port), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	connection, err := newLoopbackGatewayConnection(config.grpcListenAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -55,4 +53,26 @@ func startMQTTAdapter(parent context.Context, config runtimeConfig, metrics *htt
 			slog.Error("mqtt_shutdown", "error_code", "grpc_close_failed")
 		}
 	}, nil
+}
+
+func newLoopbackGatewayConnection(listenAddress string) (*grpc.ClientConn, error) {
+	_, port, err := net.SplitHostPort(listenAddress)
+	if err != nil {
+		return nil, fmt.Errorf("gateway listen address invalid")
+	}
+	transport, err := loopbackGatewayCredentials()
+	if err != nil {
+		return nil, err
+	}
+	return grpc.NewClient(net.JoinHostPort("127.0.0.1", port), grpc.WithTransportCredentials(transport))
+}
+
+func loopbackGatewayCredentials() (credentials.TransportCredentials, error) {
+	if getenv("MEDIA_CONTROL_GRPC_ALLOW_PLAINTEXT", "false") == "true" {
+		return insecure.NewCredentials(), nil
+	}
+	return (grpcgateway.TLSFiles{
+		CAFile: getenv("MEDIA_CONTROL_GRPC_CA_FILE", ""), CertFile: getenv("MEDIA_CONTROL_GRPC_CERT_FILE", ""),
+		KeyFile: getenv("MEDIA_CONTROL_GRPC_KEY_FILE", ""), ServerName: "media-control",
+	}).ClientCredentials()
 }

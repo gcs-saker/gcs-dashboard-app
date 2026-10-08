@@ -79,6 +79,9 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert {"postgres", "mqtt", "backend", "mediamtx", "media-control", "turn", "nginx", "edge"} <= set(services)
     assert "mysql" not in services
     assert services["backend"]["environment"]["DATABASE_URL"].startswith("${DATABASE_URL:")
+    assert services["backend"]["environment"]["MEDIA_CONTROL_GRPC_TARGET"] == (
+        "${MEDIA_CONTROL_GRPC_TARGET:-media-control:9090}"
+    )
     assert services["backend"]["environment"]["AUTH_JWT_SECRET"].startswith("${AUTH_JWT_SECRET:")
     assert services["backend"]["environment"]["AUTH_REFRESH_TOKEN_EXPIRE_MINUTES"] == (
         "${AUTH_REFRESH_TOKEN_EXPIRE_MINUTES:-120}"
@@ -161,6 +164,8 @@ def test_no_auth_mqtt_is_only_available_as_explicit_local_smoke_profile() -> Non
     assert override["services"]["mqtt"]["profiles"] == ["local-mqtt-no-auth"]
     assert override["services"]["mqtt"]["command"] == ["mosquitto", "-c", "/mosquitto-no-auth.conf"]
     assert override["services"]["media-control"]["environment"]["MQTT_GATEWAY_ALLOW_PLAINTEXT"] == "true"
+    assert override["services"]["media-control"]["environment"]["MEDIA_CONTROL_GRPC_ALLOW_PLAINTEXT"] == "true"
+    assert override["services"]["backend"]["environment"]["MEDIA_CONTROL_GRPC_ALLOW_PLAINTEXT"] == "true"
     assert "local-mqtt-no-auth" in override_text
 
 

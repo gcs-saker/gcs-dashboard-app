@@ -26,7 +26,7 @@ from modules.protocol_v2.gateway_service import (  # noqa: E402
 PROTO_ROOT = REPO_ROOT / "contracts" / "proto"
 GATEWAY_PROTO = PROTO_ROOT / "gcs" / "saker" / "v1" / "gateway_service.proto"
 DESCRIPTOR_SET = REPO_ROOT / "tmp" / "gcs-saker-grpc-gateway.pb"
-SCHEMA_VERSION = "grpc-runtime-smoke-v1"
+SCHEMA_VERSION = "grpc-runtime-smoke-v2"
 DEFAULT_METHOD = "/gcs.saker.v1.SakerGatewayService/Exchange"
 GATEWAY_TOKEN_METADATA = "x-gcs-gateway-token"
 AUTHORIZATION_METADATA = "authorization"
@@ -75,9 +75,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--proto-root", type=Path, default=PROTO_ROOT)
     parser.add_argument("--gateway-proto", type=Path, default=GATEWAY_PROTO)
     parser.add_argument("--descriptor-set", type=Path, default=DESCRIPTOR_SET)
-    parser.add_argument("--target", default=os.getenv("CONTROL_GRPC_TARGET", ""))
-    parser.add_argument("--auth-token", default=os.getenv("CONTROL_GRPC_AUTH_TOKEN", ""))
-    parser.add_argument("--method", default=os.getenv("CONTROL_GRPC_METHOD", DEFAULT_METHOD))
+    parser.add_argument("--target", default=os.getenv("MEDIA_CONTROL_GRPC_TARGET", ""))
+    parser.add_argument("--auth-token", default=os.getenv("MEDIA_CONTROL_GRPC_AUTH_TOKEN", ""))
+    parser.add_argument("--method", default=os.getenv("MEDIA_CONTROL_GRPC_METHOD", DEFAULT_METHOD))
+    parser.add_argument("--ca-file", type=Path, default=os.getenv("MEDIA_CONTROL_GRPC_CA_FILE", ""))
+    parser.add_argument("--cert-file", type=Path, default=os.getenv("MEDIA_CONTROL_GRPC_CERT_FILE", ""))
+    parser.add_argument("--key-file", type=Path, default=os.getenv("MEDIA_CONTROL_GRPC_KEY_FILE", ""))
+    parser.add_argument("--server-name", default=os.getenv("MEDIA_CONTROL_GRPC_SERVER_NAME", ""))
+    parser.add_argument("--allow-plaintext", action="store_true")
     parser.add_argument("--timeout-seconds", type=float, default=2.0)
     parser.add_argument(
         "--messages",
@@ -103,8 +108,8 @@ def main() -> int:
         "descriptorFallbackCommand": config.grpc_tools_descriptor_command(),
         "implementedRuntime": [
             "protobuf descriptor contract",
-            "client implementation behind MessageSender abstraction",
-            "CONTROL_GRPC_TARGET and CONTROL_GRPC_METHOD runtime configuration",
+            "reusable Backend MediaControlGrpcClient with bounded calls and explicit close",
+            "TLS 1.3 mutual authentication with CA and server-name verification",
             "SakerGatewayService.Exchange server implementation in media-control",
             "MEDIA_CONTROL_GRPC_LISTEN_ADDR compose wiring for local and single-node runtime",
             "metadata based gateway authorization",
@@ -142,7 +147,7 @@ def main() -> int:
     if not target or not auth_token:
         payload["runtime"] = {
             "executed": False,
-            "reason": "CONTROL_GRPC_TARGET or CONTROL_GRPC_AUTH_TOKEN is not configured",
+            "reason": "MEDIA_CONTROL_GRPC_TARGET or MEDIA_CONTROL_GRPC_AUTH_TOKEN is not configured",
         }
         print(json.dumps(payload, ensure_ascii=False))
         return 0
@@ -153,6 +158,11 @@ def main() -> int:
         auth_token=auth_token,
         timeout_seconds=args.timeout_seconds,
         messages=max(args.messages, 1),
+        ca_file=args.ca_file,
+        cert_file=args.cert_file,
+        key_file=args.key_file,
+        server_name=args.server_name,
+        allow_plaintext=args.allow_plaintext,
     )
     payload["runtime"] = runtime
     print(json.dumps(payload, ensure_ascii=False))
@@ -160,7 +170,16 @@ def main() -> int:
 
 
 def run_exchange_smoke(
-    target: str, method: str, auth_token: str, timeout_seconds: float, messages: int
+    target: str,
+    method: str,
+    auth_token: str,
+    timeout_seconds: float,
+    messages: int,
+    ca_file: Path,
+    cert_file: Path,
+    key_file: Path,
+    server_name: str,
+    allow_plaintext: bool,
 ) -> dict[str, Any]:
     try:
         import grpc
@@ -171,7 +190,10 @@ def run_exchange_smoke(
             "reason": f"grpcio is not installed: {exc}",
         }
 
-    channel = grpc.insecure_channel(target)
+    try:
+        channel = build_channel(grpc, target, ca_file, cert_file, key_file, server_name, allow_plaintext)
+    except (OSError, ValueError) as exc:
+        return {"executed": False, "accepted": False, "reason": str(exc)}
     stub = channel.stream_stream(
         method,
         request_serializer=identity_bytes,
@@ -181,13 +203,13 @@ def run_exchange_smoke(
         (AUTHORIZATION_METADATA, f"Bearer {auth_token}"),
         (GATEWAY_TOKEN_METADATA, auth_token),
     )
-    responses = stub(
-        iter(gateway_request(index) for index in range(1, messages + 1)),
-        metadata=metadata,
-        timeout=timeout_seconds,
-    )
-    decoded_responses: list[GatewayStreamResponse] = []
     try:
+        responses = stub(
+            iter(gateway_request(index) for index in range(1, messages + 1)),
+            metadata=metadata,
+            timeout=timeout_seconds,
+        )
+        decoded_responses: list[GatewayStreamResponse] = []
         for response in responses:
             decoded_responses.append(GatewayStreamResponse.from_protobuf_wire(response))
     except Exception as exc:  # pragma: no cover - exact grpc exception varies by runtime
@@ -196,6 +218,8 @@ def run_exchange_smoke(
             "accepted": False,
             "reason": str(exc),
         }
+    finally:
+        channel.close()
     accepted = bool(decoded_responses) and all(item.status == GatewayAckStatus.ACCEPTED for item in decoded_responses)
     return {
         "executed": True,
@@ -207,6 +231,21 @@ def run_exchange_smoke(
         "statuses": [int(item.status) for item in decoded_responses],
         "reasonCodes": [item.reason_code for item in decoded_responses],
     }
+
+
+def build_channel(
+    grpc: Any, target: str, ca_file: Path, cert_file: Path, key_file: Path, server_name: str, allow_plaintext: bool
+):
+    if allow_plaintext:
+        return grpc.insecure_channel(target)
+    if not all((str(ca_file), str(cert_file), str(key_file), server_name)):
+        raise ValueError("gRPC mTLS files and server name are required")
+    credentials = grpc.ssl_channel_credentials(
+        root_certificates=ca_file.read_bytes(),
+        private_key=key_file.read_bytes(),
+        certificate_chain=cert_file.read_bytes(),
+    )
+    return grpc.secure_channel(target, credentials, options=(("grpc.ssl_target_name_override", server_name),))
 
 
 def compile_descriptor(config: GrpcRuntimeSmokeConfig) -> dict[str, Any]:
