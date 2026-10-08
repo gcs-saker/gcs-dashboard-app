@@ -31,11 +31,11 @@ def test_mqtt_hardened_smoke_reports_acl_protobuf_and_runtime_boundary() -> None
     assert payload["status"] == "hardened-profile-runtime-contract"
     assert payload["profile"]["composeMode"] == "default-hardened"
     assert payload["profile"]["overrideFile"] is None
-    assert payload["topicNamespace"]["telemetry"] == "gcs/{orgId}/{groupId}/{assetId}/telemetry"
-    assert "device gateway publishes protobuf telemetry" in "\n".join(payload["allowedFlows"])
+    assert payload["topicNamespace"]["telemetry"] == "gcs/device/{deviceUuid}/{publishSession}/telemetry"
+    assert "certificate-bound UUID" in "\n".join(payload["allowedFlows"])
     assert "anonymous MQTT clients are rejected" in payload["deniedFlows"]
     assert payload["protobufBoundary"]["mediaFrames"].startswith("never carried by MQTT")
-    assert "device telemetry publish reaches backend subscriber" in payload["runtimeChecks"]
+    assert "device telemetry publish reaches media-control subscriber" in payload["runtimeChecks"]
     assert "default hardened MQTT active" in payload["promotionGate"]
     assert "broker credential rotation drill" in payload["promotionGate"]
 
@@ -58,6 +58,10 @@ def test_mqtt_acl_and_guide_keep_dashboard_outside_broker_and_health_readable() 
 
     assert "user gcs_backend_pub" in acl
     assert "topic read $SYS/#" in acl
+    assert "topic read gcs/device/+/+/telemetry" in acl
+    assert "topic write gcs/device/+/+/result" in acl
+    assert "pattern write gcs/device/%u/+/telemetry" in acl
+    assert "pattern read gcs/device/%u/+/command" in acl
     assert "pattern write gcs/+/+/%u/telemetry" in acl
     assert "pattern read gcs/+/+/%u/command" in acl
     assert "The dashboard must never receive MQTT credentials" in readme
@@ -73,6 +77,10 @@ def test_single_node_compose_uses_hardened_mqtt_by_default() -> None:
     assert "acl.hardened" in compose
     assert "INTERNAL_PKI_DIR" in compose
     assert "MQTT_TLS_ENABLED: ${MQTT_TLS_ENABLED:-true}" in compose
+    assert "MQTT_GATEWAY_URL: ${MQTT_GATEWAY_URL:-ssl://mqtt:8883}" in compose
+    assert 'MQTT_GATEWAY_ALLOW_PLAINTEXT: "false"' in compose
+    assert "MQTT_GATEWAY_CERT_FILE: /run/secrets/gcs-pki/media-control.crt" in compose
+    assert "MQTT_GATEWAY_SERVER_NAME: mqtt" in compose
     assert "mqtt-health.crt" in compose
 
 
@@ -85,10 +93,13 @@ def test_local_compose_uses_hardened_mqtt_and_keeps_no_auth_in_explicit_profile(
     assert "mosquitto-no-auth.conf" not in compose
     assert "mosquitto.hardened.conf" in compose
     assert "acl.hardened" in compose
-    assert "MQTT_PASSWORD_FILE" in compose
-    assert "MQTT_USERNAME: ${MQTT_USERNAME:?Set MQTT_USERNAME in .env}" in compose
+    assert "MQTT_PASSWORD_FILE" not in compose
+    assert "MQTT_USERNAME: ${MQTT_USERNAME:-}" in compose
+    assert 'MQTT_TLS_ENABLED: "true"' in compose
+    assert "mqtt-health.crt" in compose
     assert "local-mqtt-no-auth" in local_no_auth
     assert "mosquitto-no-auth.conf" in local_no_auth
+    assert 'MQTT_GATEWAY_ALLOW_PLAINTEXT: "true"' in local_no_auth
 
 
 def test_runtime_failure_captures_broker_logs_before_cleanup() -> None:

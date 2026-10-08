@@ -8,7 +8,8 @@ prepare_ephemeral_internal_pki() {
   }
   require_command openssl
   EPHEMERAL_PKI_DIR="$(mktemp -d)"
-  if ! "${REPO_ROOT}/scripts/ops/prepare_internal_pki.sh" "$EPHEMERAL_PKI_DIR" >/dev/null 2>&1; then
+  if ! INCLUDE_MQTT_SMOKE_IDENTITY=1 \
+    "${REPO_ROOT}/scripts/ops/prepare_internal_pki.sh" "$EPHEMERAL_PKI_DIR" >/dev/null 2>&1; then
     echo "Failed to generate ephemeral internal PKI" >&2
     return 1
   fi
@@ -22,10 +23,11 @@ prepare_ephemeral_internal_pki() {
       cp /source/ca.crt /source/ca.crl /source/auth-policy.crt /source/auth-policy.key \
         /source/media-control.crt /source/media-control.key \
         /source/mqtt.crt /source/mqtt.key /source/mqtt-health.crt /source/mqtt-health.key \
-        /source/backend.crt /source/backend.key /target/
+        /source/backend.crt /source/backend.key \
+        /source/mqtt-device-smoke.crt /source/mqtt-device-smoke.key /target/
       chown 10002:10002 /target/auth-policy.key
       chown 10001:10001 /target/media-control.key /target/backend.key
-      chown 1883:1883 /target/mqtt.key /target/mqtt-health.key
+      chown 1883:1883 /target/mqtt.key /target/mqtt-health.key /target/mqtt-device-smoke.key
       chmod 600 /target/*.key
       chmod 644 /target/*.crt /target/*.crl
     '

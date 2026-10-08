@@ -1,10 +1,7 @@
 # GCS-Saker MQTT ACL
 #
-# Topic namespace:
-#   gcs/{orgId}/{groupId}/{assetId}/telemetry
-#   gcs/{orgId}/{groupId}/{assetId}/status
-#   gcs/{orgId}/{groupId}/{assetId}/command
-#   gcs/{orgId}/{groupId}/{assetId}/command_ack
+# Canonical topic namespace:
+#   gcs/device/{deviceUuid}/{publishSession}/{telemetry|result|command|command_ack}
 #   gcs/ops/{service}/event
 #
 # The dashboard must not connect to MQTT directly. Browser clients use REST/JSON
@@ -19,17 +16,23 @@ topic read gcs/+/+/+/command_ack
 topic write gcs/ops/+/event
 
 user gcs_media_control
-topic read gcs/+/+/+/telemetry
-topic read gcs/+/+/+/status
-topic write gcs/+/+/+/command
-topic read gcs/+/+/+/command_ack
+topic read gcs/device/+/+/telemetry
+topic write gcs/device/+/+/result
+topic write gcs/device/+/+/command
+topic read gcs/device/+/+/command_ack
 topic write gcs/ops/media-control/event
 
 user mqtt-health
 topic read $SYS/#
 
-# Device certificate CN is the server-owned asset UUID. A device can only use
-# the asset segment matching its authenticated certificate identity.
+# Device certificate CN is the server-owned device UUID. The publish session is
+# additionally validated by Media Control's opaque token/session policy.
+pattern write gcs/device/%u/+/telemetry
+pattern read gcs/device/%u/+/result
+pattern read gcs/device/%u/+/command
+pattern write gcs/device/%u/+/command_ack
+
+# Transitional legacy namespace. Removed by #847 after canonical broker E2E.
 pattern write gcs/+/+/%u/telemetry
 pattern write gcs/+/+/%u/status
 pattern read gcs/+/+/%u/command

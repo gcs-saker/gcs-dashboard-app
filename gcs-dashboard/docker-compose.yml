@@ -34,11 +34,8 @@ services:
     image: eclipse-mosquitto:2
     container_name: ${COMPOSE_PROJECT_NAME:-gcs-saker-local}-mqtt
     command: ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
-    environment:
-      MQTT_HEALTH_USERNAME: ${MQTT_HEALTH_USERNAME:?Set MQTT_HEALTH_USERNAME in .env}
-      MQTT_HEALTH_PASSWORD: ${MQTT_HEALTH_PASSWORD:?Set MQTT_HEALTH_PASSWORD in .env}
     ports:
-      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MQTT_HOST_PORT:-1883}:1883"
+      - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MQTT_HOST_PORT:-8883}:8883"
     volumes:
       - type: bind
         source: ../deploy/mosquitto/mosquitto.hardened.conf
@@ -49,15 +46,15 @@ services:
         target: /mosquitto/config/acl
         read_only: true
       - type: bind
-        source: ${MQTT_PASSWORD_FILE:?Set MQTT_PASSWORD_FILE in .env}
-        target: /mosquitto/config/passwords
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR in .env}
+        target: /run/secrets/gcs-pki
         read_only: true
       - mqtt-data:/mosquitto/data
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "mosquitto_sub -h 127.0.0.1 -p 1883 -u \"$${MQTT_HEALTH_USERNAME}\" -P \"$${MQTT_HEALTH_PASSWORD}\" -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null",
+          "mosquitto_sub -h 127.0.0.1 -p 8883 --cafile /run/secrets/gcs-pki/ca.crt --cert /run/secrets/gcs-pki/mqtt-health.crt --key /run/secrets/gcs-pki/mqtt-health.key -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null",
         ]
       interval: 10s
       timeout: 5s
@@ -96,10 +93,14 @@ services:
       BACKEND_CORS_ALLOW_ORIGINS: ${BACKEND_CORS_ALLOW_ORIGINS:-http://localhost:5173,http://localhost:5174}
       BACKEND_CONTENT_SECURITY_POLICY: ${BACKEND_CONTENT_SECURITY_POLICY:-}
       MQTT_HOST: ${MQTT_HOST:-mqtt}
-      MQTT_PORT: ${MQTT_PORT:-1883}
+      MQTT_PORT: ${MQTT_PORT:-8883}
       MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-gcs_backend_pub}
-      MQTT_USERNAME: ${MQTT_USERNAME:?Set MQTT_USERNAME in .env}
-      MQTT_PASSWORD: ${MQTT_PASSWORD:?Set MQTT_PASSWORD in .env}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      MQTT_TLS_ENABLED: "true"
+      MQTT_TLS_CA_FILE: /run/secrets/gcs-pki/ca.crt
+      MQTT_TLS_CERT_FILE: /run/secrets/gcs-pki/backend.crt
+      MQTT_TLS_KEY_FILE: /run/secrets/gcs-pki/backend.key
       TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS: ${TELEMETRY_BUFFER_AUTO_FLUSH_MAX_ITEMS:-1000}
       CONTROL_MESSAGE_SENDER: ${CONTROL_MESSAGE_SENDER:-mqtt}
       MEDIAMTX_PUBLIC_WEBRTC_BASE_URL: ${MEDIAMTX_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8889}
@@ -121,6 +122,11 @@ services:
       mqtt:
         condition: service_healthy
     restart: always
+    volumes:
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR in .env}
+        target: /run/secrets/gcs-pki
+        read_only: true
 
   mediamtx:
     image: ${MEDIAMTX_IMAGE:-bluenviron/mediamtx:1.21.0}
@@ -177,11 +183,24 @@ services:
       AUTH_POLICY_AUDIT_INGEST_TOKEN: ${AUTH_POLICY_AUDIT_INGEST_TOKEN:?Set AUTH_POLICY_AUDIT_INGEST_TOKEN in .env}
       MEDIA_CONTROL_REDIS_ADDR: ${MEDIA_CONTROL_REDIS_ADDR:-redis:6379}
       MEDIA_CONTROL_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+      MQTT_GATEWAY_URL: ssl://mqtt:8883
+      MQTT_GATEWAY_ALLOW_PLAINTEXT: "false"
+      MQTT_GATEWAY_CA_FILE: /run/secrets/gcs-pki/ca.crt
+      MQTT_GATEWAY_CERT_FILE: /run/secrets/gcs-pki/media-control.crt
+      MQTT_GATEWAY_KEY_FILE: /run/secrets/gcs-pki/media-control.key
+      MQTT_GATEWAY_SERVER_NAME: mqtt
       TURN_USERNAME: ${WEBRTC_TURN_USERNAME:-gcs-turn}
       TURN_PASSWORD: ${WEBRTC_TURN_PASSWORD:-replace-with-secret-outside-git}
     depends_on:
       redis:
         condition: service_healthy
+      mqtt:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR in .env}
+        target: /run/secrets/gcs-pki
+        read_only: true
     restart: always
 
   turn:
