@@ -25,6 +25,7 @@ prepare_ephemeral_internal_pki() {
         /source/mqtt.crt /source/mqtt.key /source/mqtt-health.crt /source/mqtt-health.key \
         /source/backend.crt /source/backend.key \
         /source/postgres.crt /source/postgres.key /source/redis.crt /source/redis.key \
+        /source/turn-primary.crt /source/turn-primary.key /source/turn-secondary.crt /source/turn-secondary.key \
         /source/mqtt-device-smoke.crt /source/mqtt-device-smoke.key \
         /source/mqtt-device-other.crt /source/mqtt-device-other.key \
         /source/mqtt-device-revoked.crt /source/mqtt-device-revoked.key /target/
@@ -32,6 +33,7 @@ prepare_ephemeral_internal_pki() {
       chown 10001:10001 /target/media-control.key /target/backend.key
       chown 999:999 /target/postgres.key
       chown 999:1000 /target/redis.key
+      chown 65534:65534 /target/turn-primary.key /target/turn-secondary.key
       chown 1883:1883 /target/mqtt.key /target/mqtt-health.key \
         /target/mqtt-device-smoke.key /target/mqtt-device-other.key /target/mqtt-device-revoked.key
       chmod 600 /target/*.key

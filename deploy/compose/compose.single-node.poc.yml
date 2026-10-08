@@ -329,7 +329,7 @@ services:
       MEDIA_CONTROL_AUTHZ_CACHE_TTL_SECONDS: ${MEDIA_CONTROL_AUTHZ_CACHE_TTL_SECONDS:-2}
       MEDIA_CONTROL_STUN_URL: ${MEDIA_CONTROL_STUN_URL:-stun:stun.l.google.com:19302}
       MEDIA_CONTROL_TURN_PRIMARY_URL: ${MEDIA_CONTROL_TURN_PRIMARY_URL:-turn:localhost:3478?transport=udp}
-      MEDIA_CONTROL_TURN_SECONDARY_URL: ${MEDIA_CONTROL_TURN_SECONDARY_URL:-}
+      MEDIA_CONTROL_TURN_SECONDARY_URL: ${MEDIA_CONTROL_TURN_SECONDARY_URL:-turns:turn-primary:5349?transport=tcp}
       MEDIA_CONTROL_TURN_MAX_HEALTHY_SERVERS: ${MEDIA_CONTROL_TURN_MAX_HEALTHY_SERVERS:-1}
       MEDIA_CONTROL_ICE_SERVER_CACHE_TTL_SECONDS: ${MEDIA_CONTROL_ICE_SERVER_CACHE_TTL_SECONDS:-10}
       MEDIA_CONTROL_ICE_SERVER_CACHE_KEY: ${MEDIA_CONTROL_ICE_SERVER_CACHE_KEY:-gcs-saker:media-control:ice-servers}
@@ -426,6 +426,9 @@ services:
       - --realm=${TURN_REALM:-gcs-saker.closed}
       - --static-auth-secret=${TURN_SHARED_SECRET:?Set TURN_SHARED_SECRET}
       - --listening-port=3478
+      - --tls-listening-port=5349
+      - --cert=/run/secrets/gcs-pki/turn-primary.crt
+      - --pkey=/run/secrets/gcs-pki/turn-primary.key
       - --min-port=${TURN_RELAY_MIN_PORT:-49160}
       - --max-port=${TURN_PRIMARY_RELAY_MAX_PORT:-49180}
       - --external-ip=${TURN_EXTERNAL_IP:-127.0.0.1}
@@ -439,9 +442,14 @@ services:
         source: ../coturn/turnserver-entrypoint.sh
         target: /usr/local/bin/gcs-turnserver-entrypoint
         read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
+        target: /run/secrets/gcs-pki
+        read_only: true
     ports:
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/tcp"
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/udp"
+      - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_TLS_HOST_PORT:-5349}:5349/tcp"
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_RELAY_HOST_MIN_PORT:-49160}-${TURN_PRIMARY_RELAY_HOST_MAX_PORT:-49180}:49160-49180/udp"
     healthcheck:
       <<: *health_defaults
@@ -467,6 +475,9 @@ services:
       - --realm=${TURN_REALM:-gcs-saker.closed}
       - --static-auth-secret=${TURN_SHARED_SECRET:?Set TURN_SHARED_SECRET}
       - --listening-port=3478
+      - --tls-listening-port=5349
+      - --cert=/run/secrets/gcs-pki/turn-secondary.crt
+      - --pkey=/run/secrets/gcs-pki/turn-secondary.key
       - --min-port=${TURN_SECONDARY_RELAY_MIN_PORT:-49181}
       - --max-port=${TURN_RELAY_MAX_PORT:-49200}
       - --external-ip=${TURN_EXTERNAL_IP:-127.0.0.1}
@@ -480,9 +491,14 @@ services:
         source: ../coturn/turnserver-entrypoint.sh
         target: /usr/local/bin/gcs-turnserver-entrypoint
         read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
+        target: /run/secrets/gcs-pki
+        read_only: true
     ports:
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/tcp"
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/udp"
+      - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_TLS_HOST_PORT:-5350}:5349/tcp"
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_RELAY_HOST_MIN_PORT:-49181}-${TURN_SECONDARY_RELAY_HOST_MAX_PORT:-49200}:49181-49200/udp"
     healthcheck:
       <<: *health_defaults
