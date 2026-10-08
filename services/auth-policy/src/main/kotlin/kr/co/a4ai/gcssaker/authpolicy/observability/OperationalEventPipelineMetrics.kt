@@ -11,6 +11,8 @@ class OperationalEventPipelineMetrics(registry: MeterRegistry? = null) {
     private val saturatedBatches = registry?.counter("gcs.auth_policy.operational_events.batch.saturated")
     private val queriedRows = registry?.summary("gcs.auth_policy.operational_events.query.rows")
     private val queryLatency = registry?.timer("gcs.auth_policy.operational_events.query.latency")
+    private val signalWakeups = registry?.counter("gcs.auth_policy.operational_events.sse.signal.wakeup")
+    private val fallbackPolls = registry?.counter("gcs.auth_policy.operational_events.sse.fallback.poll")
 
     init {
         registry?.let {
@@ -31,6 +33,10 @@ class OperationalEventPipelineMetrics(registry: MeterRegistry? = null) {
         queriedRows?.record(rowCount.toDouble())
         acceptedEvents?.increment(rowCount.toDouble())
         if (rowCount >= limit) saturatedBatches?.increment()
+    }
+
+    fun recordWait(changed: Boolean) {
+        if (changed) signalWakeups?.increment() else fallbackPolls?.increment()
     }
 
     fun <T> measureQuery(operation: () -> T): T =

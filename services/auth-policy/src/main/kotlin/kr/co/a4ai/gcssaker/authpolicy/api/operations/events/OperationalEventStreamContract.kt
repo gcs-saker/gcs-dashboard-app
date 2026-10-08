@@ -5,10 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 data class OperationalEventStreamPolicy(
     val pollCount: Int = OperationalEventStreamContract.DEFAULT_POLL_COUNT,
     val pollIntervalMillis: Long = OperationalEventStreamContract.DEFAULT_POLL_INTERVAL_MILLIS,
+    val fallbackPollIntervalMillis: Long = OperationalEventStreamContract.DEFAULT_FALLBACK_POLL_INTERVAL_MILLIS,
 ) {
     init {
         require(pollCount in 1..OperationalEventStreamContract.MAX_POLL_COUNT)
         require(pollIntervalMillis >= 0)
+        require(fallbackPollIntervalMillis > 0)
     }
 }
 
@@ -16,6 +18,7 @@ object OperationalEventStreamContract {
     const val DEFAULT_POLL_COUNT = 30
     const val MAX_POLL_COUNT = 120
     const val DEFAULT_POLL_INTERVAL_MILLIS = 1_000L
+    const val DEFAULT_FALLBACK_POLL_INTERVAL_MILLIS = 5_000L
     const val BATCH_LIMIT = 100
     const val EVENT_OPERATIONAL_EVENT = "operational-event"
     const val EVENT_HEARTBEAT = "heartbeat"

@@ -2,6 +2,8 @@ package kr.co.a4ai.gcssaker.authpolicy.configuration
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalEventRepository
+import kr.co.a4ai.gcssaker.authpolicy.application.OperationalEventSignal
+import kr.co.a4ai.gcssaker.authpolicy.application.SignalingOperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
@@ -42,6 +44,7 @@ internal fun createOperationalReadRepository(
 internal fun createOperationalEventRepository(
     settings: AuthRuntimeSettings,
     dataSource: ObjectProvider<DataSource>,
+    signal: OperationalEventSignal,
 ): OperationalEventRepository {
     val initialEvents = seedOperationalEvents()
     val repository = PersistenceMode.dataSource(settings, dataSource)?.let {
@@ -49,7 +52,7 @@ internal fun createOperationalEventRepository(
     } ?: run {
         InMemoryOperationalEventRepository(initialEvents)
     }
-    return repository
+    return SignalingOperationalEventRepository(repository, signal)
 }
 
 private fun readPolicy(settings: AuthRuntimeSettings): RedisCachePolicy =

@@ -12,6 +12,7 @@ import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
 import kr.co.a4ai.gcssaker.authpolicy.configuration.OperationalPersistenceConfiguration
 import kr.co.a4ai.gcssaker.authpolicy.configuration.RuntimeEnvReader
 import kr.co.a4ai.gcssaker.authpolicy.configuration.TimeSyncPolicyConfiguration
+import kr.co.a4ai.gcssaker.authpolicy.application.LocalOperationalEventSignal
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthenticatedPrincipal
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
 import kr.co.a4ai.gcssaker.authpolicy.domain.NoopPrincipalCache
@@ -299,6 +300,7 @@ class AuthPolicyConfigTest {
         val repository = OperationalPersistenceConfiguration().operationalEventRepository(
             AuthRuntimeSettings.fromEnvironment(localEnvironment()).copy(jdbcPersistenceEnabled = false),
             EmptyObjectProvider(),
+            LocalOperationalEventSignal(),
         )
         val principal = AuthenticatedPrincipal("operator01", UserRole.OPERATOR, GroupId("co-a"))
 

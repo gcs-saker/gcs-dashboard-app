@@ -3,6 +3,8 @@ package kr.co.a4ai.gcssaker.authpolicy.configuration
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micrometer.core.instrument.MeterRegistry
 import kr.co.a4ai.gcssaker.authpolicy.observability.OperationalEventPipelineMetrics
+import kr.co.a4ai.gcssaker.authpolicy.application.LocalOperationalEventSignal
+import kr.co.a4ai.gcssaker.authpolicy.application.OperationalEventSignal
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
@@ -17,6 +19,9 @@ class OperationalPersistenceConfiguration {
     @Bean
     fun operationalEventPipelineMetrics(registry: MeterRegistry): OperationalEventPipelineMetrics =
         OperationalEventPipelineMetrics(registry)
+
+    @Bean
+    fun operationalEventSignal(): OperationalEventSignal = LocalOperationalEventSignal()
 
     @Bean
     fun operationalReadDependencies(
@@ -34,6 +39,7 @@ class OperationalPersistenceConfiguration {
     fun operationalEventRepository(
         settings: AuthRuntimeSettings,
         dataSource: ObjectProvider<DataSource>,
+        signal: OperationalEventSignal,
     ): OperationalEventRepository =
-        createOperationalEventRepository(settings, dataSource)
+        createOperationalEventRepository(settings, dataSource, signal)
 }
