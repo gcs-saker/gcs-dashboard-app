@@ -27,13 +27,16 @@ def run_check() -> dict:
 def test_mqtt_hardened_smoke_reports_acl_protobuf_and_runtime_boundary() -> None:
     payload = run_check()
 
-    assert payload["schemaVersion"] == "mqtt-hardened-profile-smoke-v1"
+    assert payload["schemaVersion"] == "mqtt-hardened-profile-smoke-v2"
     assert payload["status"] == "hardened-profile-runtime-contract"
     assert payload["profile"]["composeMode"] == "default-hardened"
     assert payload["profile"]["overrideFile"] is None
     assert payload["topicNamespace"]["telemetry"] == "gcs/device/{deviceUuid}/{publishSession}/telemetry"
     assert "certificate-bound UUID" in "\n".join(payload["allowedFlows"])
     assert "anonymous MQTT clients are rejected" in payload["deniedFlows"]
+    assert "revoked device certificates are rejected" in "\n".join(payload["deniedFlows"])
+    assert "another device UUID" in "\n".join(payload["deniedFlows"])
+    assert "64 KiB" in "\n".join(payload["deniedFlows"])
     assert payload["protobufBoundary"]["mediaFrames"].startswith("never carried by MQTT")
     assert "device telemetry publish reaches media-control subscriber" in payload["runtimeChecks"]
     assert "default hardened MQTT active" in payload["promotionGate"]
@@ -115,3 +118,12 @@ def test_runtime_smoke_restarts_broker_and_requires_mtls_reconnect() -> None:
 
     assert '"restart", "mqtt"' in source
     assert "broker.restart.mtls_reconnect" in source
+
+
+def test_runtime_smoke_executes_certificate_acl_and_size_denials() -> None:
+    source = SMOKE_SCRIPT.read_text(encoding="utf-8")
+
+    for check_name in ("certificate.revoked", "device.cross_uuid.publish", "payload.oversized"):
+        assert check_name in source
+    assert "mqtt-device-other" in source
+    assert "mqtt-device-revoked" in source

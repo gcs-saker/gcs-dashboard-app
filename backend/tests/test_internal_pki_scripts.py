@@ -19,6 +19,10 @@ def test_internal_pki_generation_is_private_and_bounded() -> None:
     assert "chmod 600" in source
     assert "serverAuth" in source and "clientAuth" in source
     assert "openssl ca -gencrl" in source
+    assert "mqtt-device-other" in source
+    assert "mqtt-device-revoked" in source
+    assert 'openssl ca -batch -config "${output_real}/openssl-ca.cnf"' in source
+    assert '-revoke "${output_real}/mqtt-device-revoked.crt"' in source
 
 
 def test_internal_pki_check_fails_before_expiry() -> None:

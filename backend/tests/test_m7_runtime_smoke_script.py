@@ -99,7 +99,9 @@ def test_m7_runtime_smoke_generates_and_removes_ephemeral_local_pki():
     assert "gcs-saker.ephemeral-pki=true" in contract
     assert "chown 10002:10002 /target/auth-policy.key" in contract
     assert "chown 10001:10001 /target/media-control.key /target/backend.key" in contract
-    assert "chown 1883:1883 /target/mqtt.key /target/mqtt-health.key /target/mqtt-device-smoke.key" in contract
+    assert "chown 1883:1883 /target/mqtt.key /target/mqtt-health.key" in contract
+    assert "/target/mqtt-device-other.key" in contract
+    assert "/target/mqtt-device-revoked.key" in contract
     assert "/source/ca.crl" in contract
     assert "/source/ca.key" not in contract
     assert 'export INTERNAL_PKI_DIR="$(cygpath -m "$EPHEMERAL_PKI_DIR")"' in contract
