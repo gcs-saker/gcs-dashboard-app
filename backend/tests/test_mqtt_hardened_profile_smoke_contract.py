@@ -98,7 +98,7 @@ def test_local_compose_uses_hardened_mqtt_and_keeps_no_auth_in_explicit_profile(
     assert "acl.hardened" in compose
     assert "MQTT_PASSWORD_FILE" not in compose
     assert "MQTT_USERNAME" not in compose
-    assert 'MQTT_GATEWAY_URL: ssl://mqtt:8883' in compose
+    assert "MQTT_GATEWAY_URL: ssl://mqtt:8883" in compose
     assert "mqtt-health.crt" in compose
     assert "local-mqtt-no-auth" in local_no_auth
     assert "mosquitto-no-auth.conf" in local_no_auth
