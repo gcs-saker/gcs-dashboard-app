@@ -6,22 +6,15 @@ import (
 	"time"
 )
 
-func TestClassifyStatisticsSeparatesActiveEndedAndExpired(t *testing.T) {
+func TestDecodeStatisticsUsesAggregateCountersAndOldestIndex(t *testing.T) {
 	now := time.Unix(1_800_000_000, 0)
-	stats := Statistics{}
-	classifyStatistics(&stats, values("active", now.Add(time.Minute), now.Add(-time.Minute)), now)
-	classifyStatistics(&stats, values("ended", now.Add(time.Minute), now.Add(-2*time.Minute)), now)
-	classifyStatistics(&stats, values("active", now.Add(-time.Second), now.Add(-3*time.Minute)), now)
+	oldest := now.Add(-3 * time.Minute).UnixMilli()
+	stats := decodeStatistics([]string{"1005", "2", "3", strconv.FormatInt(oldest, 10), "1007", "0"}, now)
 
-	if stats.Active != 1 || stats.Ended != 1 || stats.Expired != 1 || stats.OldestAge != 3*time.Minute {
-		t.Fatalf("unexpected statistics %#v", stats)
+	if stats.Active != 1005 || stats.Ended != 2 || stats.Expired != 3 || stats.Scanned != 1007 || stats.Truncated {
+		t.Fatalf("unexpected aggregate statistics %#v", stats)
 	}
-}
-
-func values(status string, expires time.Time, created time.Time) map[string]string {
-	return map[string]string{
-		"status":             status,
-		"renewal_expires_ms": strconv.FormatInt(expires.UnixMilli(), 10),
-		"created_ms":         strconv.FormatInt(created.UnixMilli(), 10),
+	if stats.OldestAge != 3*time.Minute {
+		t.Fatalf("unexpected oldest age %s", stats.OldestAge)
 	}
 }

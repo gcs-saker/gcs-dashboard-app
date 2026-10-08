@@ -59,6 +59,15 @@ class TelemetryAlertRuleEngineTest {
         assertEquals(2, events.eventsFor(principal, OperationalEventQuery()).count { it.eventType == "telemetry.timeout" })
     }
 
+    @Test
+    fun `timeout cleanup removes all per-device alert state`() {
+        engine.evaluate(telemetry(battery = 10.0), now)
+        engine.evaluateTimeouts(now.plusSeconds(31))
+        engine.evaluate(telemetry(battery = 10.0, observedAt = now.plusSeconds(32)), now.plusSeconds(32))
+
+        assertEquals(2, events.eventsFor(principal, OperationalEventQuery()).count { it.eventType == "battery.low" })
+    }
+
     private fun eventTypes(): Set<String?> =
         events.eventsFor(principal, OperationalEventQuery()).map { it.eventType }.toSet()
 

@@ -14,8 +14,12 @@ import (
 )
 
 const (
-	keyPrefix          = "gcs-saker:publish-session:v1:"
-	sessionExpiryGrace = time.Minute
+	keyPrefix            = "gcs-saker:publish-session:v1:"
+	sessionExpiryGrace   = time.Minute
+	statisticsStatusKey  = "gcs-saker:publish-session-statistics:v1:status"
+	statisticsCountKey   = "gcs-saker:publish-session-statistics:v1:count"
+	statisticsExpiryKey  = "gcs-saker:publish-session-statistics:v1:expiry"
+	statisticsCreatedKey = "gcs-saker:publish-session-statistics:v1:created"
 )
 
 type RedisStore struct {
@@ -46,7 +50,37 @@ func (s *RedisStore) Save(ctx context.Context, v domain.PublishSession) error {
 		pipe.ExpireAt(ctx, streamIndexKey(v.StreamID), v.RenewalTokenExpiresAt.Add(sessionExpiryGrace))
 		return nil
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	return s.updateStatistics(ctx, v)
+}
+
+var updateStatisticsScript = redis.NewScript(`
+local expired = redis.call('ZRANGEBYSCORE', KEYS[3], '-inf', ARGV[5], 'LIMIT', 0, 100)
+for _, id in ipairs(expired) do
+  local status = redis.call('HGET', KEYS[1], id)
+  if status then redis.call('HINCRBY', KEYS[2], status, -1) end
+  redis.call('HDEL', KEYS[1], id)
+  redis.call('ZREM', KEYS[3], id)
+  redis.call('ZREM', KEYS[4], id)
+end
+local previous = redis.call('HGET', KEYS[1], ARGV[1])
+if previous ~= ARGV[2] then
+  if previous then redis.call('HINCRBY', KEYS[2], previous, -1) end
+  redis.call('HINCRBY', KEYS[2], ARGV[2], 1)
+  redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+end
+redis.call('ZADD', KEYS[3], ARGV[3], ARGV[1])
+redis.call('ZADD', KEYS[4], ARGV[4], ARGV[1])
+return 1
+`)
+
+func (s *RedisStore) updateStatistics(ctx context.Context, v domain.PublishSession) error {
+	return updateStatisticsScript.Run(ctx, s.client,
+		[]string{statisticsStatusKey, statisticsCountKey, statisticsExpiryKey, statisticsCreatedKey},
+		v.SessionID, string(v.Status), millis(v.RenewalTokenExpiresAt), millis(v.CreatedAt), millis(time.Now()),
+	).Err()
 }
 
 func streamIndexKey(streamID string) string {
@@ -120,20 +154,35 @@ func (s *RedisStore) RotateRenewal(ctx context.Context, id string, expected, nex
 	}
 	rotation := domain.RenewalRotationResult(result[0])
 	v, findErr := s.Find(ctx, id)
-	return v, rotation, findErr
+	if findErr != nil {
+		return v, rotation, findErr
+	}
+	if statsErr := s.updateStatistics(ctx, v); statsErr != nil {
+		return v, rotation, fmt.Errorf("%w: update rotation statistics", domain.ErrPublishSessionStoreUnavailable)
+	}
+	return v, rotation, nil
 }
 
+var endScript = redis.NewScript(`
+if redis.call('EXISTS', KEYS[1]) == 0 then return 0 end
+redis.call('HSET', KEYS[1], 'status', 'ended', 'updated_ms', ARGV[2])
+local previous = redis.call('HGET', KEYS[2], ARGV[1])
+if previous ~= 'ended' then
+  if previous then redis.call('HINCRBY', KEYS[3], previous, -1) end
+  redis.call('HINCRBY', KEYS[3], 'ended', 1)
+  redis.call('HSET', KEYS[2], ARGV[1], 'ended')
+end
+return 1
+`)
+
 func (s *RedisStore) End(ctx context.Context, id string, now time.Time) error {
-	key := keyPrefix + id
-	exists, err := s.client.Exists(ctx, key).Result()
-	if err != nil || exists == 0 {
-		if err != nil {
-			return fmt.Errorf("%w: %v", domain.ErrPublishSessionStoreUnavailable, err)
-		}
-		return domain.ErrPublishSessionNotFound
-	}
-	if err := s.client.HSet(ctx, key, "status", string(domain.PublishSessionEnded), "updated_ms", millis(now)).Err(); err != nil {
+	result, err := endScript.Run(ctx, s.client, []string{keyPrefix + id, statisticsStatusKey, statisticsCountKey},
+		id, millis(now)).Int()
+	if err != nil {
 		return fmt.Errorf("%w: %v", domain.ErrPublishSessionStoreUnavailable, err)
+	}
+	if result == 0 {
+		return domain.ErrPublishSessionNotFound
 	}
 	return nil
 }
