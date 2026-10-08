@@ -41,7 +41,7 @@ def test_same_host_secondary_turn_is_opt_in() -> None:
     assert services["turn-secondary"]["profiles"] == ["same-host-turn-redundancy"]
     assert "turn-secondary" not in services["media-control"]["depends_on"]
     assert services["media-control"]["environment"]["MEDIA_CONTROL_TURN_SECONDARY_URL"] == (
-        "${MEDIA_CONTROL_TURN_SECONDARY_URL:-}"
+        "${MEDIA_CONTROL_TURN_SECONDARY_URL:-turns:turn-primary:5349?transport=tcp}"
     )
 
 
