@@ -1,6 +1,10 @@
 from collections.abc import Awaitable, Callable
 from time import perf_counter
 
+from fastapi import Depends, FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+
 from api import auth, control, health, map_config, stream, telemetry, unmaned_assets
 from api.contracts import (
     LegacyRouteContract,
@@ -21,12 +25,9 @@ from core.structured_logging import (
     log_request_failed,
 )
 from core.tracing import TracingSettings, configure_global_tracing, trace_fastapi_request
-from fastapi import Depends, FastAPI, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
 from modules.ai_adapter.router import router as ai_adapter_router
 from modules.ai_contract.router import router as mock_ai_router
 from modules.telemetry_ingest import TelemetryReadModelStore
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 
 async def add_security_headers(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
