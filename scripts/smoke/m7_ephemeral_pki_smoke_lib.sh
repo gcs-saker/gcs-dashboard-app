@@ -24,10 +24,13 @@ prepare_ephemeral_internal_pki() {
         /source/media-control.crt /source/media-control.key \
         /source/mqtt.crt /source/mqtt.key /source/mqtt-health.crt /source/mqtt-health.key \
         /source/backend.crt /source/backend.key \
-        /source/mqtt-device-smoke.crt /source/mqtt-device-smoke.key /target/
+        /source/mqtt-device-smoke.crt /source/mqtt-device-smoke.key \
+        /source/mqtt-device-other.crt /source/mqtt-device-other.key \
+        /source/mqtt-device-revoked.crt /source/mqtt-device-revoked.key /target/
       chown 10002:10002 /target/auth-policy.key
       chown 10001:10001 /target/media-control.key /target/backend.key
-      chown 1883:1883 /target/mqtt.key /target/mqtt-health.key /target/mqtt-device-smoke.key
+      chown 1883:1883 /target/mqtt.key /target/mqtt-health.key \
+        /target/mqtt-device-smoke.key /target/mqtt-device-other.key /target/mqtt-device-revoked.key
       chmod 600 /target/*.key
       chmod 644 /target/*.crt /target/*.crl
     '

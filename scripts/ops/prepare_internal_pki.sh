@@ -66,6 +66,10 @@ issue_identity mqtt-health mqtt-health clientAuth mqtt-health
 issue_identity backend backend clientAuth gcs_backend_pub
 if [[ "${INCLUDE_MQTT_SMOKE_IDENTITY:-0}" == "1" ]]; then
   issue_identity mqtt-device-smoke mqtt-device-smoke clientAuth smoke-device-01
+  issue_identity mqtt-device-other mqtt-device-other clientAuth smoke-device-02
+  issue_identity mqtt-device-revoked mqtt-device-revoked clientAuth revoked-device-01
+  openssl ca -batch -config "${output_real}/openssl-ca.cnf" \
+    -revoke "${output_real}/mqtt-device-revoked.crt"
 fi
 openssl ca -gencrl -config "${output_real}/openssl-ca.cnf" -out "${output_real}/ca.crl"
 chmod 600 "${output_real}"/*.key

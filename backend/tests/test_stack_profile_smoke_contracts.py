@@ -150,7 +150,7 @@ def test_postgis_profile_smoke_reports_runtime_query_contract() -> None:
 def test_mqtt_hardened_profile_smoke_reports_acl_and_protobuf_runtime_contract() -> None:
     payload = run_check(MQTT_SMOKE)
 
-    assert payload["schemaVersion"] == "mqtt-hardened-profile-smoke-v1"
+    assert payload["schemaVersion"] == "mqtt-hardened-profile-smoke-v2"
     assert payload["status"] == "hardened-profile-runtime-contract"
     assert payload["profile"]["composeMode"] == "default-hardened"
     assert payload["profile"]["overrideFile"] is None

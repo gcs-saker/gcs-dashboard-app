@@ -17,12 +17,14 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_DIR = REPO_ROOT / "backend"
 COMPOSE_FILE = REPO_ROOT / "deploy" / "compose" / "compose.single-node.poc.yml"
 ENV_FILE = REPO_ROOT / "deploy" / "compose" / ".env.single-node.example"
-SCHEMA_VERSION = "mqtt-hardened-profile-smoke-v1"
+SCHEMA_VERSION = "mqtt-hardened-profile-smoke-v2"
 DEFAULT_PROJECT_NAME = "gcs-saker-mqtt-profile-smoke"
 CLIENT_IMAGE = "eclipse-mosquitto:2"
 BACKEND_USER = "gcs_backend_pub"
 MEDIA_CONTROL_USER = "gcs_media_control"
 DEVICE_USER = "smoke-device-01"
+OTHER_DEVICE_USER = "smoke-device-02"
+REVOKED_DEVICE_USER = "revoked-device-01"
 MQTT_HEALTH_USER = "mqtt-health"
 ORG_ID = "a4ai"
 GROUP_ID = "co-a"
@@ -121,6 +123,9 @@ def smoke_contract(config: MqttHardenedProfileConfig) -> dict[str, Any]:
         ],
         "deniedFlows": [
             "anonymous MQTT clients are rejected",
+            "revoked device certificates are rejected during TLS authentication",
+            "a device certificate cannot publish or subscribe as another device UUID",
+            "broker rejects payloads larger than the 64 KiB contract limit",
             "browser/dashboard clients do not have broker users",
             "legacy robot/control topics are rejected by bridge parser",
         ],
@@ -173,14 +178,17 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
         generated_env = tmp_dir / "mqtt-smoke.env"
         telemetry_payload = tmp_dir / "telemetry.bin"
         telemetry_received = tmp_dir / "telemetry.received.bin"
+        denied_received = tmp_dir / "denied.received.bin"
         command_payload = tmp_dir / "command.txt"
         command_received = tmp_dir / "command.received.txt"
+        oversized_payload = tmp_dir / "oversized.bin"
 
         if config.pki_dir is None or not config.pki_dir.is_dir():
             raise RuntimeError("--pki-dir with ephemeral MQTT certificates is required")
         write_generated_env(config.env_file, generated_env, config.pki_dir)
         write_telemetry_payload(telemetry_payload)
         command_payload.write_text("return-to-base", encoding="utf-8")
+        oversized_payload.write_bytes(b"x" * (65_536 + 1))
 
         checks: list[dict[str, Any]] = []
         try:
@@ -212,6 +220,28 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
             )
             if anonymous.returncode == 0:
                 raise AssertionError("anonymous MQTT client was not rejected")
+
+            checks.append(
+                assert_denied("certificate.revoked", publish_telemetry(config, REVOKED_DEVICE_USER, telemetry_payload))
+            )
+            checks.append(
+                assert_publish_suppressed(
+                    config,
+                    name="device.cross_uuid.publish",
+                    publisher_identity=OTHER_DEVICE_USER,
+                    payload_path=telemetry_payload,
+                    output_path=denied_received,
+                )
+            )
+            checks.append(
+                assert_publish_suppressed(
+                    config,
+                    name="payload.oversized",
+                    publisher_identity=DEVICE_USER,
+                    payload_path=oversized_payload,
+                    output_path=denied_received,
+                )
+            )
 
             subscribe_and_publish(
                 config=config,
@@ -388,6 +418,67 @@ def subscribe_and_publish(
         raise RuntimeError(f"subscriber did not write output for {topic}")
 
 
+def publish_telemetry(
+    config: MqttHardenedProfileConfig,
+    identity: str,
+    payload_path: Path,
+) -> subprocess.CompletedProcess[bytes]:
+    return run_client(
+        config,
+        "mosquitto_pub",
+        "-h",
+        "mqtt",
+        "-p",
+        "8883",
+        "-t",
+        TELEMETRY_TOPIC,
+        "-q",
+        "1",
+        "-f",
+        f"/work/{payload_path.name}",
+        work_dir=payload_path.parent,
+        check=False,
+        identity=identity,
+    )
+
+
+def assert_publish_suppressed(
+    config: MqttHardenedProfileConfig,
+    *,
+    name: str,
+    publisher_identity: str,
+    payload_path: Path,
+    output_path: Path,
+) -> dict[str, Any]:
+    subscriber = run_client_popen(
+        config,
+        "sh",
+        "-lc",
+        'mosquitto_sub -h mqtt -p 8883 --cafile /pki/ca.crt --cert "$MQTT_CERT" --key "$MQTT_KEY" -t "$MQTT_TOPIC" -C 1 -W 2 -N > "$MQTT_OUTPUT"',
+        env={
+            "MQTT_USER": MEDIA_CONTROL_USER,
+            "MQTT_TOPIC": TELEMETRY_TOPIC,
+            "MQTT_OUTPUT": f"/work/{output_path.name}",
+            "MQTT_CERT": "/pki/media-control.crt",
+            "MQTT_KEY": "/pki/media-control.key",
+        },
+        work_dir=output_path.parent,
+    )
+    time.sleep(0.5)
+    publish_telemetry(config, publisher_identity, payload_path)
+    subscriber.communicate(timeout=5)
+    if output_path.exists() and output_path.stat().st_size > 0:
+        raise AssertionError(f"{name}: rejected payload was delivered")
+    output_path.unlink(missing_ok=True)
+    return {"name": name, "passed": True}
+
+
+def assert_denied(name: str, result: subprocess.CompletedProcess[bytes]) -> dict[str, Any]:
+    if result.returncode == 0:
+        raise AssertionError(f"{name}: broker unexpectedly accepted operation")
+    return {"name": name, "passed": True, "returnCode": result.returncode}
+
+
 def run_client(
     config: MqttHardenedProfileConfig,
     *args: str,
@@ -442,6 +533,8 @@ def certificate_base(identity: str) -> str:
         BACKEND_USER: "backend",
         MEDIA_CONTROL_USER: "media-control",
         DEVICE_USER: "mqtt-device-smoke",
+        OTHER_DEVICE_USER: "mqtt-device-other",
+        REVOKED_DEVICE_USER: "mqtt-device-revoked",
         MQTT_HEALTH_USER: "mqtt-health",
     }[identity]
 

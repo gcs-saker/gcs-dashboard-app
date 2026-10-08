@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -32,12 +33,22 @@ func (labPolicy) ValidateSessionBinding(_ context.Context, s domain.PublishSessi
 	return nil
 }
 
-type labStore struct{ calls atomic.Int32 }
+type labStore struct {
+	calls  atomic.Int32
+	mu     sync.Mutex
+	events map[string]struct{}
+}
 
-func (s *labStore) StoreTelemetry(_ context.Context, identity grpcgateway.GatewayIdentity, _ grpcgateway.Telemetry) error {
+func (s *labStore) StoreTelemetry(_ context.Context, identity grpcgateway.GatewayIdentity, telemetry grpcgateway.Telemetry) error {
 	if identity.GroupID != "co-a" || identity.Session == nil {
 		return fmt.Errorf("missing server-owned group/session")
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, exists := s.events[telemetry.EventID]; exists {
+		return nil
+	}
+	s.events[telemetry.EventID] = struct{}{}
 	s.calls.Add(1)
 	return nil
 }
@@ -61,7 +72,7 @@ func TestRealMQTTToSessionAuthenticatedGRPC(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := &labStore{}
+	store := &labStore{events: map[string]struct{}{}}
 	server := grpc.NewServer()
 	grpcgateway.NewDeviceServer(labPolicy{}, 65536, grpcgateway.NewTelemetryHandler(store)).
 		WithSessionAuthenticator(grpcgateway.PublishSessionAuthenticator{Store: sessions, Validator: labPolicy{}, Secret: "local-fixture-secret", Now: time.Now}).Register(server)
@@ -98,7 +109,7 @@ func TestRealMQTTToSessionAuthenticatedGRPC(t *testing.T) {
 	defer client.Disconnect(100)
 	waitToken(t, client.Connect())
 	responses := make(chan *pb.GatewayStreamResponse, 8)
-	waitToken(t, client.Subscribe("gcs/device/drone-1/ps_mqtttest/result", 1, func(_ mqtt.Client, m mqtt.Message) {
+	waitToken(t, client.Subscribe("gcs/device/+/+/result", 1, func(_ mqtt.Client, m mqtt.Message) {
 		response := &pb.GatewayStreamResponse{}
 		if err := proto.Unmarshal(m.Payload(), response); err == nil {
 			responses <- response
@@ -107,13 +118,13 @@ func TestRealMQTTToSessionAuthenticatedGRPC(t *testing.T) {
 	request := &pb.GatewayStreamRequest{RequestId: "valid", AssetId: "drone-1", Payload: &pb.GatewayStreamRequest_Telemetry{Telemetry: &pb.TelemetryEnvelope{
 		EventId: "event-1", AssetId: "drone-1", Time: &pb.Timestamped{ObservedUnixMillis: now.UnixMilli()}, Position: &pb.GeoPoint{Latitude: 35.87, Longitude: 128.6},
 	}}}
-	send := func(access string, expected pb.GatewayAckStatus) {
+	send := func(topic string, access string, expected pb.GatewayAckStatus, payload *pb.GatewayStreamRequest) {
 		t.Helper()
-		wire, err := proto.Marshal(&pb.MqttGatewayMessage{PublishToken: access, Request: request})
+		wire, err := proto.Marshal(&pb.MqttGatewayMessage{PublishToken: access, Request: payload})
 		if err != nil {
 			t.Fatal(err)
 		}
-		waitToken(t, client.Publish("gcs/device/drone-1/ps_mqtttest/telemetry", 1, false, wire))
+		waitToken(t, client.Publish(topic, 1, false, wire))
 		select {
 		case response := <-responses:
 			if response.Status != expected {
@@ -123,17 +134,60 @@ func TestRealMQTTToSessionAuthenticatedGRPC(t *testing.T) {
 			t.Fatal("MQTT result timeout")
 		}
 	}
-	send(token, pb.GatewayAckStatus_GATEWAY_ACK_STATUS_ACCEPTED)
-	send("forged-token", pb.GatewayAckStatus_GATEWAY_ACK_STATUS_REJECTED)
+	topic := "gcs/device/drone-1/ps_mqtttest/telemetry"
+	send(topic, token, pb.GatewayAckStatus_GATEWAY_ACK_STATUS_ACCEPTED, request)
+	send(topic, token, pb.GatewayAckStatus_GATEWAY_ACK_STATUS_ACCEPTED, request)
+	send(topic, "forged-token", pb.GatewayAckStatus_GATEWAY_ACK_STATUS_REJECTED, request)
+	expiredSession := session
+	expiredSession.CreatedAt = now.Add(-3 * time.Minute)
+	expiredSession.PublishTokenExpiresAt = now.Add(-time.Minute)
+	expiredToken, err := sessiontoken.IssueDevice("local-fixture-secret", expiredSession, "expired-jti", now.Add(-2*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	send(topic, expiredToken, pb.GatewayAckStatus_GATEWAY_ACK_STATUS_REJECTED, request)
+	send("gcs/device/drone-1/ps_other/telemetry", token, pb.GatewayAckStatus_GATEWAY_ACK_STATUS_REJECTED, request)
 	request.GroupId = "co-b"
-	send(token, pb.GatewayAckStatus_GATEWAY_ACK_STATUS_REJECTED)
+	send(topic, token, pb.GatewayAckStatus_GATEWAY_ACK_STATUS_REJECTED, request)
 	request.GroupId = ""
+	sendRawTelemetry(t, client, responses, topic, []byte{0xff})
 	if err := sessions.End(ctx, session.SessionID, time.Now()); err != nil {
 		t.Fatal(err)
 	}
-	send(token, pb.GatewayAckStatus_GATEWAY_ACK_STATUS_REJECTED)
+	send(topic, token, pb.GatewayAckStatus_GATEWAY_ACK_STATUS_REJECTED, request)
 	if store.calls.Load() != 1 {
 		t.Fatalf("rejected input reached storage: %d", store.calls.Load())
+	}
+	assertOversizedDisconnected(t, client, topic)
+}
+
+func sendRawTelemetry(
+	t *testing.T,
+	client mqtt.Client,
+	responses <-chan *pb.GatewayStreamResponse,
+	topic string,
+	payload []byte,
+) {
+	t.Helper()
+	waitToken(t, client.Publish(topic, 1, false, payload))
+	select {
+	case response := <-responses:
+		if response.Status != pb.GatewayAckStatus_GATEWAY_ACK_STATUS_REJECTED {
+			t.Fatalf("invalid MQTT payload was not rejected: %s", response.Status)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("MQTT rejection result timeout")
+	}
+}
+
+func assertOversizedDisconnected(t *testing.T, client mqtt.Client, topic string) {
+	t.Helper()
+	token := client.Publish(topic, 1, false, make([]byte, mqttgateway.MaxPayloadBytes+1))
+	if !token.WaitTimeout(5 * time.Second) {
+		t.Fatal("oversized MQTT publish did not terminate")
+	}
+	if token.Error() == nil {
+		t.Fatal("broker accepted oversized MQTT payload")
 	}
 }
 
