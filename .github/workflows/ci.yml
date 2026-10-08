@@ -453,6 +453,7 @@ jobs:
           MQTT_HEALTH_USERNAME: health
           MQTT_HEALTH_PASSWORD: contract-only
           MQTT_PASSWORD_FILE: ../deploy/mosquitto/passwords.example
+          INTERNAL_PKI_DIR: /tmp/gcs-pki
           DATABASE_URL: postgresql://gcs_geo:contract-only@postgres:5432/gcs_geo
           AUTH_JWT_SECRET: contract-only-secret-at-least-32-characters
           MQTT_USERNAME: backend

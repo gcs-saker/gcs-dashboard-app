@@ -64,6 +64,9 @@ issue_identity media-control media-control clientAuth gcs_media_control
 issue_identity mqtt mqtt serverAuth mqtt
 issue_identity mqtt-health mqtt-health clientAuth mqtt-health
 issue_identity backend backend clientAuth gcs_backend_pub
+if [[ "${INCLUDE_MQTT_SMOKE_IDENTITY:-0}" == "1" ]]; then
+  issue_identity mqtt-device-smoke mqtt-device-smoke clientAuth smoke-device-01
+fi
 openssl ca -gencrl -config "${output_real}/openssl-ca.cnf" -out "${output_real}/ca.crl"
 chmod 600 "${output_real}"/*.key
 chmod 644 "${output_real}"/*.crt

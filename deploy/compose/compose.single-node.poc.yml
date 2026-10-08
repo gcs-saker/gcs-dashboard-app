@@ -317,6 +317,11 @@ services:
       MEDIA_CONTROL_OTEL_SERVICE_NAME: ${MEDIA_CONTROL_OTEL_SERVICE_NAME:-gcs-saker-media-control}
       MEDIA_CONTROL_REDIS_ADDR: ${MEDIA_CONTROL_REDIS_ADDR:-redis:6379}
       MEDIA_CONTROL_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+      MQTT_GATEWAY_URL: ${MQTT_GATEWAY_URL:-ssl://mqtt:8883}
+      MQTT_GATEWAY_CA_FILE: /run/secrets/gcs-pki/ca.crt
+      MQTT_GATEWAY_CERT_FILE: /run/secrets/gcs-pki/media-control.crt
+      MQTT_GATEWAY_KEY_FILE: /run/secrets/gcs-pki/media-control.key
+      MQTT_GATEWAY_SERVER_NAME: mqtt
       MEDIA_CONTROL_STREAM_CACHE_TTL_SECONDS: ${MEDIA_CONTROL_STREAM_CACHE_TTL_SECONDS:-1}
       MEDIA_CONTROL_STREAM_PRESENCE_TTL_SECONDS: ${MEDIA_CONTROL_STREAM_PRESENCE_TTL_SECONDS:-6}
     volumes:
@@ -329,6 +334,8 @@ services:
       test: ["CMD", "/usr/local/bin/media-control", "healthcheck"]
     depends_on:
       redis:
+        condition: service_healthy
+      mqtt:
         condition: service_healthy
       mediamtx:
         condition: service_started

@@ -22,16 +22,15 @@ DEFAULT_PROJECT_NAME = "gcs-saker-mqtt-profile-smoke"
 CLIENT_IMAGE = "eclipse-mosquitto:2"
 BACKEND_USER = "gcs_backend_pub"
 MEDIA_CONTROL_USER = "gcs_media_control"
-DEVICE_USER = "raw.mobile.front"
-BACKEND_PASSWORD = "smoke-backend-pass"
-MEDIA_CONTROL_PASSWORD = "smoke-media-control-pass"
-DEVICE_PASSWORD = "smoke-device-gateway-pass"
+DEVICE_USER = "smoke-device-01"
+MQTT_HEALTH_USER = "mqtt-health"
 ORG_ID = "a4ai"
 GROUP_ID = "co-a"
-ASSET_ID = "raw.mobile.front"
-TELEMETRY_TOPIC = f"gcs/{ORG_ID}/{GROUP_ID}/{ASSET_ID}/telemetry"
-COMMAND_TOPIC = f"gcs/{ORG_ID}/{GROUP_ID}/{ASSET_ID}/command"
-TELEMETRY_SUBSCRIPTION = "gcs/+/+/+/telemetry"
+ASSET_ID = DEVICE_USER
+PUBLISH_SESSION = "ps_smoke-session"
+TELEMETRY_TOPIC = f"gcs/device/{DEVICE_USER}/{PUBLISH_SESSION}/telemetry"
+COMMAND_TOPIC = f"gcs/device/{DEVICE_USER}/{PUBLISH_SESSION}/command"
+TELEMETRY_SUBSCRIPTION = "gcs/device/+/+/telemetry"
 
 
 @dataclass(frozen=True)
@@ -108,16 +107,16 @@ def smoke_contract(config: MqttHardenedProfileConfig) -> dict[str, Any]:
             "runtime": CLIENT_IMAGE,
         },
         "topicNamespace": {
-            "telemetry": "gcs/{orgId}/{groupId}/{assetId}/telemetry",
-            "status": "gcs/{orgId}/{groupId}/{assetId}/status",
-            "command": "gcs/{orgId}/{groupId}/{assetId}/command",
-            "commandAck": "gcs/{orgId}/{groupId}/{assetId}/command_ack",
+            "telemetry": "gcs/device/{deviceUuid}/{publishSession}/telemetry",
+            "result": "gcs/device/{deviceUuid}/{publishSession}/result",
+            "command": "gcs/device/{deviceUuid}/{publishSession}/command",
+            "commandAck": "gcs/device/{deviceUuid}/{publishSession}/command_ack",
             "opsEvent": "gcs/ops/{service}/event",
         },
         "allowedFlows": [
-            "device gateway publishes protobuf telemetry to gcs/{org}/{group}/{asset}/telemetry",
-            "backend subscribes telemetry/status and publishes command",
-            "device gateway subscribes command and publishes command_ack",
+            "device publishes protobuf telemetry under its certificate-bound UUID and opaque session",
+            "media-control subscribes telemetry and publishes result/command",
+            "device subscribes result/command and publishes command_ack",
             "dashboard never receives MQTT credentials and uses edge REST/WebRTC/HLS instead",
         ],
         "deniedFlows": [
@@ -133,17 +132,17 @@ def smoke_contract(config: MqttHardenedProfileConfig) -> dict[str, Any]:
         },
         "runtimeChecks": [
             "docker compose config --quiet with default hardened MQTT service",
-            "Mosquitto password file generated outside the repository",
+            "Mosquitto requires a trusted client certificate on TLS 1.3 port 8883",
             "anonymous subscribe denied",
-            "device telemetry publish reaches backend subscriber",
-            "backend command publish reaches device subscriber",
+            "device telemetry publish reaches media-control subscriber",
+            "media-control command publish reaches device subscriber",
             "telemetry payload survives MQTT as protobuf bytes and decodes with matching topic identity",
         ],
         "safety": [
             "COMPOSE_PROJECT_NAME from inherited env files is filtered and replaced by the explicit smoke project name",
             "cleanup uses docker compose down --remove-orphans only on the isolated smoke project",
             "cleanup never uses down -v",
-            "real broker passwords are not written to the repository",
+            "private keys remain in an isolated ephemeral PKI directory",
         ],
         "promotionGate": "Keep default hardened MQTT active only when runtime smoke and broker credential rotation drill pass.",
     }
@@ -171,17 +170,15 @@ def main() -> int:
 def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="gcs-saker-mqtt-smoke-") as tmp:
         tmp_dir = Path(tmp)
-        password_file = tmp_dir / "passwords"
         generated_env = tmp_dir / "mqtt-smoke.env"
         telemetry_payload = tmp_dir / "telemetry.bin"
         telemetry_received = tmp_dir / "telemetry.received.bin"
         command_payload = tmp_dir / "command.txt"
         command_received = tmp_dir / "command.received.txt"
 
-        write_password_file(password_file)
         if config.pki_dir is None or not config.pki_dir.is_dir():
             raise RuntimeError("--pki-dir with ephemeral MQTT certificates is required")
-        write_generated_env(config.env_file, generated_env, password_file, config.pki_dir)
+        write_generated_env(config.env_file, generated_env, config.pki_dir)
         write_telemetry_payload(telemetry_payload)
         command_payload.write_text("return-to-base", encoding="utf-8")
 
@@ -218,12 +215,10 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
 
             subscribe_and_publish(
                 config=config,
-                subscriber_user=BACKEND_USER,
-                subscriber_password=BACKEND_PASSWORD,
+                subscriber_user=MEDIA_CONTROL_USER,
                 topic=TELEMETRY_SUBSCRIPTION,
                 output_path=telemetry_received,
                 publisher_user=DEVICE_USER,
-                publisher_password=DEVICE_PASSWORD,
                 publish_topic=TELEMETRY_TOPIC,
                 payload_path=telemetry_payload,
             )
@@ -239,11 +234,9 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
             subscribe_and_publish(
                 config=config,
                 subscriber_user=DEVICE_USER,
-                subscriber_password=DEVICE_PASSWORD,
                 topic=COMMAND_TOPIC,
                 output_path=command_received,
-                publisher_user=BACKEND_USER,
-                publisher_password=BACKEND_PASSWORD,
+                publisher_user=MEDIA_CONTROL_USER,
                 publish_topic=COMMAND_TOPIC,
                 payload_path=command_payload,
             )
@@ -281,47 +274,7 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
             )
 
 
-def write_password_file(password_file: Path) -> None:
-    run_checked(
-        [
-            "docker",
-            "run",
-            "--rm",
-            "-v",
-            f"{password_file.parent}:/work",
-            CLIENT_IMAGE,
-            "mosquitto_passwd",
-            "-b",
-            "-c",
-            "/work/passwords",
-            BACKEND_USER,
-            BACKEND_PASSWORD,
-        ],
-        name="password.backend",
-    )
-    for username, password in (
-        (MEDIA_CONTROL_USER, MEDIA_CONTROL_PASSWORD),
-        (DEVICE_USER, DEVICE_PASSWORD),
-    ):
-        run_checked(
-            [
-                "docker",
-                "run",
-                "--rm",
-                "-v",
-                f"{password_file.parent}:/work",
-                CLIENT_IMAGE,
-                "mosquitto_passwd",
-                "-b",
-                "/work/passwords",
-                username,
-                password,
-            ],
-            name=f"password.{username}",
-        )
-
-
-def write_generated_env(source: Path, target: Path, password_file: Path, pki_dir: Path) -> None:
+def write_generated_env(source: Path, target: Path, pki_dir: Path) -> None:
     lines: list[str] = []
     for line in source.read_text(encoding="utf-8").splitlines():
         if line.startswith("COMPOSE_PROJECT_NAME="):
@@ -329,14 +282,7 @@ def write_generated_env(source: Path, target: Path, password_file: Path, pki_dir
         if line.startswith(("MQTT_PASSWORD=", "MQTT_PASSWORD_FILE=", "MQTT_HEALTH_PASSWORD=", "INTERNAL_PKI_DIR=")):
             continue
         lines.append(line)
-    lines.extend(
-        [
-            f"MQTT_PASSWORD={BACKEND_PASSWORD}",
-            f"MQTT_PASSWORD_FILE={password_file}",
-            f"MQTT_HEALTH_PASSWORD={BACKEND_PASSWORD}",
-            f"INTERNAL_PKI_DIR={pki_dir}",
-        ]
-    )
+    lines.append(f"INTERNAL_PKI_DIR={pki_dir}")
     target.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -379,10 +325,6 @@ def wait_for_mqtt(config: MqttHardenedProfileConfig) -> None:
             "mqtt",
             "-p",
             "8883",
-            "-u",
-            BACKEND_USER,
-            "-P",
-            BACKEND_PASSWORD,
             "-t",
             "$SYS/broker/version",
             "-C",
@@ -390,6 +332,7 @@ def wait_for_mqtt(config: MqttHardenedProfileConfig) -> None:
             "-W",
             "2",
             check=False,
+            identity=MQTT_HEALTH_USER,
         )
         if result.returncode == 0:
             return
@@ -401,11 +344,9 @@ def subscribe_and_publish(
     *,
     config: MqttHardenedProfileConfig,
     subscriber_user: str,
-    subscriber_password: str,
     topic: str,
     output_path: Path,
     publisher_user: str,
-    publisher_password: str,
     publish_topic: str,
     payload_path: Path,
 ) -> None:
@@ -416,7 +357,6 @@ def subscribe_and_publish(
         'mosquitto_sub -h mqtt -p 8883 --cafile /pki/ca.crt --cert "$MQTT_CERT" --key "$MQTT_KEY" -t "$MQTT_TOPIC" -C 1 -W 8 -N > "$MQTT_OUTPUT"',
         env={
             "MQTT_USER": subscriber_user,
-            "MQTT_PASSWORD": subscriber_password,
             "MQTT_TOPIC": topic,
             "MQTT_OUTPUT": f"/work/{output_path.name}",
             "MQTT_CERT": f"/pki/{certificate_base(subscriber_user)}.crt",
@@ -432,10 +372,6 @@ def subscribe_and_publish(
         "mqtt",
         "-p",
         "8883",
-        "-u",
-        publisher_user,
-        "-P",
-        publisher_password,
         "-t",
         publish_topic,
         "-q",
@@ -443,6 +379,7 @@ def subscribe_and_publish(
         "-f",
         f"/work/{payload_path.name}",
         work_dir=payload_path.parent,
+        identity=publisher_user,
     )
     stdout, stderr = subscriber.communicate(timeout=10)
     if subscriber.returncode != 0:
@@ -456,8 +393,9 @@ def run_client(
     *args: str,
     work_dir: Path | None = None,
     check: bool = True,
+    identity: str | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
-    command = client_command(config, *args, work_dir=work_dir)
+    command = client_command(config, *args, work_dir=work_dir, identity=identity)
     return run_checked(command, name="mqtt.client", check=check)
 
 
@@ -467,7 +405,7 @@ def run_client_popen(
     env: dict[str, str],
     work_dir: Path,
 ) -> subprocess.Popen[bytes]:
-    command = client_command(config, *args, work_dir=work_dir, env=env)
+    command = client_command(config, *args, work_dir=work_dir, env=env, identity=env.get("MQTT_USER"))
     return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
@@ -476,6 +414,7 @@ def client_command(
     *args: str,
     work_dir: Path | None = None,
     env: dict[str, str] | None = None,
+    identity: str | None = None,
 ) -> list[str]:
     command = ["docker", "run", "--rm", "--network", config.network_name()]
     if config.pki_dir is None:
@@ -491,18 +430,20 @@ def client_command(
         command.extend(args[1:])
         return command
     command.extend(["--cafile", "/pki/ca.crt"])
-    username = args[args.index("-u") + 1] if "-u" in args else ""
-    certificate = certificate_base(username) if username else ""
+    certificate = certificate_base(identity) if identity else ""
     if certificate:
         command.extend(["--cert", f"/pki/{certificate}.crt", "--key", f"/pki/{certificate}.key"])
     command.extend(args[1:])
     return command
 
 
-def certificate_base(username: str) -> str:
-    return {BACKEND_USER: "backend", MEDIA_CONTROL_USER: "media-control", DEVICE_USER: f"device-{DEVICE_USER}"}[
-        username
-    ]
+def certificate_base(identity: str) -> str:
+    return {
+        BACKEND_USER: "backend",
+        MEDIA_CONTROL_USER: "media-control",
+        DEVICE_USER: "mqtt-device-smoke",
+        MQTT_HEALTH_USER: "mqtt-health",
+    }[identity]
 
 
 def assert_bytes_equal(name: str, actual: bytes, expected: bytes) -> dict[str, Any]:
@@ -519,26 +460,14 @@ def assert_bytes_equal(name: str, actual: bytes, expected: bytes) -> dict[str, A
 def assert_telemetry_decodes(payload: bytes) -> dict[str, Any]:
     sys.path.insert(0, str(BACKEND_DIR))
     from modules.protocol_v2.telemetry import TelemetryEnvelopePayload
-    from mqtt.consumer_bridge import MqttConsumerBridge
 
-    class Sink:
-        def __init__(self) -> None:
-            self.item = None
-
-        def upsert(self, telemetry: Any) -> Any:
-            self.item = telemetry
-            return telemetry
-
-    sink = Sink()
-    bridge = MqttConsumerBridge(sink)
-    bridge.handle_message(TELEMETRY_TOPIC, payload)
     telemetry = TelemetryEnvelopePayload.from_protobuf_wire(payload)
-    if telemetry.org_id != ORG_ID or telemetry.group_id != GROUP_ID or telemetry.asset_id != ASSET_ID:
-        raise AssertionError("decoded protobuf identity does not match MQTT topic")
+    if telemetry.asset_id != ASSET_ID:
+        raise AssertionError("decoded protobuf device identity does not match MQTT topic")
     return {
         "name": "telemetry.protobuf.decode",
         "passed": True,
-        "identity": f"{telemetry.org_id}/{telemetry.group_id}/{telemetry.asset_id}",
+        "identity": f"{DEVICE_USER}/{PUBLISH_SESSION}",
         "latitude": telemetry.latitude,
         "longitude": telemetry.longitude,
     }
