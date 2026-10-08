@@ -220,10 +220,22 @@ def test_single_node_uses_valkey_as_default_cache_runtime() -> None:
         "${REDIS_AOF_REWRITE_MIN_SIZE:-64mb}",
         "--requirepass",
         "${REDIS_PASSWORD:?Set REDIS_PASSWORD}",
+        "--port",
+        "0",
+        "--tls-port",
+        "6379",
+        "--tls-cert-file",
+        "/run/secrets/gcs-pki/redis.crt",
+        "--tls-key-file",
+        "/run/secrets/gcs-pki/redis.key",
+        "--tls-ca-cert-file",
+        "/run/secrets/gcs-pki/ca.crt",
+        "--tls-auth-clients",
+        "no",
     ]
     assert redis["healthcheck"]["test"] == [
         "CMD-SHELL",
-        'valkey-cli -a "$${REDIS_PASSWORD}" ping | grep PONG',
+        'valkey-cli --tls --cacert /run/secrets/gcs-pki/ca.crt -h redis -a "$${REDIS_PASSWORD}" ping | grep PONG',
     ]
 
 

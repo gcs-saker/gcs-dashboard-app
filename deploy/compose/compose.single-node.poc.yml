@@ -347,7 +347,6 @@ services:
       MEDIA_CONTROL_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
       MEDIA_CONTROL_REDIS_CA_FILE: /run/secrets/gcs-pki/ca.crt
       MEDIA_CONTROL_REDIS_SERVER_NAME: redis
-      MEDIA_CONTROL_REDIS_ALLOW_PLAINTEXT: "false"
       MQTT_GATEWAY_URL: ${MQTT_GATEWAY_URL:-ssl://mqtt:8883}
       MQTT_GATEWAY_CA_FILE: /run/secrets/gcs-pki/ca.crt
       MQTT_GATEWAY_CERT_FILE: /run/secrets/gcs-pki/media-control.crt

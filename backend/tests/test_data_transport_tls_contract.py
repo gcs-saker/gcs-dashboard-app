@@ -18,10 +18,10 @@ def test_single_node_database_and_redis_transports_require_tls() -> None:
         "--tls-key-file",
         "MEDIA_CONTROL_REDIS_CA_FILE",
         "MEDIA_CONTROL_REDIS_SERVER_NAME: redis",
-        'MEDIA_CONTROL_REDIS_ALLOW_PLAINTEXT: "false"',
         'SPRING_DATA_REDIS_SSL_ENABLED: "true"',
     ):
         assert value in compose
+    assert "MEDIA_CONTROL_REDIS_ALLOW_PLAINTEXT" not in compose
     hba = (ROOT / "deploy" / "postgres" / "pg_hba.tls.conf").read_text(encoding="utf-8")
     assert "hostssl all all" in hba
     assert "host all all 0.0.0.0/0 reject" in hba
