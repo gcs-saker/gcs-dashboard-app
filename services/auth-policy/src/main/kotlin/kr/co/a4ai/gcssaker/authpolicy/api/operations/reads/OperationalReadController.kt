@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
 import java.time.Clock
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 
 @RestController
 class OperationalReadController(
@@ -35,6 +34,7 @@ class OperationalReadController(
     private val alertRuleEngine: TelemetryAlertRuleEngine = TelemetryAlertRuleEngine.NOOP,
     private val telemetryPublisher: TelemetryPublisher = TelemetryPublisher.NOOP,
     private val deviceCredentials: DeviceCredentialAuthenticationService? = null,
+    private val streamSessionSignal: StreamSessionVersionSignal = StreamSessionVersionSignal(),
 ) {
     private val requestReader = OperationalReadRequestReader(principalResolver)
     private val ingestion = TelemetryIngestionService(
@@ -144,7 +144,9 @@ class OperationalReadController(
         @RequestBody request: StreamSessionRequest,
     ): StreamSessionResponse {
         val principal = requestReader.principal(authorization)
-        return repository.recordStreamSession(request.toReadModel(principal)).toResponse()
+        return repository.recordStreamSession(request.toReadModel(principal)).also {
+            streamSessionSignal.publish()
+        }.toResponse()
     }
 
     @GetMapping(OperationalReadApiRoutes.STREAM_SESSIONS)
@@ -166,6 +168,7 @@ class OperationalReadController(
     ): ResponseEntity<StreamingResponseBody> {
         val principal = requestReader.principal(authorization)
         val stream = StreamingResponseBody { output ->
+            var observedVersion = streamSessionSignal.current()
             repeat(streamPolicy.pollCount) { index ->
                 output.writeOperationalReadSseEvent(
                     OperationalReadStreamContract.EVENT_STREAM_SESSIONS,
@@ -179,7 +182,7 @@ class OperationalReadController(
                 )
                 output.flush()
                 if (index < streamPolicy.pollCount - 1 && streamPolicy.pollIntervalMillis > 0) {
-                    TimeUnit.MILLISECONDS.sleep(streamPolicy.pollIntervalMillis)
+                    observedVersion = streamSessionSignal.awaitChange(observedVersion, streamPolicy.pollIntervalMillis)
                 }
             }
         }
