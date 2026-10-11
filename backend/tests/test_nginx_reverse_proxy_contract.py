@@ -58,6 +58,17 @@ def test_reverse_proxy_sets_browser_security_headers() -> None:
     assert "connect-src 'self' https: wss: stun: turn: turns:;" in config
     assert "worker-src 'self' blob:;" in config
     assert 'add_header Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)" always;' in config
+    assert "add_header Referrer-Policy no-referrer always;" in config
+
+
+def test_edge_access_logs_never_record_query_credentials() -> None:
+    for config in [read_config(), read_single_node_config()]:
+        assert "log_format gcs_safe" in config
+        assert '"$request_method $uri $server_protocol"' in config
+        assert "access_log /dev/stdout gcs_safe;" in config
+        log_format = config.split("log_format gcs_safe", 1)[1].split(";", 1)[0]
+        assert "$request_uri" not in log_format
+        assert "$args" not in log_format
 
 
 def test_public_caddy_terminator_sets_security_headers_for_every_host() -> None:

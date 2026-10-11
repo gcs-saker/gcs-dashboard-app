@@ -6,12 +6,10 @@ import kr.co.a4ai.gcssaker.authpolicy.configuration.AuthRuntimeSettings
 import kr.co.a4ai.gcssaker.authpolicy.domain.AuthSessionService
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.core.annotation.Order
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
@@ -19,29 +17,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 @Configuration
 class AuthSecurityConfig {
     @Bean
-    @Order(0)
-    fun authEndpointSecurityFilterChain(
-        http: HttpSecurity,
-        settings: AuthRuntimeSettings,
-    ): SecurityFilterChain {
-        http
-            .securityMatcher(AntPathRequestMatcher(AuthSecurityRouteContract.AUTH_PREFIX))
-            .csrf { csrf -> csrf.disable() }
-            .cors { cors -> cors.configurationSource(corsConfigurationSource(settings)) }
-            .sessionManagement { sessionsConfig ->
-                sessionsConfig.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            }
-            .formLogin { form -> form.disable() }
-            .httpBasic { basic -> basic.disable() }
-            .logout { logout -> logout.disable() }
-            .authorizeHttpRequests { requests ->
-                requests.anyRequest().permitAll()
-            }
-        return http.build()
-    }
-
-    @Bean
-    @Order(1)
     fun authPolicySecurityFilterChain(
         http: HttpSecurity,
         settings: AuthRuntimeSettings,

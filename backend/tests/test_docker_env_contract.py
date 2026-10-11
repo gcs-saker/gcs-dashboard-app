@@ -103,7 +103,7 @@ def test_compose_declares_env_injection_for_runtime_services() -> None:
     assert services["backend"]["environment"]["WEBRTC_TURN_URL"] == "${WEBRTC_TURN_URL:-}"
     assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_LISTEN_ADDR"] == ":9090"
     assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_TOKEN"] == (
-        "${MEDIA_CONTROL_GRPC_TOKEN:-${MEDIA_CONTROL_PUBLISH_TOKEN:?Set MEDIA_CONTROL_PUBLISH_TOKEN in .env}}"
+        "${MEDIA_CONTROL_GRPC_TOKEN:?Set an independent MEDIA_CONTROL_GRPC_TOKEN in .env}"
     )
     assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES"] == (
         "${MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES:-65536}"
@@ -320,7 +320,7 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
         "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIA_CONTROL_GRPC_HOST_PORT:-9090}:9090"
     ]
     assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_TOKEN"] == (
-        "${MEDIA_CONTROL_GRPC_TOKEN:-${MEDIA_CONTROL_PUBLISH_TOKEN:?Set MEDIA_CONTROL_PUBLISH_TOKEN}}"
+        "${MEDIA_CONTROL_GRPC_TOKEN:?Set an independent MEDIA_CONTROL_GRPC_TOKEN}"
     )
     assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES"] == (
         "${MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES:-65536}"
