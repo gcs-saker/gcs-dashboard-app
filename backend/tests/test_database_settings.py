@@ -1,6 +1,12 @@
 import pytest
 
-from core.db import DEFAULT_DATABASE_URL, LEGACY_MYSQL_ALLOWED_ENV, DatabaseSettings
+from core.db import (
+    DATABASE_URL_ENV,
+    DATABASE_URL_FILE_ENV,
+    DEFAULT_DATABASE_URL,
+    LEGACY_MYSQL_ALLOWED_ENV,
+    DatabaseSettings,
+)
 from core.settings_base import SettingsConfigurationError
 
 
@@ -20,6 +26,19 @@ def test_database_settings_reads_database_url_from_env(monkeypatch) -> None:
 
     assert settings.url == "postgresql+psycopg2://gcs_geo:test@postgres:5432/gcs_geo"
     assert settings.is_postgres is True
+
+
+def test_database_url_file_is_supported_and_ambiguous_input_is_rejected(tmp_path, monkeypatch) -> None:
+    database_url = "postgresql://gcs:test@postgres-geo:5432/gcs?sslmode=verify-full&sslrootcert=/ca.crt"
+    secret_file = tmp_path / "database-url"
+    secret_file.write_text(database_url, encoding="utf-8")
+    monkeypatch.delenv(DATABASE_URL_ENV, raising=False)
+    monkeypatch.setenv(DATABASE_URL_FILE_ENV, str(secret_file))
+
+    assert DatabaseSettings.from_env().url == database_url
+    monkeypatch.setenv(DATABASE_URL_ENV, database_url)
+    with pytest.raises(SettingsConfigurationError, match="cannot both be configured"):
+        DatabaseSettings.from_env()
 
 
 def test_database_settings_rejects_mysql_unless_legacy_flag_is_explicit(monkeypatch) -> None:

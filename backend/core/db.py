@@ -1,16 +1,20 @@
 from __future__ import annotations
 
+from pathlib import Path
 from urllib.parse import urlparse
 
 from pydantic import Field, ValidationError, model_validator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
+from core.secret_files import SecretFileError, read_secret_input
 from core.settings_base import BackendBaseSettings, SettingsConfigurationError, settings_error_message
 
 Base = declarative_base()
 
 DATABASE_URL_ENV = "DATABASE_URL"
+DATABASE_URL_FILE_ENV = "DATABASE_URL_FILE"
+DEFAULT_DATABASE_URL_FILE = Path("/run/secrets/DATABASE_URL")
 DATABASE_TLS_REQUIRED_ENV = "DATABASE_TLS_REQUIRED"
 DEFAULT_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 LEGACY_MYSQL_ALLOWED_ENV = "GCS_ALLOW_LEGACY_MYSQL"
@@ -26,7 +30,10 @@ class DatabaseSettings(BackendBaseSettings):
     @classmethod
     def from_env(cls) -> "DatabaseSettings":
         try:
-            return cls()
+            secret_url = read_secret_input(DATABASE_URL_ENV, DATABASE_URL_FILE_ENV, DEFAULT_DATABASE_URL_FILE)
+            return cls(url=secret_url) if secret_url is not None else cls()
+        except SecretFileError as exc:
+            raise SettingsConfigurationError(str(exc)) from exc
         except ValidationError as exc:
             raise SettingsConfigurationError(settings_error_message("database", exc)) from exc
 
