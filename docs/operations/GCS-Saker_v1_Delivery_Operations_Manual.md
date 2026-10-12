@@ -23,7 +23,8 @@ management endpoints remain private.
 2. Resolve license and VEX gates, then produce the signed four-image digest manifest.
 3. Verify Cosign identity, SLSA provenance, SPDX attestation, source revision, and image digests.
 4. Before stateful change, create and verify PostgreSQL and broker backups.
-5. Run `safe_stateless_deploy.sh`; never build application images on Server-01.
+5. Stage infrastructure with `safe_infrastructure_deploy.sh`, then run `safe_stateless_deploy.sh`
+   from the same immutable checkout and signed manifest. Never build application images on Server-01.
 6. Validate public health/readiness, unauthenticated denial, container health, and exact revision.
 
 ## Routine checks

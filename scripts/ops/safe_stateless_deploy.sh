@@ -45,6 +45,8 @@ source "${verified_images}"
 export BACKEND_IMAGE AUTH_POLICY_IMAGE MEDIA_CONTROL_IMAGE DASHBOARD_IMAGE
 export MQTT_IMAGE MEDIAMTX_IMAGE COTURN_IMAGE
 compose=(docker compose --project-name "${PROJECT_NAME}" --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
+COMPOSE_FILE="${COMPOSE_FILE}" ENV_FILE="${ENV_FILE}" COMPOSE_PROJECT_NAME="${PROJECT_NAME}" \
+  SOURCE_COMMIT="${SOURCE_COMMIT}" bash "${ROOT}/scripts/ops/verify_runtime_release_alignment.sh" infrastructure
 mqtt_container="$("${compose[@]}" ps -q mqtt)"
 [[ -n "${mqtt_container}" ]] || { echo "running MQTT container is required" >&2; exit 2; }
 mqtt_pki_source="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/run/secrets/gcs-pki"}}{{.Source}}{{end}}{{end}}' "${mqtt_container}")"
@@ -312,6 +314,8 @@ remove_green_containers
 if [[ -n "${PUBLIC_TLS_HOST:-}" ]]; then
   "${ROOT}/scripts/ops/check_public_tls.sh" "${PUBLIC_TLS_HOST}" "${PUBLIC_TLS_PORT:-443}"
 fi
+COMPOSE_FILE="${COMPOSE_FILE}" ENV_FILE="${ENV_FILE}" COMPOSE_PROJECT_NAME="${PROJECT_NAME}" \
+  SOURCE_COMMIT="${SOURCE_COMMIT}" bash "${ROOT}/scripts/ops/verify_runtime_release_alignment.sh" all
 # Keep the operator-facing release pointer aligned with the Compose source that
 # now owns the live containers. Updating it only after every verification has
 # passed preserves the previous pointer when rollback runs.

@@ -201,6 +201,11 @@ for service in "${SERVICES[@]}"; do
   [[ "${current}" != "${previous_ids[${service}]}" ]] || { echo "service was not replaced: ${service}" >&2; exit 1; }
 done
 
+COMPOSE_FILE="${COMPOSE_FILE}" ENV_FILE="${ENV_FILE}" COMPOSE_PROJECT_NAME="${PROJECT_NAME}" \
+  SOURCE_COMMIT="${SOURCE_COMMIT}" bash "${ROOT}/scripts/ops/verify_runtime_release_alignment.sh" infrastructure
+
 deployment_complete=1
 trap - EXIT
-echo "infrastructure deployment completed sequentially: mqtt -> mediamtx -> turn-primary"
+printf 'sourceCommit=%s\ncomplete=false\nscope=infrastructure\n' "${SOURCE_COMMIT}" \
+  > "${RELEASE_DIR}/infrastructure-stage.evidence"
+echo "infrastructure stage completed sequentially; full runtime release is not complete"

@@ -2,7 +2,17 @@
 
 ## Atomic release rule
 
-Run `scripts/ops/safe_stateless_deploy.sh` only from an immutable release checkout. Place the release workflow's `release-manifest.json` and `release-manifest.cosign.bundle.json` in `RELEASE_DIR`. The script verifies the manifest signature, source commit, every OCI image signature, SLSA provenance, and SPDX attestation before pulling digest-addressed images. It does not build production application images. Any verification or revision mismatch fails before rollout or triggers the captured stateless rollback.
+Run both deployment stages from the same immutable release checkout and signed manifest. First run
+`scripts/ops/safe_infrastructure_deploy.sh`; this produces `infrastructure-stage.evidence` with
+`complete=false`. Then run `scripts/ops/safe_stateless_deploy.sh`. Stateless cutover refuses to start
+unless MQTT, MediaMTX, and TURN already match the same source commit and signed image digests. The
+release pointer changes only after backend, auth-policy, media-control, dashboard, MQTT, MediaMTX,
+and TURN all pass the final alignment check.
+
+Place the release workflow's `release-manifest.json` and
+`release-manifest.cosign.bundle.json` in `RELEASE_DIR`. The scripts verify the manifest signature,
+source commit, every OCI image signature, SLSA provenance, and SPDX attestation. They do not build
+production images. A revision or image ID mismatch fails before stateless rollout or triggers rollback.
 
 `RELEASE_DIR` must be an existing owner-controlled directory outside the source checkout (for example `/home/user/gcs-saker-runtime/evidence/<release-id>`). The deploy script writes evidence before its dirty-check, so placing evidence inside the checkout is rejected before any file or container mutation.
 
