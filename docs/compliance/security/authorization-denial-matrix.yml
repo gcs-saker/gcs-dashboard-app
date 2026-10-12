@@ -17,6 +17,9 @@ cases:
   - {id: AD-HIER-001, category: hierarchy-scope, expected: DENY, selector: 'StreamPolicyControllerTest::operator cannot access descendant group stream'}
   - {id: AD-TALKBACK-001, category: hierarchy-scope, expected: DENY, selector: 'StreamPolicyControllerTest::group admin cannot send talkback to descendant group'}
   - {id: AD-TALKBACK-002, category: role-mismatch, expected: DENY, selector: 'StreamPolicyControllerTest::viewer cannot send talkback in same group'}
+  - {id: AD-ADMIN-001, category: role-mismatch, expected: DENY, selector: 'StreamPolicyControllerTest::system administrator receives no stream or talkback access'}
+  - {id: AD-ADMIN-002, category: role-mismatch, expected: DENY, selector: 'AccountPublisherPolicyControllerTest::system administrator cannot publish'}
+  - {id: AD-SESSION-001, category: expired-or-revoked, expected: DENY, selector: 'MediaPolicyRpcTest::account binding RPC rejects disabled or stale publisher sessions'}
   - {id: AD-DEVICE-001, category: device-identity, expected: DENY, selector: 'DevicePublishAuthorizationServiceTest::wrong credential is rejected without exposing group'}
   - {id: AD-DEVICE-002, category: device-identity, expected: DENY, selector: 'DevicePublishAuthorizationServiceTest::pending device is rejected before publish authorization'}
 evidence:
@@ -30,6 +33,8 @@ selectorSources:
   AuthSessionServiceTest: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/AuthSessionServiceTest.kt
   AdminDeviceControllerTest: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AdminDeviceControllerTest.kt
   StreamPolicyControllerTest: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/StreamPolicyControllerTest.kt
+  AccountPublisherPolicyControllerTest: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/AccountPublisherPolicyControllerTest.kt
+  MediaPolicyRpcTest: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/MediaPolicyRpcTest.kt
   DevicePublishAuthorizationServiceTest: services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/domain/DevicePublishAuthorizationServiceTest.kt
 verdictRules:
   PASS: every case executed and passed with no unexpected permit

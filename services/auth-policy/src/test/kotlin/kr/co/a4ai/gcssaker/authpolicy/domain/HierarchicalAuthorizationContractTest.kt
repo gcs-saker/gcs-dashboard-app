@@ -26,7 +26,7 @@ class HierarchicalAuthorizationContractTest {
             case(UserRole.GROUP_ADMIN, companyA.id, platoonA.id, expected(view = true)),
             case(UserRole.GROUP_ADMIN, companyA.id, companyB.id, expected()),
             case(UserRole.GROUP_ADMIN, companyA.id, root.id, expected()),
-            case(UserRole.ADMIN, companyA.id, companyB.id, expected(true, true, true, true, true)),
+            case(UserRole.ADMIN, companyA.id, companyB.id, expected(view = true, manage = true)),
             case(UserRole.ADMIN, companyA.id, GroupId("missing"), expected()),
         )
 
