@@ -32,16 +32,34 @@ func Handle(ctx context.Context, exchange Exchange, topic string, payload []byte
 	if err := proto.Unmarshal(payload, message); err != nil {
 		return nil, errors.New("mqtt_payload_invalid")
 	}
-	if message.PublishToken == "" || message.Request == nil || message.Request.GetTelemetry() == nil {
-		return nil, errors.New("mqtt_telemetry_required")
-	}
-	if message.Request.GroupId != "" {
-		return nil, errors.New("mqtt_group_input_forbidden")
-	}
-	if message.Request.AssetId != binding.DeviceUUID || message.Request.GetTelemetry().AssetId != binding.DeviceUUID {
-		return nil, errors.New("mqtt_device_identity_mismatch")
+	if err := validateMQTTMessage(binding, message); err != nil {
+		return nil, err
 	}
 	return exchange(ctx, binding.PublishSession, message.PublishToken, message.Request)
+}
+
+func validateMQTTMessage(binding mqtttopic.Topic, message *pb.MqttGatewayMessage) error {
+	if message.PublishToken == "" || message.Request == nil || message.Request.GetTelemetry() == nil {
+		return errors.New("mqtt_telemetry_required")
+	}
+	if mqttMessageHasUnknownFields(message) {
+		return errors.New("mqtt_unknown_fields_forbidden")
+	}
+	if message.Request.GroupId != "" {
+		return errors.New("mqtt_group_input_forbidden")
+	}
+	if message.Request.AssetId != binding.DeviceUUID || message.Request.GetTelemetry().AssetId != binding.DeviceUUID {
+		return errors.New("mqtt_device_identity_mismatch")
+	}
+	return nil
+}
+
+func mqttMessageHasUnknownFields(message *pb.MqttGatewayMessage) bool {
+	request := message.GetRequest()
+	telemetry := request.GetTelemetry()
+	return len(message.ProtoReflect().GetUnknown()) > 0 ||
+		len(request.ProtoReflect().GetUnknown()) > 0 ||
+		len(telemetry.ProtoReflect().GetUnknown()) > 0
 }
 
 func telemetryTopic(raw string) (mqtttopic.Topic, error) {

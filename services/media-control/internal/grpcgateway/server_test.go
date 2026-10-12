@@ -53,6 +53,28 @@ func TestExchangeReturnsMalformedStatusForInvalidPayload(t *testing.T) {
 	assertResponse(t, response, "", GatewayAckStatusRejected, reasonMalformed)
 }
 
+func TestExchangeRejectsUnknownAndUnspecifiedEnumValues(t *testing.T) {
+	cases := []*sakerv1.GatewayStreamRequest{
+		{RequestId: "unknown-stream-state", AssetId: "device-1", Payload: &sakerv1.GatewayStreamRequest_StreamEvent{
+			StreamEvent: &sakerv1.StreamSessionEvent{State: sakerv1.StreamState(999)},
+		}},
+		{RequestId: "unspecified-ack", AssetId: "device-1", Payload: &sakerv1.GatewayStreamRequest_CommandAck{
+			CommandAck: &sakerv1.CommandAck{Status: sakerv1.GatewayAckStatus_GATEWAY_ACK_STATUS_UNSPECIFIED},
+		}},
+	}
+	for _, request := range cases {
+		wire, err := proto.Marshal(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		response, err := exchangeOnce(t, wire, testGatewayToken, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertResponse(t, response, "", GatewayAckStatusRejected, reasonMalformed)
+	}
+}
+
 func TestExchangeReturnsBackpressureForOversizedPayload(t *testing.T) {
 	response, err := exchangeOnce(t, append(gatewayRequest("req-large", true), make([]byte, 128)...), testGatewayToken, func(server Server) Server {
 		server.maxPayloadBytes = 16
@@ -63,6 +85,15 @@ func TestExchangeReturnsBackpressureForOversizedPayload(t *testing.T) {
 		t.Fatalf("exchange failed: %v", err)
 	}
 	assertResponse(t, response, "", GatewayAckStatusBackpressure, reasonBackpressure)
+}
+
+func TestExchangeTransportRejectsExtremePayloadBeforeHandler(t *testing.T) {
+	payload := make([]byte, defaultMaxPayloadBytes+grpcFrameAllowance+1)
+	_, err := exchangeOnce(t, payload, testGatewayToken, nil)
+
+	if status.Code(err) != codes.ResourceExhausted {
+		t.Fatalf("expected resource exhausted, got %v", err)
+	}
 }
 
 func TestExchangeCanAskGatewayToReconnect(t *testing.T) {
@@ -115,8 +146,12 @@ func TestExchangeRoutesPlannedGatewayPayloadsToHandler(t *testing.T) {
 			if handler.requests[0].Payload.Kind != payloadKind {
 				t.Fatalf("handler payload kind mismatch: got %q want %q", handler.requests[0].Payload.Kind, payloadKind)
 			}
-			if len(handler.requests[0].Payload.Value) != 0 {
-				t.Fatalf("expected canonical empty protobuf payload, got %q", handler.requests[0].Payload.Value)
+			payloadSize := len(handler.requests[0].Payload.Value)
+			if payloadKind == GatewayPayloadTelemetry && payloadSize != 0 {
+				t.Fatalf("expected empty telemetry fixture, got %q", handler.requests[0].Payload.Value)
+			}
+			if payloadKind != GatewayPayloadTelemetry && payloadSize == 0 {
+				t.Fatal("expected validated enum payload to remain encoded")
 			}
 		})
 	}
@@ -226,11 +261,11 @@ func exchangeOnceWithMetadata(
 ) ([]byte, error) {
 	t.Helper()
 	listener := bufconn.Listen(1024 * 1024)
-	grpcServer := grpc.NewServer()
 	server := NewServer(testGatewayToken, defaultMaxPayloadBytes)
 	if mutate != nil {
 		server = mutate(server)
 	}
+	grpcServer := grpc.NewServer(server.serverOptions()...)
 	server.Register(grpcServer)
 	go func() {
 		_ = grpcServer.Serve(listener)
@@ -291,9 +326,13 @@ func gatewayRequestOfKind(requestID string, payloadKind GatewayPayloadKind) []by
 	case GatewayPayloadTelemetry:
 		message.Payload = &sakerv1.GatewayStreamRequest_Telemetry{Telemetry: &sakerv1.TelemetryEnvelope{}}
 	case GatewayPayloadStream:
-		message.Payload = &sakerv1.GatewayStreamRequest_StreamEvent{StreamEvent: &sakerv1.StreamSessionEvent{}}
+		message.Payload = &sakerv1.GatewayStreamRequest_StreamEvent{StreamEvent: &sakerv1.StreamSessionEvent{
+			State: sakerv1.StreamState_STREAM_STATE_PUBLISHING,
+		}}
 	case GatewayPayloadCommandAck:
-		message.Payload = &sakerv1.GatewayStreamRequest_CommandAck{CommandAck: &sakerv1.CommandAck{}}
+		message.Payload = &sakerv1.GatewayStreamRequest_CommandAck{CommandAck: &sakerv1.CommandAck{
+			Status: sakerv1.GatewayAckStatus_GATEWAY_ACK_STATUS_ACCEPTED,
+		}}
 	default:
 		panic("unsupported test gateway request payload kind")
 	}
@@ -327,8 +366,9 @@ func assertResponse(t *testing.T, payload []byte, requestID string, expectedStat
 func exchangeMany(t *testing.T, requestIDs []string, token string) ([][]byte, error) {
 	t.Helper()
 	listener := bufconn.Listen(1024 * 1024)
-	grpcServer := grpc.NewServer()
-	NewServer(testGatewayToken, defaultMaxPayloadBytes).Register(grpcServer)
+	server := NewServer(testGatewayToken, defaultMaxPayloadBytes)
+	grpcServer := grpc.NewServer(server.serverOptions()...)
+	server.Register(grpcServer)
 	go func() {
 		_ = grpcServer.Serve(listener)
 	}()

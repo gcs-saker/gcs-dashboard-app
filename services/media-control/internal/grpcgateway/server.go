@@ -19,6 +19,7 @@ import (
 
 const (
 	defaultMaxPayloadBytes = 64 * 1024
+	grpcFrameAllowance     = 1024
 	reasonUnauthorized     = "unauthorized_gateway_metadata"
 	gracefulStopTimeout    = 5 * time.Second
 )
@@ -88,11 +89,7 @@ func (s Server) serve(ctx context.Context, listenAddress string, onReady func())
 	if err != nil {
 		return err
 	}
-	serverOptions := make([]grpc.ServerOption, 0, 1)
-	if s.transportCredentials != nil {
-		serverOptions = append(serverOptions, grpc.Creds(s.transportCredentials))
-	}
-	server := grpc.NewServer(serverOptions...)
+	server := grpc.NewServer(s.serverOptions()...)
 	s.Register(server)
 	go stopServerWhenCancelled(ctx, server)
 	if onReady != nil {
@@ -103,6 +100,18 @@ func (s Server) serve(ctx context.Context, listenAddress string, onReady func())
 		return nil
 	}
 	return err
+}
+
+func (s Server) serverOptions() []grpc.ServerOption {
+	transportLimit := s.maxPayloadBytes + grpcFrameAllowance
+	options := []grpc.ServerOption{
+		grpc.MaxRecvMsgSize(transportLimit),
+		grpc.MaxSendMsgSize(transportLimit),
+	}
+	if s.transportCredentials != nil {
+		options = append(options, grpc.Creds(s.transportCredentials))
+	}
+	return options
 }
 
 func stopServerWhenCancelled(ctx context.Context, server *grpc.Server) {

@@ -27,7 +27,13 @@ REQUIRED_EVIDENCE = {
     ),
     "grpc-boundary": (
         ROOT / "services/media-control/internal/grpcgateway/server_test.go",
-        ("reasonMalformed", "reasonBackpressure", "reasonIdentityMismatch"),
+        (
+            "reasonMalformed",
+            "reasonBackpressure",
+            "reasonIdentityMismatch",
+            "TestExchangeTransportRejectsExtremePayloadBeforeHandler",
+            "TestExchangeRejectsUnknownAndUnspecifiedEnumValues",
+        ),
     ),
     "grpc-fuzz": (
         ROOT / "services/media-control/internal/grpcgateway/auth_fuzz_test.go",
@@ -35,7 +41,20 @@ REQUIRED_EVIDENCE = {
     ),
     "mqtt-boundary": (
         ROOT / "services/media-control/internal/mqttgateway/message_test.go",
-        ("MalformedAndOversized", "gcs/device/+/+/telemetry", "invalid payload reached gateway"),
+        (
+            "MalformedAndOversized",
+            "UnknownProtobufFieldsNeverReachGateway",
+            "gcs/device/+/+/telemetry",
+            "invalid payload reached gateway",
+        ),
+    ),
+    "mqtt-lifecycle-boundary": (
+        ROOT / "services/media-control/internal/mqttgateway/bridge_test.go",
+        ("TestConsumerFailsClosedWhenIngressQueueCloses", "TestConsumerStopsOnCancellationOrConnectionLoss"),
+    ),
+    "mqtt-backpressure-boundary": (
+        ROOT / "services/media-control/internal/mqttgateway/partition_consumer_test.go",
+        ("TestConsumerCancellationStopsSaturatedPartition", "TestEnqueueBackpressureLeavesQoSMessageUnacknowledged"),
     ),
     "mqtt-fuzz": (
         ROOT / "services/media-control/internal/mqttgateway/message_fuzz_test.go",

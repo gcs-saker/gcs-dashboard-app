@@ -61,12 +61,28 @@ func generatedRequestPayload(message *sakerv1.GatewayStreamRequest) (GatewayStre
 		wire, err := proto.Marshal(payload.Telemetry)
 		return GatewayStreamRequestPayload{Kind: GatewayPayloadTelemetry, Value: wire}, err
 	case *sakerv1.GatewayStreamRequest_StreamEvent:
+		if !knownStreamState(payload.StreamEvent.GetState()) {
+			return GatewayStreamRequestPayload{}, fmt.Errorf("stream event state is invalid")
+		}
 		wire, err := proto.Marshal(payload.StreamEvent)
 		return GatewayStreamRequestPayload{Kind: GatewayPayloadStream, Value: wire}, err
 	case *sakerv1.GatewayStreamRequest_CommandAck:
+		if !knownGatewayAckStatus(payload.CommandAck.GetStatus()) {
+			return GatewayStreamRequestPayload{}, fmt.Errorf("command ack status is invalid")
+		}
 		wire, err := proto.Marshal(payload.CommandAck)
 		return GatewayStreamRequestPayload{Kind: GatewayPayloadCommandAck, Value: wire}, err
 	default:
 		return GatewayStreamRequestPayload{}, fmt.Errorf("gateway request must contain exactly one payload")
 	}
+}
+
+func knownStreamState(state sakerv1.StreamState) bool {
+	_, known := sakerv1.StreamState_name[int32(state)]
+	return known && state != sakerv1.StreamState_STREAM_STATE_UNSPECIFIED
+}
+
+func knownGatewayAckStatus(status sakerv1.GatewayAckStatus) bool {
+	_, known := sakerv1.GatewayAckStatus_name[int32(status)]
+	return known && status != sakerv1.GatewayAckStatus_GATEWAY_ACK_STATUS_UNSPECIFIED
 }

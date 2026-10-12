@@ -136,8 +136,29 @@ func (m *Metrics) ObserveError(source string, reason string) {
 }
 
 func (m *Metrics) ObserveGateway(status string, reason string, elapsed time.Duration) {
-	m.gatewayMessages.WithLabelValues(status, reason).Inc()
-	m.gatewayDuration.WithLabelValues(status).Observe(elapsed.Seconds())
+	boundedStatus := gatewayMetricStatus(status)
+	m.gatewayMessages.WithLabelValues(boundedStatus, gatewayMetricReason(reason)).Inc()
+	m.gatewayDuration.WithLabelValues(boundedStatus).Observe(elapsed.Seconds())
+}
+
+func gatewayMetricReason(reason string) string {
+	switch reason {
+	case "accepted", "malformed_protobuf", "telemetry_semantic_invalid", "payload_too_large",
+		"reconnect_requested", "telemetry_store_failed", "device_identity_mismatch", "unauthorized_gateway_metadata":
+		return reason
+	default:
+		return "other"
+	}
+}
+
+func gatewayMetricStatus(status string) string {
+	switch status {
+	case "GATEWAY_ACK_STATUS_ACCEPTED", "GATEWAY_ACK_STATUS_REJECTED",
+		"GATEWAY_ACK_STATUS_BACKPRESSURE", "GATEWAY_ACK_STATUS_RECONNECT":
+		return status
+	default:
+		return "GATEWAY_ACK_STATUS_UNKNOWN"
+	}
 }
 
 func (m *Metrics) ObserveMQTTIngress(result string) {

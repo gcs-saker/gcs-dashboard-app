@@ -69,3 +69,20 @@ func TestDeviceCannotSelectGroupInMQTTEnvelope(t *testing.T) {
 		t.Fatal("device-selected group was accepted")
 	}
 }
+
+func TestUnknownProtobufFieldsNeverReachGateway(t *testing.T) {
+	exchange := func(context.Context, string, string, *pb.GatewayStreamRequest) (*pb.GatewayStreamResponse, error) {
+		t.Fatal("unknown protobuf field reached gateway")
+		return nil, nil
+	}
+	request := &pb.GatewayStreamRequest{AssetId: "device-1",
+		Payload: &pb.GatewayStreamRequest_Telemetry{Telemetry: &pb.TelemetryEnvelope{AssetId: "device-1"}}}
+	wire, err := proto.Marshal(&pb.MqttGatewayMessage{PublishToken: "opaque-token", Request: request})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wire = append(wire, 0x98, 0x06, 0x01) // unknown field 99, varint value 1
+	if _, err := Handle(context.Background(), exchange, "gcs/device/device-1/ps_test/telemetry", wire); err == nil {
+		t.Fatal("unknown protobuf field was accepted")
+	}
+}

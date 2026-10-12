@@ -93,6 +93,8 @@ func TestMetricsIncreaseAfterStreamAndIceRequests(t *testing.T) {
 func TestMetricsClassifiesUnknownCacheResultAsError(t *testing.T) {
 	metrics := NewMetrics()
 	metrics.ObserveStreamCache("stream-id-must-not-be-a-label")
+	metrics.ObserveGateway("private-device-uuid", "private-session-id", time.Millisecond)
+	metrics.ObserveMQTTIngress("private-topic")
 	metrics.ObserveHTTP("/api/v1/streams/{streamId}", http.MethodGet, http.StatusNotFound, 2*time.Millisecond)
 	recorder := httptest.NewRecorder()
 
@@ -100,11 +102,17 @@ func TestMetricsClassifiesUnknownCacheResultAsError(t *testing.T) {
 	body := recorder.Body.String()
 	for _, expected := range []string{
 		"gcs_media_control_stream_cache_events_total{result=\"error\"} 1",
+		"gcs_media_control_gateway_messages_total{reason=\"other\",status=\"GATEWAY_ACK_STATUS_UNKNOWN\"} 1",
+		"gcs_media_control_mqtt_ingress_total{result=\"error\"} 1",
 		"gcs_media_control_http_requests_total{method=\"GET\",route=\"/api/v1/streams/{streamId}\",status=\"404\"} 1",
 	} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected metric line %q in:\n%s", expected, body)
 		}
+	}
+	if strings.Contains(body, "private-device-uuid") || strings.Contains(body, "private-session-id") ||
+		strings.Contains(body, "private-topic") {
+		t.Fatalf("metrics leaked unbounded labels: %s", body)
 	}
 }
 
