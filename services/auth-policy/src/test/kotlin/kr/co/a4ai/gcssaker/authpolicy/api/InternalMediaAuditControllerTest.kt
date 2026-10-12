@@ -45,6 +45,19 @@ class InternalMediaAuditControllerTest {
     }
 
     @Test
+    fun `publish session lifecycle is accepted as bounded audit evidence`() {
+        controller.lifecycle(token, request(operation = "publish.session.created"))
+
+        val event = repository.eventsFor(
+            AuthenticatedPrincipal("admin", UserRole.ADMIN, GroupId("co-a")),
+            OperationalEventQuery(query = "publish.session.created"),
+        ).single()
+        assertEquals("publish.session.created", event.operation)
+        assertEquals("media-control", event.actorId)
+        assertEquals(null, event.streamId)
+    }
+
+    @Test
     fun `missing or incorrect service token is rejected before persistence`() {
         assertThrows(UnauthorizedApiError::class.java) { controller.lifecycle(null, request()) }
         assertThrows(UnauthorizedApiError::class.java) { controller.lifecycle("wrong", request()) }

@@ -51,6 +51,7 @@ requiredEventFamilies:
   - account-and-group-policy
   - administrator-replacement
   - device-credential-lifecycle
+  - publish-session-lifecycle
   - stream-authorization-denial
   - talkback-start-stop-denial
   - mission-save-dispatch-cancel-acknowledgement

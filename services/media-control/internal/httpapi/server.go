@@ -27,6 +27,10 @@ type PublishSessionReadiness interface {
 	Ready() (bool, string)
 }
 
+type PublishSessionAuditSink interface {
+	RecordPublishSessionLifecycle(context.Context, string, string, string, time.Time) error
+}
+
 type StreamAuthorizer interface {
 	AuthorizeStream(
 		ctx context.Context,
@@ -80,6 +84,7 @@ type publishEndpoints struct {
 	mediaMTXAPIPass  string
 	publishGlobal    *fixedWindowLimiter
 	publishSubjects  *fixedWindowLimiter
+	publishAudit     PublishSessionAuditSink
 }
 
 type operationalEndpoints struct {
@@ -98,6 +103,11 @@ func (s Server) WithMediaMTXAPIIdentity(username, password string) Server {
 
 func (s Server) WithPublishSessionReadiness(readiness PublishSessionReadiness) Server {
 	s.publishSessionReadiness = readiness
+	return s
+}
+
+func (s Server) WithPublishSessionAuditSink(sink PublishSessionAuditSink) Server {
+	s.publishAudit = sink
 	return s
 }
 
