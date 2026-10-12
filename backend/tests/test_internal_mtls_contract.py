@@ -17,8 +17,11 @@ def test_production_internal_policy_rpc_requires_mtls_files() -> None:
     assert media["environment"]["AUTH_POLICY_GRPC_SERVER_NAME"] == "auth-policy"
     assert "ALLOW_PLAINTEXT" not in str(auth["environment"])
     assert "ALLOW_PLAINTEXT" not in str(media["environment"])
-    for service in (auth, media):
-        mount = next(
-            item for item in service["volumes"] if isinstance(item, dict) and item["target"] == "/run/secrets/gcs-pki"
-        )
-        assert mount["read_only"] is True
+    expected_targets = {
+        "auth-policy": {"ca.crt", "auth-policy.crt", "auth-policy.key"},
+        "media-control": {"ca.crt", "media-control.crt", "media-control.key"},
+    }
+    for name, service in (("auth-policy", auth), ("media-control", media)):
+        targets = {Path(item["target"]).name for item in service["volumes"] if isinstance(item, dict)}
+        assert targets == expected_targets[name]
+        assert all(item["read_only"] is True for item in service["volumes"] if isinstance(item, dict))

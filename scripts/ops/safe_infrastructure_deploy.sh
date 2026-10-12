@@ -48,9 +48,9 @@ capture_previous_state() {
 check_current_internal_pki() {
   local container pki_source
   container="${previous_ids[mqtt]}"
-  pki_source="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/run/secrets/gcs-pki"}}{{.Source}}{{end}}{{end}}' "${container}")"
-  [[ "${pki_source}" = /* && -d "${pki_source}" ]] || { echo "MQTT PKI source is unavailable" >&2; return 1; }
-  bash "${ROOT}/scripts/ops/check_internal_pki.sh" "${pki_source}"
+  pki_source="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/run/secrets/gcs-pki/ca.crl"}}{{.Source}}{{end}}{{end}}' "${container}")"
+  [[ "${pki_source}" = /* && -f "${pki_source}" ]] || { echo "MQTT CRL source is unavailable" >&2; return 1; }
+  bash "${ROOT}/scripts/ops/check_internal_pki.sh" "$(dirname "${pki_source}")"
 }
 
 backup_mqtt_data() {

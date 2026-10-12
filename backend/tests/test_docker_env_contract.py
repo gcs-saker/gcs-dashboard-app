@@ -189,12 +189,7 @@ def test_single_node_mqtt_is_hardened_by_default_and_healthcheck_authenticates()
         "target": "/mosquitto/config/acl",
         "read_only": True,
     } in mqtt["volumes"]
-    assert {
-        "type": "bind",
-        "source": "${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}",
-        "target": "/run/secrets/gcs-pki",
-        "read_only": True,
-    } in mqtt["volumes"]
+    assert all(volume.get("target") != "/run/secrets/gcs-pki" for volume in mqtt["volumes"] if isinstance(volume, dict))
     assert mqtt_healthcheck == ["CMD", "/usr/local/bin/gcs-mqtt-healthcheck"]
     assert "mosquitto_sub" in healthcheck_source
     assert "'$SYS/broker/version'" in healthcheck_source

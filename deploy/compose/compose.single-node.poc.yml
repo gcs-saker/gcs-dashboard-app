@@ -53,8 +53,12 @@ services:
         target: /etc/postgresql/pg_hba.tls.conf
         read_only: true
       - type: bind
-        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
-        target: /run/secrets/gcs-pki
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/postgres.crt
+        target: /run/secrets/gcs-pki/postgres.crt
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/postgres.key
+        target: /run/secrets/gcs-pki/postgres.key
         read_only: true
     healthcheck:
       <<: *health_defaults
@@ -100,8 +104,16 @@ services:
     volumes:
       - redis-data:/data
       - type: bind
-        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
-        target: /run/secrets/gcs-pki
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/ca.crt
+        target: /run/secrets/gcs-pki/ca.crt
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/redis.crt
+        target: /run/secrets/gcs-pki/redis.crt
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/redis.key
+        target: /run/secrets/gcs-pki/redis.key
         read_only: true
     healthcheck:
       <<: *health_defaults
@@ -132,8 +144,28 @@ services:
         read_only: true
       - mqtt-data:/mosquitto/data
       - type: bind
-        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
-        target: /run/secrets/gcs-pki
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/ca.crt
+        target: /run/secrets/gcs-pki/ca.crt
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/ca.crl
+        target: /run/secrets/gcs-pki/ca.crl
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/mqtt.crt
+        target: /run/secrets/gcs-pki/mqtt.crt
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/mqtt.key
+        target: /run/secrets/gcs-pki/mqtt.key
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/mqtt-health.crt
+        target: /run/secrets/gcs-pki/mqtt-health.crt
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/mqtt-health.key
+        target: /run/secrets/gcs-pki/mqtt-health.key
         read_only: true
     healthcheck:
       <<: *health_defaults
@@ -198,8 +230,16 @@ services:
       test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request\nurllib.request.urlopen('http://127.0.0.1:8001/healthz', timeout=2).read()\nPY"]
     volumes:
       - type: bind
-        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
-        target: /run/secrets/gcs-pki
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/ca.crt
+        target: /run/secrets/gcs-pki/ca.crt
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/backend.crt
+        target: /run/secrets/gcs-pki/backend.crt
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/backend.key
+        target: /run/secrets/gcs-pki/backend.key
         read_only: true
     restart: unless-stopped
     networks:
@@ -284,8 +324,16 @@ services:
     volumes:
       - audit-anchor-data:/var/lib/gcs-audit-anchor
       - type: bind
-        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
-        target: /run/secrets/gcs-pki
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/ca.crt
+        target: /run/secrets/gcs-pki/ca.crt
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/auth-policy.crt
+        target: /run/secrets/gcs-pki/auth-policy.crt
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/auth-policy.key
+        target: /run/secrets/gcs-pki/auth-policy.key
         read_only: true
     restart: unless-stopped
     networks:
@@ -362,8 +410,16 @@ services:
       MEDIA_CONTROL_STREAM_PRESENCE_TTL_SECONDS: ${MEDIA_CONTROL_STREAM_PRESENCE_TTL_SECONDS:-6}
     volumes:
       - type: bind
-        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
-        target: /run/secrets/gcs-pki
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/ca.crt
+        target: /run/secrets/gcs-pki/ca.crt
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/media-control.crt
+        target: /run/secrets/gcs-pki/media-control.crt
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/media-control.key
+        target: /run/secrets/gcs-pki/media-control.key
         read_only: true
     healthcheck:
       <<: *health_defaults
@@ -449,8 +505,12 @@ services:
         target: /usr/local/bin/gcs-turn-healthcheck
         read_only: true
       - type: bind
-        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
-        target: /run/secrets/gcs-pki
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/turn-primary.crt
+        target: /run/secrets/gcs-pki/turn-primary.crt
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/turn-primary.key
+        target: /run/secrets/gcs-pki/turn-primary.key
         read_only: true
     ports:
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/tcp"
@@ -502,8 +562,12 @@ services:
         target: /usr/local/bin/gcs-turn-healthcheck
         read_only: true
       - type: bind
-        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
-        target: /run/secrets/gcs-pki
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/turn-secondary.crt
+        target: /run/secrets/gcs-pki/turn-secondary.crt
+        read_only: true
+      - type: bind
+        source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/turn-secondary.key
+        target: /run/secrets/gcs-pki/turn-secondary.key
         read_only: true
     ports:
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/tcp"
