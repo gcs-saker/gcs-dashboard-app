@@ -15,7 +15,9 @@ def test_media_control_go_unknowns_have_exact_versioned_resolutions() -> None:
     assert all("@v" in entry["purl"] for entry in go_entries)
     assert all(entry["source"].startswith("https://") for entry in go_entries)
     assert all(entry["verifiedBy"] == "go-licenses-v2.0.1" for entry in go_entries)
-    assert all(str(entry["verifiedOn"]) == "2026-09-17" for entry in go_entries)
+    assert {str(entry["verifiedOn"]) for entry in go_entries} <= {"2026-09-17", "2026-10-12"}
+    x_net = next(entry for entry in go_entries if entry["purl"] == "pkg:golang/golang.org/x/net@v0.60.0")
+    assert str(x_net["verifiedOn"]) == "2026-10-12"
 
 
 def test_paho_epl_remains_review_required_instead_of_being_silently_allowed() -> None:

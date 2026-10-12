@@ -128,6 +128,8 @@ def test_internal_authentication_and_debug_boundaries_remain_blocked_at_edge() -
     assert "x-gcs-exposure: internal-blocked" in document
     assert "location = /media-control/metrics" in edge
     assert "location /auth-policy/actuator/" in edge
+    assert "location /auth-policy/admin/api-docs/" in edge
+    assert "location /auth-policy/webjars/swagger-ui/" in edge
 
 
 def test_openapi_contains_no_known_secret_material_or_secret_examples() -> None:
