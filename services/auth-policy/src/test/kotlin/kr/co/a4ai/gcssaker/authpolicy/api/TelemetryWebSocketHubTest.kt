@@ -90,6 +90,45 @@ class TelemetryWebSocketHubTest {
     }
 
     @Test
+    fun `system administrator is rejected before subscribing to telemetry`() {
+        val admin = session("system-admin", GroupId("a"), UserRole.ADMIN)
+
+        hub.afterConnectionEstablished(admin)
+        hub.publish(telemetry(GroupId("a")))
+
+        Mockito.verify(admin).close(Mockito.argThat<CloseStatus> { it.code == CloseStatus.POLICY_VIOLATION.code })
+        Mockito.verify(admin, Mockito.never()).sendMessage(Mockito.any())
+        assertEquals(0, hub.connectionCount())
+    }
+
+    @Test
+    fun `bounds global and per principal connection counts`() {
+        val registry = SimpleMeterRegistry()
+        val metrics = kr.co.a4ai.gcssaker.authpolicy.observability.TelemetryWebSocketMetrics(registry)
+        val boundedHub = TelemetryWebSocketHub(
+            objectMapper,
+            metrics = metrics,
+            maxConnections = 2,
+            maxConnectionsPerPrincipal = 1,
+        )
+        val first = session("first", GroupId("a"), username = "same-user")
+        val duplicatePrincipal = session("second", GroupId("a"), username = "same-user")
+        val other = session("other", GroupId("a"), username = "other-user")
+        val overGlobalLimit = session("third", GroupId("a"), username = "third-user")
+
+        boundedHub.afterConnectionEstablished(first)
+        boundedHub.afterConnectionEstablished(duplicatePrincipal)
+        boundedHub.afterConnectionEstablished(other)
+        boundedHub.afterConnectionEstablished(overGlobalLimit)
+
+        Mockito.verify(duplicatePrincipal).close(Mockito.argThat<CloseStatus> { it.code == 1013 })
+        Mockito.verify(overGlobalLimit).close(Mockito.argThat<CloseStatus> { it.code == 1013 })
+        assertEquals(2, boundedHub.connectionCount())
+        assertEquals(2.0, registry.counter("gcs.auth_policy.telemetry.websocket.rejected").count())
+        boundedHub.close()
+    }
+
+    @Test
     fun `preserves subscriber order without blocking a healthy subscriber`() {
         val slowStarted = CountDownLatch(1)
         val releaseSlow = CountDownLatch(1)
@@ -166,9 +205,14 @@ class TelemetryWebSocketHubTest {
         isolatedHub.close()
     }
 
-    private fun session(id: String, groupId: GroupId, role: UserRole = UserRole.VIEWER): WebSocketSession {
+    private fun session(
+        id: String,
+        groupId: GroupId,
+        role: UserRole = UserRole.VIEWER,
+        username: String = "viewer-$id",
+    ): WebSocketSession {
         val session = Mockito.mock(WebSocketSession::class.java)
-        val principal = AuthenticatedPrincipal("viewer-$id", role, groupId)
+        val principal = AuthenticatedPrincipal(username, role, groupId)
         Mockito.`when`(session.id).thenReturn(id)
         Mockito.`when`(session.isOpen).thenReturn(true)
         Mockito.`when`(session.principal).thenReturn(UsernamePasswordAuthenticationToken(principal, null, emptyList()))

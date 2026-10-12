@@ -33,8 +33,16 @@ class TelemetryWebSocketHub(
     private val metrics: TelemetryWebSocketMetrics = TelemetryWebSocketMetrics(),
     private val executor: ExecutorService = Executors.newVirtualThreadPerTaskExecutor(),
     private val queueCapacity: Int = DEFAULT_QUEUE_CAPACITY,
+    private val maxConnections: Int = DEFAULT_MAX_CONNECTIONS,
+    private val maxConnectionsPerPrincipal: Int = DEFAULT_MAX_CONNECTIONS_PER_PRINCIPAL,
 ) : TextWebSocketHandler(), TelemetryPublisher, AutoCloseable {
     private val subscribers = ConcurrentHashMap<String, TelemetrySubscriber>()
+    private val subscriberLock = Any()
+
+    init {
+        require(maxConnections > 0) { "telemetry max connections must be positive" }
+        require(maxConnectionsPerPrincipal > 0) { "telemetry per-principal connection limit must be positive" }
+    }
 
     override fun afterConnectionEstablished(session: WebSocketSession) {
         val principal = (session.principal as? Authentication)?.principal as? AuthenticatedPrincipal
@@ -42,10 +50,20 @@ class TelemetryWebSocketHub(
             session.close(CloseStatus.NOT_ACCEPTABLE.withReason("authenticated principal required"))
             return
         }
+        if (principal.role == UserRole.ADMIN) {
+            session.close(CloseStatus.POLICY_VIOLATION.withReason("media access denied"))
+            return
+        }
         val subscriber = TelemetrySubscriber(session, principal, queueCapacity, metrics) {
             removeSubscriber(session.id, CloseStatus.SERVER_ERROR, true)
         }
-        subscribers.put(session.id, subscriber)?.let { previous ->
+        val admission = admit(subscriber)
+        if (!admission.accepted) {
+            metrics.rejected()
+            session.close(CONNECTION_LIMIT_CLOSE_STATUS)
+            return
+        }
+        admission.previous?.let { previous ->
             previous.close(CloseStatus.NORMAL, true)
             metrics.disconnected()
         }
@@ -66,7 +84,7 @@ class TelemetryWebSocketHub(
         subscribers.values.forEach { subscriber ->
             val canViewDescendant = subscriber.principal.role == UserRole.GROUP_ADMIN &&
                 hierarchyRepository?.current()?.isAncestor(subscriber.principal.groupId, telemetry.groupId) == true
-            if (subscriber.principal.role == UserRole.ADMIN || subscriber.principal.groupId == telemetry.groupId || canViewDescendant) {
+            if (subscriber.principal.groupId == telemetry.groupId || canViewDescendant) {
                 if (!subscriber.offer(payload)) {
                     removeSubscriber(subscriber.session.id, BACKPRESSURE_CLOSE_STATUS, true)
                 }
@@ -87,18 +105,33 @@ class TelemetryWebSocketHub(
     }
 
     private fun removeSubscriber(id: String, status: CloseStatus, closeSession: Boolean) {
-        subscribers.remove(id)?.let { subscriber ->
+        val removed = synchronized(subscriberLock) { subscribers.remove(id) }
+        removed?.let { subscriber ->
             subscriber.close(status, closeSession)
             metrics.disconnected()
         }
     }
 
+    private fun admit(subscriber: TelemetrySubscriber): SubscriberAdmission = synchronized(subscriberLock) {
+        val previous = subscribers[subscriber.session.id]
+        val principalConnections = subscribers.values.count { it.principal.username == subscriber.principal.username }
+        val atLimit = previous == null &&
+            (subscribers.size >= maxConnections || principalConnections >= maxConnectionsPerPrincipal)
+        if (atLimit) SubscriberAdmission(false, null)
+        else SubscriberAdmission(true, subscribers.put(subscriber.session.id, subscriber))
+    }
+
     private companion object {
         const val DEFAULT_QUEUE_CAPACITY = 64
+        const val DEFAULT_MAX_CONNECTIONS = 256
+        const val DEFAULT_MAX_CONNECTIONS_PER_PRINCIPAL = 4
         const val SHUTDOWN_TIMEOUT_SECONDS = 1L
         val BACKPRESSURE_CLOSE_STATUS = CloseStatus(1013, "telemetry backpressure")
+        val CONNECTION_LIMIT_CLOSE_STATUS = CloseStatus(1013, "telemetry connection limit")
     }
 }
+
+private data class SubscriberAdmission(val accepted: Boolean, val previous: TelemetrySubscriber?)
 
 @Configuration
 class TelemetryWebSocketBeanConfig {

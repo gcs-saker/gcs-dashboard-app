@@ -11,6 +11,7 @@ class TelemetryWebSocketMetrics(registry: MeterRegistry? = null) {
     private val sent = registry?.counter("gcs.auth_policy.telemetry.websocket.sent")
     private val backpressure = registry?.counter("gcs.auth_policy.telemetry.websocket.backpressure")
     private val failures = registry?.counter("gcs.auth_policy.telemetry.websocket.failed")
+    private val rejected = registry?.counter("gcs.auth_policy.telemetry.websocket.rejected")
 
     init {
         registry?.let {
@@ -50,5 +51,9 @@ class TelemetryWebSocketMetrics(registry: MeterRegistry? = null) {
 
     fun failed() {
         failures?.increment()
+    }
+
+    fun rejected() {
+        rejected?.increment()
     }
 }

@@ -78,6 +78,8 @@ type publishEndpoints struct {
 	sessionValidator domain.SessionBindingValidator
 	mediaMTXAPIUser  string
 	mediaMTXAPIPass  string
+	publishGlobal    *fixedWindowLimiter
+	publishSubjects  *fixedWindowLimiter
 }
 
 type operationalEndpoints struct {
@@ -127,9 +129,20 @@ func NewServerWithMetrics(
 			streams: streams, ice: ice, playback: playback, authorizer: authorizer, groups: groups,
 			cameras: newCameraCommandStore(),
 		},
-		publishEndpoints:     publishEndpoints{publishToken: strings.TrimSpace(publishToken)},
+		publishEndpoints: publishEndpoints{
+			publishToken:  strings.TrimSpace(publishToken),
+			publishGlobal: newFixedWindowLimiter(publishSessionGlobalRequestsPerMinute, time.Minute, 1),
+			publishSubjects: newFixedWindowLimiter(
+				publishSessionSubjectRequestsPerMinute, time.Minute, publishSessionTrackedSubjects,
+			),
+		},
 		operationalEndpoints: operationalEndpoints{metrics: metrics, now: time.Now},
 	}
+}
+
+func (s Server) WithPublishSessionRateLimits(global, subjects *fixedWindowLimiter) Server {
+	s.publishGlobal, s.publishSubjects = global, subjects
+	return s
 }
 
 func (s Server) WithPublishSessionStore(store domain.PublishSessionStore) Server {

@@ -28,6 +28,10 @@ failureConditions: [panic, crash, race, resource leak, secret disclosure, author
 resourceBoundaries:
   grpc: [transport receive limit, transport send limit, application payload limit, unknown enum rejection]
   mqtt: [broker payload limit, ingress queue bound, partition queue bound, closed queue fail-closed, unknown protobuf field rejection]
+  auth: [bounded tracked client keys, fixed window request limit, retry-after response]
+  publishSession: [global request limit, hashed subject request limit, bounded tracked subjects]
+  websocket: [global connection limit, per-principal connection limit, subscriber queue bound, backpressure disconnect]
+  sse: [bounded worker pool, bounded executor queue, bounded async timeout]
 evidencePolicy: Findings and corpora exclude credentials, private routes, controlled data, and raw private media.
 ciEvidenceSchema: gcs-saker.security-campaign.v1
 retestPolicy: Critical and High findings are retested after remediation and before release; all other findings are retested within 30 days.
