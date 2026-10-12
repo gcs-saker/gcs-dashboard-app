@@ -327,14 +327,15 @@ def test_single_node_nginx_routes_mobile_publisher_without_replacing_dashboard()
     assert "proxy_pass http://$dashboard_host:3000;" in root_location
 
 
-def test_operational_swagger_has_one_canonical_edge_entrypoint() -> None:
+def test_operational_documentation_is_internal_only() -> None:
     for config in [read_config(), read_single_node_config()]:
         swagger_location = extract_exact_location(config, "/ops/swagger")
         openapi_location = extract_exact_location(config, "/ops/openapi.yaml")
 
-        assert "absolute_redirect off;" in swagger_location
-        assert "return 308 /auth-policy/admin/api-docs/swagger;" in swagger_location
-        assert "return 308 /auth-policy/admin/api-docs/openapi.yaml;" in openapi_location
+        assert "return 404;" in swagger_location
+        assert "return 404;" in openapi_location
+        assert "location /auth-policy/admin/api-docs/" in config
+        assert "location /auth-policy/webjars/swagger-ui/" in config
 
 
 def test_reserved_operational_typos_never_fall_through_to_spa() -> None:
