@@ -10,6 +10,7 @@ DEPLOY_SCRIPT = REPO_ROOT / "scripts" / "ops" / "safe_stateless_deploy.sh"
 MQTT_PASSWORD_PREPARER = REPO_ROOT / "scripts" / "ops" / "prepare_mqtt_password_file.sh"
 SERVER01_SMOKE = REPO_ROOT / "scripts" / "ops" / "server01_operational_smoke.sh"
 SERVER01_SCOPE = REPO_ROOT / "docs" / "operations" / "GCS-Saker_Server01_managed_scope.md"
+RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release-supply-chain.yml"
 
 
 def load_release_gate():
@@ -34,6 +35,14 @@ def test_application_images_must_use_immutable_digests(monkeypatch: pytest.Monke
     inventory = release_gate.application_image_inventory(commit)
 
     assert set(inventory) == {"backend", "auth-policy", "media-control", "dashboard"}
+
+
+def test_release_scan_does_not_reference_missing_grype_configuration() -> None:
+    workflow = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "backend-python312.yaml" not in workflow
+    assert "severity-cutoff: high" in workflow
+    assert "only-fixed: true" in workflow
 
 
 def test_mutable_application_image_tag_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
