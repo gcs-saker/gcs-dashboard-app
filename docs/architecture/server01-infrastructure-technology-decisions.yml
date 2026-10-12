@@ -1,0 +1,68 @@
+schemaVersion: gcs-saker.infrastructure-technology-decisions.v1
+reviewedAt: 2026-10-12
+scope: server01-production
+constraints:
+  - single managed Server-01 runtime
+  - Docker Compose deployment
+  - WebRTC, TURN, and MQTT latency must not regress
+  - offline recovery must remain possible
+  - mobile workflows must not change
+decisions:
+  - id: compose-secrets
+    decision: ADOPT
+    implementationIssue: 881
+    reason: per-service file grants immediately reduce credential exposure without adding a control plane
+    officialReference: https://docs.docker.com/compose/how-tos/use-secrets/
+  - id: sops-age-systemd-credentials
+    decision: ADOPT
+    implementationIssue: 892
+    reason: encrypted reviewable configuration and host-scoped delivery fit a single offline-capable server
+    officialReference: https://getsops.io/docs/
+  - id: opentelemetry-collector
+    decision: ADOPT
+    implementationIssue: 894
+    reason: one bounded telemetry gateway reduces exporter coupling and preserves existing application protocols
+    officialReference: https://opentelemetry.io/docs/collector/deploy/
+  - id: step-ca
+    decision: TRIAL
+    implementationIssue: 893
+    reason: short-lived certificate renewal is valuable but reload and CA recovery must be proven first
+    officialReference: https://smallstep.com/docs/step-ca/renewal/
+  - id: falco-modern-ebpf
+    decision: TRIAL
+    implementationIssue: 895
+    reason: runtime detection is valuable only if kernel compatibility, event loss, load, and alert quality pass a soak
+    officialReference: https://falco.org/docs/setup/container/
+  - id: spiffe-spire
+    decision: HOLD
+    implementationIssue: null
+    reason: server, agent, attestation, and registration recovery exceed the current single-node benefit
+    reconsiderWhen: multiple managed nodes or at least 20 independently identified workloads
+    officialReference: https://spiffe.io/docs/latest/spire-about/spire-concepts/
+  - id: k3s-cilium
+    decision: HOLD
+    implementationIssue: null
+    reason: cluster recovery and UDP media operations are not justified without a high-availability requirement
+    reconsiderWhen: a supported three-node high-availability deployment is funded
+    officialReference: https://docs.k3s.io/
+  - id: gvisor
+    decision: HOLD
+    implementationIssue: null
+    reason: network compatibility and latency evidence are absent for TURN and media workloads
+    reconsiderWhen: an untrusted workload requires stronger isolation and passes media benchmarks
+    officialReference: https://gvisor.dev/docs/
+  - id: kata-containers
+    decision: HOLD
+    implementationIssue: null
+    reason: VM isolation cost is not justified for trusted communication services on one server
+    reconsiderWhen: untrusted third-party AI models require a dedicated sandbox
+    officialReference: https://katacontainers.io/docs/
+executionOrder:
+  - [881, 892, 882]
+  - [884, 885, 886]
+  - [887, 888]
+  - [894, 893, 895]
+decisionRules:
+  ADOPT: implement behind tests and rollback evidence
+  TRIAL: isolated opt-in profile only; production remains NOT_RUN
+  HOLD: no implementation issue until reconsiderWhen is satisfied
