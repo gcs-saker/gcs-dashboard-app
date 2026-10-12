@@ -22,6 +22,8 @@ def test_security_campaign_gate_covers_rest_grpc_mqtt_and_tokens() -> None:
         "grpc-fuzz": "PASS",
         "media-token-boundary": "PASS",
         "mqtt-boundary": "PASS",
+        "mqtt-lifecycle-boundary": "PASS",
+        "mqtt-backpressure-boundary": "PASS",
         "mqtt-fuzz": "PASS",
         "rest-dast": "PASS",
         "token-fuzz": "PASS",

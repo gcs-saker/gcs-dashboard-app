@@ -45,7 +45,10 @@ func (c consumer) run(ctx context.Context) error {
 			return errors.New("mqtt_connection_lost")
 		case err := <-workerErrors:
 			return err
-		case message := <-c.queue:
+		case message, open := <-c.queue:
+			if !open {
+				return errors.New("mqtt_ingress_queue_closed")
+			}
 			if err := c.dispatch(ctx, message, partitions, workerErrors); err != nil {
 				return err
 			}

@@ -41,6 +41,15 @@ func TestConsumerStopsOnCancellationOrConnectionLoss(t *testing.T) {
 	}
 }
 
+func TestConsumerFailsClosedWhenIngressQueueCloses(t *testing.T) {
+	queue := make(chan mqtt.Message)
+	close(queue)
+	err := (consumer{lost: make(chan struct{}), queue: queue}).run(context.Background())
+	if err == nil || err.Error() != "mqtt_ingress_queue_closed" {
+		t.Fatalf("unexpected closed queue result: %v", err)
+	}
+}
+
 func TestAwaitReportsTimeoutAndTokenError(t *testing.T) {
 	if err := await(fakeToken{waited: false}); err == nil || err.Error() != "mqtt_operation_timeout" {
 		t.Fatalf("unexpected timeout error: %v", err)

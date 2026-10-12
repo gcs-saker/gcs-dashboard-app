@@ -25,6 +25,9 @@ fuzzing:
     durationPerTarget: 10s
     targets: [FuzzParseStreamID, FuzzValidateForRoute, FuzzMissionWaypointBoundary, FuzzGatewayMetadata, FuzzSessionFromTopic]
 failureConditions: [panic, crash, race, resource leak, secret disclosure, authorization bypass, unbounded retry, inconsistent accepted round-trip]
+resourceBoundaries:
+  grpc: [transport receive limit, transport send limit, application payload limit, unknown enum rejection]
+  mqtt: [broker payload limit, ingress queue bound, partition queue bound, closed queue fail-closed, unknown protobuf field rejection]
 evidencePolicy: Findings and corpora exclude credentials, private routes, controlled data, and raw private media.
 ciEvidenceSchema: gcs-saker.security-campaign.v1
 retestPolicy: Critical and High findings are retested after remediation and before release; all other findings are retested within 30 days.
