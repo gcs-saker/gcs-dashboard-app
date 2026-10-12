@@ -84,7 +84,9 @@ def test_single_node_compose_uses_hardened_mqtt_by_default() -> None:
     assert "MQTT_GATEWAY_ALLOW_PLAINTEXT" not in compose
     assert "MQTT_GATEWAY_CERT_FILE: /run/secrets/gcs-pki/media-control.crt" in compose
     assert "MQTT_GATEWAY_SERVER_NAME: mqtt" in compose
-    assert "mqtt-health.crt" in compose
+    healthcheck = (REPO_ROOT / "deploy" / "mosquitto" / "mqtt-healthcheck.sh").read_text(encoding="utf-8")
+    assert "mqtt-health.crt" in healthcheck
+    assert '["CMD", "/usr/local/bin/gcs-mqtt-healthcheck"]' in compose
 
 
 def test_local_compose_uses_hardened_mqtt_and_keeps_no_auth_in_explicit_profile() -> None:

@@ -16,3 +16,9 @@ and atomically replaces `ca.crl`. Reload or sequentially recreate the consuming 
 the revoked certificate is rejected with `openssl verify -crl_check` and an actual connection denial.
 Root CA compromise does not use leaf revocation; execute the full dual-trust replacement with incident
 response approval and preserve the old audit evidence.
+
+The CRL has an independent lifetime and can expire before any leaf certificate. Run
+`check_internal_pki.sh` in release preflight and scheduled maintenance checks. Refresh a healthy CA's
+CRL with `refresh_internal_crl.sh`; it generates, validates, and atomically replaces the CRL. A new CRL
+is not consumed until the affected service reloads or is sequentially recreated in an approved window.
+Never disable `crlfile` to recover availability.

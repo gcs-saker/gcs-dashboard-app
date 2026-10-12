@@ -33,7 +33,7 @@ serial=\$dir/serial
 crlnumber=\$dir/crlnumber
 default_md=sha384
 default_days=90
-default_crl_days=7
+default_crl_days=30
 policy=policy_any
 copy_extensions=copy
 [policy_any]

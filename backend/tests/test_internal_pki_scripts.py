@@ -6,6 +6,9 @@ CHECK = ROOT / "scripts/ops/check_internal_pki.sh"
 ISSUE_DEVICE = ROOT / "scripts/ops/issue_device_certificate.sh"
 REVOKE = ROOT / "scripts/ops/revoke_internal_certificate.sh"
 ROTATE = ROOT / "scripts/ops/stage_internal_ca_rotation.sh"
+REFRESH_CRL = ROOT / "scripts/ops/refresh_internal_crl.sh"
+SAFE_INFRA_DEPLOY = ROOT / "scripts/ops/safe_infrastructure_deploy.sh"
+SAFE_STATELESS_DEPLOY = ROOT / "scripts/ops/safe_stateless_deploy.sh"
 
 
 def test_internal_pki_generation_is_private_and_bounded() -> None:
@@ -16,6 +19,7 @@ def test_internal_pki_generation_is_private_and_bounded() -> None:
     assert "rsa_keygen_bits:3072" in source
     assert "-sha384" in source
     assert "default_days=90" in source
+    assert "default_crl_days=30" in source
     assert "chmod 600" in source
     assert "serverAuth" in source and "clientAuth" in source
     assert "serverAuth,clientAuth" in source
@@ -32,6 +36,8 @@ def test_internal_pki_check_fails_before_expiry() -> None:
 
     assert "openssl verify" in source
     assert "openssl x509 -checkend" in source
+    assert "openssl crl" in source and "-nextupdate" in source
+    assert "-CRLfile" in source and "-crl_check" in source
     assert "PKI_EXPIRY_WARN_SECONDS:-1209600" in source
     assert '"600"' in source and '"400"' in source
 
@@ -55,3 +61,23 @@ def test_ca_rotation_requires_dual_trust_and_no_overwrite() -> None:
     assert "refusing to overwrite trust bundle" in source
     assert '"${old_ca}" "${new_ca}"' in source
     assert "rotate leaves before removing the old CA" in source
+
+
+def test_crl_refresh_is_bounded_and_atomic() -> None:
+    source = REFRESH_CRL.read_text(encoding="utf-8")
+
+    assert "PKI directory must be outside the repository" in source
+    assert "PKI_CRL_MIN_VALIDITY_SECONDS:-1209600" in source
+    assert "openssl ca -batch -gencrl" in source
+    assert "openssl crl" in source and "-nextupdate" in source
+    assert "mktemp" in source and "mv -f" in source
+
+
+def test_deployments_fail_before_mutation_when_current_crl_is_stale() -> None:
+    infrastructure = SAFE_INFRA_DEPLOY.read_text(encoding="utf-8")
+    stateless = SAFE_STATELESS_DEPLOY.read_text(encoding="utf-8")
+
+    assert infrastructure.index("check_current_internal_pki") < infrastructure.index("backup_mqtt_data")
+    assert infrastructure.index("check_internal_pki.sh") < infrastructure.index("replace_service mqtt")
+    assert stateless.index("check_internal_pki.sh") < stateless.index("previous_container_id=")
+    assert stateless.index("check_internal_pki.sh") < stateless.index("deployment_complete=0")

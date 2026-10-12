@@ -60,9 +60,11 @@ def test_single_node_keeps_management_ports_local_but_allows_webrtc_ice_public_b
 def test_mqtt_healthcheck_uses_the_certificate_dns_identity() -> None:
     compose = load_yaml(SINGLE_NODE_COMPOSE_FILE)
     healthcheck = compose["services"]["mqtt"]["healthcheck"]["test"]
+    source = (REPO_ROOT / "deploy/mosquitto/mqtt-healthcheck.sh").read_text(encoding="utf-8")
 
-    assert "mosquitto_sub -h mqtt -p 8883" in healthcheck[-1]
-    assert "mosquitto_sub -h 127.0.0.1" not in healthcheck[-1]
+    assert healthcheck == ["CMD", "/usr/local/bin/gcs-mqtt-healthcheck"]
+    assert '-h "${MQTT_HEALTH_HOST:-mqtt}"' in source
+    assert "127.0.0.1" not in source
 
 
 def test_single_node_edge_depends_on_active_cutover_services() -> None:
