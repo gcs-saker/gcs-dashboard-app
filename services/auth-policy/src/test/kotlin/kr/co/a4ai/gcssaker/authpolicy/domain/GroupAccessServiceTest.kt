@@ -65,12 +65,18 @@ class GroupAccessServiceTest {
     }
 
     @Test
-    fun `admin can inspect every group`() {
+    fun `admin can inspect and manage groups without media capabilities`() {
         val admin = AuthenticatedPrincipal("admin", UserRole.ADMIN, GroupId("company-a"))
 
         assertEquals(4, service.visibleGroups(admin).size)
-        assertTrue(service.accessFor(admin, GroupId("company-b")).canControl)
-        assertTrue(service.accessFor(admin, GroupId("company-b")).canManage)
+        val access = service.accessFor(admin, GroupId("company-b"))
+        assertTrue(access.canView)
+        assertTrue(access.canManage)
+        assertTrue(access.canManageMembers)
+        assertTrue(access.canManageDevices)
+        assertFalse(access.canControl)
+        assertFalse(access.canSendTalkback)
+        assertFalse(access.canPublish)
     }
 
     private fun registeredDevice(deviceUuid: String, groupId: String) = RegisteredDevice(

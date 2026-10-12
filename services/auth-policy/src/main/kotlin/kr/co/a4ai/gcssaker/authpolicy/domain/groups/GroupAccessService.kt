@@ -11,9 +11,9 @@ data class GroupAccess(
 )
 
 fun ownGroupAccess(principal: AuthenticatedPrincipal): GroupAccess {
-    val canOperate = principal.role == UserRole.ADMIN || principal.role == UserRole.OPERATOR ||
-        principal.role == UserRole.GROUP_ADMIN
-    val canManage = principal.role == UserRole.ADMIN || principal.role == UserRole.GROUP_ADMIN
+    if (principal.role == UserRole.ADMIN) return systemAdministratorGroupAccess()
+    val canOperate = principal.role == UserRole.OPERATOR || principal.role == UserRole.GROUP_ADMIN
+    val canManage = principal.role == UserRole.GROUP_ADMIN
     return GroupAccess(
         canView = true,
         canControl = canOperate,
@@ -42,7 +42,8 @@ class GroupAccessService(
     fun accessFor(principal: AuthenticatedPrincipal, groupId: GroupId): GroupAccess {
         val hierarchy = hierarchyRepository.current()
         if (!hierarchy.contains(groupId)) return deniedGroupAccess()
-        if (principal.role == UserRole.ADMIN || principal.groupId == groupId) return ownGroupAccess(principal)
+        if (principal.role == UserRole.ADMIN) return systemAdministratorGroupAccess()
+        if (principal.groupId == groupId) return ownGroupAccess(principal)
         val isGroupAdminDescendant = principal.role == UserRole.GROUP_ADMIN &&
             hierarchy.isAncestor(principal.groupId, groupId)
         return if (isGroupAdminDescendant) descendantGroupAdminAccess() else deniedGroupAccess()
@@ -72,6 +73,16 @@ private fun deniedGroupAccess() = GroupAccess(
     canPublish = false,
     canManageMembers = false,
     canManageDevices = false,
+)
+
+private fun systemAdministratorGroupAccess() = GroupAccess(
+    canView = true,
+    canControl = false,
+    canManage = true,
+    canSendTalkback = false,
+    canPublish = false,
+    canManageMembers = true,
+    canManageDevices = true,
 )
 
 private fun descendantGroupAdminAccess() = GroupAccess(

@@ -23,6 +23,7 @@ class AccountPublisherPolicyControllerTest {
             listOf(
                 user("publisher-a", UserRole.OPERATOR),
                 user("viewer-a", UserRole.VIEWER),
+                user("admin-a", UserRole.ADMIN),
             ),
         ),
         hasher,
@@ -47,6 +48,13 @@ class AccountPublisherPolicyControllerTest {
     fun `viewer cannot publish`() {
         assertThrows(ForbiddenApiError::class.java) {
             controller.authorize(bearer("viewer-a"), AccountPublishAuthorizationRequest())
+        }
+    }
+
+    @Test
+    fun `system administrator cannot publish`() {
+        assertThrows(ForbiddenApiError::class.java) {
+            controller.authorize(bearer("admin-a"), AccountPublishAuthorizationRequest())
         }
     }
 
