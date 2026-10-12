@@ -10,6 +10,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 REQUIRED_EVIDENCE = {
+    "auth-rate-limit": (
+        ROOT / "services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/RequestSecurityFiltersTest.kt",
+        ("rate limit filter rejects repeated auth requests", "RETRY_AFTER_HEADER"),
+    ),
     "rest-dast": (
         ROOT / "scripts/smoke/auth_boundary_dast.py",
         (
@@ -24,6 +28,10 @@ REQUIRED_EVIDENCE = {
     "media-token-boundary": (
         ROOT / "services/media-control/internal/httpapi/media_auth_test.go",
         ("RejectsCrossActionAndDuplicateTokens", "RejectsUnknownActionAndOversizedBody"),
+    ),
+    "publish-session-rate-limit": (
+        ROOT / "services/media-control/internal/httpapi/request_rate_limit_test.go",
+        ("BoundsKeysAndRecoversAfterWindow", "UsesHashedSubjectAndReturns429"),
     ),
     "grpc-boundary": (
         ROOT / "services/media-control/internal/grpcgateway/server_test.go",
@@ -63,6 +71,19 @@ REQUIRED_EVIDENCE = {
     "token-fuzz": (
         ROOT / "services/media-control/internal/sessiontoken/token_fuzz_test.go",
         ("FuzzValidateForRoute",),
+    ),
+    "websocket-resource-boundary": (
+        ROOT / "services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/api/TelemetryWebSocketHubTest.kt",
+        (
+            "system administrator is rejected",
+            "bounds global and per principal connection counts",
+            "records queue and backpressure metrics",
+        ),
+    ),
+    "sse-resource-boundary": (
+        ROOT
+        / "services/auth-policy/src/test/kotlin/kr/co/a4ai/gcssaker/authpolicy/configuration/streaming/MvcStreamingConfigTest.kt",
+        ("bounded workers and queue capacity", "remainingCapacity"),
     ),
 }
 

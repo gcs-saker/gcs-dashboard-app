@@ -16,6 +16,9 @@ func (s Server) routePublishSessionRequest(
 	routes publishSessionRoutes,
 	create http.HandlerFunc,
 ) {
+	if r.Method == http.MethodPost && !s.allowPublishSessionRequest(w, r) {
+		return
+	}
 	if r.URL.Path == routes.collection {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
