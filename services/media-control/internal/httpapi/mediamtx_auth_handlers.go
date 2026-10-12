@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -19,14 +20,15 @@ func (s Server) mediaMTXAuth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var payload mediaMTXAuthRequest
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+	limitedBody := http.MaxBytesReader(w, r.Body, maxMediaMTXAuthBody)
+	if err := json.NewDecoder(limitedBody).Decode(&payload); err != nil {
 		writeJSON(w, http.StatusBadRequest, errorPayload(errPublisherAuthFailed))
 		return
 	}
 	switch payload.Action {
 	case mediaMTXActionAPI:
-		if s.mediaMTXAPIUser == "" || s.mediaMTXAPIPass == "" ||
-			payload.User != s.mediaMTXAPIUser || payload.Password != s.mediaMTXAPIPass {
+		validPassword := subtle.ConstantTimeCompare([]byte(payload.Password), []byte(s.mediaMTXAPIPass)) == 1
+		if s.mediaMTXAPIUser == "" || s.mediaMTXAPIPass == "" || payload.User != s.mediaMTXAPIUser || !validPassword {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -36,7 +38,7 @@ func (s Server) mediaMTXAuth(w http.ResponseWriter, r *http.Request) {
 	case mediaMTXActionRead, mediaMTXActionPlayback:
 		s.authorizeMediaMTXPlayback(w, payload)
 	default:
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusForbidden)
 	}
 }
 
@@ -55,9 +57,14 @@ func (s Server) authorizeMediaMTXPublish(w http.ResponseWriter, payload mediaMTX
 		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
 		return
 	}
+	token, validToken := exactQueryToken(values, publisherTokenQueryKey)
+	if !validToken {
+		writeJSON(w, http.StatusForbidden, errorPayload(errPublisherAuthFailed))
+		return
+	}
 	tokenPayload, err := sessiontoken.ValidateForRoute(
 		s.publishToken,
-		values.Get(publisherTokenQueryKey),
+		token,
 		sessiontoken.RouteValidation{
 			Action: mediaMTXActionPublish, StreamID: parsed.StreamID, StreamPath: payload.Path,
 			Now: time.Now(), EnforceExpiry: true,
@@ -86,17 +93,13 @@ func (s Server) authorizeMediaMTXPlayback(w http.ResponseWriter, payload mediaMT
 		writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
 		return
 	}
+	rawToken, validToken := exactQueryToken(values, playbackTokenQueryKey)
+	if !validToken {
+		writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
+		return
+	}
 	if parsed.Prefix == "talkback" {
-		token, err := sessiontoken.ValidateForRoute(
-			s.publishToken,
-			values.Get(playbackTokenQueryKey),
-			sessiontoken.RouteValidation{
-				Action: mediaMTXActionPlayback, StreamID: parsed.StreamID, StreamPath: payload.Path,
-				Now: time.Now(), EnforceExpiry: true,
-			},
-		)
-		validScope := err == nil && s.talkbackPlaybackTokenIsActive(token, time.Now())
-		if !validScope {
+		if !s.validTalkbackPlaybackToken(parsed, rawToken, time.Now()) {
 			writeJSON(w, http.StatusForbidden, errorPayload(errPlaybackAuthFailed))
 			return
 		}
@@ -112,7 +115,7 @@ func (s Server) authorizeMediaMTXPlayback(w http.ResponseWriter, payload mediaMT
 	}
 	if sessiontoken.Validate(
 		s.publishToken,
-		values.Get(playbackTokenQueryKey),
+		rawToken,
 		mediaMTXActionPlayback,
 		parsed.StreamID,
 		payload.Path,
@@ -124,6 +127,26 @@ func (s Server) authorizeMediaMTXPlayback(w http.ResponseWriter, payload mediaMT
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s Server) validTalkbackPlaybackToken(parsed domain.ParsedStreamPath, rawToken string, now time.Time) bool {
+	token, err := sessiontoken.ValidateForRoute(
+		s.publishToken,
+		rawToken,
+		sessiontoken.RouteValidation{
+			Action: mediaMTXActionPlayback, StreamID: parsed.StreamID, StreamPath: parsed.Path,
+			Now: now, EnforceExpiry: true,
+		},
+	)
+	return err == nil && s.talkbackPlaybackTokenIsActive(token, now)
+}
+
+func exactQueryToken(values url.Values, key string) (string, bool) {
+	tokens, found := values[key]
+	if !found || len(tokens) != 1 || strings.TrimSpace(tokens[0]) == "" {
+		return "", false
+	}
+	return tokens[0], true
 }
 
 func (s Server) talkbackPlaybackTokenIsActive(token sessiontoken.Payload, now time.Time) bool {

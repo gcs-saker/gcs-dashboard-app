@@ -12,7 +12,18 @@ ROOT = Path(__file__).resolve().parents[2]
 REQUIRED_EVIDENCE = {
     "rest-dast": (
         ROOT / "scripts/smoke/auth_boundary_dast.py",
-        ("playback_idor_unauthenticated", "login_oversized", "FORBIDDEN_RESPONSE_MARKERS"),
+        (
+            "playback_idor_unauthenticated",
+            "login_untrusted_origin",
+            "login_missing_csrf",
+            "stream_invalid_bearer",
+            "login_oversized",
+            "FORBIDDEN_RESPONSE_MARKERS",
+        ),
+    ),
+    "media-token-boundary": (
+        ROOT / "services/media-control/internal/httpapi/media_auth_test.go",
+        ("RejectsCrossActionAndDuplicateTokens", "RejectsUnknownActionAndOversizedBody"),
     ),
     "grpc-boundary": (
         ROOT / "services/media-control/internal/grpcgateway/server_test.go",
