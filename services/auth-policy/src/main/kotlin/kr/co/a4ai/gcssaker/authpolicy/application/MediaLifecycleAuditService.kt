@@ -46,7 +46,7 @@ class MediaLifecycleAuditService(
         eventType = operation,
         sourceService = "media-control",
         source = "media lifecycle",
-        message = "talkback lifecycle [sessionRef=$sessionReference]",
+        message = "media lifecycle [sessionRef=$sessionReference]",
         connections = 0,
         latencyMs = 0,
         throughputMbps = 0.0,
@@ -70,6 +70,7 @@ class MediaLifecycleAuditService(
         val OPERATIONS = setOf(
             "talkback.session.started", "talkback.session.disconnected", "media.session.revoked",
             "publish.sessions.degraded", "publish.sessions.recovered",
+            "publish.session.created", "publish.session.renewed", "publish.session.ended",
         )
     }
 }

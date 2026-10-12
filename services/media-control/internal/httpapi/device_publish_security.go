@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -10,7 +11,10 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 )
+
+const publishSessionAuditTimeout = 500 * time.Millisecond
 
 func secureOpaqueToken(prefix string) (string, error) {
 	buf := make([]byte, 32)
@@ -58,6 +62,17 @@ func (s Server) auditDeviceSession(r *http.Request, event, deviceUUID, result st
 		"security_audit event=%s result=%s device=%s client_ip_hash=%s client_ip_source=%s",
 		event, result, privateDeviceReference(deviceUUID), ipFingerprint, ipSource,
 	)
+}
+
+func (s Server) auditPublishSessionLifecycle(ctx context.Context, groupID, sessionID, operation string) {
+	if s.publishAudit == nil {
+		return
+	}
+	auditContext, cancel := context.WithTimeout(ctx, publishSessionAuditTimeout)
+	defer cancel()
+	if err := s.publishAudit.RecordPublishSessionLifecycle(auditContext, groupID, sessionID, operation, s.now()); err != nil {
+		log.Printf("security_audit event=publish_session_audit_failed result=failed error_code=audit_sink_failed error_type=%T", err)
+	}
 }
 
 func clientIP(r *http.Request) (string, string) {

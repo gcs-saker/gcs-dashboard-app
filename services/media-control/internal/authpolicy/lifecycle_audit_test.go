@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -92,5 +93,26 @@ func TestLifecycleAuditSinkRecordsPublishSessionHealthWithoutReasonLeak(t *testi
 	}
 	if payload["operation"] != "publish.sessions.degraded" || len(payload["sessionReference"].(string)) != 32 {
 		t.Fatalf("unexpected bounded health audit %#v", payload)
+	}
+}
+
+func TestLifecycleAuditSinkHashesPublishSessionReference(t *testing.T) {
+	var payload map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&payload)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+	sink, _ := NewLifecycleAuditSink(server.URL, "audit-token-with-at-least-32-characters", server.Client())
+	rawSessionID := "ps_private_session_identifier"
+
+	if err := sink.RecordPublishSessionLifecycle(
+		context.Background(), "co-a", rawSessionID, "publish.session.created", time.Now(),
+	); err != nil {
+		t.Fatal(err)
+	}
+	reference, _ := payload["sessionReference"].(string)
+	if len(reference) != 32 || strings.Contains(reference, rawSessionID) {
+		t.Fatalf("publish session reference was not bounded: %#v", payload)
 	}
 }

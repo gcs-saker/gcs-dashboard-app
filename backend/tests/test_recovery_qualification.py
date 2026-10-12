@@ -1,6 +1,7 @@
 import argparse
 import json
 import runpy
+import sys
 from pathlib import Path
 from typing import Any, Callable, cast
 
@@ -8,12 +9,14 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts/ops/recovery_qualification.py"
+sys.path.insert(0, str(SCRIPT.parent))
 MODULE = runpy.run_path(str(SCRIPT))
 RecoveryQualificationError = cast(type[BaseException], MODULE["RecoveryQualificationError"])
 load_document = cast(Callable[[Path], dict[str, Any]], MODULE["load_document"])
 validate_profile = cast(Callable[[dict[str, Any]], dict[str, dict[str, Any]]], MODULE["validate_profile"])
 reconcile_records = cast(Callable[[list[str], list[str]], dict[str, Any]], MODULE["reconcile_records"])
 evaluate_recovery = cast(Callable[..., str], MODULE["evaluate_recovery"])
+scenario_reconciliation = cast(Callable[..., dict[str, Any] | None], MODULE["scenario_reconciliation"])
 verify_backup = cast(Callable[[Path, str], str], MODULE["verify_backup"])
 validate_execution = cast(Callable[[argparse.Namespace, str], str], MODULE["validate_execution"])
 write_immutable = cast(Callable[[Path, dict[str, Any]], None], MODULE["write_immutable"])
@@ -88,6 +91,43 @@ def test_recovery_verdict_enforces_every_invariant(
             rto=120,
         )
         == expected
+    )
+
+
+def test_required_record_reconciliation_cannot_be_omitted_or_expose_ids(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scenario = {"recoveryEvidence": ["accepted-record-reconciliation"]}
+    missing = argparse.Namespace(accepted=None, recovered=None)
+    with pytest.raises(RecoveryQualificationError, match="record evidence is required"):
+        scenario_reconciliation(missing, scenario)
+
+    source_commit = "a" * 40
+    accepted = tmp_path / "accepted.json"
+    recovered = tmp_path / "recovered.json"
+    for path, ids in ((accepted, ["event-1", "event-2"]), (recovered, ["event-2", "event-1"])):
+        path.write_text(
+            json.dumps({"schemaVersion": "gcs-saker.record-id-set.v1", "sourceCommit": source_commit, "ids": ids}),
+            encoding="utf-8",
+        )
+    monkeypatch.setitem(scenario_reconciliation.__globals__, "_source_commit", lambda: source_commit)
+    result = scenario_reconciliation(argparse.Namespace(accepted=accepted, recovered=recovered), scenario)
+
+    assert result is not None and result["technicalResult"] == "PASS"
+    assert "event-1" not in json.dumps(result)
+
+
+def test_reconciliation_failure_forces_recovery_failure() -> None:
+    assert (
+        evaluate_recovery(
+            fault_observed=True,
+            container_preserved=True,
+            post_probes=[{"passed": True}],
+            duration=1.0,
+            rto=120,
+            reconciliation_passed=False,
+        )
+        == "FAIL"
     )
 
 

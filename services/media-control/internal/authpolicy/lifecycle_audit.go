@@ -57,6 +57,17 @@ func (s LifecycleAuditSink) RecordSessionRevocation(ctx context.Context, event m
 	return s.recordMediaLifecycle(ctx, event.GroupID, event.Reference, event.Operation, event.OccurredAt)
 }
 
+func (s LifecycleAuditSink) RecordPublishSessionLifecycle(
+	ctx context.Context,
+	groupID string,
+	sessionID string,
+	operation string,
+	occurredAt time.Time,
+) error {
+	digest := sha256.Sum256([]byte("publish-session-lifecycle\x00" + sessionID))
+	return s.recordMediaLifecycle(ctx, groupID, hex.EncodeToString(digest[:16]), operation, occurredAt)
+}
+
 func (s LifecycleAuditSink) recordMediaLifecycle(
 	ctx context.Context,
 	groupID string,

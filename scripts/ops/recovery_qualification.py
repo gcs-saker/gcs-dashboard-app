@@ -10,103 +10,23 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import yaml
+from recovery_qualification_support import (
+    REQUIRED_TARGET,
+    RecoveryQualificationError,
+    load_document,
+    load_record_ids,
+    reconcile_records,
+    validate_profile,
+    verify_backup,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = REPO_ROOT / "docs/compliance/quality/recovery-qualification-profile.yml"
 COMPOSE_PATH = REPO_ROOT / "deploy/compose/compose.single-node.poc.yml"
-REQUIRED_TARGET = "server01-production"
-
-
-class RecoveryQualificationError(RuntimeError):
-    pass
-
-
-def load_document(path: Path) -> dict[str, Any]:
-    if path.suffix == ".json":
-        document = json.loads(path.read_text(encoding="utf-8"))
-    else:
-        document = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if not isinstance(document, dict):
-        raise RecoveryQualificationError(f"{path.name} must contain an object")
-    return document
-
-
-def validate_profile(profile: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    if profile.get("status") != "CONTROLLED_DRAFT_NOT_EXECUTED":
-        raise RecoveryQualificationError("recovery profile must remain an unexecuted draft")
-    if profile.get("target") != REQUIRED_TARGET:
-        raise RecoveryQualificationError("only Server-01 production is permitted")
-    scenarios = _index(profile.get("scenarios"), "recovery scenarios")
-    expected_services = {"postgres-geo", "redis", "mqtt", "mediamtx", "auth-policy", "media-control"}
-    if {entry.get("service") for entry in scenarios.values()} != expected_services:
-        raise RecoveryQualificationError("recovery service coverage is incomplete")
-    thresholds = profile.get("thresholds", {})
-    if thresholds.get("status") != "PROPOSED_NOT_APPROVED":
-        raise RecoveryQualificationError("recovery thresholds must remain proposed")
-    if profile.get("execution", {}).get("recreateContainers") is not False:
-        raise RecoveryQualificationError("recovery scenarios must preserve container identity")
-    return scenarios
-
-
-def _index(entries: Any, label: str) -> dict[str, dict[str, Any]]:
-    if not isinstance(entries, list) or not entries:
-        raise RecoveryQualificationError(f"{label} must be a non-empty list")
-    indexed = {entry.get("id"): entry for entry in entries if isinstance(entry, dict)}
-    if len(indexed) != len(entries) or None in indexed:
-        raise RecoveryQualificationError(f"{label} IDs must be present and unique")
-    return indexed
-
-
-def reconcile_records(accepted: list[str], recovered: list[str]) -> dict[str, Any]:
-    if not accepted or any(not isinstance(value, str) or not value for value in accepted):
-        raise RecoveryQualificationError("accepted IDs must be non-empty strings")
-    if len(accepted) != len(set(accepted)):
-        raise RecoveryQualificationError("accepted IDs must be unique")
-    if any(not isinstance(value, str) or not value for value in recovered):
-        raise RecoveryQualificationError("recovered IDs must be non-empty strings")
-    recovered_counts = Counter(recovered)
-    missing = sorted(set(accepted) - set(recovered_counts))
-    duplicates = sorted(key for key, count in recovered_counts.items() if count > 1)
-    unexpected = sorted(set(recovered_counts) - set(accepted))
-    technical_result = "PASS" if not missing and not duplicates and not unexpected else "FAIL"
-    return {
-        "acceptedCount": len(accepted),
-        "recoveredCount": len(recovered),
-        "missingIds": missing,
-        "duplicateIds": duplicates,
-        "unexpectedIds": unexpected,
-        "unrecoverableAcceptedRecords": len(missing),
-        "technicalResult": technical_result,
-        "verdict": "BLOCKED" if technical_result == "PASS" else "FAIL",
-    }
-
-
-def verify_backup(path: Path, source_commit: str) -> str:
-    result = load_document(path)
-    if result.get("sourceCommit") != source_commit or result.get("restoreVerified") is not True:
-        raise RecoveryQualificationError("backup restore evidence is absent or belongs to another commit")
-    digest = result.get("databaseDumpSha256")
-    if not isinstance(digest, str) or len(digest) != 64:
-        raise RecoveryQualificationError("backup evidence requires a database dump SHA-256")
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def load_record_ids(path: Path, source_commit: str) -> list[str]:
-    document = load_document(path)
-    if document.get("schemaVersion") != "gcs-saker.record-id-set.v1":
-        raise RecoveryQualificationError(f"unsupported record ID evidence: {path}")
-    if document.get("sourceCommit") != source_commit:
-        raise RecoveryQualificationError(f"record ID evidence commit mismatch: {path}")
-    record_ids = document.get("ids")
-    if not isinstance(record_ids, list):
-        raise RecoveryQualificationError(f"record ID evidence requires an IDs list: {path}")
-    return record_ids
 
 
 def build_reconciliation(accepted_path: Path, recovered_path: Path) -> dict[str, Any]:
@@ -121,8 +41,14 @@ def build_reconciliation(accepted_path: Path, recovered_path: Path) -> dict[str,
         "sourceCommit": source_commit,
         "thresholdStatus": "PROPOSED_NOT_APPROVED",
         "artifacts": [
-            {"path": str(accepted_path), "sha256": hashlib.sha256(accepted_path.read_bytes()).hexdigest()},
-            {"path": str(recovered_path), "sha256": hashlib.sha256(recovered_path.read_bytes()).hexdigest()},
+            {
+                "path": str(accepted_path),
+                "sha256": hashlib.sha256(accepted_path.read_bytes()).hexdigest(),
+            },
+            {
+                "path": str(recovered_path),
+                "sha256": hashlib.sha256(recovered_path.read_bytes()).hexdigest(),
+            },
         ],
         **result,
     }
@@ -138,7 +64,10 @@ def validate_execution(args: argparse.Namespace, source_commit: str) -> str:
     origin = urllib.parse.urlparse(args.public_base_url)
     if origin.scheme != "https" or origin.hostname != "gcs-saker.com":
         raise RecoveryQualificationError("public recovery probes must use the production HTTPS origin")
-    for path, label in ((args.env_file, "environment file"), (args.backup_result, "backup result")):
+    for path, label in (
+        (args.env_file, "environment file"),
+        (args.backup_result, "backup result"),
+    ):
         if path is None or not path.is_absolute() or not path.is_file():
             raise RecoveryQualificationError(f"{label} must be an existing absolute file")
     if args.evidence_dir is None or not args.evidence_dir.is_absolute() or not args.evidence_dir.is_dir():
@@ -161,7 +90,14 @@ def compose_command(args: argparse.Namespace, *parts: str) -> list[str]:
 
 
 def run_command(command: list[str], timeout: int = 30) -> str:
-    completed = subprocess.run(command, cwd=REPO_ROOT, check=True, capture_output=True, text=True, timeout=timeout)
+    completed = subprocess.run(
+        command,
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
     return completed.stdout.strip()
 
 
@@ -211,11 +147,39 @@ def run_probes(profile: dict[str, Any], public_base_url: str) -> list[dict[str, 
 
 
 def evaluate_recovery(
-    *, fault_observed: bool, container_preserved: bool, post_probes: list[dict[str, Any]], duration: float, rto: int
+    *,
+    fault_observed: bool,
+    container_preserved: bool,
+    post_probes: list[dict[str, Any]],
+    duration: float,
+    rto: int,
+    reconciliation_passed: bool = True,
 ) -> str:
     probes_passed = all(item["passed"] for item in post_probes)
     within_rto = duration <= rto
-    return "PASS" if fault_observed and container_preserved and probes_passed and within_rto else "FAIL"
+    return (
+        "PASS"
+        if fault_observed and container_preserved and probes_passed and within_rto and reconciliation_passed
+        else "FAIL"
+    )
+
+
+def scenario_reconciliation(args: argparse.Namespace, scenario: dict[str, Any]) -> dict[str, Any] | None:
+    required = "accepted-record-reconciliation" in scenario.get("recoveryEvidence", [])
+    if not required:
+        return None
+    if not args.accepted or not args.recovered or not args.accepted.is_file() or not args.recovered.is_file():
+        raise RecoveryQualificationError("accepted and recovered record evidence is required for this scenario")
+    result = build_reconciliation(args.accepted, args.recovered)
+    return {
+        "acceptedCount": result["acceptedCount"],
+        "recoveredCount": result["recoveredCount"],
+        "unrecoverableAcceptedRecords": result["unrecoverableAcceptedRecords"],
+        "duplicateRecoveredRecords": len(result["duplicateIds"]),
+        "unexpectedRecoveredRecords": len(result["unexpectedIds"]),
+        "technicalResult": result["technicalResult"],
+        "artifactHashes": [item["sha256"] for item in result["artifacts"]],
+    }
 
 
 def run_scenario(args: argparse.Namespace, profile: dict[str, Any], scenario: dict[str, Any]) -> dict[str, Any]:
@@ -236,13 +200,18 @@ def run_scenario(args: argparse.Namespace, profile: dict[str, Any], scenario: di
     try:
         run_command(compose_command(args, "start", service), timeout=60)
         execution = profile["execution"]
-        wait_for_recovery(container_id, execution["maximumAttempts"], execution["retryIntervalSeconds"])
+        wait_for_recovery(
+            container_id,
+            execution["maximumAttempts"],
+            execution["retryIntervalSeconds"],
+        )
     finally:
         status, _ = container_state(container_id)
         if status != "running":
             run_command(compose_command(args, "start", service), timeout=60)
     recovered_at = datetime.now(timezone.utc)
     post_probes = run_probes(profile, args.public_base_url)
+    reconciliation = scenario_reconciliation(args, scenario)
     current_id = run_command(compose_command(args, "ps", "-q", service))
     recovery_duration = (recovered_at - started_at).total_seconds()
     technical_result = evaluate_recovery(
@@ -251,6 +220,7 @@ def run_scenario(args: argparse.Namespace, profile: dict[str, Any], scenario: di
         post_probes=post_probes,
         duration=recovery_duration,
         rto=profile["thresholds"]["recoveryTimeObjectiveSeconds"],
+        reconciliation_passed=reconciliation is None or reconciliation["technicalResult"] == "PASS",
     )
     return {
         "schemaVersion": "gcs-saker.recovery-result.v1",
@@ -266,6 +236,7 @@ def run_scenario(args: argparse.Namespace, profile: dict[str, Any], scenario: di
         "preProbes": pre_probes,
         "duringProbes": during_probes,
         "postProbes": post_probes,
+        "recordReconciliation": reconciliation,
         "technicalResult": technical_result,
         "verdict": "BLOCKED" if technical_result == "PASS" else "FAIL",
         "limitations": ["thresholds and independent assessment are not approved"],

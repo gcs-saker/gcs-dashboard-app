@@ -112,12 +112,17 @@ func buildRuntime(config runtimeConfig) (httpapi.Server, runtimeResources, error
 		return httpapi.Server{}, runtimeResources{}, errors.Join(err, authorizer.Close())
 	}
 	metrics := httpapi.NewMetrics()
+	auditSink, err := authpolicy.NewLifecycleAuditSink(config.authPolicyBaseURL, config.auditIngestToken, nil)
+	if err != nil {
+		return httpapi.Server{}, runtimeResources{}, errors.Join(err, publishSessions.Close(), authorizer.Close())
+	}
 	handler := httpapi.NewServerWithMetrics(
 		newStreamLister(config, metrics), newIceServerProvider(config, metrics), config.playback,
 		&authorizer, config.groupResolver, config.publishToken, metrics,
 	).WithDevicePublishAuthorizer(&authorizer).
 		WithAccountPublishAuthorizer(&authorizer).
 		WithPublishSessionStore(publishSessions).
+		WithPublishSessionAuditSink(auditSink).
 		WithMediaMTXAPIIdentity(config.mediaMTXAPIUser, config.mediaMTXAPIPassword)
 	gateway, err := newGatewayRuntime(config, metrics, publishSessions)
 	if err != nil {

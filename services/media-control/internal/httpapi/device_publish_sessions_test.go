@@ -19,6 +19,21 @@ type renewalBindingValidator struct {
 	calls int
 }
 
+type recordingPublishSessionAudit struct {
+	operations []string
+	groups     []string
+	sessions   []string
+}
+
+func (a *recordingPublishSessionAudit) RecordPublishSessionLifecycle(
+	_ context.Context, groupID, sessionID, operation string, _ time.Time,
+) error {
+	a.operations = append(a.operations, operation)
+	a.groups = append(a.groups, groupID)
+	a.sessions = append(a.sessions, sessionID)
+	return nil
+}
+
 func (v *renewalBindingValidator) ValidateSessionBinding(context.Context, domain.PublishSession) error {
 	v.calls++
 	return v.err
@@ -31,8 +46,9 @@ func TestDevicePublishSessionUsesServerOwnedIdentityAndRotatesRenewalToken(t *te
 		Path: "raw/device-001/front", PublisherGroupID: "co-a", CredentialVersion: 2, DevicePolicyVersion: 4,
 	}}
 	store := domain.NewInMemoryPublishSessionStore()
+	audit := &recordingPublishSessionAudit{}
 	server := newTestServerWithDevicePublisher(fakeStreams{}, fakeIce{}, publisher).WithPublishSessionStore(store).
-		WithSessionBindingValidator(&renewalBindingValidator{})
+		WithSessionBindingValidator(&renewalBindingValidator{}).WithPublishSessionAuditSink(audit)
 
 	request := httptest.NewRequest(http.MethodPost, routeDevicePublishSessions, strings.NewReader(`{"sensorId":"front"}`))
 	request.Header.Set(deviceUUIDHeader, "device-001")
@@ -97,6 +113,14 @@ func TestDevicePublishSessionUsesServerOwnedIdentityAndRotatesRenewalToken(t *te
 	}
 	if session, err := store.Find(context.Background(), created.SessionID); err != nil || session.Status != domain.PublishSessionEnded {
 		t.Fatal("renewal replay must end the session")
+	}
+	if strings.Join(audit.operations, ",") != "publish.session.created,publish.session.renewed,publish.session.ended" {
+		t.Fatalf("unexpected central audit operations: %#v", audit.operations)
+	}
+	for index := range audit.groups {
+		if audit.groups[index] != "co-a" || audit.sessions[index] != created.SessionID {
+			t.Fatalf("audit binding mismatch groups=%#v sessions=%#v", audit.groups, audit.sessions)
+		}
 	}
 }
 

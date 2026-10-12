@@ -60,7 +60,7 @@ execution:
     - {path: /media-control/readyz, expectedStatus: 200}
     - {path: /auth-policy/auth/me, expectedStatus: 401}
 evidence:
-  requiredFields: [scenarioId, sourceCommit, approvedWindowId, backupResultSha256, startedAt, recoveredAt, recoveryDurationSeconds, containerIdPreserved, faultObserved, preProbes, duringProbes, postProbes, technicalResult, verdict, limitations]
+  requiredFields: [scenarioId, sourceCommit, approvedWindowId, backupResultSha256, startedAt, recoveredAt, recoveryDurationSeconds, containerIdPreserved, faultObserved, preProbes, duringProbes, postProbes, recordReconciliation, technicalResult, verdict, limitations]
   immutableWrite: true
   privateArtifacts: [backup, environment, raw logs, accepted IDs, recovered IDs]
   publicEvidenceProhibits: [credential, token, cookie, private IP, private route, raw personal data]

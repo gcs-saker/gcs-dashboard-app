@@ -100,6 +100,7 @@ func (s Server) issuePublishSession(
 		return
 	}
 	s.auditDeviceSession(r, "publish_session_created", auditIdentity, "allowed")
+	s.auditPublishSessionLifecycle(r.Context(), authorization.PublisherGroupID, response.SessionID, "publish.session.created")
 	writeJSON(w, http.StatusCreated, response)
 }
 
@@ -185,10 +186,7 @@ func (s Server) renewDevicePublishSession(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if result != domain.RenewalRotated {
-		// Only a confirmed replay of the immediately previous token terminates the
-		// session. Random mismatches must not become a session-termination oracle.
-		s.auditDeviceSession(r, "publish_session_renewal_rejected", "", "denied")
-		writeJSON(w, http.StatusUnauthorized, errorPayload(errPublishSessionRenewalDenied))
+		s.rejectPublishSessionRenewal(w, r, session, result)
 		return
 	}
 	publishToken, err := sessiontoken.IssueDevice(s.publishToken, session, mustOpaqueToken("jti_"), now)
@@ -197,11 +195,27 @@ func (s Server) renewDevicePublishSession(w http.ResponseWriter, r *http.Request
 		return
 	}
 	s.auditDeviceSession(r, "publish_session_renewed", session.DeviceUUID, "allowed")
+	s.auditPublishSessionLifecycle(r.Context(), session.GroupID, session.SessionID, "publish.session.renewed")
 	writeJSON(w, http.StatusOK, renewPublishSessionResponse{
 		PublishToken: publishToken, RenewalToken: nextRenewal,
 		PublishTokenExpiresAt: session.PublishTokenExpiresAt.UTC().Format(time.RFC3339),
 		RenewalTokenExpiresAt: session.RenewalTokenExpiresAt.UTC().Format(time.RFC3339),
 	})
+}
+
+func (s Server) rejectPublishSessionRenewal(
+	w http.ResponseWriter,
+	r *http.Request,
+	session domain.PublishSession,
+	result domain.RenewalRotationResult,
+) {
+	// Only a confirmed replay terminates the session; random mismatches must not
+	// become a session-termination oracle.
+	s.auditDeviceSession(r, "publish_session_renewal_rejected", "", "denied")
+	if result == domain.RenewalReplayed {
+		s.auditPublishSessionLifecycle(r.Context(), session.GroupID, session.SessionID, "publish.session.ended")
+	}
+	writeJSON(w, http.StatusUnauthorized, errorPayload(errPublishSessionRenewalDenied))
 }
 
 func (s Server) renewalBindingIsCurrent(ctx context.Context, session domain.PublishSession) bool {
@@ -234,6 +248,7 @@ func (s Server) endDevicePublishSession(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	s.auditDeviceSession(r, "publish_session_ended", session.DeviceUUID, "allowed")
+	s.auditPublishSessionLifecycle(r.Context(), session.GroupID, session.SessionID, "publish.session.ended")
 	w.WriteHeader(http.StatusNoContent)
 }
 
