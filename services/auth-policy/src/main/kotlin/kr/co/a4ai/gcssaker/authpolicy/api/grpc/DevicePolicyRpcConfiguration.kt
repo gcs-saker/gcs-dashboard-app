@@ -47,9 +47,9 @@ class DevicePolicyRpcConfiguration {
         environment: Environment,
     ): DevicePolicyRpcRuntime {
         val settings = InternalGrpcSettings.from(environment)
-        require(settings.token.length >= 32) { "internal RPC token must contain at least 32 characters" }
+        val acceptedTokens = settings.acceptedTokens()
         val builder = rpcServerBuilder(settings, environment.activeProfiles.toSet())
-        services.forEach { builder.addService(ServerInterceptors.intercept(it, InternalRpcAuthentication(settings.token))) }
+        services.forEach { builder.addService(ServerInterceptors.intercept(it, InternalRpcAuthentication(acceptedTokens))) }
         return DevicePolicyRpcRuntime(builder.build().start())
     }
 
@@ -75,8 +75,16 @@ data class InternalGrpcSettings(
     val certFile: String,
     val keyFile: String,
     val allowPlaintext: Boolean,
+    val previousToken: String = "",
 ) {
     fun tlsFiles() = listOf(caFile, certFile, keyFile)
+
+    fun acceptedTokens(): List<String> {
+        val tokens = listOf(token, previousToken).map(String::trim).filter(String::isNotEmpty)
+        require(tokens.all { it.length >= 32 }) { "internal RPC tokens must contain at least 32 characters" }
+        require(tokens.distinct().size == tokens.size) { "current and previous internal RPC tokens must differ" }
+        return tokens
+    }
 
     companion object {
         fun from(environment: Environment) = InternalGrpcSettings(
@@ -86,6 +94,7 @@ data class InternalGrpcSettings(
             environment.getProperty("gcs.internal-grpc.cert-file", ""),
             environment.getProperty("gcs.internal-grpc.key-file", ""),
             environment.getProperty("gcs.internal-grpc.allow-plaintext-local-test", Boolean::class.java, false),
+            environment.getProperty("gcs.internal-grpc.previous-token", ""),
         )
     }
 }
@@ -97,12 +106,19 @@ class DevicePolicyRpcRuntime(private val server: Server) : AutoCloseable {
     }
 }
 
-class InternalRpcAuthentication(private val token: String) : ServerInterceptor {
+class InternalRpcAuthentication(private val acceptedTokens: List<String>) : ServerInterceptor {
+    constructor(token: String) : this(listOf(token))
+
     override fun <ReqT : Any?, RespT : Any?> interceptCall(
         call: ServerCall<ReqT, RespT>, headers: Metadata, next: ServerCallHandler<ReqT, RespT>,
     ): ServerCall.Listener<ReqT> {
         val supplied = headers.get(Metadata.Key.of("x-gcs-internal-token", Metadata.ASCII_STRING_MARSHALLER)).orEmpty()
-        if (!MessageDigest.isEqual(supplied.toByteArray(), token.toByteArray())) {
+        val suppliedBytes = supplied.toByteArray()
+        val accepted = acceptedTokens.fold(false) { result, token ->
+            val matches = MessageDigest.isEqual(suppliedBytes, token.toByteArray())
+            result || matches
+        }
+        if (!accepted) {
             call.close(Status.UNAUTHENTICATED.withDescription("internal_auth_required"), Metadata())
             return object : ServerCall.Listener<ReqT>() {}
         }

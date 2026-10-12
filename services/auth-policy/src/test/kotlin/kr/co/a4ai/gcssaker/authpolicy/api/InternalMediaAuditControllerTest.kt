@@ -54,6 +54,22 @@ class InternalMediaAuditControllerTest {
     }
 
     @Test
+    fun `previous service token is accepted only during an explicit rotation window`() {
+        val previous = "previous-audit-token-with-32-characters"
+        val rotationRepository = InMemoryOperationalEventRepository(emptyList())
+        val rotationController = InternalMediaAuditController(
+            MediaLifecycleAuditService(rotationRepository, now = { now }),
+            token,
+            previous,
+        )
+
+        rotationController.lifecycle(previous, request())
+        assertEquals(1, rotationRepository.eventsFor(
+            AuthenticatedPrincipal("admin", UserRole.ADMIN, GroupId("co-a")), OperationalEventQuery(),
+        ).size)
+    }
+
+    @Test
     fun `unknown operation and raw path reference are rejected`() {
         assertThrows(BadRequestApiError::class.java) { controller.lifecycle(token, request(operation = "deploy")) }
         assertThrows(BadRequestApiError::class.java) {

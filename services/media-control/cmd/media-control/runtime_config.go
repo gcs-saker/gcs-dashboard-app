@@ -91,12 +91,15 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		groupResolver:       groupResolver,
 		iceServers:          loadIceServers(),
 		publishToken:        publishToken,
-		grpcToken:           getenv(runtimeEnv.grpcToken, publishToken),
+		grpcToken:           getenv(runtimeEnv.grpcToken, ""),
 		grpcMaxPayloadBytes: getenvInt(runtimeEnv.grpcMaxPayloadBytes, runtimeDefaults.grpcMaxPayloadBytes),
 	}
 	loadAuthorizationRuntime(&config)
 	loadStateRuntime(&config)
 	loadTurnRuntime(&config)
+	if err := validateRuntimeCredentialSeparation(config); err != nil {
+		return runtimeConfig{}, err
+	}
 	return config, nil
 }
 
