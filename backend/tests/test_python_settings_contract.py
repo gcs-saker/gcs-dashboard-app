@@ -5,7 +5,13 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from core.auth_config import AUTH_JWT_SECRET, AUTH_REFRESH_TOKEN_EXPIRE_MINUTES, AuthConfigError, AuthSettings
+from core.auth_config import (
+    AUTH_JWT_SECRET,
+    AUTH_JWT_SECRET_FILE,
+    AUTH_REFRESH_TOKEN_EXPIRE_MINUTES,
+    AuthConfigError,
+    AuthSettings,
+)
 from core.db import DatabaseSettings
 from core.ice_settings import WebRtcIceSettings
 from core.settings_base import SettingsConfigurationError
@@ -30,6 +36,36 @@ def test_auth_settings_masks_secret_in_repr() -> None:
 
     assert secret not in repr(settings)
     assert settings.secret.get_secret_value() == secret
+
+
+def test_auth_settings_reads_secret_file_and_rejects_ambiguous_input(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    secret_file = tmp_path / "auth-secret"
+    secret = "file-auth-secret-for-gcs-saker-at-least-32-characters"
+    secret_file.write_text(f"{secret}\n", encoding="utf-8")
+    monkeypatch.delenv(AUTH_JWT_SECRET, raising=False)
+    monkeypatch.setenv(AUTH_JWT_SECRET_FILE, str(secret_file))
+
+    assert AuthSettings.from_env().secret.get_secret_value() == secret
+    monkeypatch.setenv(AUTH_JWT_SECRET, "environment-secret-at-least-32-characters")
+    with pytest.raises(AuthConfigError, match="cannot both be configured"):
+        AuthSettings.from_env()
+
+
+def test_auth_settings_rejects_empty_and_oversized_secret_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    secret_file = tmp_path / "auth-secret"
+    monkeypatch.delenv(AUTH_JWT_SECRET, raising=False)
+    monkeypatch.setenv(AUTH_JWT_SECRET_FILE, str(secret_file))
+    secret_file.write_text("\n", encoding="utf-8")
+    with pytest.raises(AuthConfigError, match="must not be empty"):
+        AuthSettings.from_env()
+
+    secret_file.write_text("x" * 4097, encoding="utf-8")
+    with pytest.raises(AuthConfigError, match="exceeds the size limit"):
+        AuthSettings.from_env()
 
 
 def test_auth_settings_defaults_refresh_sessions_to_two_hours(monkeypatch: pytest.MonkeyPatch) -> None:
