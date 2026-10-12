@@ -18,6 +18,7 @@ import java.time.Instant
 class InternalMediaAuditController(
     private val audit: MediaLifecycleAuditService,
     @param:Value("\${AUTH_POLICY_AUDIT_INGEST_TOKEN:}") private val expectedToken: String,
+    @param:Value("\${AUTH_POLICY_AUDIT_INGEST_PREVIOUS_TOKEN:}") private val previousToken: String = "",
 ) {
     @PostMapping(InternalMediaAuditRoutes.LIFECYCLE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -33,8 +34,14 @@ class InternalMediaAuditController(
         }
     }
 
-    private fun validToken(supplied: String?): Boolean = expectedToken.length >= MINIMUM_TOKEN_LENGTH &&
-        MessageDigest.isEqual(expectedToken.toByteArray(), supplied.orEmpty().toByteArray())
+    private fun validToken(supplied: String?): Boolean {
+        val suppliedBytes = supplied.orEmpty().toByteArray()
+        return listOf(expectedToken, previousToken).fold(false) { accepted, candidate ->
+            val validCandidate = candidate.length >= MINIMUM_TOKEN_LENGTH
+            val matches = MessageDigest.isEqual(candidate.toByteArray(), suppliedBytes)
+            accepted || (validCandidate && matches)
+        }
+    }
 
     private companion object {
         const val MINIMUM_TOKEN_LENGTH = 32
