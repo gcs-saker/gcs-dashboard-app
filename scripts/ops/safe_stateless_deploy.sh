@@ -45,6 +45,11 @@ source "${verified_images}"
 export BACKEND_IMAGE AUTH_POLICY_IMAGE MEDIA_CONTROL_IMAGE DASHBOARD_IMAGE
 export MQTT_IMAGE MEDIAMTX_IMAGE COTURN_IMAGE
 compose=(docker compose --project-name "${PROJECT_NAME}" --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
+mqtt_container="$("${compose[@]}" ps -q mqtt)"
+[[ -n "${mqtt_container}" ]] || { echo "running MQTT container is required" >&2; exit 2; }
+mqtt_pki_source="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/run/secrets/gcs-pki"}}{{.Source}}{{end}}{{end}}' "${mqtt_container}")"
+[[ "${mqtt_pki_source}" = /* && -d "${mqtt_pki_source}" ]] || { echo "MQTT PKI source is unavailable" >&2; exit 2; }
+bash "${ROOT}/scripts/ops/check_internal_pki.sh" "${mqtt_pki_source}"
 previous_container_id="$("${compose[@]}" ps -q backend)"
 [[ -n "${previous_container_id}" ]] || { echo "running backend container is required" >&2; exit 2; }
 previous_compose_file="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project.config_files" }}' "${previous_container_id}")"

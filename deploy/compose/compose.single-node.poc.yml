@@ -126,6 +126,10 @@ services:
         source: ../mosquitto/acl.hardened
         target: /mosquitto/config/acl
         read_only: true
+      - type: bind
+        source: ../mosquitto/mqtt-healthcheck.sh
+        target: /usr/local/bin/gcs-mqtt-healthcheck
+        read_only: true
       - mqtt-data:/mosquitto/data
       - type: bind
         source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}
@@ -133,11 +137,7 @@ services:
         read_only: true
     healthcheck:
       <<: *health_defaults
-      test:
-        [
-          "CMD-SHELL",
-          "mosquitto_sub -h mqtt -p 8883 --cafile /run/secrets/gcs-pki/ca.crt --cert /run/secrets/gcs-pki/mqtt-health.crt --key /run/secrets/gcs-pki/mqtt-health.key -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null",
-        ]
+      test: ["CMD", "/usr/local/bin/gcs-mqtt-healthcheck"]
     restart: unless-stopped
     networks:
       - media-net

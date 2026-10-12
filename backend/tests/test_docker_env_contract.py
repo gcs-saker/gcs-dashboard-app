@@ -174,6 +174,7 @@ def test_single_node_mqtt_is_hardened_by_default_and_healthcheck_authenticates()
     mqtt = compose["services"]["mqtt"]
     mqtt_healthcheck = mqtt["healthcheck"]["test"]
     healthcheck_command = " ".join(mqtt_healthcheck)
+    healthcheck_source = (REPO_ROOT / "deploy/mosquitto/mqtt-healthcheck.sh").read_text(encoding="utf-8")
 
     assert mqtt["command"] == ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
     assert {
@@ -194,9 +195,10 @@ def test_single_node_mqtt_is_hardened_by_default_and_healthcheck_authenticates()
         "target": "/run/secrets/gcs-pki",
         "read_only": True,
     } in mqtt["volumes"]
-    assert "mosquitto_sub" in healthcheck_command
-    assert "$$SYS/broker/version" in healthcheck_command
-    assert "--cert /run/secrets/gcs-pki/mqtt-health.crt" in healthcheck_command
+    assert mqtt_healthcheck == ["CMD", "/usr/local/bin/gcs-mqtt-healthcheck"]
+    assert "mosquitto_sub" in healthcheck_source
+    assert "'$SYS/broker/version'" in healthcheck_source
+    assert "--cert /run/secrets/gcs-pki/mqtt-health.crt" in healthcheck_source
     assert "/dev/tcp" not in " ".join(mqtt_healthcheck)
     assert "nc -z" not in healthcheck_command
 
