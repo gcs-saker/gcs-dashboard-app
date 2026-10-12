@@ -24,3 +24,14 @@ def test_internal_pki_issues_turn_server_identities() -> None:
 
     assert "issue_identity turn-primary turn-primary serverAuth turn-primary" in source
     assert "issue_identity turn-secondary turn-secondary serverAuth turn-secondary" in source
+
+
+def test_turn_healthcheck_cannot_convert_probe_failure_to_success() -> None:
+    compose = (ROOT / "deploy" / "compose" / "compose.single-node.poc.yml").read_text(encoding="utf-8")
+    healthcheck = (ROOT / "deploy" / "coturn" / "turn-healthcheck.sh").read_text(encoding="utf-8")
+
+    assert compose.count('["CMD", "/usr/local/bin/gcs-turn-healthcheck"]') == 2
+    assert "turnutils_stunclient" in healthcheck
+    assert "-t 1500" in healthcheck
+    assert "|| exit 0" not in healthcheck
+    assert "|| exit 0" not in compose
