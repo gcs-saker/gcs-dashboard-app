@@ -8,7 +8,7 @@ dynamic:
     harness: scripts/smoke/auth_boundary_dast.py
     ciInventoryGate: scripts/gates/security_campaign_gate.py
     targets: [REST, GraphQL, WebSocket, WHIP-WHEP signaling]
-    requiredScenarios: [unauthenticated, invalid-bearer, object-scope, path-traversal, malformed-json, oversized-input, error-sanitization]
+    requiredScenarios: [unauthenticated, invalid-bearer, object-scope, path-traversal, malformed-json, oversized-input, csrf-origin, method-confusion, error-sanitization]
     lastDisposableResult: {scenarios: 11, passed: 11, leakageDetected: 0}
   penetrationTest:
     status: NOT_RUN
@@ -17,6 +17,9 @@ fuzzing:
   pullRequestSeeds:
     status: IMPLEMENTED
     targets: [stream ID and path, media token, mission waypoint, gRPC metadata, MQTT topic]
+  mediaTokenBoundary:
+    status: IMPLEMENTED
+    cases: [action-mismatch, duplicate-token, wrong-stream, wrong-group, expiry, tampering, oversized-auth-body, unknown-action]
   scheduledCampaign:
     status: IMPLEMENTED
     durationPerTarget: 10s

@@ -20,6 +20,7 @@ def test_security_campaign_gate_covers_rest_grpc_mqtt_and_tokens() -> None:
     assert payload["campaigns"] == {
         "grpc-boundary": "PASS",
         "grpc-fuzz": "PASS",
+        "media-token-boundary": "PASS",
         "mqtt-boundary": "PASS",
         "mqtt-fuzz": "PASS",
         "rest-dast": "PASS",

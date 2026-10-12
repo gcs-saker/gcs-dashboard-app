@@ -163,3 +163,50 @@ func TestMediaMTXPublishAuthRejectsSignedClaimThatDisagreesWithSession(t *testin
 		t.Fatalf("expected 403 for mismatched session group, got %d: %s", recorder.Code, recorder.Body.String())
 	}
 }
+
+func TestMediaMTXAuthRejectsUnknownActionAndOversizedBody(t *testing.T) {
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	unknown := executeMediaMTXAuth(server, `{"action":"unexpected","path":"raw/local/webcam"}`)
+	if unknown.Code != http.StatusForbidden {
+		t.Fatalf("unknown action status=%d", unknown.Code)
+	}
+	oversized := executeMediaMTXAuth(server, `{"action":"publish","padding":"`+strings.Repeat("x", maxMediaMTXAuthBody)+`"}`)
+	if oversized.Code != http.StatusBadRequest {
+		t.Fatalf("oversized auth status=%d", oversized.Code)
+	}
+}
+
+func TestMediaMTXAuthRejectsCrossActionAndDuplicateTokens(t *testing.T) {
+	now := time.Now()
+	server := newTestServer(fakeStreams{}, fakeIce{})
+	publishToken, err := sessiontoken.Issue(
+		"test-publish-token", mediaMTXActionPublish, "raw.local.webcam", "raw/local/webcam", "co-a", now,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	playbackToken, err := sessiontoken.Issue(
+		"test-publish-token", mediaMTXActionPlayback, "raw.local.webcam", "raw/local/webcam", "co-a", now,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cases := []string{
+		`{"action":"read","path":"raw/local/webcam","query":"playbackToken=` + publishToken + `"}`,
+		`{"action":"publish","path":"raw/local/webcam","query":"publisherToken=` + playbackToken + `"}`,
+		`{"action":"read","path":"raw/local/webcam","query":"playbackToken=` + playbackToken + `&playbackToken=duplicate"}`,
+		`{"action":"publish","path":"raw/local/webcam","query":"publisherToken=` + publishToken + `&publisherToken=duplicate"}`,
+	}
+	for _, body := range cases {
+		if response := executeMediaMTXAuth(server, body); response.Code != http.StatusForbidden {
+			t.Fatalf("credential misuse status=%d body=%s", response.Code, response.Body.String())
+		}
+	}
+}
+
+func executeMediaMTXAuth(server Server, body string) *httptest.ResponseRecorder {
+	request := httptest.NewRequest(http.MethodPost, routeMediaMTXAuth, strings.NewReader(body))
+	recorder := httptest.NewRecorder()
+	server.Routes().ServeHTTP(recorder, request)
+	return recorder
+}

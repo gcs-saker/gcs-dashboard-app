@@ -14,6 +14,7 @@ from urllib.parse import urljoin, urlsplit
 from urllib.request import Request, urlopen
 
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+TARGET_ORIGIN = "__TARGET_ORIGIN__"
 FORBIDDEN_RESPONSE_MARKERS = (
     "traceback",
     "stack trace",
@@ -23,6 +24,13 @@ FORBIDDEN_RESPONSE_MARKERS = (
     "bearer ",
     "publishertoken",
     "/run/secrets",
+    "auth-policy:8080",
+    "media-control:8081",
+    "mediamtx:9997",
+    "sqlalchemy",
+    "org.springframework",
+    "panic:",
+    "goroutine ",
 )
 
 
@@ -91,6 +99,23 @@ def scenarios() -> list[Scenario]:
         ),
         Scenario("login_malformed_json", "POST", "/auth-policy/auth/login", b"{", (400,), json_headers),
         Scenario(
+            "login_untrusted_origin",
+            "POST",
+            "/auth-policy/auth/login",
+            b'{"username":"probe","password":"probe"}',
+            (403,),
+            {**json_headers, "Origin": "https://attacker.invalid", "X-GCS-CSRF": "same-origin"},
+        ),
+        Scenario(
+            "login_missing_csrf",
+            "POST",
+            "/auth-policy/auth/login",
+            b'{"username":"probe","password":"probe"}',
+            (403,),
+            {**json_headers, "Origin": TARGET_ORIGIN},
+        ),
+        Scenario("login_method_confusion", "GET", "/auth-policy/auth/login", None, (405,), {}),
+        Scenario(
             "login_oversized",
             "POST",
             "/auth-policy/auth/login",
@@ -106,6 +131,14 @@ def scenarios() -> list[Scenario]:
             (400, 401, 403, 404),
             {},
         ),
+        Scenario(
+            "stream_invalid_bearer",
+            "GET",
+            "/media-control/api/v1/streams",
+            None,
+            (401, 403),
+            {"Authorization": "Bearer invalid-security-campaign-token"},
+        ),
     ]
 
 
@@ -120,10 +153,14 @@ def validate_target(base_url: str, allow_remote: bool) -> None:
 
 
 def execute(base_url: str, scenario: Scenario) -> dict[str, object]:
+    headers = dict(scenario.headers)
+    if headers.get("Origin") == TARGET_ORIGIN:
+        parsed = urlsplit(base_url)
+        headers["Origin"] = f"{parsed.scheme}://{parsed.netloc}"
     request = Request(
         urljoin(base_url.rstrip("/") + "/", scenario.path.lstrip("/")),
         data=scenario.body,
-        headers=scenario.headers,
+        headers=headers,
         method=scenario.method,
     )
     status = 0

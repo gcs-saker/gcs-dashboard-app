@@ -31,8 +31,12 @@ def test_dast_scenarios_cover_owned_attack_boundaries() -> None:
         "graphql_unauthenticated",
         "websocket_unauthenticated",
         "login_malformed_json",
+        "login_untrusted_origin",
+        "login_missing_csrf",
+        "login_method_confusion",
         "login_oversized",
         "admin_path_traversal",
+        "stream_invalid_bearer",
     }
 
 
@@ -49,7 +53,11 @@ def test_remote_dast_requires_explicit_https_approval() -> None:
 
 def test_dast_payload_scenarios_reach_the_body_parser_without_a_cors_preflight() -> None:
     module = load_module()
-    payload_scenarios = [item for item in module.scenarios() if item.body is not None]
+    payload_scenarios = [
+        item
+        for item in module.scenarios()
+        if item.body is not None and item.name not in {"login_untrusted_origin", "login_missing_csrf"}
+    ]
 
     assert payload_scenarios
     assert all("Origin" not in item.headers for item in payload_scenarios)
@@ -76,6 +84,28 @@ def test_dast_results_never_return_response_content(monkeypatch: pytest.MonkeyPa
     assert result["result"] == "PASS"
     assert result["leakageDetected"] is False
     assert "body" not in result
+
+
+def test_missing_csrf_probe_uses_the_approved_target_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = load_module()
+    observed_headers = {}
+
+    class ForbiddenResponse:
+        def read(self, _limit):
+            return b'{"detail":"csrf header required"}'
+
+        def close(self):
+            return None
+
+    def reject(request, **_kwargs):
+        observed_headers.update(request.headers)
+        raise module.HTTPError(request.full_url, 403, "forbidden", {}, ForbiddenResponse())
+
+    scenario = next(item for item in module.scenarios() if item.name == "login_missing_csrf")
+    monkeypatch.setattr(module, "urlopen", reject)
+
+    assert module.execute("https://approved.example.test", scenario)["result"] == "PASS"
+    assert observed_headers["Origin"] == "https://approved.example.test"
 
 
 def test_dast_fails_on_internal_secret_or_stack_marker(monkeypatch: pytest.MonkeyPatch) -> None:

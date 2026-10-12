@@ -28,6 +28,7 @@ const (
 	mediaMTXActionPublish  = "publish"
 	mediaMTXActionAPI      = "api"
 	mediaMTXActionRead     = "read"
+	maxMediaMTXAuthBody    = 64 * 1024
 	playbackTokenQueryKey  = "playbackToken"
 	publisherTokenQueryKey = "publisherToken"
 
