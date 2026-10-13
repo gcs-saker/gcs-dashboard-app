@@ -75,7 +75,11 @@ func readinessStatus(checks []readinessCheck) (string, int) {
 }
 
 func (s Server) streamRegistryReadiness(ctx context.Context) readinessCheck {
-	if _, err := s.listStreams(ctx); err != nil {
+	probe := s.streams
+	if s.mediaMTXReadiness != nil {
+		probe = s.mediaMTXReadiness
+	}
+	if _, err := probe.ListStreams(ctx); err != nil {
 		return readinessCheck{
 			Name:     readyCheckStreamRegistry,
 			Status:   healthStatusError,
