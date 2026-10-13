@@ -1,11 +1,5 @@
 name: ${COMPOSE_PROJECT_NAME:-gcs-saker-arch-poc}
 
-x-env-files: &service_env_files
-  - path: ./.env.single-node
-    required: false
-  - path: ./.env.single-node.example
-    required: true
-
 x-health-defaults: &health_defaults
   interval: 10s
   timeout: 5s
@@ -195,7 +189,6 @@ services:
       context: ../../backend
       args:
         SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
-    env_file: *service_env_files
     environment:
       DATABASE_URL_FILE: /run/secrets/DATABASE_URL
       DATABASE_TLS_REQUIRED: "true"
@@ -283,7 +276,6 @@ services:
         contracts: ../../contracts
       args:
         SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
-    env_file: *service_env_files
     environment:
       JAVA_TOOL_OPTIONS: ${AUTH_POLICY_JAVA_TOOL_OPTIONS:--Xms128m -Xmx512m -XX:MaxMetaspaceSize=192m -XX:MaxDirectMemorySize=64m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError}
       AUTH_POLICY_JWT_ISSUER: ${AUTH_JWT_ISSUER:-gcs-saker}
@@ -427,7 +419,6 @@ services:
       context: ../../services/media-control
       args:
         SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
-    env_file: *service_env_files
     ports:
       # Host nginx terminates public TLS/HTTP2 and forwards gRPC here. Keep
       # this listener loopback-only; it is not a public plaintext endpoint.
@@ -437,7 +428,6 @@ services:
       MEDIAMTX_API_USER: ${MEDIAMTX_API_USER:-gcs-media-control}
       TURN_CREDENTIAL_MODE: ${TURN_CREDENTIAL_MODE:-shared-secret}
       TURN_USERNAME: ${TURN_USERNAME:-gcs-turn}
-      TURN_PASSWORD: ${TURN_PASSWORD:-}
       MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL: ${MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8080/webrtc}
       MEDIA_CONTROL_PUBLIC_HLS_BASE_URL: ${MEDIA_CONTROL_PUBLIC_HLS_BASE_URL:-http://localhost:8080/hls}
       MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN: ${MEDIA_CONTROL_EXPECTED_PUBLIC_ORIGIN:-}
@@ -547,7 +537,6 @@ services:
     mem_limit: ${MEDIAMTX_MEMORY_LIMIT:-1g}
     cpus: ${MEDIAMTX_CPU_LIMIT:-2.0}
     logging: *logging_defaults
-    env_file: *service_env_files
     environment:
       MTX_WEBRTCIPSFROMINTERFACES: ${MEDIAMTX_WEBRTC_IPS_FROM_INTERFACES:-true}
       MTX_WEBRTCADDITIONALHOSTS: ${MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS:-127.0.0.1}
@@ -580,7 +569,6 @@ services:
     mem_limit: ${TURN_MEMORY_LIMIT:-256m}
     cpus: ${TURN_CPU_LIMIT:-0.5}
     logging: *logging_defaults
-    env_file: *service_env_files
     entrypoint: ["/bin/sh", "/usr/local/bin/gcs-turnserver-entrypoint"]
     command:
       - -n
@@ -641,7 +629,6 @@ services:
     mem_limit: ${TURN_MEMORY_LIMIT:-256m}
     cpus: ${TURN_CPU_LIMIT:-0.5}
     logging: *logging_defaults
-    env_file: *service_env_files
     entrypoint: ["/bin/sh", "/usr/local/bin/gcs-turnserver-entrypoint"]
     command:
       - -n
