@@ -79,7 +79,7 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		return runtimeConfig{}, err
 	}
 	publishToken := getenv(runtimeEnv.publishToken, "")
-	grpcToken, err := getenvSecret(runtimeEnv.grpcToken, "")
+	secrets, err := loadPrimaryRuntimeSecrets()
 	if err != nil {
 		return runtimeConfig{}, err
 	}
@@ -88,14 +88,14 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		otelServiceName:     getenv(runtimeEnv.otelServiceName, runtimeDefaults.otelServiceName),
 		mediaMTXBaseURL:     getenv(runtimeEnv.mediaMTXBaseURL, runtimeDefaults.mediaMTXBaseURL),
 		mediaMTXAPIUser:     getenv("MEDIAMTX_API_USER", ""),
-		mediaMTXAPIPassword: getenv("MEDIAMTX_API_PASSWORD", ""),
+		mediaMTXAPIPassword: secrets.mediaMTXAPIPassword,
 		listenAddress:       getenv(runtimeEnv.listenAddress, runtimeDefaults.listenAddress),
 		grpcListenAddress:   getenv(runtimeEnv.grpcListenAddress, runtimeDefaults.grpcListenAddress),
 		playback:            playback,
 		groupResolver:       groupResolver,
 		iceServers:          loadIceServers(),
 		publishToken:        publishToken,
-		grpcToken:           grpcToken,
+		grpcToken:           secrets.grpcToken,
 		grpcMaxPayloadBytes: getenvInt(runtimeEnv.grpcMaxPayloadBytes, runtimeDefaults.grpcMaxPayloadBytes),
 	}
 	if err := loadAuthorizationRuntime(&config); err != nil {
@@ -104,11 +104,30 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 	if err := loadStateRuntime(&config); err != nil {
 		return runtimeConfig{}, err
 	}
-	loadTurnRuntime(&config)
+	if err := loadTurnRuntime(&config); err != nil {
+		return runtimeConfig{}, err
+	}
 	if err := validateRuntimeCredentialSeparation(config); err != nil {
 		return runtimeConfig{}, err
 	}
 	return config, nil
+}
+
+type primaryRuntimeSecrets struct {
+	grpcToken           string
+	mediaMTXAPIPassword string
+}
+
+func loadPrimaryRuntimeSecrets() (primaryRuntimeSecrets, error) {
+	grpcToken, err := getenvSecret(runtimeEnv.grpcToken, "")
+	if err != nil {
+		return primaryRuntimeSecrets{}, err
+	}
+	mediaMTXAPIPassword, err := getenvSecret("MEDIAMTX_API_PASSWORD", "")
+	if err != nil {
+		return primaryRuntimeSecrets{}, err
+	}
+	return primaryRuntimeSecrets{grpcToken: grpcToken, mediaMTXAPIPassword: mediaMTXAPIPassword}, nil
 }
 
 func loadAuthorizationRuntime(config *runtimeConfig) error {
@@ -154,12 +173,17 @@ func loadStateRuntime(config *runtimeConfig) error {
 	return nil
 }
 
-func loadTurnRuntime(config *runtimeConfig) {
+func loadTurnRuntime(config *runtimeConfig) error {
+	turnSharedSecret, err := getenvSecret(runtimeEnv.turnSharedSecret, runtimeDefaults.turnSharedSecret)
+	if err != nil {
+		return err
+	}
 	config.turnMaxHealthy = getenvInt(runtimeEnv.turnMaxHealthyServers, runtimeDefaults.turnMaxHealthyServers)
 	config.turnCredentialMode = loadTurnCredentialMode()
-	config.turnSharedSecret = getenv(runtimeEnv.turnSharedSecret, runtimeDefaults.turnSharedSecret)
+	config.turnSharedSecret = turnSharedSecret
 	config.iceServerCacheTTL = getenvDuration(runtimeEnv.iceServerCacheTTL, runtimeDefaults.iceServerCacheTTL)
 	config.iceServerCacheKey = getenv(runtimeEnv.iceServerCacheKey, runtimeDefaults.iceServerCacheKey)
+	return nil
 }
 
 func (c runtimeConfig) authPolicyTLS() authpolicy.RPCClientTLSConfig {

@@ -194,7 +194,8 @@ def test_single_node_turn_services_use_coturn_supported_runtime_flags() -> None:
         command = service["command"]
         assert service["image"].startswith("${COTURN_IMAGE:-coturn/coturn@sha256:")
         assert "--use-auth-secret" in command
-        assert "--static-auth-secret=${TURN_SHARED_SECRET:?Set TURN_SHARED_SECRET}" in command
+        assert "--static-auth-secret" not in command
+        assert service["tmpfs"] == ["/tmp:rw,noexec,nosuid,nodev,size=16m"]
         assert not any(argument.startswith("--user=") for argument in command)
         assert "--no-cli" in command
         assert "--no-multicast-peers" in command

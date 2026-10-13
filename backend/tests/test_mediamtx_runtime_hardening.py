@@ -3,6 +3,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 DOCKERFILE = ROOT / "deploy" / "mediamtx" / "Dockerfile.hardened"
 CONFIG = ROOT / "deploy" / "mediamtx" / "mediamtx.closed-network.yml"
+ENTRYPOINT = ROOT / "deploy" / "mediamtx" / "secret-entrypoint.go"
 
 
 def test_mediamtx_source_and_builder_are_immutable() -> None:
@@ -21,6 +22,10 @@ def test_mediamtx_runtime_patches_security_dependencies_and_drops_privileges() -
     assert "FROM scratch" in source
     assert "LABEL org.opencontainers.image.revision=$SOURCE_COMMIT" in source
     assert "USER 10001:10001" in source
+    assert 'ENTRYPOINT ["/gcs-mediamtx-entrypoint"]' in source
+    entrypoint = ENTRYPOINT.read_text(encoding="utf-8")
+    assert 'loadRequiredSecret("MEDIAMTX_API_PASSWORD")' in entrypoint
+    assert "syscall.Exec" in entrypoint
 
 
 def test_mediamtx_disables_unused_moq_listener() -> None:

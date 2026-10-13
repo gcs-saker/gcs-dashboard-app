@@ -220,7 +220,6 @@ services:
       MEDIAMTX_PUBLIC_HLS_BASE_URL: ${MEDIAMTX_PUBLIC_HLS_BASE_URL:-http://localhost:8080/hls}
       MEDIAMTX_API_BASE_URL: ${MEDIAMTX_API_BASE_URL:-http://mediamtx:9997}
       MEDIAMTX_API_USER: ${MEDIAMTX_API_USER:-gcs-media-control}
-      MEDIAMTX_API_PASSWORD: ${MEDIAMTX_API_PASSWORD:?Set MEDIAMTX_API_PASSWORD}
       WEBRTC_STUN_URL: ${WEBRTC_STUN_URL:-stun:turn-primary:3478}
       DASHBOARD_MAP_PROVIDER: ${DASHBOARD_MAP_PROVIDER:-esri-satellite}
       DASHBOARD_MAP_STYLE_URL: ${DASHBOARD_MAP_STYLE_URL:-https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}}
@@ -258,6 +257,11 @@ services:
         mode: 0400
       - source: database_url
         target: DATABASE_URL
+        uid: "10001"
+        gid: "10001"
+        mode: 0400
+      - source: mediamtx_api_password
+        target: MEDIAMTX_API_PASSWORD
         uid: "10001"
         gid: "10001"
         mode: 0400
@@ -399,9 +403,7 @@ services:
     environment:
       MEDIAMTX_API_BASE_URL: ${MEDIAMTX_API_BASE_URL:-http://mediamtx:9997}
       MEDIAMTX_API_USER: ${MEDIAMTX_API_USER:-gcs-media-control}
-      MEDIAMTX_API_PASSWORD: ${MEDIAMTX_API_PASSWORD:?Set MEDIAMTX_API_PASSWORD}
       TURN_CREDENTIAL_MODE: ${TURN_CREDENTIAL_MODE:-shared-secret}
-      TURN_SHARED_SECRET: ${TURN_SHARED_SECRET:?Set TURN_SHARED_SECRET}
       TURN_USERNAME: ${TURN_USERNAME:-gcs-turn}
       TURN_PASSWORD: ${TURN_PASSWORD:-}
       MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL: ${MEDIA_CONTROL_PUBLIC_WEBRTC_BASE_URL:-http://localhost:8080/webrtc}
@@ -478,6 +480,16 @@ services:
         uid: "10001"
         gid: "10001"
         mode: 0400
+      - source: mediamtx_api_password
+        target: MEDIAMTX_API_PASSWORD
+        uid: "10001"
+        gid: "10001"
+        mode: 0400
+      - source: turn_shared_secret
+        target: TURN_SHARED_SECRET
+        uid: "10001"
+        gid: "10001"
+        mode: 0400
     healthcheck:
       <<: *health_defaults
       test: ["CMD", "/usr/local/bin/media-control", "healthcheck"]
@@ -508,7 +520,6 @@ services:
       MTX_WEBRTCIPSFROMINTERFACES: ${MEDIAMTX_WEBRTC_IPS_FROM_INTERFACES:-true}
       MTX_WEBRTCADDITIONALHOSTS: ${MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS:-127.0.0.1}
       MEDIAMTX_API_USER: ${MEDIAMTX_API_USER:-gcs-media-control}
-      MEDIAMTX_API_PASSWORD: ${MEDIAMTX_API_PASSWORD:?Set MEDIAMTX_API_PASSWORD}
     ports:
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_RTSP_PORT:-8554}:8554/tcp"
       - "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIAMTX_RTMP_PORT:-1935}:1935/tcp"
@@ -521,6 +532,12 @@ services:
         target: /mediamtx.yml
         read_only: true
     command: /mediamtx.yml
+    secrets:
+      - source: mediamtx_api_password
+        target: MEDIAMTX_API_PASSWORD
+        uid: "10001"
+        gid: "10001"
+        mode: 0400
     restart: unless-stopped
     networks:
       - media-net
@@ -539,7 +556,6 @@ services:
       - --fingerprint
       - --use-auth-secret
       - --realm=${TURN_REALM:-gcs-saker.closed}
-      - --static-auth-secret=${TURN_SHARED_SECRET:?Set TURN_SHARED_SECRET}
       - --listening-port=3478
       - --tls-listening-port=5349
       - --cert=/run/secrets/gcs-pki/turn-primary.crt
@@ -569,6 +585,11 @@ services:
         source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/turn-primary.key
         target: /run/secrets/gcs-pki/turn-primary.key
         read_only: true
+    secrets:
+      - source: turn_shared_secret
+        target: TURN_SHARED_SECRET
+        mode: 0400
+    tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=16m"]
     ports:
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/tcp"
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_PRIMARY_HOST_PORT:-3478}:3478/udp"
@@ -596,7 +617,6 @@ services:
       - --fingerprint
       - --use-auth-secret
       - --realm=${TURN_REALM:-gcs-saker.closed}
-      - --static-auth-secret=${TURN_SHARED_SECRET:?Set TURN_SHARED_SECRET}
       - --listening-port=3478
       - --tls-listening-port=5349
       - --cert=/run/secrets/gcs-pki/turn-secondary.crt
@@ -626,6 +646,11 @@ services:
         source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/turn-secondary.key
         target: /run/secrets/gcs-pki/turn-secondary.key
         read_only: true
+    secrets:
+      - source: turn_shared_secret
+        target: TURN_SHARED_SECRET
+        mode: 0400
+    tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=16m"]
     ports:
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/tcp"
       - "${TURN_PUBLIC_BIND_ADDR:-127.0.0.1}:${TURN_SECONDARY_HOST_PORT:-3479}:3478/udp"
@@ -744,3 +769,7 @@ secrets:
     environment: AUTH_POLICY_AUDIT_INGEST_TOKEN
   media_control_grpc_token:
     environment: MEDIA_CONTROL_GRPC_TOKEN
+  mediamtx_api_password:
+    environment: MEDIAMTX_API_PASSWORD
+  turn_shared_secret:
+    environment: TURN_SHARED_SECRET

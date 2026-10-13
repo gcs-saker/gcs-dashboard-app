@@ -11,11 +11,14 @@ RUN tar -xzf /tmp/mediamtx.tar.gz --strip-components=1 \
     && go get golang.org/x/net@v0.60.0 \
     && go mod tidy \
     && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/mediamtx .
+COPY secret-entrypoint.go /tmp/secret-entrypoint.go
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/gcs-mediamtx-entrypoint /tmp/secret-entrypoint.go
 
 FROM scratch
 ARG SOURCE_COMMIT=unknown
 LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
 COPY --from=build /out/mediamtx /mediamtx
+COPY --from=build /out/gcs-mediamtx-entrypoint /gcs-mediamtx-entrypoint
 USER 10001:10001
-ENTRYPOINT ["/mediamtx"]
+ENTRYPOINT ["/gcs-mediamtx-entrypoint"]
 CMD ["/mediamtx.yml"]
