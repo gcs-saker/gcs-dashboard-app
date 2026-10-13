@@ -131,6 +131,9 @@ services:
       - control-net
 
   mqtt:
+    <<: *runtime_hardening
+    user: "1883:1883"
+    group_add: ["${GCS_PKI_RUNTIME_GID:-1000}"]
     image: ${MQTT_IMAGE:-eclipse-mosquitto@sha256:a908c65cc8e67ec9d292ef27c2c0360dbaaee7eb1b935cdd194e67697f15dea1}
     pids_limit: 128
     mem_limit: ${MQTT_MEMORY_LIMIT:-256m}
@@ -175,6 +178,9 @@ services:
         source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/mqtt-health.key
         target: /run/secrets/gcs-pki/mqtt-health.key
         read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+      - /mosquitto/log:rw,noexec,nosuid,nodev,size=16m,uid=1883,gid=1883,mode=0750
     healthcheck:
       <<: *health_defaults
       test: ["CMD", "/usr/local/bin/gcs-mqtt-healthcheck"]
