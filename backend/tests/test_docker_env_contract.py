@@ -293,7 +293,7 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
     assert services["media-control"]["environment"]["MEDIA_CONTROL_AUTH_MODE"] == (
         "${MEDIA_CONTROL_AUTH_MODE:-required}"
     )
-    assert services["auth-policy"]["environment"]["AUTH_POLICY_SIGNUP_INVITES"] == ("${AUTH_POLICY_SIGNUP_INVITES:-}")
+    assert "AUTH_POLICY_SIGNUP_INVITES" not in services["auth-policy"]["environment"]
     assert services["auth-policy"]["environment"]["AUTH_POLICY_SMOKE_GROUP_ID"] == (
         "${AUTH_POLICY_SMOKE_GROUP_ID:-co-a}"
     )
