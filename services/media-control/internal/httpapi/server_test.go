@@ -234,6 +234,28 @@ func TestReadyzReturnsDegradedWhenMediaMTXRegistryFails(t *testing.T) {
 	}
 }
 
+func TestReadyzBypassesCachedStreamsForAuthenticatedMediaMTXProbe(t *testing.T) {
+	path, _ := domain.NewStreamPath("raw/local/webcam")
+	ice, _ := domain.NewIceServer("turn:turn-primary:3478", domain.IceServerTURN, "gcs-turn", "secret", true)
+	server := newTestServer(
+		fakeStreams{streams: []domain.StreamDescriptor{{Path: path, Ready: true, Status: domain.StreamStatusOnline}}},
+		fakeIce{servers: []domain.IceServer{ice}},
+	).WithMediaMTXReadinessProbe(fakeStreams{err: errors.New("management api returned 401 for private host")})
+	request := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	recorder := httptest.NewRecorder()
+
+	server.Routes().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d", recorder.Code)
+	}
+	payload := decodeTestJSON[readinessResponse](t, recorder)
+	assertReadyCheck(t, payload, "stream_registry", "error", "stream registry query failed")
+	if strings.Contains(recorder.Body.String(), "401") || strings.Contains(recorder.Body.String(), "private host") {
+		t.Fatalf("readiness leaked MediaMTX detail: %s", recorder.Body.String())
+	}
+}
+
 func TestReadyzReturnsDegradedWhenNoIceServersAreHealthy(t *testing.T) {
 	path, _ := domain.NewStreamPath("raw/local/webcam")
 	server := newTestServer(
