@@ -95,7 +95,9 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		grpcMaxPayloadBytes: getenvInt(runtimeEnv.grpcMaxPayloadBytes, runtimeDefaults.grpcMaxPayloadBytes),
 	}
 	loadAuthorizationRuntime(&config)
-	loadStateRuntime(&config)
+	if err := loadStateRuntime(&config); err != nil {
+		return runtimeConfig{}, err
+	}
 	loadTurnRuntime(&config)
 	if err := validateRuntimeCredentialSeparation(config); err != nil {
 		return runtimeConfig{}, err
@@ -117,10 +119,14 @@ func loadAuthorizationRuntime(config *runtimeConfig) {
 	config.authzCacheTTL = getenvDuration(runtimeEnv.authzCacheTTLSeconds, runtimeDefaults.authzCacheTTL)
 }
 
-func loadStateRuntime(config *runtimeConfig) {
+func loadStateRuntime(config *runtimeConfig) error {
+	redisPassword, err := getenvSecret(runtimeEnv.redisPassword, runtimeDefaults.redisPassword)
+	if err != nil {
+		return err
+	}
 	config.streamCacheTTL = getenvDuration(runtimeEnv.streamCacheTTLSeconds, runtimeDefaults.streamCacheTTL)
 	config.redisAddress = getenv(runtimeEnv.redisAddress, runtimeDefaults.redisAddress)
-	config.redisPassword = getenv(runtimeEnv.redisPassword, runtimeDefaults.redisPassword)
+	config.redisPassword = redisPassword
 	config.redisTimeout = getenvDuration(runtimeEnv.redisTimeoutSeconds, runtimeDefaults.redisTimeout)
 	config.redisCAFile = getenv("MEDIA_CONTROL_REDIS_CA_FILE", "")
 	config.redisCertFile = getenv("MEDIA_CONTROL_REDIS_CERT_FILE", "")
@@ -130,6 +136,7 @@ func loadStateRuntime(config *runtimeConfig) {
 	config.streamCacheKey = getenv(runtimeEnv.streamCacheKey, runtimeDefaults.streamCacheKey)
 	config.streamPresenceKey = getenv(runtimeEnv.streamPresencePrefix, runtimeDefaults.streamPresencePrefix)
 	config.streamPresenceTTL = getenvDuration(runtimeEnv.streamPresenceTTL, runtimeDefaults.streamPresenceTTL)
+	return nil
 }
 
 func loadTurnRuntime(config *runtimeConfig) {
