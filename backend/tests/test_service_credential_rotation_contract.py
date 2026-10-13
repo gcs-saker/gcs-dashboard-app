@@ -17,9 +17,9 @@ def test_compose_exposes_validation_only_rotation_secrets() -> None:
     assert "GCS_INTERNAL_GRPC_PREVIOUS_TOKEN" not in auth_environment
     assert "AUTH_POLICY_AUDIT_INGEST_PREVIOUS_TOKEN" not in auth_environment
     assert rotation_targets == {"GCS_INTERNAL_GRPC_PREVIOUS_TOKEN", "AUTH_POLICY_AUDIT_INGEST_PREVIOUS_TOKEN"}
-    assert rotation["secrets"]["auth_policy_rpc_previous_token"]["environment"] == "AUTH_POLICY_RPC_PREVIOUS_TOKEN"
-    assert rotation["secrets"]["audit_ingest_previous_token"]["environment"] == (
-        "AUTH_POLICY_AUDIT_INGEST_PREVIOUS_TOKEN"
+    assert rotation["secrets"]["auth_policy_rpc_previous_token"]["file"].endswith("/AUTH_POLICY_RPC_PREVIOUS_TOKEN")
+    assert rotation["secrets"]["audit_ingest_previous_token"]["file"].endswith(
+        "/AUTH_POLICY_AUDIT_INGEST_PREVIOUS_TOKEN"
     )
 
 
