@@ -58,3 +58,18 @@ def test_internal_service_tokens_are_scoped_files() -> None:
     assert {"AUTH_POLICY_RPC_TOKEN", "AUTH_POLICY_AUDIT_INGEST_TOKEN", "MEDIA_CONTROL_GRPC_TOKEN"} <= media_targets
     for name in ("AUTH_POLICY_RPC_TOKEN", "AUTH_POLICY_AUDIT_INGEST_TOKEN", "MEDIA_CONTROL_GRPC_TOKEN"):
         assert name not in services["media-control"]["environment"]
+
+
+def test_turn_and_mediamtx_credentials_are_scoped_files() -> None:
+    document = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
+    services = document["services"]
+
+    assert "MEDIAMTX_API_PASSWORD" not in services["mediamtx"]["environment"]
+    assert "MEDIAMTX_API_PASSWORD" not in services["media-control"]["environment"]
+    assert "TURN_SHARED_SECRET" not in services["media-control"]["environment"]
+    assert {item["target"] for item in services["mediamtx"]["secrets"]} == {"MEDIAMTX_API_PASSWORD"}
+    assert {item["target"] for item in services["turn-primary"]["secrets"]} == {"TURN_SHARED_SECRET"}
+    assert {item["target"] for item in services["media-control"]["secrets"]} >= {
+        "MEDIAMTX_API_PASSWORD",
+        "TURN_SHARED_SECRET",
+    }

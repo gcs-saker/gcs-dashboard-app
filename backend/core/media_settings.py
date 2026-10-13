@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic import Field, ValidationError, field_validator
 
 from core.env_parsing import empty_to_none
+from core.secret_files import SecretFileError, read_secret_input
 from core.settings_base import BackendBaseSettings, SettingsConfigurationError, settings_error_message
+
+MEDIAMTX_API_PASSWORD = "MEDIAMTX_API_PASSWORD"
+MEDIAMTX_API_PASSWORD_FILE = "MEDIAMTX_API_PASSWORD_FILE"
 
 
 class MediaServerSettings(BackendBaseSettings):
@@ -23,6 +29,13 @@ class MediaServerSettings(BackendBaseSettings):
     @classmethod
     def from_env(cls) -> "MediaServerSettings":
         try:
-            return cls()
+            password = read_secret_input(
+                MEDIAMTX_API_PASSWORD,
+                MEDIAMTX_API_PASSWORD_FILE,
+                Path("/run/secrets/MEDIAMTX_API_PASSWORD"),
+            )
+            return cls(api_password=password) if password is not None else cls()
+        except SecretFileError as exc:
+            raise SettingsConfigurationError(str(exc)) from exc
         except ValidationError as exc:
             raise SettingsConfigurationError(settings_error_message("media server", exc)) from exc

@@ -16,7 +16,10 @@ def test_turn_profile_keeps_udp_and_adds_tls_fallback() -> None:
     ):
         assert value in compose
     assert "--use-auth-secret" in compose
-    assert "--static-auth-secret" in compose
+    assert "--static-auth-secret" not in compose
+    entrypoint = (ROOT / "deploy/coturn/turnserver-entrypoint.sh").read_text(encoding="utf-8")
+    assert "static-auth-secret=%s" in entrypoint
+    assert "/run/secrets/TURN_SHARED_SECRET" in entrypoint
 
 
 def test_internal_pki_issues_turn_server_identities() -> None:
