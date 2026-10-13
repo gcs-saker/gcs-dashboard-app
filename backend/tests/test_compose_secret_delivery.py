@@ -4,6 +4,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 COMPOSE = ROOT / "deploy/compose/compose.single-node.poc.yml"
+STATIC_TURN_OVERRIDE = ROOT / "deploy/compose/compose.static-turn-credential.override.yml"
 
 
 def test_shared_jwt_secret_is_file_scoped_and_absent_from_container_environment() -> None:
@@ -95,3 +96,34 @@ def test_auth_policy_operational_credentials_are_file_scoped() -> None:
     for name in expected:
         source = next(item["source"] for item in auth_policy["secrets"] if item["target"] == name)
         assert document["secrets"][source]["environment"] == name
+
+
+def test_production_services_do_not_receive_the_shared_environment_file() -> None:
+    services = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"]
+    secret_names = {
+        "AUTH_JWT_SECRET",
+        "DATABASE_URL",
+        "POSTGRES_PASSWORD",
+        "REDIS_PASSWORD",
+        "AUTH_POLICY_RPC_TOKEN",
+        "AUTH_POLICY_AUDIT_INGEST_TOKEN",
+        "MEDIA_CONTROL_GRPC_TOKEN",
+        "MEDIAMTX_API_PASSWORD",
+        "TURN_SHARED_SECRET",
+        "TURN_PASSWORD",
+    }
+
+    assert all("env_file" not in service for service in services.values())
+    for service in services.values():
+        assert secret_names.isdisjoint(service.get("environment", {}))
+
+
+def test_static_turn_password_requires_explicit_file_scoped_override() -> None:
+    base = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
+    override = yaml.safe_load(STATIC_TURN_OVERRIDE.read_text(encoding="utf-8"))
+
+    assert "turn_static_password" not in base["secrets"]
+    assert override["secrets"]["turn_static_password"] == {"environment": "TURN_PASSWORD"}
+    assert override["services"]["media-control"]["environment"]["TURN_CREDENTIAL_MODE"] == "static"
+    assert {item["target"] for item in override["services"]["media-control"]["secrets"]} == {"TURN_PASSWORD"}
+    assert {item["target"] for item in override["services"]["mediamtx"]["secrets"]} == {"TURN_PASSWORD"}

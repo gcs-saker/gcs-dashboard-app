@@ -14,11 +14,23 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	if err := loadOptionalSecret("TURN_PASSWORD"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	arguments := append([]string{"/mediamtx"}, os.Args[1:]...)
 	if err := syscall.Exec(arguments[0], arguments, os.Environ()); err != nil {
 		fmt.Fprintln(os.Stderr, "MediaMTX entrypoint failed")
 		os.Exit(1)
 	}
+}
+
+func loadOptionalSecret(name string) error {
+	path := "/run/secrets/" + name
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return os.Setenv(name, "")
+	}
+	return loadRequiredSecret(name)
 }
 
 func loadRequiredSecret(name string) error {

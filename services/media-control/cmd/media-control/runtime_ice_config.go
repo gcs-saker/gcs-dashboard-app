@@ -33,7 +33,11 @@ func loadTurnCredentialMode() string {
 
 func configuredTurnCredential() string {
 	if loadTurnCredentialMode() == turnCredentialModeStatic {
-		return getenv(runtimeEnv.turnStaticPassword, runtimeDefaults.turnStaticPassword)
+		credential, err := getenvSecret(runtimeEnv.turnStaticPassword, runtimeDefaults.turnStaticPassword)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return credential
 	}
 	return "issued-per-request"
 }
