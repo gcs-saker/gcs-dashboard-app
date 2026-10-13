@@ -26,6 +26,10 @@
 previous 값은 검증 전용이다. 신규 요청을 서명하거나 발급하는 데 사용하지 않는다. current와 previous가
 같거나 32자 미만이면 서비스는 시작 단계에서 실패해야 한다.
 
+previous 값은 기본 Compose 환경에 두지 않는다. 교체 기간에만
+`compose.credential-rotation.override.yml`을 추가해 service-scoped secret 파일로 제공하고,
+새 current token 검증이 끝나면 override를 제거한다.
+
 ## publish secret 교체
 
 media token은 최대 5분 TTL과 stream, action, group, session binding을 가진다. publish secret 교체 전에는

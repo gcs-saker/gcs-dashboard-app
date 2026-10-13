@@ -79,6 +79,10 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		return runtimeConfig{}, err
 	}
 	publishToken := getenv(runtimeEnv.publishToken, "")
+	grpcToken, err := getenvSecret(runtimeEnv.grpcToken, "")
+	if err != nil {
+		return runtimeConfig{}, err
+	}
 	config := runtimeConfig{
 		traceExporter:       getenv(runtimeEnv.traceExporter, runtimeDefaults.traceExporter),
 		otelServiceName:     getenv(runtimeEnv.otelServiceName, runtimeDefaults.otelServiceName),
@@ -91,10 +95,12 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		groupResolver:       groupResolver,
 		iceServers:          loadIceServers(),
 		publishToken:        publishToken,
-		grpcToken:           getenv(runtimeEnv.grpcToken, ""),
+		grpcToken:           grpcToken,
 		grpcMaxPayloadBytes: getenvInt(runtimeEnv.grpcMaxPayloadBytes, runtimeDefaults.grpcMaxPayloadBytes),
 	}
-	loadAuthorizationRuntime(&config)
+	if err := loadAuthorizationRuntime(&config); err != nil {
+		return runtimeConfig{}, err
+	}
 	if err := loadStateRuntime(&config); err != nil {
 		return runtimeConfig{}, err
 	}
@@ -105,18 +111,27 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 	return config, nil
 }
 
-func loadAuthorizationRuntime(config *runtimeConfig) {
+func loadAuthorizationRuntime(config *runtimeConfig) error {
+	rpcToken, err := getenvSecret("AUTH_POLICY_RPC_TOKEN", "")
+	if err != nil {
+		return err
+	}
+	auditToken, err := getenvSecret("AUTH_POLICY_AUDIT_INGEST_TOKEN", "")
+	if err != nil {
+		return err
+	}
 	config.authMode = getenv(runtimeEnv.authMode, authpolicy.AuthModeRequired)
 	config.authPolicyBaseURL = getenv(runtimeEnv.authPolicyBaseURL, runtimeDefaults.authPolicyBaseURL)
 	config.authPolicyHTTPFallback = getenv("AUTH_POLICY_ALLOW_HTTP_FALLBACK", "false") == "true"
 	config.deviceRPCTarget = getenv("AUTH_POLICY_GRPC_TARGET", "")
-	config.deviceRPCToken = getenv("AUTH_POLICY_RPC_TOKEN", "")
+	config.deviceRPCToken = rpcToken
 	config.deviceRPCCAFile = getenv("AUTH_POLICY_GRPC_CA_FILE", "")
 	config.deviceRPCCertFile = getenv("AUTH_POLICY_GRPC_CERT_FILE", "")
 	config.deviceRPCKeyFile = getenv("AUTH_POLICY_GRPC_KEY_FILE", "")
 	config.deviceRPCServerName = getenv("AUTH_POLICY_GRPC_SERVER_NAME", "")
-	config.auditIngestToken = getenv("AUTH_POLICY_AUDIT_INGEST_TOKEN", "")
+	config.auditIngestToken = auditToken
 	config.authzCacheTTL = getenvDuration(runtimeEnv.authzCacheTTLSeconds, runtimeDefaults.authzCacheTTL)
+	return nil
 }
 
 func loadStateRuntime(config *runtimeConfig) error {

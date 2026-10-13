@@ -303,8 +303,6 @@ services:
       AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED: ${AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED:-true}
       AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED: ${AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED:-true}
       AUTH_POLICY_TRUSTED_PROXY_CIDRS: ${AUTH_POLICY_TRUSTED_PROXY_CIDRS:-127.0.0.0/8}
-      AUTH_POLICY_AUDIT_INGEST_TOKEN: ${AUTH_POLICY_AUDIT_INGEST_TOKEN:?Set AUTH_POLICY_AUDIT_INGEST_TOKEN}
-      AUTH_POLICY_AUDIT_INGEST_PREVIOUS_TOKEN: ${AUTH_POLICY_AUDIT_INGEST_PREVIOUS_TOKEN:-}
       AUTH_POLICY_AUDIT_WARNING_RECORDS: ${AUTH_POLICY_AUDIT_WARNING_RECORDS:-800000}
       AUTH_POLICY_AUDIT_SECURITY_RETENTION_DAYS: ${AUTH_POLICY_AUDIT_SECURITY_RETENTION_DAYS:-365}
       AUTH_POLICY_AUDIT_PRIVILEGED_RETENTION_DAYS: ${AUTH_POLICY_AUDIT_PRIVILEGED_RETENTION_DAYS:-730}
@@ -314,8 +312,6 @@ services:
       AUTH_POLICY_AUDIT_ANCHOR_INTERVAL_MILLIS: ${AUTH_POLICY_AUDIT_ANCHOR_INTERVAL_MILLIS:-300000}
       GCS_INTERNAL_GRPC_ENABLED: "true"
       GCS_INTERNAL_GRPC_PORT: 9091
-      GCS_INTERNAL_GRPC_TOKEN: ${AUTH_POLICY_RPC_TOKEN:?Set AUTH_POLICY_RPC_TOKEN}
-      GCS_INTERNAL_GRPC_PREVIOUS_TOKEN: ${AUTH_POLICY_RPC_PREVIOUS_TOKEN:-}
       GCS_INTERNAL_GRPC_CA_FILE: /run/secrets/gcs-pki/ca.crt
       GCS_INTERNAL_GRPC_CERT_FILE: /run/secrets/gcs-pki/auth-policy.crt
       GCS_INTERNAL_GRPC_KEY_FILE: /run/secrets/gcs-pki/auth-policy.key
@@ -369,6 +365,16 @@ services:
         uid: "10002"
         gid: "10002"
         mode: 0400
+      - source: auth_policy_rpc_token
+        target: GCS_INTERNAL_GRPC_TOKEN
+        uid: "10002"
+        gid: "10002"
+        mode: 0400
+      - source: audit_ingest_token
+        target: AUTH_POLICY_AUDIT_INGEST_TOKEN
+        uid: "10002"
+        gid: "10002"
+        mode: 0400
     restart: unless-stopped
     networks:
       - control-net
@@ -404,12 +410,10 @@ services:
       MEDIA_CONTROL_AUTH_MODE: ${MEDIA_CONTROL_AUTH_MODE:-required}
       AUTH_POLICY_BASE_URL: ${AUTH_POLICY_BASE_URL:-http://auth-policy:8080}
       AUTH_POLICY_GRPC_TARGET: ${AUTH_POLICY_GRPC_TARGET-auth-policy:9091}
-      AUTH_POLICY_RPC_TOKEN: ${AUTH_POLICY_RPC_TOKEN:?Set AUTH_POLICY_RPC_TOKEN}
       AUTH_POLICY_GRPC_CA_FILE: /run/secrets/gcs-pki/ca.crt
       AUTH_POLICY_GRPC_CERT_FILE: /run/secrets/gcs-pki/media-control.crt
       AUTH_POLICY_GRPC_KEY_FILE: /run/secrets/gcs-pki/media-control.key
       AUTH_POLICY_GRPC_SERVER_NAME: auth-policy
-      AUTH_POLICY_AUDIT_INGEST_TOKEN: ${AUTH_POLICY_AUDIT_INGEST_TOKEN:?Set AUTH_POLICY_AUDIT_INGEST_TOKEN}
       MEDIA_CONTROL_AUTHZ_CACHE_TTL_SECONDS: ${MEDIA_CONTROL_AUTHZ_CACHE_TTL_SECONDS:-2}
       MEDIA_CONTROL_STUN_URL: ${MEDIA_CONTROL_STUN_URL:-stun:stun.l.google.com:19302}
       MEDIA_CONTROL_TURN_PRIMARY_URL: ${MEDIA_CONTROL_TURN_PRIMARY_URL:-turn:localhost:3478?transport=udp}
@@ -422,7 +426,6 @@ services:
       MEDIA_CONTROL_PUBLISH_TOKEN: ${MEDIA_CONTROL_PUBLISH_TOKEN:?Set MEDIA_CONTROL_PUBLISH_TOKEN}
       MEDIA_CONTROL_LISTEN_ADDR: :8081
       MEDIA_CONTROL_GRPC_LISTEN_ADDR: :9090
-      MEDIA_CONTROL_GRPC_TOKEN: ${MEDIA_CONTROL_GRPC_TOKEN:?Set an independent MEDIA_CONTROL_GRPC_TOKEN}
       MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES: ${MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES:-65536}
       MEDIA_CONTROL_GRPC_CA_FILE: /run/secrets/gcs-pki/ca.crt
       MEDIA_CONTROL_GRPC_CERT_FILE: /run/secrets/gcs-pki/media-control.crt
@@ -457,6 +460,21 @@ services:
     secrets:
       - source: redis_password
         target: MEDIA_CONTROL_REDIS_PASSWORD
+        uid: "10001"
+        gid: "10001"
+        mode: 0400
+      - source: auth_policy_rpc_token
+        target: AUTH_POLICY_RPC_TOKEN
+        uid: "10001"
+        gid: "10001"
+        mode: 0400
+      - source: audit_ingest_token
+        target: AUTH_POLICY_AUDIT_INGEST_TOKEN
+        uid: "10001"
+        gid: "10001"
+        mode: 0400
+      - source: media_control_grpc_token
+        target: MEDIA_CONTROL_GRPC_TOKEN
         uid: "10001"
         gid: "10001"
         mode: 0400
@@ -720,3 +738,9 @@ secrets:
     environment: DATABASE_URL
   redis_password:
     environment: REDIS_PASSWORD
+  auth_policy_rpc_token:
+    environment: AUTH_POLICY_RPC_TOKEN
+  audit_ingest_token:
+    environment: AUTH_POLICY_AUDIT_INGEST_TOKEN
+  media_control_grpc_token:
+    environment: MEDIA_CONTROL_GRPC_TOKEN

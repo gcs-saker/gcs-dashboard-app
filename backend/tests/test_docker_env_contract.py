@@ -313,9 +313,7 @@ def test_single_node_dashboard_can_cut_over_stream_api_to_go_media_control() -> 
     assert services["media-control"]["ports"] == [
         "${LOCAL_BIND_ADDR:-127.0.0.1}:${MEDIA_CONTROL_GRPC_HOST_PORT:-9090}:9090"
     ]
-    assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_TOKEN"] == (
-        "${MEDIA_CONTROL_GRPC_TOKEN:?Set an independent MEDIA_CONTROL_GRPC_TOKEN}"
-    )
+    assert "MEDIA_CONTROL_GRPC_TOKEN" not in services["media-control"]["environment"]
     assert services["media-control"]["environment"]["MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES"] == (
         "${MEDIA_CONTROL_GRPC_MAX_PAYLOAD_BYTES:-65536}"
     )

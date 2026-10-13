@@ -46,3 +46,15 @@ def test_redis_password_is_file_scoped_for_server_and_clients() -> None:
     assert {item["target"] for item in services["auth-policy"]["secrets"]} >= {"SPRING_DATA_REDIS_PASSWORD"}
     assert {item["target"] for item in services["media-control"]["secrets"]} >= {"MEDIA_CONTROL_REDIS_PASSWORD"}
     assert services["redis"]["entrypoint"] == ["/usr/local/bin/gcs-valkey-secret-entrypoint"]
+
+
+def test_internal_service_tokens_are_scoped_files() -> None:
+    document = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
+    services = document["services"]
+    auth_targets = {item["target"] for item in services["auth-policy"]["secrets"]}
+    media_targets = {item["target"] for item in services["media-control"]["secrets"]}
+
+    assert {"GCS_INTERNAL_GRPC_TOKEN", "AUTH_POLICY_AUDIT_INGEST_TOKEN"} <= auth_targets
+    assert {"AUTH_POLICY_RPC_TOKEN", "AUTH_POLICY_AUDIT_INGEST_TOKEN", "MEDIA_CONTROL_GRPC_TOKEN"} <= media_targets
+    for name in ("AUTH_POLICY_RPC_TOKEN", "AUTH_POLICY_AUDIT_INGEST_TOKEN", "MEDIA_CONTROL_GRPC_TOKEN"):
+        assert name not in services["media-control"]["environment"]
