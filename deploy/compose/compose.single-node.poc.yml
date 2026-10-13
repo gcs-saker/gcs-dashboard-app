@@ -573,7 +573,9 @@ services:
       - media-net
 
   turn-primary:
-    group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}"]
+    <<: *runtime_hardening
+    user: "65534:65534"
+    group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}", "${GCS_PKI_RUNTIME_GID:-1000}"]
     image: ${COTURN_IMAGE:-coturn/coturn@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e}
     pids_limit: 256
     mem_limit: ${TURN_MEMORY_LIMIT:-256m}
@@ -633,7 +635,9 @@ services:
       - media-net
 
   turn-secondary:
-    group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}"]
+    <<: *runtime_hardening
+    user: "65534:65534"
+    group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}", "${GCS_PKI_RUNTIME_GID:-1000}"]
     profiles: [same-host-turn-redundancy]
     image: ${COTURN_IMAGE:-coturn/coturn@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e}
     pids_limit: 256
