@@ -91,6 +91,7 @@ type operationalEndpoints struct {
 	metrics                 *Metrics
 	gateway                 GatewayReadiness
 	publishSessionReadiness PublishSessionReadiness
+	mediaMTXReadiness       StreamLister
 	now                     func() time.Time
 }
 
@@ -108,6 +109,11 @@ func (s Server) WithPublishSessionReadiness(readiness PublishSessionReadiness) S
 
 func (s Server) WithPublishSessionAuditSink(sink PublishSessionAuditSink) Server {
 	s.publishAudit = sink
+	return s
+}
+
+func (s Server) WithMediaMTXReadinessProbe(probe StreamLister) Server {
+	s.mediaMTXReadiness = probe
 	return s
 }
 

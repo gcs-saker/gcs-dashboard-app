@@ -123,6 +123,7 @@ func buildRuntime(config runtimeConfig) (httpapi.Server, runtimeResources, error
 		WithAccountPublishAuthorizer(&authorizer).
 		WithPublishSessionStore(publishSessions).
 		WithPublishSessionAuditSink(auditSink).
+		WithMediaMTXReadinessProbe(newMediaMTXClient(config, &http.Client{Timeout: 3 * time.Second})).
 		WithMediaMTXAPIIdentity(config.mediaMTXAPIUser, config.mediaMTXAPIPassword)
 	gateway, err := newGatewayRuntime(config, metrics, publishSessions)
 	if err != nil {
