@@ -34,7 +34,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-gcs_geo}
       POSTGRES_USER: ${POSTGRES_USER:-gcs_geo}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD_FILE: /run/secrets/POSTGRES_PASSWORD
     entrypoint: ["/bin/bash", "-ec"]
     command:
       - |
@@ -66,6 +66,9 @@ services:
     restart: unless-stopped
     networks:
       - control-net
+    secrets:
+      - source: postgres_password
+        target: POSTGRES_PASSWORD
 
   redis:
     image: valkey/valkey@sha256:d2e18f3410b6f616de1417f570fa55261af2898b9c5b2cfb6781ce2373ea43d1
@@ -187,7 +190,7 @@ services:
         SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
     env_file: *service_env_files
     environment:
-      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+      DATABASE_URL_FILE: /run/secrets/DATABASE_URL
       DATABASE_TLS_REQUIRED: "true"
       AUTH_ACCESS_TOKEN_EXPIRE_MINUTES: ${AUTH_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       AUTH_REFRESH_TOKEN_EXPIRE_MINUTES: ${AUTH_REFRESH_TOKEN_EXPIRE_MINUTES:-120}
@@ -243,6 +246,11 @@ services:
     secrets:
       - source: auth_jwt_secret
         target: AUTH_JWT_SECRET
+        uid: "10001"
+        gid: "10001"
+        mode: 0400
+      - source: database_url
+        target: DATABASE_URL
         uid: "10001"
         gid: "10001"
         mode: 0400
@@ -307,7 +315,6 @@ services:
       SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
       SPRING_DATASOURCE_URL: ${AUTH_POLICY_DATASOURCE_URL:-jdbc:postgresql://postgres-geo:5432/${POSTGRES_DB:-gcs_geo}?sslmode=verify-full&sslrootcert=/run/secrets/gcs-pki/ca.crt}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-gcs_geo}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
       TIME_SYNC_MODE: ${TIME_SYNC_MODE:-public}
       TIME_SYNC_SOURCE_HOST: ${TIME_SYNC_SOURCE_HOST:-pool.ntp.org}
       TIME_SYNC_SOURCE_PORT: ${TIME_SYNC_SOURCE_PORT:-123}
@@ -343,6 +350,11 @@ services:
     secrets:
       - source: auth_jwt_secret
         target: AUTH_POLICY_JWT_SECRET
+        uid: "10002"
+        gid: "10002"
+        mode: 0400
+      - source: postgres_password
+        target: SPRING_DATASOURCE_PASSWORD
         uid: "10002"
         gid: "10002"
         mode: 0400
@@ -686,3 +698,7 @@ volumes:
 secrets:
   auth_jwt_secret:
     environment: AUTH_JWT_SECRET
+  postgres_password:
+    environment: POSTGRES_PASSWORD
+  database_url:
+    environment: DATABASE_URL
