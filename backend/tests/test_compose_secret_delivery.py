@@ -73,3 +73,25 @@ def test_turn_and_mediamtx_credentials_are_scoped_files() -> None:
         "MEDIAMTX_API_PASSWORD",
         "TURN_SHARED_SECRET",
     }
+
+
+def test_auth_policy_operational_credentials_are_file_scoped() -> None:
+    document = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
+    auth_policy = document["services"]["auth-policy"]
+    targets = {item["target"] for item in auth_policy["secrets"]}
+    expected = {
+        "AUTH_POLICY_ADMIN_PASSWORD",
+        "AUTH_POLICY_OPERATOR_PASSWORD",
+        "AUTH_POLICY_SMOKE_PASSWORD",
+        "AUTH_POLICY_ADMIN_MFA_SECRET",
+        "AUTH_POLICY_ADMIN_MFA_RECOVERY_HASHES",
+        "AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS",
+        "AUTH_POLICY_SIGNUP_INVITES",
+        "AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY",
+    }
+
+    assert expected <= targets
+    assert expected.isdisjoint(auth_policy["environment"])
+    for name in expected:
+        source = next(item["source"] for item in auth_policy["secrets"] if item["target"] == name)
+        assert document["secrets"][source]["environment"] == name

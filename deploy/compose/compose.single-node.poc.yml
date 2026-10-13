@@ -294,15 +294,8 @@ services:
       AUTH_POLICY_REFRESH_COOKIE_SECURE: ${AUTH_REFRESH_COOKIE_SECURE:-true}
       AUTH_POLICY_REFRESH_COOKIE_SAMESITE: ${AUTH_REFRESH_COOKIE_SAMESITE:-lax}
       AUTH_POLICY_ALLOWED_ORIGINS: ${BACKEND_CORS_ALLOW_ORIGINS:-http://localhost:8080}
-      AUTH_POLICY_ADMIN_PASSWORD: ${AUTH_POLICY_ADMIN_PASSWORD:?Set AUTH_POLICY_ADMIN_PASSWORD}
       AUTH_POLICY_ADMIN_MFA_REQUIRED: ${AUTH_POLICY_ADMIN_MFA_REQUIRED:-false}
-      AUTH_POLICY_ADMIN_MFA_SECRET: ${AUTH_POLICY_ADMIN_MFA_SECRET:?Set AUTH_POLICY_ADMIN_MFA_SECRET}
-      AUTH_POLICY_ADMIN_MFA_RECOVERY_HASHES: ${AUTH_POLICY_ADMIN_MFA_RECOVERY_HASHES:?Set AUTH_POLICY_ADMIN_MFA_RECOVERY_HASHES}
-      AUTH_POLICY_OPERATOR_PASSWORD: ${AUTH_POLICY_OPERATOR_PASSWORD:?Set AUTH_POLICY_OPERATOR_PASSWORD}
-      AUTH_POLICY_SMOKE_PASSWORD: ${AUTH_POLICY_SMOKE_PASSWORD:?Set AUTH_POLICY_SMOKE_PASSWORD}
       AUTH_POLICY_SMOKE_GROUP_ID: ${AUTH_POLICY_SMOKE_GROUP_ID:-co-a}
-      AUTH_POLICY_SIGNUP_INVITES: ${AUTH_POLICY_SIGNUP_INVITES:-}
-      AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS: ${AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS:?Set AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS}
       AUTH_POLICY_TRACING_SAMPLING_PROBABILITY: ${AUTH_POLICY_TRACING_SAMPLING_PROBABILITY:-0.1}
       AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED: ${AUTH_POLICY_REDIS_PRINCIPAL_CACHE_ENABLED:-true}
       AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED: ${AUTH_POLICY_REDIS_REFRESH_SESSION_ENABLED:-true}
@@ -312,7 +305,6 @@ services:
       AUTH_POLICY_AUDIT_PRIVILEGED_RETENTION_DAYS: ${AUTH_POLICY_AUDIT_PRIVILEGED_RETENTION_DAYS:-730}
       AUTH_POLICY_AUDIT_ANCHOR_ENABLED: ${AUTH_POLICY_AUDIT_ANCHOR_ENABLED:-true}
       AUTH_POLICY_AUDIT_ANCHOR_DIRECTORY: /var/lib/gcs-audit-anchor
-      AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY: ${AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY:?Set AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY}
       AUTH_POLICY_AUDIT_ANCHOR_INTERVAL_MILLIS: ${AUTH_POLICY_AUDIT_ANCHOR_INTERVAL_MILLIS:-300000}
       GCS_INTERNAL_GRPC_ENABLED: "true"
       GCS_INTERNAL_GRPC_PORT: 9091
@@ -376,6 +368,46 @@ services:
         mode: 0400
       - source: audit_ingest_token
         target: AUTH_POLICY_AUDIT_INGEST_TOKEN
+        uid: "10002"
+        gid: "10002"
+        mode: 0400
+      - source: auth_policy_admin_password
+        target: AUTH_POLICY_ADMIN_PASSWORD
+        uid: "10002"
+        gid: "10002"
+        mode: 0400
+      - source: auth_policy_operator_password
+        target: AUTH_POLICY_OPERATOR_PASSWORD
+        uid: "10002"
+        gid: "10002"
+        mode: 0400
+      - source: auth_policy_smoke_password
+        target: AUTH_POLICY_SMOKE_PASSWORD
+        uid: "10002"
+        gid: "10002"
+        mode: 0400
+      - source: auth_policy_admin_mfa_secret
+        target: AUTH_POLICY_ADMIN_MFA_SECRET
+        uid: "10002"
+        gid: "10002"
+        mode: 0400
+      - source: auth_policy_admin_mfa_recovery_hashes
+        target: AUTH_POLICY_ADMIN_MFA_RECOVERY_HASHES
+        uid: "10002"
+        gid: "10002"
+        mode: 0400
+      - source: auth_policy_device_bootstrap_tokens
+        target: AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS
+        uid: "10002"
+        gid: "10002"
+        mode: 0400
+      - source: auth_policy_signup_invites
+        target: AUTH_POLICY_SIGNUP_INVITES
+        uid: "10002"
+        gid: "10002"
+        mode: 0400
+      - source: auth_policy_audit_anchor_hmac_key
+        target: AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY
         uid: "10002"
         gid: "10002"
         mode: 0400
@@ -769,6 +801,22 @@ secrets:
     environment: AUTH_POLICY_AUDIT_INGEST_TOKEN
   media_control_grpc_token:
     environment: MEDIA_CONTROL_GRPC_TOKEN
+  auth_policy_admin_password:
+    environment: AUTH_POLICY_ADMIN_PASSWORD
+  auth_policy_operator_password:
+    environment: AUTH_POLICY_OPERATOR_PASSWORD
+  auth_policy_smoke_password:
+    environment: AUTH_POLICY_SMOKE_PASSWORD
+  auth_policy_admin_mfa_secret:
+    environment: AUTH_POLICY_ADMIN_MFA_SECRET
+  auth_policy_admin_mfa_recovery_hashes:
+    environment: AUTH_POLICY_ADMIN_MFA_RECOVERY_HASHES
+  auth_policy_device_bootstrap_tokens:
+    environment: AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS
+  auth_policy_signup_invites:
+    environment: AUTH_POLICY_SIGNUP_INVITES
+  auth_policy_audit_anchor_hmac_key:
+    environment: AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY
   mediamtx_api_password:
     environment: MEDIAMTX_API_PASSWORD
   turn_shared_secret:
