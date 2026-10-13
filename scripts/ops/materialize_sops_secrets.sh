@@ -14,4 +14,5 @@ sops --decrypt --output-type json "${encrypted_bundle}" \
   | python3 "${ROOT}/scripts/ops/materialize_secret_bundle.py" \
       --allowlist "${ROOT}/deploy/runtime-credentials/server01-required-secret-names.txt" \
       --optional-allowlist "${ROOT}/deploy/runtime-credentials/server01-optional-secret-names.txt" \
+      --runtime-gid "${GCS_SECRET_RUNTIME_GID:-10050}" \
       --output-directory "${output_directory}"

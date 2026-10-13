@@ -20,6 +20,7 @@ x-logging-defaults: &logging_defaults
 
 services:
   postgres-geo:
+    group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}"]
     image: postgis/postgis@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5
     pids_limit: 256
     mem_limit: ${POSTGRES_MEMORY_LIMIT:-1g}
@@ -65,6 +66,9 @@ services:
         target: POSTGRES_PASSWORD
 
   redis:
+    <<: *runtime_hardening
+    user: "999:1000"
+    group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}"]
     image: valkey/valkey@sha256:d2e18f3410b6f616de1417f570fa55261af2898b9c5b2cfb6781ce2373ea43d1
     pids_limit: 128
     mem_limit: ${REDIS_MEMORY_LIMIT:-512m}
@@ -180,6 +184,7 @@ services:
 
   backend:
     <<: *runtime_hardening
+    group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}"]
     tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=64m"]
     mem_limit: ${BACKEND_MEMORY_LIMIT:-768m}
     cpus: ${BACKEND_CPU_LIMIT:-1.5}
@@ -265,6 +270,7 @@ services:
 
   auth-policy:
     <<: *runtime_hardening
+    group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}"]
     tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=128m"]
     mem_limit: ${AUTH_POLICY_MEMORY_LIMIT:-1g}
     cpus: ${AUTH_POLICY_CPU_LIMIT:-2.0}
@@ -410,6 +416,7 @@ services:
 
   media-control:
     <<: *runtime_hardening
+    group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}"]
     tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=64m"]
     mem_limit: ${MEDIA_CONTROL_MEMORY_LIMIT:-768m}
     cpus: ${MEDIA_CONTROL_CPU_LIMIT:-2.0}
@@ -532,6 +539,8 @@ services:
       - media-net
 
   mediamtx:
+    <<: *runtime_hardening
+    group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}"]
     image: ${MEDIAMTX_IMAGE:-bluenviron/mediamtx@sha256:19fddade8d6110a3d718ac0045681fbeba344ae563a066205fe5929a87f7582f}
     pids_limit: 512
     mem_limit: ${MEDIAMTX_MEMORY_LIMIT:-1g}
@@ -564,6 +573,7 @@ services:
       - media-net
 
   turn-primary:
+    group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}"]
     image: ${COTURN_IMAGE:-coturn/coturn@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e}
     pids_limit: 256
     mem_limit: ${TURN_MEMORY_LIMIT:-256m}
@@ -623,6 +633,7 @@ services:
       - media-net
 
   turn-secondary:
+    group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}"]
     profiles: [same-host-turn-redundancy]
     image: ${COTURN_IMAGE:-coturn/coturn@sha256:aa68aab64a3b929d57fc2924c98ea447bf996cf8dade2508e7b71eaf23f1f14e}
     pids_limit: 256

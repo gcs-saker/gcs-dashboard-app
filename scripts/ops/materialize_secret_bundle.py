@@ -54,10 +54,12 @@ def validate_output_directory(path: Path) -> None:
         raise SecretMaterializationError("output directory must be owner-only")
 
 
-def write_secret(directory: Path, name: str, value: str) -> None:
+def write_secret(directory: Path, name: str, value: str, runtime_gid: int | None) -> None:
     descriptor, temporary = tempfile.mkstemp(prefix=f".{name}.", dir=directory)
     try:
-        os.fchmod(descriptor, 0o600)
+        if runtime_gid is not None:
+            os.fchown(descriptor, -1, runtime_gid)
+        os.fchmod(descriptor, 0o440 if runtime_gid is not None else 0o600)
         with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
             stream.write(value)
         os.replace(temporary, directory / name)
@@ -71,13 +73,14 @@ def main() -> int:
     parser.add_argument("--allowlist", type=Path, required=True)
     parser.add_argument("--optional-allowlist", type=Path, required=True)
     parser.add_argument("--output-directory", type=Path, required=True)
+    parser.add_argument("--runtime-gid", type=int)
     args = parser.parse_args()
     try:
         validate_output_directory(args.output_directory)
         optional = load_names(args.optional_allowlist)
         secrets = validate_secrets(load_bundle(sys.stdin), load_names(args.allowlist), optional)
         for name, value in secrets.items():
-            write_secret(args.output_directory, name, value)
+            write_secret(args.output_directory, name, value, args.runtime_gid)
         for name in optional - set(secrets):
             (args.output_directory / name).unlink(missing_ok=True)
     except (OSError, ValueError, json.JSONDecodeError, SecretMaterializationError) as exc:

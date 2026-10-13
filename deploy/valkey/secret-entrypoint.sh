@@ -22,7 +22,6 @@ esac
 escaped="$(printf '%s' "${password}" | sed 's/\\/\\\\/g; s/"/\\"/g')"
 umask 077
 printf 'requirepass "%s"\n' "${escaped}" > "${config_file}"
-chown valkey:valkey "${config_file}"
 chmod 0400 "${config_file}"
 
 exec /usr/local/bin/docker-entrypoint.sh valkey-server "${config_file}" "$@"
