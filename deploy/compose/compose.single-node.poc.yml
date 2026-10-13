@@ -76,10 +76,8 @@ services:
     mem_limit: ${REDIS_MEMORY_LIMIT:-512m}
     cpus: ${REDIS_CPU_LIMIT:-0.75}
     logging: *logging_defaults
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    entrypoint: ["/usr/local/bin/gcs-valkey-secret-entrypoint"]
     command:
-      - valkey-server
       - --appendonly
       - "yes"
       - --maxmemory
@@ -90,8 +88,6 @@ services:
       - "100"
       - --auto-aof-rewrite-min-size
       - ${REDIS_AOF_REWRITE_MIN_SIZE:-64mb}
-      - --requirepass
-      - ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
       - --port
       - "0"
       - --tls-port
@@ -107,6 +103,10 @@ services:
     volumes:
       - redis-data:/data
       - type: bind
+        source: ../valkey/secret-entrypoint.sh
+        target: /usr/local/bin/gcs-valkey-secret-entrypoint
+        read_only: true
+      - type: bind
         source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/ca.crt
         target: /run/secrets/gcs-pki/ca.crt
         read_only: true
@@ -118,9 +118,16 @@ services:
         source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/redis.key
         target: /run/secrets/gcs-pki/redis.key
         read_only: true
+    secrets:
+      - source: redis_password
+        target: REDIS_PASSWORD
+        uid: "999"
+        gid: "1000"
+        mode: 0400
+    tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=16m"]
     healthcheck:
       <<: *health_defaults
-      test: ["CMD-SHELL", "valkey-cli --tls --cacert /run/secrets/gcs-pki/ca.crt -h redis -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      test: ["CMD-SHELL", "VALKEYCLI_AUTH=$$(cat /run/secrets/REDIS_PASSWORD) valkey-cli --tls --cacert /run/secrets/gcs-pki/ca.crt -h redis ping | grep PONG"]
     restart: unless-stopped
     networks:
       - control-net
@@ -321,7 +328,6 @@ services:
       TIME_SYNC_DRIFT_WARN_MS: ${TIME_SYNC_DRIFT_WARN_MS:-1000}
       SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST:-redis}
       SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT:-6379}
-      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
       SPRING_DATA_REDIS_SSL_ENABLED: "true"
       SPRING_DATA_REDIS_SSL_BUNDLE: gcsredis
       SPRING_SSL_BUNDLE_PEM_GCSREDIS_TRUSTSTORE_CERTIFICATE: /run/secrets/gcs-pki/ca.crt
@@ -355,6 +361,11 @@ services:
         mode: 0400
       - source: postgres_password
         target: SPRING_DATASOURCE_PASSWORD
+        uid: "10002"
+        gid: "10002"
+        mode: 0400
+      - source: redis_password
+        target: SPRING_DATA_REDIS_PASSWORD
         uid: "10002"
         gid: "10002"
         mode: 0400
@@ -421,7 +432,6 @@ services:
       MEDIA_CONTROL_TRACE_EXPORTER: ${MEDIA_CONTROL_TRACE_EXPORTER:-none}
       MEDIA_CONTROL_OTEL_SERVICE_NAME: ${MEDIA_CONTROL_OTEL_SERVICE_NAME:-gcs-saker-media-control}
       MEDIA_CONTROL_REDIS_ADDR: ${MEDIA_CONTROL_REDIS_ADDR:-redis:6379}
-      MEDIA_CONTROL_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
       MEDIA_CONTROL_REDIS_CA_FILE: /run/secrets/gcs-pki/ca.crt
       MEDIA_CONTROL_REDIS_SERVER_NAME: redis
       MQTT_GATEWAY_URL: ${MQTT_GATEWAY_URL:-ssl://mqtt:8883}
@@ -444,6 +454,12 @@ services:
         source: ${INTERNAL_PKI_DIR:?Set INTERNAL_PKI_DIR}/media-control.key
         target: /run/secrets/gcs-pki/media-control.key
         read_only: true
+    secrets:
+      - source: redis_password
+        target: MEDIA_CONTROL_REDIS_PASSWORD
+        uid: "10001"
+        gid: "10001"
+        mode: 0400
     healthcheck:
       <<: *health_defaults
       test: ["CMD", "/usr/local/bin/media-control", "healthcheck"]
@@ -702,3 +718,5 @@ secrets:
     environment: POSTGRES_PASSWORD
   database_url:
     environment: DATABASE_URL
+  redis_password:
+    environment: REDIS_PASSWORD

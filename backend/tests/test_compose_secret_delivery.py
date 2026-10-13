@@ -32,3 +32,17 @@ def test_postgres_credentials_are_delivered_as_service_scoped_files() -> None:
     assert "DATABASE_URL" not in services["backend"]["environment"]
     assert "SPRING_DATASOURCE_PASSWORD" not in services["auth-policy"]["environment"]
     assert {item["target"] for item in services["auth-policy"]["secrets"]} >= {"SPRING_DATASOURCE_PASSWORD"}
+
+
+def test_redis_password_is_file_scoped_for_server_and_clients() -> None:
+    document = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
+    services = document["services"]
+
+    assert document["secrets"]["redis_password"] == {"environment": "REDIS_PASSWORD"}
+    assert "REDIS_PASSWORD" not in services["redis"].get("environment", {})
+    assert "SPRING_DATA_REDIS_PASSWORD" not in services["auth-policy"]["environment"]
+    assert "MEDIA_CONTROL_REDIS_PASSWORD" not in services["media-control"]["environment"]
+    assert {item["target"] for item in services["redis"]["secrets"]} == {"REDIS_PASSWORD"}
+    assert {item["target"] for item in services["auth-policy"]["secrets"]} >= {"SPRING_DATA_REDIS_PASSWORD"}
+    assert {item["target"] for item in services["media-control"]["secrets"]} >= {"MEDIA_CONTROL_REDIS_PASSWORD"}
+    assert services["redis"]["entrypoint"] == ["/usr/local/bin/gcs-valkey-secret-entrypoint"]

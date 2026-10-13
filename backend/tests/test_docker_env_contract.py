@@ -204,7 +204,6 @@ def test_single_node_uses_valkey_as_default_cache_runtime() -> None:
 
     assert redis["image"] == "valkey/valkey@sha256:d2e18f3410b6f616de1417f570fa55261af2898b9c5b2cfb6781ce2373ea43d1"
     assert redis["command"] == [
-        "valkey-server",
         "--appendonly",
         "yes",
         "--maxmemory",
@@ -215,8 +214,6 @@ def test_single_node_uses_valkey_as_default_cache_runtime() -> None:
         "100",
         "--auto-aof-rewrite-min-size",
         "${REDIS_AOF_REWRITE_MIN_SIZE:-64mb}",
-        "--requirepass",
-        "${REDIS_PASSWORD:?Set REDIS_PASSWORD}",
         "--port",
         "0",
         "--tls-port",
@@ -232,7 +229,7 @@ def test_single_node_uses_valkey_as_default_cache_runtime() -> None:
     ]
     assert redis["healthcheck"]["test"] == [
         "CMD-SHELL",
-        'valkey-cli --tls --cacert /run/secrets/gcs-pki/ca.crt -h redis -a "$${REDIS_PASSWORD}" ping | grep PONG',
+        "VALKEYCLI_AUTH=$$(cat /run/secrets/REDIS_PASSWORD) valkey-cli --tls --cacert /run/secrets/gcs-pki/ca.crt -h redis ping | grep PONG",
     ]
 
 
