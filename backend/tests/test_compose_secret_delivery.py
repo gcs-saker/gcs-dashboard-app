@@ -11,7 +11,7 @@ def test_shared_jwt_secret_is_file_scoped_and_absent_from_container_environment(
     document = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
     services = document["services"]
 
-    assert document["secrets"]["auth_jwt_secret"] == {"environment": "AUTH_JWT_SECRET"}
+    assert document["secrets"]["auth_jwt_secret"]["file"].endswith("/AUTH_JWT_SECRET")
     assert "AUTH_JWT_SECRET" not in services["backend"]["environment"]
     assert "AUTH_POLICY_JWT_SECRET" not in services["auth-policy"]["environment"]
     assert services["auth-policy"]["environment"]["SPRING_CONFIG_IMPORT"] == "configtree:/run/secrets/"
@@ -25,8 +25,8 @@ def test_postgres_credentials_are_delivered_as_service_scoped_files() -> None:
     document = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
     services = document["services"]
 
-    assert document["secrets"]["postgres_password"] == {"environment": "POSTGRES_PASSWORD"}
-    assert document["secrets"]["database_url"] == {"environment": "DATABASE_URL"}
+    assert document["secrets"]["postgres_password"]["file"].endswith("/POSTGRES_PASSWORD")
+    assert document["secrets"]["database_url"]["file"].endswith("/DATABASE_URL")
     assert services["postgres-geo"]["environment"]["POSTGRES_PASSWORD_FILE"] == "/run/secrets/POSTGRES_PASSWORD"
     assert "POSTGRES_PASSWORD" not in services["postgres-geo"]["environment"]
     assert services["backend"]["environment"]["DATABASE_URL_FILE"] == "/run/secrets/DATABASE_URL"
@@ -39,7 +39,7 @@ def test_redis_password_is_file_scoped_for_server_and_clients() -> None:
     document = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
     services = document["services"]
 
-    assert document["secrets"]["redis_password"] == {"environment": "REDIS_PASSWORD"}
+    assert document["secrets"]["redis_password"]["file"].endswith("/REDIS_PASSWORD")
     assert "REDIS_PASSWORD" not in services["redis"].get("environment", {})
     assert "SPRING_DATA_REDIS_PASSWORD" not in services["auth-policy"]["environment"]
     assert "MEDIA_CONTROL_REDIS_PASSWORD" not in services["media-control"]["environment"]
@@ -95,7 +95,7 @@ def test_auth_policy_operational_credentials_are_file_scoped() -> None:
     assert expected.isdisjoint(auth_policy["environment"])
     for name in expected:
         source = next(item["source"] for item in auth_policy["secrets"] if item["target"] == name)
-        assert document["secrets"][source]["environment"] == name
+        assert document["secrets"][source]["file"].endswith(f"/{name}")
 
 
 def test_production_services_do_not_receive_the_shared_environment_file() -> None:
@@ -123,7 +123,7 @@ def test_static_turn_password_requires_explicit_file_scoped_override() -> None:
     override = yaml.safe_load(STATIC_TURN_OVERRIDE.read_text(encoding="utf-8"))
 
     assert "turn_static_password" not in base["secrets"]
-    assert override["secrets"]["turn_static_password"] == {"environment": "TURN_PASSWORD"}
+    assert override["secrets"]["turn_static_password"]["file"].endswith("/TURN_PASSWORD")
     assert override["services"]["media-control"]["environment"]["TURN_CREDENTIAL_MODE"] == "static"
     assert {item["target"] for item in override["services"]["media-control"]["secrets"]} == {"TURN_PASSWORD"}
     assert {item["target"] for item in override["services"]["mediamtx"]["secrets"]} == {"TURN_PASSWORD"}

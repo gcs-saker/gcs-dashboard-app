@@ -775,36 +775,36 @@ volumes:
 
 secrets:
   auth_jwt_secret:
-    environment: AUTH_JWT_SECRET
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/AUTH_JWT_SECRET
   postgres_password:
-    environment: POSTGRES_PASSWORD
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/POSTGRES_PASSWORD
   database_url:
-    environment: DATABASE_URL
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/DATABASE_URL
   redis_password:
-    environment: REDIS_PASSWORD
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/REDIS_PASSWORD
   auth_policy_rpc_token:
-    environment: AUTH_POLICY_RPC_TOKEN
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/AUTH_POLICY_RPC_TOKEN
   audit_ingest_token:
-    environment: AUTH_POLICY_AUDIT_INGEST_TOKEN
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/AUTH_POLICY_AUDIT_INGEST_TOKEN
   media_control_grpc_token:
-    environment: MEDIA_CONTROL_GRPC_TOKEN
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/MEDIA_CONTROL_GRPC_TOKEN
   auth_policy_admin_password:
-    environment: AUTH_POLICY_ADMIN_PASSWORD
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/AUTH_POLICY_ADMIN_PASSWORD
   auth_policy_operator_password:
-    environment: AUTH_POLICY_OPERATOR_PASSWORD
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/AUTH_POLICY_OPERATOR_PASSWORD
   auth_policy_smoke_password:
-    environment: AUTH_POLICY_SMOKE_PASSWORD
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/AUTH_POLICY_SMOKE_PASSWORD
   auth_policy_admin_mfa_secret:
-    environment: AUTH_POLICY_ADMIN_MFA_SECRET
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/AUTH_POLICY_ADMIN_MFA_SECRET
   auth_policy_admin_mfa_recovery_hashes:
-    environment: AUTH_POLICY_ADMIN_MFA_RECOVERY_HASHES
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/AUTH_POLICY_ADMIN_MFA_RECOVERY_HASHES
   auth_policy_device_bootstrap_tokens:
-    environment: AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS
   auth_policy_signup_invites:
-    environment: AUTH_POLICY_SIGNUP_INVITES
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/AUTH_POLICY_SIGNUP_INVITES
   auth_policy_audit_anchor_hmac_key:
-    environment: AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY
   mediamtx_api_password:
-    environment: MEDIAMTX_API_PASSWORD
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/MEDIAMTX_API_PASSWORD
   turn_shared_secret:
-    environment: TURN_SHARED_SECRET
+    file: ${GCS_RUNTIME_SECRET_DIR:-/run/gcs-saker-secrets}/TURN_SHARED_SECRET
