@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "server01-docker-forwarding-policy-v1",
+  "server": "Server-01",
+  "dockerPublicBindings": {
+    "mediamtx": {
+      "tcp": [8189],
+      "udp": [8189],
+      "udpRanges": []
+    },
+    "turn-primary": {
+      "tcp": [3478, 5349],
+      "udp": [3478],
+      "udpRanges": [[49160, 49200]]
+    },
+    "turn-secondary": {
+      "tcp": [3478, 5349],
+      "udp": [3478],
+      "udpRanges": [[49160, 49200]]
+    }
+  },
+  "hostIngress": {
+    "tcp": [443, 55121],
+    "udp": []
+  },
+  "firewall": {
+    "requireEstablishedReturn": true,
+    "requireTerminalDeny": true,
+    "forbidUnconditionalAccept": true,
+    "forbidReturnBeforeDeny": true
+  }
+}

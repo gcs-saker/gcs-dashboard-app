@@ -69,3 +69,35 @@ def test_docker_user_requires_stateful_return_and_default_deny() -> None:
 
     assert {result.status for result in module.check_docker_user_rules(passing)} == {"PASS"}
     assert any(result.status == "FAIL" for result in module.check_docker_user_rules(missing_deny))
+
+
+def test_policy_is_external_and_targets_server_01() -> None:
+    module = load_module()
+    policy = module.load_policy()
+
+    assert policy["server"] == "Server-01"
+    assert policy["hostIngress"]["tcp"] == [443, 55121]
+    assert policy["dockerPublicBindings"]["mediamtx"]["udp"] == [8189]
+
+
+def test_return_or_unconditional_accept_cannot_bypass_default_deny() -> None:
+    module = load_module()
+    unconditional = """
+    -N DOCKER-USER
+    -A DOCKER-USER -j ACCEPT
+    -A DOCKER-USER -j DROP
+    """
+    early_return = """
+    -N DOCKER-USER
+    -A DOCKER-USER -j RETURN
+    -A DOCKER-USER -j DROP
+    """
+
+    assert any(
+        result.name == "firewall.rule_order" and result.status == "FAIL"
+        for result in module.check_docker_user_rules(unconditional)
+    )
+    assert any(
+        result.name == "firewall.rule_order" and result.status == "FAIL"
+        for result in module.check_docker_user_rules(early_return)
+    )

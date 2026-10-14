@@ -8,13 +8,12 @@ import ipaddress
 import json
 import subprocess
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
 
 COMMAND_TIMEOUT_SECONDS = 5
 SERVER_NAME = "Server-01"
-PUBLIC_MEDIA_PORTS = frozenset({("tcp", 8189), ("udp", 8189)})
-PUBLIC_TURN_CONTROL_PORTS = frozenset({("tcp", 3478), ("udp", 3478), ("tcp", 5349)})
-PUBLIC_TURN_RELAY_RANGE = range(49160, 49201)
+DEFAULT_POLICY = Path(__file__).resolve().parents[2] / "deploy/firewall/server01-docker-forwarding-policy.json"
 
 
 @dataclass(frozen=True)
@@ -60,29 +59,40 @@ def is_loopback(host_ip: str) -> bool:
         return False
 
 
-def service_name(container_name: str) -> str:
-    for candidate in ("turn-primary", "turn-secondary", "mediamtx"):
+def load_policy(path: Path = DEFAULT_POLICY) -> dict[str, Any]:
+    policy = json.loads(path.read_text(encoding="utf-8"))
+    if policy.get("schemaVersion") != "server01-docker-forwarding-policy-v1":
+        raise ValueError("unsupported firewall policy schema")
+    if policy.get("server") != SERVER_NAME:
+        raise ValueError("firewall policy targets the wrong server")
+    return policy
+
+
+def service_name(container_name: str, candidates: set[str]) -> str:
+    for candidate in sorted(candidates, key=len, reverse=True):
         if candidate in container_name:
             return candidate
     return container_name
 
 
-def public_binding_allowed(binding: PortBinding) -> bool:
+def public_binding_allowed(binding: PortBinding, policy: dict[str, Any]) -> bool:
     if is_loopback(binding.host_ip):
         return True
-    service = service_name(binding.container_name)
-    endpoint = (binding.protocol, binding.container_port)
-    if service == "mediamtx":
-        return endpoint in PUBLIC_MEDIA_PORTS
-    if service.startswith("turn-"):
-        return endpoint in PUBLIC_TURN_CONTROL_PORTS or (
-            binding.protocol == "udp" and binding.container_port in PUBLIC_TURN_RELAY_RANGE
-        )
-    return False
+    public_bindings = policy["dockerPublicBindings"]
+    service = service_name(binding.container_name, set(public_bindings))
+    service_policy = public_bindings.get(service)
+    if service_policy is None:
+        return False
+    if binding.container_port in service_policy.get(binding.protocol, []):
+        return True
+    return binding.protocol == "udp" and any(
+        start <= binding.container_port <= end for start, end in service_policy.get("udpRanges", [])
+    )
 
 
-def check_public_bindings(bindings: list[PortBinding]) -> CheckResult:
-    denied = [binding for binding in bindings if not public_binding_allowed(binding)]
+def check_public_bindings(bindings: list[PortBinding], policy: dict[str, Any] | None = None) -> CheckResult:
+    active_policy = policy or load_policy()
+    denied = [binding for binding in bindings if not public_binding_allowed(binding, active_policy)]
     if denied:
         summary = ", ".join(
             f"{item.container_name}:{item.host_ip}:{item.host_port}->{item.container_port}/{item.protocol}"
@@ -92,24 +102,43 @@ def check_public_bindings(bindings: list[PortBinding]) -> CheckResult:
     return CheckResult("docker.public_bindings", "PASS", f"validated {len(bindings)} bindings")
 
 
-def check_docker_user_rules(rules: str) -> list[CheckResult]:
+def check_docker_user_rules(rules: str, policy: dict[str, Any] | None = None) -> list[CheckResult]:
+    firewall_policy = (policy or load_policy())["firewall"]
     lines = [line.strip() for line in rules.splitlines() if line.strip()]
     if not any(line == "-N DOCKER-USER" for line in lines):
         return [CheckResult("firewall.docker_user_chain", "FAIL", "DOCKER-USER chain is missing")]
     established = any("--ctstate RELATED,ESTABLISHED" in line and "-j ACCEPT" in line for line in lines)
-    terminal_deny = any(
-        line.startswith("-A DOCKER-USER") and ("-j DROP" in line or "-j REJECT" in line) for line in lines
+    chain_rules = [line for line in lines if line.startswith("-A DOCKER-USER")]
+    deny_indexes = [index for index, line in enumerate(chain_rules) if "-j DROP" in line or "-j REJECT" in line]
+    terminal_deny = bool(deny_indexes)
+    first_deny = deny_indexes[0] if deny_indexes else len(chain_rules)
+    unconditional_accept = any(line == "-A DOCKER-USER -j ACCEPT" for line in chain_rules)
+    return_before_deny = any("-j RETURN" in line for line in chain_rules[:first_deny])
+    accept_after_deny = any("-j ACCEPT" in line for line in chain_rules[first_deny + 1 :])
+    ordered = not (
+        firewall_policy["forbidUnconditionalAccept"]
+        and unconditional_accept
+        or firewall_policy["forbidReturnBeforeDeny"]
+        and return_before_deny
+        or accept_after_deny
     )
+    established_ok = established or not firewall_policy["requireEstablishedReturn"]
+    deny_ok = terminal_deny or not firewall_policy["requireTerminalDeny"]
     return [
         CheckResult(
             "firewall.established_return",
-            "PASS" if established else "FAIL",
-            "RELATED,ESTABLISHED traffic is accepted" if established else "stateful return rule is missing",
+            "PASS" if established_ok else "FAIL",
+            "RELATED,ESTABLISHED traffic is accepted" if established_ok else "stateful return rule is missing",
         ),
         CheckResult(
             "firewall.default_deny",
-            "PASS" if terminal_deny else "FAIL",
-            "terminal deny rule is present" if terminal_deny else "terminal DROP/REJECT is missing",
+            "PASS" if deny_ok else "FAIL",
+            "terminal deny rule is present" if deny_ok else "terminal DROP/REJECT is missing",
+        ),
+        CheckResult(
+            "firewall.rule_order",
+            "PASS" if ordered else "FAIL",
+            "allow rules precede terminal deny" if ordered else "ACCEPT/RETURN bypasses terminal deny",
         ),
     ]
 
@@ -134,14 +163,14 @@ def inspect_running_containers() -> list[dict[str, Any]]:
     return json.loads(run_command(["docker", "inspect", *ids]))
 
 
-def collect_live_results() -> list[CheckResult]:
+def collect_live_results(policy: dict[str, Any]) -> list[CheckResult]:
     results: list[CheckResult] = []
     try:
-        results.append(check_public_bindings(parse_bindings(inspect_running_containers())))
+        results.append(check_public_bindings(parse_bindings(inspect_running_containers()), policy))
     except (OSError, RuntimeError, subprocess.TimeoutExpired, ValueError, json.JSONDecodeError) as error:
         results.append(CheckResult("docker.public_bindings", "BLOCKED", type(error).__name__))
     try:
-        results.extend(check_docker_user_rules(run_command(["iptables", "-S", "DOCKER-USER"])))
+        results.extend(check_docker_user_rules(run_command(["iptables", "-S", "DOCKER-USER"]), policy))
     except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
         results.append(CheckResult("firewall.docker_user_chain", "BLOCKED", type(error).__name__))
     return results
@@ -158,6 +187,7 @@ def overall_status(results: list[CheckResult]) -> str:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="Print the stable read-only contract")
+    parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY)
     return parser
 
 
@@ -166,7 +196,12 @@ def main() -> int:
     if args.check:
         print("Server-01 firewall drift check contract passed")
         return 0
-    results = collect_live_results()
+    try:
+        policy = load_policy(args.policy)
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        results = [CheckResult("policy.load", "FAIL", type(error).__name__)]
+    else:
+        results = collect_live_results(policy)
     payload = {
         "schemaVersion": "server01-firewall-drift-v1",
         "server": SERVER_NAME,
