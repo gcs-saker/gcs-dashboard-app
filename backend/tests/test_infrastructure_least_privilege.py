@@ -50,3 +50,17 @@ def test_turn_services_run_non_root_without_linux_capabilities() -> None:
         assert service["security_opt"] == ["no-new-privileges:true"]
         assert service["group_add"] == ["${GCS_SECRET_RUNTIME_GID:-10050}", "${GCS_PKI_RUNTIME_GID:-1000}"]
         assert service["tmpfs"] == ["/tmp:rw,noexec,nosuid,nodev,size=16m"]
+
+
+def test_mqtt_runs_non_root_with_only_owned_write_paths() -> None:
+    mqtt = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"]["mqtt"]
+
+    assert mqtt["user"] == "1883:1883"
+    assert mqtt["read_only"] is True
+    assert mqtt["cap_drop"] == ["ALL"]
+    assert mqtt["security_opt"] == ["no-new-privileges:true"]
+    assert mqtt["group_add"] == ["${GCS_PKI_RUNTIME_GID:-1000}"]
+    assert mqtt["tmpfs"] == [
+        "/tmp:rw,noexec,nosuid,nodev,size=16m",
+        "/mosquitto/log:rw,noexec,nosuid,nodev,size=16m,uid=1883,gid=1883,mode=0750",
+    ]
