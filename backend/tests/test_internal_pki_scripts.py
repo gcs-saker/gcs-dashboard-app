@@ -21,6 +21,10 @@ def test_internal_pki_generation_is_private_and_bounded() -> None:
     assert "default_days=90" in source
     assert "default_crl_days=30" in source
     assert "chmod 600" in source
+    assert 'runtime_gid="${GCS_PKI_RUNTIME_GID:-1000}"' in source
+    assert 'chgrp "${runtime_gid}"' in source
+    assert 'chmod 640 "${output_real}/${key}"' in source
+    assert 'chmod 644 "${output_real}"/*.crt "${output_real}/ca.crl"' in source
     assert "serverAuth" in source and "clientAuth" in source
     assert "serverAuth,clientAuth" in source
     assert "issue_identity media-control media-control serverClientAuth" in source
@@ -39,7 +43,9 @@ def test_internal_pki_check_fails_before_expiry() -> None:
     assert "openssl crl" in source and "-nextupdate" in source
     assert "-CRLfile" in source and "-crl_check" in source
     assert "PKI_EXPIRY_WARN_SECONDS:-1209600" in source
-    assert '"600"' in source and '"400"' in source
+    assert 'runtime_gid="${GCS_PKI_RUNTIME_GID:-1000}"' in source
+    assert "600|400" in source and "640|440" in source
+    assert '"${group_id}" == "${runtime_gid}"' in source
 
 
 def test_device_issuance_and_revocation_are_bounded_to_private_pki() -> None:
