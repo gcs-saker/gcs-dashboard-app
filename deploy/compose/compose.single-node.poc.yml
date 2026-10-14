@@ -20,7 +20,9 @@ x-logging-defaults: &logging_defaults
 
 services:
   postgres-geo:
-    group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}"]
+    <<: *runtime_hardening
+    user: "999:999"
+    group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}", "${GCS_PKI_RUNTIME_GID:-1000}"]
     image: postgis/postgis@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5
     pids_limit: 256
     mem_limit: ${POSTGRES_MEMORY_LIMIT:-1g}
@@ -33,9 +35,9 @@ services:
     entrypoint: ["/bin/bash", "-ec"]
     command:
       - |
-        install -d -o postgres -g postgres -m 700 /var/lib/postgresql/tls
-        install -o postgres -g postgres -m 600 /run/secrets/gcs-pki/postgres.key /var/lib/postgresql/tls/server.key
-        install -o postgres -g postgres -m 644 /run/secrets/gcs-pki/postgres.crt /var/lib/postgresql/tls/server.crt
+        install -d -m 700 /var/lib/postgresql/tls
+        install -m 600 /run/secrets/gcs-pki/postgres.key /var/lib/postgresql/tls/server.key
+        install -m 644 /run/secrets/gcs-pki/postgres.crt /var/lib/postgresql/tls/server.crt
         exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/tls/server.crt -c ssl_key_file=/var/lib/postgresql/tls/server.key -c hba_file=/etc/postgresql/pg_hba.tls.conf
     volumes:
       - postgres-geo-data:/var/lib/postgresql/data
@@ -64,6 +66,10 @@ services:
     secrets:
       - source: postgres_password
         target: POSTGRES_PASSWORD
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m,mode=1777
+      - /var/run/postgresql:rw,noexec,nosuid,nodev,size=16m,uid=999,gid=999,mode=3775
+      - /var/lib/postgresql/tls:rw,noexec,nosuid,nodev,size=16m,uid=999,gid=999,mode=0700
 
   redis:
     <<: *runtime_hardening

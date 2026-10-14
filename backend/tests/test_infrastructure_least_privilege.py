@@ -35,8 +35,28 @@ def test_secret_consumers_receive_only_the_runtime_reader_group() -> None:
         "turn-secondary",
     }
 
-    for name in consumers - {"turn-primary", "turn-secondary"}:
+    for name in consumers - {"postgres-geo", "turn-primary", "turn-secondary"}:
         assert services[name]["group_add"] == ["${GCS_SECRET_RUNTIME_GID:-10050}"]
+
+
+def test_postgres_runs_non_root_without_linux_capabilities() -> None:
+    postgres = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"]["postgres-geo"]
+    startup_command = postgres["command"][0]
+
+    assert postgres["user"] == "999:999"
+    assert postgres["read_only"] is True
+    assert postgres["cap_drop"] == ["ALL"]
+    assert "cap_add" not in postgres
+    assert postgres["security_opt"] == ["no-new-privileges:true"]
+    assert postgres["group_add"] == ["${GCS_SECRET_RUNTIME_GID:-10050}", "${GCS_PKI_RUNTIME_GID:-1000}"]
+    assert "chown" not in startup_command
+    assert "-o postgres" not in startup_command
+    assert "-g postgres" not in startup_command
+    assert postgres["tmpfs"] == [
+        "/tmp:rw,noexec,nosuid,nodev,size=32m,mode=1777",
+        "/var/run/postgresql:rw,noexec,nosuid,nodev,size=16m,uid=999,gid=999,mode=3775",
+        "/var/lib/postgresql/tls:rw,noexec,nosuid,nodev,size=16m,uid=999,gid=999,mode=0700",
+    ]
 
 
 def test_turn_services_run_non_root_without_linux_capabilities() -> None:
