@@ -50,7 +50,7 @@ def test_m7_runtime_smoke_checks_active_cutover_only() -> None:
         "http://auth-policy:8080/healthz",
         "http://media-control:8081/healthz",
         "http://media-control:8081/api/v1/streams/ice-servers",
-        "http://mediamtx:9997/v3/config/global/get",
+        "http://media-control:8081/readyz",
         "Verified active cutover",
     ]:
         assert active_probe in script
@@ -58,7 +58,7 @@ def test_m7_runtime_smoke_checks_active_cutover_only() -> None:
     for future_or_legacy_probe in [
         "/api/control/",
         "/api/v1/ai/mock/detections",
-        "/metrics",
+        "http://media-control:8081/metrics",
         "/ws/",
         "verify edge/backend/auth",
     ]:

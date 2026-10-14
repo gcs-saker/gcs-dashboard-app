@@ -15,6 +15,8 @@ The single-node Compose file owns explicit CPU, memory, PID, file-descriptor, an
 
 Image-owned stop signals remain authoritative. Compose sets only the grace interval, so PostgreSQL keeps its image `SIGINT` behavior and nginx keeps its image-specific graceful signal.
 
+The pinned Coturn image marks `turnserver` with `NET_BIND_SERVICE` as a file capability. Docker refuses to execute that binary when the capability is absent from the container bounding set, even when configured ports are above 1024. TURN therefore drops every capability and adds back only `NET_BIND_SERVICE`; runtime regression tests lock this documented image-specific exception.
+
 The externally supplied mobile publisher image is intentionally excluded from this change. Its current PID, CPU, and memory limits remain unchanged; file-descriptor and stop-signal changes require the mobile artifact owner's separate compatibility validation.
 
 Any increase must include a measured concurrency target, peak descriptor evidence, memory/CPU impact, and a rollback value. A limit hit is a capacity failure to investigate, not a reason to remove the bound.

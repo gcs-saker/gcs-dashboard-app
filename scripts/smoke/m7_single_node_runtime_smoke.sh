@@ -15,10 +15,12 @@ USE_LOCAL_DEV_OVERRIDE="${USE_LOCAL_DEV_OVERRIDE:-1}"
 BUILD_STACK="${BUILD_STACK:-1}"
 RUN_AUTH_DAST="${RUN_AUTH_DAST:-1}"
 RUN_PUBLISH_PLAY_SMOKE="${RUN_PUBLISH_PLAY_SMOKE:-0}"
+RUN_OTEL_FAIL_OPEN_SMOKE="${RUN_OTEL_FAIL_OPEN_SMOKE:-0}"
 AUTH_DAST_EVIDENCE_FILE="${AUTH_DAST_EVIDENCE_FILE:-}"
 EPHEMERAL_INTERNAL_PKI="${EPHEMERAL_INTERNAL_PKI:-${STOP_STACK}}"
 EPHEMERAL_PKI_DIR=""
 EPHEMERAL_PKI_VOLUME=""
+EPHEMERAL_RUNTIME_SECRET_DIR=""
 STACK_STARTED=0
 
 usage() {
@@ -40,6 +42,7 @@ Environment:
   EPHEMERAL_INTERNAL_PKI  Generate isolated local PKI. Defaults to STOP_STACK.
   RUN_AUTH_DAST  Run bounded authentication/authorization DAST. Default: 1.
   RUN_PUBLISH_PLAY_SMOKE  Run VP8/Opus publish/play and sibling denial. Default: 0.
+  RUN_OTEL_FAIL_OPEN_SMOKE  Stop/restart Collector and verify application fail-open behavior. Default: 0.
   AUTH_DAST_EVIDENCE_FILE  Optional new absolute owner-only JSON result path.
 EOF
 }
@@ -132,6 +135,15 @@ apply_smoke_ports() {
   export WEBRTC_TURN_URL="${GCS_SMOKE_WEBRTC_TURN_URL:-turn:127.0.0.1:${TURN_PRIMARY_HOST_PORT}?transport=udp}"
   export VITE_WEBRTC_STUN_URL="${GCS_SMOKE_VITE_WEBRTC_STUN_URL:-stun:127.0.0.1:${TURN_PRIMARY_HOST_PORT}}"
   export BACKEND_CORS_ALLOW_ORIGINS="${GCS_SMOKE_BACKEND_CORS_ALLOW_ORIGINS:-http://127.0.0.1:${PUBLIC_HTTP_PORT},http://localhost:${PUBLIC_HTTP_PORT}}"
+}
+
+apply_otel_smoke_profile() {
+  [[ "$RUN_OTEL_FAIL_OPEN_SMOKE" == "1" ]] || return 0
+  export COMPOSE_PROFILES=observability
+  export BACKEND_OTEL_TRACES_ENABLED=true
+  export BACKEND_OTEL_TRACES_EXPORTER=otlp
+  export MEDIA_CONTROL_TRACE_EXPORTER=otlp
+  export AUTH_POLICY_OTEL_TRACES_ENABLED=true
 }
 
 wait_for_http() {
@@ -244,6 +256,51 @@ print(server["urls"], server["username"], server["credential"], sep="\t")
 '
 }
 
+collector_metrics() {
+  compose exec -T backend python -c '
+import urllib.request
+print(urllib.request.urlopen("http://otel-collector:8888/metrics", timeout=2).read().decode())
+'
+}
+
+verify_collector_metrics() {
+  local metrics
+  metrics="$(collector_metrics)"
+  grep -q "otelcol_receiver_accepted_spans" <<<"$metrics"
+  grep -q "otelcol_exporter_sent_spans" <<<"$metrics"
+}
+
+verify_otel_fail_open() {
+  local edge_base_url="$1"
+  local access_token="$2"
+  local outage_token
+
+  wait_for_container_health otel-collector
+  sleep 3
+  verify_collector_metrics
+  compose stop -t 5 otel-collector >/dev/null
+
+  wait_for_http "${edge_base_url}/healthz" 10 1
+  wait_for_http "${edge_base_url}/readyz" 10 1
+  outage_token="$(login_access_token "$edge_base_url")"
+  curl -fsS -H "Authorization: Bearer ${outage_token}" \
+    -H "Content-Type: application/json" \
+    -d '{"uuid":"raw.otel.failopen","latitude":35.882,"longitude":128.61,"altitude":42,"magneticX":1,"magneticY":2,"magneticZ":3,"soc":"88","phoneBatterySOC":77,"velocity":4.5,"totalDistance":120,"epochTime":65,"portDistance":9}' \
+    "${edge_base_url}/api/telemetry/" | grep -q "raw.otel.failopen"
+  curl -fsS -H "Authorization: Bearer ${access_token}" \
+    "${edge_base_url}/api/telemetry/all" | grep -q "raw.otel.failopen"
+  runtime_probe_from_edge "http://media-control:8081/healthz"
+  wait_for_stream_status "${edge_base_url}/stream/status" 10 1
+
+  compose start otel-collector >/dev/null
+  wait_for_container_health otel-collector
+  curl -fsS "${edge_base_url}/healthz" >/dev/null
+  sleep 3
+  verify_collector_metrics
+  echo "OTel fail-open: login/API/telemetry/media-control/stream status PASS"
+  echo "OTel fail-open: physical talkback and hardware stream BLOCKED (equipment not present)"
+}
+
 check_required_files() {
   test -f "$COMPOSE_FILE"
   test -f "$COMPOSE_OVERRIDE_FILE"
@@ -253,6 +310,7 @@ check_required_files() {
   test -f "${REPO_ROOT}/deploy/mediamtx/mediamtx.closed-network.yml"
   test -f "${REPO_ROOT}/services/auth-policy/build.gradle.kts"
   test -f "${REPO_ROOT}/services/media-control/go.mod"
+  test -f "${REPO_ROOT}/deploy/otel/collector.gateway.yml"
 }
 
 check_contract_text() {
@@ -270,6 +328,8 @@ check_contract_text() {
   grep -q "location = /api/telemetry/all" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /webrtc/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
   grep -q "location /hls/" "${REPO_ROOT}/deploy/nginx/single-node.poc.conf"
+  grep -q "otel-collector" "$COMPOSE_FILE"
+  grep -q "memory_limiter" "${REPO_ROOT}/deploy/otel/collector.gateway.yml"
 }
 
 run_check() {
@@ -291,13 +351,19 @@ run_check() {
 
 runtime_probe_from_edge() {
   local url="$1"
-  compose exec -T edge wget -q -O- "$url" >/dev/null
+  if ! compose exec -T edge wget -q -O- "$url" >/dev/null; then
+    echo "Runtime probe failed: ${url}" >&2
+    return 1
+  fi
 }
 
 runtime_probe_from_edge_with_auth() {
   local url="$1"
   local access_token="$2"
-  compose exec -T edge wget -q -O- --header "Authorization: Bearer ${access_token}" "$url" >/dev/null
+  if ! compose exec -T edge wget -q -O- --header "Authorization: Bearer ${access_token}" "$url" >/dev/null; then
+    echo "Authenticated runtime probe failed: ${url}" >&2
+    return 1
+  fi
 }
 
 run_live() {
@@ -307,7 +373,9 @@ run_live() {
   check_required_files
   load_env
   apply_smoke_ports
+  apply_otel_smoke_profile
   trap cleanup_runtime_smoke EXIT
+  prepare_ephemeral_runtime_secrets
   prepare_ephemeral_internal_pki
 
   if [[ "$START_STACK" == "1" ]]; then
@@ -353,7 +421,11 @@ run_live() {
   runtime_probe_from_edge "http://media-control:8081/healthz"
   runtime_probe_from_edge_with_auth "http://media-control:8081/v1/ice-servers" "$access_token"
   runtime_probe_from_edge_with_auth "http://media-control:8081/api/v1/streams/ice-servers" "$access_token"
-  runtime_probe_from_edge "http://mediamtx:9997/v3/config/global/get"
+  runtime_probe_from_edge "http://media-control:8081/readyz"
+
+  if [[ "$RUN_OTEL_FAIL_OPEN_SMOKE" == "1" ]]; then
+    verify_otel_fail_open "$edge_base_url" "$access_token"
+  fi
 
   local turn_url
   local turn_username

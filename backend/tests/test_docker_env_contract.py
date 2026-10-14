@@ -229,7 +229,7 @@ def test_single_node_uses_valkey_as_default_cache_runtime() -> None:
     ]
     assert redis["healthcheck"]["test"] == [
         "CMD-SHELL",
-        "VALKEYCLI_AUTH=$$(cat /run/secrets/REDIS_PASSWORD) valkey-cli --tls --cacert /run/secrets/gcs-pki/ca.crt -h redis ping | grep PONG",
+        "REDISCLI_AUTH=$$(cat /run/secrets/REDIS_PASSWORD) valkey-cli --tls --cacert /run/secrets/gcs-pki/ca.crt -h redis ping | grep PONG",
     ]
 
 

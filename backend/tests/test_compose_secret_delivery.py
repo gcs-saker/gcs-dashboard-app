@@ -32,7 +32,7 @@ def test_postgres_credentials_are_delivered_as_service_scoped_files() -> None:
     assert services["backend"]["environment"]["DATABASE_URL_FILE"] == "/run/secrets/DATABASE_URL"
     assert "DATABASE_URL" not in services["backend"]["environment"]
     assert "SPRING_DATASOURCE_PASSWORD" not in services["auth-policy"]["environment"]
-    assert {item["target"] for item in services["auth-policy"]["secrets"]} >= {"SPRING_DATASOURCE_PASSWORD"}
+    assert {item["target"] for item in services["auth-policy"]["secrets"]} >= {"spring.datasource.password"}
 
 
 def test_redis_password_is_file_scoped_for_server_and_clients() -> None:
@@ -44,7 +44,7 @@ def test_redis_password_is_file_scoped_for_server_and_clients() -> None:
     assert "SPRING_DATA_REDIS_PASSWORD" not in services["auth-policy"]["environment"]
     assert "MEDIA_CONTROL_REDIS_PASSWORD" not in services["media-control"]["environment"]
     assert {item["target"] for item in services["redis"]["secrets"]} == {"REDIS_PASSWORD"}
-    assert {item["target"] for item in services["auth-policy"]["secrets"]} >= {"SPRING_DATA_REDIS_PASSWORD"}
+    assert {item["target"] for item in services["auth-policy"]["secrets"]} >= {"spring.data.redis.password"}
     assert {item["target"] for item in services["media-control"]["secrets"]} >= {"MEDIA_CONTROL_REDIS_PASSWORD"}
     assert services["redis"]["entrypoint"] == ["/usr/local/bin/gcs-valkey-secret-entrypoint"]
 
@@ -55,7 +55,7 @@ def test_internal_service_tokens_are_scoped_files() -> None:
     auth_targets = {item["target"] for item in services["auth-policy"]["secrets"]}
     media_targets = {item["target"] for item in services["media-control"]["secrets"]}
 
-    assert {"GCS_INTERNAL_GRPC_TOKEN", "AUTH_POLICY_AUDIT_INGEST_TOKEN"} <= auth_targets
+    assert {"gcs.internal-grpc.token", "AUTH_POLICY_AUDIT_INGEST_TOKEN"} <= auth_targets
     assert {"AUTH_POLICY_RPC_TOKEN", "AUTH_POLICY_AUDIT_INGEST_TOKEN", "MEDIA_CONTROL_GRPC_TOKEN"} <= media_targets
     for name in ("AUTH_POLICY_RPC_TOKEN", "AUTH_POLICY_AUDIT_INGEST_TOKEN", "MEDIA_CONTROL_GRPC_TOKEN"):
         assert name not in services["media-control"]["environment"]

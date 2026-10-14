@@ -66,26 +66,26 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		publicWebRTCBaseURL,
 		publicHLSBaseURL,
 	); err != nil {
-		return runtimeConfig{}, err
+		return runtimeConfig{}, newStartupError("config_public_origin", err)
 	}
 	playback, err := domain.NewPlaybackURLBuilder(
 		publicWebRTCBaseURL,
 		publicHLSBaseURL,
 	)
 	if err != nil {
-		return runtimeConfig{}, err
+		return runtimeConfig{}, newStartupError("config_playback", err)
 	}
 	groupResolver, err := domain.NewStreamGroupResolver(
 		getenv(runtimeEnv.defaultPublisherGroup, runtimeDefaults.defaultPublisherGroup),
 		getenv(runtimeEnv.streamGroupMap, runtimeDefaults.streamGroupMap),
 	)
 	if err != nil {
-		return runtimeConfig{}, err
+		return runtimeConfig{}, newStartupError("config_stream_groups", err)
 	}
 	publishToken := getenv(runtimeEnv.publishToken, "")
 	secrets, err := loadPrimaryRuntimeSecrets()
 	if err != nil {
-		return runtimeConfig{}, err
+		return runtimeConfig{}, newStartupError("config_primary_secrets", err)
 	}
 	config := runtimeConfig{
 		mediaMTXBaseURL:     getenv(runtimeEnv.mediaMTXBaseURL, runtimeDefaults.mediaMTXBaseURL),
@@ -102,16 +102,16 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 	}
 	loadTracingRuntime(&config)
 	if err := loadAuthorizationRuntime(&config); err != nil {
-		return runtimeConfig{}, err
+		return runtimeConfig{}, newStartupError("config_authorization", err)
 	}
 	if err := loadStateRuntime(&config); err != nil {
-		return runtimeConfig{}, err
+		return runtimeConfig{}, newStartupError("config_state", err)
 	}
 	if err := loadTurnRuntime(&config); err != nil {
-		return runtimeConfig{}, err
+		return runtimeConfig{}, newStartupError("config_turn", err)
 	}
 	if err := validateRuntimeCredentialSeparation(config); err != nil {
-		return runtimeConfig{}, err
+		return runtimeConfig{}, newStartupError("config_credential_separation", err)
 	}
 	return config, nil
 }

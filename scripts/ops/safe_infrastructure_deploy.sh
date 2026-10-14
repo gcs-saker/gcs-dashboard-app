@@ -145,7 +145,7 @@ check_mqtt() {
 check_mediamtx() {
   local edge
   edge="$(container_id edge)"
-  docker exec "${edge}" wget --timeout=5 --tries=1 -q -O- http://mediamtx:9997/v3/config/global/get >/dev/null
+  docker exec "${edge}" wget --timeout=5 --tries=1 -q -O- http://media-control:8081/readyz >/dev/null
   "${compose[@]}" exec -T media-control /usr/local/bin/media-control healthcheck
 }
 

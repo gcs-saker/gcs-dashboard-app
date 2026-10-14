@@ -59,7 +59,7 @@ def test_postgres_runs_non_root_without_linux_capabilities() -> None:
     ]
 
 
-def test_turn_services_run_non_root_without_linux_capabilities() -> None:
+def test_turn_services_run_non_root_with_only_image_required_capability() -> None:
     services = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"]
 
     for name in ("turn-primary", "turn-secondary"):
@@ -67,6 +67,7 @@ def test_turn_services_run_non_root_without_linux_capabilities() -> None:
         assert service["user"] == "65534:65534"
         assert service["read_only"] is True
         assert service["cap_drop"] == ["ALL"]
+        assert service["cap_add"] == ["NET_BIND_SERVICE"]
         assert service["security_opt"] == ["no-new-privileges:true"]
         assert service["group_add"] == ["${GCS_SECRET_RUNTIME_GID:-10050}", "${GCS_PKI_RUNTIME_GID:-1000}"]
         assert service["tmpfs"] == ["/tmp:rw,noexec,nosuid,nodev,size=16m"]
