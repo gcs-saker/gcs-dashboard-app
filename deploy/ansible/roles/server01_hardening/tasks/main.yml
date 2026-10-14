@@ -1,0 +1,23 @@
+---
+- name: Reject every target except the canonical Server-01 inventory host
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname == "server01-production"
+      - ansible_port | int == server01_ssh_port
+      - groups['server01_managed'] | length == 1
+    fail_msg: Only Server-01 on SSH 55121 is managed
+
+- name: Collect Server-01 drift evidence
+  ansible.builtin.include_tasks: audit.yml
+
+- name: Require explicit approval before any hardening mutation
+  ansible.builtin.assert:
+    that:
+      - server01_maintenance_window_approved | bool
+      - server01_confirm_ssh_key_access | bool
+    fail_msg: Hardening requires an approved maintenance window and verified SSH key access
+  when: server01_apply_hardening | bool
+
+- name: Apply approved Server-01 hardening
+  ansible.builtin.include_tasks: apply.yml
+  when: server01_apply_hardening | bool

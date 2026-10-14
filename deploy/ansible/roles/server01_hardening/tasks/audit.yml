@@ -1,0 +1,80 @@
+---
+- name: Read effective SSH daemon settings
+  ansible.builtin.command: sshd -T
+  register: server01_sshd
+  changed_when: false
+  failed_when: false
+
+- name: Read UFW status
+  ansible.builtin.command: ufw status
+  register: server01_ufw
+  changed_when: false
+  failed_when: false
+
+- name: Read Docker security settings
+  ansible.builtin.command:
+    argv:
+      - docker
+      - info
+      - --format
+      - "{{ '{{json .SecurityOptions}} {{.LoggingDriver}} {{.LiveRestoreEnabled}}' }}"
+  register: server01_docker
+  changed_when: false
+  failed_when: false
+
+- name: Read time synchronization state
+  ansible.builtin.command: timedatectl show --property=NTPSynchronized --value
+  register: server01_time_sync
+  changed_when: false
+  failed_when: false
+
+- name: Read required service enablement
+  ansible.builtin.command: "systemctl is-enabled {{ item }}"
+  loop: "{{ server01_required_services }}"
+  register: server01_services
+  changed_when: false
+  failed_when: false
+
+- name: Inspect private runtime directories
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ server01_runtime_root }}"
+    - "{{ server01_runtime_secret_root }}"
+  register: server01_runtime_paths
+
+- name: Build bounded drift status
+  ansible.builtin.set_fact:
+    server01_audit_blocked: >-
+      {{
+        server01_sshd.rc != 0 or
+        server01_ufw.rc != 0 or
+        server01_docker.rc != 0 or
+        server01_time_sync.rc != 0 or
+        (server01_services.results | selectattr('rc', 'ne', 0) | list | length > 0) or
+        (server01_runtime_paths.results | rejectattr('stat.exists') | list | length > 0)
+      }}
+    server01_audit_status: >-
+      {{ 'BLOCKED' if (
+        server01_sshd.rc != 0 or server01_ufw.rc != 0 or server01_docker.rc != 0
+      ) else 'PASS' }}
+
+- name: Print sanitized Server-01 drift summary
+  ansible.builtin.debug:
+    msg:
+      server: Server-01
+      status: "{{ server01_audit_status }}"
+      mutation: none
+      ssh_readable: "{{ server01_sshd.rc == 0 }}"
+      ufw_readable: "{{ server01_ufw.rc == 0 }}"
+      docker_readable: "{{ server01_docker.rc == 0 }}"
+      ntp_synchronized: "{{ server01_time_sync.stdout | trim == 'yes' }}"
+      required_services_enabled: "{{ server01_services.results | selectattr('rc', 'eq', 0) | list | length }}"
+      required_services_total: "{{ server01_required_services | length }}"
+
+- name: Fail closed when required drift evidence is blocked
+  ansible.builtin.assert:
+    that:
+      - not server01_audit_blocked
+    fail_msg: Server-01 drift evidence is BLOCKED; do not report PASS
+  when: server01_fail_on_blocked_audit | bool
