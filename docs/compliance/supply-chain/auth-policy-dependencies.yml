@@ -19,6 +19,7 @@ dependencies:
   - {configuration: implementation, coordinate: "org.flywaydb:flyway-core", reason: "database schema migration"}
   - {configuration: implementation, coordinate: "io.github.resilience4j:resilience4j-circuitbreaker:2.3.0", reason: "bounded session-store degradation"}
   - {configuration: implementation, coordinate: "io.micrometer:micrometer-tracing-bridge-otel", reason: "trace correlation bridge"}
+  - {configuration: implementation, coordinate: "io.opentelemetry:opentelemetry-exporter-otlp", reason: "bounded internal Collector trace export"}
   - {configuration: implementation, coordinate: "org.jetbrains.kotlin:kotlin-reflect", reason: "Spring Kotlin runtime reflection"}
   - {configuration: compileOnly, coordinate: "org.springframework.modulith:spring-modulith-api", reason: "module boundary annotations"}
   - {configuration: testImplementation, coordinate: "org.springframework.boot:spring-boot-starter-test", reason: "Spring integration tests"}
