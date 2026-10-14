@@ -226,7 +226,10 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
                 raise AssertionError("anonymous MQTT client was not rejected")
 
             checks.append(
-                assert_denied("certificate.revoked", publish_telemetry(config, REVOKED_DEVICE_USER, telemetry_payload))
+                assert_denied(
+                    "certificate.revoked",
+                    publish_telemetry(config, REVOKED_DEVICE_USER, telemetry_payload),
+                )
             )
             checks.append(
                 assert_publish_suppressed(
@@ -282,7 +285,10 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
                 )
             )
 
-            run_checked([*config.compose_command(generated_env), "restart", "mqtt"], name="compose.restart")
+            run_checked(
+                [*config.compose_command(generated_env), "restart", "mqtt"],
+                name="compose.restart",
+            )
             wait_for_mqtt(config)
             checks.append({"name": "broker.restart.mtls_reconnect", "passed": True})
 
@@ -293,7 +299,14 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
             }
         except Exception as error:
             diagnostics = subprocess.run(
-                [*config.compose_command(generated_env), "logs", "--no-color", "--tail", "120", "mqtt"],
+                [
+                    *config.compose_command(generated_env),
+                    "logs",
+                    "--no-color",
+                    "--tail",
+                    "120",
+                    "mqtt",
+                ],
                 check=False,
                 capture_output=True,
                 text=True,
@@ -313,7 +326,14 @@ def write_generated_env(source: Path, target: Path, pki_dir: Path) -> None:
     for line in source.read_text(encoding="utf-8").splitlines():
         if line.startswith("COMPOSE_PROJECT_NAME="):
             continue
-        if line.startswith(("MQTT_PASSWORD=", "MQTT_PASSWORD_FILE=", "MQTT_HEALTH_PASSWORD=", "INTERNAL_PKI_DIR=")):
+        if line.startswith(
+            (
+                "MQTT_PASSWORD=",
+                "MQTT_PASSWORD_FILE=",
+                "MQTT_HEALTH_PASSWORD=",
+                "INTERNAL_PKI_DIR=",
+            )
+        ):
             continue
         lines.append(line)
     lines.append(f"INTERNAL_PKI_DIR={pki_dir}")
@@ -374,12 +394,17 @@ def wait_for_mqtt(config: MqttHardenedProfileConfig) -> None:
     raise RuntimeError("MQTT broker did not become ready for authenticated health subscription")
 
 
-def assert_edge_cannot_resolve_broker(config: MqttHardenedProfileConfig) -> dict[str, Any]:
+def assert_edge_cannot_resolve_broker(
+    config: MqttHardenedProfileConfig,
+) -> dict[str, Any]:
     network = config.edge_network_name()
     inspect = subprocess.run(["docker", "network", "inspect", network], check=False, capture_output=True)
     created = inspect.returncode != 0
     if created:
-        run_checked(["docker", "network", "create", "--internal", network], name="network.edge.create")
+        run_checked(
+            ["docker", "network", "create", "--internal", network],
+            name="network.edge.create",
+        )
     try:
         probe = subprocess.run(
             [
@@ -402,7 +427,9 @@ def assert_edge_cannot_resolve_broker(config: MqttHardenedProfileConfig) -> dict
     finally:
         if created:
             run_checked(
-                ["docker", "network", "rm", network], name="network.edge.remove", allow_failure=True
+                ["docker", "network", "rm", network],
+                name="network.edge.remove",
+                allow_failure=True,
             )
 
 

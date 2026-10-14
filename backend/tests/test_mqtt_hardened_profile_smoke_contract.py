@@ -110,9 +110,10 @@ def test_local_compose_uses_hardened_mqtt_and_keeps_no_auth_in_explicit_profile(
 def test_runtime_failure_captures_broker_logs_before_cleanup() -> None:
     source = SMOKE_SCRIPT.read_text(encoding="utf-8")
 
-    assert '"logs", "--no-color", "--tail", "120", "mqtt"' in source
+    for argument in ('"logs"', '"--no-color"', '"--tail"', '"120"', '"mqtt"'):
+        assert argument in source
     assert "MQTT smoke failed before cleanup" in source
-    assert source.index('"logs", "--no-color"') < source.index("config.down_command(generated_env)")
+    assert source.index("diagnostics = subprocess.run") < source.index("config.down_command(generated_env)")
 
 
 def test_runtime_smoke_restarts_broker_and_requires_mtls_reconnect() -> None:
