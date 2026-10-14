@@ -13,6 +13,10 @@ import (
 type runtimeConfig struct {
 	traceExporter          string
 	otelServiceName        string
+	otelEndpoint           string
+	otelExportTimeout      time.Duration
+	otelMaxQueueSize       int
+	otelMaxExportBatch     int
 	mediaMTXBaseURL        string
 	mediaMTXAPIUser        string
 	mediaMTXAPIPassword    string
@@ -84,8 +88,6 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		return runtimeConfig{}, err
 	}
 	config := runtimeConfig{
-		traceExporter:       getenv(runtimeEnv.traceExporter, runtimeDefaults.traceExporter),
-		otelServiceName:     getenv(runtimeEnv.otelServiceName, runtimeDefaults.otelServiceName),
 		mediaMTXBaseURL:     getenv(runtimeEnv.mediaMTXBaseURL, runtimeDefaults.mediaMTXBaseURL),
 		mediaMTXAPIUser:     getenv("MEDIAMTX_API_USER", ""),
 		mediaMTXAPIPassword: secrets.mediaMTXAPIPassword,
@@ -98,6 +100,7 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		grpcToken:           secrets.grpcToken,
 		grpcMaxPayloadBytes: getenvInt(runtimeEnv.grpcMaxPayloadBytes, runtimeDefaults.grpcMaxPayloadBytes),
 	}
+	loadTracingRuntime(&config)
 	if err := loadAuthorizationRuntime(&config); err != nil {
 		return runtimeConfig{}, err
 	}
@@ -111,6 +114,15 @@ func loadRuntimeConfig() (runtimeConfig, error) {
 		return runtimeConfig{}, err
 	}
 	return config, nil
+}
+
+func loadTracingRuntime(config *runtimeConfig) {
+	config.traceExporter = getenv(runtimeEnv.traceExporter, runtimeDefaults.traceExporter)
+	config.otelServiceName = getenv(runtimeEnv.otelServiceName, runtimeDefaults.otelServiceName)
+	config.otelEndpoint = getenv(runtimeEnv.otelEndpoint, runtimeDefaults.otelEndpoint)
+	config.otelExportTimeout = getenvDuration(runtimeEnv.otelExportTimeout, runtimeDefaults.otelExportTimeout)
+	config.otelMaxQueueSize = getenvInt(runtimeEnv.otelMaxQueueSize, runtimeDefaults.otelMaxQueueSize)
+	config.otelMaxExportBatch = getenvInt(runtimeEnv.otelMaxExportBatch, runtimeDefaults.otelMaxExportBatch)
 }
 
 type primaryRuntimeSecrets struct {

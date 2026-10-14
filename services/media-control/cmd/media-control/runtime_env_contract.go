@@ -19,6 +19,10 @@ type runtimeEnvContract struct {
 	publishToken          envName
 	traceExporter         envName
 	otelServiceName       envName
+	otelEndpoint          envName
+	otelExportTimeout     envName
+	otelMaxQueueSize      envName
+	otelMaxExportBatch    envName
 	mediaMTXBaseURL       envName
 	listenAddress         envName
 	grpcListenAddress     envName
@@ -55,6 +59,10 @@ var runtimeEnv = runtimeEnvContract{
 	publishToken:          "MEDIA_CONTROL_PUBLISH_TOKEN",
 	traceExporter:         "MEDIA_CONTROL_TRACE_EXPORTER",
 	otelServiceName:       "MEDIA_CONTROL_OTEL_SERVICE_NAME",
+	otelEndpoint:          "MEDIA_CONTROL_OTEL_ENDPOINT",
+	otelExportTimeout:     "MEDIA_CONTROL_OTEL_EXPORT_TIMEOUT_SECONDS",
+	otelMaxQueueSize:      "MEDIA_CONTROL_OTEL_MAX_QUEUE_SIZE",
+	otelMaxExportBatch:    "MEDIA_CONTROL_OTEL_MAX_EXPORT_BATCH_SIZE",
 	mediaMTXBaseURL:       "MEDIAMTX_API_BASE_URL",
 	listenAddress:         "MEDIA_CONTROL_LISTEN_ADDR",
 	grpcListenAddress:     "MEDIA_CONTROL_GRPC_LISTEN_ADDR",
@@ -89,6 +97,7 @@ type runtimeDefaultsContract struct {
 	streamGroupMap        string
 	traceExporter         string
 	otelServiceName       string
+	otelEndpoint          string
 	mediaMTXBaseURL       string
 	listenAddress         string
 	grpcListenAddress     string
@@ -110,8 +119,11 @@ type runtimeDefaultsContract struct {
 	redisTimeout          time.Duration
 	streamPresenceTTL     time.Duration
 	iceServerCacheTTL     time.Duration
+	otelExportTimeout     time.Duration
 	turnMaxHealthyServers int
 	grpcMaxPayloadBytes   int
+	otelMaxQueueSize      int
+	otelMaxExportBatch    int
 }
 
 var runtimeDefaults = runtimeDefaultsContract{
@@ -121,6 +133,7 @@ var runtimeDefaults = runtimeDefaultsContract{
 	streamGroupMap:        "raw/sample/front=co-a,raw/local/webcam=co-a",
 	traceExporter:         observability.TraceExporterNone,
 	otelServiceName:       "gcs-saker-media-control",
+	otelEndpoint:          "otel-collector:4317",
 	mediaMTXBaseURL:       "http://mediamtx:9997",
 	listenAddress:         ":8081",
 	grpcListenAddress:     ":9090",
@@ -142,6 +155,9 @@ var runtimeDefaults = runtimeDefaultsContract{
 	redisTimeout:          500 * time.Millisecond,
 	streamPresenceTTL:     6 * time.Second,
 	iceServerCacheTTL:     10 * time.Second,
+	otelExportTimeout:     time.Second,
 	turnMaxHealthyServers: 1,
 	grpcMaxPayloadBytes:   grpcDefaultMaxPayloadBytes,
+	otelMaxQueueSize:      512,
+	otelMaxExportBatch:    128,
 }

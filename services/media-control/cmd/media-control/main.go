@@ -42,7 +42,14 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	traceShutdown, err := observability.InstallTracing(config.traceExporter, config.otelServiceName, nil)
+	traceShutdown, err := observability.InstallTracing(observability.TraceConfig{
+		Exporter:       config.traceExporter,
+		ServiceName:    config.otelServiceName,
+		OTLPEndpoint:   config.otelEndpoint,
+		ExportTimeout:  config.otelExportTimeout,
+		MaxQueueSize:   config.otelMaxQueueSize,
+		MaxExportBatch: config.otelMaxExportBatch,
+	}, nil)
 	if err != nil {
 		return err
 	}
