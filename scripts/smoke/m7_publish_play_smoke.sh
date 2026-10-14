@@ -11,16 +11,20 @@ START_STACK="${START_STACK:-1}"
 STOP_STACK="${STOP_STACK:-0}"
 RUN_WEBRTC_ICE_SMOKE="${RUN_WEBRTC_ICE_SMOKE:-1}"
 RUN_HLS_SMOKE="${RUN_HLS_SMOKE:-0}"
+RUN_OTEL_OUTAGE_DURING_PLAYBACK="${RUN_OTEL_OUTAGE_DURING_PLAYBACK:-0}"
 PYTHON_IMAGE="${PYTHON_IMAGE:-python:3.12-slim}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-gcs-saker-arch-poc}"
 EDGE_BASE_URL="${EDGE_BASE_URL:-http://127.0.0.1:18080}"
 MEDIA_NETWORK="${MEDIA_NETWORK:-${COMPOSE_PROJECT_NAME}_stream-net}"
+TURN_NETWORK="${TURN_NETWORK:-${COMPOSE_PROJECT_NAME}_turn-net}"
 ENV_FILE="${ENV_FILE:-${REPO_ROOT}/deploy/compose/.env.single-node.example}"
 PUBLISHER_NAME="gcs-saker-m7-publisher-$$"
 SESSION_DIR=""
 PUBLISHER_STARTED_MS=""
 OWNER_TOKEN_FILE=""
 SIBLING_TOKEN_FILE=""
+COLLECTOR_CONTAINER=""
+COLLECTOR_STOPPED=0
 
 usage() {
   cat <<'EOF'
@@ -36,6 +40,7 @@ Environment:
   STOP_STACK               Stop compose after the smoke. Default: 0
   RUN_WEBRTC_ICE_SMOKE     Verify WHEP audio and video frames. Default: 1
   RUN_HLS_SMOKE            Verify HLS only with an H264-compatible publisher. Default: 0
+  RUN_OTEL_OUTAGE_DURING_PLAYBACK  Verify received audio/video while Collector is stopped. Default: 0
   PYTHON_IMAGE             Default: python:3.12-slim
   EDGE_BASE_URL            Default: http://127.0.0.1:18080
 EOF
@@ -63,11 +68,22 @@ load_auth_credentials() {
 }
 
 now_ms() {
-  python3 -c 'import time; print(int(time.time() * 1000))'
+  python3 -c 'import sys,time; sys.stdout.reconfigure(newline="\n"); print(int(time.time() * 1000))'
+}
+
+docker_host_path() {
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -m "$1"
+  else
+    printf '%s\n' "$1"
+  fi
 }
 
 cleanup() {
   local status=$?
+  if [[ "$COLLECTOR_STOPPED" == "1" ]]; then
+    docker start "$COLLECTOR_CONTAINER" >/dev/null || status=1
+  fi
   if [[ "$status" -ne 0 ]] && docker inspect "$PUBLISHER_NAME" >/dev/null 2>&1; then
     echo "Authenticated WHIP publisher failed; retained tail follows" >&2
     docker logs --tail 80 "$PUBLISHER_NAME" 2>&1 >&2 || true
@@ -97,6 +113,7 @@ rewrite_origin_for_container() {
   python3 - "$1" <<'PY'
 import sys
 from urllib.parse import urlsplit, urlunsplit
+sys.stdout.reconfigure(newline="\n")
 
 source = urlsplit(sys.argv[1])
 print(urlunsplit(("http", "edge:8080", source.path, source.query, source.fragment)))
@@ -107,6 +124,7 @@ json_field() {
   python3 - "$1" "$2" <<'PY'
 import json
 import sys
+sys.stdout.reconfigure(newline="\n")
 
 with open(sys.argv[1], encoding="utf-8") as payload_file:
     value = json.load(payload_file)
@@ -122,7 +140,7 @@ login_to_file() {
     -H "X-GCS-CSRF: same-origin" \
     -d "{\"username\":\"${username}\",\"password\":\"${password}\"}" \
     "${EDGE_BASE_URL}/auth-policy/auth/login" \
-    | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])' \
+    | python3 -c 'import json,sys; sys.stdout.reconfigure(newline="\n"); print(json.load(sys.stdin)["access_token"])' \
     >"${token_file}"
   chmod 600 "${token_file}"
 }
@@ -151,8 +169,8 @@ start_publisher() {
   local publish_url internal_publish_url
   publish_url="$(json_field "${SESSION_DIR}/session.json" publishUrl)"
   internal_publish_url="$(rewrite_origin_for_container "$publish_url")"
-  docker run -d --name "$PUBLISHER_NAME" --network "$MEDIA_NETWORK" \
-    -v "${REPO_ROOT}:/workspace:ro" -v "${SESSION_DIR}:/run/gcs-smoke:ro" -w /workspace \
+  MSYS_NO_PATHCONV=1 docker run -d --name "$PUBLISHER_NAME" --network "$MEDIA_NETWORK" --network "$TURN_NETWORK" \
+    -v "$(docker_host_path "$REPO_ROOT"):/workspace:ro" -v "$(docker_host_path "$SESSION_DIR"):/run/gcs-smoke:ro" -w /workspace \
     "$PYTHON_IMAGE" \
     bash -lc 'pip install aiortc >/tmp/aiortc-install.log && python scripts/smoke/webrtc_whip_publish_smoke.py --run --require-connected --whip-url "$1" --publish-token-file /run/gcs-smoke/publish-token --ice-server-url stun:turn-primary:3478 --publish-seconds "$2"' \
     smoke "$internal_publish_url" "$PUBLISH_DURATION_SECONDS" >/dev/null
@@ -213,6 +231,7 @@ first_hls_variant_url() {
   python3 - "$1" "$2" <<'PY'
 import sys
 from urllib.parse import urljoin
+sys.stdout.reconfigure(newline="\n")
 
 for line in sys.argv[2].splitlines():
     value = line.strip()
@@ -236,9 +255,25 @@ verify_whep() {
   local whep_url internal_whep_url
   whep_url="$(json_field "${SESSION_DIR}/playback.json" playbackUrls.webrtc)"
   internal_whep_url="$(rewrite_origin_for_container "$whep_url")"
-  docker run --rm --network "$MEDIA_NETWORK" -v "${REPO_ROOT}:/workspace:ro" -w /workspace \
+  MSYS_NO_PATHCONV=1 docker run --rm --network "$MEDIA_NETWORK" --network "$TURN_NETWORK" -v "$(docker_host_path "$REPO_ROOT"):/workspace:ro" -w /workspace \
     "$PYTHON_IMAGE" bash -lc 'pip install aiortc >/tmp/aiortc-install.log && python scripts/smoke/webrtc_ice_smoke.py --run --require-connected --require-video-frame --require-audio-frame --measure-audio-video-sync --latency-profile playback --enforce-latency-budget --whep-url "$1" --ice-server-url stun:turn-primary:3478' \
     smoke "$internal_whep_url"
+}
+
+verify_collector_outage_playback() {
+  COLLECTOR_CONTAINER="$(docker ps -q \
+    --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}" \
+    --filter "label=com.docker.compose.service=otel-collector")"
+  [[ -n "$COLLECTOR_CONTAINER" && "$COLLECTOR_CONTAINER" != *$'\n'* ]] || {
+    echo "Expected exactly one running Collector in the disposable project" >&2
+    return 1
+  }
+  docker stop -t 5 "$COLLECTOR_CONTAINER" >/dev/null
+  COLLECTOR_STOPPED=1
+  verify_whep
+  docker start "$COLLECTOR_CONTAINER" >/dev/null
+  COLLECTOR_STOPPED=0
+  echo "Collector outage: synthetic WHIP publish and WHEP audio/video frames PASS"
 }
 
 run_check() {
@@ -266,6 +301,7 @@ run_live() {
   verify_sibling_playback_denied
   [[ "$RUN_HLS_SMOKE" == "1" ]] && verify_hls
   [[ "$RUN_WEBRTC_ICE_SMOKE" == "1" ]] && verify_whep
+  [[ "$RUN_OTEL_OUTAGE_DURING_PLAYBACK" == "1" ]] && verify_collector_outage_playback
   echo "M7 authenticated publish/play smoke run passed"
   echo "Publish-to-playback visibility latency ms: $(($(now_ms) - PUBLISHER_STARTED_MS))"
 }

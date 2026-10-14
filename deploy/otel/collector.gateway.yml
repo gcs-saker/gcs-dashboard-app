@@ -33,6 +33,52 @@ processors:
       - {key: network.peer.address, action: delete}
       - {key: device.uuid, action: delete}
       - {key: stream.id, action: delete}
+  transform/privacy:
+    error_mode: propagate
+    trace_statements:
+      - context: resource
+        statements:
+          - keep_keys(attributes, ["service.name"])
+          - set(attributes["service.name"], "gcs-unknown") where attributes["service.name"] != "gcs-saker-backend" and attributes["service.name"] != "gcs-saker-media-control" and attributes["service.name"] != "gcs-saker-auth-policy"
+      - context: scope
+        statements:
+          - set(name, "gcs.instrumentation")
+          - set(version, "")
+          - keep_keys(attributes, [])
+      - context: span
+        statements:
+          - set(name, "gcs.request")
+          - set(status.message, "")
+          - set(trace_state, "")
+          - keep_keys(attributes, ["http.request.method", "http.method", "http.response.status_code", "http.status_code"])
+      - context: spanevent
+        statements:
+          - set(name, "gcs.event")
+          - keep_keys(attributes, [])
+    metric_statements:
+      - context: resource
+        statements:
+          - keep_keys(attributes, ["service.name"])
+          - set(attributes["service.name"], "gcs-unknown") where attributes["service.name"] != "gcs-saker-backend" and attributes["service.name"] != "gcs-saker-media-control" and attributes["service.name"] != "gcs-saker-auth-policy"
+      - context: scope
+        statements:
+          - set(name, "gcs.instrumentation")
+          - set(version, "")
+          - keep_keys(attributes, [])
+      - context: metric
+        statements:
+          - set(description, "")
+      - context: datapoint
+        statements:
+          - keep_keys(attributes, [])
+  filter/privacy:
+    error_mode: propagate
+    traces:
+      span:
+        - Len(links) > 0
+    metrics:
+      datapoint:
+        - Len(exemplars) > 0
   batch:
     timeout: 2s
     send_batch_size: 512
@@ -43,6 +89,11 @@ exporters:
     verbosity: basic
     sampling_initial: 5
     sampling_thereafter: 200
+    sending_queue:
+      enabled: true
+      queue_size: 256
+      num_consumers: 1
+      block_on_overflow: false
 
 service:
   extensions: [health_check]
@@ -50,7 +101,7 @@ service:
     logs:
       level: info
     metrics:
-      level: basic
+      level: normal
       readers:
         - pull:
             exporter:
@@ -60,9 +111,9 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, resource/sanitize, attributes/sanitize, batch]
+      processors: [memory_limiter, filter/privacy, resource/sanitize, attributes/sanitize, transform/privacy, batch]
       exporters: [debug]
     metrics:
       receivers: [otlp]
-      processors: [memory_limiter, resource/sanitize, attributes/sanitize, batch]
+      processors: [memory_limiter, filter/privacy, resource/sanitize, attributes/sanitize, transform/privacy, batch]
       exporters: [debug]

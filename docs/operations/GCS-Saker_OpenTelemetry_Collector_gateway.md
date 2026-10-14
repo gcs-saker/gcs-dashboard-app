@@ -34,6 +34,12 @@ Media Control follows the same disabled and fail-open boundary with `MEDIA_CONTR
 
 Auth Policy uses Spring Boot's managed OpenTelemetry OTLP exporter with export disabled by default. Its endpoint guard accepts only `http://otel-collector:4318/v1/traces` or equivalent local test addresses. The batch queue is limited to 512 spans, each batch to 128 spans, the schedule delay to two seconds, and export processing to one second. Auth Policy has no Compose dependency on Collector health.
 
+The gateway debug exporter has a 256-request in-memory queue with one consumer and no blocking on overflow. Internal queue size/capacity, enqueue failures and export failures are observable on the private metrics endpoint. The disposable pressure test adds a one-slot exporter aimed at a closed loopback port to exercise failure and saturation; this exporter is never part of the deployment profile.
+
+Export privacy uses an allowlist as well as the legacy key denylist. Resource attributes retain only a normalized service name. Free-form span names, scope names/versions, event names and status messages are replaced; event attributes and metric dimensions are removed. Unsupported span links and metric exemplars are dropped before export. Trace IDs, timing and status remain available, but detailed route and exception diagnostics stay with the owning service's structured logs. Transform errors propagate rather than exporting unsanitized payloads.
+
+Run `python scripts/smoke/otel_collector_pressure_smoke.py --run` to verify sanitized detailed output and actual queue saturation/export failures in an isolated internal Docker network. It uses synthetic canaries, captures no real credentials, and removes only its own collector and network. A successful test requires positive drop/failure counters, not merely metric names. This test does not qualify physical mobile audio or Talkback.
+
 Official deployment and component guidance:
 
 - https://opentelemetry.io/docs/collector/deploy/

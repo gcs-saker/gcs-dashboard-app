@@ -66,7 +66,22 @@ def test_collector_has_no_external_exporter_or_public_management_surface() -> No
     assert config["exporters"]["debug"]["sampling_initial"] == 5
     assert config["exporters"]["debug"]["sampling_thereafter"] == 200
     assert config["extensions"]["health_check"]["endpoint"] == "0.0.0.0:13133"
-    assert config["service"]["telemetry"]["metrics"]["level"] == "basic"
+    assert config["service"]["telemetry"]["metrics"]["level"] == "normal"
+    assert config["exporters"]["debug"]["sending_queue"] == {
+        "enabled": True,
+        "queue_size": 256,
+        "num_consumers": 1,
+        "block_on_overflow": False,
+    }
+
+
+def test_collector_privacy_transform_precedes_batch_and_discards_unsupported_payloads() -> None:
+    config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    for pipeline in config["service"]["pipelines"].values():
+        assert pipeline["processors"].index("transform/privacy") < pipeline["processors"].index("batch")
+    assert config["processors"]["transform/privacy"]["error_mode"] == "propagate"
+    assert config["processors"]["filter/privacy"]["traces"]["span"] == ["Len(links) > 0"]
+    assert config["processors"]["filter/privacy"]["metrics"]["datapoint"] == ["Len(exemplars) > 0"]
 
 
 def test_backend_otlp_export_is_disabled_bounded_and_not_a_dependency() -> None:

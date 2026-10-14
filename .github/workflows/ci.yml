@@ -279,6 +279,9 @@ jobs:
       - name: Run backend tests with coverage
         run: python -m pytest tests --cov=. --cov-report=term-missing --cov-fail-under=85
 
+      - name: Verify Collector privacy and backpressure with injected export failure
+        run: python ../scripts/smoke/otel_collector_pressure_smoke.py --run
+
       - name: Build backend runtime image
         run: docker build -t gcs-saker-backend:ci .
 
