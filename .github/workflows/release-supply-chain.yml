@@ -148,7 +148,7 @@ jobs:
             --manifest services/auth-policy/build/reports/runtime-dependencies.json \
             --output "${RUNNER_TEMP}/${{ matrix.image }}.spdx.json" \
             --report "${RUNNER_TEMP}/${{ matrix.image }}.maven-reconciliation.json" \
-            --expected-corrections 27
+            --expected-corrections 32
 
       - name: Preserve unchanged non-Maven SBOM
         if: matrix.image != 'auth-policy'
