@@ -33,6 +33,19 @@ management:
   tracing:
     sampling:
       probability: ${AUTH_POLICY_TRACING_SAMPLING_PROBABILITY:1.0}
+    export:
+      otlp:
+        enabled: ${AUTH_POLICY_OTEL_TRACES_ENABLED:false}
+  opentelemetry:
+    tracing:
+      export:
+        schedule-delay: ${AUTH_POLICY_OTEL_SCHEDULE_DELAY:2s}
+        timeout: ${AUTH_POLICY_OTEL_EXPORT_TIMEOUT:1s}
+        max-queue-size: ${AUTH_POLICY_OTEL_MAX_QUEUE_SIZE:512}
+        max-batch-size: ${AUTH_POLICY_OTEL_MAX_BATCH_SIZE:128}
+        otlp:
+          endpoint: ${AUTH_POLICY_OTEL_ENDPOINT:http://otel-collector:4318/v1/traces}
+          timeout: ${AUTH_POLICY_OTEL_EXPORT_TIMEOUT:1s}
 
 logging:
   pattern:

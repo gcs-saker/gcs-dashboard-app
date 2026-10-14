@@ -53,6 +53,7 @@ dependencies {
     implementation("org.flywaydb:flyway-core")
     implementation("io.github.resilience4j:resilience4j-circuitbreaker:2.3.0")
     implementation("io.micrometer:micrometer-tracing-bridge-otel")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     compileOnly("org.springframework.modulith:spring-modulith-api")
 
