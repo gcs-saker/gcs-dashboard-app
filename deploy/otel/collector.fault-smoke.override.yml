@@ -1,0 +1,33 @@
+# Disposable smoke only. This exporter deliberately targets a closed loopback port.
+processors:
+  batch:
+    timeout: 100ms
+    send_batch_size: 1
+    send_batch_max_size: 1
+exporters:
+  debug:
+    verbosity: detailed
+    sampling_initial: 1000
+    sampling_thereafter: 1
+  otlp/fault:
+    endpoint: 127.0.0.1:9
+    tls:
+      insecure: true
+    timeout: 200ms
+    retry_on_failure:
+      enabled: true
+      initial_interval: 100ms
+      max_interval: 200ms
+      max_elapsed_time: 2s
+    sending_queue:
+      enabled: true
+      queue_size: 1
+      num_consumers: 1
+      block_on_overflow: false
+service:
+  telemetry:
+    metrics:
+      level: detailed
+  pipelines:
+    traces:
+      exporters: [debug, otlp/fault]
