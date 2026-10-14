@@ -282,6 +282,16 @@ jobs:
       - name: Verify Collector privacy and backpressure with injected export failure
         run: python ../scripts/smoke/otel_collector_pressure_smoke.py --run
 
+      - name: Verify isolated backend and canonical telemetry storage ownership
+        env:
+          TEST_TELEMETRY_POSTGRES_DSN: postgresql+psycopg2://postgres@127.0.0.1:15432/gcs_ownership_smoke
+        run: |
+          docker run -d --name telemetry-ownership-postgres \
+            -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=gcs_ownership_smoke \
+            -p 127.0.0.1:15432:5432 postgres:16-alpine
+          trap 'docker rm -f telemetry-ownership-postgres' EXIT
+          python -m pytest tests/test_telemetry_storage_postgres.py -q
+
       - name: Build backend runtime image
         run: docker build -t gcs-saker-backend:ci .
 

@@ -55,3 +55,12 @@ def test_m10_first_read_view_uses_windowed_latest_stream_session_projection() ->
     assert "ORDER BY last_heartbeat_at DESC, id DESC" in migration
     assert "FROM operational_stream_session_latest" in read_sql
     assert "NOT EXISTS" not in read_sql.split("const val selectLatestStreamSessions", 1)[1]
+
+
+def test_latest_stream_migration_preserves_columns_but_collapses_old_sessions() -> None:
+    migration = (READ_VIEW_MIGRATION.parent / "V31__stream_latest_per_group_and_stream.sql").read_text(encoding="utf-8")
+    assert "CREATE OR REPLACE VIEW operational_stream_session_latest" in migration
+    assert "PARTITION BY group_id, stream_id\n" in migration
+    assert "COALESCE(session_id" not in migration
+    assert "ORDER BY last_heartbeat_at DESC, id DESC" in migration
+    assert "DROP TABLE" not in migration

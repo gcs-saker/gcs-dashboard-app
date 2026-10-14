@@ -163,9 +163,9 @@ class InMemoryOperationalReadRepository(
         streamSessionHistory
             .asSequence()
             .filter { canRead(principal, it.groupId) }
-            .groupBy { "${it.streamId}|${it.sessionId.orEmpty()}" }
+            .groupBy { it.groupId to it.streamId }
             .values
-            .map { sessions -> sessions.maxBy { it.lastHeartbeatAt } }
+            .map { sessions -> sessions.asReversed().maxBy { it.lastHeartbeatAt } }
             .sortedWith(compareBy<StreamSessionReadModel> { it.status }.thenBy { it.streamId })
             .drop(offset).take(limit).toList()
 }

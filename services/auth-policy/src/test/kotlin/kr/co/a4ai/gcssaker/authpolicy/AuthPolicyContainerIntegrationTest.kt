@@ -85,6 +85,29 @@ class AuthPolicyContainerIntegrationTest {
     }
 
     @Test
+    fun `postgres latest stream view collapses sessions and preserves all history`() {
+        val dataSource = postgresDataSource()
+        AuthPolicyDatabaseInitializer(dataSource).initializeSchema()
+        val repository = kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalReadRepository(
+            dataSource, emptyList(), emptyMap(),
+        )
+        val at = Instant.parse("2026-10-14T00:00:00Z")
+        val first = kr.co.a4ai.gcssaker.authpolicy.domain.StreamSessionReadModel(
+            "latest-view-fixture", "old-session", "online", "test", at, at, null, GroupId("co-a"),
+        )
+        repository.recordStreamSession(first)
+        repository.recordStreamSession(first.copy(sessionId = "new-session", lastHeartbeatAt = at.plusSeconds(1)))
+        repository.recordStreamSession(first.copy(sessionId = "stale-session", status = "offline"))
+        val own = AuthenticatedPrincipal("test-viewer", UserRole.VIEWER, GroupId("co-a"))
+        assertEquals("new-session", repository.streamSessionsFor(own).single { it.streamId == first.streamId }.sessionId)
+        val sibling = own.copy(groupId = GroupId("co-b"))
+        assertEquals(0, repository.streamSessionsFor(sibling).count { it.streamId == first.streamId })
+        assertEquals(3, JdbcTemplate(dataSource).queryForObject(
+            "SELECT COUNT(*) FROM stream_sessions WHERE stream_id = ?", Int::class.java, first.streamId,
+        ))
+    }
+
+    @Test
     fun `redis container stores principal cache and consumes refresh session once`() {
         val connectionFactory = LettuceConnectionFactory(redis.host, redis.getMappedPort(ContainerIntegrationContract.REDIS_PORT))
         connectionFactory.start()
