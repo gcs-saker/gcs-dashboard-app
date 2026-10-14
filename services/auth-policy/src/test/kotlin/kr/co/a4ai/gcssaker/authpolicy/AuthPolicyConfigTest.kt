@@ -301,6 +301,7 @@ class AuthPolicyConfigTest {
             AuthRuntimeSettings.fromEnvironment(localEnvironment()).copy(jdbcPersistenceEnabled = false),
             EmptyObjectProvider(),
             LocalOperationalEventSignal(),
+            io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
         )
         val principal = AuthenticatedPrincipal("operator01", UserRole.OPERATOR, GroupId("co-a"))
 

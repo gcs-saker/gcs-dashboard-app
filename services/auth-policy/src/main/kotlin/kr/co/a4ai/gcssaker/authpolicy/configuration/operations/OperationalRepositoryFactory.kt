@@ -17,6 +17,7 @@ import org.springframework.beans.factory.ObjectProvider
 import org.springframework.data.redis.core.StringRedisTemplate
 import java.time.Duration
 import javax.sql.DataSource
+import io.micrometer.core.instrument.MeterRegistry
 
 data class OperationalReadDependencies(
     val dataSource: ObjectProvider<DataSource>,
@@ -45,10 +46,11 @@ internal fun createOperationalEventRepository(
     settings: AuthRuntimeSettings,
     dataSource: ObjectProvider<DataSource>,
     signal: OperationalEventSignal,
+    registry: MeterRegistry? = null,
 ): OperationalEventRepository {
     val initialEvents = seedOperationalEvents()
     val repository = PersistenceMode.dataSource(settings, dataSource)?.let {
-        JdbcOperationalEventRepository(it, initialEvents)
+        JdbcOperationalEventRepository(it, initialEvents, registry)
     } ?: run {
         InMemoryOperationalEventRepository(initialEvents)
     }

@@ -13,7 +13,7 @@ internal object AuthPolicyJdbcMigrations {
 
     fun ensure(dataSource: DataSource) {
         val signature = migrationSignature(dataSource)
-        if (!migratedDataSources.add(signature)) {
+        if (signature in migratedDataSources) {
             return
         }
         Flyway.configure()
@@ -23,6 +23,8 @@ internal object AuthPolicyJdbcMigrations {
             .baselineVersion("0")
             .load()
             .migrate()
+        // Failed migrations must never make subsequent repositories skip schema validation.
+        migratedDataSources.add(signature)
     }
 
     private fun migrationLocations(dataSource: DataSource): Array<String> =

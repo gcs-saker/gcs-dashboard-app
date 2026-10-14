@@ -3,31 +3,70 @@ package kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventReadModel
 import org.springframework.jdbc.core.JdbcTemplate
 import java.sql.Timestamp
+import javax.sql.DataSource
+import io.micrometer.core.instrument.MeterRegistry
+import org.slf4j.LoggerFactory
+import java.util.concurrent.TimeUnit
+import java.time.temporal.ChronoUnit
 
 class JdbcOperationalEventWriter(
-    private val jdbc: JdbcTemplate,
+    dataSource: DataSource,
+    private val registry: MeterRegistry? = null,
 ) {
+    private val jdbc = JdbcTemplate(dataSource).apply { queryTimeout = AuditAppendTransactions.TRANSACTION_TIMEOUT_SECONDS }
+    private val transactions = AuditAppendTransactions(dataSource, jdbc, registry)
+    private val isPostgres = dataSource.connection.use { it.metaData.databaseProductName == "PostgreSQL" }
+    private val logger = LoggerFactory.getLogger(javaClass)
     fun seed(initialEvents: Collection<OperationalEventReadModel>) {
         initialEvents.forEach(::appendIfAbsent)
     }
 
-    @Synchronized
     fun appendIfAbsent(event: OperationalEventReadModel) {
-        if (!existsById(event.id)) {
-            insert(withAuditChain(event))
+        val started = System.nanoTime()
+        try {
+            val outcome = transactions.execute { appendOwned(event) }
+            registry?.counter("gcs.auth_policy.audit.append", "result", outcome.name.lowercase())?.increment()
+        } catch (error: AuditAppendError) {
+            registry?.counter("gcs.auth_policy.audit.append", "result", "failed")?.increment()
+            logger.warn(
+                "audit_append operation=append result=failed duration_ms={} error_code={}",
+                TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started), error.errorCode.value,
+            )
+            throw error
+        } finally {
+            registry?.timer("gcs.auth_policy.audit.append.duration")?.record(System.nanoTime() - started, TimeUnit.NANOSECONDS)
         }
     }
 
-    private fun withAuditChain(event: OperationalEventReadModel): OperationalEventReadModel {
-        if (!AuditHashChain.isAudit(event)) return event
-        val previousHash = jdbc.query(OperationalEventSql.latestAuditHash) { rs, _ -> rs.getString(1) }
-            .firstOrNull() ?: AuditHashChain.GENESIS_HASH
-        return AuditHashChain.chain(event, previousHash)
+    private fun appendOwned(event: OperationalEventReadModel): AuditAppendOutcome {
+        // The singleton row is the cross-process serialization point; JVM monitors are insufficient.
+        val previousHash = jdbc.queryForObject(
+            OperationalEventSql.lockAuditHead, String::class.java,
+        ) ?: throw AuditAppendError(AuditAppendErrorCode.HEAD_MISSING)
+        if (existsById(event.id)) return AuditAppendOutcome.DUPLICATE
+        val persisted = normalizeStoragePrecision(event)
+        val appended = if (AuditHashChain.isAudit(persisted)) AuditHashChain.chain(persisted, previousHash) else persisted
+        if (insert(appended) == 0) return AuditAppendOutcome.DUPLICATE
+        if (AuditHashChain.isAudit(event)) {
+            val advanced = jdbc.update(
+                OperationalEventSql.advanceAuditHead,
+                appended.eventHash,
+            )
+            if (advanced != 1) throw AuditAppendError(AuditAppendErrorCode.HEAD_MISSING)
+        }
+        return AuditAppendOutcome.APPENDED
     }
 
-    private fun insert(event: OperationalEventReadModel) {
+    private fun normalizeStoragePrecision(event: OperationalEventReadModel): OperationalEventReadModel = event.copy(
+        severity = event.severity.lowercase(),
+        occurredAt = event.occurredAt.truncatedTo(ChronoUnit.MILLIS),
+        receivedAt = event.receivedAt?.truncatedTo(ChronoUnit.MICROS),
+        clockMeasuredAt = event.clockMeasuredAt?.truncatedTo(ChronoUnit.MICROS),
+    )
+
+    private fun insert(event: OperationalEventReadModel): Int =
         jdbc.update(
-            OperationalEventSql.insert,
+            if (isPostgres) OperationalEventSql.insertPostgres else OperationalEventSql.insert,
             event.id,
             Timestamp.from(event.occurredAt),
             event.severity.lowercase(),
@@ -57,7 +96,6 @@ class JdbcOperationalEventWriter(
             event.clockDriftMs,
             event.clockMeasuredAt?.let(Timestamp::from),
         )
-    }
 
     private fun existsById(id: String): Boolean =
         (jdbc.queryForObject(OperationalEventSql.existsById, Int::class.java, id) ?: 0) > 0
