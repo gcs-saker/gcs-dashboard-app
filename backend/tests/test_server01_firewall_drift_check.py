@@ -101,3 +101,28 @@ def test_return_or_unconditional_accept_cannot_bypass_default_deny() -> None:
         result.name == "firewall.rule_order" and result.status == "FAIL"
         for result in module.check_docker_user_rules(early_return)
     )
+
+
+def test_ufw_requires_https_and_server01_ssh_without_private_ports() -> None:
+    module = load_module()
+    policy = module.load_policy()
+    passing = """
+    Status: active
+    443/tcp ALLOW IN Anywhere
+    55121/tcp ALLOW IN Anywhere
+    """
+    exposed_database = passing + "5432/tcp ALLOW IN Anywhere\n"
+
+    assert {result.status for result in module.check_ufw_status(passing, policy)} == {"PASS"}
+    assert any(result.status == "FAIL" for result in module.check_ufw_status(exposed_database, policy))
+
+
+def test_iptables_and_nftables_split_brain_is_rejected() -> None:
+    module = load_module()
+
+    nft = "table ip filter { chain DOCKER-USER { type filter hook forward priority filter; } }"
+    consistent = module.check_firewall_backend("iptables v1.8.11 (nf_tables)", nft)
+    split = module.check_firewall_backend("iptables v1.8.11 (legacy)", nft)
+
+    assert consistent.status == "PASS"
+    assert split.status == "FAIL"

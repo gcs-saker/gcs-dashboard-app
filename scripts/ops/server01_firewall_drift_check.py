@@ -143,6 +143,55 @@ def check_docker_user_rules(rules: str, policy: dict[str, Any] | None = None) ->
     ]
 
 
+def ufw_allows_port(line: str, port: int) -> bool:
+    fields = line.split()
+    return bool(fields) and fields[0].split("/", maxsplit=1)[0] == str(port) and "ALLOW" in fields
+
+
+def check_ufw_status(status_output: str, policy: dict[str, Any]) -> list[CheckResult]:
+    firewall_policy = policy["hostFirewall"]
+    active = "Status: active" in status_output
+    allow_lines = [line.strip() for line in status_output.splitlines() if "ALLOW" in line]
+    missing = [
+        port
+        for port in firewall_policy["requiredPublicTcp"]
+        if not any(ufw_allows_port(line, port) for line in allow_lines)
+    ]
+    forbidden = [
+        port
+        for port in firewall_policy["forbiddenPublicTcp"]
+        if any(ufw_allows_port(line, port) for line in allow_lines)
+    ]
+    return [
+        CheckResult(
+            "firewall.ufw_active",
+            "PASS" if active else "FAIL",
+            "UFW is active" if active else "UFW is inactive",
+        ),
+        CheckResult(
+            "firewall.host_ingress_required",
+            "PASS" if not missing else "FAIL",
+            "required host ingress is present" if not missing else f"missing TCP ports: {missing}",
+        ),
+        CheckResult(
+            "firewall.host_ingress_private",
+            "PASS" if not forbidden else "FAIL",
+            "private ports are not allowed by UFW" if not forbidden else f"forbidden TCP ports: {forbidden}",
+        ),
+    ]
+
+
+def check_firewall_backend(iptables_version: str, nft_ruleset: str) -> CheckResult:
+    uses_nft = "nf_tables" in iptables_version
+    nft_has_docker_chain = "chain DOCKER-USER" in nft_ruleset
+    nft_has_active_hooks = " hook input " in nft_ruleset or " hook forward " in nft_ruleset
+    if uses_nft and nft_has_docker_chain:
+        return CheckResult("firewall.backend_consistency", "PASS", "iptables-nft and nftables agree")
+    if not uses_nft and not nft_has_active_hooks:
+        return CheckResult("firewall.backend_consistency", "PASS", "legacy iptables has no parallel nft hooks")
+    return CheckResult("firewall.backend_consistency", "FAIL", "iptables and nftables rules are split")
+
+
 def run_command(command: list[str]) -> str:
     result = subprocess.run(
         command,
@@ -173,6 +222,19 @@ def collect_live_results(policy: dict[str, Any]) -> list[CheckResult]:
         results.extend(check_docker_user_rules(run_command(["iptables", "-S", "DOCKER-USER"]), policy))
     except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
         results.append(CheckResult("firewall.docker_user_chain", "BLOCKED", type(error).__name__))
+    try:
+        results.extend(check_ufw_status(run_command(["ufw", "status"]), policy))
+    except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+        results.append(CheckResult("firewall.ufw_status", "BLOCKED", type(error).__name__))
+    try:
+        results.append(
+            check_firewall_backend(
+                run_command(["iptables", "--version"]),
+                run_command(["nft", "list", "ruleset"]),
+            )
+        )
+    except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+        results.append(CheckResult("firewall.backend_consistency", "BLOCKED", type(error).__name__))
     return results
 
 
