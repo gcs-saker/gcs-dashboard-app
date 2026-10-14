@@ -670,7 +670,6 @@ services:
     logging: *logging_defaults
     entrypoint: ["/bin/sh", "/usr/local/bin/gcs-turnserver-entrypoint"]
     command:
-      - -n
       - --log-file=stdout
       - --fingerprint
       - --use-auth-secret
@@ -736,7 +735,6 @@ services:
     logging: *logging_defaults
     entrypoint: ["/bin/sh", "/usr/local/bin/gcs-turnserver-entrypoint"]
     command:
-      - -n
       - --log-file=stdout
       - --fingerprint
       - --use-auth-secret

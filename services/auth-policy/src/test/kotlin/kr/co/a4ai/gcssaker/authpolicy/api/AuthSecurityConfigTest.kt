@@ -91,6 +91,15 @@ class AuthSecurityConfigTest @Autowired constructor(
     }
 
     @Test
+    fun `unsupported login method requires authentication before method routing`() {
+        mockMvc.get(AuthApiRoutes.ROOT + AuthApiRoutes.LOGIN)
+            .andExpect { status { isUnauthorized() } }
+        mockMvc.get(AuthApiRoutes.ROOT + AuthApiRoutes.LOGIN) {
+            header(HttpHeaders.AUTHORIZATION, bearerAccessToken())
+        }.andExpect { status { isMethodNotAllowed() } }
+    }
+
+    @Test
     fun `public login route without csrf reaches browser write guard`() {
         mockMvc.post(AuthApiRoutes.ROOT + AuthApiRoutes.LOGIN) {
             header(HttpHeaders.ORIGIN, AuthSecurityConfigTestContract.TRUSTED_ORIGIN)

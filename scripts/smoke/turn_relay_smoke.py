@@ -32,6 +32,12 @@ TRANSPORT_UDP = 17
 DEFAULT_TURN_URL = "turn:turn.gcs-saker.com:3478?transport=udp"
 
 
+class TurnAllocationError(RuntimeError):
+    def __init__(self, error_code: int | None) -> None:
+        self.error_code = error_code
+        super().__init__(f"TURN allocation failed with error={error_code or 'unknown'}")
+
+
 @dataclass(frozen=True)
 class TurnTarget:
     host: str
@@ -241,7 +247,7 @@ def run_turn_allocate(target: TurnTarget, username: str, password: str, timeout:
                 challenge = authenticated
                 continue
             error_code = decode_error_code(get_attr(authenticated, ATTR_ERROR_CODE))
-            raise RuntimeError(f"TURN allocation failed with error={error_code or 'unknown'}")
+            raise TurnAllocationError(error_code)
 
     if authenticated is None or authenticated.type != ALLOCATE_SUCCESS_RESPONSE:
         raise RuntimeError("TURN allocation failed after retrying stale nonce challenges")
@@ -250,6 +256,16 @@ def run_turn_allocate(target: TurnTarget, username: str, password: str, timeout:
     if not relay:
         raise RuntimeError("TURN allocation succeeded but did not return XOR-RELAYED-ADDRESS")
     return relay
+
+
+def verify_credential_denial(target: TurnTarget, username: str, password: str, timeout: float) -> None:
+    try:
+        run_turn_allocate(target, username, password + "-invalid", timeout)
+    except TurnAllocationError as error:
+        if error.error_code == 401:
+            return
+        raise RuntimeError("TURN invalid-credential check returned an unexpected error") from error
+    raise RuntimeError("TURN accepted an invalid credential")
 
 
 def run_static_check() -> int:
@@ -277,6 +293,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--username", default=os.getenv("WEBRTC_TURN_USERNAME"))
     parser.add_argument("--password", default=os.getenv("WEBRTC_TURN_PASSWORD"))
     parser.add_argument("--timeout-seconds", type=float, default=5)
+    parser.add_argument("--verify-denials", action="store_true", help="Also require invalid credentials to return 401.")
     args = parser.parse_args(argv)
     if not args.check and not args.run:
         args.check = True
@@ -292,6 +309,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             raise RuntimeError("WEBRTC_TURN_USERNAME and WEBRTC_TURN_PASSWORD are required for --run")
         target = parse_turn_url(args.turn_url)
         relay = run_turn_allocate(target, args.username, args.password, args.timeout_seconds)
+        if args.verify_denials:
+            verify_credential_denial(target, args.username, args.password, args.timeout_seconds)
+            print("TURN invalid-credential denial passed")
         print("TURN relay smoke run passed")
         print(f"TURN URL: {args.turn_url}")
         print(f"Relay address: {relay}")
