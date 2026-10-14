@@ -1,0 +1,8 @@
+all:
+  children:
+    server01_managed:
+      hosts:
+        server01-production:
+          ansible_host: replace-with-private-server01-address
+          ansible_port: 55121
+          ansible_user: replace-with-managed-user
