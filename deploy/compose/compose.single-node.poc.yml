@@ -578,6 +578,31 @@ services:
       - edge-net
       - egress-net
 
+  otel-collector:
+    <<: *runtime_hardening
+    profiles: [observability]
+    image: ${OTEL_COLLECTOR_IMAGE:-otel/opentelemetry-collector-contrib@sha256:39923a8e431bd1f57be82411999d389fcfe40857492e4365456d97a4c1f74be6}
+    user: "10001:10001"
+    pids_limit: 128
+    mem_limit: ${OTEL_COLLECTOR_MEMORY_LIMIT:-256m}
+    cpus: ${OTEL_COLLECTOR_CPU_LIMIT:-0.5}
+    ulimits: *ulimits_default
+    stop_grace_period: 30s
+    logging: *logging_defaults
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - type: bind
+        source: ../otel/collector.gateway.yml
+        target: /etc/otelcol-contrib/config.yaml
+        read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=16m"]
+    healthcheck:
+      <<: *health_defaults
+      test: ["CMD", "/otelcol-contrib", "validate", "--config=/etc/otelcol-contrib/config.yaml"]
+    restart: unless-stopped
+    networks:
+      - control-net
+
   mediamtx:
     <<: *runtime_hardening
     group_add: ["${GCS_SECRET_RUNTIME_GID:-10050}"]
