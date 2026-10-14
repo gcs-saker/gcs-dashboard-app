@@ -12,6 +12,7 @@ class TelemetrySqlDialect:
 
 
 class TelemetryStorageTables:
+    HISTORY_SCHEMA: Final = "backend_compat"
     LATEST: Final = "telemetry_realtime"
     HISTORY: Final = "telemetry_history"
     LATEST_MATERIALIZED_VIEW: Final = "telemetry_latest_mv"
@@ -71,4 +72,5 @@ telemetry_history_table = Table(
     Column(TelemetryStorageColumns.VELOCITY, Float),
     Column(TelemetryStorageColumns.EPOCH_TIME, Float),
     Column(TelemetryStorageColumns.RECEIVED_AT, DateTime(timezone=True), nullable=False),
+    schema=TelemetryStorageTables.HISTORY_SCHEMA,
 )

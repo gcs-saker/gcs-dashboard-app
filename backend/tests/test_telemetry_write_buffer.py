@@ -340,7 +340,7 @@ def test_postgres_history_bulk_insert_keeps_append_only_contract() -> None:
 
     compiled = str(build_postgres_history_bulk_insert(batch).compile(dialect=postgresql.dialect()))
 
-    assert compiled.startswith("INSERT INTO telemetry_history")
+    assert compiled.startswith("INSERT INTO backend_compat.telemetry_history")
     assert "stream_uuid" in compiled
     assert "received_at" in compiled
     assert "ON CONFLICT" not in compiled
