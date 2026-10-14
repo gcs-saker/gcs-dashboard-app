@@ -1,0 +1,17 @@
+---
+server01_apply_hardening: false
+server01_maintenance_window_approved: false
+server01_confirm_ssh_key_access: false
+server01_fail_on_blocked_audit: true
+server01_ssh_port: 55121
+server01_required_tcp_ports:
+  - 443
+  - 55121
+server01_runtime_root: /home/user/gcs-saker-runtime/server01
+server01_runtime_secret_root: /run/gcs-saker-secrets
+server01_secret_runtime_gid: 10050
+server01_required_services:
+  - auditd
+  - chrony
+  - docker
+  - gcs-saker-maintenance.timer
