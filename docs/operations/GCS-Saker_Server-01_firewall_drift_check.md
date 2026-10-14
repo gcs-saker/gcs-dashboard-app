@@ -30,4 +30,8 @@ The Docker forwarding check requires a `DOCKER-USER` chain, an explicit `RELATED
 
 An unconditional `ACCEPT`, a `RETURN` before the terminal deny, or an allow rule after the deny is reported as rule-order drift. These patterns can bypass policy or create an unreachable rule that gives a false sense of protection.
 
+The live check also requires active UFW host ingress for HTTPS `443/tcp` and Server-01 SSH `55121/tcp`, while rejecting explicit UFW allows for private application, database, cache, broker, and management ports. TURN and MediaMTX published-port filtering remains owned by `DOCKER-USER`, not duplicated as an assumption about UFW's input chain.
+
+`iptables --version` and `nft list ruleset` are compared to detect split ownership. An iptables-nft deployment must expose the Docker chain through nftables; a legacy iptables deployment must not have a parallel active nftables input/forward hook. A split result is `FAIL`, because operators could inspect one ruleset while traffic is governed by the other.
+
 Capture the JSON with the immutable source revision during Server-01 validation. Review every failure before changing a rule; never flush a live firewall or recreate stateful containers as a remediation shortcut.
