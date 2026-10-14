@@ -2,6 +2,8 @@
 
 `scripts/ops/server01_firewall_drift_check.py` is a read-only check. It does not apply UFW, nftables, iptables, Docker, or sysctl changes.
 
+The reviewed allowlist and host-ingress contract live in `deploy/firewall/server01-docker-forwarding-policy.json`. Port changes must update that policy and its tests instead of adding an inline exception to the checker.
+
 Run the contract check in CI:
 
 ```bash
@@ -25,5 +27,7 @@ The initial allowlist permits only these non-loopback container bindings:
 HTTPS `443/tcp` is terminated by the Server-01 host edge and is not a Docker container binding in this check. PostgreSQL, Redis, MQTT, HLS, RTSP, RTMP, MediaMTX management, metrics, dashboard, backend, and auth-policy container ports must remain loopback-only or unpublished.
 
 The Docker forwarding check requires a `DOCKER-USER` chain, an explicit `RELATED,ESTABLISHED` return rule, and a terminal `DROP` or `REJECT`. This is a drift detector, not a complete rule installer. The follow-up firewall policy must add explicit allow rules before the terminal deny and preserve SSH port `55121` outside Docker forwarding.
+
+An unconditional `ACCEPT`, a `RETURN` before the terminal deny, or an allow rule after the deny is reported as rule-order drift. These patterns can bypass policy or create an unreachable rule that gives a false sense of protection.
 
 Capture the JSON with the immutable source revision during Server-01 validation. Review every failure before changing a rule; never flush a live firewall or recreate stateful containers as a remediation shortcut.
