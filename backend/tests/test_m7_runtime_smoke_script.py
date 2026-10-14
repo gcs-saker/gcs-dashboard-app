@@ -72,8 +72,9 @@ def test_m7_runtime_smoke_requires_backend_stream_status_payload_and_read_model_
     assert "/api/v1/groups/co-a/members" in script
     assert "sibling-group viewer received co-a telemetry" in script
     assert "verify edge/backend/auth" not in script
-    for legacy_path in ("/api/control/", "/api/v1/ai/mock/detections", "/metrics", "/ws/"):
+    for legacy_path in ("/api/control/", "/api/v1/ai/mock/detections", "/ws/"):
         assert legacy_path not in script
+    assert '"http://media-control:8081/metrics"' not in script
 
 
 def test_m7_runtime_smoke_uses_local_override_and_ephemeral_turn_credentials():
@@ -96,6 +97,10 @@ def test_m7_runtime_smoke_generates_and_removes_ephemeral_local_pki():
     assert 'EPHEMERAL_INTERNAL_PKI="${EPHEMERAL_INTERNAL_PKI:-${STOP_STACK}}"' in script
     assert "prepare_internal_pki.sh" in contract
     assert "compose.ephemeral-pki.override.yml" in script
+    override = (REPO_ROOT / "deploy/compose/compose.ephemeral-pki.override.yml").read_text(encoding="utf-8")
+    assert override.count("volumes: !override") == 4
+    assert "mqtt-data:/mosquitto/data" in override
+    assert "audit-anchor-data:/var/lib/gcs-audit-anchor" in override
     assert "gcs-saker.ephemeral-pki=true" in contract
     assert "chown 10002:10002 /target/auth-policy.key" in contract
     assert "chown 10001:10001 /target/media-control.key /target/backend.key" in contract
@@ -106,6 +111,7 @@ def test_m7_runtime_smoke_generates_and_removes_ephemeral_local_pki():
     assert "/source/ca.key" not in contract
     assert 'export INTERNAL_PKI_DIR="$(cygpath -m "$EPHEMERAL_PKI_DIR")"' in contract
     assert "export AUTH_POLICY_AUDIT_ANCHOR_ENABLED=false" in contract
+    assert 'export MEDIA_CONTROL_PUBLISH_TOKEN="$(openssl rand -hex 32)"' in contract
     assert "EPHEMERAL_INTERNAL_PKI requires STOP_STACK=1" in contract
     assert "trap cleanup_runtime_smoke EXIT" in script
     assert "retained service log tails follow" in contract
@@ -144,3 +150,19 @@ def test_runtime_smoke_can_run_publish_play_inside_ephemeral_pki_lifecycle() -> 
     assert 'RUN_PUBLISH_PLAY_SMOKE="${RUN_PUBLISH_PLAY_SMOKE:-0}"' in script
     assert '"${REPO_ROOT}/scripts/smoke/m7_publish_play_smoke.sh" --run' in script
     assert 'START_STACK=0 STOP_STACK=0 EDGE_BASE_URL="$edge_base_url"' in script
+
+
+def test_runtime_smoke_stops_collector_and_rechecks_application_paths() -> None:
+    script = (REPO_ROOT / "scripts/smoke/m7_single_node_runtime_smoke.sh").read_text(encoding="utf-8")
+
+    assert 'RUN_OTEL_FAIL_OPEN_SMOKE="${RUN_OTEL_FAIL_OPEN_SMOKE:-0}"' in script
+    assert "COMPOSE_PROFILES=observability" in script
+    assert "BACKEND_OTEL_TRACES_EXPORTER=otlp" in script
+    assert "MEDIA_CONTROL_TRACE_EXPORTER=otlp" in script
+    assert "AUTH_POLICY_OTEL_TRACES_ENABLED=true" in script
+    assert "compose stop -t 5 otel-collector" in script
+    assert "compose start otel-collector" in script
+    assert "raw.otel.failopen" in script
+    assert "otelcol_receiver_accepted_spans" in script
+    assert "otelcol_exporter_sent_spans" in script
+    assert "physical talkback and hardware stream BLOCKED" in script

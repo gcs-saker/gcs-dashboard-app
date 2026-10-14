@@ -35,7 +35,7 @@ def test_each_replacement_has_a_service_specific_probe_and_rollback() -> None:
     source = script_source()
 
     assert "check_mqtt" in source
-    assert "/v3/config/global/get" in source
+    assert "http://media-control:8081/readyz" in source
     assert "turnutils_stunclient" in source
     assert "rollback_service" in source
     assert '"${compose[@]}" up -d --no-deps "${service}"' in source

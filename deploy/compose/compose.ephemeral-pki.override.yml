@@ -1,24 +1,38 @@
 services:
   mqtt:
-    volumes:
+    volumes: !override
+      - type: bind
+        source: ../mosquitto/mosquitto.hardened.conf
+        target: /mosquitto/config/mosquitto.conf
+        read_only: true
+      - type: bind
+        source: ../mosquitto/acl.hardened
+        target: /mosquitto/config/acl
+        read_only: true
+      - type: bind
+        source: ../mosquitto/mqtt-healthcheck.sh
+        target: /usr/local/bin/gcs-mqtt-healthcheck
+        read_only: true
+      - mqtt-data:/mosquitto/data
       - type: volume
         source: ephemeral-pki
         target: /run/secrets/gcs-pki
         read_only: true
   backend:
-    volumes:
+    volumes: !override
       - type: volume
         source: ephemeral-pki
         target: /run/secrets/gcs-pki
         read_only: true
   auth-policy:
-    volumes:
+    volumes: !override
+      - audit-anchor-data:/var/lib/gcs-audit-anchor
       - type: volume
         source: ephemeral-pki
         target: /run/secrets/gcs-pki
         read_only: true
   media-control:
-    volumes:
+    volumes: !override
       - type: volume
         source: ephemeral-pki
         target: /run/secrets/gcs-pki

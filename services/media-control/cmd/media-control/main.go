@@ -32,7 +32,7 @@ func main() {
 		os.Exit(runHealthcheck())
 	}
 	if err := run(); err != nil {
-		log.Printf("media-control stopped error_code=runtime_failed error_type=%T", err)
+		log.Printf("media-control stopped error_code=%s error_type=%T", startupErrorCode(err), err)
 		os.Exit(1)
 	}
 }
@@ -51,13 +51,13 @@ func run() error {
 		MaxExportBatch: config.otelMaxExportBatch,
 	}, nil)
 	if err != nil {
-		return err
+		return newStartupError("tracing", err)
 	}
 	defer shutdownTracing(traceShutdown)
 
 	handler, resources, err := buildRuntime(config)
 	if err != nil {
-		return err
+		return newStartupError("dependencies", err)
 	}
 	defer resources.Close()
 
@@ -68,19 +68,19 @@ func run() error {
 	grpcReadiness := grpcgateway.StartDeviceWithReadiness(grpcContext, config.grpcListenAddress, resources.gateway.server)
 	handler = handler.WithGatewayReadiness(grpcReadiness)
 	if err := startTalkbackLifecycleObserver(runtimeContext, config, resources.metrics); err != nil {
-		return err
+		return newStartupError("talkback_observer", err)
 	}
 	if err := startPublishSessionRevocationObserver(runtimeContext, config, resources); err != nil {
-		return err
+		return newStartupError("revocation_observer", err)
 	}
 	publishReadiness := &publishSessionReadiness{ready: true}
 	handler = handler.WithPublishSessionReadiness(publishReadiness)
 	if err := startPublishSessionStatistics(runtimeContext, config, resources, publishReadiness); err != nil {
-		return err
+		return newStartupError("session_statistics", err)
 	}
 	stopMQTT, err := startMQTTAdapter(runtimeContext, config, resources.metrics)
 	if err != nil {
-		return err
+		return newStartupError("mqtt_adapter", err)
 	}
 	defer stopMQTT()
 	return serveUntilShutdown(runtimeContext, newHTTPServer(config.listenAddress, handler.Routes()))

@@ -8,16 +8,33 @@ prepare_ephemeral_internal_pki() {
   }
   require_command openssl
   EPHEMERAL_PKI_DIR="$(mktemp -d)"
-  if ! INCLUDE_MQTT_SMOKE_IDENTITY=1 \
-    "${REPO_ROOT}/scripts/ops/prepare_internal_pki.sh" "$EPHEMERAL_PKI_DIR" >/dev/null 2>&1; then
+  local prepare_status=0
+  if command -v cygpath >/dev/null 2>&1; then
+    MSYS_NO_PATHCONV=1 docker run --rm \
+      -e INCLUDE_MQTT_SMOKE_IDENTITY=1 \
+      -e GCS_PKI_RUNTIME_GID=1000 \
+      -v "$(cygpath -m "$REPO_ROOT"):/repo:ro" \
+      -v "$(cygpath -m "$EPHEMERAL_PKI_DIR"):/pki" \
+      -w /repo --entrypoint bash \
+      postgis/postgis@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5 \
+      scripts/ops/prepare_internal_pki.sh /pki || prepare_status=$?
+  else
+    INCLUDE_MQTT_SMOKE_IDENTITY=1 \
+      "${REPO_ROOT}/scripts/ops/prepare_internal_pki.sh" "$EPHEMERAL_PKI_DIR" >/dev/null 2>&1 || prepare_status=$?
+  fi
+  if [[ "$prepare_status" -ne 0 ]]; then
     echo "Failed to generate ephemeral internal PKI" >&2
     return 1
   fi
   EPHEMERAL_PKI_VOLUME="gcs-saker-smoke-pki-$$-${RANDOM}"
   export EPHEMERAL_PKI_VOLUME
   docker volume create --label gcs-saker.ephemeral-pki=true "$EPHEMERAL_PKI_VOLUME" >/dev/null
-  docker run --rm \
-    -v "${EPHEMERAL_PKI_DIR}:/source:ro" \
+  local pki_source_mount="$EPHEMERAL_PKI_DIR"
+  if command -v cygpath >/dev/null 2>&1; then
+    pki_source_mount="$(cygpath -m "$EPHEMERAL_PKI_DIR")"
+  fi
+  MSYS_NO_PATHCONV=1 docker run --rm \
+    -v "${pki_source_mount}:/source:ro" \
     -v "${EPHEMERAL_PKI_VOLUME}:/target" \
     alpine:3.23 sh -eu -c '
       cp /source/ca.crt /source/ca.crl /source/auth-policy.crt /source/auth-policy.key \
@@ -47,6 +64,46 @@ prepare_ephemeral_internal_pki() {
   export AUTH_POLICY_AUDIT_ANCHOR_ENABLED=false
 }
 
+prepare_ephemeral_runtime_secrets() {
+  [[ "$STOP_STACK" == "1" ]] || return 0
+  require_command openssl
+  EPHEMERAL_RUNTIME_SECRET_DIR="$(mktemp -d)"
+  umask 077
+  export MEDIA_CONTROL_PUBLISH_TOKEN="$(openssl rand -hex 32)"
+  write_runtime_secret AUTH_JWT_SECRET "${AUTH_JWT_SECRET}"
+  write_runtime_secret POSTGRES_PASSWORD "${POSTGRES_PASSWORD}"
+  write_runtime_secret DATABASE_URL \
+    "postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-geo:5432/${POSTGRES_DB}?sslmode=verify-full&sslrootcert=/run/secrets/gcs-pki/ca.crt"
+  write_runtime_secret REDIS_PASSWORD "${REDIS_PASSWORD}"
+  write_runtime_secret AUTH_POLICY_RPC_TOKEN "${AUTH_POLICY_RPC_TOKEN}"
+  write_runtime_secret AUTH_POLICY_AUDIT_INGEST_TOKEN "${AUTH_POLICY_AUDIT_INGEST_TOKEN}"
+  write_runtime_secret MEDIA_CONTROL_GRPC_TOKEN "${MEDIA_CONTROL_GRPC_TOKEN}"
+  write_runtime_secret AUTH_POLICY_ADMIN_PASSWORD "${AUTH_POLICY_ADMIN_PASSWORD}"
+  write_runtime_secret AUTH_POLICY_OPERATOR_PASSWORD "${AUTH_POLICY_OPERATOR_PASSWORD}"
+  write_runtime_secret AUTH_POLICY_SMOKE_PASSWORD "${AUTH_POLICY_SMOKE_PASSWORD}"
+  write_runtime_secret AUTH_POLICY_ADMIN_MFA_SECRET "${AUTH_POLICY_ADMIN_MFA_SECRET}"
+  write_runtime_secret AUTH_POLICY_ADMIN_MFA_RECOVERY_HASHES "${AUTH_POLICY_ADMIN_MFA_RECOVERY_HASHES}"
+  write_runtime_secret AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS "${AUTH_POLICY_DEVICE_BOOTSTRAP_TOKENS}"
+  write_runtime_secret AUTH_POLICY_SIGNUP_INVITES "${AUTH_POLICY_SIGNUP_INVITES:-A4AI01:1:co-a}"
+  write_runtime_secret AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY "${AUTH_POLICY_AUDIT_ANCHOR_HMAC_KEY}"
+  write_runtime_secret MEDIAMTX_API_PASSWORD "${MEDIAMTX_API_PASSWORD}"
+  write_runtime_secret TURN_SHARED_SECRET "${TURN_SHARED_SECRET}"
+  local secret_mount="$EPHEMERAL_RUNTIME_SECRET_DIR"
+  if command -v cygpath >/dev/null 2>&1; then
+    secret_mount="$(cygpath -m "$EPHEMERAL_RUNTIME_SECRET_DIR")"
+  fi
+  MSYS_NO_PATHCONV=1 docker run --rm -v "${secret_mount}:/secrets" alpine:3.23 \
+    sh -ec 'chown 0:10050 /secrets/* && chmod 0440 /secrets/*'
+  export GCS_RUNTIME_SECRET_DIR="$secret_mount"
+}
+
+write_runtime_secret() {
+  local name="$1"
+  local value="$2"
+  printf '%s' "$value" >"${EPHEMERAL_RUNTIME_SECRET_DIR}/${name}"
+  chmod 600 "${EPHEMERAL_RUNTIME_SECRET_DIR}/${name}"
+}
+
 cleanup_runtime_smoke() {
   local status=$?
   if [[ "$status" -ne 0 && "$STACK_STARTED" == "1" ]]; then
@@ -66,6 +123,11 @@ cleanup_runtime_smoke() {
     ephemeral_label="$(docker volume inspect --format '{{index .Labels "gcs-saker.ephemeral-pki"}}' \
       "$EPHEMERAL_PKI_VOLUME" 2>/dev/null || true)"
     [[ "$ephemeral_label" != "true" ]] || docker volume rm "$EPHEMERAL_PKI_VOLUME" >/dev/null 2>&1 || true
+  fi
+  if [[ -n "${EPHEMERAL_RUNTIME_SECRET_DIR:-}" && -d "$EPHEMERAL_RUNTIME_SECRET_DIR" ]]; then
+    local secret_real
+    secret_real="$(realpath "$EPHEMERAL_RUNTIME_SECRET_DIR")"
+    [[ "$secret_real" == "$(realpath "$(dirname "$EPHEMERAL_RUNTIME_SECRET_DIR")")"/* ]] && rm -rf -- "$secret_real"
   fi
   return "$status"
 }
