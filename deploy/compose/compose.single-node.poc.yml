@@ -192,7 +192,7 @@ services:
       test: ["CMD", "/usr/local/bin/gcs-mqtt-healthcheck"]
     restart: unless-stopped
     networks:
-      - media-net
+      - broker-net
 
   backend:
     <<: *runtime_hardening
@@ -278,7 +278,9 @@ services:
     restart: unless-stopped
     networks:
       - control-net
-      - media-net
+      - stream-net
+      - edge-net
+      - egress-net
 
   auth-policy:
     <<: *runtime_hardening
@@ -424,7 +426,8 @@ services:
     restart: unless-stopped
     networks:
       - control-net
-      - media-net
+      - edge-net
+      - egress-net
 
   media-control:
     <<: *runtime_hardening
@@ -548,7 +551,10 @@ services:
     restart: unless-stopped
     networks:
       - control-net
-      - media-net
+      - broker-net
+      - stream-net
+      - edge-net
+      - egress-net
 
   mediamtx:
     <<: *runtime_hardening
@@ -582,7 +588,8 @@ services:
         mode: 0400
     restart: unless-stopped
     networks:
-      - media-net
+      - stream-net
+      - turn-net
 
   turn-primary:
     <<: *runtime_hardening
@@ -644,7 +651,7 @@ services:
       test: ["CMD", "/usr/local/bin/gcs-turn-healthcheck"]
     restart: unless-stopped
     networks:
-      - media-net
+      - turn-net
 
   turn-secondary:
     <<: *runtime_hardening
@@ -707,7 +714,7 @@ services:
       test: ["CMD", "/usr/local/bin/gcs-turn-healthcheck"]
     restart: unless-stopped
     networks:
-      - media-net
+      - turn-net
 
   dashboard:
     <<: *runtime_hardening
@@ -736,7 +743,7 @@ services:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:3000/ >/dev/null"]
     restart: unless-stopped
     networks:
-      - control-net
+      - edge-net
 
   mobile-publisher:
     image: ${MOBILE_PUBLISHER_IMAGE:-ghcr.io/gcs-saker/gcs-mobile-publisher@sha256:0000000000000000000000000000000000000000000000000000000000000000}
@@ -749,7 +756,7 @@ services:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz >/dev/null"]
     restart: unless-stopped
     networks:
-      - control-net
+      - edge-net
 
   edge:
     <<: *runtime_hardening
@@ -784,14 +791,24 @@ services:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz >/dev/null"]
     restart: unless-stopped
     networks:
-      - control-net
-      - media-net
+      - edge-net
+      - stream-net
 
 networks:
   control-net:
     driver: bridge
     internal: true
-  media-net:
+  broker-net:
+    driver: bridge
+    internal: true
+  edge-net:
+    driver: bridge
+    internal: true
+  stream-net:
+    driver: bridge
+  turn-net:
+    driver: bridge
+  egress-net:
     driver: bridge
 
 volumes:

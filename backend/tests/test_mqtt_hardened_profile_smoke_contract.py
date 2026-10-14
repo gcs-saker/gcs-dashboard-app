@@ -122,6 +122,14 @@ def test_runtime_smoke_restarts_broker_and_requires_mtls_reconnect() -> None:
     assert "broker.restart.mtls_reconnect" in source
 
 
+def test_runtime_smoke_denies_edge_to_broker_name_resolution() -> None:
+    source = SMOKE_SCRIPT.read_text(encoding="utf-8")
+
+    assert 'return f"{self.project_name}_broker-net"' in source
+    assert 'return f"{self.project_name}_edge-net"' in source
+    assert "network.edge_to_broker.denied" in source
+
+
 def test_runtime_smoke_executes_certificate_acl_and_size_denials() -> None:
     source = SMOKE_SCRIPT.read_text(encoding="utf-8")
 

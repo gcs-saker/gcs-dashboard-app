@@ -68,7 +68,10 @@ class MqttHardenedProfileConfig:
         return [*self.compose_command(env_file), "down", "--remove-orphans"]
 
     def network_name(self) -> str:
-        return f"{self.project_name}_media-net"
+        return f"{self.project_name}_broker-net"
+
+    def edge_network_name(self) -> str:
+        return f"{self.project_name}_edge-net"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -195,6 +198,7 @@ def run_smoke(config: MqttHardenedProfileConfig) -> dict[str, Any]:
             run_checked(config.config_command(generated_env), name="compose.config")
             run_checked(config.up_command(generated_env), name="compose.up")
             wait_for_mqtt(config)
+            checks.append(assert_edge_cannot_resolve_broker(config))
 
             anonymous = run_client(
                 config,
@@ -368,6 +372,38 @@ def wait_for_mqtt(config: MqttHardenedProfileConfig) -> None:
             return
         time.sleep(1)
     raise RuntimeError("MQTT broker did not become ready for authenticated health subscription")
+
+
+def assert_edge_cannot_resolve_broker(config: MqttHardenedProfileConfig) -> dict[str, Any]:
+    network = config.edge_network_name()
+    inspect = subprocess.run(["docker", "network", "inspect", network], check=False, capture_output=True)
+    created = inspect.returncode != 0
+    if created:
+        run_checked(["docker", "network", "create", "--internal", network], name="network.edge.create")
+    try:
+        probe = subprocess.run(
+            [
+                "docker",
+                "run",
+                "--rm",
+                "--network",
+                network,
+                CLIENT_IMAGE,
+                "sh",
+                "-lc",
+                "if getent hosts mqtt; then exit 1; fi",
+            ],
+            check=False,
+            capture_output=True,
+        )
+        if probe.returncode != 0:
+            raise AssertionError("edge network unexpectedly resolved the MQTT broker")
+        return {"name": "network.edge_to_broker.denied", "passed": True}
+    finally:
+        if created:
+            run_checked(
+                ["docker", "network", "rm", network], name="network.edge.remove", allow_failure=True
+            )
 
 
 def subscribe_and_publish(
