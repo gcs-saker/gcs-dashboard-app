@@ -1,6 +1,6 @@
 # Telemetry storage ownership
 
-Auth Policy owns online ingestion, idempotent event history in `public.telemetry_history`, current values in `public.telemetry_latest`, and PostGIS projections. PostgreSQL is authoritative; Redis and dashboard state are derived caches. REST, internal gRPC and MQTT all reach that owner. Existing mobile requests and response shapes are unchanged.
+Auth Policy owns online ingestion, idempotent event history in its Flyway schema's `telemetry_history`, current values in `telemetry_latest`, and PostGIS projections. The schema is `public` in the isolated PostgreSQL fixture and can be `gcs_geo` with the deployment's same-named database role. PostgreSQL is authoritative; Redis and dashboard state are derived caches. REST, internal gRPC and MQTT all reach that owner. Existing mobile requests and response shapes are unchanged.
 
 The backend `LegacyDbTelemetryBulkSink` is a migration-only compatibility consumer. Its history DTO uses `stream_uuid/received_at`, not Auth Policy's `uuid/recorded_at/event_id/group_id` contract. Its SQL now explicitly names `backend_compat.telemetry_history`; it must never insert that DTO into `public.telemetry_history`. Legacy latest values remain in the existing separate `telemetry_realtime` table. Compatibility storage is not an alternative source for online authorization or dashboard reads.
 

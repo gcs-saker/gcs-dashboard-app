@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.RowMapper
 internal object OperationalReadRowMappers {
     val telemetry = RowMapper<TelemetryReadModel> { rs, _ ->
         TelemetryReadModel(
+            eventId = rs.getString(OperationalReadColumns.eventId),
             uuid = rs.getString(OperationalReadColumns.uuid),
             latitude = rs.getDouble(OperationalReadColumns.latitude),
             longitude = rs.getDouble(OperationalReadColumns.longitude),
@@ -88,6 +89,7 @@ internal object OperationalReadRowMappers {
 }
 
 internal object OperationalReadColumns {
+    const val eventId = "event_id"
     const val id = "id"
     const val cid = "cid"
     const val uuid = "uuid"

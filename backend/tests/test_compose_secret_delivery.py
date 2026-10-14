@@ -7,6 +7,13 @@ COMPOSE = ROOT / "deploy/compose/compose.single-node.poc.yml"
 STATIC_TURN_OVERRIDE = ROOT / "deploy/compose/compose.static-turn-credential.override.yml"
 
 
+def test_postgres_error_logging_omits_row_details_and_bound_parameters() -> None:
+    service = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"]["postgres-geo"]
+    command = " ".join(service["command"])
+    assert "log_error_verbosity=terse" in command
+    assert "log_parameter_max_length_on_error=0" in command
+
+
 def test_shared_jwt_secret_is_file_scoped_and_absent_from_container_environment() -> None:
     document = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
     services = document["services"]

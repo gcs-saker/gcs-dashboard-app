@@ -8,14 +8,18 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.DuplicateAuthUserException
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.dao.DuplicateKeyException
+import org.springframework.dao.DataAccessException
+import org.springframework.transaction.TransactionException
 import org.springframework.transaction.support.TransactionTemplate
 import javax.sql.DataSource
 
 class JdbcAuthUserRepository(
     dataSource: DataSource,
 ) : AuthUserRepository {
-    private val jdbc = JdbcTemplate(dataSource)
-    private val transactions = TransactionTemplate(org.springframework.jdbc.datasource.DataSourceTransactionManager(dataSource))
+    private val jdbc = JdbcTemplate(dataSource).apply { queryTimeout = QUERY_TIMEOUT_SECONDS }
+    private val transactions = TransactionTemplate(org.springframework.jdbc.datasource.DataSourceTransactionManager(dataSource)).apply {
+        timeout = QUERY_TIMEOUT_SECONDS
+    }
     private val isPostgres = dataSource.connection.use { it.metaData.databaseProductName.equals("PostgreSQL", true) }
 
     override fun findByUsername(username: String): AuthUser? =
@@ -26,9 +30,13 @@ class JdbcAuthUserRepository(
 
     override fun save(user: AuthUser): AuthUser {
         try {
-            return insertUser(user)
+            return transactions.execute { insertUser(user) } ?: throw AuthUserPersistenceError()
         } catch (exception: DuplicateKeyException) {
             throw DuplicateAuthUserException("Username or email already registered", exception)
+        } catch (exception: DataAccessException) {
+            throw AuthUserPersistenceError(exception)
+        } catch (exception: TransactionException) {
+            throw AuthUserPersistenceError(exception)
         }
     }
 
@@ -38,13 +46,21 @@ class JdbcAuthUserRepository(
         jdbc.query(AuthUserSql.selectByGroup, authUserRowMapper, groupId.value, limit, offset)
 
     override fun update(user: AuthUser): AuthUser {
-        val updated = jdbc.update(
-            AuthUserSql.update,
-            user.email.lowercase(), user.passwordHash, user.companyId, user.role.name,
-            user.groupId.value, user.active, user.securityVersion, user.id, user.username,
-        )
-        check(updated == 1) { "User not found" }
-        return user
+        try {
+            return transactions.execute {
+                val updated = jdbc.update(
+                    AuthUserSql.update,
+                    user.email.lowercase(), user.passwordHash, user.companyId, user.role.name,
+                    user.groupId.value, user.active, user.securityVersion, user.id, user.username,
+                )
+                if (updated != 1) throw AuthUserPersistenceError()
+                user
+            } ?: throw AuthUserPersistenceError()
+        } catch (exception: DataAccessException) {
+            throw AuthUserPersistenceError(exception)
+        } catch (exception: TransactionException) {
+            throw AuthUserPersistenceError(exception)
+        }
     }
 
     override fun replaceGroupAdmin(groupId: GroupId, username: String): AuthUser =
@@ -86,6 +102,7 @@ class JdbcAuthUserRepository(
     }
 
     private companion object {
+        const val QUERY_TIMEOUT_SECONDS = 3
         val authUserRowMapper = RowMapper<AuthUser> { rs, _ ->
             AuthUser(
                 id = rs.getInt(AuthUserColumns.id),
@@ -101,6 +118,8 @@ class JdbcAuthUserRepository(
         }
     }
 }
+
+class AuthUserPersistenceError(cause: Throwable? = null) : RuntimeException("auth_user_write_failed", cause)
 
 private object AuthUserColumns {
     const val id = "id"

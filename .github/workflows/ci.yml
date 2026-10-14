@@ -290,7 +290,7 @@ jobs:
             -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=gcs_ownership_smoke \
             -p 127.0.0.1:15432:5432 postgres:16-alpine
           trap 'docker rm -f telemetry-ownership-postgres' EXIT
-          python -m pytest tests/test_telemetry_storage_postgres.py -q
+          python -m pytest tests/test_telemetry_storage_postgres.py tests/test_telemetry_identity_backfill_postgres.py -q
 
       - name: Build backend runtime image
         run: docker build -t gcs-saker-backend:ci .
