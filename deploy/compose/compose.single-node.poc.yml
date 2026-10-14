@@ -18,6 +18,16 @@ x-logging-defaults: &logging_defaults
     max-size: ${CONTAINER_LOG_MAX_SIZE:-10m}
     max-file: ${CONTAINER_LOG_MAX_FILES:-3}
 
+x-ulimits-default: &ulimits_default
+  nofile:
+    soft: 16384
+    hard: 32768
+
+x-ulimits-high-connection: &ulimits_high_connection
+  nofile:
+    soft: 32768
+    hard: 65536
+
 services:
   postgres-geo:
     <<: *runtime_hardening
@@ -27,6 +37,8 @@ services:
     pids_limit: 256
     mem_limit: ${POSTGRES_MEMORY_LIMIT:-1g}
     cpus: ${POSTGRES_CPU_LIMIT:-1.5}
+    ulimits: *ulimits_default
+    stop_grace_period: 60s
     logging: *logging_defaults
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-gcs_geo}
@@ -79,6 +91,8 @@ services:
     pids_limit: 128
     mem_limit: ${REDIS_MEMORY_LIMIT:-512m}
     cpus: ${REDIS_CPU_LIMIT:-0.75}
+    ulimits: *ulimits_default
+    stop_grace_period: 30s
     logging: *logging_defaults
     entrypoint: ["/usr/local/bin/gcs-valkey-secret-entrypoint"]
     command:
@@ -144,6 +158,8 @@ services:
     pids_limit: 128
     mem_limit: ${MQTT_MEMORY_LIMIT:-256m}
     cpus: ${MQTT_CPU_LIMIT:-0.5}
+    ulimits: *ulimits_default
+    stop_grace_period: 30s
     logging: *logging_defaults
     command: ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
     volumes:
@@ -200,6 +216,8 @@ services:
     tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=64m"]
     mem_limit: ${BACKEND_MEMORY_LIMIT:-768m}
     cpus: ${BACKEND_CPU_LIMIT:-1.5}
+    ulimits: *ulimits_default
+    stop_grace_period: 30s
     logging: *logging_defaults
     image: ${BACKEND_IMAGE:-gcs-saker-backend:arch-poc}
     build:
@@ -288,6 +306,8 @@ services:
     tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=128m"]
     mem_limit: ${AUTH_POLICY_MEMORY_LIMIT:-1g}
     cpus: ${AUTH_POLICY_CPU_LIMIT:-2.0}
+    ulimits: *ulimits_default
+    stop_grace_period: 45s
     logging: *logging_defaults
     image: ${AUTH_POLICY_IMAGE:-gcs-saker-auth-policy:arch-poc}
     build:
@@ -435,6 +455,8 @@ services:
     tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=64m"]
     mem_limit: ${MEDIA_CONTROL_MEMORY_LIMIT:-768m}
     cpus: ${MEDIA_CONTROL_CPU_LIMIT:-2.0}
+    ulimits: *ulimits_default
+    stop_grace_period: 30s
     logging: *logging_defaults
     image: ${MEDIA_CONTROL_IMAGE:-gcs-saker-media-control:arch-poc}
     build:
@@ -563,6 +585,8 @@ services:
     pids_limit: 512
     mem_limit: ${MEDIAMTX_MEMORY_LIMIT:-1g}
     cpus: ${MEDIAMTX_CPU_LIMIT:-2.0}
+    ulimits: *ulimits_high_connection
+    stop_grace_period: 30s
     logging: *logging_defaults
     environment:
       MTX_WEBRTCIPSFROMINTERFACES: ${MEDIAMTX_WEBRTC_IPS_FROM_INTERFACES:-true}
@@ -599,6 +623,8 @@ services:
     pids_limit: 256
     mem_limit: ${TURN_MEMORY_LIMIT:-256m}
     cpus: ${TURN_CPU_LIMIT:-0.5}
+    ulimits: *ulimits_high_connection
+    stop_grace_period: 20s
     logging: *logging_defaults
     entrypoint: ["/bin/sh", "/usr/local/bin/gcs-turnserver-entrypoint"]
     command:
@@ -662,6 +688,8 @@ services:
     pids_limit: 256
     mem_limit: ${TURN_MEMORY_LIMIT:-256m}
     cpus: ${TURN_CPU_LIMIT:-0.5}
+    ulimits: *ulimits_high_connection
+    stop_grace_period: 20s
     logging: *logging_defaults
     entrypoint: ["/bin/sh", "/usr/local/bin/gcs-turnserver-entrypoint"]
     command:
@@ -723,6 +751,8 @@ services:
       - /var/cache/nginx:rw,noexec,nosuid,nodev,size=16m,uid=101,gid=101,mode=0755
     mem_limit: ${DASHBOARD_MEMORY_LIMIT:-256m}
     cpus: ${DASHBOARD_CPU_LIMIT:-0.5}
+    ulimits: *ulimits_default
+    stop_grace_period: 15s
     logging: *logging_defaults
     image: ${DASHBOARD_IMAGE:-gcs-saker-dashboard:arch-poc}
     build:
@@ -767,6 +797,8 @@ services:
       - /var/cache/nginx:rw,noexec,nosuid,nodev,size=16m,uid=101,gid=101,mode=0755
     mem_limit: ${EDGE_MEMORY_LIMIT:-256m}
     cpus: ${EDGE_CPU_LIMIT:-0.5}
+    ulimits: *ulimits_high_connection
+    stop_grace_period: 15s
     logging: *logging_defaults
     ports:
       - "${PUBLIC_HTTP_BIND_ADDR:-127.0.0.1}:${PUBLIC_HTTP_PORT:-8080}:8080"
