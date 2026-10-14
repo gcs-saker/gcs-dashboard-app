@@ -24,7 +24,7 @@ from core.structured_logging import (
     log_request_completed,
     log_request_failed,
 )
-from core.tracing import TracingSettings, configure_global_tracing, trace_fastapi_request
+from core.tracing import TracingSettings, configure_global_tracing, shutdown_tracer_provider, trace_fastapi_request
 from modules.ai_adapter.router import router as ai_adapter_router
 from modules.ai_contract.router import router as mock_ai_router
 from modules.telemetry_ingest import TelemetryReadModelStore
@@ -137,6 +137,10 @@ def create_app() -> FastAPI:
     application.state.web_security_settings = web_security_settings
     application.state.tracing_settings = tracing_settings
     application.state.tracer_provider = configure_global_tracing(tracing_settings)
+    application.router.add_event_handler(
+        "shutdown",
+        lambda: shutdown_tracer_provider(application.state.tracer_provider),
+    )
     application.state.request_logger = get_logger("python-api")
     application.state.telemetry_read_model_store = TelemetryReadModelStore()
     application.add_middleware(

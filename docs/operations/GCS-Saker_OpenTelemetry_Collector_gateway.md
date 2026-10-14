@@ -17,6 +17,19 @@ docker compose \
 
 Production promotion requires a second step that connects each service through bounded asynchronous exporters, proves fail-open behavior with the Collector stopped, and measures accepted, refused, sent, failed, queue, and drop metrics. External export and disk-backed queues remain disabled until their destination, retention, encryption, and storage ceiling are approved.
 
+The Python backend supports the first bounded OTLP connection behind disabled defaults:
+
+```text
+BACKEND_OTEL_TRACES_ENABLED=false
+BACKEND_OTEL_TRACES_EXPORTER=none
+BACKEND_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+BACKEND_OTEL_EXPORT_TIMEOUT_SECONDS=1.0
+BACKEND_OTEL_BSP_MAX_QUEUE_SIZE=512
+BACKEND_OTEL_BSP_MAX_EXPORT_BATCH_SIZE=128
+```
+
+Setting the exporter to `otlp` is accepted only for the internal Collector hostname or local test addresses. Span completion enqueues to the SDK batch worker instead of performing network I/O on the request path. The backend has no Compose dependency on Collector health, and shutdown owns a bounded flush before closing the provider.
+
 Official deployment and component guidance:
 
 - https://opentelemetry.io/docs/collector/deploy/

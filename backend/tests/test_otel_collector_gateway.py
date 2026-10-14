@@ -67,3 +67,18 @@ def test_collector_has_no_external_exporter_or_public_management_surface() -> No
     assert config["exporters"]["debug"]["sampling_thereafter"] == 200
     assert config["extensions"]["health_check"]["endpoint"] == "0.0.0.0:13133"
     assert config["service"]["telemetry"]["metrics"]["level"] == "basic"
+
+
+def test_backend_otlp_export_is_disabled_bounded_and_not_a_dependency() -> None:
+    services = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"]
+    backend = services["backend"]
+
+    assert backend["environment"]["OTEL_TRACES_ENABLED"] == "${BACKEND_OTEL_TRACES_ENABLED:-false}"
+    assert backend["environment"]["OTEL_TRACES_EXPORTER"] == "${BACKEND_OTEL_TRACES_EXPORTER:-none}"
+    assert backend["environment"]["OTEL_EXPORTER_OTLP_ENDPOINT"].endswith("otel-collector:4317}")
+    assert backend["environment"]["OTEL_EXPORT_TIMEOUT_SECONDS"] == "${BACKEND_OTEL_EXPORT_TIMEOUT_SECONDS:-1.0}"
+    assert backend["environment"]["OTEL_BSP_MAX_QUEUE_SIZE"] == "${BACKEND_OTEL_BSP_MAX_QUEUE_SIZE:-512}"
+    assert backend["environment"]["OTEL_BSP_MAX_EXPORT_BATCH_SIZE"] == (
+        "${BACKEND_OTEL_BSP_MAX_EXPORT_BATCH_SIZE:-128}"
+    )
+    assert "otel-collector" not in backend["depends_on"]
