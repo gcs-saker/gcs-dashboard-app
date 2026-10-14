@@ -3,7 +3,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 output="${1:?Usage: prepare_internal_pki.sh <absolute-output-directory>}"
+runtime_gid="${GCS_PKI_RUNTIME_GID:-1000}"
 [[ "${output}" = /* ]] || { echo "output directory must be absolute" >&2; exit 2; }
+[[ "${runtime_gid}" =~ ^[0-9]+$ ]] || { echo "PKI runtime GID must be numeric" >&2; exit 2; }
 root_real="$(realpath "${ROOT}")"
 mkdir -p "${output}"
 output_real="$(realpath "${output}")"
@@ -82,5 +84,13 @@ if [[ "${INCLUDE_MQTT_SMOKE_IDENTITY:-0}" == "1" ]]; then
 fi
 openssl ca -gencrl -config "${output_real}/openssl-ca.cnf" -out "${output_real}/ca.crl"
 chmod 600 "${output_real}"/*.key
-chmod 644 "${output_real}"/*.crt
+runtime_keys=(
+  auth-policy.key media-control.key mqtt.key mqtt-health.key backend.key
+  postgres.key redis.key turn-primary.key turn-secondary.key
+)
+for key in "${runtime_keys[@]}"; do
+  chgrp "${runtime_gid}" "${output_real}/${key}"
+  chmod 640 "${output_real}/${key}"
+done
+chmod 644 "${output_real}"/*.crt "${output_real}/ca.crl"
 echo "internal PKI created; protect ca.key offline and rotate leaf certificates within 90 days"
