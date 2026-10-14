@@ -82,3 +82,20 @@ def test_backend_otlp_export_is_disabled_bounded_and_not_a_dependency() -> None:
         "${BACKEND_OTEL_BSP_MAX_EXPORT_BATCH_SIZE:-128}"
     )
     assert "otel-collector" not in backend["depends_on"]
+
+
+def test_media_control_otlp_export_is_disabled_bounded_and_not_a_dependency() -> None:
+    services = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"]
+    media_control = services["media-control"]
+    environment = media_control["environment"]
+
+    assert environment["MEDIA_CONTROL_TRACE_EXPORTER"] == "${MEDIA_CONTROL_TRACE_EXPORTER:-none}"
+    assert environment["MEDIA_CONTROL_OTEL_ENDPOINT"] == "${MEDIA_CONTROL_OTEL_ENDPOINT:-otel-collector:4317}"
+    assert environment["MEDIA_CONTROL_OTEL_EXPORT_TIMEOUT_SECONDS"] == (
+        "${MEDIA_CONTROL_OTEL_EXPORT_TIMEOUT_SECONDS:-1.0}"
+    )
+    assert environment["MEDIA_CONTROL_OTEL_MAX_QUEUE_SIZE"] == "${MEDIA_CONTROL_OTEL_MAX_QUEUE_SIZE:-512}"
+    assert environment["MEDIA_CONTROL_OTEL_MAX_EXPORT_BATCH_SIZE"] == (
+        "${MEDIA_CONTROL_OTEL_MAX_EXPORT_BATCH_SIZE:-128}"
+    )
+    assert "otel-collector" not in media_control["depends_on"]

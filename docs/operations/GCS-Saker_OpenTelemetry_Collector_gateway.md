@@ -30,6 +30,8 @@ BACKEND_OTEL_BSP_MAX_EXPORT_BATCH_SIZE=128
 
 Setting the exporter to `otlp` is accepted only for the internal Collector hostname or local test addresses. Span completion enqueues to the SDK batch worker instead of performing network I/O on the request path. The backend has no Compose dependency on Collector health, and shutdown owns a bounded flush before closing the provider.
 
+Media Control follows the same disabled and fail-open boundary with `MEDIA_CONTROL_TRACE_EXPORTER=none`. Its OTLP mode accepts only `otel-collector:4317` or local test addresses, uses a 512-span queue, exports at most 128 spans per batch, disables exporter retries, and limits each export attempt to one second. Media Control startup and readiness do not depend on Collector health.
+
 Official deployment and component guidance:
 
 - https://opentelemetry.io/docs/collector/deploy/
