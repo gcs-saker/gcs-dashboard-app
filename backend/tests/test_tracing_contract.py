@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from core.tracing import (
@@ -13,6 +15,8 @@ from core.tracing import (
     build_tracer_provider,
     extract_trace_context,
     inject_trace_headers,
+    shutdown_tracer_provider,
+    span_processor_for,
     trace_ai_sidecar_call,
     trace_fastapi_request,
     tracer_for,
@@ -96,3 +100,41 @@ def test_ai_sidecar_span_uses_metadata_only() -> None:
     assert attributes[TraceAttributeNames.SCHEMA_VERSION] == "ai.detection.v1alpha1"
     assert all("stream" not in key.lower() for key in attributes)
     assert all("payload" not in key.lower() for key in attributes)
+
+
+def test_otlp_exporter_uses_bounded_async_processor() -> None:
+    exporter = InMemorySpanExporter()
+    settings = TracingSettings(
+        enabled=True,
+        exporter=TraceExporters.OTLP,
+        otlp_endpoint="http://otel-collector:4317",
+        max_queue_size=256,
+        max_export_batch_size=64,
+    )
+
+    processor = span_processor_for(settings, exporter)
+
+    assert isinstance(processor, BatchSpanProcessor)
+    processor.shutdown()
+
+
+def test_otlp_exporter_rejects_external_endpoint_and_unbounded_batch() -> None:
+    with pytest.raises(ValueError, match="internal collector"):
+        TracingSettings(enabled=True, exporter=TraceExporters.OTLP, otlp_endpoint="https://example.com:4317")
+    with pytest.raises(ValueError, match="batch cannot exceed queue"):
+        TracingSettings(
+            enabled=True,
+            exporter=TraceExporters.OTLP,
+            max_queue_size=64,
+            max_export_batch_size=128,
+        )
+
+
+def test_tracer_shutdown_flushes_and_closes_provider() -> None:
+    exporter, provider = tracing_fixture()
+    with tracer_for(provider).start_as_current_span("shutdown-probe"):
+        pass
+
+    shutdown_tracer_provider(provider)
+
+    assert exporter.get_finished_spans()[0].name == "shutdown-probe"
