@@ -61,6 +61,9 @@ def test_login_method_probe_preserves_authentication_precedence(
     scenario = next(item for item in module.scenarios() if item.name == "login_method_confusion")
 
     class MethodResponse:
+        def __init__(self, response_status: int) -> None:
+            self.status = response_status
+
         def __enter__(self):
             return self
 
@@ -70,8 +73,7 @@ def test_login_method_probe_preserves_authentication_precedence(
         def read(self, _limit):
             return b'{"detail":"authentication required"}'
 
-    response = MethodResponse()
-    response.status = status
+    response = MethodResponse(status)
     monkeypatch.setattr(module, "urlopen", lambda *_args, **_kwargs: response)
 
     assert module.execute("http://127.0.0.1:8080", scenario)["result"] == expected_result
