@@ -51,6 +51,34 @@ def test_remote_dast_requires_explicit_https_approval() -> None:
     module.validate_target("http://127.0.0.1:8080", allow_remote=False)
 
 
+@pytest.mark.parametrize("status, expected_result", [(401, "PASS"), (200, "FAIL"), (302, "FAIL"), (405, "FAIL")])
+def test_login_method_probe_preserves_authentication_precedence(
+    monkeypatch: pytest.MonkeyPatch,
+    status: int,
+    expected_result: str,
+) -> None:
+    module = load_module()
+    scenario = next(item for item in module.scenarios() if item.name == "login_method_confusion")
+
+    class MethodResponse:
+        def __init__(self, response_status: int) -> None:
+            self.status = response_status
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return None
+
+        def read(self, _limit):
+            return b'{"detail":"authentication required"}'
+
+    response = MethodResponse(status)
+    monkeypatch.setattr(module, "urlopen", lambda *_args, **_kwargs: response)
+
+    assert module.execute("http://127.0.0.1:8080", scenario)["result"] == expected_result
+
+
 def test_dast_payload_scenarios_reach_the_body_parser_without_a_cors_preflight() -> None:
     module = load_module()
     payload_scenarios = [

@@ -3,6 +3,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "smoke" / "turn_relay_smoke.py"
 
@@ -56,3 +58,34 @@ def test_turn_relay_smoke_static_contract_mentions_stale_nonce_retry() -> None:
 
     assert "438" in script
     assert "stale nonce" in script.lower()
+
+
+def test_turn_credential_denial_requires_an_actual_401(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = load_turn_smoke_module()
+    target = module.TurnTarget("127.0.0.1", 3478, "udp")
+
+    def denied(_target, _username, password, _timeout):
+        assert password == "test-password-invalid"
+        raise module.TurnAllocationError(401)
+
+    monkeypatch.setattr(module, "run_turn_allocate", denied)
+    module.verify_credential_denial(target, "test-user", "test-password", 1)
+
+
+@pytest.mark.parametrize("failure", [None, 438, "timeout"])
+def test_turn_denial_check_fails_for_acceptance_or_unrelated_errors(
+    monkeypatch: pytest.MonkeyPatch,
+    failure: int | str | None,
+) -> None:
+    module = load_turn_smoke_module()
+
+    def unexpected(*_args):
+        if failure == "timeout":
+            raise TimeoutError("test timeout")
+        if failure is not None:
+            raise module.TurnAllocationError(failure)
+        return "127.0.0.1:49160"
+
+    monkeypatch.setattr(module, "run_turn_allocate", unexpected)
+    with pytest.raises((RuntimeError, TimeoutError)):
+        module.verify_credential_denial(module.TurnTarget("127.0.0.1", 3478, "udp"), "test-user", "test-password", 1)

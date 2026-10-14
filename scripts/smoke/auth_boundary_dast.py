@@ -114,7 +114,8 @@ def scenarios() -> list[Scenario]:
             (403,),
             {**json_headers, "Origin": TARGET_ORIGIN},
         ),
-        Scenario("login_method_confusion", "GET", "/auth-policy/auth/login", None, (405,), {}),
+        # Only POST is public; other login methods authenticate before routing.
+        Scenario("login_method_confusion", "GET", "/auth-policy/auth/login", None, (401,), {}),
         Scenario(
             "login_oversized",
             "POST",

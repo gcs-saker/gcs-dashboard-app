@@ -224,7 +224,7 @@ login_token_for() {
     -H "X-GCS-CSRF: same-origin" \
     -d "{\"username\":\"${username}\",\"password\":\"${password}\"}" \
     "${edge_base_url}/auth-policy/auth/login" \
-    | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])'
+    | python3 -c 'import json, sys; sys.stdout.reconfigure(newline="\n"); print(json.load(sys.stdin)["access_token"])'
 }
 
 verify_authenticated_sibling_denial() {
@@ -249,6 +249,7 @@ turn_credentials() {
     "${edge_base_url}/media-control/api/v1/streams/ice-servers" \
     | python3 -c '
 import json, sys
+sys.stdout.reconfigure(newline="\n")
 payload = json.load(sys.stdin)
 servers = payload if isinstance(payload, list) else payload["iceServers"]
 server = next(item for item in servers if str(item.get("urls", "")).startswith("turn:"))
@@ -406,6 +407,8 @@ run_live() {
 
   local access_token
   access_token="$(login_access_token "$edge_base_url")"
+  expect_http_status "405" "${edge_base_url}/auth-policy/auth/login" \
+    -H "Authorization: Bearer ${access_token}"
   verify_authenticated_sibling_denial "$edge_base_url"
   curl -fsS \
     -H "Authorization: Bearer ${access_token}" \
@@ -435,7 +438,8 @@ run_live() {
     --run \
     --turn-url "$turn_url" \
     --username "$turn_username" \
-    --password "$turn_password"
+    --password "$turn_password" \
+    --verify-denials
 
   if [[ "$RUN_PUBLISH_PLAY_SMOKE" == "1" ]]; then
     START_STACK=0 STOP_STACK=0 EDGE_BASE_URL="$edge_base_url" \
