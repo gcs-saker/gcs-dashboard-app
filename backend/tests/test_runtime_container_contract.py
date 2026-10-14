@@ -108,6 +108,38 @@ def test_single_node_stateful_images_and_resource_limits_are_fixed() -> None:
     assert services["turn-primary"]["image"].startswith("${COTURN_IMAGE:-coturn/coturn@sha256:")
 
 
+def test_single_node_runtime_has_bounded_file_descriptors_and_shutdown_grace() -> None:
+    services = load_yaml(SINGLE_NODE_COMPOSE_FILE)["services"]
+    default_nofile = {"soft": 16_384, "hard": 32_768}
+    high_connection_nofile = {"soft": 32_768, "hard": 65_536}
+
+    expected = {
+        "postgres-geo": (default_nofile, "60s"),
+        "redis": (default_nofile, "30s"),
+        "mqtt": (default_nofile, "30s"),
+        "backend": (default_nofile, "30s"),
+        "auth-policy": (default_nofile, "45s"),
+        "media-control": (default_nofile, "30s"),
+        "mediamtx": (high_connection_nofile, "30s"),
+        "turn-primary": (high_connection_nofile, "20s"),
+        "turn-secondary": (high_connection_nofile, "20s"),
+        "dashboard": (default_nofile, "15s"),
+        "edge": (high_connection_nofile, "15s"),
+    }
+
+    for service_name, (nofile, stop_grace_period) in expected.items():
+        service = services[service_name]
+        assert service["pids_limit"] > 0
+        assert service["mem_limit"]
+        assert service["cpus"]
+        assert service["ulimits"]["nofile"] == nofile
+        assert service["stop_grace_period"] == stop_grace_period
+        assert "stop_signal" not in service
+
+    assert "ulimits" not in services["mobile-publisher"]
+    assert "stop_grace_period" not in services["mobile-publisher"]
+
+
 def test_https_edge_healthcheck_allows_temporary_self_signed_certificate() -> None:
     override = load_yaml(EDGE_HTTPS_OVERRIDE_FILE)
     healthcheck = override["services"]["edge"]["healthcheck"]["test"]
