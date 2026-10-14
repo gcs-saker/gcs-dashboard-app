@@ -110,9 +110,10 @@ def test_local_compose_uses_hardened_mqtt_and_keeps_no_auth_in_explicit_profile(
 def test_runtime_failure_captures_broker_logs_before_cleanup() -> None:
     source = SMOKE_SCRIPT.read_text(encoding="utf-8")
 
-    assert '"logs", "--no-color", "--tail", "120", "mqtt"' in source
+    for argument in ('"logs"', '"--no-color"', '"--tail"', '"120"', '"mqtt"'):
+        assert argument in source
     assert "MQTT smoke failed before cleanup" in source
-    assert source.index('"logs", "--no-color"') < source.index("config.down_command(generated_env)")
+    assert source.index("diagnostics = subprocess.run") < source.index("config.down_command(generated_env)")
 
 
 def test_runtime_smoke_restarts_broker_and_requires_mtls_reconnect() -> None:
@@ -120,6 +121,14 @@ def test_runtime_smoke_restarts_broker_and_requires_mtls_reconnect() -> None:
 
     assert '"restart", "mqtt"' in source
     assert "broker.restart.mtls_reconnect" in source
+
+
+def test_runtime_smoke_denies_edge_to_broker_name_resolution() -> None:
+    source = SMOKE_SCRIPT.read_text(encoding="utf-8")
+
+    assert 'return f"{self.project_name}_broker-net"' in source
+    assert 'return f"{self.project_name}_edge-net"' in source
+    assert "network.edge_to_broker.denied" in source
 
 
 def test_runtime_smoke_executes_certificate_acl_and_size_denials() -> None:
