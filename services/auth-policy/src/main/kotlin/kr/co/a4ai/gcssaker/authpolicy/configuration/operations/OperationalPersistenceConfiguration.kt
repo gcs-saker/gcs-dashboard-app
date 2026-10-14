@@ -40,6 +40,7 @@ class OperationalPersistenceConfiguration {
         settings: AuthRuntimeSettings,
         dataSource: ObjectProvider<DataSource>,
         signal: OperationalEventSignal,
+        registry: MeterRegistry,
     ): OperationalEventRepository =
-        createOperationalEventRepository(settings, dataSource, signal)
+        createOperationalEventRepository(settings, dataSource, signal, registry)
 }

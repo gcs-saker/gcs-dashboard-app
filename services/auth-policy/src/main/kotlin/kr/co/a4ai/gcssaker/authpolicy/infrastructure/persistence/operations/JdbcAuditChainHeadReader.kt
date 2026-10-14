@@ -6,24 +6,17 @@ import org.springframework.jdbc.core.JdbcTemplate
 import javax.sql.DataSource
 
 class JdbcAuditChainHeadReader(dataSource: DataSource) : AuditChainHeadReader {
-    private val jdbc = JdbcTemplate(dataSource)
+    private val jdbc = JdbcTemplate(dataSource).apply { queryTimeout = AuditAppendTransactions.TRANSACTION_TIMEOUT_SECONDS }
 
     override fun current(): AuditChainHead? {
-        val count = jdbc.queryForObject(COUNT_QUERY, Long::class.java) ?: 0
-        if (count == 0L) return null
-        val hash = jdbc.queryForObject(HEAD_QUERY, String::class.java) ?: return null
-        return AuditChainHead(hash, count)
+        return jdbc.query(HEAD_QUERY) { rs, _ ->
+            AuditChainHead(rs.getString("last_hash"), rs.getLong("event_count"))
+        }.firstOrNull()?.takeIf { it.recordCount > 0 }
     }
 
     private companion object {
-        const val COUNT_QUERY = """
-            SELECT COUNT(*) FROM operational_events
-            WHERE category IN ('security', 'audit') AND event_hash IS NOT NULL
-        """
         const val HEAD_QUERY = """
-            SELECT event_hash FROM operational_events
-            WHERE category IN ('security', 'audit') AND event_hash IS NOT NULL
-            ORDER BY occurred_at DESC, id DESC LIMIT 1
+            SELECT last_hash, event_count FROM operational_audit_chain_head WHERE singleton = 1
         """
     }
 }

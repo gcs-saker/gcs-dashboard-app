@@ -102,9 +102,9 @@ internal object OperationalEventSql {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     const val existsById = "SELECT COUNT(1) FROM operational_events WHERE id = ?"
-    const val latestAuditHash = """
-        SELECT event_hash FROM operational_events
-        WHERE category IN ('security', 'audit') AND event_hash IS NOT NULL
-        ORDER BY occurred_at DESC, id DESC LIMIT 1
+    const val insertPostgres = insert + " ON CONFLICT (id) DO NOTHING"
+    const val lockAuditHead = "SELECT last_hash FROM operational_audit_chain_head WHERE singleton = 1 FOR UPDATE"
+    const val advanceAuditHead = """
+        UPDATE operational_audit_chain_head SET last_hash = ?, event_count = event_count + 1 WHERE singleton = 1
     """
 }

@@ -14,13 +14,15 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.toCursor
 import org.springframework.jdbc.core.JdbcTemplate
 import java.sql.Timestamp
 import javax.sql.DataSource
+import io.micrometer.core.instrument.MeterRegistry
 
 class JdbcOperationalEventRepository(
     dataSource: DataSource,
     initialEvents: Collection<OperationalEventReadModel>,
+    registry: MeterRegistry? = null,
 ) : OperationalEventRepository {
     private val jdbc = JdbcTemplate(dataSource)
-    private val writer = JdbcOperationalEventWriter(jdbc)
+    private val writer = JdbcOperationalEventWriter(dataSource, registry)
     private val metricsReader = JdbcOperationalEventMetricsReader(jdbc)
 
     init {
