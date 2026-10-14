@@ -15,7 +15,7 @@ SMOKE_PASSWORD="${SMOKE_PASSWORD:-m7-smoke-pass}"
 FFMPEG_IMAGE="${FFMPEG_IMAGE:-jrottenberg/ffmpeg:6.1-alpine}"
 FFMPEG_PLATFORM="${FFMPEG_PLATFORM:-}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-gcs-saker-arch-poc}"
-MEDIA_NETWORK="${MEDIA_NETWORK:-${COMPOSE_PROJECT_NAME}_media-net}"
+MEDIA_NETWORK="${MEDIA_NETWORK:-${COMPOSE_PROJECT_NAME}_stream-net}"
 PUBLISHER_NAME="gcs-saker-m7-media-control-publisher-$$"
 
 usage() {
