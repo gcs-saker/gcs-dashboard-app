@@ -22,6 +22,11 @@
     "tcp": [443, 55121],
     "udp": []
   },
+  "hostFirewall": {
+    "manager": "ufw",
+    "requiredPublicTcp": [443, 55121],
+    "forbiddenPublicTcp": [3000, 5432, 6379, 8001, 8080, 8883, 8888, 8889, 9997, 9998]
+  },
   "firewall": {
     "requireEstablishedReturn": true,
     "requireTerminalDeny": true,
