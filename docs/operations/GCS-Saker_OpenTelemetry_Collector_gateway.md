@@ -32,6 +32,8 @@ Setting the exporter to `otlp` is accepted only for the internal Collector hostn
 
 Media Control follows the same disabled and fail-open boundary with `MEDIA_CONTROL_TRACE_EXPORTER=none`. Its OTLP mode accepts only `otel-collector:4317` or local test addresses, uses a 512-span queue, exports at most 128 spans per batch, disables exporter retries, and limits each export attempt to one second. Media Control startup and readiness do not depend on Collector health.
 
+Auth Policy uses Spring Boot's managed OpenTelemetry OTLP exporter with export disabled by default. Its endpoint guard accepts only `http://otel-collector:4318/v1/traces` or equivalent local test addresses. The batch queue is limited to 512 spans, each batch to 128 spans, the schedule delay to two seconds, and export processing to one second. Auth Policy has no Compose dependency on Collector health.
+
 Official deployment and component guidance:
 
 - https://opentelemetry.io/docs/collector/deploy/

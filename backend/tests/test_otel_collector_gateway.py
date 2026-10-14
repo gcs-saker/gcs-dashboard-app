@@ -99,3 +99,19 @@ def test_media_control_otlp_export_is_disabled_bounded_and_not_a_dependency() ->
         "${MEDIA_CONTROL_OTEL_MAX_EXPORT_BATCH_SIZE:-128}"
     )
     assert "otel-collector" not in media_control["depends_on"]
+
+
+def test_auth_policy_otlp_export_is_disabled_bounded_and_not_a_dependency() -> None:
+    services = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"]
+    auth_policy = services["auth-policy"]
+    environment = auth_policy["environment"]
+
+    assert environment["AUTH_POLICY_OTEL_TRACES_ENABLED"] == "${AUTH_POLICY_OTEL_TRACES_ENABLED:-false}"
+    assert environment["AUTH_POLICY_OTEL_ENDPOINT"] == (
+        "${AUTH_POLICY_OTEL_ENDPOINT:-http://otel-collector:4318/v1/traces}"
+    )
+    assert environment["AUTH_POLICY_OTEL_EXPORT_TIMEOUT"] == "${AUTH_POLICY_OTEL_EXPORT_TIMEOUT:-1s}"
+    assert environment["AUTH_POLICY_OTEL_SCHEDULE_DELAY"] == "${AUTH_POLICY_OTEL_SCHEDULE_DELAY:-2s}"
+    assert environment["AUTH_POLICY_OTEL_MAX_QUEUE_SIZE"] == "${AUTH_POLICY_OTEL_MAX_QUEUE_SIZE:-512}"
+    assert environment["AUTH_POLICY_OTEL_MAX_BATCH_SIZE"] == "${AUTH_POLICY_OTEL_MAX_BATCH_SIZE:-128}"
+    assert "otel-collector" not in auth_policy["depends_on"]

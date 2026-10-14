@@ -203,7 +203,7 @@ jobs:
             --manifest services/auth-policy/build/reports/runtime-dependencies.json \
             --output "$RUNNER_TEMP/auth-policy-sbom.spdx.json" \
             --report "$RUNNER_TEMP/auth-policy-maven-reconciliation.json" \
-            --expected-corrections 27
+            --expected-corrections 32
 
       - name: Upload reconciled auth-policy SBOM
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
