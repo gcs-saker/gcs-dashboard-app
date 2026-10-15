@@ -14,6 +14,11 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceCredentialAuthenticationServi
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.devices.InMemoryRegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDevice
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceStatus
+import kr.co.a4ai.gcssaker.authpolicy.domain.*
+import kr.co.a4ai.gcssaker.authpolicy.application.TelemetryIngestionService
+import kr.co.a4ai.gcssaker.authpolicy.application.TelemetryIngestionEffects
+import kr.co.a4ai.gcssaker.authpolicy.application.TelemetryWriteAuthorizationService
+import org.springframework.http.HttpHeaders
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.assertThrows
@@ -36,10 +41,10 @@ class OperationalReadControllerTest {
         InMemoryAuthUserRepository(
             listOf(
                 AuthUser(
-                    username = "viewer-a",
+                    username = "operator-a",
                     email = "viewer-a@example.test",
                     passwordHash = passwordHasher.hash("pass"),
-                    role = UserRole.VIEWER,
+                    role = UserRole.OPERATOR,
                     groupId = GroupId("co-a"),
                 ),
                 AuthUser(
@@ -55,8 +60,7 @@ class OperationalReadControllerTest {
         tokenService,
     )
     private val timestamp = Instant.parse("2026-05-29T00:00:00Z")
-    private val controller = OperationalReadController(
-        repository = InMemoryOperationalReadRepository(
+    private val repository = InMemoryOperationalReadRepository(
             telemetry = listOf(
                 telemetry("raw.sample.front", GroupId("co-a")),
                 telemetry("raw.company-b.front", GroupId("co-b")),
@@ -65,10 +69,35 @@ class OperationalReadControllerTest {
                 "raw.sample.front" to listOf(asset("DRN-01", GroupId("co-a"))),
                 "raw.company-b.front" to listOf(asset("DRN-02", GroupId("co-b"))),
             ),
-        ),
+        )
+    private val controller = OperationalReadController(
+        repository = repository,
         principalResolver = BearerPrincipalResolver(sessions),
         clock = Clock.fixed(timestamp, ZoneOffset.UTC),
     )
+    private val devices = InMemoryRegisteredDeviceRepository()
+    private val policy = GroupPolicyService(listOf(
+        OrganizationUnit(GroupId("co-a"), "A", GroupType.COMPANY),
+        OrganizationUnit(GroupId("co-b"), "B", GroupType.COMPANY),
+    ))
+    private val writeController = writer(repository, DeviceCredentialAuthenticationService(devices, passwordHasher))
+
+    private fun writer(repository: OperationalReadRepository, credentials: DeviceCredentialAuthenticationService) =
+        TelemetryWriteController(
+            BearerPrincipalResolver(sessions), TelemetryWriteAuthorizationService(policy, devices),
+            TelemetryIngestionService(repository, TelemetryIngestionEffects(
+                GeofenceTelemetryEvaluator.NOOP, TelemetryAlertRuleEngine.NOOP, TelemetryPublisher.NOOP,
+            ), Clock.fixed(timestamp, ZoneOffset.UTC)), credentials,
+        )
+
+    private fun TelemetryWriteController.ingestDeviceTelemetry(
+        deviceId: String, authorization: String?, request: TelemetryIngestRequest,
+        deviceUuid: String? = null, deviceCredential: String? = null,
+    ): TelemetryReadResponse = ingestDeviceTelemetry(deviceId, HttpHeaders().apply {
+        authorization?.let { set(HttpHeaders.AUTHORIZATION, it) }
+        deviceUuid?.let { set(DeviceTelemetryAuthHeaders.DEVICE_UUID, it) }
+        deviceCredential?.let { set(DeviceTelemetryAuthHeaders.DEVICE_CREDENTIAL, it) }
+    }, request)
 
     @Test
     fun `active robot sends geometry using the same uuid credential identity as stream publish`() {
@@ -88,12 +117,7 @@ class OperationalReadControllerTest {
             ),
             passwordHasher,
         )
-        val deviceController = OperationalReadController(
-            repository = telemetryRepository,
-            principalResolver = BearerPrincipalResolver(sessions),
-            clock = Clock.fixed(timestamp, ZoneOffset.UTC),
-            deviceCredentials = deviceCredentials,
-        )
+        val deviceController = writer(telemetryRepository, deviceCredentials)
 
         val response = deviceController.ingestDeviceTelemetry(
             deviceId = "robot-uuid-001",
@@ -121,13 +145,13 @@ class OperationalReadControllerTest {
         assertEquals(121.0, response.headingDeg)
         assertEquals(121.0, response.yawDeg)
         assertEquals(92.0, response.linkQualityPercent)
-        assertEquals(1, telemetryRepository.telemetryFor(principal("viewer-a")).size)
+        assertEquals(1, telemetryRepository.telemetryFor(principal("operator-a")).size)
     }
 
     @Test
     fun `robot geometry rejects a different header uuid`() {
         val error = assertThrows<ResponseStatusException> {
-            controller.ingestDeviceTelemetry(
+            writeController.ingestDeviceTelemetry(
                 deviceId = "robot-uuid-001",
                 authorization = null,
                 request = TelemetryIngestRequest(
@@ -144,7 +168,7 @@ class OperationalReadControllerTest {
 
     @Test
     fun `telemetry read model keeps python compatible array response and filters by group`() {
-        val response = controller.telemetryAll(bearer(accessToken("viewer-a")))
+        val response = controller.telemetryAll(bearer(accessToken("operator-a")))
 
         assertEquals(1, response.size)
         assertEquals("raw.sample.front", response[0].uuid)
@@ -154,7 +178,7 @@ class OperationalReadControllerTest {
 
     @Test
     fun `asset read model returns gateway mapped assets only inside principal group`() {
-        val response = controller.assetsForGateway("raw.sample.front", bearer(accessToken("viewer-a")))
+        val response = controller.assetsForGateway("raw.sample.front", bearer(accessToken("operator-a")))
 
         assertEquals(1, response.size)
         assertEquals("DRN-01", response[0].uuid)
@@ -164,9 +188,9 @@ class OperationalReadControllerTest {
 
     @Test
     fun `telemetry ingest upserts the read model for the authenticated group`() {
-        val token = bearer(accessToken("viewer-a"))
+        val token = bearer(accessToken("operator-a"))
 
-        val ingested = controller.ingestTelemetry(
+        val ingested = writeController.ingestTelemetry(
             token,
             TelemetryIngestRequest(
                 uuid = "raw.mobile.gps",
@@ -193,10 +217,10 @@ class OperationalReadControllerTest {
 
     @Test
     fun `device telemetry ingest binds path identity validates timestamp and stores latest snapshot`() {
-        val token = bearer(accessToken("viewer-a"))
+        val token = bearer(accessToken("operator-a"))
         val observed = timestamp.toEpochMilli()
 
-        val first = controller.ingestDeviceTelemetry(
+        val first = writeController.ingestDeviceTelemetry(
             "device-001",
             token,
             TelemetryIngestRequest(
@@ -205,7 +229,7 @@ class OperationalReadControllerTest {
                 observedUnixMillis = observed,
             ),
         )
-        val latest = controller.ingestDeviceTelemetry(
+        val latest = writeController.ingestDeviceTelemetry(
             "device-001",
             token,
             TelemetryIngestRequest(
@@ -225,12 +249,12 @@ class OperationalReadControllerTest {
 
     @Test
     fun `device telemetry ingest rejects mismatched identity and invalid timestamps`() {
-        val token = bearer(accessToken("viewer-a"))
+        val token = bearer(accessToken("operator-a"))
 
         assertEquals(
             OperationalReadApiErrors.DEVICE_ID_MISMATCH,
             assertThrows<BadRequestApiError> {
-                controller.ingestDeviceTelemetry(
+                writeController.ingestDeviceTelemetry(
                     "device-001",
                     token,
                     TelemetryIngestRequest(
@@ -243,7 +267,7 @@ class OperationalReadControllerTest {
         assertEquals(
             OperationalReadApiErrors.OBSERVED_TIMESTAMP_REQUIRED,
             assertThrows<BadRequestApiError> {
-                controller.ingestDeviceTelemetry(
+                writeController.ingestDeviceTelemetry(
                     "device-001",
                     token,
                     TelemetryIngestRequest(uuid = null),
@@ -253,7 +277,7 @@ class OperationalReadControllerTest {
         assertEquals(
             OperationalReadApiErrors.OBSERVED_TIMESTAMP_IN_FUTURE,
             assertThrows<BadRequestApiError> {
-                controller.ingestDeviceTelemetry(
+                writeController.ingestDeviceTelemetry(
                     "device-001",
                     token,
                     TelemetryIngestRequest(
@@ -267,9 +291,9 @@ class OperationalReadControllerTest {
 
     @Test
     fun `telemetry history returns selected stream samples without exposing other groups`() {
-        val token = bearer(accessToken("viewer-a"))
-        controller.ingestTelemetry(token, TelemetryIngestRequest(uuid = "raw.mobile.history", latitude = 35.88))
-        controller.ingestTelemetry(token, TelemetryIngestRequest(uuid = "raw.mobile.history", latitude = 35.89))
+        val token = bearer(accessToken("operator-a"))
+        writeController.ingestTelemetry(token, TelemetryIngestRequest(uuid = "raw.mobile.history", latitude = 35.88))
+        writeController.ingestTelemetry(token, TelemetryIngestRequest(uuid = "raw.mobile.history", latitude = 35.89))
 
         val history = controller.telemetryHistory("raw.mobile.history", token, limit = 10)
         val hidden = controller.telemetryHistory("raw.company-b.front", token, limit = 10)
@@ -280,7 +304,7 @@ class OperationalReadControllerTest {
 
     @Test
     fun `server health snapshots are persisted and filtered by authenticated group`() {
-        val token = bearer(accessToken("viewer-a"))
+        val token = bearer(accessToken("operator-a"))
 
         controller.recordServerHealthSnapshot(
             token,
@@ -303,7 +327,7 @@ class OperationalReadControllerTest {
 
     @Test
     fun `stream sessions expose latest heartbeat state for dashboard registry`() {
-        val token = bearer(accessToken("viewer-a"))
+        val token = bearer(accessToken("operator-a"))
 
         controller.recordStreamSession(
             token,
@@ -340,7 +364,7 @@ class OperationalReadControllerTest {
     @Test
     fun `telemetry ingest rejects blank uuid`() {
         val error = org.junit.jupiter.api.assertThrows<ResponseStatusException> {
-            controller.ingestTelemetry(bearer(accessToken("viewer-a")), TelemetryIngestRequest(uuid = " "))
+            writeController.ingestTelemetry(bearer(accessToken("operator-a")), TelemetryIngestRequest(uuid = " "))
         }
 
         assertEquals(HttpStatus.BAD_REQUEST, error.statusCode)
@@ -350,7 +374,7 @@ class OperationalReadControllerTest {
     fun `stream session ingest rejects missing stream id`() {
         val error = org.junit.jupiter.api.assertThrows<ResponseStatusException> {
             controller.recordStreamSession(
-                bearer(accessToken("viewer-a")),
+                bearer(accessToken("operator-a")),
                 StreamSessionRequest(streamId = " ", status = "online"),
             )
         }
@@ -361,7 +385,7 @@ class OperationalReadControllerTest {
     @Test
     fun `telemetry ingest rejects missing access token`() {
         val error = org.junit.jupiter.api.assertThrows<ResponseStatusException> {
-            controller.ingestTelemetry(null, TelemetryIngestRequest(uuid = "raw.mobile.gps"))
+            writeController.ingestTelemetry(null, TelemetryIngestRequest(uuid = "raw.mobile.gps"))
         }
 
         assertEquals(HttpStatus.UNAUTHORIZED, error.statusCode)
@@ -369,7 +393,7 @@ class OperationalReadControllerTest {
 
     @Test
     fun `asset read model hides another group assets`() {
-        val response = controller.assetsForGateway("raw.company-b.front", bearer(accessToken("viewer-a")))
+        val response = controller.assetsForGateway("raw.company-b.front", bearer(accessToken("operator-a")))
 
         assertTrue(response.isEmpty())
     }

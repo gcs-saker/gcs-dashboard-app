@@ -13,6 +13,8 @@ object OperationalReadApiErrors {
 
 object TelemetryIngestPolicy {
     const val MAX_FUTURE_SKEW_MILLIS = 300_000L
+    const val MAX_UUID_LENGTH = 128
+    const val MAX_EVENT_ID_LENGTH = 160
 }
 
 object DeviceTelemetryAuthHeaders {

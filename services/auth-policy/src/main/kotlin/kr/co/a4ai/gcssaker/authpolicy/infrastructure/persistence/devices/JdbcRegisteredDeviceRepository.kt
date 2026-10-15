@@ -19,6 +19,8 @@ class JdbcRegisteredDeviceRepository(
     private val transactions = TransactionTemplate(DataSourceTransactionManager(dataSource))
 
     init {
+        jdbc.queryTimeout = 3
+        transactions.timeout = 3
         AuthPolicyJdbcMigrations.ensure(dataSource)
     }
 

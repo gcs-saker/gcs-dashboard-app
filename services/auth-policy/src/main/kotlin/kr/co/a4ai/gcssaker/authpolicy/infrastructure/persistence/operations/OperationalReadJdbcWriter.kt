@@ -4,6 +4,11 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.AssetReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.ServerHealthSnapshotReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.StreamSessionReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
+import kr.co.a4ai.gcssaker.authpolicy.domain.PermissionDeniedError
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryWriteErrors
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryStorageUnavailableError
+import org.springframework.dao.DataAccessException
+import org.springframework.transaction.TransactionException
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.datasource.DataSourceTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
@@ -19,21 +24,56 @@ internal class OperationalReadJdbcWriter(
     private val transactions = TransactionTemplate(DataSourceTransactionManager(dataSource))
     private val isPostgres = dataSource.connection.use { it.metaData.databaseProductName.equals("PostgreSQL", true) }
 
+    init {
+        jdbc.queryTimeout = 3
+        transactions.timeout = 3
+    }
+
     fun replaceTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel {
         val persisted = if (isPostgres && telemetry.eventId == null) telemetry.copy(eventId = newLegacyEventId()) else telemetry
+        try {
+            persistTelemetry(persisted)
+        } catch (error: DataAccessException) {
+            if (generateSequence<Throwable>(error) { it.cause }.take(8)
+                .filterIsInstance<java.sql.SQLException>().any { it.sqlState == OWNERSHIP_SQL_STATE }
+            ) throw PermissionDeniedError(TelemetryWriteErrors.OWNERSHIP_CONFLICT, "telemetry write is not permitted")
+            throw TelemetryStorageUnavailableError(error)
+        } catch (error: TransactionException) {
+            throw TelemetryStorageUnavailableError(error)
+        }
+        return persisted
+    }
+
+    private fun persistTelemetry(persisted: TelemetryReadModel) {
         transactions.executeWithoutResult {
             if (isPostgres) {
+                jdbc.execute("SET LOCAL lock_timeout = '500ms'")
+                jdbc.execute("SET LOCAL statement_timeout = '2s'")
                 jdbc.update(
                     OperationalReadSql.upsertTelemetryAndHistoryPostgres,
                     *postgresTelemetryArguments(persisted),
                 )
             } else {
-                jdbc.update(OperationalReadSql.deleteTelemetryByUuid, telemetry.uuid)
-                insertTelemetry(telemetry)
-                insertTelemetryHistory(telemetry, telemetry.observedAt ?: Instant.now())
+                validateFixtureOwnership(persisted)
+                jdbc.update(OperationalReadSql.deleteTelemetryByUuid, persisted.uuid)
+                insertTelemetry(persisted)
+                insertTelemetryHistory(persisted, persisted.observedAt ?: Instant.now())
             }
         }
-        return persisted
+    }
+
+    private fun validateFixtureOwnership(sample: TelemetryReadModel) {
+        val devices = jdbc.query("SELECT group_id, status FROM registered_devices WHERE device_uuid = ?",
+            { row, _ -> row.getString("group_id") to row.getString("status") }, sample.uuid)
+        val owners = if (devices.isNotEmpty()) devices.map { it.first } else
+            jdbc.queryForList("SELECT group_id FROM telemetry_latest WHERE uuid = ?", String::class.java, sample.uuid)
+        if (owners.any { it != sample.groupId.value } || devices.any { it.second != "active" }) {
+            throw PermissionDeniedError(TelemetryWriteErrors.OWNERSHIP_CONFLICT, "telemetry write is not permitted")
+        }
+    }
+
+    private companion object {
+        const val OWNERSHIP_SQL_STATE = "P7401"
     }
 
     fun insertTelemetry(telemetry: TelemetryReadModel) {

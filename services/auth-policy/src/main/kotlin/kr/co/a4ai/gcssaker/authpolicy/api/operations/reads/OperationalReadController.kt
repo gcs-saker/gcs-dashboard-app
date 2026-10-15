@@ -1,14 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import kr.co.a4ai.gcssaker.authpolicy.application.TelemetryIngestionService
-import kr.co.a4ai.gcssaker.authpolicy.application.TelemetryIngestionEffects
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
-import kr.co.a4ai.gcssaker.authpolicy.domain.GeofenceTelemetryEvaluator
-import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryAlertRuleEngine
-import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryPublisher
-import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceCredentialAuthenticationService
-import kr.co.a4ai.gcssaker.authpolicy.domain.DevicePublishAuthorizationRejectedException
 import org.springframework.http.CacheControl
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -30,16 +23,9 @@ class OperationalReadController(
     private val objectMapper: ObjectMapper = ObjectMapper(),
     private val streamPolicy: OperationalReadStreamPolicy = OperationalReadStreamPolicy(),
     private val clock: Clock = Clock.systemUTC(),
-    private val geofenceEvaluator: GeofenceTelemetryEvaluator = GeofenceTelemetryEvaluator.NOOP,
-    private val alertRuleEngine: TelemetryAlertRuleEngine = TelemetryAlertRuleEngine.NOOP,
-    private val telemetryPublisher: TelemetryPublisher = TelemetryPublisher.NOOP,
-    private val deviceCredentials: DeviceCredentialAuthenticationService? = null,
     private val streamSessionSignal: StreamSessionVersionSignal = StreamSessionVersionSignal(),
 ) {
     private val requestReader = OperationalReadRequestReader(principalResolver)
-    private val ingestion = TelemetryIngestionService(
-        repository, TelemetryIngestionEffects(geofenceEvaluator, alertRuleEngine, telemetryPublisher), clock,
-    )
 
     @GetMapping(OperationalReadApiRoutes.TELEMETRY_ALL)
     @RequiresBearerAuth
@@ -51,45 +37,6 @@ class OperationalReadController(
         val principal = requestReader.principal(authorization)
         return repository.telemetryFor(principal, requestReader.boundedLimit(limit), requestReader.boundedOffset(offset))
             .map { it.toResponse() }
-    }
-
-    @PostMapping(OperationalReadApiRoutes.TELEMETRY_INGEST)
-    @RequiresBearerAuth
-    fun ingestTelemetry(
-        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
-        @RequestBody request: TelemetryIngestRequest,
-    ): TelemetryReadResponse {
-        val principal = requestReader.principal(authorization)
-        val telemetry = ingestion.ingest(request.toReadModel(principal))
-        return telemetry.toResponse()
-    }
-
-    @PostMapping(OperationalReadApiRoutes.DEVICE_TELEMETRY_INGEST)
-    @RequiresBearerAuth
-    fun ingestDeviceTelemetry(
-        @PathVariable deviceId: String,
-        @RequestHeader(AuthSecurityHeaders.AUTHORIZATION_HEADER_NAME, required = false) authorization: String?,
-        @RequestBody request: TelemetryIngestRequest,
-        @RequestHeader(DeviceTelemetryAuthHeaders.DEVICE_UUID, required = false) deviceUuid: String? = null,
-        @RequestHeader(DeviceTelemetryAuthHeaders.DEVICE_CREDENTIAL, required = false) deviceCredential: String? = null,
-    ): TelemetryReadResponse {
-        val groupId = if (!deviceUuid.isNullOrBlank() || !deviceCredential.isNullOrBlank()) {
-            if (deviceUuid != deviceId) {
-                throw ForbiddenApiError(OperationalReadApiErrors.DEVICE_ID_MISMATCH)
-            }
-            try {
-                deviceCredentials?.authenticate(deviceUuid, deviceCredential.orEmpty())?.groupId
-                    ?: throw UnauthorizedApiError(AuthApiErrors.AUTHENTICATION_REQUIRED)
-            } catch (error: DevicePublishAuthorizationRejectedException) {
-                throw ForbiddenApiError(error.message ?: "device authentication failed")
-            }
-        } else {
-            requestReader.principal(authorization).groupId
-        }
-        val telemetry = ingestion.ingest(
-            request.toDeviceReadModel(groupId, deviceId, Instant.now(clock)),
-        )
-        return telemetry.toResponse()
     }
 
     @GetMapping(OperationalReadApiRoutes.TELEMETRY_HISTORY)

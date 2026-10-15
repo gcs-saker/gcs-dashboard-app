@@ -8,6 +8,7 @@ import kr.co.a4ai.gcssaker.authpolicy.application.OperationalEventSignal
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceRepository
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -32,8 +33,9 @@ class OperationalPersistenceConfiguration {
     ) = OperationalReadDependencies(dataSource, redisTemplate, objectMapper, hierarchy)
 
     @Bean
-    fun operationalReadRepository(settings: AuthRuntimeSettings, dependencies: OperationalReadDependencies): OperationalReadRepository =
-        createOperationalReadRepository(settings, dependencies)
+    fun operationalReadRepository(
+        settings: AuthRuntimeSettings, dependencies: OperationalReadDependencies, devices: RegisteredDeviceRepository,
+    ): OperationalReadRepository = createOperationalReadRepository(settings, dependencies, devices)
 
     @Bean
     fun operationalEventRepository(

@@ -22,15 +22,10 @@ import java.util.concurrent.TimeUnit
 @ConditionalOnProperty(name = ["gcs.internal-grpc.enabled"], havingValue = "true")
 class DevicePolicyRpcConfiguration {
     @Bean
-    fun telemetryRpcEffects(geofence: GeofenceTelemetryEvaluator, alerts: TelemetryAlertRuleEngine, publisher: TelemetryPublisher) =
-        TelemetryIngestionEffects(geofence, alerts, publisher)
-
-    @Bean
     fun devicePolicyRpcService(
         credentials: DeviceCredentialAuthenticationService,
-        repository: OperationalReadRepository,
-        effects: TelemetryIngestionEffects,
-    ) = DevicePolicyRpcService(credentials, TelemetryIngestionService(repository, effects))
+        ingestion: TelemetryIngestionService,
+    ) = DevicePolicyRpcService(credentials, ingestion)
 
     @Bean
     fun mediaPolicyRpcService(
