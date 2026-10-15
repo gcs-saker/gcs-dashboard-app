@@ -4,6 +4,28 @@
 
 ## 0. 검토 결론
 
+### 2026-10-15: #920 네 번째 구간 — 부분 문자열 검색 GIN 도입성 평가
+
+**결론: 운영 인덱스 추가는 보류한다.** `scripts/benchmarks/event_search_index_benchmark.py`는 소유 Kotlin `selectBase`/`andTextQuery`/정렬/limit 상수를 직접 읽어 동일한 SQL을 실행한다. 9개 LOWER/COALESCE 표현식 전체에 대응하는 test-only 다중 표현식 `pg_trgm` GIN을 기본 fastupdate(on) 및 off로 비교한다. 검색 표현식이나 placeholder/그룹 연결 계약이 달라지면 실패한다. 컬럼 결합 검색으로 의미를 바꾸거나 일부 OR 필드를 누락하지 않는다. 권한 정책·서버 SQL·migration·모바일/대시보드 호출은 변경하지 않았다.
+
+로컬 Docker PostgreSQL 16의 변형별 100,000행, 읽기 12개 프로필·각 9회, 동일 1,000행 쓰기 warmup 후 9회 commit 측정이다. 읽기 변형 순서는 회전하고 쓰기 순서는 교대한다. 희귀어·흔한 단어·미일치·1/2글자·한글·NULL 필드·기존 `%`/`_` wildcard 의미·자기/하위/전체 그룹 범위를 비교한다. 각 응답은 최대 51행이며, 세 인덱스 변형 사이 동일한 정렬 결과와 독립 allowlisted-group oracle 일치를 요구한다. 인덱스를 강제 선택하지 않으며 실제 GIN 사용 여부·buffer/scan/filter/spill 수치를 비식별 JSON으로 남긴다.
+
+| 항목 | 기존 B-tree 기준 | GIN fastupdate on | GIN fastupdate off |
+| --- | ---: | ---: | ---: |
+| 희귀어 검색 p95 (ms) | 38.880 | 0.337 | 0.308 |
+| 미일치 검색 p95 (ms) | 35.615 | 0.273 | 0.206 |
+| 흔한 단어 검색 p95 (ms) | 0.139 | 0.092 | 0.093 |
+| 1,000행 insert+commit p50 (ms) | 8.739 | 27.520 | 147.369 |
+| 1,000행 insert+commit p95 (ms) | 12.647 | 42.730 | 204.371 |
+| 초기 테이블+인덱스 공간 (MiB) | 33.59 | 46.48 | 46.48 |
+| 1,000행 평균 WAL (bytes) | 612,320 | 3,083,602 | 15,423,702 |
+
+희귀어와 한글 긴 검색어에서는 실제 GIN을 사용했다. 흔한 단어·짧은 검색은 GIN을 선택하지 않았으며, 두 글자 한글 `임무`는 여전히 수십 ms였다. 추출 가능한 trigram이 없는 LIKE 패턴은 전체 인덱스 스캔으로 퇴화할 수 있다. GIN fastupdate는 pending list로 쓰기를 지연하지만 정리 비용이 없어지는 것은 아니다. 이번 on 설정의 수동 잔여 pending 정리는 약 6.9ms였고 자동 정리가 일어난 경우 그 비용은 insert 시간에 포함된다. 근거: [PostgreSQL 16 pg_trgm](https://www.postgresql.org/docs/16/pgtrgm.html), [GIN fast-update 구현](https://www.postgresql.org/docs/16/gin-implementation.html).
+
+이 시험은 warm-cache 합성 fixture이며 쓰기에는 현재 검색용 B-tree와 후보 GIN을 포함하지만 전체 운영 audit hash/lock/FK/모든 인덱스 및 네트워크 비용은 포함하지 않는다. WAL은 단독 시험 클러스터 전체 증가량이다. 최초 예비 시험의 초기 flush 편향은 보존하고 최종 측정은 모든 변형에 같은 warmup을 적용했다. 실제 운영 검색 빈도, 동시 송출·감사 저장 p95 예산, generic prepared plan, 분포 편향, 1천만/1억행, 장시간 pending 정리·lock wait는 아직 미검증이다. 따라서 검색만 빨라진다는 이유로 쓰기 중앙값 약 3배/17배 및 추가 공간 약 38%의 인덱스를 자동 채택하지 않는다. 별도 요구/부하 evidence가 생기면 최소 표현식 후보와 재평가한다.
+
+재현은 전용 로컬 `gcs_query_benchmark` DB의 새 `event_search_*` namespace에서만 허용한다. 기존 namespace가 하나라도 있으면 DDL 전에 실패하고 삭제/덮어쓰기를 하지 않는다. 실제 재실행 거부 뒤 각 변형의 110,000행 보존도 확인했다. `--run` 없는 실행은 접속 없이 NOT_RUN이며, 실패는 원문 SQL/검색어/호스트 없는 FAIL 코드와 nonzero exit다. CI는 PostgreSQL fixture에서 3회 측정하고 `event-search-index-benchmark` artifact를 저장한다. PASS는 결과·범위·측정 계약 통과이지 성능 목표 또는 운영 배포 승인이라는 뜻이 아니다.
+
 ### 2026-10-15: #920 세 번째 구간 — group closure 증분 갱신
 
 권위 원천은 PostgreSQL `organization_groups`의 adjacency(상위 그룹 연결·활성 상태)이며, `organization_group_closure`는 같은 DB 트랜잭션에서 유지하는 파생 관계다. TTL이 있는 권한 캐시가 아니다. 그룹 하나를 변경할 때 영향받는 활성 하위 트리의 기존 관계만 읽고, 정규 관계와 비교하여 삭제/삽입/깊이 수정분만 반영한다. 나머지 관계는 재삽입하지 않는다. 초기 기동에서는 전체 파생 관계를 검증·차이 조정하되 이미 정상인 행은 쓰지 않는다. 잘못된 활성 계층(순환·누락/비활성 부모)은 묵인하지 않는다. 수동 DB 변경은 지원되는 운영 경로가 아니며 유효하지 않은 adjacency 자체를 자동 복구한다고 주장하지 않는다.
