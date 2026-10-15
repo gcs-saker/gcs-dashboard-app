@@ -17,6 +17,7 @@ class JdbcRegisteredDeviceRepository(
     private val jdbc = JdbcTemplate(dataSource)
     private val metadata = JdbcRegisteredDeviceMetadataDao(jdbc)
     private val transactions = TransactionTemplate(DataSourceTransactionManager(dataSource))
+    private val postgres = dataSource.connection.use { it.metaData.databaseProductName.equals("PostgreSQL", true) }
 
     init {
         jdbc.queryTimeout = 3
@@ -44,18 +45,14 @@ class JdbcRegisteredDeviceRepository(
     @Synchronized
     override fun save(device: RegisteredDevice): RegisteredDevice =
         transactions.execute {
-            if (findByDeviceUuid(device.deviceUuid) == null) {
-                insert(device)
-            } else {
-                update(device)
-            }
-            metadata.replace(device)
+            upsert(device)
+            metadata.synchronize(device)
             device
         } ?: error("device save transaction returned no result")
 
-    private fun insert(device: RegisteredDevice) {
+    private fun upsert(device: RegisteredDevice) {
         jdbc.update(
-            RegisteredDeviceSql.insert,
+            if (postgres) RegisteredDeviceSql.upsertPostgres else RegisteredDeviceSql.mergeFixture,
             device.deviceUuid,
             device.groupId.value,
             device.displayName,
@@ -64,20 +61,6 @@ class JdbcRegisteredDeviceRepository(
             device.deviceType.apiValue,
             device.credentialVersion,
             device.policyVersion,
-        )
-    }
-
-    private fun update(device: RegisteredDevice) {
-        jdbc.update(
-            RegisteredDeviceSql.update,
-            device.groupId.value,
-            device.displayName,
-            device.credentialHash,
-            device.status.name.lowercase(),
-            device.deviceType.apiValue,
-            device.credentialVersion,
-            device.policyVersion,
-            device.deviceUuid,
         )
     }
 
@@ -131,9 +114,16 @@ private object RegisteredDeviceSql {
         INSERT INTO registered_devices (device_uuid, group_id, display_name, credential_hash, status, device_type, credential_version, policy_version)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """
-    const val update = """
-        UPDATE registered_devices
-        SET group_id = ?, display_name = ?, credential_hash = ?, status = ?, device_type = ?, credential_version = ?, policy_version = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE device_uuid = ?
+    const val upsertPostgres = insert + """
+        ON CONFLICT (device_uuid) DO UPDATE SET
+            group_id = EXCLUDED.group_id, display_name = EXCLUDED.display_name,
+            credential_hash = EXCLUDED.credential_hash, status = EXCLUDED.status,
+            device_type = EXCLUDED.device_type, credential_version = EXCLUDED.credential_version,
+            policy_version = EXCLUDED.policy_version, updated_at = CURRENT_TIMESTAMP
+    """
+    const val mergeFixture = """
+        MERGE INTO registered_devices (device_uuid, group_id, display_name, credential_hash, status,
+            device_type, credential_version, policy_version, updated_at)
+        KEY (device_uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     """
 }
