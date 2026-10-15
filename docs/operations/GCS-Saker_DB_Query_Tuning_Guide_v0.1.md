@@ -4,6 +4,16 @@
 
 ## 0. 검토 결론
 
+### 2026-10-15: #920 세 번째 구간 — group closure 증분 갱신
+
+권위 원천은 PostgreSQL `organization_groups`의 adjacency(상위 그룹 연결·활성 상태)이며, `organization_group_closure`는 같은 DB 트랜잭션에서 유지하는 파생 관계다. TTL이 있는 권한 캐시가 아니다. 그룹 하나를 변경할 때 영향받는 활성 하위 트리의 기존 관계만 읽고, 정규 관계와 비교하여 삭제/삽입/깊이 수정분만 반영한다. 나머지 관계는 재삽입하지 않는다. 초기 기동에서는 전체 파생 관계를 검증·차이 조정하되 이미 정상인 행은 쓰지 않는다. 잘못된 활성 계층(순환·누락/비활성 부모)은 묵인하지 않는다. 수동 DB 변경은 지원되는 운영 경로가 아니며 유효하지 않은 adjacency 자체를 자동 복구한다고 주장하지 않는다.
+
+그룹 레코드와 closure 변경은 SERIALIZABLE 트랜잭션 안에서 함께 커밋/롤백한다. 이 서비스의 계층 writer만 공유하는 transaction advisory lock을 사용하며 미디어·텔레메트리 writer/reader는 이 잠금을 얻지 않는다. SQL/트랜잭션 timeout은 3초, PostgreSQL statement/lock wait는 각각 2초/500ms다. 직렬화·deadlock·lock contention으로 확정된 실패만 최대 3회(50/100ms backoff) 재시도하고, 다른 저장 오류·계층/권한 거부는 재시도하지 않는다. commit 실패 원인도 분류하며 중단은 interrupt flag를 보존한다. 실패는 식별자·SQL·호스트를 포함하지 않는 typed 400/404/409/503으로 전달한다. 기존 서비스의 시스템 관리자 전용 변경 정책, 토큰 무효화와 캐시 전략은 변경하지 않았으며 그 전체 흐름의 cross-service 원자성까지 새로 보장한다는 뜻은 아니다.
+
+로컬 PostgreSQL 16.15의 합성 그룹 1,007개·closure 3,017행에서 동일한 3개 노드 하위 트리를 옮기는 repository 시험을 전후 교대 9회 수행했다. 기존 `b05c82ed` 방식은 매번 6,034행 삭제/삽입, 증분 방식은 12행 변경이었다. p50/p95는 기존 **2,908.824/2,954.739 ms**, 증분 **29.603/70.124 ms**였다. 기존 방식도 동일 DataSource의 단일 SERIALIZABLE 트랜잭션 안에서 실행했다. 비교용 과거 구현은 test-only이며 새 운영 경로는 전체 DELETE/TRUNCATE를 사용하지 않는다. 이름 변경·정상 재기동은 closure 쓰기 0행, 공통 조상 깊이 변경은 기존 키를 UPDATE, 무관한 가지의 실제 행(ctid)은 그대로 유지됨을 검증했다. 이 값은 로컬 repository-only 수치이지 전체 HTTP·운영 서버·미디어 성능 인증 결과가 아니다.
+
+독립 재귀 SQL 및 200회 결정론적 계층 변경 oracle로 결과를 비교하고, 다른 가지 동시 생성·상호 순환 시도·잠금 timeout/복구·DB 중간 실패 롤백·서브트리 이동 전후 읽기 범위·하위 그룹 관리 거부를 시험한다. `scripts/reports/group_closure_evidence.py`가 owned JUnit 4개 suite에서 비식별 수치만 추출한다. 누락 시험은 NOT_RUN, skipped는 BLOCKED, 실패/비정상 결과는 FAIL이며 CI는 PASS만 통과시킨다. 원문 로그·실패 SQL·그룹/장비 식별자는 artifact에 포함하지 않는다. 서버 배포와 실제 모바일/Talkback qualification은 별개다.
+
 ### 2026-10-15: #920 두 번째 구간 — 호환형 텔레메트리 keyset 조회
 
 새 opt-in 조회는 `GET /api/telemetry/page?limit=100`이며 서버 내부 REST 계약은 `contracts/rest/v1/telemetry-page.contract.json`이 소유한다. 응답은 기존 `TelemetryReadResponse`를 담는 `items`와 nullable `nextCursor`다. 이후 페이지는 `cursor` 파라미터와 정상 Bearer 토큰을 함께 보낸다. 기존 `/api/telemetry/all` 배열 응답·offset·limit 보정 방식, 모바일 및 대시보드 호출은 변경하지 않았다. 따라서 기존 화면이 자동으로 더 빨라졌다는 의미는 아니다.
