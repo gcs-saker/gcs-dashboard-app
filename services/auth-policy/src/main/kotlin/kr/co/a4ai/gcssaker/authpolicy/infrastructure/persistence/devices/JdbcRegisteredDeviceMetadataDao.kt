@@ -1,6 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence
 
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDevice
+import kr.co.a4ai.gcssaker.authpolicy.domain.DeviceMetadataDelta
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceSensor
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceSensors
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceStream
@@ -26,9 +27,16 @@ internal class JdbcRegisteredDeviceMetadataDao(
         }
     }
 
-    fun replace(device: RegisteredDevice) {
-        replaceSensors(device)
-        replaceStreams(device)
+    fun synchronize(device: RegisteredDevice) {
+        val identity = listOf(device.deviceUuid)
+        val sensors = DeviceMetadataDelta.between(
+            sensorsByDeviceUuid(identity)[device.deviceUuid].orEmpty(), device.sensors.values, RegisteredDeviceSensor::sensorId,
+        )
+        val streams = DeviceMetadataDelta.between(
+            streamsByDeviceUuid(identity)[device.deviceUuid].orEmpty(), device.streamPaths.values, RegisteredDeviceStream::streamPath,
+        )
+        synchronizeSensors(device.deviceUuid, sensors)
+        synchronizeStreams(device.deviceUuid, streams)
     }
 
     private fun sensorsByDeviceUuid(deviceUuids: List<String>): Map<String, List<RegisteredDeviceSensor>> =
@@ -47,23 +55,27 @@ internal class JdbcRegisteredDeviceMetadataDao(
         ).groupBy { it.deviceUuid }
             .mapValues { (_, rows) -> rows.map { it.stream } }
 
-    private fun replaceSensors(device: RegisteredDevice) {
-        jdbc.update(RegisteredDeviceMetadataSql.deleteSensors, device.deviceUuid)
-        jdbc.batchUpdate(
-            RegisteredDeviceMetadataSql.insertSensor,
-            device.sensors.values.map {
-                arrayOf(device.deviceUuid, it.sensorId, it.sensorType, it.status)
-            },
+    private fun synchronizeSensors(uuid: String, delta: DeviceMetadataDelta<RegisteredDeviceSensor>) {
+        if (delta.removed.isNotEmpty()) jdbc.batchUpdate(
+            RegisteredDeviceMetadataSql.deleteSensor, delta.removed.map { arrayOf(uuid, it) },
+        )
+        if (delta.inserted.isNotEmpty()) jdbc.batchUpdate(
+            RegisteredDeviceMetadataSql.insertSensor, delta.inserted.map { arrayOf(uuid, it.sensorId, it.sensorType, it.status) },
+        )
+        if (delta.updated.isNotEmpty()) jdbc.batchUpdate(
+            RegisteredDeviceMetadataSql.updateSensor, delta.updated.map { arrayOf(it.sensorType, it.status, uuid, it.sensorId) },
         )
     }
 
-    private fun replaceStreams(device: RegisteredDevice) {
-        jdbc.update(RegisteredDeviceMetadataSql.deleteStreams, device.deviceUuid)
-        jdbc.batchUpdate(
-            RegisteredDeviceMetadataSql.insertStream,
-            device.streamPaths.values.map {
-                arrayOf(device.deviceUuid, it.streamPath, it.kind, it.status)
-            },
+    private fun synchronizeStreams(uuid: String, delta: DeviceMetadataDelta<RegisteredDeviceStream>) {
+        if (delta.removed.isNotEmpty()) jdbc.batchUpdate(
+            RegisteredDeviceMetadataSql.deleteStream, delta.removed.map { arrayOf(uuid, it) },
+        )
+        if (delta.inserted.isNotEmpty()) jdbc.batchUpdate(
+            RegisteredDeviceMetadataSql.insertStream, delta.inserted.map { arrayOf(uuid, it.streamPath, it.kind, it.status) },
+        )
+        if (delta.updated.isNotEmpty()) jdbc.batchUpdate(
+            RegisteredDeviceMetadataSql.updateStream, delta.updated.map { arrayOf(it.kind, it.status, uuid, it.streamPath) },
         )
     }
 
@@ -111,12 +123,20 @@ private object RegisteredDeviceMetadataColumns {
 }
 
 private object RegisteredDeviceMetadataSql {
-    const val deleteSensors = "DELETE FROM registered_device_sensors WHERE device_uuid = ?"
+    const val deleteSensor = "DELETE FROM registered_device_sensors WHERE device_uuid = ? AND sensor_id = ?"
+    const val updateSensor = """
+        UPDATE registered_device_sensors SET sensor_type = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE device_uuid = ? AND sensor_id = ?
+    """
     const val insertSensor = """
         INSERT INTO registered_device_sensors (device_uuid, sensor_id, sensor_type, status)
         VALUES (?, ?, ?, ?)
     """
-    const val deleteStreams = "DELETE FROM registered_device_streams WHERE device_uuid = ?"
+    const val deleteStream = "DELETE FROM registered_device_streams WHERE device_uuid = ? AND stream_path = ?"
+    const val updateStream = """
+        UPDATE registered_device_streams SET kind = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE device_uuid = ? AND stream_path = ?
+    """
     const val insertStream = """
         INSERT INTO registered_device_streams (device_uuid, stream_path, kind, status)
         VALUES (?, ?, ?, ?)

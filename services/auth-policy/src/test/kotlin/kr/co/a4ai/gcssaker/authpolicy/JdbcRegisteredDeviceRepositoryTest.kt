@@ -20,6 +20,19 @@ import kotlin.test.assertFails
 
 class JdbcRegisteredDeviceRepositoryTest {
     @Test
+    fun `saving an existing device uses two metadata reads without a redundant device lookup`() {
+        val source = h2DataSource()
+        JdbcOrganizationHierarchyRepository(source, listOf(OrganizationUnit(GroupId("co-a"), "A", GroupType.COMPANY)))
+        val counted = StatementCountingDataSource(source)
+        val repository = JdbcRegisteredDeviceRepository(counted)
+        val original = DeviceRepositoryFixtures.device(DeviceRepositoryFixtures.DEVICE_UUID)
+        repository.save(original)
+        counted.selects.set(0)
+        repository.save(original)
+        assertEquals(2, counted.selects.get())
+    }
+
+    @Test
     fun `legacy inactive status maps to disabled during rolling deployment`() {
         assertEquals(RegisteredDeviceStatus.DISABLED, RegisteredDeviceStatus.fromPersistence("INACTIVE"))
         assertEquals(RegisteredDeviceStatus.ACTIVE, RegisteredDeviceStatus.fromPersistence("active"))
