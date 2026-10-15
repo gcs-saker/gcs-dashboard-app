@@ -105,17 +105,17 @@ def initialize_fixture(connection: PgConnection, options: BenchmarkOptions) -> N
         cursor.execute("SELECT set_config('work_mem', %s, false)", (str(options.work_mem_kb) + "kB",))
 
 
-def result_hash(connection: PgConnection, sql: str) -> str:
+def result_hash(connection: PgConnection, sql: str, parameters: tuple[object, ...] = SCOPE_PARAMETERS) -> str:
     with connection.cursor() as cursor:
-        cursor.execute(sql, SCOPE_PARAMETERS)
+        cursor.execute(sql, parameters)
         rows = sorted(cursor.fetchall(), key=repr)
     encoded = json.dumps(rows, default=str, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
 
 
-def measure(connection: PgConnection, sql: str) -> PlanMeasurement:
+def measure(connection: PgConnection, sql: str, parameters: tuple[object, ...] = SCOPE_PARAMETERS) -> PlanMeasurement:
     with connection.cursor() as cursor:
-        cursor.execute(EXPLAIN_PREFIX + sql, SCOPE_PARAMETERS)
+        cursor.execute(EXPLAIN_PREFIX + sql, parameters)
         row = cursor.fetchone()
     if row is None:
         raise QueryBenchmarkError("plan_missing")

@@ -1,7 +1,7 @@
 package kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence
 
 internal object OperationalReadSql {
-    const val selectTelemetry = """
+    const val selectTelemetryBase = """
         SELECT event_id, uuid, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
                soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id,
                battery_percent, heading_deg, roll_deg, pitch_deg, yaw_deg, link_quality_percent, observed_at, session_id, stream_id
@@ -10,8 +10,10 @@ internal object OperationalReadSql {
             SELECT 1 FROM organization_group_closure c
             WHERE c.ancestor_group_id = ? AND c.descendant_group_id = telemetry_latest.group_id
         )))
-        ORDER BY uuid LIMIT ? OFFSET ?
     """
+    const val selectTelemetry = selectTelemetryBase + " ORDER BY uuid LIMIT ? OFFSET ?"
+    const val andTelemetryAfterUuid = " AND uuid > ?"
+    const val orderTelemetryPage = " ORDER BY uuid LIMIT ?"
     const val selectAssetsByGateway = """
         SELECT id, cid, uuid, company_id, type, name, description, image_url,
                status, created_at, updated_at, group_id

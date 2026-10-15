@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "method": "GET",
+  "path": "/telemetry/page",
+  "edgePath": "/api/telemetry/page",
+  "query": {
+    "limit": {"type": "integer", "minimum": 1, "maximum": 500, "default": 100},
+    "cursor": {"type": "string", "maxLength": 2048, "optional": true}
+  },
+  "response": {
+    "items": {"type": "array", "itemModel": "TelemetryReadResponse", "maxItems": 500},
+    "nextCursor": {"type": ["string", "null"]}
+  },
+  "authentication": "Bearer required on every request; pagination cursors are not authentication tokens",
+  "cursor": {"purpose": "telemetry-page-v1", "ttlSeconds": 600, "boundTo": ["username", "groupId", "role", "securityVersion"]},
+  "ordering": "uuid ascending using the authoritative database collation",
+  "consistency": "live keyset walk, not a snapshot; new identities before the cursor require a new walk",
+  "compatibility": {"legacyPath": "/telemetry/all", "legacyEdgePath": "/api/telemetry/all", "legacyResponse": "array", "legacyOffsetUnchanged": true}
+}

@@ -23,6 +23,7 @@ class PlanMeasurement:
     temp_read_blocks: int
     temp_written_blocks: int
     sort_spill_nodes: int
+    uuid_range_scan: bool = False
 
     def as_report(self) -> dict[str, object]:
         return cast(dict[str, object], asdict(self))
@@ -32,15 +33,19 @@ def stream_metrics_sql(source: str) -> str:
     names = ("selectStreamSessionsBase", "groupByStreamSession")
     fragments = []
     for name in names:
-        match = re.search(rf'const val {name}\s*=\s*("""[\s\S]*?"""|"[^"\n]*")', source)
-        if match is None:
-            raise QueryBenchmarkError("owned_sql_missing")
-        literal = match.group(1)
-        fragments.append(literal[3:-3] if literal.startswith('"""') else literal[1:-1])
+        fragments.append(owned_sql_literal(source, name))
     sql = "\n".join(fragments).strip()
     if sql.count("?") != len(SCOPE_PARAMETERS):
         raise QueryBenchmarkError("owned_sql_parameter_contract_changed")
     return sql.replace("?", "%s")
+
+
+def owned_sql_literal(source: str, name: str) -> str:
+    match = re.search(rf'const val {re.escape(name)}\s*=\s*("""[\s\S]*?"""|"[^"\n]*")', source)
+    if match is None:
+        raise QueryBenchmarkError("owned_sql_missing")
+    literal = match.group(1)
+    return literal[3:-3] if literal.startswith('"""') else literal[1:-1]
 
 
 def object_mapping(value: object) -> dict[str, object]:
@@ -69,6 +74,7 @@ def plan_measurement(value: object) -> PlanMeasurement:
         block_count(plan, "Temp Read Blocks"),
         block_count(plan, "Temp Written Blocks"),
         sort_spills(plan),
+        uuid_range_scan(plan),
     )
 
 
@@ -80,13 +86,24 @@ def block_count(plan: dict[str, object], name: str) -> int:
 
 
 def sort_spills(plan: dict[str, object]) -> int:
+    return sum(node.get("Sort Space Type") == "Disk" for node in plan_nodes(plan))
+
+
+def uuid_range_scan(plan: dict[str, object]) -> bool:
+    return any(
+        isinstance(node.get("Index Cond"), str) and re.search(r"\buuid\b[^<>=]*>", str(node["Index Cond"])) is not None
+        for node in plan_nodes(plan)
+    )
+
+
+def plan_nodes(plan: dict[str, object]) -> list[dict[str, object]]:
     pending = [plan]
-    spills = 0
+    visited: list[dict[str, object]] = []
     for _ in range(1_000):
         if not pending:
-            return spills
+            return visited
         node = pending.pop()
-        spills += node.get("Sort Space Type") == "Disk"
+        visited.append(node)
         children = node.get("Plans", [])
         if not isinstance(children, list):
             raise QueryBenchmarkError("plan_children_invalid")

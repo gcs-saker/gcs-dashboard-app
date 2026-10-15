@@ -8,6 +8,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.ResourceNotFoundError
 import kr.co.a4ai.gcssaker.authpolicy.domain.StateConflictError
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryStorageUnavailableError
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryWriteErrors
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryPageUnavailableError
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
@@ -32,6 +33,10 @@ class ApiExceptionHandler(
     fun telemetryStorageError(error: TelemetryStorageUnavailableError, request: HttpServletRequest): ProblemDetail =
         problem(HttpStatus.SERVICE_UNAVAILABLE.value(), TelemetryWriteErrors.STORAGE_UNAVAILABLE,
             "telemetry storage is unavailable", request)
+
+    @ExceptionHandler(TelemetryPageUnavailableError::class)
+    fun telemetryPageError(request: HttpServletRequest): ProblemDetail =
+        problem(HttpStatus.SERVICE_UNAVAILABLE.value(), "telemetry_page_unavailable", "telemetry page is unavailable", request)
 
     private fun problem(status: Int, code: String, detail: String, request: HttpServletRequest): ProblemDetail {
         val clientIp = clientIpResolver.resolveWithTrust(request)

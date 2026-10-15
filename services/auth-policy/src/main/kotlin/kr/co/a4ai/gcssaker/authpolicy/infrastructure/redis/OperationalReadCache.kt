@@ -10,6 +10,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.ServerHealthSnapshotReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.StreamSessionReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryHistoryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryPageQuery
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
 import java.security.MessageDigest
 import java.util.concurrent.ThreadLocalRandom
@@ -21,6 +22,9 @@ class RedisOperationalReadRepository(
     private val policy: RedisCachePolicy = RedisCachePolicy.OPERATIONAL_READ,
     private val jitterSource: () -> Double = { ThreadLocalRandom.current().nextDouble() },
 ) : OperationalReadRepository {
+    override fun telemetryPageFor(principal: AuthenticatedPrincipal, query: TelemetryPageQuery): List<TelemetryReadModel> =
+        delegate.telemetryPageFor(principal, query)
+
     override fun telemetryFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<TelemetryReadModel> =
         delegate.telemetryFor(principal, limit, offset)
 
