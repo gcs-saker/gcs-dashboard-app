@@ -36,6 +36,11 @@ class AuthPolicyContainerIntegrationTest {
         val initializer = AuthPolicyDatabaseInitializer(dataSource)
         initializer.initializeSchema()
         val authUsers = JdbcAuthUserRepository(dataSource)
+        kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOrganizationHierarchyRepository(
+            dataSource, listOf(kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationUnit(
+                GroupId(ContainerIntegrationContract.GROUP_ID), "Test group", kr.co.a4ai.gcssaker.authpolicy.domain.GroupType.COMPANY,
+            )),
+        )
         AuthUserSeeder().synchronize(authUsers, listOf(seedUser()))
         initializer.alignGeneratedIdentity()
         val events = JdbcOperationalEventRepository(dataSource, emptyList())

@@ -20,6 +20,7 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.core.env.Environment
 import java.time.Duration
 import javax.sql.DataSource
+import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOrganizationHierarchyRepository
 
 /** Authentication identity and session composition only. */
 @Configuration
@@ -45,9 +46,12 @@ class AuthPolicyConfig {
         settings: AuthRuntimeSettings,
         passwordHasher: PasswordHasher,
         dataSource: ObjectProvider<DataSource>,
+        hierarchy: OrganizationHierarchyRepository = InMemoryOrganizationHierarchyRepository(seedOrganizationUnits()),
     ): AuthUserRepository {
         val initialUsers = seedAuthUsers(settings, passwordHasher)
         val repository = PersistenceMode.dataSource(settings, dataSource)?.let { source ->
+            val knownGroups = hierarchy.listAll().map { it.id }.toSet()
+            require(initialUsers.all { it.groupId in knownGroups }) { "configured user group must exist" }
             val initializer = AuthPolicyDatabaseInitializer(source)
             initializer.initializeSchema()
             val jdbcRepository = JdbcAuthUserRepository(source)

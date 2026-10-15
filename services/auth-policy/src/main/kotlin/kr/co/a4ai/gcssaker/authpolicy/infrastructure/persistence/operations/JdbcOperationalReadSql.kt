@@ -2,7 +2,7 @@ package kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence
 
 internal object OperationalReadSql {
     const val selectTelemetry = """
-        SELECT uuid, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
+        SELECT event_id, uuid, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
                soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id,
                battery_percent, heading_deg, roll_deg, pitch_deg, yaw_deg, link_quality_percent, observed_at, session_id, stream_id
         FROM telemetry_latest
@@ -23,7 +23,7 @@ internal object OperationalReadSql {
         ORDER BY uuid LIMIT ? OFFSET ?
     """
     const val selectTelemetryHistory = """
-        SELECT uuid, recorded_at, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
+        SELECT event_id, uuid, recorded_at, latitude, longitude, altitude, magnetic_x, magnetic_y, magnetic_z,
                soc, phone_battery_soc, velocity, total_distance, epoch_time, port_distance, group_id,
                battery_percent, heading_deg, roll_deg, pitch_deg, yaw_deg, link_quality_percent, observed_at, session_id, stream_id
         FROM telemetry_history

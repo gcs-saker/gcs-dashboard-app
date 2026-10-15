@@ -9,20 +9,23 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import java.sql.Timestamp
 import java.time.Instant
+import java.util.UUID
 
 internal class OperationalReadJdbcWriter(
     dataSource: javax.sql.DataSource,
+    private val newLegacyEventId: () -> String = { "legacy:" + UUID.randomUUID().toString() },
 ) {
     private val jdbc = JdbcTemplate(dataSource)
     private val transactions = TransactionTemplate(DataSourceTransactionManager(dataSource))
     private val isPostgres = dataSource.connection.use { it.metaData.databaseProductName.equals("PostgreSQL", true) }
 
     fun replaceTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel {
+        val persisted = if (isPostgres && telemetry.eventId == null) telemetry.copy(eventId = newLegacyEventId()) else telemetry
         transactions.executeWithoutResult {
             if (isPostgres) {
                 jdbc.update(
                     OperationalReadSql.upsertTelemetryAndHistoryPostgres,
-                    *postgresTelemetryArguments(telemetry),
+                    *postgresTelemetryArguments(persisted),
                 )
             } else {
                 jdbc.update(OperationalReadSql.deleteTelemetryByUuid, telemetry.uuid)
@@ -30,7 +33,7 @@ internal class OperationalReadJdbcWriter(
                 insertTelemetryHistory(telemetry, telemetry.observedAt ?: Instant.now())
             }
         }
-        return telemetry
+        return persisted
     }
 
     fun insertTelemetry(telemetry: TelemetryReadModel) {
