@@ -4,6 +4,20 @@
 
 ## 0. 검토 결론
 
+### 2026-10-15: #920 두 번째 구간 — 호환형 텔레메트리 keyset 조회
+
+새 opt-in 조회는 `GET /api/telemetry/page?limit=100`이며 서버 내부 REST 계약은 `contracts/rest/v1/telemetry-page.contract.json`이 소유한다. 응답은 기존 `TelemetryReadResponse`를 담는 `items`와 nullable `nextCursor`다. 이후 페이지는 `cursor` 파라미터와 정상 Bearer 토큰을 함께 보낸다. 기존 `/api/telemetry/all` 배열 응답·offset·limit 보정 방식, 모바일 및 대시보드 호출은 변경하지 않았다. 따라서 기존 화면이 자동으로 더 빨라졌다는 의미는 아니다.
+
+새 경로는 기본 100개, 최대 500개만 반환하고 다음 페이지 유무를 위해 DB에서 한 행을 추가 조회한다(최대 501행). 0/초과/잘못된 limit, 빈·너무 긴 cursor, 중복·알 수 없는 쿼리 파라미터 및 offset 혼용은 400이다. 응답은 `Cache-Control: no-store`이고 Redis stale/cache 경로를 사용하지 않는다. JDBC 읽기는 3초 query timeout과 고정된 redacted 503 오류를 사용한다.
+
+커서는 기존 검증 라이브러리의 HS256 JWT로 서명하며 purpose·audience·issuer·만료를 검증한다. 위치 UUID와 사용자·그룹·역할·securityVersion의 길이 구분된 해시를 담고 최대 10분만 유효하다. opaque 계약은 클라이언트가 파싱하지 않는다는 뜻이며 암호화된 저장물은 아니다. 이 커서는 로그인/갱신 토큰이 아니고 실제 접근권한도 담지 않는다. 매 페이지 Bearer 인증과 현재 서버 소유 그룹 필터를 재검사한다. 다른 사용자/그룹/역할/권한 버전의 커서는 403, 변조/만료/다른 purpose는 400이며 Bearer 토큰 대용으로 쓰면 401이다. 같은 유효 사용자에 의한 재조회는 허용하되 로그인 세션 연장 권한은 없다. 원문 커서·UUID는 로그에 남기지 않으며 기존 edge 쿼리 제거 규칙을 유지한다.
+
+정렬은 DB collation의 UUID 오름차순이며 `uuid > last_uuid` 범위 조회다. UUID가 바뀌지 않는 최신값 갱신은 페이지 위치를 밀지 않는다. **live 목록이지 snapshot은 아니다.** 삭제·그룹 변경은 다음 페이지의 현재 상태에 반영되고, 커서 이전 위치에 새 UUID가 생기면 새 순회를 시작해야 보인다. heartbeat 순서가 계속 바뀌는 스트림 목록, 장비/자산 목록까지 이번 단계에서 변환했다고 주장하지 않는다.
+
+실측: 로컬 PostgreSQL 16.15, 합성 `telemetry_latest` 100,000행(요청 그룹 20,000행), 15,000개를 건너뛴 깊은 페이지, 동일 51행 결과, 워밍 후 전후 교대 9회였다. offset p50/p95는 **1.743/1.791 ms**, keyset은 **0.072/0.079 ms**였다. shared buffer hit는 **840 → 8**, 두 쿼리 모두 shared read·임시 I/O는 0이었다. 기존 `(group_id, uuid)` 인덱스를 사용하며 새 인덱스/쓰기 증폭은 없다. 이는 따뜻한 캐시의 SELECT 실행 수치이지 HTTP·UI·텔레메트리 수집 처리량/음성 품질/운영 서버 성능을 증명하지 않는다. 1천만/1억 행은 `NOT_RUN`이다.
+
+재현: `scripts/benchmarks/telemetry_keyset_benchmark.py --run --rows 100000 --repeats 9`. 기존 로컬 전용 DB 가드와 신규 테이블 덮어쓰기 거부를 사용한다. 운영 소유 SQL을 읽고 동일 결과 해시와 실제 UUID 인덱스 range condition을 확인하며 원문 SQL/조건/UUID를 출력하지 않는다. CI는 절대 시간 대신 결과·범위 실행계획 계약을 검사하고 `telemetry-keyset-benchmark` JSON artifact를 보존한다. `scripts/smoke/telemetry_page_smoke.py`는 리디렉션·ambient proxy를 차단한 localhost 읽기 전용 시험으로, 실제 edge에서 기존 배열/새 순회 동일성, 중복, no-store, 미인증·커서 대용 인증·다른 신원·잘못된 요청 거부를 검증한다. 서버 배포와 실기기 검증은 별개다.
+
 ### 2026-10-15: #920 첫 구간 — 메타데이터 저장과 통계 쿼리 측정
 
 장비 저장은 PostgreSQL의 원자적 upsert로 기존 장비의 불필요한 재조회(센서/스트림 포함)를 제거하고, 동일 트랜잭션 안에서 메타데이터 변경분만 반영한다. 기존 장비 저장의 SELECT는 3회에서 2회로 줄어든다. 센서 2개·스트림 1개가 변경되지 않은 시험에서는 기존의 행 삭제/재삽입 6회가 0회가 된다. 장비 본체 저장은 유지되므로 전체 DB 쓰기가 0회라는 뜻은 아니다. 순서만 바뀐 목록은 쓰지 않으며, 수정 행은 기존 생성 시각을 보존한다. 중복 키·메타데이터 실패는 장비 본체까지 롤백한다. 요청/응답·인증/그룹 정책·모바일 코드는 변경하지 않는다.

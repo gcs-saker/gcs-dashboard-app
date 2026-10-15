@@ -72,6 +72,7 @@ class ApiContractTest {
             OperationalEventGraphQlController::class to "operationalEvents",
             OperationalEventGraphQlController::class to "operationalEventPage",
             OperationalReadController::class to "telemetryAll",
+            TelemetryPageController::class to "page",
             TelemetryWriteController::class to "ingestTelemetry",
             TelemetryWriteController::class to "ingestDeviceTelemetry",
             OperationalReadController::class to "telemetryHistory",

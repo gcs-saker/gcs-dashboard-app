@@ -261,6 +261,14 @@ print(server["urls"], server["username"], server["credential"], sep="\t")
 '
 }
 
+verify_telemetry_keyset() {
+  local edge_base_url="$1" access_token="$2" sibling_token
+  sibling_token="$(login_token_for "$edge_base_url" \
+    "${AUTH_POLICY_SMOKE_USERNAME:-m7-smoke-viewer}" "${AUTH_POLICY_SMOKE_PASSWORD}")"
+  GCS_SMOKE_PAGE_TOKEN="$access_token" GCS_SMOKE_SIBLING_TOKEN="$sibling_token" \
+    python3 "${REPO_ROOT}/scripts/smoke/telemetry_page_smoke.py" --run --base-url "$edge_base_url"
+}
+
 collector_metrics() {
   compose exec -T backend python -c '
 import urllib.request
@@ -423,6 +431,7 @@ run_live() {
   curl -fsS -H "Authorization: Bearer ${access_token}" "${edge_base_url}/api/telemetry/all" | grep -q "raw.sample.front"
   curl -fsS -H "Authorization: Bearer ${access_token}" "${edge_base_url}/api/telemetry/all" | grep -q "raw.smoke.telemetry"
   curl -fsS -H "Authorization: Bearer ${access_token}" "${edge_base_url}/api/asset/raw.sample.front" | grep -q "DRN-01"
+  verify_telemetry_keyset "$edge_base_url" "$access_token"
 
   runtime_probe_from_edge "http://auth-policy:8080/healthz"
   runtime_probe_from_edge "http://media-control:8081/healthz"

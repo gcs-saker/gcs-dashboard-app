@@ -322,12 +322,21 @@ jobs:
                 --repeats 3 --baseline-ref HEAD^1 > "$RUNNER_TEMP/event-query-$candidate-$memory.json"
             done
           done
+          python ../scripts/benchmarks/telemetry_keyset_benchmark.py \
+            --run --repeats 3 > "$RUNNER_TEMP/telemetry-keyset.json"
 
       - name: Upload operational-event query evidence
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: operational-event-query-benchmark
           path: ${{ runner.temp }}/event-query-*.json
+          if-no-files-found: error
+
+      - name: Upload telemetry keyset query evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: telemetry-keyset-benchmark
+          path: ${{ runner.temp }}/telemetry-keyset.json
           if-no-files-found: error
 
       - name: Build backend runtime image

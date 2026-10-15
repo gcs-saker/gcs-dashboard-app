@@ -10,6 +10,8 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.StreamSessionReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryHistoryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryPageQuery
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryPageSize
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisCachePolicy
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisOperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.StringKeyValueStore
@@ -22,6 +24,28 @@ import java.time.Instant
 class OperationalReadCacheTest {
     private val principal = AuthenticatedPrincipal("operator01", UserRole.OPERATOR, GroupId("co-a"))
     private val policy = RedisCachePolicy("gcs:ops-read:", Duration.ofSeconds(3), ttlJitterRatio = 0.0)
+
+    @Test
+    fun `keyset pages always delegate to authoritative storage without caching the cursor`() {
+        val delegate = RecordingOperationalReadRepository()
+        val store = org.mockito.Mockito.mock(StringKeyValueStore::class.java)
+        val repository = RedisOperationalReadRepository(delegate, store, jacksonObjectMapper(), policy)
+        val query = TelemetryPageQuery(TelemetryPageSize(1), "after")
+        repository.telemetryPageFor(principal, query)
+        repository.telemetryPageFor(principal, query)
+        assertEquals(2, delegate.pageReads)
+        org.mockito.Mockito.verifyNoInteractions(store)
+    }
+
+    @Test
+    fun `failed keyset reads do not fall back to stale cached authorization scope`() {
+        val store = org.mockito.Mockito.mock(StringKeyValueStore::class.java)
+        val repository = RedisOperationalReadRepository(FailingOperationalReadRepository, store, jacksonObjectMapper(), policy)
+        org.junit.jupiter.api.assertThrows<IllegalStateException> {
+            repository.telemetryPageFor(principal, TelemetryPageQuery(TelemetryPageSize(1)))
+        }
+        org.mockito.Mockito.verifyNoInteractions(store)
+    }
 
     @Test
     fun `redis operational read cache avoids repeated stream session reads`() {
@@ -109,6 +133,11 @@ class OperationalReadCacheTest {
     }
 
     private class RecordingOperationalReadRepository : OperationalReadRepository {
+        var pageReads = 0
+        override fun telemetryPageFor(principal: AuthenticatedPrincipal, query: TelemetryPageQuery): List<TelemetryReadModel> {
+            pageReads += 1
+            return emptyList()
+        }
         private val sessions = mutableListOf(streamSession())
         var streamReads = 0
 
@@ -149,6 +178,7 @@ class OperationalReadCacheTest {
     }
 
     private object FailingOperationalReadRepository : OperationalReadRepository {
+        override fun telemetryPageFor(principal: AuthenticatedPrincipal, query: TelemetryPageQuery): List<TelemetryReadModel> = error("database unavailable")
         override fun telemetryFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<TelemetryReadModel> =
             error("database unavailable")
 

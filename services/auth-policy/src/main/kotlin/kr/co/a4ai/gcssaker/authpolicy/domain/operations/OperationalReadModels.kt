@@ -71,6 +71,7 @@ data class StreamSessionReadModel(
 )
 
 interface OperationalReadRepository {
+    fun telemetryPageFor(principal: AuthenticatedPrincipal, query: TelemetryPageQuery): List<TelemetryReadModel>
     fun telemetryFor(principal: AuthenticatedPrincipal, limit: Int = 200, offset: Int = 0): List<TelemetryReadModel>
     fun upsertTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel
     fun telemetryHistoryFor(principal: AuthenticatedPrincipal, uuid: String, limit: Int): List<TelemetryHistoryReadModel>
@@ -104,6 +105,11 @@ class InMemoryOperationalReadRepository(
         telemetryByUuid.values
             .filter { canRead(principal, it.groupId) }
             .sortedBy { it.uuid }.drop(offset).take(limit)
+
+    override fun telemetryPageFor(principal: AuthenticatedPrincipal, query: TelemetryPageQuery): List<TelemetryReadModel> =
+        telemetryByUuid.values.asSequence().filter { canRead(principal, it.groupId) }
+            .filter { query.afterUuid == null || it.uuid > query.afterUuid }
+            .sortedBy { it.uuid }.take(query.size.fetchLimit).toList()
 
     @Synchronized
     override fun upsertTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel {

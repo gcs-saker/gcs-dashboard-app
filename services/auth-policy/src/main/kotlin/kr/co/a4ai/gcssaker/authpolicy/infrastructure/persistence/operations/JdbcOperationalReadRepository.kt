@@ -8,6 +8,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.StreamSessionReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryHistoryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import kr.co.a4ai.gcssaker.authpolicy.domain.UserRole
+import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryPageQuery
 import org.springframework.jdbc.core.JdbcTemplate
 import javax.sql.DataSource
 
@@ -19,12 +20,16 @@ class JdbcOperationalReadRepository(
     private val jdbc = JdbcTemplate(dataSource)
     private val writer = OperationalReadJdbcWriter(dataSource)
     private val seeder = OperationalReadSeeder(jdbc, writer)
+    private val pages = JdbcTelemetryPageReader(dataSource)
 
     init {
         OperationalReadSchema.ensure(dataSource)
         seeder.seedTelemetry(telemetry)
         seeder.seedAssets(assetsByGateway)
     }
+
+    override fun telemetryPageFor(principal: AuthenticatedPrincipal, query: TelemetryPageQuery): List<TelemetryReadModel> =
+        pages.read(principal, query)
 
     override fun telemetryFor(principal: AuthenticatedPrincipal, limit: Int, offset: Int): List<TelemetryReadModel> =
         jdbc.query(
