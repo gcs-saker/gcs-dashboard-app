@@ -353,12 +353,12 @@ jobs:
           path: ${{ runner.temp }}/telemetry-keyset.json
           if-no-files-found: error
 
-        - name: Upload operational-event search/index evidence
-          uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
-          with:
-            name: event-search-index-benchmark
-            path: ${{ runner.temp }}/event-search-index.json
-            if-no-files-found: error
+      - name: Upload operational-event search/index evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: event-search-index-benchmark
+          path: ${{ runner.temp }}/event-search-index.json
+          if-no-files-found: error
 
       - name: Build backend runtime image
         run: docker build -t gcs-saker-backend:ci .
