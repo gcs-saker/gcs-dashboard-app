@@ -14,6 +14,21 @@ images, workflows, and deployment are outside this roadmap.
 The umbrella tracker is #890. Stateful recreation always requires a verified backup and
 sequential health checks.
 
+## Tail backlog added on 2026-10-15
+
+The existing DB (#920), orchestration/network (#922/#923) and certificate/runtime
+pilots (#893/#895) keep their current priority. The following ideas are appended
+after those validation stages, not inserted ahead of them:
+
+1. #945: minimal device-binding projection; remove unnecessary sensor/stream reads
+   without weakening fresh group, device-state or credential/policy-version checks.
+2. #946: authorized bulk lookup for only the requested opaque identities, capped at
+   100; define partial-result privacy and preserve existing mobile callers.
+3. #947: explicit list-summary DTO/projection and selected-device detail reads;
+   measure payload/DB/HTTP costs before changing dashboard consumers.
+
+These items do not authorize production deployment or mobile source/image changes.
+
 ## Technology decisions
 
 The machine-readable decision record is

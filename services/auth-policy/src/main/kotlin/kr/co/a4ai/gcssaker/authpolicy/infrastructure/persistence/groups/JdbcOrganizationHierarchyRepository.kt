@@ -1,156 +1,57 @@
 package kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence
 
-import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
-import kr.co.a4ai.gcssaker.authpolicy.domain.GroupType
-import kr.co.a4ai.gcssaker.authpolicy.domain.GroupStatus
-import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchy
-import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
-import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationUnit
+import kr.co.a4ai.gcssaker.authpolicy.domain.*
 import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.jdbc.datasource.DataSourceTransactionManager
-import org.springframework.transaction.support.TransactionTemplate
-import org.springframework.transaction.TransactionDefinition
+import org.springframework.dao.DataAccessException
 import javax.sql.DataSource
 
-class JdbcOrganizationHierarchyRepository(
-    dataSource: DataSource,
-    seedUnits: Collection<OrganizationUnit>,
-) : OrganizationHierarchyRepository {
-    private val jdbc = JdbcTemplate(dataSource)
-    private val transactions = TransactionTemplate(DataSourceTransactionManager(dataSource)).apply {
-        isolationLevel = TransactionDefinition.ISOLATION_SERIALIZABLE
-    }
+class JdbcOrganizationHierarchyRepository(dataSource: DataSource, seedUnits: Collection<OrganizationUnit>) : OrganizationHierarchyRepository {
+    private val jdbc = JdbcTemplate(dataSource).apply { queryTimeout = QUERY_TIMEOUT_SECONDS }
+    private val groups = JdbcGroupHierarchyDao(jdbc)
+    private val closure = JdbcGroupClosureDao(jdbc)
+    private val planner = GroupClosurePlanner()
+    private val transactions = GroupHierarchyTransactions(dataSource, jdbc)
 
     init {
         AuthPolicyJdbcMigrations.ensure(dataSource)
-        transactions.executeWithoutResult {
-            seedMissingGroups(seedUnits)
-            rebuildClosure(current())
-        }
-    }
-
-    override fun current(): OrganizationHierarchy =
-        OrganizationHierarchy.of(
-            jdbc.query(
-                GroupHierarchySql.selectGroups,
-                { rs, _ ->
-                OrganizationUnit(
-                    id = GroupId(rs.getString(GroupHierarchyColumns.id)),
-                    name = rs.getString(GroupHierarchyColumns.name),
-                    type = GroupType.valueOf(rs.getString(GroupHierarchyColumns.type)),
-                    parentId = rs.getString(GroupHierarchyColumns.parentId)?.let(::GroupId),
-                )
-                },
-                GroupHierarchyContract.ACTIVE_STATUS,
-            ),
-        )
-
-    override fun listAll(): List<OrganizationUnit> = jdbc.query(GroupHierarchySql.selectAllGroups) { rs, _ ->
-        OrganizationUnit(
-            id = GroupId(rs.getString(GroupHierarchyColumns.id)),
-            name = rs.getString(GroupHierarchyColumns.name),
-            type = GroupType.valueOf(rs.getString(GroupHierarchyColumns.type)),
-            parentId = rs.getString(GroupHierarchyColumns.parentId)?.let(::GroupId),
-            status = GroupStatus.valueOf(rs.getString(GroupHierarchyColumns.status).uppercase()),
-        )
-    }
-
-    override fun create(unit: OrganizationUnit): OrganizationUnit =
-        transactions.execute {
-            jdbc.update(
-                GroupHierarchySql.insertGroup, unit.id.value, unit.name, unit.type.name,
-                unit.parentId?.value, unit.status.name.lowercase(),
-            )
-            rebuildActiveClosure()
-            unit
-        } ?: error("group creation transaction returned no result")
-
-    override fun update(unit: OrganizationUnit): OrganizationUnit =
-        transactions.execute {
-            val updated = jdbc.update(
-                GroupHierarchySql.updateGroup, unit.name, unit.type.name, unit.parentId?.value,
-                unit.status.name.lowercase(), unit.id.value,
-            )
-            check(updated == 1) { "group not found" }
-            rebuildActiveClosure()
-            unit
-        } ?: error("group update transaction returned no result")
-
-    private fun seedMissingGroups(seedUnits: Collection<OrganizationUnit>) {
-        seedUnits.forEach { unit ->
-            val existing = jdbc.queryForObject(GroupHierarchySql.countGroupById, Int::class.java, unit.id.value) ?: 0
-            if (existing == 0) {
-                jdbc.update(
-                    GroupHierarchySql.insertGroup,
-                    unit.id.value,
-                    unit.name,
-                    unit.type.name,
-                    unit.parentId?.value,
-                    GroupHierarchyContract.ACTIVE_STATUS,
-                )
+        transactions.execute(GroupHierarchyOperation.INITIALIZE) {
+            groups.seedMissing(seedUnits)
+            val units = groups.listAll()
+            if (units.none { it.status == GroupStatus.ACTIVE }) {
+                throw InvalidContractError("group_hierarchy_invalid", "active group hierarchy must not be empty")
             }
+            closure.synchronize(closure.readAll(), planner.complete(units))
         }
     }
 
-    private fun rebuildClosure(hierarchy: OrganizationHierarchy) {
-        val unitsById = hierarchy.units().associateBy { it.id }
-        jdbc.update(GroupHierarchySql.deleteClosure)
-        unitsById.values.forEach { unit ->
-            var current: GroupId? = unit.id
-            var depth = 0
-            while (current != null) {
-                jdbc.update(GroupHierarchySql.insertClosure, current.value, unit.id.value, depth)
-                current = unitsById[current]?.parentId
-                depth += 1
-            }
-        }
+    override fun current(): OrganizationHierarchy = OrganizationHierarchy.of(read(groups::active))
+    override fun listAll(): List<OrganizationUnit> = read(groups::listAll)
+
+    private fun read(query: () -> List<OrganizationUnit>): List<OrganizationUnit> = try {
+        query()
+    } catch (error: DataAccessException) {
+        throw GroupHierarchyStorageError(GroupHierarchyErrorCode.UNAVAILABLE, error)
     }
 
-    private fun rebuildActiveClosure() {
-        val active = listAll().filter { it.status == GroupStatus.ACTIVE }
-        if (active.isEmpty()) {
-            jdbc.update(GroupHierarchySql.deleteClosure)
-        } else {
-            rebuildClosure(OrganizationHierarchy.of(active))
-        }
+    override fun create(unit: OrganizationUnit): OrganizationUnit = transactions.execute(GroupHierarchyOperation.CREATE) {
+        val existing = groups.listAll()
+        if (existing.any { it.id == unit.id }) throw StateConflictError("group_already_exists", "group already exists")
+        val scope = planner.forChange(existing, unit)
+        groups.insert(unit)
+        closure.synchronize(closure.readFor(scope.descendants), scope.desired)
+        unit
     }
-}
 
-private object GroupHierarchyColumns {
-    const val id = "id"
-    const val name = "name"
-    const val type = "type"
-    const val parentId = "parent_id"
-    const val status = "status"
-}
+    override fun update(unit: OrganizationUnit): OrganizationUnit = transactions.execute(GroupHierarchyOperation.UPDATE) {
+        val existing = groups.listAll()
+        if (existing.none { it.id == unit.id }) throw ResourceNotFoundError("group_not_found", "group not found")
+        val scope = planner.forChange(existing, unit)
+        groups.update(unit)
+        closure.synchronize(closure.readFor(scope.descendants), scope.desired)
+        unit
+    }
 
-private object GroupHierarchyContract {
-    const val ACTIVE_STATUS = "active"
-}
-
-private object GroupHierarchySql {
-    const val countGroupById = "SELECT COUNT(*) FROM organization_groups WHERE id = ?"
-    const val deleteClosure = "DELETE FROM organization_group_closure"
-    const val selectGroups = """
-        SELECT id, name, type, parent_id
-        FROM organization_groups
-        WHERE status = ?
-        ORDER BY id
-    """
-    const val selectAllGroups = """
-        SELECT id, name, type, parent_id, status FROM organization_groups ORDER BY id
-    """
-    const val insertGroup = """
-        INSERT INTO organization_groups (id, name, type, parent_id, status)
-        VALUES (?, ?, ?, ?, ?)
-    """
-    const val insertClosure = """
-        INSERT INTO organization_group_closure (ancestor_group_id, descendant_group_id, depth)
-        VALUES (?, ?, ?)
-    """
-    const val updateGroup = """
-        UPDATE organization_groups
-        SET name = ?, type = ?, parent_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    """
+    private companion object {
+        const val QUERY_TIMEOUT_SECONDS = 3
+    }
 }
