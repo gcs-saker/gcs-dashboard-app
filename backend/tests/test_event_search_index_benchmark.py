@@ -2,6 +2,7 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
+import yaml
 
 from tests.test_operational_event_query_benchmark import BENCHMARKS, load_module
 
@@ -187,3 +188,12 @@ def test_wrong_insert_count_is_a_failure_not_a_timing_sample() -> None:
     cursor.rowcount = 999
     with pytest.raises(fixture.QueryBenchmarkError, match="search_write_count_changed"):
         fixture.append_batch(connection, 1)
+
+
+def test_ci_runs_fixture_comparison_and_uploads_evidence_as_a_backend_step() -> None:
+    workflow = yaml.safe_load((BENCHMARKS.parents[1] / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["backend-test"]["steps"]
+    uploads = [step for step in steps if step.get("with", {}).get("name") == "event-search-index-benchmark"]
+    assert len(uploads) == 1
+    assert uploads[0]["with"]["if-no-files-found"] == "error"
+    assert any("event_search_index_benchmark.py" in step.get("run", "") for step in steps)
