@@ -13,6 +13,8 @@ class TelemetryIngestionService(
     private val effects: TelemetryIngestionEffects,
     private val clock: Clock = Clock.systemUTC(),
 ) {
+    fun currentTime(): Instant = Instant.now(clock)
+
     fun ingest(sample: TelemetryReadModel): TelemetryReadModel {
         val stored = repository.upsertTelemetry(sample)
         val now = Instant.now(clock)

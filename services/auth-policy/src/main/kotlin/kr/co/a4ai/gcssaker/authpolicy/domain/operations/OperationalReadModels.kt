@@ -87,6 +87,7 @@ class InMemoryOperationalReadRepository(
     telemetry: Collection<TelemetryReadModel>,
     private val assetsByGateway: Map<String, List<AssetReadModel>>,
     private val hierarchy: OrganizationHierarchyRepository? = null,
+    private val devices: RegisteredDeviceRepository? = null,
 ) : OperationalReadRepository {
     private fun canRead(principal: AuthenticatedPrincipal, groupId: GroupId): Boolean =
         principal.role == UserRole.ADMIN || principal.groupId == groupId ||
@@ -104,7 +105,9 @@ class InMemoryOperationalReadRepository(
             .filter { canRead(principal, it.groupId) }
             .sortedBy { it.uuid }.drop(offset).take(limit)
 
+    @Synchronized
     override fun upsertTelemetry(telemetry: TelemetryReadModel): TelemetryReadModel {
+        validateOwnership(telemetry)
         if (telemetry.eventId != null && !eventIds.add(telemetry.eventId)) return telemetry
         telemetryByUuid.compute(telemetry.uuid) { _, current ->
             if (current?.observedAt != null && telemetry.observedAt != null && current.observedAt > telemetry.observedAt) current else telemetry
@@ -113,6 +116,16 @@ class InMemoryOperationalReadRepository(
             current.orEmpty() + TelemetryHistoryReadModel(Instant.now(), telemetry)
         }
         return telemetry
+    }
+
+    private fun validateOwnership(sample: TelemetryReadModel) {
+        val device = devices?.findByDeviceUuid(sample.uuid)
+        val owner = device?.groupId ?: telemetryByUuid[sample.uuid]?.groupId
+        if (owner?.let { it != sample.groupId } == true ||
+            device?.status?.let { it != RegisteredDeviceStatus.ACTIVE } == true
+        ) {
+            throw PermissionDeniedError(TelemetryWriteErrors.OWNERSHIP_CONFLICT, "telemetry write is not permitted")
+        }
     }
 
     override fun telemetryHistoryFor(

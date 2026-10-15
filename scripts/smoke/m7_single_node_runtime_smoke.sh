@@ -233,6 +233,10 @@ verify_authenticated_sibling_denial() {
     "${AUTH_POLICY_SMOKE_USERNAME:-m7-smoke-viewer}" "${AUTH_POLICY_SMOKE_PASSWORD}")"
   expect_http_status "403" "${edge_base_url}/auth-policy/api/v1/groups/co-a/members" \
     -H "Authorization: Bearer ${sibling_token}"
+  expect_http_status "403" "${edge_base_url}/api/telemetry/" \
+    -H "Authorization: Bearer ${sibling_token}" \
+    -H "Content-Type: application/json" \
+    -d '{"uuid":"raw.denied.viewer.telemetry"}'
   sibling_payload="$(curl -fsS -H "Authorization: Bearer ${sibling_token}" \
     "${edge_base_url}/api/telemetry/all")"
   [[ "$sibling_payload" != *"raw.sample.front"* ]] || {

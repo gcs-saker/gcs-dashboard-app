@@ -8,6 +8,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.DevicePublishAuthorizationRejectedE
 import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDevice
 import kr.co.a4ai.gcssaker.authpolicy.domain.DevicePolicyBinding
 import kr.co.a4ai.gcssaker.authpolicy.domain.GroupId
+import kr.co.a4ai.gcssaker.authpolicy.domain.PermissionDeniedError
 import kr.co.a4ai.gcssaker.contracts.v1.DeviceBinding
 import kr.co.a4ai.gcssaker.contracts.v1.DeviceCredentialRequest
 import kr.co.a4ai.gcssaker.contracts.v1.DevicePolicyServiceGrpc
@@ -70,6 +71,8 @@ class DevicePolicyRpcService(
             observer.onCompleted()
         } catch (error: DevicePublishAuthorizationRejectedException) {
             observer.onError(Status.UNAUTHENTICATED.withDescription("device_binding_invalid").asRuntimeException())
+        } catch (error: PermissionDeniedError) {
+            observer.onError(Status.PERMISSION_DENIED.withDescription(error.code).asRuntimeException())
         } catch (error: IllegalArgumentException) {
             observer.onError(Status.INVALID_ARGUMENT.withDescription("telemetry_invalid").asRuntimeException())
         } catch (error: RuntimeException) {

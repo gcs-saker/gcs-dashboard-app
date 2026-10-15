@@ -8,6 +8,7 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.InMemoryOperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.domain.OrganizationHierarchyRepository
+import kr.co.a4ai.gcssaker.authpolicy.domain.RegisteredDeviceRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalEventRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.JdbcOperationalReadRepository
 import kr.co.a4ai.gcssaker.authpolicy.infrastructure.redis.RedisCachePolicy
@@ -29,12 +30,13 @@ data class OperationalReadDependencies(
 internal fun createOperationalReadRepository(
     settings: AuthRuntimeSettings,
     dependencies: OperationalReadDependencies,
+    devices: RegisteredDeviceRepository? = null,
 ): OperationalReadRepository {
     val seeds = seedOperationalReadModels()
     val repository = PersistenceMode.dataSource(settings, dependencies.dataSource)?.let {
         JdbcOperationalReadRepository(it, seeds.telemetry, seeds.assetsByGateway)
     } ?: run {
-        InMemoryOperationalReadRepository(seeds.telemetry, seeds.assetsByGateway, dependencies.hierarchy)
+        InMemoryOperationalReadRepository(seeds.telemetry, seeds.assetsByGateway, dependencies.hierarchy, devices)
     }
     return dependencies.redisTemplate.getIfAvailable()
         ?.takeIf { settings.redisOperationalReadCacheEnabled }

@@ -10,10 +10,13 @@ import kr.co.a4ai.gcssaker.authpolicy.domain.TelemetryReadModel
 import java.time.Instant
 
 internal fun TelemetryIngestRequest.toReadModel(principal: AuthenticatedPrincipal): TelemetryReadModel {
-    val telemetryUuid = uuid?.trim()?.takeIf { it.isNotEmpty() }
-        ?: throw BadRequestApiError(OperationalReadApiErrors.UUID_REQUIRED)
+    val telemetryUuid = validateTelemetryUuid(uuid)
+    val normalizedEvent = eventId?.trim()?.takeIf { it.isNotEmpty() }
+    if (normalizedEvent != null && normalizedEvent.length > TelemetryIngestPolicy.MAX_EVENT_ID_LENGTH) {
+        throw BadRequestApiError("telemetry event identity is too long")
+    }
     return TelemetryReadModel(
-        eventId = eventId?.trim()?.takeIf { it.isNotEmpty() },
+        eventId = normalizedEvent,
         uuid = telemetryUuid,
         latitude = latitude ?: 0.0,
         longitude = longitude ?: 0.0,
@@ -36,6 +39,15 @@ internal fun TelemetryIngestRequest.toReadModel(principal: AuthenticatedPrincipa
         linkQualityPercent = linkQualityPercent,
         observedAt = observedUnixMillis?.let(Instant::ofEpochMilli),
     )
+}
+
+internal fun validateTelemetryUuid(uuid: String?): String {
+    val normalized = uuid?.trim()?.takeIf { it.isNotEmpty() }
+        ?: throw BadRequestApiError(OperationalReadApiErrors.UUID_REQUIRED)
+    if (normalized.length > TelemetryIngestPolicy.MAX_UUID_LENGTH) {
+        throw BadRequestApiError("telemetry identity is too long")
+    }
+    return normalized
 }
 
 internal fun TelemetryIngestRequest.toDeviceReadModel(
