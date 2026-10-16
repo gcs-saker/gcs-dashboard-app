@@ -23,7 +23,7 @@ def line() -> str:
 
 
 def write_suite(directory: Path, evidence: ModuleType, status: str = "PASS") -> Path:
-    tests = 10 if status == "BLOCKED" else 19
+    tests = 11 if status == "BLOCKED" else 20
     root = ElementTree.Element(
         "testsuite",
         name=evidence.SUITE,
@@ -111,7 +111,7 @@ def test_junit_identity_counts_and_single_measurement_are_required(tmp_path: Pat
         root.set("tests" if mutation == "counts" else "name", "99" if mutation == "counts" else "unowned")
     elif mutation == "case_missing":
         root.remove(root.findall("testcase")[0])
-        root.set("tests", "18")
+        root.set("tests", "19")
     else:
         stdout = root.find("system-out")
         assert stdout is not None
@@ -161,6 +161,8 @@ def test_ci_evidence_and_additive_private_migration_preserve_legacy_consumer() -
     assert "max_batch_size CONSTANT INTEGER := 1000" in migration and "REVOKE ALL" in migration
     assert "NOT isfinite(as_of_at)" in migration and "bounded retention timeouts required" in migration
     assert "SET LOCAL lock_timeout = '2s'" in migration and "SET LOCAL statement_timeout = '10s'" in migration
+    assert "DECLARE owned_schema TEXT := current_schema()" in migration and "SECURITY INVOKER" in migration
+    assert "public.telemetry_history" not in migration
     assert "prune_telemetry_history_batch" not in maintenance
     assert "CREATE OR REPLACE" not in migration and "DROP " not in migration
     compose = yaml.safe_load((root / "deploy/compose/compose.single-node.poc.yml").read_text())

@@ -99,7 +99,7 @@ def verification_result(counts: dict[str, int], measurements: list[dict[str, int
         return "FAIL"
     if counts["skipped"]:
         return "BLOCKED"
-    if counts["tests"] != 19 or len(measurements) != 1:
+    if counts["tests"] != 20 or len(measurements) != 1:
         raise TelemetryRetentionEvidenceError("verification_cases_missing_or_duplicate")
     return "PASS"
 

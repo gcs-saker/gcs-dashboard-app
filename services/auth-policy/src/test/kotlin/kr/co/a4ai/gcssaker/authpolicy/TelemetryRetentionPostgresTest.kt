@@ -14,6 +14,10 @@ import java.sql.SQLException
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import org.springframework.jdbc.datasource.DriverManagerDataSource
+import org.springframework.jdbc.core.JdbcTemplate
+import kr.co.a4ai.gcssaker.authpolicy.infrastructure.persistence.AuthPolicyDatabaseInitializer
+import java.util.Properties
 
 internal enum class InvalidRetentionInput {
     NULL_DAYS, ZERO_DAYS, OVER_DAYS, NULL_SIZE, ZERO_SIZE, OVER_SIZE, NULL_ANCHOR, FUTURE_ANCHOR, POS_INFINITY, NEG_INFINITY;
@@ -172,6 +176,36 @@ internal class TelemetryRetentionPostgresTest {
             fixture.query(fixture.input())
         } }
         assertEquals(2L to 1L, fixture.counts())
+    }
+
+    @Test
+    fun `isolated migration schema keeps its function and history separate from public`() {
+        fixture.seed(1)
+        fixture.jdbc.execute("CREATE SCHEMA retention_fixture")
+        val source = DriverManagerDataSource(postgres.jdbcUrl, postgres.username, postgres.password).apply {
+            setConnectionProperties(Properties().apply {
+                setProperty("currentSchema", "retention_fixture")
+                setProperty("connectTimeout", "3"); setProperty("socketTimeout", "5")
+            })
+        }
+        AuthPolicyDatabaseInitializer(source).initializeSchema()
+        source.connection.use { connection ->
+            connection.autoCommit = false
+            try {
+                connection.createStatement().use { statement ->
+                    statement.queryTimeout = 3
+                    statement.execute("SET LOCAL statement_timeout='2s'")
+                    statement.execute("SET LOCAL lock_timeout='500ms'")
+                    // Hide all tables through the caller's search_path; the function must remain schema-bound.
+                    statement.execute("SET LOCAL search_path=pg_catalog")
+                    statement.executeQuery("SELECT * FROM retention_fixture.prune_telemetry_history_batch(30,1)").use { rows ->
+                        assertTrue(rows.next()); assertEquals(0, rows.getLong(1))
+                    }
+                }
+            } finally { connection.rollback() }
+        }
+        assertEquals(2L to 1L, fixture.counts())
+        assertFalse(JdbcTemplate(source).apply { queryTimeout = 3 }.queryForObject("SELECT prosecdef FROM pg_proc WHERE oid='retention_fixture.prune_telemetry_history_batch(integer,integer,timestamptz)'::regprocedure", Boolean::class.java) ?: true)
     }
 
     @Test

@@ -2,14 +2,20 @@
 SET LOCAL lock_timeout = '2s';
 SET LOCAL statement_timeout = '10s';
 
-CREATE FUNCTION public.prune_telemetry_history_batch(
+-- Bind the migrated schema at creation, not the caller's mutable search_path (#920).
+DO $migration$
+DECLARE owned_schema TEXT := current_schema();
+BEGIN
+EXECUTE format($definition$
+CREATE FUNCTION %1$I.prune_telemetry_history_batch(
     retention_days INTEGER,
     batch_size INTEGER,
     as_of_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 )
 RETURNS TABLE(history_deleted BIGINT, points_deleted BIGINT, has_more BOOLEAN)
 LANGUAGE plpgsql
-SET search_path = pg_catalog, public
+SECURITY INVOKER
+SET search_path = pg_catalog, %1$I
 SET timezone = 'UTC'
 AS $$
 DECLARE
@@ -35,14 +41,14 @@ BEGIN
     END IF;
     cutoff_at := as_of_at - make_interval(days => retention_days);
     WITH candidates AS (
-        SELECT h.ctid, h.tableoid FROM public.telemetry_history h
+        SELECT h.ctid, h.tableoid FROM %1$I.telemetry_history h
         WHERE h.recorded_at < cutoff_at ORDER BY h.recorded_at
         LIMIT batch_size FOR UPDATE SKIP LOCKED
     )
-    DELETE FROM public.telemetry_history h USING candidates c
+    DELETE FROM %1$I.telemetry_history h USING candidates c
     WHERE h.ctid = c.ctid AND h.tableoid = c.tableoid;
     GET DIAGNOSTICS history_count = ROW_COUNT;
-    SELECT EXISTS (SELECT 1 FROM public.telemetry_history WHERE recorded_at < cutoff_at) INTO history_remaining;
+    SELECT EXISTS (SELECT 1 FROM %1$I.telemetry_history WHERE recorded_at < cutoff_at) INTO history_remaining;
     IF to_regclass('gcs_geo.stream_telemetry_points') IS NOT NULL THEN
         EXECUTE 'WITH candidates AS (
             SELECT p.ctid, p.tableoid FROM gcs_geo.stream_telemetry_points p
@@ -57,5 +63,7 @@ BEGIN
     RETURN QUERY SELECT history_count, points_count, history_remaining OR points_remaining;
 END;
 $$;
-
-REVOKE ALL ON FUNCTION public.prune_telemetry_history_batch(INTEGER, INTEGER, TIMESTAMPTZ) FROM PUBLIC;
+$definition$, owned_schema);
+EXECUTE format('REVOKE ALL ON FUNCTION %I.prune_telemetry_history_batch(INTEGER, INTEGER, TIMESTAMPTZ) FROM PUBLIC', owned_schema);
+END;
+$migration$;
