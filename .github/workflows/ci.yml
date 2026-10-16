@@ -254,6 +254,18 @@ jobs:
           path: ${{ runner.temp }}/geo-retention-index-evidence.json
           if-no-files-found: error
 
+      - name: Extract geo schema migration evidence
+        run: |
+          python ../../scripts/reports/geo_schema_migration_evidence.py --results-dir build/test-results/test \
+            --source-commit "$GITHUB_SHA" > "$RUNNER_TEMP/geo-schema-migration-evidence.json"
+
+      - name: Upload geo schema migration evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: geo-schema-migration-evidence
+          path: ${{ runner.temp }}/geo-schema-migration-evidence.json
+          if-no-files-found: error
+
       - name: Export authoritative runtime dependency coordinates
         run: ./gradlew writeRuntimeDependencyManifest --no-daemon
 
