@@ -4,6 +4,34 @@
 
 ## 0. 검토 결론
 
+### 2026-10-16: #920 다섯 번째 구간 — 운영 통계·시간 버킷 rollup 후보 검증
+
+**결론: 조회 이득은 확인했지만 실시간 운영 경로 도입은 BLOCKED다.** `scripts/benchmarks/operational_rollup_benchmark.py`는 소유 Kotlin의 전체 aggregate 및 분 단위 bucket SQL을 추출해 test-only materialized view와 비교한다. `metricsFor` 응답 전체(강도별/ICE별/stream-session 포함)를 대체한 것은 아니다. 운영 SQL·API·권한·schema·모바일/화면·송출 경로는 변경하지 않는다.
+
+후보는 그룹과 UTC 분 단위로 count, connections 합계, latency min/max/합계/nonnull count, throughput 합계/nonnull count를 저장한다. 평균은 그룹별 평균을 다시 평균내지 않고 **합계/실제 nonnull 건수**로 계산한다. 응답 시 현재 closure 조건을 원문 그대로 적용하여, 집계표를 새로 만들지 않아도 하위 그룹 이동 후 읽기 범위가 바뀌게 한다. 집계 시 사용자별 권한 결과를 저장하지 않는다. 독립 그룹 allowlist oracle로 자기/하위/전체/빈 그룹을 비교하며 bucket 정렬과 기존 1,440개 상한을 유지한다. 합계·건수는 정확 일치, DB의 numeric/double 평균은 1e-12 허용 오차로 비교한다. 빈 기간과 데이터는 있지만 모든 측정값이 NULL인 분도 포함한다.
+
+로컬 Docker PostgreSQL 16.15, 합성 원시 이벤트 **1,000,000행**, 그룹별 분 집계 **50,001행**, 프로필 7개 × aggregate/bucket × 각각 3회 EXPLAIN ANALYZE 측정이다. 현재 SQL과 후보 순서를 교대하고 index 선택을 강제하지 않는다.
+
+| 조회 p95 (ms) | 원시 SQL | 후보 rollup |
+| --- | ---: | ---: |
+| 자기 그룹 전체 aggregate | 47.413 | 3.538 |
+| 자기 그룹 시간 bucket | 90.752 | 1.650 |
+| 하위 그룹 포함 aggregate | 177.142 | 12.966 |
+| 하위 그룹 포함 시간 bucket | 322.112 | 18.090 |
+| 전체 범위 aggregate | 59.165 | 5.890 |
+
+최초 집계+unique index+ANALYZE 약 **389.1ms**, 추가 집계 저장공간 약 **7.02MiB**, 늦게 도착한 1건 후 전체 REFRESH 약 **332.0ms**였다. 이는 warm-cache 합성 DB-only 결과이며 짧은 3회 p95는 표본 최댓값이다. 전체 refresh의 장시간/동시 reader 차단, WAL/ingest 비용, generic prepared plan, 실제 조회 빈도 및 1천만/1억행은 미검증이다. 실제 HTTP·미디어 개선 수치로 사용하지 않는다.
+
+다음 반례/회복은 실제 PostgreSQL에서 확인했다.
+
+- 분 중간의 `[from, to]`를 bucket 시작시각으로 단순 필터하면 유효 이벤트를 놓친다. 후보는 UTC 분 시작부터 분 끝 `59.999999`까지인 완전한 분 또는 시간 필터 없음만 허용하며, 부분 시간 범위는 실행 전에 거부한다. 기존 API의 임의 시각 범위를 이 제한으로 바꾼 것은 아니다.
+- 과거 분으로 늦게 도착한 이벤트는 원시 통계를 즉시 바꾸지만 집계표에는 반영되지 않는다. 시험은 이 불일치를 반드시 검출한 뒤 refresh하여 aggregate/bucket 일치가 회복되는지 확인한다. 같은 이벤트 ID 재삽입은 DO NOTHING으로 중복을 막는다. 원시 데이터는 권위 원천이며 집계표는 별도 파생 snapshot이다.
+- closure에서 하위 그룹을 다른 상위 그룹으로 옮긴 후 집계표 refresh 없이 기존 상위의 통계에서 빠지는지 검사한다. 이는 SQL 조회 범위 시험이지 실제 사용자 토큰·membership lifecycle을 새로 검증했다는 의미는 아니다.
+
+따라서 현재 단계에서는 raw SQL을 유지한다. 실제 채택 전에는 arbitrary 경계 분을 raw로 병합하는 정확성, severity/text 등 기존 필터 보존, late/out-of-order event의 idempotent 증분 반영, freshness watermark·무효화·재시작 복구, reader/refresh lock 및 ingest/WAL 예산, 파생 데이터 오류 시 raw fallback 계약이 필요하다. TTL이나 정기 refresh만으로 현재 통계와 항상 같다고 주장하지 않는다. [PostgreSQL materialized view](https://www.postgresql.org/docs/16/rules-materializedviews.html)는 저장 결과가 최신이 아닐 수 있음을 설명하며, [REFRESH](https://www.postgresql.org/docs/16/sql-refreshmaterializedview.html)는 전체 내용을 교체한다. concurrent refresh 지원/unique index 존재만으로 위 freshness 계약이 완성되는 것은 아니다.
+
+재현은 새 로컬 `gcs_query_benchmark` DB의 고정 `event_rollup_benchmark` namespace에서만 허용한다. 이미 존재하면 DDL 전에 실패하고 덮어쓰지 않는다. 실제 재실행 거부 후 원시 1,000,001행 보존을 확인했다. 기본 CLI는 접속 없이 NOT_RUN, 실패는 redacted FAIL/nonzero다. CI는 100,000행/3회 및 의미 반례·회복을 실행하고 `operational-rollup-benchmark` artifact를 보존한다. 시험 PASS와 `production_adoption=BLOCKED`는 의도적으로 별개이며 속도만으로 자동 도입하지 않는다.
+
 ### 2026-10-15: #920 네 번째 구간 — 부분 문자열 검색 GIN 도입성 평가
 
 **결론: 운영 인덱스 추가는 보류한다.** `scripts/benchmarks/event_search_index_benchmark.py`는 소유 Kotlin `selectBase`/`andTextQuery`/정렬/limit 상수를 직접 읽어 동일한 SQL을 실행한다. 9개 LOWER/COALESCE 표현식 전체에 대응하는 test-only 다중 표현식 `pg_trgm` GIN을 기본 fastupdate(on) 및 off로 비교한다. 검색 표현식이나 placeholder/그룹 연결 계약이 달라지면 실패한다. 컬럼 결합 검색으로 의미를 바꾸거나 일부 OR 필드를 누락하지 않는다. 권한 정책·서버 SQL·migration·모바일/대시보드 호출은 변경하지 않았다.
