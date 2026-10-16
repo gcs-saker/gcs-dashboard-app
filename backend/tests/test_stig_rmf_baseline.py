@@ -29,7 +29,7 @@ def test_profile_tracks_the_current_asd_stig_revision() -> None:
     standard = next(item for item in profile["standards"] if item["id"] == "DISA-ASD-STIG")
 
     assert standard["revision"] == "Version 6 Release 4"
-    assert str(standard["documentDate"]) == "2025-09-09"
+    assert str(standard["documentDate"]) == "2025-10-01"
 
 
 def test_stig_assessment_overlay_preserves_open_and_unassessed_work() -> None:
