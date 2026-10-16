@@ -19,7 +19,7 @@ def module() -> ModuleType:
 
 
 def write_suite(directory: Path, evidence: ModuleType, status: str = "PASS") -> Path:
-    tests = 2 if status == "BLOCKED" else 7
+    tests = 2 if status == "BLOCKED" else 9
     root = ElementTree.Element(
         "testsuite",
         name=evidence.SUITE,
@@ -36,7 +36,9 @@ def write_suite(directory: Path, evidence: ModuleType, status: str = "PASS") -> 
         ""
         if status == "BLOCKED"
         else "geo_migration_backup result=PASS dump_bytes=100 digest_verified=1 source_tables=8 restored_tables=8 migrations=1 index_valid=1\n"
-        "geo_migration_load result=PASS rows=500000 writes=16 reads=16 write_p95_ms=10 read_p95_ms=5 progress_seen=1 retention_temp_written=0\n"
+        "geo_migration_load result=PASS repetition=1 rows=500000 writes=16 reads=16 write_p95_ms=10 read_p95_ms=5 progress_seen=1 retention_temp_written=0\n"
+        "geo_migration_load result=PASS repetition=2 rows=500000 writes=16 reads=16 write_p95_ms=11 read_p95_ms=6 progress_seen=1 retention_temp_written=0\n"
+        "geo_migration_load result=PASS repetition=3 rows=500000 writes=16 reads=16 write_p95_ms=12 read_p95_ms=7 progress_seen=1 retention_temp_written=0\n"
     )
     path = directory / ("TEST-" + evidence.SUITE + ".xml")
     ElementTree.ElementTree(root).write(path)
@@ -47,9 +49,10 @@ def test_report_excludes_raw_logs_and_records_no_production_execution(tmp_path: 
     evidence = module()
     write_suite(tmp_path, evidence)
     report = evidence.build_report(tmp_path, "a" * 40)
-    assert report["result"] == "PASS" and report["tests"]["tests"] == 7
+    assert report["result"] == "PASS" and report["tests"]["tests"] == 9
     assert report["production_execution"] == "NOT_RUN" and report["backup_restore"] == "PASS"
     assert {row["profile"] for row in report["measurements"]} == {"backup_restore", "concurrent_load"}
+    assert report["acceptance_budget"]["repetitions"] == 3
     assert "private-" not in json.dumps(report)
 
 
@@ -69,6 +72,7 @@ def test_failure_and_missing_docker_are_not_pass(tmp_path: Path, status: str) ->
         "migrations=0",
         "index_valid=0",
         "rows=0",
+        "repetition=4",
         "writes=15",
         "reads=15",
         "progress_seen=0",
@@ -103,12 +107,12 @@ def test_suite_identity_and_real_case_counts_are_required(tmp_path: Path, mutati
     path = write_suite(tmp_path, evidence)
     root = ElementTree.parse(path).getroot()
     if mutation in {"count", "identity"}:
-        root.set("tests" if mutation == "count" else "name", "6" if mutation == "count" else "wrong")
+        root.set("tests" if mutation == "count" else "name", "8" if mutation == "count" else "wrong")
     elif mutation == "case":
         case = root.find("testcase")
         assert case is not None
         root.remove(case)
-        root.set("tests", "6")
+        root.set("tests", "8")
     ElementTree.ElementTree(root).write(path)
     if mutation == "dtd":
         path.write_bytes(b"<!DOCTYPE testsuite []>" + path.read_bytes())

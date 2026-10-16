@@ -7,6 +7,7 @@
 - 24시간 이내의 custom-format DB dump가 별도 DB에 복원됐고, table count가 일치하는 backup evidence가 필요하다.
 - 승인된 유지보수 창과 disk preflight 여유가 필요하다. active stream 중단을 요구하지 않지만 CPU/I/O 증가를 감시한다.
 - Server-02/55122를 조회·대체·fallback으로 사용하지 않는다.
+- 동일 source의 qualification은50만 행 concurrent build를 독립3회 실행해 매회 read/write p95<500ms, progress 관측, V38 temp write0을 충족해야 한다.
 
 ## 사전 확인
 
