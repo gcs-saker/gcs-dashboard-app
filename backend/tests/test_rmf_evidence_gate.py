@@ -11,7 +11,7 @@ validate_poam = cast(Callable[[list[dict[str, Any]], set[str], date], None], MOD
 
 
 def test_repository_rmf_evidence_is_consistent() -> None:
-    validate(date(2026, 9, 22))
+    validate(date(2026, 10, 16))
 
 
 def test_overdue_open_poam_item_fails_closed() -> None:

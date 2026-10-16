@@ -7,9 +7,11 @@ tests demonstrate existing authentication, scoped authorization, secret redactio
 image scanning, immutable release, backup, rollback, and health/denial controls. The imported ASD
 STIG V6R4 source remains immutable. The assessment overlay currently records 11 Not a Finding,
 274 Open, and 1 Not Applicable rule. Rules without approved evidence fail closed as Open rather than
-remaining implicitly unassessed. CCI identifiers remain blocked because the retained
-official-source extraction omitted them; NIST control mappings and evidence are recorded without
-inventing CCI values.
+remaining implicitly unassessed. On 2026-10-16 the exact official V6R4 XCCDF was restored
+from the DISA January 2026 compilation; its hash matches the original checklist baseline.
+All 286 rules and 319 CCI references are bound to retained bytes, and the 14 assessment entries
+now use exact source CCI lists. This resolves POAM-SEC-007, not the 274 Open assessments or
+the wider CA-2 assessment. See `../evidence/asd-stig-v6r4-cci-restoration-2026-10-16.md`.
 
 ## Initial findings
 

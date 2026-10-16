@@ -100,7 +100,8 @@ standards:
   - id: DISA-ASD-STIG
     title: Application Security and Development STIG
     revision: Version 6 Release 4
-    documentDate: 2025-09-09
+    documentDate: 2025-10-01
+    documentDateBasis: Retained V6R4 XCCDF release-info benchmark date.
     source: https://public.cyber.mil/stigs/downloads/
     applicability: APPLICABLE
     rationale: The product exposes browser, API, identity, and application-server attack surfaces.
