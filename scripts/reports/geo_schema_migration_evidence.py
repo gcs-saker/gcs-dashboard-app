@@ -76,6 +76,7 @@ def backup_measurement(fields: dict[str, str]) -> dict[str, object]:
 def load_measurement(fields: dict[str, str]) -> dict[str, object]:
     expected = {
         "result",
+        "repetition",
         "rows",
         "writes",
         "reads",
@@ -86,14 +87,34 @@ def load_measurement(fields: dict[str, str]) -> dict[str, object]:
     }
     if fields.keys() != expected or fields.get("result") != "PASS":
         raise GeoSchemaMigrationEvidenceError("load_measurement_invalid")
-    integers = {key: int(fields[key]) for key in ("rows", "writes", "reads", "progress_seen", "retention_temp_written")}
+    integers = {
+        key: int(fields[key])
+        for key in ("repetition", "rows", "writes", "reads", "progress_seen", "retention_temp_written")
+    }
     timings = {key: float(fields[key]) for key in ("write_p95_ms", "read_p95_ms")}
+    validate_load_values(integers, timings)
+    return {"profile": "concurrent_load", **integers, **timings}
+
+
+def validate_load_values(integers: dict[str, int], timings: dict[str, float]) -> None:
     expected_integers = {"rows": 500000, "writes": 16, "reads": 16, "progress_seen": 1, "retention_temp_written": 0}
-    if integers != expected_integers or any(
-        not math.isfinite(value) or value < 0 or value >= 3000 for value in timings.values()
+    if (
+        integers["repetition"] not in {1, 2, 3}
+        or any(integers[key] != value for key, value in expected_integers.items())
+        or any(not math.isfinite(value) or value < 0 or value >= 500 for value in timings.values())
     ):
         raise GeoSchemaMigrationEvidenceError("load_contract_invalid")
-    return {"profile": "concurrent_load", **integers, **timings}
+
+
+def verification_result(counts: dict[str, int], measurements: list[dict[str, object]]) -> str:
+    if counts["failures"] or counts["errors"]:
+        return "FAIL"
+    if counts["skipped"]:
+        return "BLOCKED"
+    repetitions = {row.get("repetition") for row in measurements if row.get("profile") == "concurrent_load"}
+    if counts["tests"] != 9 or len(measurements) != 4 or repetitions != {1, 2, 3}:
+        raise GeoSchemaMigrationEvidenceError("verification_cases_missing")
+    return "PASS"
 
 
 def build_report(directory: Path, source_commit: str) -> dict[str, object]:
@@ -101,20 +122,24 @@ def build_report(directory: Path, source_commit: str) -> dict[str, object]:
         raise GeoSchemaMigrationEvidenceError("source_revision_invalid")
     root = read_suite(directory)
     counts = suite_counts(root)
-    result = "FAIL" if counts["failures"] or counts["errors"] else "BLOCKED" if counts["skipped"] else "PASS"
     measurements = [
         measurement(line)
         for line in root.findtext("system-out", "").splitlines()
         if line.startswith(("geo_migration_backup ", "geo_migration_load "))
     ]
-    if result == "PASS" and (counts["tests"] != 7 or len(measurements) != 2):
-        raise GeoSchemaMigrationEvidenceError("verification_cases_missing")
+    result = verification_result(counts, measurements)
     return {
         "schema_version": SCHEMA_VERSION,
         "source_commit": source_commit,
         "result": result,
         "tests": counts,
         "measurements": measurements,
+        "acceptance_budget": {
+            "repetitions": 3,
+            "write_p95_ms_max": 500,
+            "read_p95_ms_max": 500,
+            "retention_temp_written": 0,
+        },
         "scope": "shared runner recovery plus custom dump restore and concurrent index read/write on pinned PostGIS",
         "production_execution": "NOT_RUN",
         "backup_restore": "PASS",

@@ -130,8 +130,8 @@ internal class GeoSchemaMigrationRunnerPostgresTest {
         assertEquals(0, postgres.execInContainer("dropdb", "-U", postgres.username, "geo_restore_fixture").exitCode)
     }
 
-    @Test
-    fun `concurrent build admits reads and writes then bounded retention has no spill`() {
+    @RepeatedTest(SOAK_REPETITIONS)
+    fun `concurrent build admits reads and writes then bounded retention has no spill`(repetition: RepetitionInfo) {
         seedPoints(500_000)
         jdbc.execute("ANALYZE gcs_geo.stream_telemetry_points")
         val executor = Executors.newSingleThreadExecutor()
@@ -159,7 +159,10 @@ internal class GeoSchemaMigrationRunnerPostgresTest {
             val tempWritten = requireNotNull(jdbc.queryForObject("""SELECT COALESCE(SUM(temp_blks_written),0)::bigint
                 FROM pg_stat_statements WHERE query LIKE 'SELECT * FROM public.prune_telemetry_history_batch%'""", Long::class.java))
             assertEquals(0, tempWritten)
-            println("geo_migration_load result=PASS rows=500000 writes=${writeLatencies.size} reads=${readLatencies.size} " +
+            assertTrue(p95(writeLatencies) < ACCEPTANCE_P95_MS && p95(readLatencies) < ACCEPTANCE_P95_MS)
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM gcs_geo.schema_migrations", Int::class.java))
+            println("geo_migration_load result=PASS repetition=${repetition.currentRepetition} rows=500000 " +
+                "writes=${writeLatencies.size} reads=${readLatencies.size} " +
                 "write_p95_ms=${p95(writeLatencies)} read_p95_ms=${p95(readLatencies)} progress_seen=1 retention_temp_written=$tempWritten")
         } finally {
             executor.shutdownNow()
@@ -218,6 +221,8 @@ internal class GeoSchemaMigrationRunnerPostgresTest {
     companion object {
         const val RUNNER = "/tmp/geo_migration_runner.sh"
         const val MIGRATION = "/tmp/gcs-geo-migrations/V001__retention_time_index.sql"
+        const val SOAK_REPETITIONS = 3
+        const val ACCEPTANCE_P95_MS = 500.0
 
         @Container @JvmStatic
         private val postgres = PostgreSQLContainer<Nothing>(DockerImageName.parse(

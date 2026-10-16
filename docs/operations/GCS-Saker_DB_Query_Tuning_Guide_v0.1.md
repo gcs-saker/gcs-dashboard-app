@@ -4,6 +4,14 @@
 
 ## 0. 검토 결론
 
+### 2026-10-16: #920 열다섯 번째 구간 — 반복 acceptance budget
+
+단일 stateful qualification의 우연한 cache/timing 결과를 줄이기 위해 50만 행 fixture를 매회 초기화하고 concurrent migration을 **독립3회** 반복한다. 각 반복은 `pg_stat_progress_create_index` 관측, insert16/read16, migration history1건, valid index, post-index V38 temp0을 다시 검사한다. acceptance budget은 각 반복의 write/read p95가 모두500ms 미만이고3회 모두 temp0인 것이다. 이는 이전3초 개별 network/query deadline보다 엄격한 qualification threshold지만 production SLO는 아니다.
+
+`geo-schema-migration-evidence`는 backup restore1개와 repetition1~3의 load3개를 정확히 요구한다. 누락·중복·repetition 범위 밖·p95≥500ms·progress 미관측·temp write는 FAIL/nonzero다. artifact에는 고정된 budget도 함께 기록한다. Docker 부재는 BLOCKED이며 한 번의 성공을3회로 복제해 인정하지 않는다.
+
+이 단계를 통과해도 Server-01 mutation authority는 자동으로 생기지 않는다. 실제 운영 backup evidence 파일의 권한·24시간 유효성·dump checksum과 maintenance 승인을 wrapper가 다시 검증한다. 다음 결정점은 사용자 승인 하의 Server-01 stateful apply 여부이며, 적용을 선택하지 않으면 기존 운영 상태는 그대로 유지된다. index 적용 후 bounded retention scheduler 전환은 여전히 별도 PR/검증 단계다.
+
 ### 2026-10-16: #920 열네 번째 구간 — backup restore·concurrent load·post-index retention qualification
 
 공용 runner가 실제 상태를 보존하는지 pinned PostGIS에서 검증한다. V001 적용 후 `pg_dump -Fc`로 database를 dump하고 별도 database를 생성해 `pg_restore --exit-on-error`로 복원한다. source/restore의 `gcs_geo` table count, migration history1건, valid/ready index를 비교하고 dump SHA-256 형식을 확인한다. 이는 disposable cluster의 실제 dump/restore PASS이며 production backup/restore 실행은 아니다.
