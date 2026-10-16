@@ -4,6 +4,26 @@
 
 ## 0. 검토 결론
 
+### 2026-10-16: #920 아홉 번째 구간 — 실제 writer 동시성·잠금·WAL 증거
+
+이전 `telemetry_bulk_flush_benchmark.py`는 buffer/SQL 생성만 측정하는 compile-only 시험이다. 이번에는 **실제 migration과 소유권 trigger를 적용한 PostgreSQL 16, pgJDBC/Hikari, 운영 `OperationalReadJdbcWriter.replaceTelemetry`**를 직접 실행한다. 운영 코드·schema·인덱스·timeout·모바일·미디어 경로는 변경하지 않았다. `pg_stat_statements` preload와 reset은 class가 소유한 disposable Testcontainers DB에만 적용하며 운영 DB를 재시작하거나 통계를 초기화하지 않는다.
+
+4개 worker에서 각 64번 저장을 시도하는 세 가지 고정 profile을 검사한다. 서로 다른 identity는 history64/latest64, 같은 identity의 다른 event는 history64/latest1과 가장 최신 observed_at의 값, 같은 event의 동시 재전송은 history1/latest1을 보장한다. 재전송 전후 latest의 physical tuple을 비교해 실제 UPDATE도 발생하지 않았는지 확인한다. 중복 profile은 먼저 동일 event를 저장한 뒤 통계를 초기화하므로 64회 재전송 비용만 측정한다.
+
+Docker 로컬 최초 통과 예(단일 측정, 전체 함수의 pool borrow/wire/commit 포함 p95):
+
+| profile | p95 (ms) | owned CTE calls | CTE WAL bytes | temp blocks written |
+| --- | ---: | ---: | ---: | ---: |
+| 서로 다른 identity | 15.544 | 64 | 65,518 | 0 |
+| 같은 identity, 다른 event | 16.385 | 64 | 66,080 | 0 |
+| 같은 event 재전송 | 14.517 | 64 | 0 | 0 |
+
+각 시도의 **history+latest CTE** 호출 수가1임을 확인하는 것이지, BEGIN/COMMIT/SET까지 전체 DB 왕복이1이라는 뜻은 아니다. 통계는 `track=top`으로 소유 CTE의 calls/exec_ms/shared hits·reads/temp writes/WAL만 수집한다. WAL은 해당 statement에서 발생한 값이며 commit record나 전체 서버 WAL을 대표하지 않는다. exec_ms는 client/pool/commit 시간이 제외되어 함수 latency와 합산하지 않는다. raw SQL/query ID/UUID/호스트/토큰/예외 원문은 evidence로 내보내지 않는다.
+
+별도 시험에서 identity advisory lock을 유지한 채 500ms lock timeout에 따른 typed unavailable·history/latest 전체 rollback, 다른 identity 저장 성공, lock 해제 후 재전송 복구를 확인한다. 등록 장비의 다른 그룹 쓰기와 DISABLED 상태는 모두 거부되고 두 테이블은 보존되며, ACTIVE 복귀 후 저장된다. 기존 두 독립 writer의 다른 그룹 최초 소유권 경쟁 시험도 함께 유지한다. 보호 lock이나 timeout을 완화하지 않는다.
+
+`scripts/reports/telemetry_writer_evidence.py`는 실제 JUnit testcase와 suite count를 대조하고 3개 profile의 aggregate만 허용한다. 실패 FAIL, skipped BLOCKED, 누락 NOT_RUN은 모두 nonzero다. CI는 전체 auth-policy check 이후 `telemetry-writer-evidence`를 immutable source revision과 함께 보존한다. 이는 작은 fixture의 정합성/비용 회귀 증거이며 장시간 soak, 1천만/1억행 history, 대규모 read/write 혼합 부하, 운영 수용량·실물 모바일 qualification은 남아 있다. 이번 구간은 기능 변경이 없어 전체 미디어 E2E를 새로 실행한 것으로 보고하지 않는다.
+
 ### 2026-10-16: #920 여덟 번째 구간 — 자기 그룹 keyset 조건·실제 pgJDBC/Hikari 검증
 
 이번 변경은 opt-in `telemetryPageFor`의 VIEWER/OPERATOR에만 기존 권한 WHERE 뒤에 **동일한 서버 소유 group_id 조건을 AND로 추가**한다. 기존 OR/계층/총관리자 조건은 제거하지 않는다. domain의 순수 `TelemetryReadScope.forRole`이 기존 자기 그룹 역할을 명시적으로 선택하고, infrastructure의 `TelemetryPageStatement`가 principal의 group을 바인딩한다. 새 역할 추가 시 exhaustive when을 다시 검토해야 한다. GROUP_ADMIN/ADMIN 쿼리와 파라미터는 이전과 바이트 단위로 같다. 미디어의 총관리자 차단 정책과 이 운영 telemetry 조회 선택은 별개이며 어떠한 미디어 권한도 새로 부여하지 않는다.
