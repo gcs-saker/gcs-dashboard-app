@@ -4,6 +4,29 @@
 
 ## 0. 검토 결론
 
+### 2026-10-16: #920 여덟 번째 구간 — 자기 그룹 keyset 조건·실제 pgJDBC/Hikari 검증
+
+이번 변경은 opt-in `telemetryPageFor`의 VIEWER/OPERATOR에만 기존 권한 WHERE 뒤에 **동일한 서버 소유 group_id 조건을 AND로 추가**한다. 기존 OR/계층/총관리자 조건은 제거하지 않는다. domain의 순수 `TelemetryReadScope.forRole`이 기존 자기 그룹 역할을 명시적으로 선택하고, infrastructure의 `TelemetryPageStatement`가 principal의 group을 바인딩한다. 새 역할 추가 시 exhaustive when을 다시 검토해야 한다. GROUP_ADMIN/ADMIN 쿼리와 파라미터는 이전과 바이트 단위로 같다. 미디어의 총관리자 차단 정책과 이 운영 telemetry 조회 선택은 별개이며 어떠한 미디어 권한도 새로 부여하지 않는다.
+
+추가 AND는 generic plan에도 기존 `(group_id, uuid)` 인덱스 범위를 명시한다. 새로운 인덱스·migration·JDBC 전역 설정·API 계약은 없다. 기존 `/telemetry/all` 배열/offset 경로, 모바일·대시보드 호출도 바꾸지 않는다. 따라서 기존 화면이 자동으로 빨라진다는 뜻은 아니며, 실제 최적화 대상은 opt-in keyset 소비자다. cursor 서명/사용자·그룹·역할·securityVersion 바인딩, 매 요청 authoritative 인증 읽기, no-store, 3초 읽기 timeout과 redacted503은 유지한다.
+
+실제 pgJDBC **42.7.12**와 HikariCP를 사용해 migrated PostgreSQL의 **100,000행+외부 그룹 대조1행**을 검사한다. pool 크기1로 동일 physical backend PID를 유지하며 서로 다른 principal의 그룹/역할을 바꿔 읽는다. 드라이버의 V3 protocol prepared statement가 만들어졌는지 서버 `pg_prepared_statements`로 확인하고, 기존7/추가조건8개 파라미터 statement가 custom/generic을 실제 사용했는지 검증한다. pool/statement/connection은 각각 명시적으로 종료한다. 테스트의 prepareThreshold5·connect/socket/query timeouts는 시험용이며 운영 설정을 바꾸지 않는다.
+
+로컬 reader 전체(pooled borrow+wire+DTO mapping 포함)를 기존/새 조건 교대9회 측정한 예:
+
+| p95 (ms) | 기존 | 자기 그룹 AND |
+| --- | ---: | ---: |
+| auto 희소 그룹 | 1.949 | 2.272 |
+| custom 강제 희소 그룹 | 2.098 | 2.116 |
+| generic 강제 희소 그룹 | 6.920 | 1.710 |
+| generic 강제 빈 그룹 | 12.326 | 1.223 |
+
+auto/custom에서는 wire·매핑 비용 수준의 차이와 변동이 있고, 범용적인 사용자 체감 개선을 주장하지 않는다. generic 희소/빈 범위의 비용 폭증을 방지하는 것이 목적이다. 실제 generic EXPLAIN은 group_id와 uuid가 모두 Index Cond에 있고 temp spill이 없음을 확인한다. 높은 역할은 기존 SQL 그대로라 이전 UNION/LATERAL 후보의 계층별 K개 재정렬 비용을 도입하지 않는다. 근거: [pgJDBC server preparation](https://jdbc.postgresql.org/documentation/server-prepare/), [Hikari configuration](https://github.com/brettwooldridge/HikariCP#configuration-knobs-baby).
+
+검증은 모든 DTO·정렬·중복·상한을 기존 reader와 비교하며 첫/깊은/끝 커서, size1/100/500, 빈 그룹, sibling 거부, 같은 physical connection의 사용자/역할 전환, 부모의 외부 그룹 차단과 기존 ADMIN 운영조회 동작을 포함한다. page/cursor/controller 및 실제 PostgreSQL timeout/복구 회귀도 함께 실행한다. 실물 모바일·동시 다중 pool 부하·1천만/1억행·생산 SLO까지 qualification한 것은 아니다.
+
+초기 실제-schema fixture는 10만 건을 한 트랜잭션으로 적재해 소유권 보호 trigger의 per-identity advisory lock shared memory를 소진했다. 이를 연결 장애나 운영 쿼리 회귀로 처리하지 않는다. 보호 trigger/DB 설정은 그대로 두고 시험 seed만 1,000건 단위의 짧은 트랜잭션으로 분리한 뒤 통과했다. `scripts/reports/telemetry_own_scope_evidence.py`는 owned JUnit5개 suite에서 숫자·정해진 profile/드라이버 버전만 추출한다. 실패는 FAIL, skipped는 BLOCKED, 누락은 NOT_RUN이며 raw SQL/UUID/호스트/토큰/로그 원문을 artifact로 내보내지 않는다. 이전 SELECT-only benchmark들은 기존 base SQL 비교로 유지하며 실제 새 reader의 증거는 `telemetry-own-jdbc-evidence`가 담당한다.
+
 ### 2026-10-16: #920 일곱 번째 구간 — scope-first SELECT 후보 비교
 
 **결론: generic의 희소/빈 그룹 병목은 줄지만 auto의 계층 조회 비용이 늘어 전체 교체는 보류한다.** `scripts/benchmarks/telemetry_scoped_candidate.py`는 소유 SQL의 projection·7개 파라미터·계층 역할 literal·전체 scope 조건을 검증한 뒤 test-only SELECT 후보를 만든다. 운영 SQL/JDBC/인덱스/정책/API/모바일은 변경하지 않았다.

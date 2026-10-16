@@ -13,6 +13,7 @@ internal object OperationalReadSql {
     """
     const val selectTelemetry = selectTelemetryBase + " ORDER BY uuid LIMIT ? OFFSET ?"
     const val andTelemetryAfterUuid = " AND uuid > ?"
+    const val andTelemetryOwnGroup = " AND group_id = ?"
     const val orderTelemetryPage = " ORDER BY uuid LIMIT ?"
     const val selectAssetsByGateway = """
         SELECT id, cid, uuid, company_id, type, name, description, image_url,

@@ -187,6 +187,18 @@ jobs:
           python ../../scripts/reports/group_closure_evidence.py --results-dir build/test-results/test \
             --source-commit "$GITHUB_SHA" > "$RUNNER_TEMP/group-closure-evidence.json"
 
+      - name: Extract pooled pgJDBC telemetry own-scope evidence
+        run: |
+          python ../../scripts/reports/telemetry_own_scope_evidence.py --results-dir build/test-results/test \
+            --source-commit "$GITHUB_SHA" > "$RUNNER_TEMP/telemetry-own-jdbc-evidence.json"
+
+      - name: Upload pooled pgJDBC telemetry evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: telemetry-own-jdbc-evidence
+          path: ${{ runner.temp }}/telemetry-own-jdbc-evidence.json
+          if-no-files-found: error
+
       - name: Upload group closure evidence
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
