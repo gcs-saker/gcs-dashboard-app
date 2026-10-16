@@ -378,6 +378,35 @@ jobs:
           path: ${{ runner.temp }}/telemetry-prepared.json
           if-no-files-found: error
 
+      - name: Compare scoped telemetry SELECT candidate in a separate fixture
+        env:
+          GCS_QUERY_BENCHMARK_HOST: 127.0.0.1
+          GCS_QUERY_BENCHMARK_PORT: "15434"
+          GCS_QUERY_BENCHMARK_PASSWORD: fixture-only
+        run: |
+          docker run -d --name scoped-query-benchmark \
+            -e POSTGRES_DB=gcs_query_benchmark -e POSTGRES_USER=benchmark \
+            -e POSTGRES_PASSWORD=fixture-only -p 127.0.0.1:15434:5432 postgres:16-alpine
+          trap 'docker rm -f -v scoped-query-benchmark' EXIT
+          ready=0
+          for attempt in $(seq 1 90); do
+            if docker exec scoped-query-benchmark pg_isready -q -U benchmark -d gcs_query_benchmark; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = 1
+          python ../scripts/benchmarks/telemetry_scoped_benchmark.py \
+            --run --repeats 3 > "$RUNNER_TEMP/telemetry-scoped.json"
+
+      - name: Upload scoped telemetry query candidate evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: telemetry-scoped-candidate
+          path: ${{ runner.temp }}/telemetry-scoped.json
+          if-no-files-found: error
+
       - name: Build backend runtime image
         run: docker build -t gcs-saker-backend:ci .
 

@@ -4,6 +4,30 @@
 
 ## 0. 검토 결론
 
+### 2026-10-16: #920 일곱 번째 구간 — scope-first SELECT 후보 비교
+
+**결론: generic의 희소/빈 그룹 병목은 줄지만 auto의 계층 조회 비용이 늘어 전체 교체는 보류한다.** `scripts/benchmarks/telemetry_scoped_candidate.py`는 소유 SQL의 projection·7개 파라미터·계층 역할 literal·전체 scope 조건을 검증한 뒤 test-only SELECT 후보를 만든다. 운영 SQL/JDBC/인덱스/정책/API/모바일은 변경하지 않았다.
+
+후보는 전체 허용, 자기 그룹, 하위 그룹을 서로 겹치지 않는 UNION ALL로 나누고, 각 범위의 UUID index를 먼저 읽는다. 하위 그룹은 현재 closure를 조회하여 LATERAL로 그룹별 상위 K개를 가져온 뒤 전체 UUID 정렬·상위 K개를 계산한다. UUID가 고유하고 group ownership이 단일하며 closure의 ancestor/descendant가 고유하다는 기존 DB 조건을 전제로 한다. 분기별 상위 K개를 합쳐도 전체 상위 K개를 얻을 수 있지만, 작업량은 하위 그룹 수×K에 따라 커질 수 있다. SQL 역할 조건은 기존 소유 조건과 같은 입력을 사용하며, 역할별 API를 새로 만들거나 클라이언트에 scope 결정을 맡기지 않는다. 참고: [PostgreSQL LATERAL](https://www.postgresql.org/docs/16/queries-table-expressions.html#QUERIES-LATERAL), [UNION](https://www.postgresql.org/docs/16/queries-union.html).
+
+예비 후보는 자기 그룹 제외를 LATERAL 안에서 검사하여 자기 그룹 행을 불필요하게 읽었다. 제외 조건을 closure 바깥쪽에 먼저 적용한 최종 후보에서는 좁은 부모의 auto p95가 예비 약 21.4ms에서 0.237ms로 줄었다. 이 수정은 benchmark-only이며 배포된 쿼리의 버그 수정이라는 뜻은 아니다.
+
+로컬 PostgreSQL16.15 **1,000,000행**, 희소 그룹1,000행·하위32그룹, 기존/후보×auto/custom/generic×12프로필×9회 비교다. 모드별 변형 순서를 교대하고 각 변형 내부 프로필 순서를 회전한다. 계획 선택 횟수는 기존 `pg_prepared_statements` 검증을 재사용한다.
+
+| 조회 p95 (ms) | 기존 auto | 후보 auto | 기존 generic 강제 | 후보 generic 강제 |
+| --- | ---: | ---: | ---: | ---: |
+| 희소 그룹 앞 페이지 | 0.051 | 0.164 | 9.451 | 0.149 |
+| 빈 그룹 | 0.036 | 0.067 | 177.669 | 0.145 |
+| 넓은 부모 앞 페이지 | 0.157 | 1.589 | 0.209 | 1.263 |
+| 좁은 부모 깊은 페이지 | 0.067 | 0.237 | 0.099 | 0.380 |
+| 최대 501행 | 0.176 | 0.344 | 0.242 | 0.254 |
+
+generic 희소 그룹 첫 sample buffer hits는 19,912→54, 빈 그룹은 386,059→3이었다. 반대로 넓은 부모의 auto buffer hits는 213→1,740이었다. 실제 pool의 auto가 이미 custom을 잘 선택한다면 전체 후보로 교체해 얻는 이득이 없거나 오히려 회귀할 수 있다. 따라서 기존 auto/SQL을 유지하고, 이후에는 서버가 검증한 **자기 그룹 범위에만** 간결한 조회 형태를 적용할 수 있는지 실제 pgJDBC/pool와 함께 검토한다. 이는 후속 후보이지 이번에 운영 적용한 사항이 아니다.
+
+실제 PostgreSQL에서 독립 그룹 allowlist oracle와 모든 컬럼·정렬·상한·중복·그룹 범위를 대조했다. 추가 6개 SQL NULL/서로 다른 role 파라미터 조합도 기존과 같음을 확인했다. `IS NOT TRUE`는 원래 OR의 SQL 삼중값 의미를 보존하기 위함이며, 이 비정상 조합을 인증 API가 허용한다는 뜻은 아니다. 원본/후보 각각 **동일한 prepared statement를 유지한 채** closure의 child 한 건을 제거하고, 다음 EXECUTE에서 해당 하위 범위가 사라지는지 검사한 뒤 fixture 관계를 복원한다. 동시 그룹 이동이나 실제 사용자 token lifecycle을 새로 qualification한 것은 아니다.
+
+warm-cache SELECT-only 시험이며 K는1/51/501을 포함한다. 실제 pgJDBC transport/pool, write/WAL, 많은 하위 그룹, concurrent reparenting, 1천만/1억행, 전체 HTTP/미디어 성능은 미검증이다. CI는 다른 benchmark의 파생 DB를 덮어쓰지 않도록 **별도 disposable PostgreSQL**에서100,000행/3회 실행하고 `telemetry-scoped-candidate` artifact를 남긴다. 기본 CLI는 접속 없이 NOT_RUN이고 실패는 redacted FAIL/nonzero이며, 정상·실패 모두 소유 connection 종료로 prepared state를 정리한다. PASS는 결과/경계/계획 시험 통과이지 후보 채택 승인이나 보편적 속도 개선을 뜻하지 않는다.
+
 ### 2026-10-16: #920 여섯 번째 구간 — prepared plan·그룹 분포 편향 검증
 
 **결론: 이번 혼합 부하의 auto는 custom plan을 유지했고 결과도 정상이다. 다만 generic plan 강제는 희소/빈 그룹에서 큰 회귀를 만들었다.** 운영 JDBC/DB 설정·SQL·인덱스·API·모바일 경로는 변경하지 않았다. `scripts/benchmarks/telemetry_prepared_benchmark.py`는 소유 telemetry keyset SELECT의 7개 파라미터를 순서 그대로 `$1..$7`로 바꿔 실제 SQL PREPARE/EXECUTE를 실행한다. auto/force_custom_plan/force_generic_plan을 별도 prepared statement 수명으로 비교하고, `pg_prepared_statements`의 실제 선택 횟수로 요청 모드가 실행됐는지 검증한다. pgJDBC transport/connection-pool 자체의 qualification은 아니며 운영 환경의 유효 설정도 읽지 않았다.
