@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -45,21 +46,78 @@ def suite_counts(root: ElementTree.Element) -> dict[str, int]:
     return counts
 
 
+def measurement(line: str) -> dict[str, object]:
+    fields = dict(token.split("=", 1) for token in line.split()[1:])
+    if line.startswith("geo_migration_backup "):
+        return backup_measurement(fields)
+    return load_measurement(fields)
+
+
+def backup_measurement(fields: dict[str, str]) -> dict[str, object]:
+    expected = {
+        "result",
+        "dump_bytes",
+        "digest_verified",
+        "source_tables",
+        "restored_tables",
+        "migrations",
+        "index_valid",
+    }
+    if fields.keys() != expected or fields.get("result") != "PASS":
+        raise GeoSchemaMigrationEvidenceError("backup_measurement_invalid")
+    numbers = {key: int(fields[key]) for key in expected - {"result"}}
+    valid = numbers["dump_bytes"] > 0 and numbers["digest_verified"] == 1
+    valid = valid and numbers["source_tables"] == numbers["restored_tables"]
+    if not valid or numbers["migrations"] != 1 or numbers["index_valid"] != 1:
+        raise GeoSchemaMigrationEvidenceError("backup_contract_invalid")
+    return {"profile": "backup_restore", **numbers}
+
+
+def load_measurement(fields: dict[str, str]) -> dict[str, object]:
+    expected = {
+        "result",
+        "rows",
+        "writes",
+        "reads",
+        "write_p95_ms",
+        "read_p95_ms",
+        "progress_seen",
+        "retention_temp_written",
+    }
+    if fields.keys() != expected or fields.get("result") != "PASS":
+        raise GeoSchemaMigrationEvidenceError("load_measurement_invalid")
+    integers = {key: int(fields[key]) for key in ("rows", "writes", "reads", "progress_seen", "retention_temp_written")}
+    timings = {key: float(fields[key]) for key in ("write_p95_ms", "read_p95_ms")}
+    expected_integers = {"rows": 500000, "writes": 16, "reads": 16, "progress_seen": 1, "retention_temp_written": 0}
+    if integers != expected_integers or any(
+        not math.isfinite(value) or value < 0 or value >= 3000 for value in timings.values()
+    ):
+        raise GeoSchemaMigrationEvidenceError("load_contract_invalid")
+    return {"profile": "concurrent_load", **integers, **timings}
+
+
 def build_report(directory: Path, source_commit: str) -> dict[str, object]:
     if not re.fullmatch(r"[0-9a-f]{40}", source_commit):
         raise GeoSchemaMigrationEvidenceError("source_revision_invalid")
-    counts = suite_counts(read_suite(directory))
+    root = read_suite(directory)
+    counts = suite_counts(root)
     result = "FAIL" if counts["failures"] or counts["errors"] else "BLOCKED" if counts["skipped"] else "PASS"
-    if result == "PASS" and counts["tests"] != 5:
+    measurements = [
+        measurement(line)
+        for line in root.findtext("system-out", "").splitlines()
+        if line.startswith(("geo_migration_backup ", "geo_migration_load "))
+    ]
+    if result == "PASS" and (counts["tests"] != 7 or len(measurements) != 2):
         raise GeoSchemaMigrationEvidenceError("verification_cases_missing")
     return {
         "schema_version": SCHEMA_VERSION,
         "source_commit": source_commit,
         "result": result,
         "tests": counts,
-        "scope": "shared bootstrap/existing-install runner; apply/rerun/checksum/incompatible-index/disk/lock recovery on pinned PostGIS",
+        "measurements": measurements,
+        "scope": "shared runner recovery plus custom dump restore and concurrent index read/write on pinned PostGIS",
         "production_execution": "NOT_RUN",
-        "backup_restore": "NOT_RUN",
+        "backup_restore": "PASS",
         "physical_mobile": "BLOCKED",
     }
 

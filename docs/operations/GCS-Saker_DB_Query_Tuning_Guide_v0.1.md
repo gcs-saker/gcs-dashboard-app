@@ -4,6 +4,18 @@
 
 ## 0. 검토 결론
 
+### 2026-10-16: #920 열네 번째 구간 — backup restore·concurrent load·post-index retention qualification
+
+공용 runner가 실제 상태를 보존하는지 pinned PostGIS에서 검증한다. V001 적용 후 `pg_dump -Fc`로 database를 dump하고 별도 database를 생성해 `pg_restore --exit-on-error`로 복원한다. source/restore의 `gcs_geo` table count, migration history1건, valid/ready index를 비교하고 dump SHA-256 형식을 확인한다. 이는 disposable cluster의 실제 dump/restore PASS이며 production backup/restore 실행은 아니다.
+
+500,000 geo history를 넣은 뒤 runner를 별도 thread에서 실행하고 `pg_stat_progress_create_index`에서 concurrent build를 실제 관측한다. build가 active인 동안 서로 다른 connection으로 insert16회와 count read16회를 수행한다. 로컬 최초 p95는 write22.121ms/read33.959ms였고 모두3초 경계 안에서 완료됐다. 단일 synthetic run이므로 운영 SLO나 최대 처리량을 뜻하지 않는다. 완료 후 index validity를 확인하고 pg_stat_statements를 reset한 뒤 V38 batch1회를 실행했으며 temp block write는0이었다.
+
+초기 qualification 구현은 한 번에500,000행을 넣어 fixture의5초 query timeout을 넘겼고, 50,000행 단위 transaction으로 제한해 운영 deadline을 늘리지 않고 해결했다. dump command의 shell quoting으로 role 이름에 quote가 포함되던 문제도 수정했다. 둘 다 시험 환경에서 발견됐고 production에는 실행하지 않았다.
+
+운영자 복구 절차는 `GCS-Saker_Geo_Schema_Migration_Runbook.md`에 분리했다. invalid/not-ready/wrong-definition index를 자동 삭제하지 않고, 정확한 catalog 확인·backup/maintenance 재검증 뒤 정확한 이름만 concurrent drop하고 runner를 재실행한다. checksum 수정·history 수동 삽입·기존 index 삭제는 금지한다.
+
+`geo-schema-migration-evidence`는 기존 recovery5개에 backup restore와 concurrent load2개를 더해 실제7개 case, dump bytes/table parity/index validity, progress 관측, read/write p95, post-index retention temp0만 export한다. raw dump/hash/SQL/path/container/log는 내보내지 않는다. 다음 단계는 production과 같은 resource limit에서 반복/soak하고 acceptance budget을 확정한 뒤, 별도 승인 하에 Server-01 migration을 수행할지 결정하는 것이다. 서버 배포·미디어 E2E는 NOT_RUN, 실물 모바일은 BLOCKED다.
+
 ### 2026-10-16: #920 열세 번째 구간 — 신규·기존 설치 공용 geo migration runner
 
 `deploy/postgres/init/002_geo_migrations.sh`가 신규 DB bootstrap과 기존 DB 운영 적용의 공용 runner다. versioned SQL은 `init/migrations/` 아래 한 벌만 두며, 신규 컨테이너는 entrypoint가 직접 실행하고 기존 설치는 `scripts/ops/apply_geo_migrations.sh`가 동일 runner와 디렉터리를 건강한 Server-01 PostgreSQL 컨테이너의 고유 임시 경로에 복사해 실행한다. wrapper는 승인된 maintenance window와 기존 복구 검증기 형식의 최신 DB backup evidence를 요구한다. 이번 구간에서는 생산 wrapper를 실행하지 않았다.

@@ -54,3 +54,12 @@ def test_candidate_index_is_owned_only_by_versioned_geo_migration() -> None:
             occurrences.append(path)
     assert occurrences == []
     assert "idx_stream_telemetry_points_observed_at_id" in migration.read_text()
+
+
+def test_operator_runbook_scopes_manual_recovery_to_exact_invalid_index() -> None:
+    runbook = (ROOT / "docs/operations/GCS-Saker_Geo_Schema_Migration_Runbook.md").read_text()
+    assert "DROP INDEX CONCURRENTLY" in runbook
+    assert "gcs_geo.idx_stream_telemetry_points_observed_at_id" in runbook
+    assert "변수·glob·검색 결과를 삭제 명령에 전달하지 않는다" in runbook
+    assert "checksum을 수정" in runbook and "history row를 수동 삽입" in runbook
+    assert "Server-02/55122" in runbook
