@@ -266,6 +266,18 @@ jobs:
           path: ${{ runner.temp }}/geo-schema-migration-evidence.json
           if-no-files-found: error
 
+      - name: Extract bounded retention runner evidence
+        run: |
+          python ../../scripts/reports/bounded_retention_evidence.py --results-dir build/test-results/test \
+            --source-commit "$GITHUB_SHA" > "$RUNNER_TEMP/bounded-retention-evidence.json"
+
+      - name: Upload bounded retention runner evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: bounded-retention-evidence
+          path: ${{ runner.temp }}/bounded-retention-evidence.json
+          if-no-files-found: error
+
       - name: Export authoritative runtime dependency coordinates
         run: ./gradlew writeRuntimeDependencyManifest --no-daemon
 

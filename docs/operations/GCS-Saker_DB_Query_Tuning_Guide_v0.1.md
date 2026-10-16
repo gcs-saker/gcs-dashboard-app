@@ -4,6 +4,18 @@
 
 ## 0. 검토 결론
 
+### 2026-10-16: #920 열여섯 번째 구간 — bounded retention caller 후보
+
+기존 `runtime_maintenance.sh`의 unbounded V19 호출은 그대로 유지하고 자동 연결하지 않는다. 신규 `deploy/postgres/bounded_retention_runner.sh`는 V001 checksum과 valid/ready geo time index가 일치할 때만 V38을 실행한다. 실행마다 UTC anchor를 한 번 고정하고, 각 batch는 별도 psql transaction으로 commit한다. days1~3650, batch1~1000, max batches1~10,000, overall budget1~3,600초, statement≤2초, lock≤500ms를 첫 boundary에서 검증한다.
+
+각 batch 응답은 숫자2개와 boolean만 허용한다. statement/lock 실패는 최대2회만 재시도하고, max batch/time budget에 도달하거나 locked row로3회 연속 zero progress면 exit75 `PARTIAL`로 종료한다. 다음 실행은 새 transaction으로 잔여 행을 안전하게 이어서 지운다. 응답을 잃고 commit 여부가 불명확해도 동일 retention delete가 idempotent하므로 재실행 시 이미 삭제된 행을 건너뛴다. 출력 count는 unknown commit 시 실제보다 작을 수 있어 감사 원장으로 사용하지 않는다.
+
+실제 pinned PostGIS 시험은 expired2,501행을 batch1,000으로3회 complete하고 즉시 재실행 시0삭제, max batch1로 partial 후 다음 실행에서1,501행 resume, 두 history의 한 행을 잠근 상태에서3회 zero-progress partial 후 lock 해제·재실행 recovery, V001/index 미적용 시 삭제 전 exit3을 검증한다. 최신 history1건과 latest tables는 보존된다. 최초 시험에서 boolean concat이 `f`가 아닌 `false`를 반환해 parser가 거부한 문제와 migration history table 부재가 readiness SQL error가 되던 문제를 수정했다. 둘 다 fixture에서 삭제 전 발견됐다.
+
+운영 wrapper `run_bounded_telemetry_retention.sh`는 Server-01/canonical project/healthy PostgreSQL/approved maintenance/24시간 이내 restore-verified backup evidence를 요구하고, 고유 임시 경로에 runner와 V001을 복사한다. 현재 systemd/runtime maintenance에는 연결되지 않았으므로 production 실행은 NOT_RUN이다. `bounded-retention-evidence`는 complete/resume/locked recovery3 profile과 실제 JUnit4개를 source에 묶고 raw SQL/host/path/token을 제외한다.
+
+다음은 실제 Server-01 index migration 승인 여부가 먼저다. index가 적용되고 post-check가 끝난 뒤에만 기존 unbounded caller를 제거하고 이 runner를 timer에 연결하는 별도 변경을 수행한다. 서버 배포·미디어 E2E는 NOT_RUN, 실물 모바일은 BLOCKED다.
+
 ### 2026-10-16: #920 열다섯 번째 구간 — 반복 acceptance budget
 
 단일 stateful qualification의 우연한 cache/timing 결과를 줄이기 위해 50만 행 fixture를 매회 초기화하고 concurrent migration을 **독립3회** 반복한다. 각 반복은 `pg_stat_progress_create_index` 관측, insert16/read16, migration history1건, valid index, post-index V38 temp0을 다시 검사한다. acceptance budget은 각 반복의 write/read p95가 모두500ms 미만이고3회 모두 temp0인 것이다. 이는 이전3초 개별 network/query deadline보다 엄격한 qualification threshold지만 production SLO는 아니다.
