@@ -230,6 +230,18 @@ jobs:
           path: ${{ runner.temp }}/telemetry-mixed-evidence.json
           if-no-files-found: error
 
+      - name: Extract bounded telemetry retention evidence
+        run: |
+          python ../../scripts/reports/telemetry_retention_evidence.py --results-dir build/test-results/test \
+            --source-commit "$GITHUB_SHA" > "$RUNNER_TEMP/telemetry-retention-evidence.json"
+
+      - name: Upload bounded telemetry retention evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: telemetry-retention-evidence
+          path: ${{ runner.temp }}/telemetry-retention-evidence.json
+          if-no-files-found: error
+
       - name: Export authoritative runtime dependency coordinates
         run: ./gradlew writeRuntimeDependencyManifest --no-daemon
 
