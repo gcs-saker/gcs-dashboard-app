@@ -28,6 +28,8 @@ generic 희소 그룹 첫 sample buffer hits는 19,912→54, 빈 그룹은 386,0
 
 warm-cache SELECT-only 시험이며 K는1/51/501을 포함한다. 실제 pgJDBC transport/pool, write/WAL, 많은 하위 그룹, concurrent reparenting, 1천만/1억행, 전체 HTTP/미디어 성능은 미검증이다. CI는 다른 benchmark의 파생 DB를 덮어쓰지 않도록 **별도 disposable PostgreSQL**에서100,000행/3회 실행하고 `telemetry-scoped-candidate` artifact를 남긴다. 기본 CLI는 접속 없이 NOT_RUN이고 실패는 redacted FAIL/nonzero이며, 정상·실패 모두 소유 connection 종료로 prepared state를 정리한다. PASS는 결과/경계/계획 시험 통과이지 후보 채택 승인이나 보편적 속도 개선을 뜻하지 않는다.
 
+최초 CI 후보 단계가 기동 직후 실패하여 준비 상태 검사도 보완했다. 공식 postgres 이미지의 임시 초기화 서버는 Unix socket만 열며 TCP를 열지 않는다. 소켓 기반 `pg_isready`를 그대로 사용하면 실제 benchmark TCP 연결보다 먼저 성공할 수 있다. 10초의 한정된 init 지연을 넣은 별도 Docker fixture에서 **socket ready / TCP not ready**, 이어서 최종 TCP ready 전환을 재현했다. CI는 `pg_isready -h 127.0.0.1`로 최종 TCP 서버를 기다리며, unit contract도 host 지정 누락을 막는다. 원래 CI 실패는 유지하고 기동 조건을 강화한 새 커밋으로 전체 CI를 다시 실행한다. 운영 PostgreSQL 설정이나 timeout/성능 합격선을 완화하지 않았다.
+
 ### 2026-10-16: #920 여섯 번째 구간 — prepared plan·그룹 분포 편향 검증
 
 **결론: 이번 혼합 부하의 auto는 custom plan을 유지했고 결과도 정상이다. 다만 generic plan 강제는 희소/빈 그룹에서 큰 회귀를 만들었다.** 운영 JDBC/DB 설정·SQL·인덱스·API·모바일 경로는 변경하지 않았다. `scripts/benchmarks/telemetry_prepared_benchmark.py`는 소유 telemetry keyset SELECT의 7개 파라미터를 순서 그대로 `$1..$7`로 바꿔 실제 SQL PREPARE/EXECUTE를 실행한다. auto/force_custom_plan/force_generic_plan을 별도 prepared statement 수명으로 비교하고, `pg_prepared_statements`의 실제 선택 횟수로 요청 모드가 실행됐는지 검증한다. pgJDBC transport/connection-pool 자체의 qualification은 아니며 운영 환경의 유효 설정도 읽지 않았다.

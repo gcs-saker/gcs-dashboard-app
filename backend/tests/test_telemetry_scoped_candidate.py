@@ -156,5 +156,6 @@ def test_ci_uses_a_separate_disposable_database_for_no_overwrite_contract() -> N
     assert len(runs) == 1
     assert runs[0]["env"]["GCS_QUERY_BENCHMARK_PORT"] == "15434"
     assert "scoped-query-benchmark" in runs[0]["run"]
+    assert "pg_isready -q -h 127.0.0.1" in runs[0]["run"]
     uploads = [step for step in steps if step.get("with", {}).get("name") == "telemetry-scoped-candidate"]
     assert len(uploads) == 1 and uploads[0]["with"]["if-no-files-found"] == "error"

@@ -390,7 +390,7 @@ jobs:
           trap 'docker rm -f -v scoped-query-benchmark' EXIT
           ready=0
           for attempt in $(seq 1 90); do
-            if docker exec scoped-query-benchmark pg_isready -q -U benchmark -d gcs_query_benchmark; then
+            if docker exec scoped-query-benchmark pg_isready -q -h 127.0.0.1 -U benchmark -d gcs_query_benchmark; then
               ready=1
               break
             fi
