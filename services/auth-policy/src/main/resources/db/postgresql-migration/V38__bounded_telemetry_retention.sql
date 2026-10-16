@@ -1,4 +1,7 @@
 -- Additive, owner-only primitive. The legacy scheduled caller is not switched here (#920).
+SET LOCAL lock_timeout = '2s';
+SET LOCAL statement_timeout = '10s';
+
 CREATE FUNCTION public.prune_telemetry_history_batch(
     retention_days INTEGER,
     batch_size INTEGER,

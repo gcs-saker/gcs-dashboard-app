@@ -160,6 +160,7 @@ def test_ci_evidence_and_additive_private_migration_preserve_legacy_consumer() -
     assert migration.count("FOR UPDATE SKIP LOCKED") == 2
     assert "max_batch_size CONSTANT INTEGER := 1000" in migration and "REVOKE ALL" in migration
     assert "NOT isfinite(as_of_at)" in migration and "bounded retention timeouts required" in migration
+    assert "SET LOCAL lock_timeout = '2s'" in migration and "SET LOCAL statement_timeout = '10s'" in migration
     assert "prune_telemetry_history_batch" not in maintenance
     assert "CREATE OR REPLACE" not in migration and "DROP " not in migration
     compose = yaml.safe_load((root / "deploy/compose/compose.single-node.poc.yml").read_text())
