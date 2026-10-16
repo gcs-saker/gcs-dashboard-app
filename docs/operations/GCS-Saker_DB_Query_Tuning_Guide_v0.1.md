@@ -4,6 +4,25 @@
 
 ## 0. 검토 결론
 
+### 2026-10-16: #920 열 번째 구간 — 실제 reader/writer 혼합 부하와 MVCC 경계
+
+실제 migration·ownership trigger·pgJDBC/Hikari·운영 reader/writer를 사용해 **latest100,001행**의 동일 분포에서 2개 reader와 2개 writer를 동시에 실행한다. 기존 실제-schema seed를 재사용하고 트랜잭션당1,000개 identity 상한도 유지한다. 32개 wave에서 reader64회/writer64회가 실행되며 페이지 크기1·500 두 profile을 비교한다. writer는 dense 그룹과 외부 그룹의 고정된 두 identity를 갱신한다. 이 시험은 동시 INSERT에 대한 전체 keyset 순회의 snapshot 보장을 새로 만들거나 주장하지 않는다.
+
+reader는 pool을 공유하며 VIEWER 자기 그룹, OPERATOR 희소 그룹, GROUP_ADMIN 부모, 외부 그룹, 빈 그룹과 첫/깊은/끝 커서를 반복 전환한다. 각 결과의 허용 group·정렬/중복·cursor 범위·lookahead 상한 및 altitude/epoch/observed_at의 동일-event 필드 일관성을 검사한다. 부하 종료 후 history64건·latest행수 불변·최신 event/DTO·history 최대 시각과 latest 일치를 확인한다. 서로 다른 시점의 두 SELECT를 DTO 비교하면 정상적인 중간 commit도 실패로 오인하므로 혼합 시험에는 그런 비교를 사용하지 않는다.
+
+별도의 commit/rollback 2개 시험은 test-only 외부 트랜잭션 안에서 canonical writer를 실행하고 gate로 **미커밋 행과 advisory lock을 실제 유지**한다. 다른 connection의 reader가 gate 해제 전에 이전 DTO를 반환하며 미커밋 history는 보지 못함을 검사한다. 해제 후 commit이면 새 DTO/history1건, rollback이면 이전 DTO/history0건이다. 이는 같은 SELECT 내 tuple 일관성과 READ COMMITTED 가시성 검증이지 latest/history를 별도 HTTP 요청으로 읽었을 때 동일 snapshot을 보장한다는 뜻은 아니다. 모든 gate/future/트랜잭션/pool은 시간 제한과 cleanup을 갖는다.
+
+Docker 로컬 최초 통과 예(각 operation64회; read latency는 DTO 검증 assertion도 포함):
+
+| page size | read p95 (ms) | write p95 (ms) | SELECT / CTE calls | write CTE WAL bytes |
+| --- | ---: | ---: | --- | ---: |
+| 1 | 2.301 | 10.242 | 64 / 64 | 61,736 |
+| 500 | 8.538 | 7.519 | 64 / 64 | 61,550 |
+
+모든 profile의 temp write는0이었다. counters는 post-load 검증 SELECT 전에 수집하며 소유 SELECT/CTE에 한정한다. test-only extension preload/reset 외에 운영 설정·SQL·timeout·index/schema·API·모바일·미디어 동작은 변경하지 않았다. `telemetry-mixed-evidence`는 숫자/고정 profile만 export하고 JUnit 실제 case/count·2 profile×2 operation cell·source revision을 검증한다. parameterized factory가 Docker 부재로 실행되지 않아2개 skipped만 기록된 경우도 PASS가 아닌 BLOCKED/nonzero로 처리한다. 누락 NOT_RUN, 실패 FAIL이다.
+
+이는 작은 횟수의 warm-cache 합성 read/write 및 deterministic 미커밋 가시성 회귀다. 장시간 soak·동시 조직 이동·다수 writer의 장비 등록 경합·대규모 history/retention·1천만/1억행·운영 수용량·실물 모바일 qualification은 남아 있다. 서버 배포와 이번 구간의 전체 미디어 E2E는 NOT_RUN, 실물 모바일은 BLOCKED다.
+
 ### 2026-10-16: #920 아홉 번째 구간 — 실제 writer 동시성·잠금·WAL 증거
 
 이전 `telemetry_bulk_flush_benchmark.py`는 buffer/SQL 생성만 측정하는 compile-only 시험이다. 이번에는 **실제 migration과 소유권 trigger를 적용한 PostgreSQL 16, pgJDBC/Hikari, 운영 `OperationalReadJdbcWriter.replaceTelemetry`**를 직접 실행한다. 운영 코드·schema·인덱스·timeout·모바일·미디어 경로는 변경하지 않았다. `pg_stat_statements` preload와 reset은 class가 소유한 disposable Testcontainers DB에만 적용하며 운영 DB를 재시작하거나 통계를 초기화하지 않는다.
