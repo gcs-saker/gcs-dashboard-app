@@ -13,3 +13,5 @@
 *.properties text eol=lf
 Dockerfile text eol=lf
 gradlew text eol=lf
+# Retained official bytes are hash-pinned; Git must not normalize their newlines.
+docs/compliance/security/sources/U_ASD_STIG_V6R4_Manual-xccdf.xml -text

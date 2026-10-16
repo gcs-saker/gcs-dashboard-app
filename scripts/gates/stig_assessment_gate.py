@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import json
+import runpy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
@@ -22,7 +23,7 @@ class StigAssessmentError(RuntimeError):
 class AssessmentContext:
     source: dict[str, Any]
     assessed: set[str]
-    cci_blocked: bool
+    cci_mappings: dict[str, list[str]]
 
 
 def load_assessment() -> dict[str, Any]:
@@ -40,7 +41,7 @@ def validate() -> dict[str, int]:
     context = AssessmentContext(
         source_rules,
         assessed,
-        str(assessment.get("cciSourceStatus", "")).startswith("BLOCKED_"),
+        verified_cci_mappings(assessment),
     )
     counts = {verdict: 0 for verdict in sorted(VERDICTS)}
     for rule in assessment.get("rules", []):
@@ -65,8 +66,18 @@ def validate_rule(rule: dict[str, Any], context: AssessmentContext) -> None:
     for evidence in rule["evidence"]:
         if not (ROOT / str(evidence)).exists():
             raise StigAssessmentError(f"assessment evidence is missing: {evidence}")
-    if not rule.get("cciRefs") and not context.cci_blocked:
-        raise StigAssessmentError(f"CCI mapping is absent without a blocker: {finding_id}")
+    if rule.get("cciRefs") != context.cci_mappings[finding_id]:
+        raise StigAssessmentError(f"CCI mapping differs from retained official source: {finding_id}")
+
+
+def verified_cci_mappings(assessment: dict[str, Any]) -> dict[str, list[str]]:
+    source_gate = runpy.run_path(str(ROOT / "scripts/gates/stig_source_evidence.py"))
+    if assessment.get("cciSourceStatus") != source_gate["VERIFIED_STATUS"]:
+        raise StigAssessmentError("assessment requires verified official CCI source")
+    try:
+        return cast(dict[str, list[str]], source_gate["validate"](ROOT))
+    except source_gate["StigSourceEvidenceError"] as error:
+        raise StigAssessmentError("official CCI source evidence verification failed") from error
 
 
 if __name__ == "__main__":

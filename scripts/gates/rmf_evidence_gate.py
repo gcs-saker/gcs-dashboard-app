@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import runpy
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -72,6 +73,17 @@ def validate(today: date = date.today()) -> None:
     poam = load_yaml(POAM)
     control_ids = validate_controls(matrix.get("controls", []))
     validate_poam(poam.get("items", []), control_ids, today)
+    validate_cci_source(matrix)
+
+
+def validate_cci_source(matrix: dict[str, Any]) -> None:
+    source_gate = runpy.run_path(str(ROOT / "scripts/gates/stig_source_evidence.py"))
+    if matrix.get("cciMappingStatus") != source_gate["VERIFIED_STATUS"]:
+        raise RmfEvidenceError("RMF CCI source must be verified against retained official bytes")
+    try:
+        source_gate["validate"](ROOT)
+    except source_gate["StigSourceEvidenceError"] as error:
+        raise RmfEvidenceError("RMF CCI source evidence verification failed") from error
 
 
 def main() -> int:

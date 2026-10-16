@@ -1,5 +1,5 @@
 schemaVersion: gcs-saker.poam.v1
-updatedAt: 2026-09-22
+updatedAt: 2026-10-16
 items:
   - id: POAM-SEC-001
     weakness: Internal service channels do not all provide mutually authenticated encryption.
@@ -58,9 +58,11 @@ items:
     controls: [CA-2, CA-7]
     issue: https://github.com/gcs-saker/gcs-dashboard-app/issues/656
     severity: MEDIUM
-    mitigation: Preserve NIST mappings and block CCI claims until the official XCCDF or data stream is retained and hash-verified.
+    mitigation: Official V6R4 archive and XCCDF retained from the DISA January 2026 compilation; pinned baseline hash and all per-rule CCI lists are verified offline. Wider assessment remains open.
     dueBy: 2026-10-15
-    status: OPEN
+    status: CLOSED
+    closedAt: 2026-10-16
+    evidence: [docs/compliance/evidence/asd-stig-v6r4-cci-restoration-2026-10-16.md, docs/compliance/security/sources/asd-stig-v6r4-provenance.json, docs/compliance/security/sources/U_ASD_STIG_V6R4_Manual-xccdf.xml, scripts/gates/stig_source_evidence.py, backend/tests/test_stig_source_evidence.py]
   - id: POAM-SEC-008
     weakness: Internal DAST evidence is retained, but independent penetration execution is not complete.
     controls: [CA-8, SA-11]

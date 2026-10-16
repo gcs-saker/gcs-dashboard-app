@@ -1,7 +1,7 @@
 schemaVersion: gcs-saker.rmf-control-matrix.v1
 baseline: NIST SP 800-53 Rev.5 tailored software baseline
 assessmentMethod: NIST SP 800-53A Rev.5
-cciMappingStatus: BLOCKED_OFFICIAL_ASD_STIG_XCCDF_NOT_RETAINED
+cciMappingStatus: VERIFIED_OFFICIAL_XCCDF_SHA256
 controls:
   - id: AC-2
     family: Access Control
@@ -103,8 +103,8 @@ controls:
   - id: CA-2
     family: Assessment, Authorization, and Monitoring
     implementation: The ASD STIG assessment overlay binds conservative verdicts to NIST controls and repository evidence.
-    assessment: Obtain the official V6R4 XCCDF/data stream, verify its hash, restore CCI mappings, and review every Open verdict.
-    evidence: [docs/compliance/security/asd-stig-v6r4-assessment.yml]
+    assessment: Verify retained official V6R4 bytes and exact CCI mappings, then review every remaining Open verdict; source restoration is not control assessment completion.
+    evidence: [docs/compliance/security/asd-stig-v6r4-assessment.yml, docs/compliance/security/sources/asd-stig-v6r4-provenance.json]
     status: OPEN
   - id: CA-7
     family: Assessment, Authorization, and Monitoring
