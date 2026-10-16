@@ -4,6 +4,28 @@
 
 ## 0. 검토 결론
 
+### 2026-10-16: #920 여섯 번째 구간 — prepared plan·그룹 분포 편향 검증
+
+**결론: 이번 혼합 부하의 auto는 custom plan을 유지했고 결과도 정상이다. 다만 generic plan 강제는 희소/빈 그룹에서 큰 회귀를 만들었다.** 운영 JDBC/DB 설정·SQL·인덱스·API·모바일 경로는 변경하지 않았다. `scripts/benchmarks/telemetry_prepared_benchmark.py`는 소유 telemetry keyset SELECT의 7개 파라미터를 순서 그대로 `$1..$7`로 바꿔 실제 SQL PREPARE/EXECUTE를 실행한다. auto/force_custom_plan/force_generic_plan을 별도 prepared statement 수명으로 비교하고, `pg_prepared_statements`의 실제 선택 횟수로 요청 모드가 실행됐는지 검증한다. pgJDBC transport/connection-pool 자체의 qualification은 아니며 운영 환경의 유효 설정도 읽지 않았다.
+
+새 로컬 schema 안의 **1,000,000행**을 dense 그룹 약 90%, sparse 그룹 0.1%(1,000행), 나머지 32개 하위 그룹으로 구성했다. 각 모드에서 동일 statement로 역할/그룹/커서를 섞은 6회 warmup 후, 12개 프로필을 각 9회 순서를 회전해 측정했다. 자기 그룹, 좁은/넓은 부모, 전체, 빈 그룹, 앞/깊은/끝 커서, 최소 1행과 최대 501행(500개 API 상한+추가 확인 1행)을 포함한다. 독립 그룹 allowlist oracle와 전체 컬럼·정렬·건수·중복·scope를 비교하며 원문 UUID/그룹/SQL/plan을 산출물에 남기지 않는다.
+
+| 조회 p95 (ms) | auto | custom 강제 | generic 강제 |
+| --- | ---: | ---: | ---: |
+| dense 앞 페이지 | 0.062 | 0.092 | 0.187 |
+| sparse 앞 페이지 | 0.073 | 0.054 | 8.454 |
+| sparse 깊은 페이지 | 0.065 | 0.069 | 7.892 |
+| 빈 그룹 | 0.043 | 0.028 | 166.949 |
+| 최대 501행 | 0.179 | 0.193 | 0.406 |
+
+auto/custom은 각각 custom 126회·generic 0회, generic 강제는 custom 0회·generic 126회였다(6 warmup+12 결과 비교+108 측정). sparse 앞 페이지의 첫 sample buffer hits는 auto 54 / generic 19,914, 빈 그룹은 3 / 386,064였다. **모든 사례에서 UUID range 조건이 보이더라도 저비용 조회라는 뜻은 아니다.** generic은 뒤쪽 UUID 범위를 순서대로 읽으며 그룹 조건에서 대량 탈락시킬 수 있다. 기존의 `uuid_range_scan=true` 단일 신호만으로 일반 성능 보장을 하지 않는다.
+
+이는 warm-cache 합성 PostgreSQL 16.15 SELECT-only 측정이며 mode 순서는 auto/custom/generic으로 고정되어 있다. fixture는 소유 keyset fixture를 재사용한 뒤 그룹 분포를 한 번 UPDATE하고 ANALYZE한다. 운영 ingest/WAL 비용·실제 pool의 statement 사용 분포·transport·lock·1천만/1억행은 미검증이다. 자동 계획이 이번에 custom을 유지했다는 사실을 모든 사용자 부하나 운영 환경의 보장으로 확대하지 않는다. [PostgreSQL PREPARE](https://www.postgresql.org/docs/16/sql-prepare.html)는 auto가 첫 다섯 custom 비용과 generic 추정 비용을 비교함을 설명하고, [pgJDBC server prepare](https://jdbc.postgresql.org/documentation/server-prepare/)는 transport 측 별도의 prepare 수명과 설정을 설명한다.
+
+현재 조치는 **전역 generic/custom 강제를 도입하지 않고 기존 auto/SQL을 유지**하는 것이다. 후속 개선 후보는 현재 서버 소유 scope를 먼저 제한한 조회 형태를 SELECT-only 비교하고, 실제 pgJDBC/pool 혼합 부하에서도 동일 결과·음수 권한 시험과 비용을 검증하는 것이다. 역할별 API를 복제하거나 브라우저에 group 필터/정책을 넘기지 않는다. 새 인덱스 없이 group/UUID 접근량을 줄일 수 있는지는 별도 evidence로 판단한다.
+
+재현은 새 로컬 `gcs_query_benchmark` DB의 `telemetry_prepared_benchmark` namespace에서만 허용한다. 기존 namespace는 DDL 전에 거부하고, public을 search_path에서 제외해 앞선 benchmark의 동명 테이블을 잘못 재사용하지 않는다. 정상 모드는 소유 statement만 DEALLOCATE하며 오류 시 연결 종료로 남은 statement를 해제한다. 기본 CLI는 접속 없이 NOT_RUN, 실패는 redacted FAIL/nonzero다. CI는 100,000행/3회로 실행하고 `telemetry-prepared-benchmark` artifact를 보존한다. 시험 PASS는 결과와 실제 계획 선택 검증 통과이지 generic 성능 승인·운영 배포 승인이 아니다.
+
 ### 2026-10-16: #920 다섯 번째 구간 — 운영 통계·시간 버킷 rollup 후보 검증
 
 **결론: 조회 이득은 확인했지만 실시간 운영 경로 도입은 BLOCKED다.** `scripts/benchmarks/operational_rollup_benchmark.py`는 소유 Kotlin의 전체 aggregate 및 분 단위 bucket SQL을 추출해 test-only materialized view와 비교한다. `metricsFor` 응답 전체(강도별/ICE별/stream-session 포함)를 대체한 것은 아니다. 운영 SQL·API·권한·schema·모바일/화면·송출 경로는 변경하지 않는다.
