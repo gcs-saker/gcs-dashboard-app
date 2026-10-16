@@ -4,6 +4,18 @@
 
 ## 0. 검토 결론
 
+### 2026-10-16: #920 열세 번째 구간 — 신규·기존 설치 공용 geo migration runner
+
+`deploy/postgres/init/002_geo_migrations.sh`가 신규 DB bootstrap과 기존 DB 운영 적용의 공용 runner다. versioned SQL은 `init/migrations/` 아래 한 벌만 두며, 신규 컨테이너는 entrypoint가 직접 실행하고 기존 설치는 `scripts/ops/apply_geo_migrations.sh`가 동일 runner와 디렉터리를 건강한 Server-01 PostgreSQL 컨테이너의 고유 임시 경로에 복사해 실행한다. wrapper는 승인된 maintenance window와 기존 복구 검증기 형식의 최신 DB backup evidence를 요구한다. 이번 구간에서는 생산 wrapper를 실행하지 않았다.
+
+V001은 앞 단계에서 검증한 `(observed_at,id)` index를 `CREATE INDEX CONCURRENTLY IF NOT EXISTS`로 생성한다. PostgreSQL 공식 문서상 concurrent build는 쓰기를 막지 않지만 두 번 scan하고 더 오래 걸릴 수 있으며, transaction block 안에서 실행할 수 없고 실패 시 invalid index가 남아 쓰기 비용을 계속 낼 수 있다. runner는 session advisory lock, migration SHA-256, DB version table, session 전체 statement/lock timeout, `PGDATA` free-space floor+table-size 기반 preflight를 적용한다. 같은 version의 checksum 불일치, 같은 이름의 invalid/not-ready/다른 정의 index는 자동 삭제·덮어쓰기 없이 중단한다. 정상 index가 생성됐으나 history 기록 전 중단된 경우에는 정의/validity 검증 후 같은 migration을 재실행해 history를 복구할 수 있다. 근거: [PostgreSQL CREATE INDEX CONCURRENTLY](https://www.postgresql.org/docs/16/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY).
+
+실제 pinned PostGIS 시험5개는 최초 적용+재실행 단일 record, checksum 불일치, 같은 이름의 다른 `(id)` index 거부·보존, 과도한 free-space 요구의 사전 중단, table lock 중 session deadline 실패 후 lock 해제 재실행 복구를 확인한다. 최초 시험에서 preflight의 `pg_total_relation_size`도 table lock에 기다릴 수 있음이 드러나 PGOPTIONS로 모든 psql connection에 deadline을 적용했다. 또 존재하지 않는 index를 `regclass`로 즉시 cast하면 boolean short-circuit 전에42704가 날 수 있어 namespace/relation catalog 조회로 바꿨다. 이 실패들은 시험 fixture에서만 발생했고 production에는 실행하지 않았다.
+
+`geo-schema-migration-evidence`는 JUnit 실제5개 case/count와 source revision만 export하고 stdout/stderr·container/path/SQL을 내보내지 않는다. 실패 FAIL, Docker 부재 skipped BLOCKED, 누락 NOT_RUN이다. migration runner의 성공은 실제 생산 backup restore나 index build 실행을 의미하지 않으므로 둘 다 NOT_RUN으로 남긴다.
+
+다음 단계는 공용 runner를 실제 배포 절차의 stateful maintenance stage에 연결하기 전, backup evidence와 disk preflight의 실제 산출물 형식, concurrent build 중 ingest/read latency, invalid index 운영자 복구 runbook, post-index V38 spill0 재검증을 묶은 qualification이다. 그 후에만 bounded retention caller 전환을 검토한다. 서버 배포·미디어 E2E는 NOT_RUN, 실물 모바일은 BLOCKED다.
+
 ### 2026-10-16: #920 열두 번째 구간 — geo retention time index 후보 비교
 
 운영 schema를 바꾸지 않고 pinned production PostGIS의 `gcs_geo.stream_telemetry_points`에 test-only `(observed_at, id)` B-tree를 생성해 V38 후보 선택 쿼리를 전후 비교한다. 100,000행 warm-cache 계획에서 기존 group/stream 계열 index로는 전역 시간순 정리를 충족할 수 없어 Sort와 temp spill이 발생했다. 후보는 `idx_retention_fixture_points_time` index scan을 사용해 Sort0/temp0으로 바뀌었다. 이 이름은 test-only이며 production init/migration에는 존재하지 않는 것을 gate로 확인한다.
