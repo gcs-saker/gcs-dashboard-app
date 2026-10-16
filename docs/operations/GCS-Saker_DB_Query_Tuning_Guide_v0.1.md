@@ -4,6 +4,16 @@
 
 ## 0. 검토 결론
 
+### 2026-10-16: #920 열두 번째 구간 — geo retention time index 후보 비교
+
+운영 schema를 바꾸지 않고 pinned production PostGIS의 `gcs_geo.stream_telemetry_points`에 test-only `(observed_at, id)` B-tree를 생성해 V38 후보 선택 쿼리를 전후 비교한다. 100,000행 warm-cache 계획에서 기존 group/stream 계열 index로는 전역 시간순 정리를 충족할 수 없어 Sort와 temp spill이 발생했다. 후보는 `idx_retention_fixture_points_time` index scan을 사용해 Sort0/temp0으로 바뀌었다. 이 이름은 test-only이며 production init/migration에는 존재하지 않는 것을 gate로 확인한다.
+
+로컬 최초 단일 측정에서 baseline candidate plan은 temp491 blocks였고, 후보 index는0이었다. 후보 build는41.638ms, index 크기는3,809,280bytes(약38bytes/기존행)였다. 같은 table에 순차로10,000행씩 INSERT SELECT한 측정은 baseline142.011ms/WAL7,921,525bytes, 후보140.406ms/WAL8,698,741bytes였다. 지연은 단일 warm run이라 개선/회귀를 일반화하지 않고, WAL은 약9.8% 증가한 관측값으로 기록한다. table가 두 번째 insert 전에 더 커지고 cache가 warm해지는 순서 효과가 있어 정밀한 write amplification qualification은 아니다.
+
+`geo-retention-index-evidence`는 baseline Sort/temp, candidate index 사용/Sort0/temp0, index bytes/build time, plan latency, insert latency/WAL의 aggregate만 허용하며 raw SQL/plan/identity/host/token을 내보내지 않는다. 실패 FAIL, skipped BLOCKED, 누락 NOT_RUN이고 source revision에 묶는다. correctness와 선택계획 개선이 확인되어도 production schema change는 NOT_RUN으로 남긴다.
+
+후보는 retention scan에는 분명한 이득이 있지만, 기존 서버에 init SQL만 바꾸면 신규 설치와 기존 설치가 갈라진다. 다음 단계는 신규 설치 init과 기존 설치용 명시적·재실행 가능한 geo schema migration을 한 소유 경로로 만들고, `CREATE INDEX CONCURRENTLY`의 transaction 제약·실패 잔여 index·lock/statement timeout·디스크 여유·rollback/검증을 설계하는 것이다. 그 전에는 V38 caller를 전환하지 않는다. 서버 배포·미디어 E2E는 NOT_RUN, 실물 모바일은 BLOCKED다.
+
 ### 2026-10-16: #920 열한 번째 구간 — owner-only 보존기간 배치 primitive·실제 PostGIS 검증
 
 **정합성 primitive는 추가했지만 기존 정리 스케줄러 전환은 보류한다.** V19와 `runtime_maintenance.sh`의 기존 단일 DELETE 호출은 그대로여서 운영 정리의 unbounded 위험이 아직 해소된 것은 아니다. V38은 private DB owner용 `prune_telemetry_history_batch(retention_days, batch_size, as_of_at)`만 추가하며, 기존 함수/호출/보존기간/테이블/index/미디어/모바일을 변경하지 않는다. 자동으로 새로운 삭제를 실행하지 않으며 PUBLIC EXECUTE 권한도 제거한다. 보존기간1~3650일·batch1~1000·finite/non-null/future 아닌 anchor를 boundary에서 검증한다.
