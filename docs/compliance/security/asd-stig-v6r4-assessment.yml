@@ -1,6 +1,7 @@
 schemaVersion: gcs-saker.asd-stig-assessment.v1
 sourceRevision: V6R4
-assessmentDate: 2026-10-16
+assessmentDate: 2026-09-09
+cciSourceRestoredAt: 2026-10-16
 scope: software-only internal assessment; not an authorization decision
 cciSourceStatus: VERIFIED_OFFICIAL_XCCDF_SHA256
 unassessedDefault: OPEN

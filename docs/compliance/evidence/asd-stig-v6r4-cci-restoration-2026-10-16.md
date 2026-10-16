@@ -37,6 +37,8 @@ checklist. The XML carries **319** CCI references. Only `ident` entries whose sy
 `http://cyber.mil/cci` are used; legacy V-ID/SV-ID entries are not CCI identifiers.
 The generated provenance contains exact per-rule CCI lists. The 14 existing assessment
 entries now use those lists, without inventing identifiers or changing verdicts.
+The original assessment date is retained; `cciSourceRestoredAt` separately records this
+source-only restoration, not a new functional security assessment.
 
 - 11 NOT_A_FINDING, 274 OPEN, 1 NOT_APPLICABLE remain unchanged.
 - Existing NIST control annotations remain tailored mappings; this work does not claim

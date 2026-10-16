@@ -179,6 +179,9 @@ def test_closure_records_real_evidence_without_extending_due_date_or_changing_ve
     counts = runpy.run_path(str(ROOT / "scripts/gates/stig_assessment_gate.py"))["validate"]()
     assert counts == {"NOT_A_FINDING": 11, "OPEN": 274, "NOT_APPLICABLE": 1}
     assert "sources/U_ASD_STIG_V6R4_Manual-xccdf.xml -text" in (ROOT / ".gitattributes").read_text()
+    assessment = yaml.safe_load((security / "asd-stig-v6r4-assessment.yml").read_text())
+    assert str(assessment["assessmentDate"]) == "2026-09-09"
+    assert str(assessment["cciSourceRestoredAt"]) == "2026-10-16"
 
 
 def test_missing_source_cannot_close_the_rmf_gate(monkeypatch: pytest.MonkeyPatch) -> None:
