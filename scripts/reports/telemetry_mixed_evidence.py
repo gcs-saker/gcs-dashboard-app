@@ -9,27 +9,30 @@ import math
 import re
 import sys
 from pathlib import Path
+from types import MappingProxyType
 from xml.etree import ElementTree
 
 SCHEMA_VERSION = "telemetry-mixed-evidence-v1"
 SUITE = "kr.co.a4ai.gcssaker.authpolicy.TelemetryMixedLoadPostgresTest"
 PREFIX = "telemetry_mixed "
 MAX_XML_BYTES = 2 * 1024 * 1024
-PROFILES = {"small_page": 1, "max_page": 500}
-OPERATIONS = {"read", "write"}
-INTEGER_FIELDS = {
-    "page_size",
-    "workers",
-    "samples",
-    "rows",
-    "history_added",
-    "calls",
-    "shared_hits",
-    "shared_reads",
-    "temp_written",
-}
-DECIMAL_FIELDS = {"p50_ms", "p95_ms", "exec_ms", "wal_bytes"}
-FIELDS = INTEGER_FIELDS | DECIMAL_FIELDS | {"result", "profile", "operation"}
+PROFILES = MappingProxyType({"small_page": 1, "max_page": 500})
+OPERATIONS = frozenset({"read", "write"})
+INTEGER_FIELDS = frozenset(
+    {
+        "page_size",
+        "workers",
+        "samples",
+        "rows",
+        "history_added",
+        "calls",
+        "shared_hits",
+        "shared_reads",
+        "temp_written",
+    }
+)
+DECIMAL_FIELDS = frozenset({"p50_ms", "p95_ms", "exec_ms", "wal_bytes"})
+FIELDS = INTEGER_FIELDS | DECIMAL_FIELDS | frozenset({"result", "profile", "operation"})
 
 
 class TelemetryMixedEvidenceError(RuntimeError):

@@ -54,6 +54,16 @@ def test_only_aggregate_mixed_load_evidence_is_exported(tmp_path: Path) -> None:
     assert report["physical_mobile"] == "BLOCKED" and report["media_e2e"] == "NOT_RUN"
 
 
+def test_profile_and_schema_constants_are_immutable() -> None:
+    evidence = module()
+    with pytest.raises(TypeError):
+        evidence.PROFILES["small_page"] = 500
+    assert all(
+        isinstance(getattr(evidence, name), frozenset)
+        for name in ("OPERATIONS", "INTEGER_FIELDS", "DECIMAL_FIELDS", "FIELDS")
+    )
+
+
 @pytest.mark.parametrize("status", ["BLOCKED", "FAIL"])
 def test_skipped_factories_and_failed_cases_are_not_pass(tmp_path: Path, status: str) -> None:
     evidence = module()
