@@ -19,7 +19,7 @@ def module() -> ModuleType:
 
 
 def write_suite(directory: Path, evidence: ModuleType, status: str = "PASS") -> Path:
-    tests = 2 if status == "BLOCKED" else 5
+    tests = 2 if status == "BLOCKED" else 7
     root = ElementTree.Element(
         "testsuite",
         name=evidence.SUITE,
@@ -32,7 +32,12 @@ def write_suite(directory: Path, evidence: ModuleType, status: str = "PASS") -> 
         case = ElementTree.SubElement(root, "testcase", name=f"test-{index}")
         if status == "BLOCKED" or status == "FAIL" and index == 0:
             ElementTree.SubElement(case, "skipped" if status == "BLOCKED" else "failure")
-    ElementTree.SubElement(root, "system-out").text = "private-host private-token private-path\n"
+    ElementTree.SubElement(root, "system-out").text = "private-host private-token private-path\n" + (
+        ""
+        if status == "BLOCKED"
+        else "geo_migration_backup result=PASS dump_bytes=100 digest_verified=1 source_tables=8 restored_tables=8 migrations=1 index_valid=1\n"
+        "geo_migration_load result=PASS rows=500000 writes=16 reads=16 write_p95_ms=10 read_p95_ms=5 progress_seen=1 retention_temp_written=0\n"
+    )
     path = directory / ("TEST-" + evidence.SUITE + ".xml")
     ElementTree.ElementTree(root).write(path)
     return path
@@ -42,8 +47,9 @@ def test_report_excludes_raw_logs_and_records_no_production_execution(tmp_path: 
     evidence = module()
     write_suite(tmp_path, evidence)
     report = evidence.build_report(tmp_path, "a" * 40)
-    assert report["result"] == "PASS" and report["tests"]["tests"] == 5
-    assert report["production_execution"] == "NOT_RUN" and report["backup_restore"] == "NOT_RUN"
+    assert report["result"] == "PASS" and report["tests"]["tests"] == 7
+    assert report["production_execution"] == "NOT_RUN" and report["backup_restore"] == "PASS"
+    assert {row["profile"] for row in report["measurements"]} == {"backup_restore", "concurrent_load"}
     assert "private-" not in json.dumps(report)
 
 
@@ -54,18 +60,55 @@ def test_failure_and_missing_docker_are_not_pass(tmp_path: Path, status: str) ->
     assert evidence.build_report(tmp_path, "a" * 40)["result"] == status
 
 
+@pytest.mark.parametrize(
+    "change",
+    [
+        "dump_bytes=0",
+        "digest_verified=0",
+        "restored_tables=7",
+        "migrations=0",
+        "index_valid=0",
+        "rows=0",
+        "writes=15",
+        "reads=15",
+        "progress_seen=0",
+        "retention_temp_written=1",
+        "write_p95_ms=3000",
+        "read_p95_ms=NaN",
+        "secret=token",
+    ],
+)
+def test_bad_backup_or_load_measurements_fail_closed(tmp_path: Path, change: str) -> None:
+    evidence = module()
+    path = write_suite(tmp_path, evidence)
+    root = ElementTree.parse(path).getroot()
+    stdout = root.find("system-out")
+    assert stdout is not None
+    key = change.split("=", 1)[0]
+    lines = (stdout.text or "").splitlines()
+    target = 1 if key in {"dump_bytes", "digest_verified", "restored_tables", "migrations", "index_valid"} else 2
+    fields = [change if field.startswith(key + "=") else field for field in lines[target].split()]
+    if key == "secret":
+        fields.append(change)
+    lines[target] = " ".join(fields)
+    stdout.text = "\n".join(lines)
+    ElementTree.ElementTree(root).write(path)
+    with pytest.raises((evidence.GeoSchemaMigrationEvidenceError, ValueError)):
+        evidence.build_report(tmp_path, "a" * 40)
+
+
 @pytest.mark.parametrize("mutation", ["count", "case", "identity", "dtd", "size"])
 def test_suite_identity_and_real_case_counts_are_required(tmp_path: Path, mutation: str) -> None:
     evidence = module()
     path = write_suite(tmp_path, evidence)
     root = ElementTree.parse(path).getroot()
     if mutation in {"count", "identity"}:
-        root.set("tests" if mutation == "count" else "name", "4" if mutation == "count" else "wrong")
+        root.set("tests" if mutation == "count" else "name", "6" if mutation == "count" else "wrong")
     elif mutation == "case":
         case = root.find("testcase")
         assert case is not None
         root.remove(case)
-        root.set("tests", "4")
+        root.set("tests", "6")
     ElementTree.ElementTree(root).write(path)
     if mutation == "dtd":
         path.write_bytes(b"<!DOCTYPE testsuite []>" + path.read_bytes())
