@@ -4,6 +4,22 @@
 
 ## 0. 검토 결론
 
+### 2026-10-16: #920 열한 번째 구간 — owner-only 보존기간 배치 primitive·실제 PostGIS 검증
+
+**정합성 primitive는 추가했지만 기존 정리 스케줄러 전환은 보류한다.** V19와 `runtime_maintenance.sh`의 기존 단일 DELETE 호출은 그대로여서 운영 정리의 unbounded 위험이 아직 해소된 것은 아니다. V38은 private DB owner용 `prune_telemetry_history_batch(retention_days, batch_size, as_of_at)`만 추가하며, 기존 함수/호출/보존기간/테이블/index/미디어/모바일을 변경하지 않는다. 자동으로 새로운 삭제를 실행하지 않으며 PUBLIC EXECUTE 권한도 제거한다. 보존기간1~3650일·batch1~1000·finite/non-null/future 아닌 anchor를 boundary에서 검증한다.
+
+한 transaction에 history와 optional geo points를 **각각 최대1,000행** 삭제하며 두 latest 테이블은 건드리지 않는다. UTC의 고정 as_of 기준 cutoff보다 엄격히 과거인 행만 선택한다. 같은 cutoff는 caller가 후속 batch에도 유지해야 하며 각 batch는 따로 commit해야 한다. CTE에서 `FOR UPDATE SKIP LOCKED`로 후보를 잠근 후 `ctid+tableoid`로 삭제해 동일 transaction의 물리 행을 식별한다. 동시 worker의 행 중복 선택을 방지하지만 잠긴 행이 남으면 has_more=true다. 이는 해당 시점의 보수적 잔여 표시이며 이후 도착하는 late event까지 영구적으로 없다는 보장이 아니다. [PostgreSQL row locking](https://www.postgresql.org/docs/16/sql-select.html#SQL-FOR-UPDATE-SHARE)는 SKIP LOCKED가 row lock만 건너뛰며 table lock은 별도임을 설명한다.
+
+caller는 외부 SELECT를 시작하기 **전에** statement_timeout을1ms~2s, lock_timeout을1ms~500ms로 설정해야 하며 0/초과 설정은22023으로 거부한다. 함수 안에서 timeout만 SET해 이미 실행 중인 외부 statement까지 제한했다고 간주하지 않는다. JDBC fixture는 SET LOCAL을 적용하는 짧은 transaction·3초 query·5초 socket timeout을 사용한다. 실제 slow second-table trigger를100ms 외부 statement timeout으로 취소(57014), table lock을500ms로 취소(55P03)해 첫 테이블 삭제도 rollback됨을 확인했다. [PostgreSQL timeout 정의](https://www.postgresql.org/docs/16/runtime-config-client.html#GUC-STATEMENT-TIMEOUT)는 statement 수신부터 완료까지의 시간과0의 비활성 의미를 규정한다.
+
+시험은 Compose production의 동일한 **pinned PostGIS image digest**와 실제 `001_geo_telemetry.sql`, migration/ownership trigger를 사용한다. 실제 PostgreSQL19개 case는 null/0/초과/±infinity/future, 최소·최대 bounds, UTC cutoff equality·timezone 복원, 두 이력/latest 보존, row skip+동시 live ingest, table/statement timeout rollback·복구, caller rollback, optional geo 부재, PUBLIC 권한 거부, 동시 두 worker의 분리 삭제를 포함한다. 생산 role·secret·서버에 접속하거나 삭제한 것은 아니다.
+
+각 history에 expired100,000행을 실제 적재한 뒤1,000행×9 batch만 측정한 로컬 예: p50 **20.631ms**, p95 **25.888ms**, 각 history9,000행 삭제, 각각91,001(fresh1 포함)/91,000행 잔여, owned function9회, WAL1,994,727bytes. 전체 drain/legacy 대비 처리량/SLO 시험은 아니다. outer statement 합계 temp writes **4,245 blocks**가 관찰됐다. 별도 후보 SELECT의 EXPLAIN은 history가 기존 recorded_at index를 사용하고 temp0인 반면 **geo points는 Sort1개·temp447 blocks**임을 확인했다. Geo의 전역 observed_at 정렬 비용을 줄일 index 후보와 write/space 비용을 다음 구간에서 비교해야 한다. 근거 없이 운영 index나 work_mem을 변경하지 않았다.
+
+`telemetry-retention-evidence`는 JUnit 실제19개 실행과 aggregate1개를 검증해 correctness PASS/실패 FAIL/skipped BLOCKED/누락 NOT_RUN을 구분한다. performance_qualification은 points spill이 있으면 FAIL, 아니어도 대규모 qualification 전에는 NOT_RUN이다. 따라서 correctness PASS를 운영 적용 준비 완료로 해석하지 않는다. Raw SQL/UUID/호스트/토큰/plan 원문은 내보내지 않는다.
+
+다음: geo time index 후보의 비용·write amplification 검증 → cutoff 고정/별도 commit/overall budget/skip된 잔여/ack 유실/중단 복구를 갖춘 운영 caller 연결 → 장기 drain·ingest/read 혼합·1천만/1억행 검증. 기존 unbounded scheduler와 Redis Lua SCAN은 이번에 수정하거나 실행하지 않았다. 서버 배포·전체 미디어 E2E는 NOT_RUN, 실물 모바일은 BLOCKED다.
+
 ### 2026-10-16: #920 열 번째 구간 — 실제 reader/writer 혼합 부하와 MVCC 경계
 
 실제 migration·ownership trigger·pgJDBC/Hikari·운영 reader/writer를 사용해 **latest100,001행**의 동일 분포에서 2개 reader와 2개 writer를 동시에 실행한다. 기존 실제-schema seed를 재사용하고 트랜잭션당1,000개 identity 상한도 유지한다. 32개 wave에서 reader64회/writer64회가 실행되며 페이지 크기1·500 두 profile을 비교한다. writer는 dense 그룹과 외부 그룹의 고정된 두 identity를 갱신한다. 이 시험은 동시 INSERT에 대한 전체 keyset 순회의 snapshot 보장을 새로 만들거나 주장하지 않는다.
