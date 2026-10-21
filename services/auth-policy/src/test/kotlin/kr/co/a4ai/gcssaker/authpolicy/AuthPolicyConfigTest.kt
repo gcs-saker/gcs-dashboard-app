@@ -38,6 +38,13 @@ class AuthPolicyConfigTest {
     }
 
     @Test
+    fun `production explicitly disables static signup invites`() {
+        val env = productionEnvironment("AUTH_POLICY_SIGNUP_INVITES" to "disabled")
+
+        assertTrue(RuntimeEnvReader(env).signupInvites().toList().isEmpty())
+    }
+
+    @Test
     fun `local profile retains the documented development signup invite`() {
         val invites = RuntimeEnvReader(localEnvironment()).signupInvites()
 
