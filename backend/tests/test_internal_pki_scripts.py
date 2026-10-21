@@ -88,6 +88,8 @@ def test_deployments_fail_before_mutation_when_current_crl_is_stale() -> None:
     infrastructure = SAFE_INFRA_DEPLOY.read_text(encoding="utf-8")
     stateless = SAFE_STATELESS_DEPLOY.read_text(encoding="utf-8")
 
+    assert "resolve_internal_pki_mount.sh" in infrastructure
+    assert "resolve_internal_pki_mount.sh" in stateless
     assert infrastructure.index("check_current_internal_pki") < infrastructure.index("backup_mqtt_data")
     assert infrastructure.index("check_internal_pki.sh") < infrastructure.index("replace_service mqtt")
     assert stateless.index("check_internal_pki.sh") < stateless.index("previous_container_id=")
