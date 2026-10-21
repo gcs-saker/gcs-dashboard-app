@@ -8,7 +8,6 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts/ops/enroll_legacy_runtime_secrets.py"
-MATERIALIZER_DIR = ROOT / "scripts/ops"
 pytestmark = pytest.mark.skipif(os.name == "nt", reason="POSIX ownership semantics required")
 
 
@@ -44,7 +43,6 @@ def run_enrollment(
             "--disable-signup",
             "--generate-mediamtx-password",
         ],
-        cwd=MATERIALIZER_DIR,
         text=True,
         capture_output=True,
     )
@@ -101,7 +99,6 @@ def test_enrollment_refuses_to_replace_managed_secret(tmp_path: Path) -> None:
             "--runtime-gid",
             str(os.getgid()),
         ],
-        cwd=MATERIALIZER_DIR,
         text=True,
         capture_output=True,
     )
