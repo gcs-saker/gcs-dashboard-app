@@ -46,16 +46,12 @@ def read_environment(path: Path) -> dict[str, str]:
         name, raw_value = line.split("=", 1)
         normalized_name = name.strip()
         if not normalized_name or normalized_name in values:
-            raise SecretMaterializationError(
-                "legacy environment key is invalid or duplicated"
-            )
+            raise SecretMaterializationError("legacy environment key is invalid or duplicated")
         values[normalized_name] = parse_value(raw_value)
     return values
 
 
-def collect_secrets(
-    primary: Path, supplements: list[Path], allowed: set[str]
-) -> dict[str, str]:
+def collect_secrets(primary: Path, supplements: list[Path], allowed: set[str]) -> dict[str, str]:
     combined = read_environment(primary)
     for supplement in supplements:
         for name, value in read_environment(supplement).items():
@@ -66,9 +62,7 @@ def collect_secrets(
 def ensure_empty_target(directory: Path, allowed: set[str]) -> None:
     existing = allowed.intersection(item.name for item in directory.iterdir())
     if existing:
-        raise SecretMaterializationError(
-            "runtime secret target already contains managed files"
-        )
+        raise SecretMaterializationError("runtime secret target already contains managed files")
 
 
 def enroll(args: argparse.Namespace) -> int:
@@ -76,16 +70,12 @@ def enroll(args: argparse.Namespace) -> int:
     optional = load_names(args.optional_allowlist)
     validate_output_directory(args.output_directory)
     ensure_empty_target(args.output_directory, required | optional)
-    enrolled = collect_secrets(
-        args.primary_env, args.supplement_env, required | optional
-    )
+    enrolled = collect_secrets(args.primary_env, args.supplement_env, required | optional)
     generated_password = False
     if args.disable_signup:
         enrolled["AUTH_POLICY_SIGNUP_INVITES"] = DISABLED_SIGNUP_POLICY
     if args.generate_mediamtx_password and "MEDIAMTX_API_PASSWORD" not in enrolled:
-        enrolled["MEDIAMTX_API_PASSWORD"] = secrets.token_urlsafe(
-            GENERATED_PASSWORD_BYTES
-        )
+        enrolled["MEDIAMTX_API_PASSWORD"] = secrets.token_urlsafe(GENERATED_PASSWORD_BYTES)
         generated_password = True
     validated = validate_secrets(enrolled, required, optional)
     for name, value in validated.items():
