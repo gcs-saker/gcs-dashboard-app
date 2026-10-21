@@ -22,3 +22,7 @@ The CRL has an independent lifetime and can expire before any leaf certificate. 
 CRL with `refresh_internal_crl.sh`; it generates, validates, and atomically replaces the CRL. A new CRL
 is not consumed until the affected service reloads or is sequentially recreated in an approved window.
 Never disable `crlfile` to recover availability.
+
+`refresh_internal_crl.sh` explicitly requests a 30-day CRL by default even when an older CA configuration
+still contains `default_crl_days=7`. `PKI_CRL_VALIDITY_DAYS` is restricted to14..365 and the generated
+CRL must still satisfy the independent14-day minimum-validity check before atomic replacement.
