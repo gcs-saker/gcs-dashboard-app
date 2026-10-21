@@ -28,6 +28,9 @@ def test_infrastructure_rollout_requires_verified_backup_and_idle_media() -> Non
     assert "ALLOW_MEDIA_SESSION_INTERRUPTION" in source
     assert "/v3/paths/list" in source
     assert "validate_mediamtx_candidate_config" in source
+    assert '["secrets"]["mediamtx_api_password"]["file"]' in source
+    assert '--group-add "${secret_gid}"' in source
+    assert ':/run/secrets/MEDIAMTX_API_PASSWORD:ro"' in source
     assert "MediaMTX candidate rejected the release configuration" in source
 
 
