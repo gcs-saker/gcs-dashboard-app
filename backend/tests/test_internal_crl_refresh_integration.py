@@ -22,8 +22,23 @@ def test_refresh_overrides_legacy_seven_day_ca_config_with_bounded_thirty_day_cr
     (pki / "index.txt").write_text("")
     (pki / "serial").write_text("1000\n")
     (pki / "crlnumber").write_text("1000\n")
-    command("openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-subj", "/CN=Fixture CA",
-            "-keyout", str(pki / "ca.key"), "-out", str(pki / "ca.crt"), "-days", "365", cwd=pki)
+    command(
+        "openssl",
+        "req",
+        "-x509",
+        "-newkey",
+        "rsa:2048",
+        "-nodes",
+        "-subj",
+        "/CN=Fixture CA",
+        "-keyout",
+        str(pki / "ca.key"),
+        "-out",
+        str(pki / "ca.crt"),
+        "-days",
+        "365",
+        cwd=pki,
+    )
     (pki / "openssl-ca.cnf").write_text(f"""[ca]
 default_ca=CA_default
 [CA_default]
@@ -41,7 +56,9 @@ default_crl_days=7
     env = os.environ | {"PKI_CRL_VALIDITY_DAYS": "30", "PKI_CRL_MIN_VALIDITY_SECONDS": "1209600"}
     command("bash", str(SCRIPT), str(pki), env=env)
     next_update = command("openssl", "crl", "-in", str(pki / "ca.crl"), "-noout", "-nextupdate")
-    expiry = datetime.strptime(next_update.removeprefix("nextUpdate="), "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc)
+    expiry = datetime.strptime(next_update.removeprefix("nextUpdate="), "%b %d %H:%M:%S %Y %Z").replace(
+        tzinfo=timezone.utc
+    )
     remaining_days = (expiry - datetime.now(timezone.utc)).total_seconds() / 86400
     assert 28 <= remaining_days <= 31
     assert (pki / "ca.crl").stat().st_mode & 0o777 == 0o644
