@@ -1,6 +1,6 @@
 module github.com/gcs-saker/gcs-dashboard-app/services/media-control
 
-go 1.26.9
+go 1.26.10
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.5.1
