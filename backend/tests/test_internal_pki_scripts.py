@@ -77,6 +77,9 @@ def test_crl_refresh_is_bounded_and_atomic() -> None:
     assert "PKI_CRL_VALIDITY_DAYS:-30" in source
     assert '"${validity_days}" -ge 14' in source and '"${validity_days}" -le 365' in source
     assert 'openssl ca -batch -gencrl -crldays "${validity_days}"' in source
+    assert "ca.crt ca.key openssl-ca.cnf serial crlnumber" in source
+    assert '[[ -f "${pki_real}/index.txt" ]]' in source
+    assert '[[ -d "${pki_real}/newcerts" ]]' in source
     assert "openssl crl" in source and "-nextupdate" in source
     assert "mktemp" in source and "mv -f" in source
 
