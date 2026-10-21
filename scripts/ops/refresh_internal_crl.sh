@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 pki_dir="${1:?Usage: refresh_internal_crl.sh <absolute-pki-directory>}"
 minimum_validity="${PKI_CRL_MIN_VALIDITY_SECONDS:-1209600}"
+validity_days="${PKI_CRL_VALIDITY_DAYS:-30}"
 
 [[ "${pki_dir}" = /* && -d "${pki_dir}" ]] || { echo "PKI directory must be absolute" >&2; exit 2; }
 root_real="$(realpath "${ROOT}")"
@@ -12,14 +13,20 @@ case "${pki_real}" in
   "${root_real}"|"${root_real}"/*) echo "PKI directory must be outside the repository" >&2; exit 2 ;;
 esac
 [[ "${minimum_validity}" =~ ^[0-9]+$ ]] || { echo "CRL minimum validity must be numeric" >&2; exit 2; }
-for required in ca.crt ca.key openssl-ca.cnf index.txt crlnumber; do
+[[ "${validity_days}" =~ ^[0-9]+$ && "${validity_days}" -ge 14 && "${validity_days}" -le 365 ]] || {
+  echo "CRL validity days must be between 14 and 365" >&2
+  exit 2
+}
+for required in ca.crt ca.key openssl-ca.cnf serial crlnumber; do
   [[ -s "${pki_real}/${required}" ]] || { echo "missing CA state: ${required}" >&2; exit 1; }
 done
+[[ -f "${pki_real}/index.txt" ]] || { echo "missing CA state: index.txt" >&2; exit 1; }
+[[ -d "${pki_real}/newcerts" ]] || { echo "missing CA state: newcerts" >&2; exit 1; }
 
 umask 077
 temporary="$(mktemp "${pki_real}/ca.crl.XXXXXX")"
 trap 'rm -f "${temporary}"' EXIT
-openssl ca -batch -gencrl -config "${pki_real}/openssl-ca.cnf" -out "${temporary}"
+openssl ca -batch -gencrl -crldays "${validity_days}" -config "${pki_real}/openssl-ca.cnf" -out "${temporary}"
 next_update="$(openssl crl -in "${temporary}" -noout -nextupdate | sed 's/^nextUpdate=//')"
 next_update_epoch="$(date -u -d "${next_update}" +%s)"
 minimum_epoch="$(( $(date -u +%s) + minimum_validity ))"
