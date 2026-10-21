@@ -10,7 +10,7 @@ services:
       - ../mqtt-test/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
     networks: [test-net]
   tests:
-    image: golang:1.26.9-alpine
+    image: golang:1.26.10-alpine
     working_dir: /workspace/services/media-control
     volumes:
       - ../..:/workspace
