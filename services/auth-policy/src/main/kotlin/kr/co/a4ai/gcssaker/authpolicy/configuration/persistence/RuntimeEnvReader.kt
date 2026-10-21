@@ -47,6 +47,9 @@ internal class RuntimeEnvReader(private val env: Environment) {
             ?.takeIf(String::isNotEmpty)
             ?: AuthRuntimeDefaults.SIGNUP_INVITES.takeIf { allowsLocalDefaults() }
             ?: return SignupInvites.of(emptyList())
+        if (raw.equals(AuthRuntimeDefaults.SIGNUP_INVITES_DISABLED, ignoreCase = true)) {
+            return SignupInvites.of(emptyList())
+        }
         return SignupInvites.of(raw.split(",").map(String::trim).filter(String::isNotEmpty).map(::signupInvite))
     }
 

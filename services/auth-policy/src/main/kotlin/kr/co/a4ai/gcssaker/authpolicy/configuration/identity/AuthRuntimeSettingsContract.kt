@@ -77,6 +77,7 @@ object AuthRuntimeDefaults {
     const val COMPANY_ID = 1
     const val GROUP_ID = "co-a"
     const val SIGNUP_INVITES = "A4AI01:1:co-a"
+    const val SIGNUP_INVITES_DISABLED = "disabled"
     const val DEVICE_BOOTSTRAP_TOKENS = "LOCAL-DEVICE-BOOTSTRAP:co-a"
     const val OPERATIONAL_EVENT_CACHE_KEY_PREFIX = "gcs:ops-events:"
     const val OPERATIONAL_EVENT_CACHE_TTL_SECONDS = 5L
