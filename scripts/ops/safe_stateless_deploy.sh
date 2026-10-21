@@ -49,9 +49,8 @@ COMPOSE_FILE="${COMPOSE_FILE}" ENV_FILE="${ENV_FILE}" COMPOSE_PROJECT_NAME="${PR
   SOURCE_COMMIT="${SOURCE_COMMIT}" bash "${ROOT}/scripts/ops/verify_runtime_release_alignment.sh" infrastructure
 mqtt_container="$("${compose[@]}" ps -q mqtt)"
 [[ -n "${mqtt_container}" ]] || { echo "running MQTT container is required" >&2; exit 2; }
-mqtt_pki_source="$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/run/secrets/gcs-pki/ca.crl"}}{{.Source}}{{end}}{{end}}' "${mqtt_container}")"
-[[ "${mqtt_pki_source}" = /* && -f "${mqtt_pki_source}" ]] || { echo "MQTT CRL source is unavailable" >&2; exit 2; }
-bash "${ROOT}/scripts/ops/check_internal_pki.sh" "$(dirname "${mqtt_pki_source}")"
+mqtt_pki_source="$(bash "${ROOT}/scripts/ops/resolve_internal_pki_mount.sh" "${mqtt_container}")"
+bash "${ROOT}/scripts/ops/check_internal_pki.sh" "${mqtt_pki_source}"
 previous_container_id="$("${compose[@]}" ps -q backend)"
 [[ -n "${previous_container_id}" ]] || { echo "running backend container is required" >&2; exit 2; }
 previous_compose_file="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project.config_files" }}' "${previous_container_id}")"
