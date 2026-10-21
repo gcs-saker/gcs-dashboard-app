@@ -86,11 +86,19 @@ pull_and_verify_images() {
 }
 
 validate_mediamtx_candidate_config() {
-  local name="gcs-mediamtx-preflight-${SOURCE_COMMIT:0:12}" status logs
+  local name="gcs-mediamtx-preflight-${SOURCE_COMMIT:0:12}" status logs secret_file secret_gid
+  secret_file="$("${compose[@]}" config --format json | python3 -c \
+    'import json,sys; print(json.load(sys.stdin)["secrets"]["mediamtx_api_password"]["file"])')"
+  [[ "${secret_file}" = /* && -s "${secret_file}" ]] || {
+    echo "MediaMTX candidate secret is unavailable" >&2
+    return 1
+  }
+  secret_gid="$(stat -c '%g' "${secret_file}")"
   docker rm -f "${name}" >/dev/null 2>&1 || true
-  docker run -d --name "${name}" --network none --read-only \
+  docker run -d --name "${name}" --network none --read-only --group-add "${secret_gid}" \
     --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m \
     -v "${ROOT}/deploy/mediamtx/mediamtx.closed-network.yml:/mediamtx.yml:ro" \
+    -v "${secret_file}:/run/secrets/MEDIAMTX_API_PASSWORD:ro" \
     "${MEDIAMTX_IMAGE}" /mediamtx.yml >/dev/null
   sleep 3
   status="$(docker inspect --format '{{.State.Status}}' "${name}")"
