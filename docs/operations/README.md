@@ -16,6 +16,7 @@
 | `GCS-Saker_운영장애대응_Runbook_v0.1.md` | M2 배포 전 장애 감지, 완화, 복구, 사용자 표시 기준 초안 |
 | `GCS-Saker_Server01_Recovery_Qualification.md` | Server-01 통제 장애 주입, 동일 컨테이너 복구, 데이터 무결성 증거 절차 |
 | `GCS-Saker_Server01_Performance_Qualification.md` | Server-01 지연·장시간 안정성 측정과 불변 판정 증거 절차 |
+| `GCS-Saker_Compose_Lifecycle_Runbook.md` | 기존 컨테이너의 순차 기동·역순 종료와 fail-closed readiness 절차 |
 | `GCS-Saker_Change_Impact_Qualification.md` | 변경 diff의 생산 소유 경계 분류와 교차 경계 검토 절차 |
 | `GCS-Saker_Hazard_Closure_Qualification.md` | MIL-STD-882E 위험·통제·증거·잔여위험 승인 폐루프 절차 |
 | `GCS-Saker_health_readiness_기준_v0.1.md` | Backend/MediaMTX/Docker/Nginx health와 readiness 판단 기준 |
