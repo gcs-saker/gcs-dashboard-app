@@ -96,16 +96,24 @@ def target_command(network: str, name: str) -> list[str]:
     ]
 
 
-def probe_command(network: str, condition: Condition, samples: int) -> list[str]:
+def probe_command(
+    network: str,
+    condition: Condition,
+    samples: int,
+    *,
+    probe_script: str = PROBE_SCRIPT,
+    target_host: str = "target",
+    target_port: int = 18080,
+) -> list[str]:
     environment = {
-        "TARGET_HOST": "target",
-        "TARGET_PORT": "18080",
+        "TARGET_HOST": target_host,
+        "TARGET_PORT": str(target_port),
         "SAMPLES": str(samples),
         "NETEM_DELAY_MS": str(condition.delay_ms),
         "NETEM_JITTER_MS": str(condition.jitter_ms),
         "NETEM_LOSS_PERCENT": str(condition.loss_percent),
         "NETEM_REORDER_PERCENT": str(condition.reorder_percent),
-        "PROBE_SCRIPT": PROBE_SCRIPT,
+        "PROBE_SCRIPT": probe_script,
     }
     command = [
         "docker",
