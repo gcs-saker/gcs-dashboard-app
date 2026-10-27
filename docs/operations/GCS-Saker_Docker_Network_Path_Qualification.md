@@ -24,3 +24,16 @@ count. Do not infer streaming or Talkback quality from TCP-connect latency. Pack
 TURN, and WebRTC require separate owned fixtures and are still `NOT_RUN` in this source-only segment.
 
 No network driver, MTU, sysctl, firewall, or production Compose change is authorized by this measurement alone.
+
+## Disposable netem matrix
+
+`docker_network_fault_fixture.py` builds the pinned local probe, creates an internal
+`gcs-net-fixture-*` network, and runs equal-sized baseline, 50±10 ms delay, 1% loss, and 5% reordering conditions.
+The target has no Linux capabilities; only the disposable probe runs as root with `NET_ADMIN` so it can apply
+`tc netem` to its own interface. Every other capability is dropped, privilege escalation is disabled, and the
+root filesystem is read-only. Both containers and the internal network are removed in `finally`, including failed
+runs.
+
+The matrix currently qualifies DNS and TCP connection establishment only. Docker being unavailable is recorded as
+`BLOCKED`, never `PASS`. Stream, Talkback, MQTT application latency, TURN allocation, ICE selection, CPU cost,
+conntrack pressure, and packet-capture metadata remain separate follow-up measurements.
