@@ -2,6 +2,7 @@ FROM python:3.12-alpine@sha256:dcc0e21003470826202b4bbb3ac8404eb3076b8a5d2211917
 
 RUN apk add --no-cache iproute2=7.0.0-r0
 COPY deploy/network/netem-probe-entrypoint.sh /usr/local/bin/gcs-netem-probe
+COPY scripts/smoke/turn_relay_smoke.py /opt/gcs/turn_relay_smoke.py
 RUN chmod 0555 /usr/local/bin/gcs-netem-probe
 
 USER 65534:65534
