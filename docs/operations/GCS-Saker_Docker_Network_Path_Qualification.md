@@ -37,3 +37,11 @@ runs.
 The matrix currently qualifies DNS and TCP connection establishment only. Docker being unavailable is recorded as
 `BLOCKED`, never `PASS`. Stream, Talkback, MQTT application latency, TURN allocation, ICE selection, CPU cost,
 conntrack pressure, and packet-capture metadata remain separate follow-up measurements.
+
+## MQTT application round trip
+
+`docker_mqtt_netem_fixture.py` reuses the same internal fixture and fault matrix with a pinned Mosquitto broker.
+Its standard-library MQTT 3.1.1 client performs CONNECT, SUBSCRIBE, PUBLISH, and received-PUBLISH timing for every
+sample. The report separates requested samples, received messages, failures, and p50/p95/p99 broker round trip.
+The test broker has no host port, persistence, production certificate, account, ACL, or data mount. Passing this
+fixture does not qualify production mTLS, authorization, telemetry processing, command execution, or reconnect.
