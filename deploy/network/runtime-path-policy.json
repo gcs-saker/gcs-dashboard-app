@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "gcs-saker.network-path-policy.v1",
+  "memberships": {
+    "postgres-geo": ["control-net"],
+    "redis": ["control-net"],
+    "mqtt": ["broker-net"],
+    "backend": ["control-net", "edge-net", "egress-net", "stream-net"],
+    "auth-policy": ["control-net", "edge-net", "egress-net"],
+    "media-control": ["broker-net", "control-net", "edge-net", "egress-net", "stream-net"],
+    "mediamtx": ["stream-net", "turn-net"],
+    "turn-primary": ["turn-net"],
+    "turn-secondary": ["turn-net"],
+    "dashboard": ["edge-net"],
+    "mobile-publisher": ["edge-net"],
+    "edge": ["edge-net", "stream-net"]
+  },
+  "internalNetworks": ["broker-net", "control-net", "edge-net"],
+  "publicPortServices": ["edge", "mediamtx", "turn-primary", "turn-secondary"],
+  "forbiddenPublishedContainerPorts": [5432, 6379, 8080, 8081, 8883, 9090, 9997],
+  "deniedPeerPairs": [
+    ["dashboard", "postgres-geo"],
+    ["dashboard", "redis"],
+    ["dashboard", "mqtt"],
+    ["mobile-publisher", "postgres-geo"],
+    ["mobile-publisher", "redis"],
+    ["mobile-publisher", "mqtt"],
+    ["edge", "postgres-geo"],
+    ["edge", "redis"],
+    ["edge", "mqtt"],
+    ["mediamtx", "postgres-geo"],
+    ["mediamtx", "redis"],
+    ["turn-primary", "backend"],
+    ["turn-primary", "mqtt"]
+  ]
+}
