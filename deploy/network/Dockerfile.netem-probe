@@ -1,0 +1,8 @@
+FROM python:3.12-alpine@sha256:dcc0e21003470826202b4bbb3ac8404eb3076b8a5d22119175f4b69edc55bee4
+
+RUN apk add --no-cache iproute2=7.0.0-r0
+COPY deploy/network/netem-probe-entrypoint.sh /usr/local/bin/gcs-netem-probe
+RUN chmod 0555 /usr/local/bin/gcs-netem-probe
+
+USER 65534:65534
+ENTRYPOINT ["/usr/local/bin/gcs-netem-probe"]
