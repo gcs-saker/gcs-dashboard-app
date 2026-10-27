@@ -45,3 +45,12 @@ Its standard-library MQTT 3.1.1 client performs CONNECT, SUBSCRIBE, PUBLISH, and
 sample. The report separates requested samples, received messages, failures, and p50/p95/p99 broker round trip.
 The test broker has no host port, persistence, production certificate, account, ACL, or data mount. Passing this
 fixture does not qualify production mTLS, authorization, telemetry processing, command execution, or reconnect.
+
+## TURN allocation round trip
+
+`docker_turn_netem_fixture.py` starts a pinned coturn process with only `NET_BIND_SERVICE`, fixture-only long-term
+credentials, and no host ports, TLS, production secret, certificate, peer allowlist, or relay data. The probe reuses
+the owned `turn_relay_smoke.py` protocol implementation to verify the 401 challenge, MESSAGE-INTEGRITY, allocation
+success, and XOR-RELAYED-ADDRESS under every netem condition. Reports separate requested samples, successful
+allocations, failures, and p50/p95/p99. Allocation success alone does not qualify relay packet flow, ICE selection,
+WebRTC media, Talkback audio, external NAT, production TLS, or credential authorization.
