@@ -1,0 +1,20 @@
+logLevel: warn
+
+api: false
+metrics: false
+playback: false
+rtsp: false
+rtmp: false
+hls: false
+srt: false
+webrtc: true
+webrtcAddress: :8889
+webrtcAllowOrigin: '*'
+webrtcLocalUDPAddress: :8189
+webrtcIPsFromInterfaces: true
+webrtcAdditionalHosts: []
+
+authMethod: internal
+paths:
+  all:
+    source: publisher
