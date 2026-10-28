@@ -34,6 +34,9 @@ java {
 }
 
 dependencies {
+    // graphql-java 24.x carries stale Guava 32.1.2 Maven metadata but no Guava bytecode.
+    // Keep the actual runtime implementation above the fixed advisory version.
+    implementation("com.google.guava:guava:33.7.2-jre")
     implementation("io.grpc:grpc-netty-shaded:1.76.0")
     implementation("io.grpc:grpc-protobuf:1.76.0")
     implementation("io.grpc:grpc-stub:1.76.0")
