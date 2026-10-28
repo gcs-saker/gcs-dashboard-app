@@ -54,3 +54,13 @@ the owned `turn_relay_smoke.py` protocol implementation to verify the 401 challe
 success, and XOR-RELAYED-ADDRESS under every netem condition. Reports separate requested samples, successful
 allocations, failures, and p50/p95/p99. Allocation success alone does not qualify relay packet flow, ICE selection,
 WebRTC media, Talkback audio, external NAT, production TLS, or credential authorization.
+
+## WebRTC ICE connection
+
+`docker_webrtc_ice_netem_fixture.py` starts pinned MediaMTX and coturn STUN fixtures, a capability-free synthetic
+WHIP audio/video publisher, and bounded aiortc WHEP receivers. The local STUN dependency prevents blocked external
+DNS/network access from consuming the ICE gathering timeout. Only each disposable receiver runs as root with `NET_ADMIN` to apply
+its own netem condition. Results separate WHEP signaling latency, ICE connected latency, direct/relay/unknown path
+counts, and failures. The internal fixture has no public port, production auth hook, TURN server, external NAT, or
+mobile artifact, so it qualifies direct Docker-bridge ICE only. TURN-selected ICE, decoded media latency, audio
+continuity, Talkback, and external-network behavior remain separate gates.

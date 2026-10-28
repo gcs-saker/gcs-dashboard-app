@@ -104,6 +104,7 @@ def probe_command(
     probe_script: str = PROBE_SCRIPT,
     target_host: str = "target",
     target_port: int = 18080,
+    probe_image: str = PROBE_TAG,
 ) -> list[str]:
     environment = {
         "TARGET_HOST": target_host,
@@ -137,7 +138,7 @@ def probe_command(
     ]
     for name, value in environment.items():
         command.extend(("--env", f"{name}={value}"))
-    return [*command, PROBE_TAG]
+    return [*command, probe_image]
 
 
 def cleanup(runner: Runner, network: str, target: str) -> None:
