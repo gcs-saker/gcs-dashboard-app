@@ -10,6 +10,8 @@ COPY scripts/smoke/latency_budget.py /opt/gcs/latency_budget.py
 COPY scripts/smoke/webrtc_audio_continuity.py /opt/gcs/webrtc_audio_continuity.py
 COPY scripts/smoke/webrtc_ice_smoke.py /opt/gcs/webrtc_ice_smoke.py
 COPY scripts/smoke/webrtc_whip_publish_smoke.py /opt/gcs/webrtc_whip_publish_smoke.py
+COPY scripts/smoke/webrtc_talkback_tone_publisher.py /opt/gcs/webrtc_talkback_tone_publisher.py
+COPY scripts/smoke/webrtc_talkback_tone_receiver.py /opt/gcs/webrtc_talkback_tone_receiver.py
 RUN chmod 0555 /usr/local/bin/gcs-netem-probe
 
 USER 65534:65534

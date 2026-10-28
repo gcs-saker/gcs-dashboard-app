@@ -89,3 +89,17 @@ first-audio latency and arrival-gap p95/max, compares RTP media timestamps to th
 inferred missing frames. `docker_webrtc_audio_netem_fixture.py` applies the four receiver-side netem conditions and
 requires a direct selected ICE path. This measures disposable receive continuity, not waveform retention, acoustic
 clarity, Talkback transmission, echo cancellation, real microphones, external NAT, or mobile radios.
+
+## Talkback synthetic tone delivery
+
+`docker_talkback_tone_netem_fixture.py` creates a fresh Talkback-shaped media path for each sample. A bounded WHIP
+publisher sends silence until a shared host-clock marker and then emits a 1 kHz tone. The netem-controlled WHEP
+receiver detects that tone from decoded PCM and records marker-to-detection latency, frames before detection,
+maximum arrival gap, direct ICE selection, and failures across the four fault conditions. Only the disposable
+receiver receives `NET_ADMIN`; every other fixture container drops capabilities and the internal network has no
+host port. Unique paths prevent a tone from one sample contaminating a later observation.
+
+This proves synthetic audio send-to-receive delivery through the same MediaMTX protocol shape used by Talkback. It
+does not prove browser authorization, mobile microphone capture, loudspeaker output, echo cancellation, acoustic
+intelligibility, external NAT, TURN relay media, or production routing. Those remain separate runtime or physical
+equipment gates and must be recorded as `BLOCKED` when the required device is unavailable.
