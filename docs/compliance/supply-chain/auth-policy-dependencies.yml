@@ -1,5 +1,6 @@
 schemaVersion: gcs-saker.auth-policy-dependencies.v1
 dependencies:
+  - {configuration: implementation, coordinate: "com.google.guava:guava:33.7.2-jre", reason: "fixed runtime collection primitives required by GraphQL and gRPC dependencies"}
   - {configuration: implementation, coordinate: "io.grpc:grpc-netty-shaded:1.76.0", reason: "TLS gRPC server transport"}
   - {configuration: implementation, coordinate: "io.grpc:grpc-protobuf:1.76.0", reason: "protobuf gRPC marshalling"}
   - {configuration: implementation, coordinate: "io.grpc:grpc-stub:1.76.0", reason: "generated gRPC service stubs"}
