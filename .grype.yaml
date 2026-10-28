@@ -1,0 +1,9 @@
+ignore:
+  - vulnerability: GHSA-xxph-c9ww-hj94
+    package:
+      name: guava
+      version: 32.1.2-jre
+      type: java-archive
+    reason: >-
+      graphql-java 24.x embeds this stale Maven coordinate without com/google/common bytecode;
+      the owned runtime Guava dependency is pinned to the fixed 33.7.2-jre release.
