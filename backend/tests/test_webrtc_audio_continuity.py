@@ -36,7 +36,7 @@ def test_receive_audio_counts_media_timeline_gaps() -> None:
         def __init__(self) -> None:
             self.frames = iter((Frame(0), Frame(960), Frame(2880)))
 
-        async def recv(self):  # type: ignore[no-untyped-def]
+        async def recv(self):
             return next(self.frames)
 
     result = asyncio.run(module.receive_audio(Track(), 3, module.time.perf_counter(), 1, "direct"))
