@@ -7,6 +7,7 @@ RUN apk add --no-cache iproute2=7.0.0-r0 \
 COPY deploy/network/netem-probe-entrypoint.sh /usr/local/bin/gcs-netem-probe
 COPY scripts/smoke/ice_pair_observation.py /opt/gcs/ice_pair_observation.py
 COPY scripts/smoke/latency_budget.py /opt/gcs/latency_budget.py
+COPY scripts/smoke/webrtc_audio_continuity.py /opt/gcs/webrtc_audio_continuity.py
 COPY scripts/smoke/webrtc_ice_smoke.py /opt/gcs/webrtc_ice_smoke.py
 COPY scripts/smoke/webrtc_whip_publish_smoke.py /opt/gcs/webrtc_whip_publish_smoke.py
 RUN chmod 0555 /usr/local/bin/gcs-netem-probe
