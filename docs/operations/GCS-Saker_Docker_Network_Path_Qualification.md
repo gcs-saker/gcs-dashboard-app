@@ -72,3 +72,12 @@ WHEP receiver with a fixture TURN URL and relay-only ICE policy. A sample passes
 reported as relay. Results retain signaling and ICE connected percentiles, relay/direct/unknown counts, and
 failures for each netem condition. This validates relay candidate selection inside one Docker host; it does not
 validate external NAT traversal, production TLS/credentials, relay media continuity, Talkback, or mobile radios.
+
+## Decoded first media frames
+
+`docker_webrtc_media_netem_fixture.py` requires first decoded video and audio frames from the synthetic WHIP stream
+over direct WHEP ICE. It records first video/audio latency, ICE-to-first-video latency, A/V sync offset, and observed
+keyframe interval. A sample with either missing media kind is a failure. Keyframe observation is reported as a
+separate count and must not be inferred when the interval is null. These metrics qualify initial media delivery in
+the disposable receive direction only; waveform storage, multi-frame continuity, long-duration audio loss,
+acoustic intelligibility, Talkback send/receive, hardware microphones, and mobile radios remain separate gates.
