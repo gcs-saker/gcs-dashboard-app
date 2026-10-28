@@ -81,3 +81,11 @@ keyframe interval. A sample with either missing media kind is a failure. Keyfram
 separate count and must not be inferred when the interval is null. These metrics qualify initial media delivery in
 the disposable receive direction only; waveform storage, multi-frame continuity, long-duration audio loss,
 acoustic intelligibility, Talkback send/receive, hardware microphones, and mobile radios remain separate gates.
+
+## Decoded audio continuity
+
+`webrtc_audio_continuity.py` is a separate bounded receiver module. It consumes 100 decoded audio frames, measures
+first-audio latency and arrival-gap p95/max, compares RTP media timestamps to the decoded frame duration, and counts
+inferred missing frames. `docker_webrtc_audio_netem_fixture.py` applies the four receiver-side netem conditions and
+requires a direct selected ICE path. This measures disposable receive continuity, not waveform retention, acoustic
+clarity, Talkback transmission, echo cancellation, real microphones, external NAT, or mobile radios.
