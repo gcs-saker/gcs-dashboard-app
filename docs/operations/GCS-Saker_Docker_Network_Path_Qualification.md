@@ -64,3 +64,11 @@ its own netem condition. Results separate WHEP signaling latency, ICE connected 
 counts, and failures. The internal fixture has no public port, production auth hook, TURN server, external NAT, or
 mobile artifact, so it qualifies direct Docker-bridge ICE only. TURN-selected ICE, decoded media latency, audio
 continuity, Talkback, and external-network behavior remain separate gates.
+
+## TURN-selected WebRTC ICE
+
+`docker_webrtc_relay_netem_fixture.py` uses the same publisher, MediaMTX, and coturn fixtures but configures every
+WHEP receiver with a fixture TURN URL and relay-only ICE policy. A sample passes only when the selected pair is
+reported as relay. Results retain signaling and ICE connected percentiles, relay/direct/unknown counts, and
+failures for each netem condition. This validates relay candidate selection inside one Docker host; it does not
+validate external NAT traversal, production TLS/credentials, relay media continuity, Talkback, or mobile radios.
