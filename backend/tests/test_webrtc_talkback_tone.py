@@ -58,3 +58,44 @@ def test_receiver_rejects_out_of_range_rms_threshold(value: int) -> None:
                 str(value),
             ],
         )
+
+
+def test_relay_receiver_requires_complete_turn_credentials() -> None:
+    receiver = load_module("webrtc_talkback_tone_receiver")
+
+    with pytest.raises(SystemExit):
+        receiver.parse_args(
+            [
+                "--whep-url",
+                "http://fixture/whep",
+                "--ice-server-url",
+                "turn:fixture",
+                "--ice-username",
+                "fixture-user",
+                "--marker-epoch-ns",
+                "1",
+                "--relay-only",
+            ],
+        )
+
+
+def test_relay_receiver_accepts_bounded_turn_configuration() -> None:
+    receiver = load_module("webrtc_talkback_tone_receiver")
+
+    args = receiver.parse_args(
+        [
+            "--whep-url",
+            "http://fixture/whep",
+            "--ice-server-url",
+            "turn:fixture",
+            "--ice-username",
+            "fixture-user",
+            "--ice-credential",
+            "fixture-credential",
+            "--marker-epoch-ns",
+            "1",
+            "--relay-only",
+        ],
+    )
+
+    assert args.relay_only is True

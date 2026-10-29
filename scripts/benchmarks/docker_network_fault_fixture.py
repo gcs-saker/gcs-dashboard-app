@@ -44,7 +44,15 @@ class Runner(Protocol):
 
 class SubprocessRunner:
     def run(self, command: list[str], timeout: int = 60) -> str:
-        completed = subprocess.run(command, check=True, capture_output=True, text=True, timeout=timeout)
+        completed = subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
         return completed.stdout.strip()
 
 

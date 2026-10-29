@@ -99,7 +99,14 @@ maximum arrival gap, direct ICE selection, and failures across the four fault co
 receiver receives `NET_ADMIN`; every other fixture container drops capabilities and the internal network has no
 host port. Unique paths prevent a tone from one sample contaminating a later observation.
 
-This proves synthetic audio send-to-receive delivery through the same MediaMTX protocol shape used by Talkback. It
-does not prove browser authorization, mobile microphone capture, loudspeaker output, echo cancellation, acoustic
-intelligibility, external NAT, TURN relay media, or production routing. Those remain separate runtime or physical
-equipment gates and must be recorded as `BLOCKED` when the required device is unavailable.
+The default direct profile proves synthetic audio send-to-receive delivery through the same MediaMTX protocol shape
+used by Talkback. It does not prove browser authorization, mobile microphone capture, loudspeaker output, echo
+cancellation, acoustic intelligibility, external NAT, TURN relay media, or production routing. Those remain
+separate runtime or physical equipment gates and must be recorded as `BLOCKED` when the required device is
+unavailable.
+
+Run the same fixture with `--relay-only` to replace local STUN with fixture TURN credentials, enforce aiortc's relay
+transport policy, remove non-relay candidates from the offer, and require the selected pair to be classified as
+`relay`. A decoded tone on a direct fallback is a failure. This relay profile qualifies synthetic media through a
+single-host TURN path only; production credentials/TLS, external NAT, mobile radios, and acoustic output remain
+outside its evidence boundary.
