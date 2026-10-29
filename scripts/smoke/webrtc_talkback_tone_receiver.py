@@ -10,6 +10,7 @@ import time
 from dataclasses import asdict, dataclass
 from typing import Sequence
 
+from ice_pair_observation import enforce_aiortc_relay_policy, relay_only_sdp
 from webrtc_ice_smoke import (
     collect_selected_ice_pair,
     post_whep_offer,
@@ -52,7 +53,12 @@ async def detect_tone(track: object, args: argparse.Namespace, path: str) -> Ton
 async def run(args: argparse.Namespace) -> ToneReceipt:
     from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
 
-    peer = RTCPeerConnection(RTCConfiguration(iceServers=[RTCIceServer(urls=[args.ice_server_url])]))
+    ice_server = RTCIceServer(
+        urls=[args.ice_server_url],
+        username=args.ice_username,
+        credential=args.ice_credential,
+    )
+    peer = RTCPeerConnection(RTCConfiguration(iceServers=[ice_server]))
     tracks: asyncio.Queue[object] = asyncio.Queue()
 
     @peer.on("track")
@@ -62,18 +68,22 @@ async def run(args: argparse.Namespace) -> ToneReceipt:
 
     try:
         peer.addTransceiver("audio", direction="recvonly")
+        if args.relay_only:
+            enforce_aiortc_relay_policy(peer)
         offer = await peer.createOffer()
         await peer.setLocalDescription(offer)
         await wait_for_ice_gathering_complete(peer, args.timeout_seconds)
         local = peer.localDescription
         if local is None:
             raise RuntimeError("talkback receiver offer is unavailable")
-        answer = post_whep_offer(args.whep_url, local.sdp, False)
+        offer_sdp = relay_only_sdp(local.sdp) if args.relay_only else local.sdp
+        answer = post_whep_offer(args.whep_url, offer_sdp, False)
         await peer.setRemoteDescription(RTCSessionDescription(sdp=answer, type="answer"))
         await wait_for_ice_connected(peer, args.timeout_seconds)
         selected = await collect_selected_ice_pair(peer)
-        if selected is None or selected.path != "direct":
-            raise RuntimeError("talkback fixture requires direct ICE")
+        expected_path = "relay" if args.relay_only else "direct"
+        if selected is None or selected.path != expected_path:
+            raise RuntimeError(f"talkback fixture requires {expected_path} ICE")
         track = await asyncio.wait_for(tracks.get(), timeout=args.timeout_seconds)
         return await detect_tone(track, args, selected.path)
     finally:
@@ -84,10 +94,17 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--whep-url", required=True)
     parser.add_argument("--ice-server-url", required=True)
+    parser.add_argument("--ice-username")
+    parser.add_argument("--ice-credential")
+    parser.add_argument("--relay-only", action="store_true")
     parser.add_argument("--marker-epoch-ns", type=int, required=True)
     parser.add_argument("--rms-threshold", type=float, default=1000)
     parser.add_argument("--timeout-seconds", type=float, default=10)
     args = parser.parse_args(argv)
+    if bool(args.ice_username) != bool(args.ice_credential):
+        parser.error("ICE username and credential must be provided together")
+    if args.relay_only and not args.ice_username:
+        parser.error("relay-only Talkback requires TURN credentials")
     if args.marker_epoch_ns <= 0 or not 1 <= args.rms_threshold <= 32767 or not 1 <= args.timeout_seconds <= 60:
         parser.error("talkback receiver bounds are invalid")
     return args

@@ -28,8 +28,9 @@ class FakeRunner:
         if command[:2] == ["docker", "logs"]:
             return "Talkback tone publisher connected"
         if command[:2] == ["docker", "run"] and "--cap-add" in command:
+            path = "relay" if "TURN_USER=gcs-fixture" in command else "direct"
             return json.dumps(
-                {"tone_latency_ms": 24, "frames_before_tone": 100, "arrival_gap_max_ms": 25, "path": "direct"},
+                {"tone_latency_ms": 24, "frames_before_tone": 100, "arrival_gap_max_ms": 25, "path": path},
             )
         return "fixture-id"
 
@@ -62,6 +63,31 @@ def test_receiver_is_only_container_granted_net_admin() -> None:
     assert "--cap-add" not in publisher
     assert receiver[receiver.index("--cap-add") + 1] == "NET_ADMIN"
     assert "TALKBACK_PATH=path" in receiver
+
+
+def test_relay_matrix_requires_relay_tone_delivery(tmp_path: Path) -> None:
+    module = load_module()
+    config = tmp_path / "deploy/network/mediamtx.webrtc-fixture.yml"
+    config.parent.mkdir(parents=True)
+    config.write_text("paths: {all: {source: publisher}}\n")
+    runner = FakeRunner()
+
+    result = module.execute_relay(tmp_path, "gcs-net-fixture-talkback-relay", 2, runner)
+
+    assert result["schemaVersion"] == "gcs-saker.talkback-tone-relay-netem-fixture.v1"
+    assert all(item["metrics"]["detected"] == 2 for item in result["results"])
+    assert all(item["metrics"]["relayPaths"] == 2 for item in result["results"])
+
+
+def test_relay_receiver_uses_turn_credentials_and_relay_policy() -> None:
+    module = load_module()
+
+    command = module.relay_receiver_command("fixture-net", module.CONDITIONS[0], "path", 1)
+
+    assert "TURN_USER=gcs-fixture" in command
+    assert "TURN_PASSWORD=fixture-password-not-for-production" in command
+    assert "--relay-only" in module.RELAY_RECEIVER_SCRIPT
+    assert command[command.index("--cap-add") + 1] == "NET_ADMIN"
 
 
 def test_summary_counts_detection_failures_and_percentiles() -> None:

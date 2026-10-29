@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -83,3 +84,18 @@ def test_dockerfile_is_pinned_and_entrypoint_applies_netem() -> None:
     assert "python:3.12-alpine@sha256:" in dockerfile
     assert "iproute2=" in dockerfile
     assert "tc qdisc replace dev eth0 root netem" in entrypoint
+
+
+def test_subprocess_runner_decodes_docker_output_as_utf8(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = load_module()
+    observed = {}
+
+    def fake_run(command, **kwargs):
+        observed.update(kwargs)
+        return subprocess.CompletedProcess(command, 0, stdout="fixture ✓\n", stderr="")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    assert module.SubprocessRunner().run(["docker", "version"]) == "fixture ✓"
+    assert observed["encoding"] == "utf-8"
+    assert observed["errors"] == "replace"
