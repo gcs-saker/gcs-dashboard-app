@@ -39,7 +39,8 @@ def test_receive_audio_counts_media_timeline_gaps() -> None:
         async def recv(self):
             return next(self.frames)
 
-    result = asyncio.run(module.receive_audio(Track(), 3, module.time.perf_counter(), 1, "direct"))
+    request = module.ReceiveRequest(3, module.time.perf_counter(), 1, "direct")
+    result = asyncio.run(module.receive_audio(Track(), request))
 
     assert result.frames == 3
     assert result.expected_frame_ms == 20
@@ -47,7 +48,7 @@ def test_receive_audio_counts_media_timeline_gaps() -> None:
     assert result.media_gap_max_ms == 40
 
 
-@pytest.mark.parametrize(("frames", "timeout"), [(1, 10), (501, 10), (100, 0), (100, 61)])
+@pytest.mark.parametrize(("frames", "timeout"), [(1, 10), (3001, 70), (100, 0), (100, 121), (1000, 20)])
 def test_audio_continuity_rejects_invalid_bounds(frames: int, timeout: int) -> None:
     module = load_module()
 
@@ -64,3 +65,49 @@ def test_audio_continuity_rejects_invalid_bounds(frames: int, timeout: int) -> N
                 str(timeout),
             ],
         )
+
+
+def test_relay_continuity_requires_complete_turn_credentials() -> None:
+    module = load_module()
+
+    with pytest.raises(SystemExit):
+        module.parse_args(
+            [
+                "--whep-url",
+                "http://fixture/whep",
+                "--ice-server-url",
+                "turn:fixture:3478",
+                "--ice-username",
+                "fixture-user",
+                "--frames",
+                "1000",
+                "--timeout-seconds",
+                "30",
+                "--relay-only",
+            ],
+        )
+
+
+def test_relay_continuity_accepts_long_bounded_sample() -> None:
+    module = load_module()
+
+    args = module.parse_args(
+        [
+            "--whep-url",
+            "http://fixture/whep",
+            "--ice-server-url",
+            "turn:fixture:3478",
+            "--ice-username",
+            "fixture-user",
+            "--ice-credential",
+            "fixture-credential",
+            "--frames",
+            "1000",
+            "--timeout-seconds",
+            "30",
+            "--relay-only",
+        ],
+    )
+
+    assert args.frames == 1000
+    assert args.relay_only is True
