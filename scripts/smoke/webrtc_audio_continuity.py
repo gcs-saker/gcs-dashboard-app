@@ -9,6 +9,7 @@ import time
 from dataclasses import dataclass
 from typing import Sequence
 
+from ice_pair_observation import enforce_aiortc_relay_policy, relay_only_sdp
 from webrtc_ice_smoke import (
     collect_selected_ice_pair,
     post_whep_offer,
@@ -27,6 +28,14 @@ class AudioContinuity:
     arrival_gap_p95_ms: float
     arrival_gap_max_ms: float
     media_gap_max_ms: float
+    path: str
+
+
+@dataclass(frozen=True)
+class ReceiveRequest:
+    frames: int
+    started: float
+    timeout_seconds: float
     path: str
 
 
@@ -50,7 +59,7 @@ def frame_duration_ms(frame: object) -> float:
     return samples / sample_rate * 1000
 
 
-async def receive_audio(track: object, frames: int, started: float, timeout: float, path: str) -> AudioContinuity:
+async def receive_audio(track: object, request: ReceiveRequest) -> AudioContinuity:
     arrival_gaps: list[float] = []
     media_gaps: list[float] = []
     missing = 0
@@ -58,12 +67,12 @@ async def receive_audio(track: object, frames: int, started: float, timeout: flo
     previous_media = None
     expected = 0.0
     first_audio_ms = 0.0
-    async with asyncio.timeout(timeout):
-        for index in range(frames):
+    async with asyncio.timeout(request.timeout_seconds):
+        for index in range(request.frames):
             frame = await track.recv()  # type: ignore[attr-defined]
             arrived = time.perf_counter()
             if index == 0:
-                first_audio_ms = (arrived - started) * 1000
+                first_audio_ms = (arrived - request.started) * 1000
                 expected = frame_duration_ms(frame)
             if previous_arrival is not None:
                 arrival_gaps.append((arrived - previous_arrival) * 1000)
@@ -75,21 +84,26 @@ async def receive_audio(track: object, frames: int, started: float, timeout: flo
             previous_arrival = arrived
             previous_media = current_media
     return AudioContinuity(
-        frames=frames,
+        frames=request.frames,
         missing_frames=missing,
         expected_frame_ms=round(expected, 3),
         first_audio_ms=round(first_audio_ms, 3),
         arrival_gap_p95_ms=percentile(arrival_gaps, 95),
         arrival_gap_max_ms=round(max(arrival_gaps), 3),
         media_gap_max_ms=round(max(media_gaps), 3) if media_gaps else 0.0,
-        path=path,
+        path=request.path,
     )
 
 
 async def run(args: argparse.Namespace) -> AudioContinuity:
     from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
 
-    peer = RTCPeerConnection(RTCConfiguration(iceServers=[RTCIceServer(urls=[args.ice_server_url])]))
+    ice_server = RTCIceServer(
+        urls=[args.ice_server_url],
+        username=args.ice_username,
+        credential=args.ice_credential,
+    )
+    peer = RTCPeerConnection(RTCConfiguration(iceServers=[ice_server]))
     audio_tracks: asyncio.Queue[object] = asyncio.Queue()
 
     @peer.on("track")
@@ -99,6 +113,8 @@ async def run(args: argparse.Namespace) -> AudioContinuity:
 
     try:
         peer.addTransceiver("audio", direction="recvonly")
+        if args.relay_only:
+            enforce_aiortc_relay_policy(peer)
         started = time.perf_counter()
         offer = await peer.createOffer()
         await peer.setLocalDescription(offer)
@@ -107,14 +123,17 @@ async def run(args: argparse.Namespace) -> AudioContinuity:
         if local is None:
             raise RuntimeError("audio continuity offer is unavailable")
         require_webrtc_sdp(local.sdp, "audio continuity offer")
-        answer = post_whep_offer(args.whep_url, local.sdp, False)
+        offer_sdp = relay_only_sdp(local.sdp) if args.relay_only else local.sdp
+        answer = post_whep_offer(args.whep_url, offer_sdp, False)
         await peer.setRemoteDescription(RTCSessionDescription(sdp=answer, type="answer"))
         await wait_for_ice_connected(peer, args.timeout_seconds)
         selected = await collect_selected_ice_pair(peer)
-        if selected is None or selected.path != "direct":
-            raise RuntimeError("audio continuity fixture requires direct ICE")
+        expected_path = "relay" if args.relay_only else "direct"
+        if selected is None or selected.path != expected_path:
+            raise RuntimeError(f"audio continuity fixture requires {expected_path} ICE")
         track = await asyncio.wait_for(audio_tracks.get(), timeout=args.timeout_seconds)
-        return await receive_audio(track, args.frames, started, args.timeout_seconds, selected.path)
+        request = ReceiveRequest(args.frames, started, args.timeout_seconds, selected.path)
+        return await receive_audio(track, request)
     finally:
         await peer.close()
 
@@ -123,11 +142,20 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--whep-url", required=True)
     parser.add_argument("--ice-server-url", required=True)
+    parser.add_argument("--ice-username")
+    parser.add_argument("--ice-credential")
+    parser.add_argument("--relay-only", action="store_true")
     parser.add_argument("--frames", type=int, default=100)
     parser.add_argument("--timeout-seconds", type=float, default=10)
     args = parser.parse_args(argv)
-    if not 2 <= args.frames <= 500 or not 1 <= args.timeout_seconds <= 60:
+    if bool(args.ice_username) != bool(args.ice_credential):
+        parser.error("ICE username and credential must be provided together")
+    if args.relay_only and not args.ice_username:
+        parser.error("relay-only audio continuity requires TURN credentials")
+    if not 2 <= args.frames <= 3000 or not 1 <= args.timeout_seconds <= 120:
         parser.error("audio continuity bounds are invalid")
+    if args.timeout_seconds < args.frames / 50 + 5:
+        parser.error("audio continuity timeout is too short for the requested frames")
     return args
 
 

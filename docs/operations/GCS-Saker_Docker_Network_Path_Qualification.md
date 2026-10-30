@@ -90,6 +90,12 @@ inferred missing frames. `docker_webrtc_audio_netem_fixture.py` applies the four
 requires a direct selected ICE path. This measures disposable receive continuity, not waveform retention, acoustic
 clarity, Talkback transmission, echo cancellation, real microphones, external NAT, or mobile radios.
 
+Use `docker_webrtc_audio_netem_fixture.py --relay-only --frames 1000 --timeout-seconds 30 --samples 1` for a bounded
+20-second decoded-audio continuity sample through TURN under each fault condition. The receiver applies relay-only
+candidate policy and fails a direct fallback. Frame count and timeout are bounded, and the timeout must cover the
+requested 20 ms frame duration plus setup margin. This remains synthetic single-host evidence rather than an
+external-NAT, production-credential, acoustic-intelligibility, or physical-mobile qualification.
+
 ## Talkback synthetic tone delivery
 
 `docker_talkback_tone_netem_fixture.py` creates a fresh Talkback-shaped media path for each sample. A bounded WHIP

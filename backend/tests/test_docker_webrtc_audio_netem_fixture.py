@@ -27,16 +27,18 @@ class FakeRunner:
         self.commands.append(command)
         if command[:2] == ["docker", "logs"]:
             return "WHIP publisher connected"
-        if command[:2] == ["docker", "run"] and "--cap-add" in command:
+        if command[:2] == ["docker", "run"] and "NET_ADMIN" in command:
+            frame_value = next(value for value in command if value.startswith("AUDIO_FRAMES="))
+            path = "relay" if "RELAY_ONLY=1" in command else "direct"
             return json.dumps(
                 {
-                    "frames": 100,
+                    "frames": int(frame_value.split("=", 1)[1]),
                     "missing_frames": 0,
                     "first_audio_ms": 100,
                     "arrival_gap_p95_ms": 21,
                     "arrival_gap_max_ms": 24,
                     "media_gap_max_ms": 20,
-                    "path": "direct",
+                    "path": path,
                 },
             )
         return "fixture-id"
@@ -75,3 +77,36 @@ def test_audio_summary_exposes_missing_frames_and_gaps() -> None:
     assert result["arrivalGapMaxP95Ms"] == 50
     assert result["mediaGapMaxP95Ms"] == 40
     assert result["directPaths"] == 2
+
+
+def test_relay_audio_soak_requires_relay_path_and_requested_frames(tmp_path: Path) -> None:
+    module = load_module()
+    config = tmp_path / "deploy/network/mediamtx.webrtc-fixture.yml"
+    config.parent.mkdir(parents=True)
+    config.write_text("paths: {all: {source: publisher}}\n")
+    runner = FakeRunner()
+    request = module.FixtureRequest("gcs-net-fixture-audio-relay", 1, 1000, 30, True)
+
+    result = module.run_fixture(tmp_path, request, runner)
+
+    assert result["schemaVersion"] == "gcs-saker.webrtc-audio-relay-netem-fixture.v1"
+    assert all(item["metrics"]["minimumFrames"] == 1000 for item in result["results"])
+    assert all(item["metrics"]["relayPaths"] == 1 for item in result["results"])
+    probes = [command for command in runner.commands if "RELAY_ONLY=1" in command]
+    assert all("TURN_USER=gcs-fixture" in command for command in probes)
+    assert all(command[command.index("--cap-add") + 1] == "NET_ADMIN" for command in probes)
+
+
+def test_audio_soak_rejects_unbounded_or_impossible_requests() -> None:
+    module = load_module()
+
+    for request in (
+        module.FixtureRequest("gcs-net-fixture-audio", 1, 1, 10, False),
+        module.FixtureRequest("gcs-net-fixture-audio", 1, 3001, 120, False),
+        module.FixtureRequest("gcs-net-fixture-audio", 1, 1000, 20, True),
+    ):
+        try:
+            module.validate_request(request)
+        except ValueError:
+            continue
+        raise AssertionError("invalid audio soak request was accepted")
