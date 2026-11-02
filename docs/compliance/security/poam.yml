@@ -1,5 +1,5 @@
 schemaVersion: gcs-saker.poam.v1
-updatedAt: 2026-10-16
+updatedAt: 2026-11-02
 items:
   - id: POAM-SEC-001
     weakness: Internal service channels do not all provide mutually authenticated encryption.
@@ -7,7 +7,10 @@ items:
     issue: https://github.com/gcs-saker/gcs-dashboard-app/issues/662
     severity: HIGH
     mitigation: Keep services private and authenticate application requests while mTLS is implemented.
-    dueBy: 2026-10-31
+    dueBy: 2026-12-31
+    extendedFrom: 2026-10-31
+    reviewedAt: 2026-11-02
+    extensionReason: Production PKI enrollment and sequential plaintext-denial rollout remain externally blocked under issue 662.
     status: OPEN
   - id: POAM-SEC-002
     weakness: System Administrator authentication does not require a second factor.
@@ -15,7 +18,10 @@ items:
     issue: https://github.com/gcs-saker/gcs-dashboard-app/issues/662
     severity: HIGH
     mitigation: Restrict production administration and retain complete privileged audit events.
-    dueBy: 2026-10-31
+    dueBy: 2026-12-31
+    extendedFrom: 2026-10-31
+    reviewedAt: 2026-11-02
+    extensionReason: Administrator MFA enrollment and recovery ownership remain externally blocked under issue 662.
     status: OPEN
   - id: POAM-SEC-003
     weakness: Release images, SBOMs, and provenance lacked independently verified signatures.
@@ -69,5 +75,8 @@ items:
     issue: https://github.com/gcs-saker/gcs-dashboard-app/issues/665
     severity: HIGH
     mitigation: Continue disposable-target DAST and commission an independent penetration retest before delivery qualification.
-    dueBy: 2026-10-31
+    dueBy: 2026-12-15
+    extendedFrom: 2026-10-31
+    reviewedAt: 2026-11-02
+    extensionReason: Internal DAST is retained, but independent penetration execution must be scheduled with an external assessor under issue 665.
     status: OPEN
