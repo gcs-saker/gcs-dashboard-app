@@ -60,12 +60,29 @@ def validate_poam(items: list[dict[str, Any]], control_ids: set[str], today: dat
         if not set(item.get("controls", [])) <= control_ids:
             raise RmfEvidenceError(f"POA&M references an unknown control: {identifier}")
         due_by = date.fromisoformat(str(item.get("dueBy")))
+        validate_extension(item, due_by, today, identifier)
         if item["status"] == "OPEN" and due_by < today:
             raise RmfEvidenceError(f"POA&M item is overdue: {identifier}")
         if item["status"] == "CLOSED":
             date.fromisoformat(str(item.get("closedAt")))
             validate_evidence(item.get("evidence", []), identifier)
         identifiers.add(identifier)
+
+
+def validate_extension(item: dict[str, Any], due_by: date, today: date, identifier: str) -> None:
+    extended_from = item.get("extendedFrom")
+    if extended_from is None:
+        return
+    reviewed_at_raw = item.get("reviewedAt")
+    reason = str(item.get("extensionReason", "")).strip()
+    if not reviewed_at_raw or not reason:
+        raise RmfEvidenceError(f"POA&M extension review is incomplete: {identifier}")
+    original_due = date.fromisoformat(str(extended_from))
+    reviewed_at = date.fromisoformat(str(reviewed_at_raw))
+    if original_due >= due_by:
+        raise RmfEvidenceError(f"POA&M extension does not move the due date forward: {identifier}")
+    if reviewed_at > today:
+        raise RmfEvidenceError(f"POA&M extension review is incomplete: {identifier}")
 
 
 def validate(today: date = date.today()) -> None:
