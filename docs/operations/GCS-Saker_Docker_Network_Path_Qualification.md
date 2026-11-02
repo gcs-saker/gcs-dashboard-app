@@ -96,6 +96,13 @@ candidate policy and fails a direct fallback. Frame count and timeout are bounde
 requested 20 ms frame duration plus setup margin. This remains synthetic single-host evidence rather than an
 external-NAT, production-credential, acoustic-intelligibility, or physical-mobile qualification.
 
+`docker_webrtc_audio_resource_fixture.py` runs the bounded relay continuity receiver as a detached container so it
+can sample `docker stats` concurrently for MediaMTX, coturn, and the receiver. It reports CPU p95/max and peak used
+memory per low-cardinality component name for every fault condition, then verifies the receiver exit code and
+decoded continuity result before cleanup. Stats count and interval are bounded; addresses, stream IDs, credentials,
+and container IDs are not emitted. Single-host fixture CPU and memory are comparative evidence only and do not
+define Server-01 capacity, concurrency limits, or production admission thresholds.
+
 ## Talkback synthetic tone delivery
 
 `docker_talkback_tone_netem_fixture.py` creates a fresh Talkback-shaped media path for each sample. A bounded WHIP
