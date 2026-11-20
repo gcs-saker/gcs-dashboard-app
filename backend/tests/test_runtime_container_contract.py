@@ -169,7 +169,9 @@ def test_edge_reverse_proxy_mounts_tls_material_from_private_env_path() -> None:
     compose = load_yaml(COMPOSE_FILE)
     edge = compose["services"]["edge"]
 
-    assert edge["image"] == "nginx:1.29-alpine"
+    assert edge["image"] == (
+        "nginx:1.31.9-alpine@sha256:fb4658584bd9a916ffb6f6e365f97c25cfdb2923801f551ea08356e695f14ff7"
+    )
     assert {
         "type": "bind",
         "source": "../deploy/nginx/gcs-saker.reverse-proxy.example.conf",
@@ -259,7 +261,7 @@ def test_dashboard_dockerfile_uses_vite_dist_and_build_args() -> None:
     dockerfile = DASHBOARD_DOCKERFILE.read_text(encoding="utf-8")
 
     assert "FROM node:22.18.0-bookworm-slim@sha256:" in dockerfile
-    assert "FROM nginx:1.29-alpine-slim@sha256:" in dockerfile
+    assert "FROM nginx:1.31.9-alpine-slim@sha256:" in dockerfile
     assert "ARG VITE_API_BASE_URL=/api" in dockerfile
     assert "ARG VITE_IDENTITY_API_BASE_URL=/auth-policy/auth" in dockerfile
     assert "RUN VITE_AUTH_API_BASE_URL=$VITE_IDENTITY_API_BASE_URL npm run build" in dockerfile

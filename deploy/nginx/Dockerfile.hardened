@@ -1,0 +1,8 @@
+FROM ghcr.io/nginx/nginx-unprivileged:1.31.9-alpine@sha256:60214a103e6f38e953ff957f34b1f2e97a9db801ab2df3821da955d0fe6cadd6
+
+ARG SOURCE_COMMIT=unknown
+LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
+USER root
+RUN apk upgrade --no-cache \
+    && chown -R 101:101 /var/cache/nginx /etc/nginx /usr/share/nginx/html
+USER 101:101

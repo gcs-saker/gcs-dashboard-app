@@ -25,6 +25,7 @@ def valid_manifest() -> dict:
         "auth-policy",
         "media-control",
         "dashboard",
+        "edge",
         "mqtt",
         "mediamtx",
         "turn",
@@ -66,6 +67,7 @@ def test_manifest_accepts_exact_signed_digest_inventory() -> None:
         "auth-policy",
         "media-control",
         "dashboard",
+        "edge",
         "mqtt",
         "mediamtx",
         "turn",
@@ -145,6 +147,7 @@ def test_deploy_verifies_manifest_and_all_attestations() -> None:
     assert '"${cosign_bin}" verify-attestation --type "${slsa_predicate}"' in verifier
     assert '"${cosign_bin}" verify-attestation --type "${spdx_predicate}"' in verifier
     assert 'release_manifest.py" verify' in verifier
+    assert 'EDGE_IMAGE="$(jq' in verifier
     assert 'MQTT_IMAGE="$(jq' in verifier
     assert 'MEDIAMTX_IMAGE="$(jq' in verifier
     assert 'COTURN_IMAGE="$(jq' in verifier
@@ -163,3 +166,5 @@ def test_release_workflow_builds_hardened_infrastructure_images() -> None:
     assert "file: deploy/mediamtx/Dockerfile.hardened" in workflow
     assert "image: turn" in workflow
     assert "file: deploy/coturn/Dockerfile.hardened" in workflow
+    assert "image: edge" in workflow
+    assert "file: deploy/nginx/Dockerfile.hardened" in workflow

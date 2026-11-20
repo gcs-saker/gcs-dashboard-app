@@ -28,7 +28,7 @@ COPY . .
 RUN VITE_AUTH_API_BASE_URL=$VITE_IDENTITY_API_BASE_URL npm run build
 
 # 2단계: Serve with nginx
-FROM nginx:1.29-alpine-slim@sha256:c9366b8c560169b101ca0e5422ed063b20779e6454c2326b9c9704225c9b0c08
+FROM nginx:1.31.9-alpine-slim@sha256:5bfced78d24d644270bedb0a9968697042e38d5c03fb6354603df025279c1cbe
 ARG SOURCE_COMMIT=unknown
 LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
 RUN apk upgrade --no-cache \

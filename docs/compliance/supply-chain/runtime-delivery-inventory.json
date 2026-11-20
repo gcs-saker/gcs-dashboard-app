@@ -14,8 +14,8 @@
       "licenseSource": "https://github.com/valkey-io/valkey/blob/unstable/COPYING"
     },
     {
-      "service": "edge",
-      "image": "nginxinc/nginx-unprivileged:stable-alpine@sha256:daa17b944bac2b578e962da4c61ad72a59233b3c63abea17113acaf4e6b9aea4",
+      "service": "edge-base",
+      "image": "ghcr.io/nginx/nginx-unprivileged:1.31.9-alpine@sha256:60214a103e6f38e953ff957f34b1f2e97a9db801ab2df3821da955d0fe6cadd6",
       "projectLicenses": ["BSD-2-Clause"],
       "licenseSource": "https://github.com/nginx/nginx/blob/master/LICENSE"
     }

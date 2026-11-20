@@ -34,11 +34,12 @@ BACKEND_IMAGE="$(jq -r '.backend' <<<"${inventory}")"
 AUTH_POLICY_IMAGE="$(jq -r '."auth-policy"' <<<"${inventory}")"
 MEDIA_CONTROL_IMAGE="$(jq -r '."media-control"' <<<"${inventory}")"
 DASHBOARD_IMAGE="$(jq -r '.dashboard' <<<"${inventory}")"
+EDGE_IMAGE="$(jq -r '.edge' <<<"${inventory}")"
 MQTT_IMAGE="$(jq -r '.mqtt' <<<"${inventory}")"
 MEDIAMTX_IMAGE="$(jq -r '.mediamtx' <<<"${inventory}")"
 COTURN_IMAGE="$(jq -r '.turn' <<<"${inventory}")"
 MOBILE_PUBLISHER_IMAGE="$(jq -r '."mobile-publisher"' <<<"${inventory}")"
-export BACKEND_IMAGE AUTH_POLICY_IMAGE MEDIA_CONTROL_IMAGE DASHBOARD_IMAGE
+export BACKEND_IMAGE AUTH_POLICY_IMAGE MEDIA_CONTROL_IMAGE DASHBOARD_IMAGE EDGE_IMAGE
 export MQTT_IMAGE MEDIAMTX_IMAGE COTURN_IMAGE MOBILE_PUBLISHER_IMAGE
 
 server_images=(
@@ -46,6 +47,7 @@ server_images=(
   "${AUTH_POLICY_IMAGE}"
   "${MEDIA_CONTROL_IMAGE}"
   "${DASHBOARD_IMAGE}"
+  "${EDGE_IMAGE}"
   "${MQTT_IMAGE}"
   "${MEDIAMTX_IMAGE}"
   "${COTURN_IMAGE}"
@@ -71,6 +73,7 @@ printf 'BACKEND_IMAGE=%s\n' "${BACKEND_IMAGE}"
 printf 'AUTH_POLICY_IMAGE=%s\n' "${AUTH_POLICY_IMAGE}"
 printf 'MEDIA_CONTROL_IMAGE=%s\n' "${MEDIA_CONTROL_IMAGE}"
 printf 'DASHBOARD_IMAGE=%s\n' "${DASHBOARD_IMAGE}"
+printf 'EDGE_IMAGE=%s\n' "${EDGE_IMAGE}"
 printf 'MQTT_IMAGE=%s\n' "${MQTT_IMAGE}"
 printf 'MEDIAMTX_IMAGE=%s\n' "${MEDIAMTX_IMAGE}"
 printf 'COTURN_IMAGE=%s\n' "${COTURN_IMAGE}"
