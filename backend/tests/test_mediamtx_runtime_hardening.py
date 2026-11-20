@@ -9,7 +9,7 @@ ENTRYPOINT = ROOT / "deploy" / "mediamtx" / "secret-entrypoint.go"
 def test_mediamtx_source_and_builder_are_immutable() -> None:
     source = DOCKERFILE.read_text(encoding="utf-8")
 
-    assert "FROM golang:1.26.10-alpine@sha256:" in source
+    assert "FROM golang:1.26.11-alpine@sha256:" in source
     assert "ADD --checksum=sha256:" in source
     assert "mediamtx/archive/2c6727904fbf233615de74a6c54a9b94dbf6025d.tar.gz" in source
 
@@ -17,8 +17,8 @@ def test_mediamtx_source_and_builder_are_immutable() -> None:
 def test_mediamtx_runtime_patches_security_dependencies_and_drops_privileges() -> None:
     source = DOCKERFILE.read_text(encoding="utf-8")
 
-    assert "go get golang.org/x/crypto@v0.56.0" in source
-    assert "go get golang.org/x/net@v0.60.0" in source
+    assert "go get golang.org/x/crypto@v0.58.1-0.20261009181718-2f1f834330b2" in source
+    assert "go get golang.org/x/net@v0.62.0" in source
     assert "FROM scratch" in source
     assert "LABEL org.opencontainers.image.revision=$SOURCE_COMMIT" in source
     assert "USER 10001:10001" in source

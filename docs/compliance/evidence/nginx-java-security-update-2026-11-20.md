@@ -32,6 +32,11 @@ Primary references:
   outdated JDK build image.
 - Embedded Tomcat: 10.1.62.
 - Backend OpenTelemetry Python packages: 1.45.2, resolving CVE-2026-126360 reported by the final CI audit.
+- Go builders: 1.26.11 and `golang.org/x/net` 0.62.0 after the final CI audit exposed fix-available stdlib and
+  networking findings in the media-control binary.
+- Media-control OpenTelemetry Go modules: 1.47.0, removing the remaining scanner findings after the Go update.
+- MediaMTX `x/crypto`: the scanner-identified fixed pseudo-version for GO-2026-5932.
+- Playwright: 1.65.1, restoring Chromium installation support on the current GitHub runner image.
 
 ## Rejected intermediate results
 

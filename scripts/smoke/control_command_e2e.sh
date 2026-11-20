@@ -27,7 +27,7 @@ run_live() {
       --tests kr.co.a4ai.gcssaker.authpolicy.domain.ControlLeasePolicyTest
   '
   docker run --rm -v "${REPO_ROOT}/services/media-control:/workspace:ro" \
-    -w /workspace golang:1.26.10-bookworm sh -eu -c '
+    -w /workspace golang:1.26.11-bookworm@sha256:dc40a13b61304647ed7e5d581d246b86413dfc29d63c6d018310feb93cd98fc0 sh -eu -c '
       go test -race ./internal/controltransport ./internal/controlstate ./internal/controlobs ./internal/deviceadapter
       go test ./internal/controlintegration -run "TestControlCommandE2E"
   '

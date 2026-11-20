@@ -1,4 +1,4 @@
-FROM golang:1.26.10-alpine@sha256:9ce231b28998b32e116927c61aa5c406183061d4f3f2d61b292c88e7f6bdf7ca AS build
+FROM golang:1.26.11-alpine@sha256:ecb67f987aa1a57794c91d19ade7ae0209f2f0f5496aaef9e6ae85ddf92d02ab AS build
 WORKDIR /workspace
 COPY go.mod go.sum ./
 COPY cmd ./cmd
@@ -10,7 +10,7 @@ FROM scratch
 ARG SOURCE_COMMIT=unknown
 LABEL org.opencontainers.image.revision=$SOURCE_COMMIT \
       org.opencontainers.image.base.name="scratch" \
-      io.gcs-saker.go.version="1.26.10" \
+      io.gcs-saker.go.version="1.26.11" \
       io.gcs-saker.grpc.version="1.82.1"
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=build /out/media-control /usr/local/bin/media-control
