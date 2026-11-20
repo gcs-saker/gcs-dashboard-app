@@ -51,3 +51,12 @@ def test_auth_policy_uses_current_tomcat_security_patch() -> None:
     build = (ROOT / "services/auth-policy/build.gradle.kts").read_text(encoding="utf-8")
 
     assert 'extra["tomcat.version"] = "10.1.62"' in build
+
+
+def test_backend_uses_fixed_opentelemetry_release() -> None:
+    requirements = (ROOT / "backend/requirements-runtime.txt").read_text(encoding="utf-8")
+
+    assert "opentelemetry-api==1.45.2" in requirements
+    assert "opentelemetry-sdk==1.45.2" in requirements
+    assert "opentelemetry-exporter-otlp-proto-grpc==1.45.2" in requirements
+    assert "opentelemetry-api==1.45.1" not in requirements

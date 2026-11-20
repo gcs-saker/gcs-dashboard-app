@@ -31,6 +31,7 @@ Primary references:
 - Gradle 8.14.3 is downloaded by the wrapper with an authoritative SHA-256 checksum rather than inherited from an
   outdated JDK build image.
 - Embedded Tomcat: 10.1.62.
+- Backend OpenTelemetry Python packages: 1.45.2, resolving CVE-2026-126360 reported by the final CI audit.
 
 ## Rejected intermediate results
 
@@ -49,13 +50,14 @@ Primary references:
 - Dashboard image build: PASS; npm audit reported zero vulnerabilities.
 - Auth-policy image build with protobuf/gRPC generation and boot JAR creation: PASS.
 - Hardened edge image build and NGINX version check: PASS, 1.31.9.
-- Grype fix-available HIGH gate: PASS for dashboard, auth-policy, and hardened edge; no findings.
+- Grype fix-available HIGH gate: PASS for dashboard, auth-policy, hardened edge, and the rebuilt backend image.
+- Backend top-level Python dependency audit after the OpenTelemetry update: no known vulnerabilities.
 - Dashboard non-root/read-only/capability-free startup and HTTP response: PASS, 3/3 cycles.
 - Production edge configuration check plus non-root/read-only/capability-free proxied health: PASS, 3/3 cycles.
 - Java ControlLeasePolicy, MediaPolicyRpc, and AuthController tests using the actual repository test sources: PASS,
   3/3 cycles. Every runtime cycle reported Corretto 21.0.13.1.
 - Dashboard and production example Compose rendering: PASS. Missing-secret rendering remains fail-closed by design.
-- Focused repository tests: 46 passed.
+- Focused repository tests: 47 passed.
 - Source-size, code-quality baseline, critical-code, runtime-lifecycle, closed-network, and supply-chain gates: PASS.
 
 These results establish source and disposable-container compatibility. They do not authorize deployment and do not
