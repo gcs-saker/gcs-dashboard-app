@@ -18,6 +18,7 @@ REQUIRED_ARTIFACTS = {
     "auth-policy-image",
     "media-control-image",
     "dashboard-image",
+    "edge-image",
     "mqtt-image",
     "mediamtx-image",
     "turn-image",

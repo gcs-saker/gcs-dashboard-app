@@ -16,6 +16,7 @@ SERVICES = {
     "auth-policy",
     "media-control",
     "dashboard",
+    "edge",
     "mqtt",
     "mediamtx",
     "turn",

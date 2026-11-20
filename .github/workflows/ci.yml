@@ -156,6 +156,18 @@ jobs:
           severity-cutoff: high
           only-fixed: true
 
+      - name: Build hardened edge runtime image
+        working-directory: .
+        run: docker build -f deploy/nginx/Dockerfile.hardened -t gcs-saker-edge:ci deploy/nginx
+
+      - name: Scan hardened edge runtime image
+        uses: anchore/scan-action@v6
+        with:
+          image: gcs-saker-edge:ci
+          fail-build: true
+          severity-cutoff: high
+          only-fixed: true
+
       - name: Scan reachable vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 

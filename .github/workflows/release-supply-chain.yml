@@ -72,6 +72,10 @@ jobs:
             context: gcs-dashboard
             file: gcs-dashboard/Dockerfile
             build_contexts: ""
+          - image: edge
+            context: deploy/nginx
+            file: deploy/nginx/Dockerfile.hardened
+            build_contexts: ""
           - image: mqtt
             context: deploy/mosquitto
             file: deploy/mosquitto/Dockerfile.hardened

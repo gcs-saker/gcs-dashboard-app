@@ -3,7 +3,7 @@ services:
   # This local-only stand-in keeps edge health checks deterministic while
   # intentionally serving no application or credential data.
   mobile-publisher:
-    image: nginx:1.29-alpine
+    image: nginx:1.31.9-alpine@sha256:fb4658584bd9a916ffb6f6e365f97c25cfdb2923801f551ea08356e695f14ff7
     pull_policy: missing
     volumes:
       - type: bind

@@ -1,13 +1,14 @@
-FROM gradle:8.14.3-jdk21@sha256:21bd311ed01360c189b8870c6b6e988199ff10f72d445d02fb39d3cff9da91d7 AS build
+FROM amazoncorretto:21@sha256:a02f509af88bd1544d5bb42be83a20d9022dc15f388a0007e2c7d0d87170b9f4 AS build
 WORKDIR /workspace
 COPY gradlew gradlew.bat settings.gradle.kts build.gradle.kts ./
 COPY gradle ./gradle
 COPY src ./src
 COPY --from=contracts /proto /workspace/contracts/proto
 ENV CONTRACTS_PROTO_DIR=/workspace/contracts/proto
-RUN gradle --no-daemon clean bootJar --stacktrace
+RUN java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain \
+    --no-daemon clean bootJar --stacktrace
 
-FROM amazoncorretto:21-alpine@sha256:58c1d555f4ff3be0cfe90d3b4d1762bde080b57afbb71d48657b9d22748cad5b
+FROM amazoncorretto:21-alpine@sha256:600e99e39da14b6a909027a924136c423e9334cb7347a8a77d5908bdaa3011b7
 ARG SOURCE_COMMIT=unknown
 LABEL org.opencontainers.image.revision=$SOURCE_COMMIT \
       org.opencontainers.image.base.name="amazoncorretto:21-alpine"

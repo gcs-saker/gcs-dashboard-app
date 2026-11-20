@@ -27,7 +27,8 @@ run_live() {
     -v "$REPO_ROOT/deploy/mqtt-test/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro" \
     eclipse-mosquitto:2.0.22 >/dev/null
   docker run --rm --network "$NETWORK" -e TEST_CONTROL_MQTT_URL=tcp://mqtt:1883 \
-    -v "$REPO_ROOT/services/media-control:/workspace:ro" -w /workspace golang:1.26.10-bookworm \
+    -v "$REPO_ROOT/services/media-control:/workspace:ro" -w /workspace \
+    golang:1.26.11-bookworm@sha256:dc40a13b61304647ed7e5d581d246b86413dfc29d63c6d018310feb93cd98fc0 \
     sh -eu -c 'go test -race ./internal/controlintegration -run TestControlCommandE2EThroughRealBroker -count=1'
   echo "test-only Mosquitto control round trip passed"
 }

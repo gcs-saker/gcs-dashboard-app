@@ -39,6 +39,10 @@ artifacts:
     sbom: IMPLEMENTED
     signature: VERIFIED
     provenance: VERIFIED
+  - id: edge-image
+    sbom: IMPLEMENTED
+    signature: VERIFIED
+    provenance: VERIFIED
   - id: mqtt-image
     sbom: IMPLEMENTED
     signature: VERIFIED
